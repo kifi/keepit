@@ -9,6 +9,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.TestHelper
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImagePath, ImageSize }
@@ -967,7 +968,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
           val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").saved
 
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1, keepCount = 2))
+          val library1 = LibraryFactory.library().withOwner(user1).withVisibility(LibraryVisibility.DISCOVERABLE).withMemberCount(1).saved
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
@@ -1004,7 +1005,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "path": "${keep2.path.relative}",
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
-                "createdAt": "${keep2.createdAt}",
+                "createdAt": "${keep2.keptAt}",
                 "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "visibility":"${keep2.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
@@ -1028,7 +1029,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "path": "${keep1.path.relative}",
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
-                "createdAt": "${keep1.createdAt}",
+                "createdAt": "${keep1.keptAt}",
                 "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "visibility":"${keep1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
@@ -1048,7 +1049,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             "numKeeps": 2
            }
            """.stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected1)
+        val actual = contentAsJson(result1)
+        TestHelper.deepCompare(actual, expected1) must beNone
       }
     }
 
