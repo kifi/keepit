@@ -16,7 +16,6 @@ object MessageFactory {
       keepId = Id(idx.incrementAndGet()),
       from = MessageSender.User(Id(idx.incrementAndGet())),
       thread = Id(idx.incrementAndGet()),
-      threadExtId = ExternalId(),
       messageText = RandomStringUtils.randomAlphabetic(50),
       source = None,
       auxData = None,
@@ -27,7 +26,7 @@ object MessageFactory {
   def messages(n: Int) = List.fill(n)(message())
 
   case class PartialElizaMessage(em: ElizaMessage) {
-    def withThread(thread: MessageThread) = this.copy(em = em.copy(keepId = thread.keepId, thread = thread.id.get, threadExtId = thread.externalId))
+    def withThread(thread: MessageThread) = this.copy(em = em.copy(keepId = thread.keepId, thread = thread.id.get))
     def from(sender: MessageSender) = this.copy(em = em.copy(from = sender))
     def withCreatedAt(time: DateTime) = this.copy(em = em.copy(createdAt = time))
     def saved(implicit injector: Injector, session: RWSession): ElizaMessage = {

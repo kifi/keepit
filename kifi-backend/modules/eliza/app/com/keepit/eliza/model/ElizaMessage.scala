@@ -119,7 +119,6 @@ case class ElizaMessage(
   externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
   thread: Id[MessageThread],
-  threadExtId: ExternalId[MessageThread],
   messageText: String,
   source: Option[MessageSource],
   auxData: Option[JsArray] = None,
@@ -149,7 +148,6 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'thread).format(Id.format[MessageThread]) and
-    (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
     (__ \ 'messageText).format[String] and
     (__ \ 'source).formatNullable[MessageSource] and
     (__ \ 'auxData).formatNullable[JsArray] and
@@ -167,7 +165,6 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
     thread: Id[MessageThread],
-    threadExtId: ExternalId[MessageThread],
     messageText: String,
     source: Option[MessageSource],
     auxData: Option[JsArray],
@@ -184,7 +181,6 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       externalId,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       thread,
-      threadExtId,
       messageText,
       source,
       auxData,
@@ -193,7 +189,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
@@ -204,7 +200,6 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       message.externalId,
       message.from.asUser,
       message.thread,
-      message.threadExtId,
       message.messageText,
       message.source,
       message.auxData,

@@ -49,7 +49,6 @@ class MessageRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
-    def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
     def source = column[Option[MessageSource]]("source", O.Nullable)
     def auxData = column[Option[JsArray]]("aux_data", O.Nullable)
@@ -59,7 +58,7 @@ class MessageRepoImpl @Inject() (
 
     def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
 
-    def * = (id.?, createdAt, updatedAt, state, seq, keepId, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, seq, keepId, externalId, from, thread, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
