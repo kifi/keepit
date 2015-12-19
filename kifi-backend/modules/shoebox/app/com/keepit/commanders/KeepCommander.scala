@@ -248,14 +248,14 @@ class KeepCommanderImpl @Inject() (
       val before = beforeOpt match {
         case None => uriIds
         case Some(beforeExtId) =>
-          keepRepo.getByExtIdAndUser(beforeExtId, userId) match {
+          keepRepo.getByExtId(beforeExtId).filter(_.userId == userId) match {
             case None => uriIds
             case Some(beforeKeep) => uriIds.dropWhile(_ != beforeKeep.uriId).drop(1)
           }
       }
       val after = afterOpt match {
         case None => before
-        case Some(afterExtId) => keepRepo.getByExtIdAndUser(afterExtId, userId) match {
+        case Some(afterExtId) => keepRepo.getByExtId(afterExtId, userId) match {
           case None => before
           case Some(afterKeep) => uriIds.takeWhile(_ != afterKeep.uriId)
         }
@@ -691,7 +691,7 @@ class KeepCommanderImpl @Inject() (
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
-      val newKeep = keepRepo.save(keep.withNormUriId(newUri.id.get).withPrimary(false))
+      val newKeep = keepRepo.save(keep.withUriId(newUri.id.get).withPrimary(false))
       ktlCommander.syncKeep(newKeep)
       ktuCommander.syncKeep(newKeep)
     } else {
@@ -702,7 +702,7 @@ class KeepCommanderImpl @Inject() (
       val mergeableKeeps = similarKeeps.filter(keep.hasStrictlyLessValuableMetadataThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
-        val soonToBeDeadKeep = keepRepo.save(keep.withNormUriId(newUri.id.get).withPrimary(false))
+        val soonToBeDeadKeep = keepRepo.save(keep.withUriId(newUri.id.get).withPrimary(false))
         ktlCommander.syncKeep(soonToBeDeadKeep)
         ktuCommander.syncKeep(soonToBeDeadKeep)
 
@@ -719,7 +719,7 @@ class KeepCommanderImpl @Inject() (
           deactivateKeep(k)
         }
 
-        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withNormUriId(newUri.id.get).withPrimary(true)))
+        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get).withPrimary(true)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)
       }

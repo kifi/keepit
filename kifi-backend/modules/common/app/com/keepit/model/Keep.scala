@@ -60,19 +60,9 @@ case class Keep(
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
-  def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
-  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner, connections = connections.withUsers(Set(newOwner)))
-
-  def withActive(isActive: Boolean) = copy(state = isActive match {
-    case true => KeepStates.ACTIVE
-    case false => KeepStates.INACTIVE
-  })
 
   def withState(state: State[Keep]) = copy(state = state)
-
-  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
-
-  def withUrl(url: String) = copy(url = url)
+  def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
 

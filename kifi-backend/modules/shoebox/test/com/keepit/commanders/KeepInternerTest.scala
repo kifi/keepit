@@ -185,7 +185,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         ))), user.id.get, library, KeepSource.keeper)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
-          keepRepo.save(keepRepo.getByUser(user.id.get).head.withActive(false))
+          keepRepo.deactivate(keepRepo.getByUser(user.id.get).head)
         }
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",

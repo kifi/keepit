@@ -138,7 +138,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           keepRepo.count === 4
           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          keepRepo.delete(bm.get.id.get)
+          keepRepo.deactivate(bm.get)
         }
         db.readWrite { implicit s =>
           keepRepo.all.size === 3
@@ -158,7 +158,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, uri1, uri2, url1, _, _, _) = setup()
         db.readWrite { implicit s =>
           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          keepRepo.save(bm.get.withActive(false))
+          keepRepo.deactivate(bm.get)
         }
 
         db.readOnlyMaster { implicit s =>

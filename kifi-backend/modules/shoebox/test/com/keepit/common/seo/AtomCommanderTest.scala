@@ -100,11 +100,9 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
           val resultTry = Await.ready(commander.libraryFeed(library, keepCountToDisplay = 1, offset = 1), Duration.Inf).value.get
           resultTry.isSuccess must equalTo(true)
           val result = resultTry.get
-          // Results would be "Kifi", "Amazon", "Google", but offset 1 and count 1 make only Amazon show.
           (result \ "entry").size must equalTo(1)
 
-          val amazon = (result \ "entry")(0)
-          amazon \ "title" === "Amazon"
+          (result \ "entry")(0) \ "title" === "Google"
         }
       }
     }
