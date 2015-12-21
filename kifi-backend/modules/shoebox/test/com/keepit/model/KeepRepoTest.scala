@@ -26,15 +26,13 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             libraryId = Some(Id[Library](4)),
             connections = KeepConnections(Set(Id(4)), Set(Id(3)))
           ))
-          val cacheKeep = keepRepo.get(savedKeep.id.get)
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
-          cacheKeep === dbKeep
+          val cacheKeep = keepRepo.get(savedKeep.id.get)
 
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
-          // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
-          // -- Ryan
           def f(k: Keep) = (k.id.get, k.uriId, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connections)
           f(dbKeep) === f(savedKeep)
+          f(dbKeep) === f(cacheKeep)
         }
         1 === 1
       }

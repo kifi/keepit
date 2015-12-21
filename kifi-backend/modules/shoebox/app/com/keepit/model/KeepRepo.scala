@@ -50,7 +50,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
   // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
-  // These ones already exist there:
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountByLibrariesSince(libraryIds: Set[Id[Library]], since: DateTime)(implicit session: RSession): Int
@@ -59,7 +58,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
-  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
+  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
@@ -252,7 +251,7 @@ class KeepRepoImpl @Inject() (
   // preserved for backward compatibility
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
-      val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
+      val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.ACTIVE) yield b).list
       if (keeps.length > 1) log.warn(s"[getByUriAndUser] ${keeps.length} keeps found for (uri, user) pair ${(uriId, userId)}")
       keeps.headOption
     }
@@ -273,8 +272,8 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && !b.state.inSet(excludeSet)) yield b).list
   }
 
-  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
+  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.state =!= excludeState.orNull) yield b).firstOption
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =

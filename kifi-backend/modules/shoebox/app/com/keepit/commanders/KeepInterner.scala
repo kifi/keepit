@@ -186,7 +186,7 @@ class KeepInternerImpl @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val keepOpt = libraryOpt.flatMap { lib => keepRepo.getPrimaryByUriAndLibrary(uri.id.get, lib.id.get) }
+    val keepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get, excludeState = None) }
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepOpt match {

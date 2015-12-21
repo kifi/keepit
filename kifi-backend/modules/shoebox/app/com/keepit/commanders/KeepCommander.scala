@@ -687,7 +687,7 @@ class KeepCommanderImpl @Inject() (
     // TODO(ryan): uncomment the line below, and get rid of the require
     // keepRepo.getByUriAndLibrariesHash(uriId, LibrariesHash(targetLibraries)).filter(k => isKeepInLibraries(k.id.get, targetLibraries))
     require(targetLibraries.size <= 1)
-    targetLibraries.headOption.map(libId => keepRepo.getPrimaryByUriAndLibrary(uriId, libId).toSet).getOrElse(Set.empty)
+    targetLibraries.headOption.map(libId => keepRepo.getByUriAndLibrary(uriId, libId).toSet).getOrElse(Set.empty)
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
@@ -735,8 +735,8 @@ class KeepCommanderImpl @Inject() (
 
   // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep] = {
-    val oldWay = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
-    val newWay = ktlRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
+    val oldWay = keepRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get)
+    val newWay = ktlRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get)
     if (newWay.map(_.keepId) != oldWay.map(_.id.get)) log.info(s"[KTL-MATCH] moveKeep(uri = ${k.uriId}, toLib = ${toLibrary.id.get}): existingKeepOpt ${newWay.map(_.keepId)} != ${oldWay.map(_.id.get)}")
 
     val existingKeepOpt = oldWay
@@ -768,7 +768,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
-    val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
+    val currentKeepOpt = keepRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get, excludeState = None)
     val newKeep = Keep(
       userId = userId,
       url = k.url,

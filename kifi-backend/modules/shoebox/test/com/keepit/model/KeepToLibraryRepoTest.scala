@@ -152,8 +152,8 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             uris.foreach { uri => createKeepsAtUri(uri, lib, n = 5 + Random.nextInt(5)) }
 
             for (uri <- uris) {
-              val expected = inject[KeepRepo].getPrimaryByUriAndLibrary(uri.id.get, lib.id.get)
-              val actual = inject[KeepToLibraryRepo].getPrimaryByUriAndLibrary(uri.id.get, lib.id.get)
+              val expected = inject[KeepRepo].getByUriAndLibrary(uri.id.get, lib.id.get)
+              val actual = inject[KeepToLibraryRepo].getByUriAndLibrary(uri.id.get, lib.id.get)
               expected.map(_.id.get) === actual.map(_.keepId)
             }
           }
