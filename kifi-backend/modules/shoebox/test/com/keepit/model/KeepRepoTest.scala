@@ -34,7 +34,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
           // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
           // -- Ryan
-          def f(k: Keep) = (k.id.get, k.uriId, k.isPrimary, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connections)
+          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connections)
           f(dbKeep) === f(savedKeep)
         }
         1 === 1

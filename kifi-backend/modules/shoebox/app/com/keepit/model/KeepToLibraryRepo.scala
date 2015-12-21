@@ -69,8 +69,29 @@ class KeepToLibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId) <> ((KeepToLibrary.applyFromDbRow _).tupled, KeepToLibrary.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId) <> ((fromDbRow _).tupled, toDbRow)
   }
+
+  def fromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
+    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
+    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
+    KeepToLibrary(
+      id, createdAt, updatedAt, state,
+      keepId, libraryId, addedAt, addedBy,
+      uriId, libraryVisibility, libraryOrganizationId)
+  }
+
+  def toDbRow(ktl: KeepToLibrary) = {
+    Some(
+      (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
+        ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
+        ktl.uriId, if (ktl.isActive) Some(true) else None,
+        ktl.visibility, ktl.organizationId)
+    )
+  }
+
+  object KeepToLibraryStates extends States[KeepToLibrary]
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
@@ -229,7 +250,7 @@ class KeepToLibraryRepoImpl @Inject() (
       Map.empty
     } else {
       val idset = libIds.map { _.id }.mkString("(", ",", ")")
-      val q = sql"""select ktl.library_id, max(bm.seq) 
+      val q = sql"""select ktl.library_id, max(bm.seq)
                     from keep_to_library ktl, bookmark bm
                     where bm.id = ktl.keep_id and ktl.library_id in #${idset}
                     group by ktl.library_id"""
@@ -260,5 +281,4 @@ class KeepToLibraryRepoImpl @Inject() (
       organization = counts(LibraryVisibility.ORGANIZATION),
       discoverable = counts(LibraryVisibility.DISCOVERABLE))
   }
-
 }
