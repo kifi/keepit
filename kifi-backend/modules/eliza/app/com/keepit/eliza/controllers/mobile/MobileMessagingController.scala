@@ -194,7 +194,7 @@ class MobileMessagingController @Inject() (
             val page = fromMessageId match {
               case None => discussion.messages.take(pageSize)
               case Some(idString) =>
-                val publicId = basicMessageCommander.getMessagePublicId(idString)
+                val publicId = Message.validatePublicId(idString).get
                 val afterId = discussion.messages.dropWhile(_.id != publicId)
                 if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${discussion.messages.size} had no message id $publicId")
                 afterId.drop(1).take(pageSize)

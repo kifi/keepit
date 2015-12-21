@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ DbSequenceAssigner, Id, ExternalId }
+import com.keepit.common.db.{ DbSequenceAssigner, Id }
 import com.keepit.model.{ Keep, SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
@@ -16,7 +16,7 @@ import play.api.libs.json.{ JsArray, JsValue }
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[MessageRepoImpl])
-trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[ElizaMessage] with SeqNumberFunction[ElizaMessage] {
+trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage] {
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
   def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
   def get(thread: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage]
@@ -40,12 +40,12 @@ class MessageRepoImpl @Inject() (
   val clock: Clock,
   val db: DataBaseComponent,
   val messagesForThreadIdCache: MessagesForThreadIdCache)
-    extends DbRepo[ElizaMessage] with MessageRepo with ExternalIdColumnDbFunction[ElizaMessage] with SeqNumberDbFunction[ElizaMessage] with Logging with MessagingTypeMappers {
+    extends DbRepo[ElizaMessage] with MessageRepo with SeqNumberDbFunction[ElizaMessage] with Logging with MessagingTypeMappers {
   import DBSession._
   import db.Driver.simple._
 
   type RepoImpl = MessageTable
-  class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with ExternalIdColumn[ElizaMessage] with SeqNumberColumn[ElizaMessage] {
+  class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with SeqNumberColumn[ElizaMessage] {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
@@ -58,7 +58,7 @@ class MessageRepoImpl @Inject() (
 
     def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
 
-    def * = (id.?, createdAt, updatedAt, state, seq, keepId, externalId, from, thread, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, seq, keepId, from, thread, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 

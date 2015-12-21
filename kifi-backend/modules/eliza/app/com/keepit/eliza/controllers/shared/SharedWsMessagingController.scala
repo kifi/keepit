@@ -2,6 +2,7 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
+import com.keepit.discussion.Message
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
@@ -281,11 +282,12 @@ class SharedWsMessagingController @Inject() (
             val recipient = Recipient(socket.userId)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
-          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-          val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
-          val messageId = basicMessageCommander.getElizaMessageId(notifId)
-          val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
-          websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
+          Message.decodePublicIdStr(notifId).map(ElizaMessage.fromCommonId).foreach { messageId =>
+            val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+            val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
+            val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
+            websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
+          }
         }
     },
 
@@ -298,8 +300,9 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
-          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
-          messagingCommander.setUnread(socket.userId, messageId)
+          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
+            messagingCommander.setUnread(socket.userId, messageId)
+          }
         }
     },
     "set_message_read" -> {
@@ -312,9 +315,10 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
         } {
-          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
-          messagingCommander.setRead(socket.userId, messageId)
-          messagingCommander.setLastSeen(socket.userId, messageId)
+          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
+            messagingCommander.setRead(socket.userId, messageId)
+            messagingCommander.setLastSeen(socket.userId, messageId)
+          }
         }
     },
     "mute_thread" -> {

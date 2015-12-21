@@ -167,14 +167,4 @@ class MessageFetchingCommander @Inject() (
       Promise.successful(m).future
     }
   }
-
-  def getMessagePublicId(messageIdStr: String): PublicId[Message] = ExternalId.asOpt[ElizaMessage](messageIdStr) match {
-    case Some(externalId) => db.readOnlyMaster { implicit session => messageRepo.get(externalId).pubId }
-    case None => Message.validatePublicId(messageIdStr).get
-  }
-
-  def getElizaMessageId(messageIdStr: String): Id[ElizaMessage] = ExternalId.asOpt[ElizaMessage](messageIdStr) match {
-    case Some(externalId) => db.readOnlyMaster { implicit session => messageRepo.get(externalId).id.get }
-    case None => ElizaMessage.fromCommonId(Message.validatePublicId(messageIdStr).flatMap(Message.decodePublicId(_)).get)
-  }
 }

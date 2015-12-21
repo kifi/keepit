@@ -1,14 +1,15 @@
 package com.keepit.eliza.controllers.ext
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.discussion.Message
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.{ ElizaThreadInfo, ElizaDiscussionCommander, MessagingCommander, ElizaEmailCommander }
-import com.keepit.common.db.ExternalId
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.model.Keep
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
+import com.keepit.common.core._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -91,8 +92,12 @@ class ExtMessagingController @Inject() (
     }
   }
 
-  def getEmailPreview(msgExtId: String) = UserAction.async { request =>
-    emailCommander.getEmailPreview(ExternalId[ElizaMessage](msgExtId)).map(Ok(_))
+  def getEmailPreview(messagePubId: PublicId[Message]) = UserAction.async { request =>
+    Message.decodePublicId(messagePubId) match {
+      case Success(messageId) => emailCommander.getEmailPreview(ElizaMessage.fromCommonId(messageId)).imap(Ok(_))
+      case Failure(_) => Future.successful(BadRequest("invalid_message_id"))
+    }
+
   }
 
 }
