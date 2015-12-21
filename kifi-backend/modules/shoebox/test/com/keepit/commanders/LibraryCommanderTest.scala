@@ -1387,7 +1387,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // unkeep k1
         db.readWrite { implicit s =>
-          keepRepo.save(k1.copy(state = KeepStates.INACTIVE))
+          keepRepo.deactivate(k1)
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
           keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
         }
