@@ -691,7 +691,7 @@ class KeepCommanderImpl @Inject() (
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
-      val newKeep = keepRepo.save(keep.withUriId(newUri.id.get).withPrimary(false))
+      val newKeep = keepRepo.save(keep.withUriId(newUri.id.get))
       ktlCommander.syncKeep(newKeep)
       ktuCommander.syncKeep(newKeep)
     } else {
@@ -702,7 +702,7 @@ class KeepCommanderImpl @Inject() (
       val mergeableKeeps = similarKeeps.filter(keep.hasStrictlyLessValuableMetadataThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
-        val soonToBeDeadKeep = keepRepo.save(keep.withUriId(newUri.id.get).withPrimary(false))
+        val soonToBeDeadKeep = keepRepo.save(keep.withUriId(newUri.id.get))
         ktlCommander.syncKeep(soonToBeDeadKeep)
         ktuCommander.syncKeep(soonToBeDeadKeep)
 
@@ -719,7 +719,7 @@ class KeepCommanderImpl @Inject() (
           deactivateKeep(k)
         }
 
-        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get).withPrimary(true)))
+        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)
       }

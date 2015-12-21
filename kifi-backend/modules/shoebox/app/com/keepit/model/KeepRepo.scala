@@ -108,10 +108,12 @@ class KeepRepoImpl @Inject() (
     def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
-    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt,
-        note, originalKeeperId, organizationId,
-        connections, librariesHash, participantsHash, messageSeq)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+    def * = (
+      id.?, createdAt, updatedAt, externalId,
+      title, uriId, isPrimary, url, userId,
+      state, source, seq, libraryId, visibility,
+      keptAt, note, originalKeeperId, organizationId,
+      connections, librariesHash, participantsHash, messageSeq).shaped <> ((Keep.fromDbRow _).tupled, Keep.toDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
@@ -130,7 +132,7 @@ class KeepRepoImpl @Inject() (
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep._applyFromDbRow(
+    Keep.fromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],

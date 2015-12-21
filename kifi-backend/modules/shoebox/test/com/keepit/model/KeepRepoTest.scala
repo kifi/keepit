@@ -19,7 +19,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           val savedKeep = keepRepo.save(Keep(
             uriId = Id[NormalizedURI](1),
-            isPrimary = true,
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
             userId = Id[User](3),

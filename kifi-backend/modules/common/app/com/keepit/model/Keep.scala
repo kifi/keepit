@@ -103,7 +103,6 @@ object Keep extends PublicIdGenerator[Keep] {
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
-
   def fromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
     url: String, userId: Id[User],

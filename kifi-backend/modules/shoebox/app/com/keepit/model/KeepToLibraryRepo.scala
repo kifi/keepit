@@ -91,8 +91,6 @@ class KeepToLibraryRepoImpl @Inject() (
     )
   }
 
-  object KeepToLibraryStates extends States[KeepToLibrary]
-
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
 
