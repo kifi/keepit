@@ -33,6 +33,7 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   // PSA: please just use this method going forward, it has the cleanest API
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
+  def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -164,6 +165,9 @@ class MessageRepoImpl @Inject() (
       case SortDirection.DESCENDING => threads.sortBy(r => (r.createdAt desc, r.id desc))
     }
     sortedThreads.take(limit).list
+  }
+  def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage] = {
+    activeRows.filter(_.keepId === keepId).list
   }
 
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)

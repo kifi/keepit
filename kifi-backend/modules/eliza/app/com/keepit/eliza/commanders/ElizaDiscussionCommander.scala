@@ -32,6 +32,7 @@ trait ElizaDiscussionCommander {
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
+  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
 }
 
 @Singleton
@@ -203,5 +204,14 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
   def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
     messageRepo.deactivate(messageRepo.get(messageId))
+  }
+  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
+    keepIds.foreach { keepId =>
+      messageThreadRepo.getByKeepId(keepId).map(_.id.get).foreach { threadId =>
+        messageRepo.getAllByThread(threadId).foreach(messageRepo.deactivate)
+        userThreadRepo.getByThread(threadId).foreach(userThreadRepo.deactivate)
+        messageThreadRepo.deactivate(messageThreadRepo.get(threadId))
+      }
+    }
   }
 }
