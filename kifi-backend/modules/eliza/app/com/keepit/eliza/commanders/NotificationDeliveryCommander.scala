@@ -189,7 +189,6 @@ class NotificationDeliveryCommander @Inject() (
             createdBy = adderUserId,
             participant = nup,
             keepId = thread.keepId,
-            threadId = thread.id.get,
             uriId = Some(thread.uriId),
             notifiedCount = 0,
             lastNotifiedAt = None,

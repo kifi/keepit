@@ -63,7 +63,6 @@ case class NonUserThread(
     createdBy: Id[User],
     participant: NonUserParticipant,
     keepId: Id[Keep],
-    threadId: Id[MessageThread],
     uriId: Option[Id[NormalizedURI]],
     notifiedCount: Int,
     lastNotifiedAt: Option[DateTime],

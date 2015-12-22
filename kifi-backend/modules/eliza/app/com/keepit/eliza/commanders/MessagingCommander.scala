@@ -212,7 +212,6 @@ class MessagingCommander @Inject() (
               createdBy = from,
               participant = nonUser,
               keepId = thread.keepId,
-              threadId = thread.id.get,
               uriId = Some(nUriId),
               notifiedCount = 0,
               lastNotifiedAt = None,
