@@ -113,8 +113,9 @@ class MessagingCommander @Inject() (
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Left(nUri) =>
         val threads = db.readOnlyReplica { implicit session =>
-          val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
-          threadIds.map(threadRepo.get)
+          val keepIds = userThreadRepo.getKeepIds(userId, nUri.id)
+          val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
+          keepIds.map(threadsByKeepId(_))
         }
         buildThreadInfos(userId, threads, url).map { unsortedInfos =>
           val infos = unsortedInfos sortWith { (a, b) =>
@@ -404,8 +405,9 @@ class MessagingCommander @Inject() (
 
   def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread] = {
     db.readOnlyReplica { implicit session =>
-      val threadIds = userThreadRepo.getThreadIds(user)
-      threadIds map threadRepo.get
+      val keepIds = userThreadRepo.getKeepIds(user)
+      val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
+      keepIds.map(threadsByKeepId(_))
     }
   }
 
@@ -562,7 +564,7 @@ class MessagingCommander @Inject() (
       db.readOnlyReplica { implicit session =>
         res.collect {
           case (url, Some(nuri)) =>
-            url -> userThreadRepo.getThreadIds(userId, Some(nuri.id.get))
+            url -> userThreadRepo.getKeepIds(userId, Some(nuri.id.get))
         }
       }.toMap
     }

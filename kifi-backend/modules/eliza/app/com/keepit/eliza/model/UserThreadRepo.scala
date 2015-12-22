@@ -43,7 +43,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
-  def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
+  def getKeepIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]]
   def isMuted(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Boolean
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
@@ -123,10 +123,10 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
+  def getKeepIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]] = {
     uriIdOpt.map { uriId => activeRows.filter(row => row.user === userId && row.uriId === uriId) }
       .getOrElse { activeRows.filter(row => row.user === userId) }
-      .map(_.threadId).list
+      .map(_.keepId).list
   }
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {

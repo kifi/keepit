@@ -145,7 +145,7 @@ class NotificationDeliveryCommander @Inject() (
 
     if (emailRecipients.nonEmpty) {
       db.readWrite { implicit session =>
-        val nonUserThreads = nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+        val nonUserThreads = nonUserThreadRepo.getByKeepId(thread.keepId)
         val recipientThreads = emailSenderOption match {
           case Some(emailSender) => nonUserThreads.filter(_.participant.identifier != emailSender.address)
           case None => nonUserThreads
@@ -515,13 +515,12 @@ class NotificationDeliveryCommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val userThreads = userThreadRepo.getLatestUnreadUnmutedThreads(userId, howMany)
       userThreads.map { userThread =>
-        val threadId = userThread.threadId
-        val messageThread = threadRepo.get(threadId)
+        val messageThread = threadRepo.get(userThread.threadId)
 
         val messagesSinceLastSeen = userThread.lastSeen map { seenAt =>
-          messageRepo.getAfter(messageThread.keepId, seenAt)
+          messageRepo.getAfter(userThread.keepId, seenAt)
         } getOrElse {
-          messageRepo.get(messageThread.keepId, 0)
+          messageRepo.get(userThread.keepId, 0)
         }
 
         UserThread.toUserThreadView(userThread, messagesSinceLastSeen, messageThread)

@@ -16,11 +16,11 @@ import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
 
-  def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]]
+  def getKeepsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[Keep]]
 
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
 
-  def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread]
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[NonUserThread]
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
@@ -86,14 +86,14 @@ class NonUserThreadRepoImpl @Inject() (
   override def deleteCache(model: NonUserThread)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
-  def getThreadsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[MessageThread]] =
-    (for (row <- rows if row.emailAddress === emailAddress) yield row.threadId).list
+  def getKeepsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[Keep]] =
+    (for (row <- rows if row.emailAddress === emailAddress) yield row.keepId).list
 
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.lastNotifiedAt.isEmpty || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt < row.threadUpdatedByOtherAt && !row.muted)) yield row).list
 
-  def getByMessageThreadId(messageThreadId: Id[MessageThread])(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- rows if row.threadId === messageThreadId) yield row).list
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[NonUserThread] =
+    (for (row <- rows if row.keepId === keepId) yield row).list
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit =
     updates.foreach {

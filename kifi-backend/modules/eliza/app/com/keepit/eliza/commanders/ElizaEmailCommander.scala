@@ -77,7 +77,7 @@ class ElizaEmailCommander @Inject() (
 
     val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
       (
-        nonUserThreadRepo.getByMessageThreadId(thread.id.get),
+        nonUserThreadRepo.getByKeepId(thread.keepId),
         thread.startedBy
       )
     }
@@ -173,7 +173,7 @@ class ElizaEmailCommander @Inject() (
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session =>
-        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
+        nonUserThreadRepo.getByKeepId(thread.keepId)
       }
 
       // Intentionally sequential execution
@@ -189,7 +189,7 @@ class ElizaEmailCommander @Inject() (
   def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
-        nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
+        nonUserThreadRepo.getByKeepId(thread.keepId).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
       }

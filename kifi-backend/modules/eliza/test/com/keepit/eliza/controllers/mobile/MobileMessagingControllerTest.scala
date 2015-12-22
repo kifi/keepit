@@ -101,7 +101,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
-          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
+          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
         }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
@@ -118,7 +118,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
-          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
+          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
         }
       }
     }
@@ -144,7 +144,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
-          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
+          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
         }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "").toString
@@ -161,7 +161,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
-          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set()
+          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set()
         }
       }
     }
