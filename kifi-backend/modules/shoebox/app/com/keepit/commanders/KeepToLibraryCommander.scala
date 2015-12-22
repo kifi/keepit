@@ -37,6 +37,8 @@ trait KeepToLibraryCommander {
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
   def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary
 
+  def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit
+
   // TODO(ryan): expose a public method `syncLibrary(lib): Future[Unit]`
   def syncWithLibrary(ktl: KeepToLibrary, lib: Library)(implicit session: RWSession): KeepToLibrary
 }
@@ -97,6 +99,12 @@ class KeepToLibraryCommanderImpl @Inject() (
     require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
     ktlRepo.save(ktl.withUriId(keep.uriId))
   }
+  def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktl =>
+      ktlRepo.deactivate(ktl.withUriId(keep.uriId))
+    }
+  }
+
   def syncWithLibrary(ktl: KeepToLibrary, library: Library)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.libraryId == library.id.get, "library.id does not match ktl.libraryId")
     ktlRepo.save(ktl.withVisibility(library.visibility).withOrganizationId(library.organizationId))
