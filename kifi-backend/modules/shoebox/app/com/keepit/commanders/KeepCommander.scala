@@ -705,7 +705,10 @@ class KeepCommanderImpl @Inject() (
           collectionCommander.copyKeepTags(keep, k) // todo: Handle notes! You can't just combine tags!
         }
         collectionCommander.deactivateKeepTags(keep)
-        deactivateKeep(keep)
+
+        val migratedKeep = keepRepo.deactivate(keep.withUriId(newUri.id.get))
+        ktlCommander.syncAndDeleteKeep(migratedKeep)
+        ktuCommander.syncAndDeleteKeep(migratedKeep)
       } else {
         val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
@@ -713,6 +716,7 @@ class KeepCommanderImpl @Inject() (
           collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
           deactivateKeep(k)
         }
+
         val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)
