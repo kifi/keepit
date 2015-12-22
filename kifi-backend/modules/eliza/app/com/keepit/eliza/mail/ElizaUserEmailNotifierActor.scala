@@ -53,8 +53,8 @@ class ElizaUserEmailNotifierActor @Inject() (
    */
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[UserThread]): Future[Unit] = {
     val userThreads = batch.participantThreads
-    val threadId = batch.threadId
-    val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadId) }
+    val keepId = batch.keepId
+    val thread = db.readOnlyReplica { implicit session => threadRepo.getByKeepId(keepId).get }
     val allUserIds = thread.participants.allUsers.toSeq
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map(s => s.map(u => u.id.get -> u).toMap)

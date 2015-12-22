@@ -13,7 +13,7 @@ import com.keepit.common.crypto.ModelWithPublicId
 
 case class UserThreadNotification(thread: Id[MessageThread], message: Id[ElizaMessage])
 
-case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
+case class UserThreadActivity(id: Id[UserThread], keepId: Id[Keep], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
 case class UserThread(
   id: Option[Id[UserThread]] = None,

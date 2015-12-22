@@ -28,7 +28,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class UserThreadQuery(
-  threadIds: Option[Set[Id[MessageThread]]] = None,
+  keepIds: Option[Set[Id[Keep]]] = None,
   beforeTime: Option[DateTime] = None,
   onlyStartedBy: Option[Id[User]] = None,
   onlyUnread: Option[Boolean] = None,
@@ -293,12 +293,12 @@ class NotificationDeliveryCommander @Inject() (
           thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++ basicNonUserParticipants.toSeq
         )
         val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity], muted: Boolean) = db.readOnlyMaster { implicit session =>
-          val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
+          val threadActivity = userThreadRepo.getThreadActivity(thread.keepId).sortBy { uta =>
             (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
           }
           val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
           val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
-          val muted = userThreadRepo.isMuted(userId, thread.id.get)
+          val muted = userThreadRepo.isMuted(userId, thread.keepId)
           (numMessages, numUnread, threadActivity, muted)
         }
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
@@ -325,12 +325,12 @@ class NotificationDeliveryCommander @Inject() (
   def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     val (uts, mts) = db.readOnlyReplica { implicit session =>
       val uts = userThreadRepo.getThreadsForUser(userId, utq)
-      val mtMap = threadRepo.getActiveByIds(uts.map(_.threadId).toSet)
+      val mtMap = threadRepo.getByKeepIds(uts.map(_.keepId).toSet)
       (uts, mtMap)
     }
     val notifJsonsByThreadFut = Future.sequence(mts.map { case (mtId, mt) => buildNotificationForMessageThread(userId, mt).map { mtId -> _ } }).map(_.toMap)
     notifJsonsByThreadFut.flatMap { notifJsonsByThread =>
-      val inputs = uts.flatMap { ut => notifJsonsByThread(ut.threadId).map(notif => (Json.toJson(notif), ut.unread, ut.uriId)) }
+      val inputs = uts.flatMap { ut => notifJsonsByThread(ut.keepId).map(notif => (Json.toJson(notif), ut.unread, ut.uriId)) }
       notificationJsonMaker.make(inputs, includeUriSummary)
     }
   }
@@ -345,7 +345,7 @@ class NotificationDeliveryCommander @Inject() (
       }
       val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnlyMaster { implicit session =>
         val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
-        val muted = userThreadRepo.isMuted(userId, thread.id.get)
+        val muted = userThreadRepo.isMuted(userId, thread.keepId)
         (numMessages, numUnread, muted)
       }
 
@@ -401,7 +401,7 @@ class NotificationDeliveryCommander @Inject() (
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted = false)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
     }
-    getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(Set(thread.id.get)), limit = 1), includeUriSummary = false).map(_.head.obj)
+    getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(Set(thread.keepId)), limit = 1), includeUriSummary = false).map(_.head.obj)
   }
 
   def setAllNotificationsRead(userId: Id[User]): Unit = {
@@ -441,8 +441,7 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getSendableNotification(userId: Id[User], keepId: Id[Keep], includeUriSummary: Boolean): Future[NotificationJson] = {
-    val threadId = db.readOnlyReplica { implicit s => threadRepo.getByKeepId(keepId).get.id.get }
-    getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(Set(threadId)), limit = 1), includeUriSummary).map(_.head)
+    getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(Set(keepId)), limit = 1), includeUriSummary).map(_.head)
   }
 
   def getUnreadThreadNotifications(userId: Id[User]): Seq[UserThreadNotification] = {

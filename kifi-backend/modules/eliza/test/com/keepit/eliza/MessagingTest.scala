@@ -164,7 +164,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
         val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId) }
         user2Threads.size === 1
-        messagingCommander.setLastSeen(user2, user2Threads.head.threadId)
+        messagingCommander.setLastSeen(user2, user2Threads.head.keepId)
 
         val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId)
         otherStarters1.isEmpty === true

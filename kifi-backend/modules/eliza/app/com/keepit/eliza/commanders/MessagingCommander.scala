@@ -72,7 +72,7 @@ class MessagingCommander @Inject() (
     }.toMap
     //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
-      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.id.get).get }
+      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.keepId).get }
     }.toMap
 
     userId2BasicUserF.map { userId2BasicUser =>
@@ -312,28 +312,28 @@ class MessagingCommander @Inject() (
 
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
-      notificationDeliveryCommander.notifyMessage(user, thread.pubKeepId, messageWithBasicUser)
+      notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
     }
     // For everyone except the sender, mark their thread as unread
     db.readWrite { implicit s =>
       (thread.participants.allUsers -- from.asUser).foreach { user =>
-        userThreadRepo.markUnread(user, thread.id.get)
+        userThreadRepo.markUnread(user, message.keepId)
       }
     }
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
-      setLastSeen(sender, thread.id.get, Some(message.createdAt))
+      setLastSeen(sender, message.keepId, Some(message.createdAt))
       db.readWrite { implicit session =>
-        userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt)
-        userThreadRepo.markRead(sender, thread.id.get, message)
+        userThreadRepo.setLastActive(sender, message.keepId, message.createdAt)
+        userThreadRepo.markRead(sender, message)
       }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, Some(message.createdAt))
-      val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
+      val (numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
+      val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }
       (numMessages, numUnread, threadActivity)
@@ -487,7 +487,7 @@ class MessagingCommander @Inject() (
       (message, threadRepo.getByKeepId(message.keepId).get)
     }
     db.readWrite(attempts = 2) { implicit session =>
-      userThreadRepo.markRead(userId, thread.id.get, message)
+      userThreadRepo.markRead(userId, message)
     }
     messagingAnalytics.clearedNotification(userId, Right(message.pubKeepId), Right(message.pubId), context)
 
@@ -500,25 +500,24 @@ class MessagingCommander @Inject() (
       (message, threadRepo.getByKeepId(message.keepId).get)
     }
     val changed: Boolean = db.readWrite(attempts = 2) { implicit session =>
-      userThreadRepo.markUnread(userId, thread.id.get)
+      userThreadRepo.markUnread(userId, message.keepId)
     }
     if (changed) {
       notificationDeliveryCommander.notifyUnread(userId, message.pubKeepId, message.pubId, thread.nUrl, message.createdAt)
     }
   }
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None): Unit = {
+  def setLastSeen(userId: Id[User], keepId: Id[Keep], timestampOpt: Option[DateTime] = None): Unit = {
     db.readWrite { implicit session =>
-      userThreadRepo.setLastSeen(userId, threadId, timestampOpt.getOrElse(clock.now))
+      userThreadRepo.setLastSeen(userId, keepId, timestampOpt.getOrElse(clock.now))
     }
   }
 
   def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
-    val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
-      val message = messageRepo.get(messageId)
-      (message, threadRepo.getByKeepId(message.keepId).get)
+    val message: ElizaMessage = db.readOnlyMaster { implicit session =>
+      messageRepo.get(messageId)
     }
-    setLastSeen(userId, thread.id.get, Some(message.createdAt))
+    setLastSeen(userId, message.keepId, Some(message.createdAt))
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
@@ -531,7 +530,7 @@ class MessagingCommander @Inject() (
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean = {
     val (stateChanged) = db.readWrite { implicit session =>
       threadRepo.getByKeepId(keepId).exists { thread =>
-        userThreadRepo.getUserThread(userId, thread.id.get) match {
+        userThreadRepo.getUserThread(userId, thread.keepId) match {
           case Some(ut) if ut.muted != mute =>
             userThreadRepo.setMuteState(ut.id.get, mute)
           case _ => false
@@ -679,7 +678,7 @@ class MessagingCommander @Inject() (
     }
 
     if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
-      val warning = s"Discussion ${thread.id.get} on uri ${thread.uriId} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
+      val warning = s"Keep ${thread.keepId} on uri ${thread.uriId} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
       airbrake.notify(new ExternalMessagingRateLimitException(warning))
     }
 

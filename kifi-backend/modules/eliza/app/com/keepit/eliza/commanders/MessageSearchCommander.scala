@@ -42,10 +42,7 @@ class MessageSearchCommander @Inject() (
     }
     resultExtIdsFut.flatMap { protoExtIds =>
       val keepIds = protoExtIds.flatMap(Keep.decodePublicIdStr(_).toOption).toSet[Id[Keep]]
-      db.readOnlyReplica { implicit session =>
-        val threadIds = threadRepo.getByKeepIds(keepIds).values.map(_.id.get).toSet
-        notificationDeliveryCommander.getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(threadIds), limit = threadIds.size), includeUriSummary = false)
-      }
+      notificationDeliveryCommander.getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(keepIds), limit = keepIds.size), includeUriSummary = false)
     }
   }
 

@@ -100,7 +100,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
@@ -117,7 +117,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         runners > 2
 
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
         }
       }
@@ -143,7 +143,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
@@ -160,7 +160,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         runners > 2
 
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set()
         }
       }
