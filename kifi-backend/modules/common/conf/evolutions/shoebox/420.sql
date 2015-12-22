@@ -17,4 +17,6 @@ ALTER TABLE message ADD CONSTRAINT message_f_message_thread FOREIGN KEY (keep_id
 ALTER TABLE message DROP COLUMN thread_ext_id;
 ALTER TABLE message DROP COLUMN external_id;
 
+ALTER TABLE user_thread ADD COLUMN keep_id bigint(20) NOT NULL AFTER user_id;
+
 # --- !Downs

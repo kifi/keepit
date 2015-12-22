@@ -10,7 +10,7 @@ import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.SQLInterpolation_WarningsFixed
 import com.keepit.eliza.commanders.{ UnreadThreadCounts, UserThreadQuery }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 
 import org.joda.time.DateTime
 
@@ -81,6 +81,7 @@ class UserThreadRepoImpl @Inject() (
   type RepoImpl = UserThreadTable
   class UserThreadTable(tag: Tag) extends RepoTable[UserThread](db, tag, "user_thread") {
     def user = column[Id[User]]("user_id", O.NotNull)
+    def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Option[Id[NormalizedURI]]]("uri_id", O.Nullable)
     def lastSeen = column[Option[DateTime]]("last_seen", O.Nullable)
@@ -93,7 +94,7 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, user, keepId, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }

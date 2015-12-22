@@ -2,7 +2,7 @@ package com.keepit.eliza.model
 
 import com.keepit.common.time._
 import com.keepit.common.db.{ State, States, Model, Id }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 
 import play.api.libs.json._
 
@@ -21,6 +21,7 @@ case class UserThread(
   updatedAt: DateTime = currentDateTime,
   state: State[UserThread] = UserThreadStates.ACTIVE,
   user: Id[User],
+  keepId: Id[Keep],
   threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],
   lastSeen: Option[DateTime],
@@ -49,6 +50,7 @@ object UserThreadStates extends States[UserThread]
 object UserThread {
   def forMessageThread(mt: MessageThread)(user: Id[User]) = UserThread(
     user = user,
+    keepId = mt.keepId,
     threadId = mt.id.get,
     uriId = Some(mt.uriId),
     lastSeen = None,
