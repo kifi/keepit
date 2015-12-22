@@ -28,6 +28,8 @@ trait ModelWithMaybeCopy[M] { self: M =>
 }
 
 trait CommonClassLinker[M <: Model[M], T] {
-  def toCommon(modelId: Id[M]): Id[T] = Id[T](modelId.id)
-  def fromCommon(commonId: Id[T]): Id[M] = Id[M](commonId.id)
+  def toCommonId(modelId: Id[M]): Id[T] = Id[T](modelId.id)
+  def fromCommonId(commonId: Id[T]): Id[M] = Id[M](commonId.id)
+  def toCommonSeq(modelSeq: SequenceNumber[M]): SequenceNumber[T] = SequenceNumber[T](modelSeq.value)
+  def fromCommonSeq(commonSeq: SequenceNumber[T]): SequenceNumber[M] = SequenceNumber[M](commonSeq.value)
 }

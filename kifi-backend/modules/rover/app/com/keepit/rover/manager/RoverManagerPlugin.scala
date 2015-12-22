@@ -4,7 +4,7 @@ import javax.inject.{ Inject, Singleton }
 
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.rover.manager.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
+import com.kifi.juggle.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

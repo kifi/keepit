@@ -1,6 +1,6 @@
-@(bookmark: Keep)
+@(bookmark: Keep, uriTitle: Option[String] = None)
 
 <a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.edit(bookmark.id.get)">
 @admin.adminHelper.bookmarkBadge(bookmark)
-@{bookmark.title.map(t => if (t.size > 70) t.substring(0, 70) + "..." else t).getOrElse("(no title)")}
+@{bookmark.title.orElse(uriTitle).map(t => if (t.size > 70) t.substring(0, 70) + "..." else t).getOrElse("(no title)")}
 </a>

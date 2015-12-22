@@ -2,6 +2,7 @@ package com.keepit.common.routes
 
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
+import com.keepit.discussion.Message
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
@@ -267,6 +268,7 @@ object Eliza extends Service {
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
     def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = ServiceRoute(GET, "/internal/eliza/keepHasAccessToken")
+    def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def rpbGetThreads = ServiceRoute(POST, "/internal/eliza/rpbGetThreads")
     def rpbConnectKeeps() = ServiceRoute(POST, "/internal/eliza/rpbConnectKeeps")
   }

@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
@@ -87,8 +87,7 @@ class ElizaEmailCommander @Inject() (
 
     ThreadEmailInfo(
       uriId = thread.uriId,
-      threadId = thread.externalId,
-      keepId = thread.keepId.map(Keep.publicId),
+      keepId = Keep.publicId(thread.keepId),
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
       isInitialEmail = isInitialEmail,
@@ -275,8 +274,7 @@ object ElizaEmailCommander {
   def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean): String = {
     val info = ThreadEmailInfo(
       Id[NormalizedURI](1),
-      ExternalId[MessageThread](),
-      None,
+      PublicId[Keep]("kASDF1234"),
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,

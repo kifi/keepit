@@ -1,10 +1,11 @@
 package com.keepit.eliza.model
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.search.index.message.{ ThreadContent, FULL }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.User
+import com.keepit.model.{ Keep, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.social.BasicUserLikeEntity
@@ -21,7 +22,8 @@ class MessagingIndexCommander @Inject() (
     threadRepo: MessageThreadRepo,
     db: Database,
     shoebox: ShoeboxServiceClient,
-    airbrake: AirbrakeNotifier) extends Logging {
+    airbrake: AirbrakeNotifier,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getMessages(fromId: Id[ElizaMessage], toId: Id[ElizaMessage], maxId: Id[ElizaMessage]): Seq[ElizaMessage] = {
     val messages = db.readOnlyReplica { implicit session => messageRepo.getFromIdToId(fromId, toId) }
@@ -66,7 +68,7 @@ class MessagingIndexCommander @Inject() (
         participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
         url = thread.url,
-        threadExternalId = thread.externalId.id,
+        keepId = Keep.publicId(thread.keepId),
         pageTitleOpt = thread.pageTitle,
         digest = digest,
         content = content,

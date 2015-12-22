@@ -186,7 +186,7 @@ class MobileMessagingController @Inject() (
     MessageThreadId.fromIdString(threadIdStr) match {
       case Some(threadId) =>
         basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
-          case (discussion, _) =>
+          case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
             val participants: Set[BasicUserLikeEntity] = discussion.participants
@@ -202,6 +202,7 @@ class MobileMessagingController @Inject() (
               "id" -> threadIdStr,
               "uri" -> url,
               "nUrl" -> nUrl,
+              "keep" -> keep,
               "participants" -> participants,
               "messages" -> (page map { m =>
                 val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {
@@ -238,7 +239,7 @@ class MobileMessagingController @Inject() (
     MessageThreadId.fromIdString(threadIdStr) match {
       case Some(threadId) =>
         basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
-          case (discussion, _) =>
+          case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
             val participants: Set[BasicUserLikeEntity] = discussion.participants
@@ -246,6 +247,7 @@ class MobileMessagingController @Inject() (
               "id" -> threadIdStr,
               "uri" -> url,
               "nUrl" -> nUrl,
+              "keep" -> keep,
               "participants" -> participants,
               "messages" -> (discussion.messages.reverse map { m =>
                 val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {

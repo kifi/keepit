@@ -145,7 +145,7 @@ case class AirbrakeError(
 object AirbrakeError {
   import scala.collection.JavaConverters._
 
-  val MaxMessageSize = 20 * 1024 //20KB
+  val MaxMessageSize = 10 * 1024 //10KB
   val MaxStackTrace = 50
 
   def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String = "", user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =

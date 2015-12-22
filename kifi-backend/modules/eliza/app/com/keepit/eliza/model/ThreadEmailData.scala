@@ -8,8 +8,7 @@ import com.keepit.rover.model.RoverUriSummary
 
 case class ThreadEmailInfo(
   uriId: Id[NormalizedURI],
-  threadId: ExternalId[MessageThread],
-  keepId: Option[PublicId[Keep]],
+  keepId: PublicId[Keep],
   pageName: String,
   pageTitle: String,
   isInitialEmail: Boolean,

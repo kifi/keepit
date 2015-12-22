@@ -3,10 +3,12 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.model._
 
 import scala.collection.mutable
+import scala.util.{ Failure, Try }
 
 @ImplementedBy(classOf[LibrarySuggestedSearchCommanderImpl])
 trait LibrarySuggestedSearchCommander {
@@ -20,7 +22,7 @@ trait LibrarySuggestedSearchCommander {
 class LibrarySuggestedSearchCommanderImpl @Inject() (
     val db: Database,
     val keepRepo: KeepRepo,
-    val suggestedSearchRepo: LibrarySuggestedSearchRepo) extends LibrarySuggestedSearchCommander {
+    val suggestedSearchRepo: LibrarySuggestedSearchRepo) extends LibrarySuggestedSearchCommander with Logging {
 
   def getSuggestedTermsForLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind): SuggestedSearchTerms = {
     db.readOnlyReplica { implicit s => suggestedSearchRepo.getSuggestedTermsByLibrary(libId, limit, kind) }
@@ -29,7 +31,7 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
   // overwrite existing, create new, deactivate the rest
   def saveSuggestedSearchTermsForLibrary(libId: Id[Library], terms: SuggestedSearchTerms, kind: SuggestedSearchTermKind): Unit = {
 
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val existing = suggestedSearchRepo.getByLibraryId(libId, kind)
       val existingByNormalizedTerm = existing.groupBy(m => SuggestedSearchTerms.normalized(m.term)).mapValues(_.head)
       val toBeInternedByNormalizedTerm = terms.terms.map { case (term, weight) => SuggestedSearchTerms.normalized(term) -> (term, weight) }
@@ -49,7 +51,13 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
           val hasNotBeenPersisted = !existingOpt.exists(m => m.term == termToBePersisted && m.weight == weight && m.termKind == kind)
           if (hasBeenDeactivated || hasNotBeenPersisted) {
             val toBePersisted = LibrarySuggestedSearch(id = existingOpt.flatMap(_.id), term = termToBePersisted, weight = weight, libraryId = libId, termKind = kind)
-            suggestedSearchRepo.save(toBePersisted)
+            Try(suggestedSearchRepo.save(toBePersisted)).recoverWith {
+              case ex: Throwable =>
+                // This isn't worth the airbrake noise if it fails. Logs if anyone wants to investigate why they fail.
+                log.error(s"[saveSuggestedSearchTermsForLibrary] Could not persist $termToBePersisted; $hasBeenDeactivated || $hasNotBeenPersisted, " +
+                  s"model: $toBePersisted; existing: $existingOpt. Existing set: $existingByNormalizedTerm", ex)
+                Failure(ex)
+            }
           }
       }
     }

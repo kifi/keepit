@@ -6,6 +6,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.MessagingCommander
@@ -14,7 +15,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.{ MessageThreadFactory, User, SocialUserInfo }
+import com.keepit.model.{ Keep, MessageThreadFactory, User, SocialUserInfo }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
@@ -39,6 +40,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     FakeSecureSocialUserPluginModule()
   )
 
+  implicit def publicIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)
 
   "SharedWsMessagingController" should {
@@ -119,7 +121,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
           val userThread = userThreadRepo.save(UserThread.forMessageThread(messageThread)(user))
           (messageThread, userThread)
         }
-        val uuid = messageThread.externalId.id
+        val pubId = Keep.publicId(messageThread.keepId).id
 
         implicit val context = new HeimdalContext(Map())
 
@@ -127,7 +129,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
         val message = socket.out
         message(0).as[String] === "message"
-        message(1).as[String] === uuid
+        message(1).as[String] === pubId
         val messageContent = message(2)
         (messageContent \ "text").as[String] === "So long and thanks for all the fish"
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2

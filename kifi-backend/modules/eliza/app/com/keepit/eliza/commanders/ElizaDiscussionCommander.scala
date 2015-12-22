@@ -134,7 +134,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               pageTitle = csKeep.title,
               startedBy = csKeep.owner,
               participants = MessageThreadParticipants(Set(csKeep.owner)),
-              keepId = Some(csKeep.id)
+              keepId = csKeep.id
             ))
             val ut = userThreadRepo.save(UserThread.forMessageThread(mt)(csKeep.owner))
             log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")

@@ -3,8 +3,9 @@
 
 angular.module('kifi')
 
-.directive('kfFeatureUpsell', [ '$window', '$state', '$analytics', '$q', 'profileService', 'libraryService',
-  function($window, $state, $analytics, $q, profileService, libraryService) {
+.directive('kfFeatureUpsell', [
+  '$window', '$rootScope', '$state', '$analytics', '$q', 'profileService', 'libraryService',
+  function($window, $rootScope, $state, $analytics, $q, profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,6 +14,7 @@ angular.module('kifi')
       link: function (scope) {
         scope.me = profileService.me;
         scope.showFeatureUpsell = (scope.me.orgs || []).length === 0;
+        scope.userLoggedIn = $rootScope.userLoggedIn;
 
         var slackIntPromoP;
         if (Object.keys(profileService.prefs).length === 0 ) {

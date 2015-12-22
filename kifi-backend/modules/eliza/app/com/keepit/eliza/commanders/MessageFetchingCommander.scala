@@ -86,7 +86,7 @@ class MessageFetchingCommander @Inject() (
     db.readOnlyMaster(threadRepo.getByMessageThreadId(threadExtId)(_)) match {
       case Some(thread) =>
         val futureMessages = getThreadMessagesWithBasicUser(thread)
-        val futureKeep = thread.keepId.map(keepId => shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))) getOrElse Future.successful(None)
+        val futureKeep = shoebox.getDiscussionKeepsByIds(userId, Set(thread.keepId)).imap(_.get(thread.keepId))
         for {
           messages <- futureMessages
           discussionKeepOpt <- futureKeep
@@ -176,6 +176,6 @@ class MessageFetchingCommander @Inject() (
 
   def getElizaMessageId(messageIdStr: String): Id[ElizaMessage] = ExternalId.asOpt[ElizaMessage](messageIdStr) match {
     case Some(externalId) => db.readOnlyMaster { implicit session => messageRepo.get(externalId).id.get }
-    case None => ElizaMessage.fromCommon(Message.validatePublicId(messageIdStr).flatMap(Message.decodePublicId(_).toOption).get)
+    case None => ElizaMessage.fromCommonId(Message.validatePublicId(messageIdStr).flatMap(Message.decodePublicId(_).toOption).get)
   }
 }

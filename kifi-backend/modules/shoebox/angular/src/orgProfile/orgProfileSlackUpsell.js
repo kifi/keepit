@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window',
-  function ($window) {
+  '$window', '$rootScope',
+  function ($window, $rootScope) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -13,6 +13,8 @@ angular.module('kifi')
       },
       templateUrl: 'orgProfile/orgProfileSlackUpsell.tpl.html',
       link: function ($scope, element, attrs, kfModalCtrl) {
+        $scope.userLoggedIn = $rootScope.userLoggedIn;
+
         function getSlackLink() {
           var library = $scope.getLibrary();
           return library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');

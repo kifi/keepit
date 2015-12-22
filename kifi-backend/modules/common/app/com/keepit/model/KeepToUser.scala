@@ -29,23 +29,4 @@ case class KeepToUser(
   def sanitizeForDelete = this.withState(KeepToUserStates.INACTIVE)
 }
 
-object KeepToUser {
-  def applyFromDbRow(id: Option[Id[KeepToUser]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToUser],
-    keepId: Id[Keep], userId: Id[User], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI]): KeepToUser = {
-    KeepToUser(
-      id, createdAt, updatedAt, state,
-      keepId, userId, addedAt, addedBy,
-      uriId)
-  }
-
-  def unapplyToDbRow(ktu: KeepToUser) = {
-    Some(
-      (ktu.id, ktu.createdAt, ktu.updatedAt, ktu.state,
-        ktu.keepId, ktu.userId, ktu.addedAt, ktu.addedBy,
-        ktu.uriId)
-    )
-  }
-}
-
 object KeepToUserStates extends States[KeepToUser]
