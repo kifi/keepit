@@ -14,12 +14,7 @@ import com.keepit.model.{ Keep, User, NormalizedURI }
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{ JsValue, JsNull }
-
 import scala.slick.jdbc.StaticQuery
-
-object UserThreadRepo {
-}
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {

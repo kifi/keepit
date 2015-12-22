@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.db.{ State, Id }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{ NonUserKind, NonUserKinds }
@@ -54,6 +54,7 @@ class NonUserThreadRepoImpl @Inject() (
     def createdBy = column[Id[User]]("created_by", O.NotNull)
     def kind = column[NonUserKind]("kind", O.NotNull)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
+    def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Option[Id[NormalizedURI]]]("uri_id", O.Nullable)
     def notifiedCount = column[Int]("notified_count", O.NotNull)
@@ -62,14 +63,14 @@ class NonUserThreadRepoImpl @Inject() (
     def muted = column[Boolean]("muted", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress, threadId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedByOtherAt, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
+    def * = (id.?, createdAt, updatedAt, createdBy, kind, emailAddress, keepId, threadId, uriId, notifiedCount, lastNotifiedAt, threadUpdatedByOtherAt, muted, state, accessToken) <> (rowToObj2 _, objToRow _)
 
-    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
+    private def rowToObj2(t: (Option[Id[NonUserThread]], DateTime, DateTime, Id[User], NonUserKind, Option[EmailAddress], Id[Keep], Id[MessageThread], Option[Id[NormalizedURI]], Int, Option[DateTime], Option[DateTime], Boolean, State[NonUserThread], ThreadAccessToken)): NonUserThread = {
       val participant = t._5 match {
         case NonUserKinds.email =>
           NonUserEmailParticipant(t._6.get)
       }
-      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, threadId = t._7, uriId = t._8, notifiedCount = t._9, lastNotifiedAt = t._10, threadUpdatedByOtherAt = t._11, muted = t._12, state = t._13, accessToken = t._14)
+      NonUserThread(id = t._1, createdAt = t._2, updatedAt = t._3, createdBy = t._4, participant = participant, keepId = t._7, threadId = t._8, uriId = t._9, notifiedCount = t._10, lastNotifiedAt = t._11, threadUpdatedByOtherAt = t._12, muted = t._13, state = t._14, accessToken = t._15)
     }
 
     private def objToRow(n: NonUserThread) = {
@@ -77,7 +78,7 @@ class NonUserThreadRepoImpl @Inject() (
         case ep: NonUserEmailParticipant =>
           (ep.kind, Option(ep.address))
       }
-      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
+      Option((n.id, n.createdAt, n.updatedAt, n.createdBy, kind, emailAddress, n.keepId, n.threadId, n.uriId, n.notifiedCount, n.lastNotifiedAt, n.threadUpdatedByOtherAt, n.muted, n.state, n.accessToken))
     }
   }
   def table(tag: Tag) = new NonUserThreadTable(tag)

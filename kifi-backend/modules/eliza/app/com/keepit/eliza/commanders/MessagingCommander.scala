@@ -210,6 +210,7 @@ class MessagingCommander @Inject() (
             nonUserThreadRepo.save(NonUserThread(
               createdBy = from,
               participant = nonUser,
+              keepId = thread.keepId,
               threadId = thread.id.get,
               uriId = Some(nUriId),
               notifiedCount = 0,

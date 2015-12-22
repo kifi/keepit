@@ -18,5 +18,6 @@ ALTER TABLE message DROP COLUMN thread_ext_id;
 ALTER TABLE message DROP COLUMN external_id;
 
 ALTER TABLE user_thread ADD COLUMN keep_id bigint(20) NOT NULL AFTER user_id;
+ALTER TABLE non_user_thread ADD COLUMN keep_id bigint(20) NOT NULL AFTER email_address;
 
 # --- !Downs

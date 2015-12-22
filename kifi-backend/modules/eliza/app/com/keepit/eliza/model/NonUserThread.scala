@@ -3,7 +3,7 @@ package com.keepit.eliza.model
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 import play.api.libs.json._
 import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
 import play.api.libs.json.JsSuccess
@@ -62,6 +62,7 @@ case class NonUserThread(
     updatedAt: DateTime = currentDateTime,
     createdBy: Id[User],
     participant: NonUserParticipant,
+    keepId: Id[Keep],
     threadId: Id[MessageThread],
     uriId: Option[Id[NormalizedURI]],
     notifiedCount: Int,
