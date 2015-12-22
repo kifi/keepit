@@ -249,14 +249,14 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId) }
+    log.info(s"Sending message from non-user with id ${nut.id} to keep ${nut.keepId}")
+    val thread = db.readOnlyMaster { implicit session => threadRepo.getByKeepId(nut.keepId).get }
     sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId) }
+    log.info(s"Sending message from user with id ${userThread.user} to keep ${userThread.keepId}")
+    val thread = db.readOnlyMaster { implicit session => threadRepo.getByKeepId(userThread.keepId).get }
     sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
   }
 

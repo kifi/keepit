@@ -77,7 +77,6 @@ class UserThreadRepoImpl @Inject() (
   class UserThreadTable(tag: Tag) extends RepoTable[UserThread](db, tag, "user_thread") {
     def user = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def threadId = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Option[Id[NormalizedURI]]]("uri_id", O.Nullable)
     def lastSeen = column[Option[DateTime]]("last_seen", O.Nullable)
     def unread = column[Boolean]("notification_pending", O.NotNull)
@@ -89,9 +88,7 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, keepId, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
-
-    def userThreadIndex = index("user_thread", (user, threadId), unique = true)
+    def * = (id.?, createdAt, updatedAt, state, user, keepId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)
@@ -148,8 +145,8 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification] = {
-    activeRows.filter(row => row.user === userId && row.unread).map(row => (row.threadId, row.lastMsgFromOther)).list.map {
-      case (thread, message) => UserThreadNotification(thread, message.get)
+    activeRows.filter(row => row.user === userId && row.unread).map(row => (row.keepId, row.lastMsgFromOther)).list.map {
+      case (keep, message) => UserThreadNotification(keep, message.get)
     }
   }
 

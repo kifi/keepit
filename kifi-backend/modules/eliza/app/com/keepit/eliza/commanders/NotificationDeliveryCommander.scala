@@ -385,7 +385,7 @@ class NotificationDeliveryCommander @Inject() (
     }
 
     //This is mostly for testing and monitoring
-    notificationRouter.sendNotification(Some(userId), UserThreadNotification(thread.id.get, message.id.get))
+    notificationRouter.sendNotification(Some(userId), UserThreadNotification(message.keepId, message.id.get))
   }
 
   private def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm
@@ -515,7 +515,7 @@ class NotificationDeliveryCommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val userThreads = userThreadRepo.getLatestUnreadUnmutedThreads(userId, howMany)
       userThreads.map { userThread =>
-        val messageThread = threadRepo.get(userThread.threadId)
+        val messageThread = threadRepo.getByKeepId(userThread.keepId).get
 
         val messagesSinceLastSeen = userThread.lastSeen map { seenAt =>
           messageRepo.getAfter(userThread.keepId, seenAt)

@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import scala.Some
 import com.keepit.common.crypto.ModelWithPublicId
 
-case class UserThreadNotification(thread: Id[MessageThread], message: Id[ElizaMessage])
+case class UserThreadNotification(keepId: Id[Keep], message: Id[ElizaMessage])
 
 case class UserThreadActivity(id: Id[UserThread], keepId: Id[Keep], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
@@ -22,7 +22,6 @@ case class UserThread(
   state: State[UserThread] = UserThreadStates.ACTIVE,
   user: Id[User],
   keepId: Id[Keep],
-  threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],
   lastSeen: Option[DateTime],
   unread: Boolean = false,
@@ -40,7 +39,7 @@ case class UserThread(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def sanitizeForDelete = this.copy(state = UserThreadStates.INACTIVE)
 
-  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, thread = $threadId, " +
+  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, keep = $keepId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
 }
@@ -51,7 +50,6 @@ object UserThread {
   def forMessageThread(mt: MessageThread)(user: Id[User]) = UserThread(
     user = user,
     keepId = mt.keepId,
-    threadId = mt.id.get,
     uriId = Some(mt.uriId),
     lastSeen = None,
     unread = true,

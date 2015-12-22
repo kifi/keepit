@@ -61,7 +61,7 @@ CREATE TABLE user_thread (
     KEY user_thread_i_user_page (user_id, uri_id),
     UNIQUE KEY user_thread_i_user_thread (user_id, thread_id),
 
-    FOREIGN KEY (thread_id)
+    CONSTRAINT user_thread_f_message_thread  FOREIGN KEY (thread_id)
       REFERENCES message_thread(id)
       ON UPDATE CASCADE ON DELETE RESTRICT
 );
