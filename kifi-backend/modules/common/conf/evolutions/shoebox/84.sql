@@ -36,7 +36,7 @@ CREATE TABLE message (
     PRIMARY KEY (id),
     KEY message_i_my_thread (thread_id),  
 
-    FOREIGN KEY (thread_id)
+    CONSTRAINT message_f_message_thread FOREIGN KEY (thread_id)
       REFERENCES message_thread(id)
       ON UPDATE CASCADE ON DELETE RESTRICT
 );

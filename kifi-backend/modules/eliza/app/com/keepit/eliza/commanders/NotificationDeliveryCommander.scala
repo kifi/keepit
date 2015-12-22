@@ -273,7 +273,7 @@ class NotificationDeliveryCommander @Inject() (
 
   def buildNotificationForMessageThread(userId: Id[User], thread: MessageThread): Future[Option[MessageNotification]] = {
     shoebox.getBasicUsers(thread.allParticipants.toSeq).map { basicUserByIdMap =>
-      db.readOnlyMaster { implicit session => messageRepo.getLatest(thread.id.get) }.map { message =>
+      db.readOnlyMaster { implicit session => messageRepo.getLatest(thread.keepId) }.map { message =>
         def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
         val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
         val messageWithBasicUser = MessageWithBasicUser(
@@ -296,7 +296,7 @@ class NotificationDeliveryCommander @Inject() (
             (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
           }
           val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
-          val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, lastSeenOpt)
+          val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
           val muted = userThreadRepo.isMuted(userId, thread.id.get)
           (numMessages, numUnread, threadActivity, muted)
         }
@@ -343,7 +343,7 @@ class NotificationDeliveryCommander @Inject() (
         case None => authorActivityInfos.length
       }
       val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnlyMaster { implicit session =>
-        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, lastSeenOpt)
+        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
         val muted = userThreadRepo.isMuted(userId, thread.id.get)
         (numMessages, numUnread, muted)
       }
@@ -396,7 +396,7 @@ class NotificationDeliveryCommander @Inject() (
 
   //for a given user and thread make sure the notification is correct
   private def recreateNotificationForAddedParticipant(userId: Id[User], thread: MessageThread): Future[JsValue] = {
-    db.readOnlyMaster { implicit session => messageRepo.getLatest(thread.id.get) }.foreach { message =>
+    db.readOnlyMaster { implicit session => messageRepo.getLatest(thread.keepId) }.foreach { message =>
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted = false)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
     }
@@ -427,14 +427,14 @@ class NotificationDeliveryCommander @Inject() (
 
   // todo(Léo): Why send unread counts computed before marking stuff as read?
   def setAllNotificationsReadBefore(user: Id[User], messageId: Id[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime = {
-    val (message, thread) = db.readWrite(attempts = 2) { implicit session =>
+    val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
       notificationRepo.setAllReadBefore(Recipient(user), message.createdAt)
-      (message, threadRepo.get(message.thread))
+      message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-    val notification = MessageThreadPushNotification(thread.pubKeepId, unreadMessages + unreadNotifications, None, None)
+    val notification = MessageThreadPushNotification(message.pubKeepId, unreadMessages + unreadNotifications, None, None)
     sendPushNotification(user, notification)
     message.createdAt
   }
@@ -519,9 +519,9 @@ class NotificationDeliveryCommander @Inject() (
         val messageThread = threadRepo.get(threadId)
 
         val messagesSinceLastSeen = userThread.lastSeen map { seenAt =>
-          messageRepo.getAfter(threadId, seenAt)
+          messageRepo.getAfter(messageThread.keepId, seenAt)
         } getOrElse {
-          messageRepo.get(threadId, 0)
+          messageRepo.get(messageThread.keepId, 0)
         }
 
         UserThread.toUserThreadView(userThread, messagesSinceLastSeen, messageThread)

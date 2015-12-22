@@ -68,7 +68,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
     val sender = MessageSender.User(senderUserId)
     val createdAt = nextTime
     inject[MessageRepo].save(ElizaMessage(keepId = thread.keepId, messageText = text,
-      thread = thread.id.get, from = sender, source = None, sentOnUrl = None, sentOnUriId = None,
+      from = sender, source = None, sentOnUrl = None, sentOnUriId = None,
       createdAt = createdAt, updatedAt = createdAt))
   }
 

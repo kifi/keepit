@@ -18,28 +18,28 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage] {
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
-  def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
-  def get(thread: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage]
-  def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[ElizaMessage]
+  def refreshCache(keepId: Id[Keep])(implicit session: RSession): Unit
+  def get(keepId: Id[Keep], from: Int)(implicit session: RSession): Seq[ElizaMessage]
+  def getAfter(keepId: Id[Keep], after: DateTime)(implicit session: RSession): Seq[ElizaMessage]
   def getFromIdToId(fromId: Id[ElizaMessage], toId: Id[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
-  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
-  def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage]
+  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
+  def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
+  def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage]
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
 
   // PSA: please just use this method going forward, it has the cleanest API
-  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
-  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
+  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
+  def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
 class MessageRepoImpl @Inject() (
   val clock: Clock,
   val db: DataBaseComponent,
-  val messagesForThreadIdCache: MessagesForThreadIdCache)
+  val messagesByKeepIdCache: MessagesByKeepIdCache)
     extends DbRepo[ElizaMessage] with MessageRepo with SeqNumberDbFunction[ElizaMessage] with Logging with MessagingTypeMappers {
   import DBSession._
   import db.Driver.simple._
@@ -48,7 +48,6 @@ class MessageRepoImpl @Inject() (
   class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with SeqNumberColumn[ElizaMessage] {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
-    def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
     def source = column[Option[MessageSource]]("source", O.Nullable)
     def auxData = column[Option[JsArray]]("aux_data", O.Nullable)
@@ -58,7 +57,7 @@ class MessageRepoImpl @Inject() (
 
     def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
 
-    def * = (id.?, createdAt, updatedAt, state, seq, keepId, from, thread, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, seq, keepId, from, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
@@ -68,14 +67,10 @@ class MessageRepoImpl @Inject() (
     super.save(message.copy(seq = deferredSeqNum()))
   }
 
-  override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = {
-    val key = MessagesForThreadIdKey(message.thread)
-    messagesForThreadIdCache.remove(key)
-  }
+  override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = deleteCache(message)
 
-  override def deleteCache(model: ElizaMessage)(implicit session: RSession): Unit = {
-    val key = MessagesForThreadIdKey(model.thread)
-    messagesForThreadIdCache.remove(key)
+  override def deleteCache(message: ElizaMessage)(implicit session: RSession): Unit = {
+    messagesByKeepIdCache.remove(MessagesKeepIdKey(message.keepId))
   }
 
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
@@ -83,35 +78,33 @@ class MessageRepoImpl @Inject() (
     invalidateCache(message)
   }
 
-  def refreshCache(threadId: Id[MessageThread])(implicit session: RSession): Unit = {
-    val key = MessagesForThreadIdKey(threadId)
-    val messages = activeRows.filter(row => row.thread === threadId).sortBy(row => row.createdAt desc).list
+  def refreshCache(keepId: Id[Keep])(implicit session: RSession): Unit = {
+    val messages = activeRows.filter(row => row.keepId === keepId).sortBy(row => row.createdAt desc).list
     try {
-      messagesForThreadIdCache.set(key, new MessagesForThread(threadId, messages))
+      messagesByKeepIdCache.set(MessagesKeepIdKey(keepId), messages)
     } catch {
       case c: CacheSizeLimitExceededException => // already reported in FortyTwoCache
     }
   }
 
-  def get(threadId: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage] = { //Note: Cache does not honor pagination!! -Stephen
-    val key = MessagesForThreadIdKey(threadId)
-    messagesForThreadIdCache.get(key) match {
-      case Some(v) => v.messages
+  def get(keepId: Id[Keep], from: Int)(implicit session: RSession): Seq[ElizaMessage] = { //Note: Cache does not honor pagination!! -Stephen
+    val key = MessagesKeepIdKey(keepId)
+    messagesByKeepIdCache.get(key) match {
+      case Some(messages) => messages
       case None =>
-        val query = activeRows.filter(row => row.thread === threadId).drop(from)
-        val got = query.sortBy(row => row.createdAt desc).list
-        val mft = MessagesForThread(threadId, got)
+        val query = activeRows.filter(row => row.keepId === keepId).drop(from)
+        val messages = query.sortBy(row => row.createdAt desc).list
         try {
-          messagesForThreadIdCache.set(key, mft)
+          messagesByKeepIdCache.set(key, messages)
         } catch {
           case c: CacheSizeLimitExceededException => // already reported in FortyTwoCache
         }
-        got
+        messages
     }
   }
 
-  def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[ElizaMessage] = {
-    activeRows.filter(row => row.thread === threadId && row.createdAt > after).sortBy(row => row.createdAt desc).list
+  def getAfter(keepId: Id[Keep], after: DateTime)(implicit session: RSession): Seq[ElizaMessage] = {
+    activeRows.filter(row => row.keepId === keepId && row.createdAt > after).sortBy(row => row.createdAt desc).list
   }
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
@@ -131,25 +124,25 @@ class MessageRepoImpl @Inject() (
     activeRows.map(_.id).max.run.getOrElse(Id(0))
   }
 
-  def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
+  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
     afterOpt.map { after =>
-      StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
+      StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where keep_id = $keepId").first
     } getOrElse {
-      val n = activeRows.filter(row => row.thread === threadId).length.run
+      val n = activeRows.filter(row => row.keepId === keepId).length.run
       (n, n)
     }
   }
 
-  def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int] = {
-    activeRows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
+  def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
+    activeRows.filter(row => row.keepId.inSet(keepIds) && row.fromHuman).groupBy(_.keepId).map { case (keepId, messages) => (keepId, messages.length) }.list.toMap
   }
 
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage] = {
-    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
+  def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage] = {
+    activeRows.filter(row => row.keepId === keepId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
-  private def getByThreadHelper(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection)(implicit session: RSession) = {
-    val threadMessages = activeRows.filter(row => row.thread === threadId)
+  private def getByThreadHelper(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection)(implicit session: RSession) = {
+    val threadMessages = activeRows.filter(row => row.keepId === keepId)
     fromId match {
       case None => threadMessages
       case Some(fid) =>
@@ -161,11 +154,11 @@ class MessageRepoImpl @Inject() (
         }
     }
   }
-  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int = {
-    getByThreadHelper(threadId, fromId, dir).length.run
+  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int = {
+    getByThreadHelper(keepId, fromId, dir).length.run
   }
-  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
-    val threads = getByThreadHelper(threadId, fromId, dir)
+  def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    val threads = getByThreadHelper(keepId, fromId, dir)
     val sortedThreads = dir match {
       case SortDirection.ASCENDING => threads.sortBy(r => (r.createdAt asc, r.id asc))
       case SortDirection.DESCENDING => threads.sortBy(r => (r.createdAt desc, r.id desc))

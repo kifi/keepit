@@ -79,9 +79,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
     val elizaMsgs = db.readOnlyReplica { implicit s =>
-      messageThreadRepo.getByKeepId(keepId).map { thread =>
-        messageRepo.getByThread(thread.id.get, fromId = fromIdOpt, limit = limit)
-      }.getOrElse(Seq.empty)
+      messageRepo.getByKeep(keepId, fromId = fromIdOpt, limit = limit)
     }
     externalizeMessages(elizaMsgs).map { extMessageMap =>
       elizaMsgs.flatMap(em => extMessageMap.get(em.id.get))
@@ -91,22 +89,21 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion] = getDiscussionsForKeeps(Set(keepId)).imap(dm => dm(keepId))
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
     val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
-    val threadIds = threadsByKeep.values.map(_.id.get).toSet
-    val countsByThread = messageRepo.getAllMessageCounts(threadIds)
-    val recentsByThread = threadIds.map { threadId =>
-      threadId -> messageRepo.getByThread(threadId, fromId = None, limit = MESSAGES_TO_INCLUDE)
+    val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
+    val recentsByKeep = keepIds.map { keepId =>
+      keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = MESSAGES_TO_INCLUDE)
     }.toMap
 
-    val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)
+    val extMessageMapFut = externalizeMessages(recentsByKeep.values.toSeq.flatten)
 
     extMessageMapFut.map { extMessageMap =>
       threadsByKeep.map {
         case (kid, thread) =>
           kid -> Discussion(
             startedAt = thread.createdAt,
-            numMessages = countsByThread.getOrElse(thread.id.get, 0),
+            numMessages = countsByKeep.getOrElse(kid, 0),
             locator = thread.deepLocator,
-            messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
+            messages = recentsByKeep(kid).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
     }
@@ -190,7 +187,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       mt <- messageThreadRepo.getByKeepId(keepId)
       ut <- userThreadRepo.getUserThread(userId, mt.id.get)
     } yield {
-      messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
+      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
         // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
         // Then you can just set it and forget it
         if (unreadCount == 0) userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))

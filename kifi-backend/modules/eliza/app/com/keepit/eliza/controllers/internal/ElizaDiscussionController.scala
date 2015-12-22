@@ -95,7 +95,6 @@ class ElizaDiscussionController @Inject() (
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = Action { request =>
     val messages = db.readOnlyMaster { implicit session =>
       val elizaMessages = messageRepo.getBySequenceNumber(ElizaMessage.fromCommonSeq(seqNum), fetchSize)
-      val threadsById = threadRepo.getByIds(elizaMessages.map(_.thread).toSet)
       elizaMessages.map(ElizaMessage.toCrossServiceMessage)
     }
     Ok(Json.toJson(messages))
