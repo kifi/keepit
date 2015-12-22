@@ -696,21 +696,16 @@ class KeepCommanderImpl @Inject() (
       ktuCommander.syncKeep(newKeep)
     } else {
       val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-      val userIds = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
       val similarKeeps = getKeepsByUriAndLibraries(newUri.id.get, libIds)
 
       val mergeableKeeps = similarKeeps.filter(keep.hasStrictlyLessValuableMetadataThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
-        val soonToBeDeadKeep = keepRepo.save(keep.withUriId(newUri.id.get))
-        ktlCommander.syncKeep(soonToBeDeadKeep)
-        ktuCommander.syncKeep(soonToBeDeadKeep)
-
         mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(soonToBeDeadKeep, k) // todo: Handle notes! You can't just combine tags!
+          collectionCommander.copyKeepTags(keep, k) // todo: Handle notes! You can't just combine tags!
         }
-        collectionCommander.deactivateKeepTags(soonToBeDeadKeep)
-        deactivateKeep(soonToBeDeadKeep)
+        collectionCommander.deactivateKeepTags(keep)
+        deactivateKeep(keep)
       } else {
         val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
@@ -718,7 +713,6 @@ class KeepCommanderImpl @Inject() (
           collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
           deactivateKeep(k)
         }
-
         val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)

@@ -56,7 +56,6 @@ class KeepToLibraryCommanderImpl @Inject() (
         val newKtlTemplate = KeepToLibrary(
           keepId = keep.id.get,
           libraryId = library.id.get,
-
           addedBy = addedBy,
           addedAt = clock.now,
           uriId = keep.uriId,
