@@ -35,7 +35,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 
   // For backwards compatibility with KeepRepo
-  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
+  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary]
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary]
@@ -69,7 +69,26 @@ class KeepToLibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId) <> ((KeepToLibrary.applyFromDbRow _).tupled, KeepToLibrary.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId) <> ((fromDbRow _).tupled, toDbRow)
+  }
+
+  def fromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
+    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
+    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
+    KeepToLibrary(
+      id, createdAt, updatedAt, state,
+      keepId, libraryId, addedAt, addedBy,
+      uriId, libraryVisibility, libraryOrganizationId)
+  }
+
+  def toDbRow(ktl: KeepToLibrary) = {
+    Some(
+      (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
+        ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
+        ktl.uriId, if (ktl.isActive) Some(true) else None,
+        ktl.visibility, ktl.organizationId)
+    )
   }
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
@@ -183,9 +202,9 @@ class KeepToLibraryRepoImpl @Inject() (
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary] = {
     (for (ktl <- rows if ktl.uriId.inSet(uriIds) && ktl.libraryId.inSet(libraryIds) && ktl.state === KeepToLibraryStates.ACTIVE) yield ktl).list
   }
-  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary] = {
+  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary] = {
     // TODO(ryan): this method needs to be deprecated, it doesn't make sense anymore (now we can have the same URI in a lib multiple times)
-    (for (ktl <- rows if ktl.uriId === uriId && ktl.libraryId === libId && ktl.isPrimary === true) yield ktl).firstOption
+    activeRows.filter(ktl => ktl.uriId === uriId && ktl.libraryId === libId).firstOption
   }
 
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary] = {
@@ -229,7 +248,7 @@ class KeepToLibraryRepoImpl @Inject() (
       Map.empty
     } else {
       val idset = libIds.map { _.id }.mkString("(", ",", ")")
-      val q = sql"""select ktl.library_id, max(bm.seq) 
+      val q = sql"""select ktl.library_id, max(bm.seq)
                     from keep_to_library ktl, bookmark bm
                     where bm.id = ktl.keep_id and ktl.library_id in #${idset}
                     group by ktl.library_id"""
@@ -260,5 +279,4 @@ class KeepToLibraryRepoImpl @Inject() (
       organization = counts(LibraryVisibility.ORGANIZATION),
       discoverable = counts(LibraryVisibility.DISCOVERABLE))
   }
-
 }

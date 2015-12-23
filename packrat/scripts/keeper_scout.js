@@ -121,7 +121,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
           if (!('me' in k)) {  // not yet initialized
             whenMeKnown.push(onKeyDown.bind(this, e));
           } else if (!k.me) {
-            toggleLoginDialog();
+            openLoginWindow();
           } else if (k.keepBox && k.keepBox.showing()) {
             k.keepBox.keep(e.altKey, e.guided);
           } else {
@@ -172,12 +172,8 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     return 'animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd';
   }
 
-  function toggleLoginDialog() {
-    api.require('scripts/iframe_dialog.js', function() {
-      api.port.emit('auth_info', function (info) {
-        iframeDialog.toggle('login', info.origin, info.data);
-      });
-    });
+  function openLoginWindow() {
+    api.port.emit('open_tab', {path: '/login'});
   }
 
   function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
@@ -186,7 +182,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
       args.unshift(null);
       whenMeKnown.push(loadAndDo.bind(null, args));
     } else if (!k.me) {
-      toggleLoginDialog();
+      openLoginWindow();
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
       api.require('scripts/' + name + '.js', function() {

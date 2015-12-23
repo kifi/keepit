@@ -15,7 +15,6 @@ case class KeepToLibrary(
   addedBy: Id[User],
   // A bunch of denormalized fields from Keep
   uriId: Id[NormalizedURI],
-  isPrimary: Boolean = true,
   // and from Library
   visibility: LibraryVisibility,
   organizationId: Option[Id[Organization]])
@@ -29,37 +28,12 @@ case class KeepToLibrary(
   def withAddedAt(time: DateTime): KeepToLibrary = this.copy(addedAt = time)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
-  def withPrimary(isPrimary: Boolean): KeepToLibrary = this.copy(isPrimary = isPrimary)
-  def nonPrimary: KeepToLibrary = this.withPrimary(false)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
 
-  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE).nonPrimary
-}
-
-object KeepToLibrary {
-  // is_primary: trueOrNull in db
-  def applyFromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
-    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
-    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
-    KeepToLibrary(
-      id, createdAt, updatedAt, state,
-      keepId, libraryId, addedAt, addedBy,
-      uriId, isPrimary.getOrElse(false),
-      libraryVisibility, libraryOrganizationId)
-  }
-
-  def trueOrNull(b: Boolean): Option[Boolean] = if (b) Some(true) else None
-  def unapplyToDbRow(ktl: KeepToLibrary) = {
-    Some(
-      (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
-        ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
-        ktl.uriId, trueOrNull(ktl.isPrimary),
-        ktl.visibility, ktl.organizationId)
-    )
-  }
+  def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE)
 }
 
 object KeepToLibraryStates extends States[KeepToLibrary]
+

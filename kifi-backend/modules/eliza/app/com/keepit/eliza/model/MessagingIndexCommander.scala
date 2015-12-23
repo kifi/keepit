@@ -69,7 +69,7 @@ class MessagingIndexCommander @Inject() (
         participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
         url = thread.url,
-        threadExternalId = thread.pubKeepId.id,
+        keepId = thread.pubKeepId,
         pageTitleOpt = thread.pageTitle,
         digest = digest,
         content = content,

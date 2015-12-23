@@ -30,7 +30,7 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
   }
   def createKeepsAtUri(uri: NormalizedURI, lib: Library, n: Int = 1)(implicit session: RWSession, injector: Injector) = {
     val mainKeep = KeepFactory.keep().withURIId(uri.id.get).withLibrary(lib).saved
-    val nonprimaryKeeps = KeepFactory.keeps(n - 1).map(_.withURIId(uri.id.get).withLibrary(lib).nonPrimary()).saved
+    val nonprimaryKeeps = KeepFactory.keeps(n - 1).map(_.withURIId(uri.id.get).withLibrary(lib)).saved
     mainKeep +: nonprimaryKeeps
   }
 
@@ -152,8 +152,8 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             uris.foreach { uri => createKeepsAtUri(uri, lib, n = 5 + Random.nextInt(5)) }
 
             for (uri <- uris) {
-              val expected = inject[KeepRepo].getPrimaryByUriAndLibrary(uri.id.get, lib.id.get)
-              val actual = inject[KeepToLibraryRepo].getPrimaryByUriAndLibrary(uri.id.get, lib.id.get)
+              val expected = inject[KeepRepo].getByUriAndLibrary(uri.id.get, lib.id.get)
+              val actual = inject[KeepToLibraryRepo].getByUriAndLibrary(uri.id.get, lib.id.get)
               expected.map(_.id.get) === actual.map(_.keepId)
             }
           }

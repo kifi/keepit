@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.google.inject.Singleton
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
@@ -66,7 +67,7 @@ trait SearchServiceClient extends ServiceClient {
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
   def indexerVersions(): Future[Map[String, Int]]
 
-  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
+  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[PublicId[Keep]]]
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
@@ -272,9 +273,9 @@ class SearchServiceClientImpl(
   }
 
   //the return values here are external id's of threads, a model that is not available here. Need to rethink this a bit. -Stephen
-  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]] = {
+  def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[PublicId[Keep]]] = {
     call(Search.internal.searchMessages(userId, query, page)).map { r =>
-      Json.fromJson[Seq[String]](r.json).get
+      Json.fromJson[Seq[PublicId[Keep]]](r.json).get
     }
   }
 

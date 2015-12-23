@@ -28,6 +28,7 @@ trait KeepToUserCommander {
   def isKeepInUser(keepId: Id[Keep], userId: Id[User])(implicit session: RSession): Boolean
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
   def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser
+  def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -78,5 +79,11 @@ class KeepToUserCommanderImpl @Inject() (
   def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser = {
     require(ktu.keepId == keep.id.get, "keep.id does not match ktu.keepId")
     ktuRepo.save(ktu.withUriId(keep.uriId))
+  }
+
+  def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    ktuRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktu =>
+      ktuRepo.deactivate(ktu.withUriId(keep.uriId))
+    }
   }
 }

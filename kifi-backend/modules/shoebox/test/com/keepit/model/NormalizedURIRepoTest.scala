@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 
 import org.joda.time.DateTime
 
@@ -26,15 +27,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
-      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-      //keepRepo.save(KeepFactory(url2.url, uri = uri2, userId = user1.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-
-      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri1.id.get, url = url1.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-      //keepRepo.save(KeepFactory(url1.url, uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-
-      keepRepo.save(Keep(title = Some("my title is long"), userId = user2.id.get, uriId = uri2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-      //keepRepo.save(KeepFactory(url2.url, uri = uri2, userId = user2.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-
+      KeepFactory.keep().withTitle("my title is short").withUser(user1).withUri(uri1).withLibrary(lib1).saved
+      KeepFactory.keep().withTitle("my title is short").withUser(user1).withUri(uri2).withLibrary(lib1).saved
+      KeepFactory.keep().withTitle("my title is long").withUser(user2).withUri(uri2).withLibrary(lib1).saved
     }
   }
 

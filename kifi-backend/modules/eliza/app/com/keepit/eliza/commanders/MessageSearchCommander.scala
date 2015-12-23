@@ -28,7 +28,7 @@ class MessageSearchCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def searchMessages(userId: Id[User], query: String, page: Int, storeInHistory: Boolean): Future[Seq[NotificationJson]] = {
-    val resultExtIdsFut = search.searchMessages(userId, query, page)
+    val futureKeepIds = search.searchMessages(userId, query, page)
     //async update search history for the user
     if (storeInHistory) {
       SafeFuture("message search history update") {
@@ -40,8 +40,8 @@ class MessageSearchCommander @Inject() (
         }
       }
     }
-    resultExtIdsFut.flatMap { protoExtIds =>
-      val keepIds = protoExtIds.flatMap(Keep.decodePublicIdStr(_).toOption).toSet[Id[Keep]]
+    futureKeepIds.flatMap { pubKeepIds =>
+      val keepIds = pubKeepIds.flatMap(Keep.decodePublicId(_).toOption).toSet[Id[Keep]]
       notificationDeliveryCommander.getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(keepIds), limit = keepIds.size), includeUriSummary = false)
     }
   }
