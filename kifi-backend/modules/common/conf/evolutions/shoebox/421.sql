@@ -25,6 +25,6 @@ ALTER TABLE non_user_thread ADD COLUMN keep_id bigint(20) NOT NULL AFTER email_a
 ALTER TABLE non_user_thread ADD CONSTRAINT non_user_thread_f_message_thread FOREIGN KEY (keep_id) REFERENCES message_thread(keep_id);
 ALTER TABLE non_user_thread DROP COLUMN IF EXISTS thread_id;
 
-INSERT INTO evolutions (name, description) VALUES ('420.sql', 'switch {message, user_thread, non_user_thread} from thread_id to keep_id, drop {message, thread}.external_id');
+INSERT INTO evolutions (name, description) VALUES ('421.sql', 'switch {message, user_thread, non_user_thread} from thread_id to keep_id, drop {message, thread}.external_id');
 
 # --- !Downs
