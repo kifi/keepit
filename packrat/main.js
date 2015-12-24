@@ -981,10 +981,7 @@ api.port.on({
     if (data.to) {
       respond(drafts[tab.nUri] || drafts[tab.url]);
     } else {
-      var threadId = currentThreadId(tab);
-      if (threadId) {
-        respond(drafts[threadId]);
-      }
+      respond(drafts[currentThreadId(tab)]);
     }
   },
   save_draft: function (data, _, tab) {
@@ -1323,13 +1320,7 @@ api.port.on({
     });
   },
   open_tab: function (data) {
-    var url = webBaseUri() + data.path;
-    var existingTab = api.tabs.anyAt(url);
-    if (existingTab && existingTab.id) {
-      api.tabs.select(existingTab.id);
-    } else {
-      api.tabs.open(url, function () {});
-    }
+    api.tabs.open(webBaseUri() + data.path);
     if (data.source === 'keeper') {
       tracker.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
     }
@@ -1833,7 +1824,7 @@ function forEachTabAtThreadList(f) {
   }
 }
 
-var threadLocatorRe = /^\/messages\/[A-Za-z0-9-]+$/;
+var threadLocatorRe = /^\/messages\/[a-z0-9-]+$/;
 function forEachThreadOpenInPane(f) {
   for (var loc in tabsByLocator) {
     if (threadLocatorRe.test(loc)) {
@@ -2395,7 +2386,6 @@ function storeDrafts(drafts) {
 
 function saveDraft(key, draft) {
   log('[saveDraft]', key);
-  if (!key) return;
   var now = draft.saved = Date.now();
   var drafts = loadDrafts();
   for (var k in drafts) {

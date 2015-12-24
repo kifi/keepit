@@ -47,24 +47,7 @@ class KeepToUserRepoImpl @Inject() (
     def addedBy = column[Id[User]]("added_by", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, userId, addedAt, addedBy, uriId) <> ((fromDbRow _).tupled, toDbRow)
-  }
-
-  def fromDbRow(id: Option[Id[KeepToUser]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToUser],
-    keepId: Id[Keep], userId: Id[User], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI]): KeepToUser = {
-    KeepToUser(
-      id, createdAt, updatedAt, state,
-      keepId, userId, addedAt, addedBy,
-      uriId)
-  }
-
-  def toDbRow(ktu: KeepToUser) = {
-    Some(
-      (ktu.id, ktu.createdAt, ktu.updatedAt, ktu.state,
-        ktu.keepId, ktu.userId, ktu.addedAt, ktu.addedBy,
-        ktu.uriId)
-    )
+    def * = (id.?, createdAt, updatedAt, state, keepId, userId, addedAt, addedBy, uriId) <> ((KeepToUser.applyFromDbRow _).tupled, KeepToUser.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepToUserTable(tag)

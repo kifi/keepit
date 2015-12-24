@@ -10,7 +10,6 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.core._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactory
 
 class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
@@ -76,10 +75,14 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         val bms = db.readWrite { implicit session =>
-          val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved
-          val bm1 = KeepFactory.keep().withTitle("bing").withUser(user).withUri(uris(1)).withLibrary(lib1).saved
-          val bm2 = KeepFactory.keep().withTitle("yahoo").withUser(user).withUri(uris(2)).withLibrary(lib1).saved
-          val bm3 = KeepFactory.keep().withTitle("ask").withUser(user).withUri(uris(3)).withLibrary(lib1).saved
+          val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url,
+            uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url,
+            uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm2 = keepRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url,
+            uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm3 = keepRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url,
+            uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           Seq(bm0, bm1, bm2, bm3)
         }
@@ -161,8 +164,11 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
         var bms = doAssign {
           db.readWrite { implicit session =>
-            val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved
-            val bm1 = KeepFactory.keep().withTitle("bing").withUser(user).withUri(uris(1)).withLibrary(lib1).saved
+            val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url,
+              uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url,
+              uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+
             Seq(bm0, bm1)
           }
         }
@@ -192,7 +198,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
             uriRepo.assignSequenceNumbers(1000)
 
-            Seq(KeepFactory.keep().withTitle("Yahoo").withUri(uris(2)).withUser(user).withLibrary(lib1).saved)
+            Seq(keepRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url,
+              uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get))))
           }
         }
         doAssign { cleaner.clean(readOnly = false) }
@@ -206,7 +213,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
         bms ++= doAssign {
           db.readWrite { implicit session =>
-            Seq(KeepFactory.keep().withTitle("AltaVista").withUser(user).withUri(uris(3)).withLibrary(lib1).saved)
+            Seq(keepRepo.save(Keep(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url,
+              uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get))))
           }
         }
         db.readOnlyMaster { implicit s =>
@@ -242,8 +250,10 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
             uriRepo.save(uris(0).withContentRequest(true))
             uriRepo.save(uris(1).withContentRequest(true))
             Seq(
-              KeepFactory.keep().withTitle("google").withUser(other).withUri(uris(0)).withLibrary(lib1).saved,
-              KeepFactory.keep().withTitle("bing").withUser(other).withUri(uris(1)).withLibrary(lib1).saved
+              keepRepo.save(Keep(title = Some("google"), userId = other.id.get, url = urls(0).url,
+                uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get))),
+              keepRepo.save(Keep(title = Some("bing"), userId = other.id.get, url = urls(1).url,
+                uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
             )
           }
         }
@@ -337,12 +347,15 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         val bms = db.readWrite { implicit session =>
-          Seq(
-            KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved,
-            KeepFactory.keep().withTitle("bing").withUser(user).withUri(uris(1)).withLibrary(lib1).saved,
-            KeepFactory.keep().withTitle("yahoo").withUser(user).withUri(uris(2)).withLibrary(lib1).saved,
-            KeepFactory.keep().withTitle("ask").withUser(user).withUri(uris(3)).withLibrary(lib1).saved
-          )
+          val bm0 = keepRepo.save(Keep(title = Some("google"), userId = user.id.get, url = urls(0).url,
+            uriId = uris(0).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm1 = keepRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = urls(1).url,
+            uriId = uris(1).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm2 = keepRepo.save(Keep(title = Some("yahoo"), userId = user.id.get, url = urls(2).url,
+            uriId = uris(2).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          val bm3 = keepRepo.save(Keep(title = Some("ask"), userId = user.id.get, url = urls(3).url,
+            uriId = uris(3).id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+          Seq(bm0, bm1, bm2, bm3)
         }
 
         // initial state

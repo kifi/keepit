@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
-import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -20,7 +19,6 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import scala.concurrent.duration._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -129,17 +127,12 @@ class KeepDecoratorImpl @Inject() (
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
           Map.empty[Id[Keep], Discussion]
       }
-      val discussionsWithStrictTimeout = TimeoutFuture(discussionsByKeepFut)(executionContext, 2.seconds).recover {
-        case _ =>
-          log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
-          Map.empty[Id[Keep], Discussion]
-      }
 
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
-        discussionsByKeep <- discussionsWithStrictTimeout
+        discussionsByKeep <- discussionsByKeepFut
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {

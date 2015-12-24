@@ -19,6 +19,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
+  def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
 
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], librariesHash: LibrariesHash)(implicit session: RSession): Set[Keep]
@@ -41,6 +42,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
+  def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
@@ -50,6 +52,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
   // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
+  // These ones already exist there:
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountByLibrariesSince(libraryIds: Set[Id[Library]], since: DateTime)(implicit session: RSession): Int
@@ -58,7 +61,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
-  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
@@ -88,7 +91,6 @@ class KeepRepoImpl @Inject() (
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
-    def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -101,18 +103,13 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
-    def connections = column[Option[KeepConnections]]("connections", O.Nullable)
-
-    // Used only within the DB to make queries on `connections` more efficient
     def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
+    def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
 
-    def * = (
-      id.?, createdAt, updatedAt, externalId,
-      title, uriId, isPrimary, url, userId,
-      state, source, seq, libraryId, visibility,
-      keptAt, note, originalKeeperId, organizationId,
-      connections, librariesHash, participantsHash, messageSeq).shaped <> ((Keep.fromDbRow _).tupled, Keep.toDbRow)
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
+      (userId, state, source, seq, libraryId, visibility, keptAt,
+        note, originalKeeperId, organizationId, librariesHash, participantsHash, messageSeq)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
@@ -126,12 +123,11 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
-  implicit val getConnectionsResult = getResultOptionFromMapper[KeepConnections]
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep.fromDbRow(
+    Keep._applyFromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
@@ -150,9 +146,8 @@ class KeepRepoImpl @Inject() (
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
-      connections = r.<<[Option[KeepConnections]],
-      lh = r.<<[LibrariesHash],
-      ph = r.<<[ParticipantsHash],
+      librariesHash = r.<<[LibrariesHash],
+      participantsHash = r.<<[ParticipantsHash],
       messageSeq = r.<<[Option[SequenceNumber[Message]]]
     )
   }
@@ -251,7 +246,7 @@ class KeepRepoImpl @Inject() (
   // preserved for backward compatibility
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
-      val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.state === KeepStates.ACTIVE) yield b).list
+      val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
       if (keeps.length > 1) log.warn(s"[getByUriAndUser] ${keeps.length} keeps found for (uri, user) pair ${(uriId, userId)}")
       keeps.headOption
     }
@@ -272,8 +267,19 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && !b.state.inSet(excludeSet)) yield b).list
   }
 
-  def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.state =!= excludeState.orNull) yield b).firstOption
+  def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
+    getByExtId(extId) flatMap { keep =>
+      if (keep.userId != userId) {
+        log.info("[KTL] unexpected keep owner: $")
+        None
+      } else {
+        Some(keep)
+      }
+    }
+  }
+
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
@@ -430,6 +436,12 @@ class KeepRepoImpl @Inject() (
 
   def getBookmarksChanged(num: SequenceNumber[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = super.getBySequenceNumber(num, limit)
 
+  def delete(id: Id[Keep])(implicit sesion: RWSession): Unit = {
+    val q = (for (b <- rows if b.id === id) yield b)
+    q.firstOption.map { bm => deleteCache(bm) }
+    q.delete
+  }
+
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
   }
@@ -490,7 +502,14 @@ class KeepRepoImpl @Inject() (
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
     // TODO(ryan): deprecate ASAP
-    getByExtId(extId, excludeSet).filter { keep => keep.libraryId.contains(libraryId) }
+    getByExtId(extId, excludeSet).flatMap { keep =>
+      if (!keep.libraryId.contains(libraryId)) {
+        log.info(s"[KTL] unexpected keep location: $keep not in library $libraryId")
+        None
+      } else {
+        Some(keep)
+      }
+    }
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {

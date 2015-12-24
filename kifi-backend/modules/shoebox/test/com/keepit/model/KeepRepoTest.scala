@@ -19,20 +19,24 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           val savedKeep = keepRepo.save(Keep(
             uriId = Id[NormalizedURI](1),
+            isPrimary = true,
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
             userId = Id[User](3),
             source = KeepSource.keeper,
             libraryId = Some(Id[Library](4)),
-            connections = KeepConnections(Set(Id(4)), Set(Id(3)))
+            librariesHash = LibrariesHash(5),
+            participantsHash = ParticipantsHash(6)
           ))
-          val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
           val cacheKeep = keepRepo.get(savedKeep.id.get)
+          val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
+          cacheKeep === dbKeep
 
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
-          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connections)
+          // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
+          // -- Ryan
+          def f(k: Keep) = (k.id.get, k.uriId, k.isPrimary, k.url, k.visibility, k.userId, k.source, k.libraryId, k.librariesHash, k.participantsHash)
           f(dbKeep) === f(savedKeep)
-          f(dbKeep) === f(cacheKeep)
         }
         1 === 1
       }

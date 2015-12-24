@@ -311,8 +311,10 @@ class SlackCommanderImpl @Inject() (
               ()
           }
           case Some((invalidToken, invalidScopes)) =>
+            airbrake.notify(s"Missing search scope for token $invalidToken while fetching channelId for Slack channel $channelName via user $userId in team $teamId")
             Future.successful(())
           case None =>
+            airbrake.notify(s"Missing token while fetching channelId for channel $channelName via user $userId in team $teamId")
             Future.successful(())
         }
     }

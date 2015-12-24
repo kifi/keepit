@@ -10,7 +10,6 @@ import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectio
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 
 class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
 
@@ -36,8 +35,12 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
 
       val hover = KeepSource.keeper
 
-      val bookmark1 = KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(lib1).saved
-      val bookmark2 = KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(lib1).saved
+      val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1))
       val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Apparel"), createdAt = t1))

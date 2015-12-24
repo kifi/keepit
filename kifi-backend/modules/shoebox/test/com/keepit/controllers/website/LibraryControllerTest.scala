@@ -7,24 +7,25 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.json.TestHelper
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.{ Id, ExternalId }
+
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ FakeShoeboxStoreModule, ImagePath, ImageSize }
+import com.keepit.common.store.{ ImagePath, FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.OrganizationPermission.FORCE_EDIT_LIBRARIES
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -968,7 +969,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
           val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "Hsu").withUsername("test").saved
 
-          val library1 = LibraryFactory.library().withOwner(user1).withVisibility(LibraryVisibility.DISCOVERABLE).withMemberCount(1).saved
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1, keepCount = 2))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
@@ -977,8 +978,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val keep1 = KeepFactory.keep().withTitle("k1").withUser(user1).withUri(uri1).withLibrary(library1).saved
-          val keep2 = KeepFactory.keep().withTitle("k2").withUser(user1).withUri(uri2).withLibrary(library1).saved
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           (user1, library1, keep1, keep2)
         }
@@ -1005,7 +1010,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "path": "${keep2.path.relative}",
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
-                "createdAt": "${keep2.keptAt}",
+                "createdAt": "${keep2.createdAt}",
                 "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "visibility":"${keep2.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
@@ -1029,7 +1034,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "path": "${keep1.path.relative}",
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
-                "createdAt": "${keep1.keptAt}",
+                "createdAt": "${keep1.createdAt}",
                 "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "visibility":"${keep1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
@@ -1049,8 +1054,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             "numKeeps": 2
            }
            """.stripMargin)
-        val actual = contentAsJson(result1)
-        TestHelper.deepCompare(actual, expected1) must beNone
+        Json.parse(contentAsString(result1)) must equalTo(expected1)
       }
     }
 
@@ -1068,8 +1072,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val keep1 = KeepFactory.keep().withTitle("G1").withUser(userA).withUri(uri1).withLibrary(library1).saved
-          val keep2 = KeepFactory.keep().withTitle("A1").withUser(userA).withUri(uri2).withLibrary(library1).saved
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           val userB = UserFactory.user().withCreatedAt(t1).withName("Bulba", "Saur").withUsername("test").saved
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
