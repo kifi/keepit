@@ -10,8 +10,6 @@ import com.keepit.test._
 import com.google.inject.Injector
 import com.keepit.common.db.{ Id }
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.LibraryFactoryHelper._
 
 class KeepTest extends Specification with ShoeboxTestInjector {
 
@@ -34,14 +32,22 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      val libPublic = LibraryFactory.library().withOwner(user1).withVisibility(LibraryVisibility.PUBLISHED).saved
+      val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(libPublic).withKeptAt(t1 plusHours 3).withSource(KeepSource.keeper).saved
-      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(libPublic).withKeptAt(t1 plusHours 5).withSource(KeepSource.keeper).saved
-      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withKeptAt(t1 plusHours 7).withSource(KeepSource.keeper).saved
-      KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(libPublic).withKeptAt(t2 plusDays 1).withSource(KeepSource.bookmarkImport).saved
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url,
+        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
+        visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
+        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-      (user1, user2, uri1, uri2, uri3, url1, url2, libPublic)
+      (user1, user2, uri1, uri2, uri3, url1, url2, lib1)
     }
   }
 
@@ -132,12 +138,36 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "invalidate cache when delete" in {
+      withDb() { implicit injector =>
+        val (user1, user2, uri1, uri2, _, url1, _, _) = setup()
+        db.readWrite { implicit s =>
+          keepRepo.count === 4
+          val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
+          keepRepo.delete(bm.get.id.get)
+        }
+        db.readWrite { implicit s =>
+          keepRepo.all.size === 3
+          keepRepo.count === 3
+        }
+        db.readWrite { implicit s =>
+          val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+        }
+        db.readWrite { implicit s =>
+          keepRepo.count === 4
+        }
+      }
+    }
+
     "get by exclude state should work" in {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, url1, _, _, _) = setup()
         db.readWrite { implicit s =>
           val bm = keepRepo.getByUriAndUser(uri1.id.get, user1.id.get)
-          keepRepo.deactivate(bm.get)
+          keepRepo.save(bm.get.withActive(false))
         }
 
         db.readOnlyMaster { implicit s =>
@@ -160,11 +190,20 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          val libDiscoverable = LibraryFactory.library().withVisibility(LibraryVisibility.DISCOVERABLE).withOwner(user).saved
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          KeepFactory.keep().withUser(user).withLibrary(libDiscoverable).withUri(uri1).withKeptAt(t1 plusMinutes 3).saved
-          KeepFactory.keep().withUser(user).withLibrary(libDiscoverable).withUri(uri2).withKeptAt(t1 plusMinutes 9).saved
-          KeepFactory.keep().withUser(user).withUri(uri3).withKeptAt(t1 plusMinutes 6).saved
+          keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url,
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+
+          keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url,
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9), keptAt = t1.plusMinutes(9),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+
+          keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url,
+            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), keptAt = t1.plusMinutes(6),
+            visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
+
         }
 
         db.readOnlyMaster { implicit s =>

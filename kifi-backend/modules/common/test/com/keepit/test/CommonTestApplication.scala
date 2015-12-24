@@ -2,7 +2,6 @@ package com.keepit.test
 
 import java.io.File
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.inject.{ FakeFortyTwoModule }
 import com.google.inject.Module
 import com.google.inject.util.Modules

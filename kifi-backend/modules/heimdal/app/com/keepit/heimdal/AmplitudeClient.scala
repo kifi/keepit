@@ -1,7 +1,5 @@
 package com.keepit.heimdal
 
-import java.security.MessageDigest
-
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
@@ -253,8 +251,6 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
 
   val specificProperties = AmplitudeSpecificProperties(heimdalContext)
 
-  val md5Digest = MessageDigest.getInstance("MD5")
-
   val userIdOpt = event match {
     case userEvent: UserEvent => Some(userEvent.userId)
     case _ => None
@@ -286,7 +282,7 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
   def build(): JsObject = {
     getUserAndEventProperties() match {
       case (userProperties, eventProperties) =>
-        val json = Json.obj(
+        Json.obj(
           "user_id" -> getUserId(),
           "device_id" -> getDistinctId(),
           "event_type" -> eventType,
@@ -301,10 +297,6 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
           "language" -> specificProperties.language,
           "ip" -> getIpAddress()
         )
-
-        val insertId = md5Digest.digest(Json.stringify(json).getBytes()).map("%02x".format(_)).mkString
-
-        json + ("insert_id", JsString(insertId))
     }
   }
 

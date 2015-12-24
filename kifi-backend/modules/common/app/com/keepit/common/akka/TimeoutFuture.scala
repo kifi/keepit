@@ -8,7 +8,7 @@ import org.jboss.netty.util.Timeout
 import com.keepit.common.core._
 
 object TimeoutFuture {
-  private val timer = new HashedWheelTimer(10, TimeUnit.MILLISECONDS)
+  val timer = new HashedWheelTimer(10, TimeUnit.MILLISECONDS)
   def apply[T](future: Future[T], onTimeout: => Unit = Unit)(implicit ec: ExecutionContext, after: Duration): Future[T] = {
     val promise = Promise[T]()
     val timeout = timer.newTimeout(new TimerTask {

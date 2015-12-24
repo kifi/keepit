@@ -49,6 +49,7 @@ object KeepFactoryHelper {
           addedAt = finalKeep.keptAt,
           addedBy = finalKeep.userId,
           uriId = finalKeep.uriId,
+          isPrimary = finalKeep.isPrimary,
           visibility = library.visibility,
           organizationId = library.organizationId
         )

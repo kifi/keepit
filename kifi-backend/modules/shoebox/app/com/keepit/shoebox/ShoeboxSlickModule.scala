@@ -12,6 +12,14 @@ import akka.actor.ActorSystem
 case class ShoeboxDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
   // can't probe for existing (or not) db, must try and possibly fail.
+  override def slaveDatabase = Try(SlickDatabase.forDataSource(DB.getDataSource("shoeboxslave")(Play.current))) match {
+    case Success(db) =>
+      println("loaded slave db")
+      Some(db)
+    case Failure(e) =>
+      println(s"could not load slave db for: $e")
+      None
+  }
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 

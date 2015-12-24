@@ -3,7 +3,6 @@ package com.keepit.commanders
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
@@ -67,7 +66,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         val site2 = "http://www.amazon.com/"
         val site3 = "http://www.kifi.com/"
 
-        val (user, keeps) = db.readWrite { implicit s =>
+        val user = db.readWrite { implicit s =>
 
           val user1 = UserFactory.user().saved
 
@@ -81,21 +80,28 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          val keep1 = KeepFactory.keep().withTitle("k1").withUser(user1).withUri(uri1).withLibrary(lib1).saved
-          val keep2 = KeepFactory.keep().withTitle("k2").withUser(user1).withUri(uri2).withLibrary(lib1).saved
-          val deletedKeep = KeepFactory.keep().withTitle("k2").withUser(user1).withUri(uri3).withLibrary(lib1).saved
-          keepRepo.deactivate(deletedKeep)
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+
+          keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9), keptAt = t1.plusMinutes(9),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+
+          keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), keptAt = t1.plusMinutes(6),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), state = KeepStates.INACTIVE))
 
           val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("t1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
 
-          (user1, Seq(keep1, keep2, deletedKeep))
+          user1
         }
 
         val keepExports = db.readOnlyMaster { implicit s => keepRepo.getKeepExports(user.id.get) }
         keepExports.length === 2
-        keepExports(0) === KeepExport(title = keeps(1).title, createdAt = keeps(1).keptAt, url = keeps(1).url)
-        keepExports(1) === KeepExport(title = keeps(0).title, createdAt = keeps(0).keptAt, url = keeps(0).url, tags = Some("t1"))
+        keepExports(0) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
+        keepExports(1) === KeepExport(title = Some("k1"), createdAt = t1.plusMinutes(3), url = site1, tags = Some("t1"))
       }
     }
 

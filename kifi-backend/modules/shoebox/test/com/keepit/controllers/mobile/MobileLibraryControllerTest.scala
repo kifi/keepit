@@ -23,7 +23,6 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -893,7 +892,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def setupKeepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty, note: Option[String] = None)(implicit injector: Injector, session: RWSession): Keep = {
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
-    val keep = KeepFactory.keep().withTitle(title).withUser(user).withUri(uri).withLibrary(lib).withNote(note.getOrElse("")).saved
+    val keep = keepRepo.save(Keep(
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, url = uri.url, note = note,
+      source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))

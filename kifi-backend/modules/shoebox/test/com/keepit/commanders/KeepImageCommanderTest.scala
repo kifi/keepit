@@ -11,7 +11,6 @@ import com.keepit.common.net.{ FakeWebService, WebService }
 import com.keepit.common.store._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.{ FakeWebServiceModule, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils
@@ -57,8 +56,13 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
-      val keep1 = KeepFactory.keep().withUri(uri).withUser(user).withLibrary(lib).saved
-      val keep2 = KeepFactory.keep().withUri(uri).withUser(user).withLibrary(lib).saved
+      val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url,
+        uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
+
+      val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url,
+        uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
       (user, lib, uri, keep1, keep2)
     }
   }

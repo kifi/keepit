@@ -1,4 +1,5 @@
 // @require styles/insulate.css
+// @require styles/login_dialog.css
 // @require styles/view_email_dialog.css
 // @require scripts/lib/jquery.js
 // @require scripts/api_iframe.js
@@ -7,6 +8,14 @@
 var iframeDialog = function () {
   'use strict';
   var configs = {
+    login: {
+      height: 386,
+      width: 660,
+      templatePath: 'html/login_dialog',
+      styles: ['styles/iframes/login.css'],
+      scripts: ['scripts/iframes/login.js', 'scripts/html/iframes/login.js', 'scripts/iframes/lib/jquery.js'],
+      onMessage: onLoginMessage
+    },
     viewEmail: {
       height: 660,
       width: 660,

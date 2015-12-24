@@ -211,7 +211,7 @@ package object json {
             case (Some(aArr), Some(bArr)) if aArr.value.length != bArr.value.length =>
               Some(s"$path: lengths unequal")
             case (Some(aArr), Some(bArr)) =>
-              (aArr.value zip bArr.value).zipWithIndex.flatMap { case ((av, bv), i) => deepCompare(av, bv, s"$path[$i]") }.headOption
+              (aArr.value zip bArr.value).flatMap { case (av, bv) => deepCompare(av, bv, s"$path[i]") }.headOption
             case _ if a != b =>
               Some(s"$path: $a != $b")
             case _ => None

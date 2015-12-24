@@ -17,7 +17,6 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -69,11 +68,22 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(lib1).saved
-      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(lib1).saved
-      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withLibrary(lib1).saved
-      KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(lib1).saved
-      libraryRepo.get(lib1.id.get)
+      val hover = KeepSource.keeper
+
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
+        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url,
+        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50),
+        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusDays(1),
+        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
+
+      lib1
     }
   }
 

@@ -1,12 +1,11 @@
 package com.keepit.search.index.message
 
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.test.CommonTestInjector
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import com.keepit.common.db.{ Id, ExternalId, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.model.{ Keep, Username, User }
+import com.keepit.model.{ Username, User }
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, VolatileIndexDirectory }
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.eliza.FakeElizaServiceClientImpl
@@ -24,8 +23,6 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
 
   def setupIndexer()(implicit injector: Injector) = {
 
-    implicit val publicIdConfig = inject[PublicIdConfiguration]
-
     val user1 = BasicUser(ExternalId(), "Mr", "Spock", "0.jpg", Username("spockizle"))
     val user2 = BasicUser(ExternalId(), "James", "Kirk", "0.jpg", Username("lilkirk"))
     val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg", Username("picboyy"))
@@ -37,7 +34,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       participants = Seq(user1, user2).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://theenterprise.com",
-      keepId = Keep.publicId(Id(1)),
+      threadExternalId = ExternalId().id,
       pageTitleOpt = Some("cheese"),
       digest = "This is thread 1.",
       content = Seq(
@@ -55,7 +52,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       participants = Seq(user1, user2).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://thereliant.com",
-      keepId = Keep.publicId(Id(2)),
+      threadExternalId = ExternalId().id,
       pageTitleOpt = None,
       digest = "This is thread 2.",
       content = Seq(
@@ -72,7 +69,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       participants = Seq(user1, user3).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://amazon.com",
-      keepId = Keep.publicId(Id(3)),
+      threadExternalId = ExternalId().id,
       pageTitleOpt = None,
       digest = "This is thread 3.",
       content = Seq(
@@ -89,7 +86,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       participants = Seq(user1).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime.minusDays(30),
       url = "http://amazon.com",
-      keepId = Keep.publicId(Id(4)),
+      threadExternalId = ExternalId().id,
       pageTitleOpt = None,
       digest = "This is thread 4.",
       content = Seq(
@@ -105,7 +102,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       participants = Seq(user1).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime.minusDays(7),
       url = "http://amazon.com",
-      keepId = Keep.publicId(Id(5)),
+      threadExternalId = ExternalId().id,
       pageTitleOpt = None,
       digest = "This is thread 5.",
       content = Seq(
@@ -163,7 +160,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
   "MessageSearcher" should {
 
     "find and rank correctly" in {
-      withInjector(FakeCryptoModule()) { implicit injector =>
+      withInjector() { implicit injector =>
         val indexer = setupIndexer()
 
         val searcher = new MessageSearcher(indexer.getSearcher, SearchConfig.defaultConfig, inject[Clock])

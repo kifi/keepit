@@ -235,10 +235,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   private def internLibrary(userId: Id[User], isPrivate: Boolean): Library = {
-    val visibility = isPrivate match {
-      case true => LibraryVisibility.SECRET
-      case false => LibraryVisibility.DISCOVERABLE
-    }
+    val visibility = Keep.isPrivateToVisibility(isPrivate)
     allLibraries.values.find(library => library.ownerId == userId && library.visibility == visibility) getOrElse {
       val name = if (isPrivate) "Private Library" else "Main Library"
       val slug = LibrarySlug(if (isPrivate) "private" else "main")
@@ -255,17 +252,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       case (uri, user, optionalTitle) =>
         val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
-        Keep(
-          title = optionalTitle orElse uri.title,
-          userId = user.id.get,
-          uriId = uri.id.get,
-          url = url.url,
-          source = source,
-          visibility = library.visibility,
-          libraryId = Some(library.id.get),
-          originalKeeperId = Some(user.id.get),
-          connections = KeepConnections(Set(library.id.get), Set(user.id.get))
-        )
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), originalKeeperId = Some(user.id.get))
     }
     saveBookmarks(bookmarks: _*)
   }

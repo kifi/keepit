@@ -26,28 +26,30 @@ import scala.util.control.NoStackTrace
 import scala.util.hashing.MurmurHash3
 
 case class Keep(
-  id: Option[Id[Keep]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  externalId: ExternalId[Keep] = ExternalId(),
-  title: Option[String] = None,
-  uriId: Id[NormalizedURI],
-  url: String, // denormalized for efficiency
-  visibility: LibraryVisibility, // denormalized from this keep’s library
-  userId: Id[User],
-  state: State[Keep] = KeepStates.ACTIVE,
-  source: KeepSource,
-  seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
-  libraryId: Option[Id[Library]],
-  keptAt: DateTime = currentDateTime,
-  note: Option[String] = None,
-  originalKeeperId: Option[Id[User]] = None,
-  organizationId: Option[Id[Organization]] = None,
-  connections: KeepConnections,
-  messageSeq: Option[SequenceNumber[Message]] = None)
-    extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    id: Option[Id[Keep]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    externalId: ExternalId[Keep] = ExternalId(),
+    title: Option[String] = None,
+    uriId: Id[NormalizedURI],
+    isPrimary: Boolean = true, // trick to let us have multiple inactive Keeps while keeping integrity constraints
+    url: String, // denormalized for efficiency
+    visibility: LibraryVisibility, // denormalized from this keep’s library
+    userId: Id[User],
+    state: State[Keep] = KeepStates.ACTIVE,
+    source: KeepSource,
+    seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
+    libraryId: Option[Id[Library]],
+    keptAt: DateTime = currentDateTime,
+    note: Option[String] = None,
+    originalKeeperId: Option[Id[User]] = None,
+    organizationId: Option[Id[Organization]] = None,
+    librariesHash: LibrariesHash = LibrariesHash.EMPTY,
+    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY,
+    messageSeq: Option[SequenceNumber[Message]] = None) extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
+  def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
+  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -58,24 +60,33 @@ case class Keep(
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
+  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner)
+
+  def withActive(isActive: Boolean) = copy(state = isActive match {
+    case true => KeepStates.ACTIVE
+    case false => KeepStates.INACTIVE
+  })
 
   def withState(state: State[Keep]) = copy(state = state)
-  def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
+
+  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
+
+  def withUrl(url: String) = copy(url = url)
 
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
     visibility = lib.visibility,
-    organizationId = lib.organizationId,
-    connections = connections.withLibraries(Set(lib.id.get))
+    organizationId = lib.organizationId
   )
 
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
-  def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(librariesHash = LibrariesHash(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.copy(participantsHash = ParticipantsHash(users))
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
 
-  def isActive: Boolean = state == KeepStates.ACTIVE
+  def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
 
   def isOlderThan(other: Keep): Boolean = keptAt < other.keptAt || (keptAt == other.keptAt && id.get.id < other.id.get.id)
@@ -97,56 +108,138 @@ object Keep extends PublicIdGenerator[Keep] {
   protected[this] val publicIdPrefix = "k"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))
 
+  // If you see this after library migration is done, tell Andrew to clean up his messes.
+  def isPrivateToVisibility(isPrivate: Boolean) = {
+    if (isPrivate) {
+      LibraryVisibility.SECRET
+    } else {
+      LibraryVisibility.DISCOVERABLE // This is not always true (post migration)! Do not use this!
+    }
+  }
+
   private def visibilityToIsPrivate(visibility: LibraryVisibility) = {
     visibility match {
       case LibraryVisibility.PUBLISHED | LibraryVisibility.DISCOVERABLE => false
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
-  def fromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
+
+  def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
+    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
+      (userId, state, source, seq, libraryId, visibility, keptAt, note, originalKeeperId, organizationId, librariesHash, participantsHash, messageSeq)) =>
+      _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
+        uriId = uriId, isPrimary = isPrimary, url = url,
+        userId = userId, state = state, source = source,
+        seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
+        note = note, originalKeeperId = originalKeeperId,
+        organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash, messageSeq = messageSeq)
+  }
+
+  // is_primary: trueOrNull in db
+  def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
     url: String, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]],
-    connections: Option[KeepConnections], lh: LibrariesHash, ph: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, url,
-      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)),
-      organizationId, connections.getOrElse(KeepConnections(libraryId.toSet, Set(userId))), messageSeq)
+    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
+      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash, messageSeq)
   }
 
-  def toDbRow(k: Keep) = {
+  def unapplyToDbRow(k: Keep) = {
     Some(
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
-        k.uriId, if (k.isActive) Some(true) else None, k.url,
-        k.userId, k.state, k.source,
+        k.uriId, if (k.isPrimary) Some(true) else None, k.url),
+      (k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt,
-        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId,
-        Some(k.connections), k.connections.librariesHash, k.connections.participantsHash, k.messageSeq)
+        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.librariesHash, k.participantsHash, k.messageSeq)
     )
   }
 
-  implicit val format: Format[Keep] = (
-    (__ \ 'id).formatNullable[Id[Keep]] and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
-    (__ \ 'externalId).format[ExternalId[Keep]] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'uriId).format[Id[NormalizedURI]] and
-    (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'userId).format[Id[User]] and
-    (__ \ 'state).format[State[Keep]] and
-    (__ \ 'source).format[KeepSource] and
-    (__ \ 'seq).format[SequenceNumber[Keep]] and
-    (__ \ 'libraryId).formatNullable[Id[Library]] and
-    (__ \ 'keptAt).format[DateTime] and
-    (__ \ 'note).formatNullable[String] and
-    (__ \ 'originalKeeperId).formatNullable[Id[User]] and
-    (__ \ 'organizationId).formatNullable[Id[Organization]] and
-    (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]]
-  )(Keep.apply, unlift(Keep.unapply))
+  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash, Option[SequenceNumber[Message]])
+  def _bookmarkFormat = {
+    val fields1To10: Reads[KeepFirstArguments] = (
+      (__ \ 'id).readNullable(Id.format[Keep]) and
+      (__ \ 'createdAt).read(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).read(DateTimeJsonFormat) and
+      (__ \ 'externalId).read(ExternalId.format[Keep]) and
+      (__ \ 'title).readNullable[String] and
+      (__ \ 'uriId).read(Id.format[NormalizedURI]) and
+      (__ \ 'isPrimary).readNullable[Boolean] and
+      (__ \ 'url).read[String]).tupled
+    val fields10Up: Reads[KeepRestArguments] = (
+      (__ \ 'userId).read(Id.format[User]) and
+      (__ \ 'state).read(State.format[Keep]) and
+      (__ \ 'source).read[String].map(KeepSource(_)) and
+      (__ \ 'seq).read(SequenceNumber.format[Keep]) and
+      (__ \ 'libraryId).readNullable(Id.format[Library]) and
+      (__ \ 'visibility).read[LibraryVisibility] and
+      (__ \ 'keptAt).read(DateTimeJsonFormat) and
+      (__ \ 'note).readNullable[String] and
+      (__ \ 'originalKeeperId).readNullable[Id[User]] and
+      (__ \ 'organizationId).readNullable[Id[Organization]] and
+      (__ \ 'librariesHash).read[LibrariesHash] and
+      (__ \ 'participantsHash).read[ParticipantsHash] and
+      (__ \ 'messageSeq).readNullable(SequenceNumber.format[Message])
+    ).tupled
+
+    (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)
+  }
+
+  // Remove when all services use the new Keep object
+  implicit def bookmarkFormat = new Format[Keep] {
+    def reads(j: JsValue) = {
+      _bookmarkFormat.reads(j)
+    }
+    def writes(k: Keep) = {
+      Json.obj(
+        "id" -> k.id,
+        "createdAt" -> k.createdAt,
+        "updatedAt" -> k.updatedAt,
+        "externalId" -> k.externalId,
+        "title" -> k.title,
+        "uriId" -> k.uriId,
+        "isPrimary" -> k.isPrimary,
+        "url" -> k.url,
+        "bookmarkPath" -> (None: Option[String]),
+        "visibility" -> k.visibility,
+        "isPrivate" -> Keep.visibilityToIsPrivate(k.visibility),
+        "userId" -> k.userId,
+        "state" -> k.state,
+        "source" -> k.source.value,
+        "seq" -> k.seq,
+        "libraryId" -> k.libraryId,
+        "keptAt" -> k.keptAt,
+        "note" -> k.note,
+        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
+        "organizationId" -> k.organizationId,
+        "librariesHash" -> k.librariesHash,
+        "participantsHash" -> k.participantsHash,
+        "messageSeq" -> k.messageSeq
+      )
+    }
+  }
+}
+
+case class LibrariesHash(value: Int) extends AnyVal
+object LibrariesHash {
+  val EMPTY = LibrariesHash(Set.empty[Id[Library]])
+  def apply(libraries: Set[Id[Library]]): LibrariesHash = LibrariesHash(MurmurHash3.setHash(libraries))
+  implicit val format: Format[LibrariesHash] =
+    Format(__.read[Int].map(LibrariesHash(_)), new Writes[LibrariesHash] {
+      def writes(hash: LibrariesHash) = JsNumber(hash.value)
+    })
+}
+
+case class ParticipantsHash(value: Int) extends AnyVal
+object ParticipantsHash {
+  val EMPTY = ParticipantsHash(Set.empty[Id[User]])
+  def apply(users: Set[Id[User]]): ParticipantsHash = ParticipantsHash(MurmurHash3.setHash(users))
+  implicit val format: Format[ParticipantsHash] =
+    Format(__.read[Int].map(ParticipantsHash(_)), new Writes[ParticipantsHash] {
+      def writes(hash: ParticipantsHash) = JsNumber(hash.value)
+    })
 }
 
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
@@ -168,7 +261,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 13
+  override val version = 11
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -186,7 +279,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 4
+  override val version = 2
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -198,6 +291,7 @@ object KeepStates extends States[Keep]
 case class KeepSource(value: String) {
   override def toString = value
 }
+
 object KeepSource {
   val keeper = KeepSource("keeper")
   val bookmarkImport = KeepSource("bookmarkImport")
@@ -237,11 +331,6 @@ object KeepSource {
     case KeepSource("INIT_LOAD") => bookmarkImport
     case source => source
   }
-
-  implicit val format: Format[KeepSource] = Format(
-    Reads { j => j.validate[String].map(KeepSource(_)) },
-    Writes { o => JsString(o.value) }
-  )
 }
 
 case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])

@@ -112,7 +112,7 @@ class MessageContentIndexable(
       "digest" -> data.digest,
       "time" -> data.updatedAt,
       "url" -> data.url,
-      "thread" -> data.keepId
+      "thread" -> data.threadExternalId
     )
     val searchResultData = Json.stringify(searchResultJson).getBytes(UTF8)
     val searchResultDocValue = buildBinaryDocValuesField(ThreadIndexFields.resultField, searchResultData)
@@ -121,7 +121,7 @@ class MessageContentIndexable(
     } else {
       val fakeResultData = Json.stringify(Json.obj("err" -> "result too large")).getBytes(UTF8)
       doc.add(buildBinaryDocValuesField(ThreadIndexFields.resultField, fakeResultData))
-      airbrake.notify(s"Failed to index thread ${data.keepId} correctly. Result json would be too large.")
+      airbrake.notify(s"Failed to index thread ${data.threadExternalId} correctly. Result json would be too large.")
     }
 
     doc

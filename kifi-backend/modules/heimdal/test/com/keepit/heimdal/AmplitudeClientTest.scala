@@ -12,6 +12,7 @@ import com.keepit.social.NonUserKinds
 import com.keepit.test.{ DummyRequestHeader, FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.JsString
+import play.api.mvc.RequestHeader
 import play.api.test.Helpers._
 
 import scala.concurrent.duration.Duration
@@ -177,30 +178,18 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
             dat.eventData \ "event_type" === JsString("user_clicked_notification")
             // device_id should be fetched from the amplitude base64-encoded cookie
             dat.eventData \ "device_id" === JsString("12345678-1234-4567-1234-123412341234")
+        },
+        amplitude.track(userWasNotified2) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_was_notified")
+            // default device_id for a user event is user_<user_id>
+            dat.eventData \ "device_id" === JsString("user_777")
         }
       )
 
       val eventsF = Future.sequence(eventsFList)
-
-      // send the same event twice to test that insert_id are identical
-      val dupeEvents = List(amplitude.track(userWasNotified2), amplitude.track(userWasNotified2))
-      val dupeEventsF = Future.sequence(dupeEvents).map {
-        case List(evt1: AmplitudeEventSent, evt2: AmplitudeEventSent) =>
-          val (JsString(insertId1), JsString(insertId2)) = (evt1.eventData \ "insert_id", evt2.eventData \ "insert_id")
-          insertId1 must matching("[a-z0-9]{32}".r) // expect md5 hash
-          insertId1 === insertId2 // expect duplicate events to have the same insert_id property
-
-          evt1.eventData \ "event_type" === JsString("user_was_notified")
-          // default device_id for a user event is user_<user_id>
-          evt1.eventData \ "device_id" === JsString("user_777")
-          evt1 === evt2 // sanity check, the insert_id check above should be enough
-      }
-
       val res = Await.result(eventsF, Duration("10 seconds"))
       res.size === eventsFList.size
-
-      val res2 = Await.result(dupeEventsF, Duration("5 seconds"))
-      res2.isSuccess must beTrue
     }
 
     "set user properties" in running(new HeimdalApplication(modules: _*)) {
