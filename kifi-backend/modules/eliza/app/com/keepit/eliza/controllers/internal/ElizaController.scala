@@ -152,13 +152,4 @@ class ElizaController @Inject() (
     }.getOrElse(Set.empty)
     Ok(Json.toJson(participants))
   }
-
-  def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
-    import GetDiscussionsForKeeps._
-    val keepIds = request.body.as[Request].keepIds
-    discussionCommander.getDiscussionsForKeeps(keepIds).map { discussions =>
-      val response = Response(discussions)
-      Ok(Json.toJson(response))
-    }
-  }
 }
