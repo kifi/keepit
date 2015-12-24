@@ -731,7 +731,9 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
-    eliza.deleteThreadsForKeeps(Set(keep.id.get))
+    session.onTransactionSuccess {
+      eliza.deleteThreadsForKeeps(Set(keep.id.get))
+    }
   }
 
   // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep
