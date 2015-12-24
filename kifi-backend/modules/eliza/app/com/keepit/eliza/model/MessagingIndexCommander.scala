@@ -32,15 +32,16 @@ class MessagingIndexCommander @Inject() (
     else getMessages(fromId, Id[ElizaMessage](toId.id + 100), maxId)
   }
 
-  private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
-    log.info(s"getting content for thread $threadId seq $seq")
-    val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadId) }
+  private def getThreadContentsForThreadWithSequenceNumber(keepId: Id[Keep], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
+    log.info(s"getting content for thread $keepId seq $seq")
+    val thread = db.readOnlyReplica { implicit session => threadRepo.getByKeepId(keepId).get }
+    val threadId = thread.id.get
     val userParticipants: Seq[Id[User]] = thread.participants.allUsers.toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
     val participantBasicNonUsers = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
 
     val messages: Seq[ElizaMessage] = db.readOnlyReplica { implicit session =>
-      messageRepo.get(threadId, 0)
+      messageRepo.get(keepId, 0)
     }.filterNot(_.from.isSystem).sortBy(-_.createdAt.getMillis)
 
     val digest = try {
@@ -68,7 +69,7 @@ class MessagingIndexCommander @Inject() (
         participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
         url = thread.url,
-        keepId = Keep.publicId(thread.keepId),
+        keepId = thread.pubKeepId,
         pageTitleOpt = thread.pageTitle,
         digest = digest,
         content = content,
@@ -82,10 +83,10 @@ class MessagingIndexCommander @Inject() (
     log.info(s"trying to get messages from $fromId, to $toId max $maxMessageId")
     val allMessages = getMessages(fromId, toId, maxMessageId)
     log.info(s"got messages ${allMessages.map(_.id.get).mkString(",")}")
-    val threadMessages = allMessages.groupBy(_.thread)
-    Future.sequence(threadMessages.toSeq.map {
-      case (threadId, messages) =>
-        getThreadContentsForThreadWithSequenceNumber(threadId, SequenceNumber(messages.map(_.id.get.id).max))
+    val messagesByKeep = allMessages.groupBy(_.keepId)
+    Future.sequence(messagesByKeep.toSeq.map {
+      case (keepId, messages) =>
+        getThreadContentsForThreadWithSequenceNumber(keepId, SequenceNumber(messages.map(_.id.get.id).max))
     })
   }
 

@@ -106,22 +106,20 @@ object MessageThreadParticipants {
 }
 
 case class MessageThread(
-  id: Option[Id[MessageThread]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[MessageThread] = MessageThreadStates.ACTIVE,
-  externalId: ExternalId[MessageThread] = ExternalId(),
-  uriId: Id[NormalizedURI],
-  url: String,
-  nUrl: String,
-  startedBy: Id[User],
-  participants: MessageThreadParticipants,
-  pageTitle: Option[String],
-  keepId: Id[Keep])
-    extends ModelWithExternalId[MessageThread] {
+    id: Option[Id[MessageThread]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[MessageThread] = MessageThreadStates.ACTIVE,
+    uriId: Id[NormalizedURI],
+    url: String,
+    nUrl: String,
+    startedBy: Id[User],
+    participants: MessageThreadParticipants,
+    pageTitle: Option[String],
+    keepId: Id[Keep]) extends Model[MessageThread] {
   def participantsHash: Int = participants.hash
-  def threadId: MessageThreadId = MessageThreadId(Some(keepId), externalId)
-  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThreadId.toLocator(threadId)
+  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
+  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
@@ -159,7 +157,6 @@ object MessageThread {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[MessageThread]] and
-    (__ \ 'externalId).format[ExternalId[MessageThread]] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
@@ -168,37 +165,16 @@ object MessageThread {
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).format[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
+
+  def locator(keepId: PublicId[Keep]): DeepLocator = DeepLocator(s"/messages/${keepId.id}")
 }
 
-sealed trait MessageThreadId
-case class ThreadExternalId(threadId: ExternalId[MessageThread]) extends MessageThreadId
-case class KeepId(keepId: Id[Keep]) extends MessageThreadId
-object MessageThreadId {
-  def toIdString(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): String = id match {
-    case ThreadExternalId(threadId) => threadId.id
-    case KeepId(keepId) => Keep.publicId(keepId).id
-  }
-
-  def fromIdString(idStr: String)(implicit publicIdConfiguration: PublicIdConfiguration): Option[MessageThreadId] = {
-    ExternalId.asOpt[MessageThread](idStr).map(ThreadExternalId(_)) orElse Keep.validatePublicId(idStr).flatMap(pubId => Keep.decodePublicId(pubId).map(KeepId(_)).toOption)
-  }
-
-  implicit def format(implicit publicIdConfiguration: PublicIdConfiguration) = Format[MessageThreadId](
-    Reads(value => value.validate[String].flatMap(fromIdString(_).map(JsSuccess(_)) getOrElse JsError(s"Invalid MessageThreadId: $value"))),
-    Writes(id => JsString(toIdString(id)))
-  )
-
-  def toLocator(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): DeepLocator = DeepLocator(s"/messages/${toIdString(id)}")
-
-  def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(KeepId) getOrElse ThreadExternalId(externalId)
+case class MessageThreadKeepIdKey(keepId: Id[Keep]) extends Key[MessageThread] {
+  override val version = 1
+  val namespace = "message_thread_by_keep_id"
+  def toKey(): String = keepId.id.toString
 }
 
-case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 9
-  val namespace = "message_thread_by_external_id"
-  def toKey(): String = externalId.id
-}
-
-class MessageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class MessageThreadKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessageThreadKeepIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

@@ -10,9 +10,8 @@ import com.keepit.model.{ Keep, User, NormalizedURI }
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
-trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
+trait MessageThreadRepo extends Repo[MessageThread] {
   def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread]
-  override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
   def getByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
   def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
@@ -20,7 +19,6 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
-  def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread]
 }
 
 @Singleton
@@ -28,8 +26,8 @@ class MessageThreadRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
   val clock: Clock,
   val db: DataBaseComponent,
-  val threadExternalIdCache: MessageThreadExternalIdCache)
-    extends DbRepo[MessageThread] with MessageThreadRepo with ExternalIdColumnDbFunction[MessageThread] with MessagingTypeMappers {
+  val threadKeepIdCache: MessageThreadKeepIdCache)
+    extends DbRepo[MessageThread] with MessageThreadRepo with MessagingTypeMappers {
 
   import db.Driver.simple._
 
@@ -38,7 +36,6 @@ class MessageThreadRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[MessageThread],
-    externalId: ExternalId[MessageThread],
     uriId: Id[NormalizedURI],
     url: String,
     nUrl: String,
@@ -47,16 +44,16 @@ class MessageThreadRepoImpl @Inject() (
     participantsHash: Int, // exists only in the db, will not be put into the model
     pageTitle: Option[String],
     keepId: Id[Keep]): MessageThread = {
-    MessageThread(id, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, pageTitle, keepId)
+    MessageThread(id, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, pageTitle, keepId)
   }
   private def messageThreadToDbRow(mt: MessageThread) = {
     Some((
-      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.externalId, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId
+      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId
     ))
   }
 
   type RepoImpl = MessageThreadTable
-  class MessageThreadTable(tag: Tag) extends RepoTable[MessageThread](db, tag, "message_thread") with ExternalIdColumn[MessageThread] {
+  class MessageThreadTable(tag: Tag) extends RepoTable[MessageThread](db, tag, "message_thread") {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def nUrl = column[String]("nUrl", O.NotNull)
@@ -65,18 +62,18 @@ class MessageThreadRepoImpl @Inject() (
     def participantsHash = column[Int]("participants_hash", O.NotNull)
     def pageTitle = column[Option[String]]("page_title", O.Nullable)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
   private def activeRows = rows.filter(_.state === MessageThreadStates.ACTIVE)
 
   override def invalidateCache(thread: MessageThread)(implicit session: RSession): Unit = {
-    threadExternalIdCache.set(MessageThreadExternalIdKey(thread.externalId), thread)
+    threadKeepIdCache.set(MessageThreadKeepIdKey(thread.keepId), thread)
   }
 
   override def deleteCache(thread: MessageThread)(implicit session: RSession): Unit = {
-    threadExternalIdCache.remove(MessageThreadExternalIdKey(thread.externalId))
+    threadKeepIdCache.remove(MessageThreadKeepIdKey(thread.keepId))
   }
 
   override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
@@ -87,10 +84,6 @@ class MessageThreadRepoImpl @Inject() (
     }
   }
 
-  override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread = {
-    threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
-  }
-
   def getByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread] = {
     rows.filter(_.id.inSet(ids)).list.map(x => x.id.get -> x).toMap
   }
@@ -99,24 +92,27 @@ class MessageThreadRepoImpl @Inject() (
     activeRows.filter(_.id.inSet(ids)).list.map(x => x.id.get -> x).toMap
   }
 
-  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
+  private def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
     activeRows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (kid, Seq(thread)) => kid -> thread }
   }
+
+  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
+    threadKeepIdCache.bulkGetOrElse(keepIds.map(MessageThreadKeepIdKey(_))) { missingKeys =>
+      getByKeepIdsNoCache(missingKeys.map(_.keepId)).map { case (keepId, thread) => MessageThreadKeepIdKey(keepId) -> thread }
+    }.map { case (MessageThreadKeepIdKey(keepId), thread) => keepId -> thread }
+  }
+
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread] = {
     getByKeepIds(Set(keepId)).get(keepId)
-  }
-  def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread] = threadId match {
-    case ThreadExternalId(extId) => getOpt(extId)
-    case KeepId(keepId) => getByKeepId(keepId)
   }
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {
     updates.foreach {
       case (oldId, newNUri) =>
-        val updateIds = rows.filter(row => row.uriId === oldId).map(_.externalId).list //Note: race condition if there is an insert after this?
+        val updateIds = rows.filter(row => row.uriId === oldId).map(_.keepId).list //Note: race condition if there is an insert after this?
         rows.filter(row => row.uriId === oldId).map(row => (row.uriId, row.nUrl)).update((newNUri.id.get, newNUri.url))
-        updateIds.foreach { extId =>
-          threadExternalIdCache.remove(MessageThreadExternalIdKey(extId))
+        updateIds.foreach { keepId =>
+          threadKeepIdCache.remove(MessageThreadKeepIdKey(keepId))
         }
     }
   }

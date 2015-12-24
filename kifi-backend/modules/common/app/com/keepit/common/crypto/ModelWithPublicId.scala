@@ -71,6 +71,7 @@ trait PublicIdGenerator[T] {
   */
   protected[this] val publicIdIvSpec: IvParameterSpec
 
+  def decodePublicIdStr(publicIdStr: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = decodePublicId(PublicId[T](publicIdStr))
   def decodePublicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(publicIdPrefix)) {
       Try(config.aes64bit(publicIdIvSpec).decrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)))).flatMap { id =>
@@ -86,8 +87,8 @@ trait PublicIdGenerator[T] {
     }
   }
 
-  def validatePublicId(id: String): Option[PublicId[T]] = if (id.startsWith(publicIdPrefix)) Some(PublicId(id)) else None
-  implicit val readsPublicId: Reads[PublicId[T]] = Reads { j => j.validate[String].flatMap(idStr => validatePublicId(idStr).map(JsSuccess(_)) getOrElse JsError(s"Invalid PublicId: $idStr")) }
+  def validatePublicId(idStr: String): Try[PublicId[T]] = if (idStr.startsWith(publicIdPrefix)) Success(PublicId(idStr)) else Failure(new IllegalArgumentException(s"Expected $idStr to start with $publicIdPrefix"))
+  implicit val readsPublicId: Reads[PublicId[T]] = Reads { j => j.validate[String].flatMap(idStr => validatePublicId(idStr).map(JsSuccess(_)) recover { case error => JsError(s"Invalid PublicId: ${error.getMessage}") } get) }
   implicit val formatPublicId: Format[PublicId[T]] = Format(readsPublicId, PublicId.writes)
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {

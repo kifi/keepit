@@ -6,7 +6,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.MessagingCommander
@@ -40,7 +40,6 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     FakeSecureSocialUserPluginModule()
   )
 
-  implicit def publicIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)
 
   "SharedWsMessagingController" should {
@@ -77,26 +76,22 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
         socket.out(0).as[String] must startWith("id:")
 
-        val messageThreadRepo = inject[MessageThreadRepo]
-        val uuid = UUID.randomUUID().toString
-
         db.readWrite { implicit s => MessageThreadFactory.thread().saved }
 
         socket.in {
-          Json.arr("get_thread", uuid)
+          Json.arr("get_thread", UUID.randomUUID().toString)
         }
 
         val thread2 = db.readWrite { implicit session => MessageThreadFactory.thread().withUsers(Id(1)).saved }
-        val uuid2 = thread2.externalId.id
 
         socket.in {
-          Json.arr("get_thread", uuid2)
+          Json.arr("get_thread", thread2.pubKeepId)
         }
 
         val threadResponse = socket.out
         threadResponse(0).as[String] === "thread"
         val thread = threadResponse(1)
-        (thread \ "id").as[String] === uuid2
+        (thread \ "id").as[PublicId[Keep]] === thread2.pubKeepId
         (thread \ "messages") === JsArray()
 
         socket.close
@@ -121,15 +116,14 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
           val userThread = userThreadRepo.save(UserThread.forMessageThread(messageThread)(user))
           (messageThread, userThread)
         }
-        val pubId = Keep.publicId(messageThread.keepId).id
 
         implicit val context = new HeimdalContext(Map())
 
-        messagingCommander.sendMessage(Id[User](2), messageThread.threadId, messageThread, "So long and thanks for all the fish", None, None)
+        messagingCommander.sendMessage(Id[User](2), messageThread, "So long and thanks for all the fish", None, None)
 
         val message = socket.out
         message(0).as[String] === "message"
-        message(1).as[String] === pubId
+        message(1).as[String] === messageThread.pubKeepId.id
         val messageContent = message(2)
         (messageContent \ "text").as[String] === "So long and thanks for all the fish"
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2

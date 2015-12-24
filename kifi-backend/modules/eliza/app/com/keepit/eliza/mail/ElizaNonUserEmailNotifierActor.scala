@@ -22,7 +22,7 @@ class ElizaNonUserEmailNotifierActor @Inject() (
   import ElizaEmailNotifierActor._
 
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[NonUserThread]): Future[Unit] = {
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(batch.threadId) }
+    val thread = db.readOnlyMaster { implicit session => threadRepo.getByKeepId(batch.keepId).get }
     elizaEmailCommander.getThreadEmailData(thread) flatMap { threadEmailData =>
       val notificationFutures = batch.participantThreads.map {
         case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => {
