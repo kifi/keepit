@@ -10,6 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.model.MessageSender
+import com.keepit.eliza.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory, _ }
@@ -147,6 +148,31 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             userThreadRepo.getUserThread(user1, keep).map(_.unread) must beSome(false)
           }
           inject[WatchableExecutionContext].drain()
+          1 === 1
+        }
+      }
+    }
+    "delete threads for keeps" in {
+      "work" in {
+        val keeps = Set(1, 2, 3).map(Id[Keep](_))
+        withDb(modules: _*) { implicit injector =>
+          val (mts, uts, msgs) = db.readWrite { implicit s =>
+            val mts = keeps.map { kid => MessageThreadFactory.thread().withKeep(kid).saved }
+            val uts = mts.flatMap { mt => UserThreadFactory.userThreads(5).map(_.withThread(mt).saved) }
+            val msgs = uts.flatMap { ut => MessageFactory.messages(5).map(_.withUserThread(ut).saved) }
+            (mts, uts, msgs)
+          }
+          db.readOnlyMaster { implicit s =>
+            mts.foreach { mt => messageThreadRepo.get(mt.id.get).state === MessageThreadStates.ACTIVE }
+            uts.foreach { ut => userThreadRepo.get(ut.id.get).state === UserThreadStates.ACTIVE }
+            msgs.foreach { msg => messageRepo.get(msg.id.get).state === ElizaMessageStates.ACTIVE }
+          }
+          discussionCommander.deleteThreadsForKeeps(keeps)
+          db.readOnlyMaster { implicit s =>
+            mts.foreach { mt => messageThreadRepo.get(mt.id.get).state === MessageThreadStates.INACTIVE }
+            uts.foreach { ut => userThreadRepo.get(ut.id.get).state === UserThreadStates.INACTIVE }
+            msgs.foreach { msg => messageRepo.get(msg.id.get).state === ElizaMessageStates.INACTIVE }
+          }
           1 === 1
         }
       }

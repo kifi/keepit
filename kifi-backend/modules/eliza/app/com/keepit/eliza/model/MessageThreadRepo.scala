@@ -19,6 +19,7 @@ trait MessageThreadRepo extends Repo[MessageThread] {
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
+  def deactivate(model: MessageThread)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -115,5 +116,8 @@ class MessageThreadRepoImpl @Inject() (
           threadKeepIdCache.remove(MessageThreadKeepIdKey(keepId))
         }
     }
+  }
+  def deactivate(model: MessageThread)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }

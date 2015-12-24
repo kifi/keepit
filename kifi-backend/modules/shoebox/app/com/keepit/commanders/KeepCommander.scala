@@ -17,6 +17,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
@@ -118,6 +119,7 @@ class KeepCommanderImpl @Inject() (
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
+    eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
     clock: Clock,
@@ -729,6 +731,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
+    eliza.deleteThreadsForKeeps(Set(keep.id.get))
   }
 
   // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep

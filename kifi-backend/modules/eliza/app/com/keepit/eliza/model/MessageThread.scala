@@ -147,6 +147,8 @@ case class MessageThread(
   def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.contains(nonUser)
   def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.allUsersExcept(user)
   def allParticipants: Set[Id[User]] = participants.allUsers
+
+  def sanitizeForDelete = this.copy(state = MessageThreadStates.INACTIVE)
 }
 
 object MessageThreadStates extends States[MessageThread]

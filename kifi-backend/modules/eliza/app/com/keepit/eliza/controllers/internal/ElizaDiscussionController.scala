@@ -91,6 +91,12 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
+  def deleteThreadsForKeeps() = Action(parse.tolerantJson) { request =>
+    import DeleteThreadsForKeeps._
+    val input = request.body.as[Request]
+    discussionCommander.deleteThreadsForKeeps(input.keepIds)
+    NoContent
+  }
 
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = Action { request =>
     val messages = db.readOnlyMaster { implicit session =>

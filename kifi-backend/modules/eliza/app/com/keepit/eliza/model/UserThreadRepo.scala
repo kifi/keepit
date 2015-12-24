@@ -60,6 +60,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Mutating threads in-place
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
+  def deactivate(model: UserThread)(implicit session: RWSession): Unit
 }
 
 /**
@@ -310,10 +311,15 @@ class UserThreadRepoImpl @Inject() (
         select thread_id, created_at, count(*) as c from user_thread
           where user_id in #$users_list
           and created_at >= '2015-1-1'
+          and state = 'active'
           group by thread_id
           order by week(created_at)
           desc
       """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
     }
+  }
+
+  def deactivate(model: UserThread)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
