@@ -7,7 +7,6 @@ import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.eliza.model._
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Inject, ImplementedBy }
-import com.keepit.model.Keep
 import scala.concurrent.duration._
 import akka.util.Timeout
 import scala.util.{ Failure, Success, Try }
@@ -17,19 +16,19 @@ import scala.collection.mutable
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-class ParticipantThreadBatch[T <: ParticipantThread](val participantThreads: Seq[T], val keepId: Id[Keep])
+class ParticipantThreadBatch[T <: ParticipantThread](val participantThreads: Seq[T], val threadId: Id[MessageThread])
 object ParticipantThreadBatch {
   def apply[T <: ParticipantThread](participantThreads: Seq[T]) = {
     require(participantThreads.nonEmpty)
-    val keepId = participantThreads.head.keepId
-    require(participantThreads.forall(_.keepId == keepId)) // All user threads must correspond to the same keep
-    new ParticipantThreadBatch(participantThreads, keepId)
+    val threadId = participantThreads.head.threadId
+    require(participantThreads.forall(_.threadId == threadId)) // All user threads must correspond to the same MessageThread
+    new ParticipantThreadBatch(participantThreads, threadId)
   }
 }
 
 object ElizaEmailNotifierActor {
   case class SendNextEmails(maxConcurrentThreadBatches: Int = MAX_CONCURRENT_MESSAGE_THREAD_BATCHES)
-  case class DoneWithThread(keepId: Id[Keep], result: Try[Unit], maxConcurrentThreadBatches: Int)
+  case class DoneWithThread(threadId: Id[MessageThread], result: Try[Unit], maxConcurrentThreadBatches: Int)
   val ALLOWED_ATTEMPTS = 2
   val MIN_TIME_BETWEEN_NOTIFICATIONS = 15 minutes
   val RECENT_ACTIVITY_WINDOW = 24 hours
@@ -42,7 +41,7 @@ abstract class ElizaEmailNotifierActor[T <: ParticipantThread](airbrake: Airbrak
 
   private val participantThreadBatchQueue = new mutable.Queue[ParticipantThreadBatch[T]]()
   private var threadBatchesBeingProcessed = 0
-  private val failures = mutable.Map[Id[Keep], Int]().withDefaultValue(0)
+  private val failures = mutable.Map[Id[MessageThread], Int]().withDefaultValue(0)
 
   protected def getParticipantThreadsToProcess(): Seq[T]
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[T]): Future[Unit]
@@ -53,29 +52,29 @@ abstract class ElizaEmailNotifierActor[T <: ParticipantThread](airbrake: Airbrak
       log.info("Attempting to process next user emails")
       if (threadBatchesBeingProcessed == 0) {
         if (participantThreadBatchQueue.isEmpty) {
-          val participantThreadBatches = getParticipantThreadsToProcess().groupBy(_.keepId).values.map(ParticipantThreadBatch(_)).toSeq
+          val participantThreadBatches = getParticipantThreadsToProcess().groupBy(_.threadId).values.map(ParticipantThreadBatch(_)).toSeq
           participantThreadBatches.foreach(participantThreadBatchQueue.enqueue(_))
         }
 
         while (threadBatchesBeingProcessed < maxConcurrentThreadBatches && participantThreadBatchQueue.nonEmpty) {
           log.info(s"userThreadBatchQueue size: ${participantThreadBatchQueue.size}")
           val batch = participantThreadBatchQueue.dequeue()
-          val keepId = batch.keepId
+          val threadId = batch.threadId
 
-          if (failures(keepId) < ALLOWED_ATTEMPTS) {
-            emailUnreadMessagesForParticipantThreadBatch(batch).onComplete { result => self ! DoneWithThread(keepId, result, maxConcurrentThreadBatches) }
+          if (failures(threadId) < ALLOWED_ATTEMPTS) {
+            emailUnreadMessagesForParticipantThreadBatch(batch).onComplete { result => self ! DoneWithThread(threadId, result, maxConcurrentThreadBatches) }
             threadBatchesBeingProcessed += 1
           }
         }
       }
 
-    case DoneWithThread(keepId, result, maxConcurrentThreadBatches) =>
+    case DoneWithThread(threadId, result, maxConcurrentThreadBatches) =>
       threadBatchesBeingProcessed -= 1
       result match {
-        case Success(_) => failures -= keepId
+        case Success(_) => failures -= threadId
         case Failure(ex) =>
-          failures(keepId) += 1
-          airbrake.notify(s"Failure occurred during user thread batch processing: keepId = ${keepId}}", ex)
+          failures(threadId) += 1
+          airbrake.notify(s"Failure occurred during user thread batch processing: threadId = ${threadId}}", ex)
       }
       if (threadBatchesBeingProcessed == 0) { self ! SendNextEmails(maxConcurrentThreadBatches) }
 

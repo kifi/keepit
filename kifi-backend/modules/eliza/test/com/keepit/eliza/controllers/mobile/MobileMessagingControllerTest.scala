@@ -28,6 +28,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
+  implicit def publicIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   implicit val context = HeimdalContext.empty
 
   def initUsers()(implicit injector: Injector): Seq[User] = {
@@ -35,6 +36,11 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
     val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
+
+  def toMessageIdStr(message: ElizaMessage)(implicit injector: Injector): String = {
+    implicit val publicIdConfig = inject[PublicIdConfiguration]
+    message.pubId.id
   }
 
   def modules = {
@@ -100,16 +106,16 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
-          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
-        path === s"/m/1/eliza/thread/${thread.pubKeepId.id}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
+        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
-        val result = inject[MobileMessagingController].addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        val result = inject[MobileMessagingController].addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("text/plain")
@@ -117,8 +123,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         runners > 2
 
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
-          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
         }
       }
     }
@@ -143,16 +149,16 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
-          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set.empty
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "").toString
-        path === s"/m/1/eliza/thread/${thread.pubKeepId.id}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "").toString
+        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
-        val result = inject[MobileMessagingController].addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        val result = inject[MobileMessagingController].addParticipantsToThread(threadIdStr = thread.externalId.id, users = eishay.externalId.toString, emailContacts = "")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("text/plain")
@@ -160,8 +166,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         runners > 2
 
         inject[Database].readOnlyMaster { implicit s =>
-          inject[UserThreadRepo].getByKeep(thread.keepId).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
-          inject[NonUserThreadRepo].getByKeepId(thread.keepId).map(_.participant.identifier).toSet === Set()
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set()
         }
       }
     }
@@ -197,11 +203,11 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val expected = Json.parse(s"""
           {
-            "id": "${message.pubId.id}",
-            "parentId": "${thread.pubKeepId.id}",
+            "id": "${toMessageIdStr(message)}",
+            "parentId": "${Keep.publicId(thread.keepId).id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
-              "id": "${thread.pubKeepId.id}",
+              "id": "${Keep.publicId(thread.keepId).id}",
               "participants":
               [
                 {
@@ -220,7 +226,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
               "messageCount":1,
               "messageTimes": {
-                "${message.pubId.id}": "${message.createdAt.toStandardTimeString}"
+                "${toMessageIdStr(message)}": "${message.createdAt.toStandardTimeString}"
               },
               "createdAt": "${thread.createdAt.toStandardTimeString}",
               "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
@@ -231,7 +237,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             },
             "messages":[
               {
-                "id": "${message.pubId.id}",
+                "id": "${toMessageIdStr(message)}",
                 "createdAt": "${message.createdAt.toStandardTimeString}",
                 "text": "test me out",
                 "url": "https://admin.kifi.com/admin/searchExperiments",
@@ -280,10 +286,10 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.pubKeepId).toString
-        path === s"/m/1/eliza/thread/${thread.pubKeepId.id}"
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.externalId.toString).toString
+        path === s"/m/1/eliza/thread/${thread.externalId.toString}"
 
-        val result = controller.getCompactThread(thread.pubKeepId)(FakeRequest("GET", path))
+        val result = controller.getCompactThread(thread.externalId.toString)(FakeRequest("GET", path))
         status(result) must equalTo(OK)
 
         contentType(result) must beSome("application/json")
@@ -293,7 +299,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val expected = Json.parse(s"""
           {
-            "id": "${thread.pubKeepId.id}",
+            "id": "${thread.externalId.id}",
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
             "keep":null,
@@ -311,28 +317,28 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               }
             ],
             "messages": [
-              { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
+              { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
             ]
           }
         """)
 
         val res = Json.parse(contentAsString(result))
         val jsMessages = (res \ "messages").as[JsArray].value
-        (messages map (_.pubId)) === (jsMessages map { m => (m \ "id").as[PublicId[Message]] })
+        (messages map toMessageIdStr) === (jsMessages map { m => (m \ "id").as[String] })
         jsMessages.size === 5
-        (jsMessages(0) \ "id").as[PublicId[Message]] === messages(0).pubId
+        (jsMessages(0) \ "id").as[String] === toMessageIdStr(messages(0))
         (jsMessages(0) \ "time").as[Long] === messages(0).createdAt.getMillis
-        (jsMessages(1) \ "id").as[PublicId[Message]] === messages(1).pubId
+        (jsMessages(1) \ "id").as[String] === toMessageIdStr(messages(1))
         (jsMessages(1) \ "time").as[Long] === messages(1).createdAt.getMillis
-        (jsMessages(2) \ "id").as[PublicId[Message]] === messages(2).pubId
+        (jsMessages(2) \ "id").as[String] === toMessageIdStr(messages(2))
         (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
-        (jsMessages(3) \ "id").as[PublicId[Message]] === messages(3).pubId
+        (jsMessages(3) \ "id").as[String] === toMessageIdStr(messages(3))
         (jsMessages(3) \ "time").as[Long] === messages(3).createdAt.getMillis
-        (jsMessages(4) \ "id").as[PublicId[Message]] === messages(4).pubId
+        (jsMessages(4) \ "id").as[String] === toMessageIdStr(messages(4))
         (jsMessages(4) \ "time").as[Long] === messages(4).createdAt.getMillis
         res must equalTo(expected)
       }
@@ -369,26 +375,26 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         messages.size === 5
 
         {
-          val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 1000, None).toString
-          path === s"/m/2/eliza/thread/${thread.pubKeepId.id}"
+          val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
+          path === s"/m/2/eliza/thread/${thread.externalId.toString}"
 
-          val action = controller.getPagedThread(thread.pubKeepId, 1000, None)
+          val action = controller.getPagedThread(thread.externalId.toString, 1000, None)
           val result = action(FakeRequest("GET", path))
           status(result) must equalTo(OK)
 
           contentType(result) must beSome("application/json")
 
           val expectedMessages = s"""[
-                { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected = Json.parse(s"""
             {
-              "id": "${thread.pubKeepId.id}",
+              "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
               "keep":null,
@@ -411,36 +417,36 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
           val res = Json.parse(contentAsString(result))
           val jsMessages = (res \ "messages").as[JsArray].value
-          (messages.reverse map (_.pubId)) === (jsMessages map { m => (m \ "id").as[PublicId[Message]] })
+          (messages.reverse map toMessageIdStr) === (jsMessages map { m => (m \ "id").as[String] })
           jsMessages.size === 5
-          (jsMessages(0) \ "id").as[PublicId[Message]] === messages(4).pubId
+          (jsMessages(0) \ "id").as[String] === toMessageIdStr(messages(4))
           (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
-          (jsMessages(1) \ "id").as[PublicId[Message]] === messages(3).pubId
+          (jsMessages(1) \ "id").as[String] === toMessageIdStr(messages(3))
           (jsMessages(1) \ "time").as[Long] === messages(3).createdAt.getMillis
-          (jsMessages(2) \ "id").as[PublicId[Message]] === messages(2).pubId
+          (jsMessages(2) \ "id").as[String] === toMessageIdStr(messages(2))
           (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
-          (jsMessages(3) \ "id").as[PublicId[Message]] === messages(1).pubId
+          (jsMessages(3) \ "id").as[String] === toMessageIdStr(messages(1))
           (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
-          (jsMessages(4) \ "id").as[PublicId[Message]] === messages(0).pubId
+          (jsMessages(4) \ "id").as[String] === toMessageIdStr(messages(0))
           (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
           res must equalTo(expected)
         }
         {
-          val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, None).toString
-          path2 === s"/m/2/eliza/thread/${thread.pubKeepId.id}?pageSize=3"
+          val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, None).toString
+          path2 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3"
 
-          val action2 = controller.getPagedThread(thread.pubKeepId, 3, None)
+          val action2 = controller.getPagedThread(thread.externalId.toString, 3, None)
           val res2 = Json.parse(contentAsString(action2(FakeRequest("GET", path2))))
 
           val expectedMessages2 = s"""[
-                { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected2 = Json.parse(s"""
             {
-              "id": "${thread.pubKeepId.id}",
+              "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
               "keep":null,
@@ -462,24 +468,24 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           """)
 
           (res2 \ "messages").as[JsArray].value.size === 3
-          (messages.reverse.take(3) map (_.pubId)) === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Message]] })
+          (messages.reverse.take(3) map toMessageIdStr) === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] })
           res2 must equalTo(expected2)
         }
         {
-          val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id)).toString
-          path3 === s"/m/2/eliza/thread/${thread.pubKeepId.id}?pageSize=3&fromMessageId=${messages(2).pubId.id}"
+          val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, Some(messages(2).externalId.toString)).toString
+          path3 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3&fromMessageId=${messages(2).externalId.toString}"
 
-          val action3 = controller.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id))
+          val action3 = controller.getPagedThread(thread.externalId.toString, 3, Some(messages(2).externalId.toString))
           val res3 = Json.parse(contentAsString(action3(FakeRequest())))
 
           val expectedMessages3 = s"""[
-                { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected3 = Json.parse(s"""
             {
-              "id": "${thread.pubKeepId.id}",
+              "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
               "keep":null,
@@ -501,7 +507,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           """)
 
           (res3 \ "messages").as[JsArray].value.size === 2
-          (messages.reverse.drop(3) map (_.pubId)) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Message]] })
+          (messages.reverse.drop(3) map toMessageIdStr) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] })
           res3 must equalTo(expected3)
         }
       }
@@ -529,8 +535,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all } head
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.pubKeepId).toString
-        path === s"/m/1/eliza/messages/${thread.pubKeepId.id}"
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.externalId.id).toString
+        path === s"/m/1/eliza/messages/${thread.externalId}"
 
         val input = Json.parse(s"""
           {
@@ -541,7 +547,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "extVersion": "2.6.65"
           }
           """)
-        val action = controller.sendMessageReplyAction(thread.pubKeepId)
+        val action = controller.sendMessageReplyAction(thread.externalId.id)
         val request = FakeRequest("POST", path).withBody(input)
         val result = action(request)
         status(result) must equalTo(OK)
@@ -556,8 +562,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         reply.messageText === "cool man!"
         val expected = Json.parse(s"""
           {
-            "id":"${reply.pubId.id}",
-            "parentId":"${reply.pubKeepId.id}",
+            "id":"${toMessageIdStr(reply)}",
+            "parentId":"${reply.threadExtId.id}",
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }
           """)
@@ -565,10 +571,10 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         //checking result with another call
 
-        val pathThread = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.pubKeepId).toString
-        pathThread === s"/m/1/eliza/thread/${thread.pubKeepId.id}"
+        val pathThread = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.externalId.toString).toString
+        pathThread === s"/m/1/eliza/thread/${thread.externalId.toString}"
 
-        val action2 = controller.getCompactThread(thread.pubKeepId)
+        val action2 = controller.getCompactThread(thread.externalId.toString)
         val request2 = FakeRequest("GET", pathThread)
         val result2 = action2(request2)
         status(result2) must equalTo(OK)
@@ -577,7 +583,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val expected2 = Json.parse(s"""
           {
-            "id": "${thread.pubKeepId.id}",
+            "id": "${thread.externalId.id}",
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
             "keep":null,
@@ -596,13 +602,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             ],
             "messages": [
               {
-                "id": "${messages(0).pubId.id}",
+                "id": "${toMessageIdStr(messages(0))}",
                 "time": ${messages(0).createdAt.getMillis},
                 "text": "test me out",
                 "userId": "${shanee.externalId.id}"
               },
               {
-                "id": "${messages(1).pubId.id}",
+                "id": "${toMessageIdStr(messages(1))}",
                 "time": ${messages(1).createdAt.getMillis},
                 "text": "cool man!",
                 "userId": "${shanee.externalId.id}"

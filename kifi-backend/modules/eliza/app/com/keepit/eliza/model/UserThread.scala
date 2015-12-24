@@ -2,7 +2,7 @@ package com.keepit.eliza.model
 
 import com.keepit.common.time._
 import com.keepit.common.db.{ State, States, Model, Id }
-import com.keepit.model.{ Keep, User, NormalizedURI }
+import com.keepit.model.{ User, NormalizedURI }
 
 import play.api.libs.json._
 
@@ -11,9 +11,9 @@ import org.joda.time.DateTime
 import scala.Some
 import com.keepit.common.crypto.ModelWithPublicId
 
-case class UserThreadNotification(keepId: Id[Keep], message: Id[ElizaMessage])
+case class UserThreadNotification(thread: Id[MessageThread], message: Id[ElizaMessage])
 
-case class UserThreadActivity(id: Id[UserThread], keepId: Id[Keep], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
+case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
 case class UserThread(
   id: Option[Id[UserThread]] = None,
@@ -21,7 +21,7 @@ case class UserThread(
   updatedAt: DateTime = currentDateTime,
   state: State[UserThread] = UserThreadStates.ACTIVE,
   user: Id[User],
-  keepId: Id[Keep],
+  threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],
   lastSeen: Option[DateTime],
   unread: Boolean = false,
@@ -39,7 +39,7 @@ case class UserThread(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def sanitizeForDelete = this.copy(state = UserThreadStates.INACTIVE)
 
-  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, keep = $keepId, " +
+  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
 }
@@ -49,7 +49,7 @@ object UserThreadStates extends States[UserThread]
 object UserThread {
   def forMessageThread(mt: MessageThread)(user: Id[User]) = UserThread(
     user = user,
-    keepId = mt.keepId,
+    threadId = mt.id.get,
     uriId = Some(mt.uriId),
     lastSeen = None,
     unread = true,

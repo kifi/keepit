@@ -2,12 +2,11 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
-import com.keepit.discussion.Message
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ Keep, NotificationCategory, UserExperimentType, KifiExtVersion }
+import com.keepit.model.{ NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
@@ -78,14 +77,14 @@ class SharedWsMessagingController @Inject() (
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
     "get_thread" -> {
-      case JsString(keepIdStr) +: _ =>
-        log.info(s"[get_thread] user ${socket.userId} thread $keepIdStr")
-        Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
-          basicMessageCommander.getDiscussionAndKeep(socket.userId, keepId).map {
+      case JsString(threadIdStr) +: _ =>
+        log.info(s"[get_thread] user ${socket.userId} thread $threadIdStr")
+        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+          basicMessageCommander.getDiscussionAndKeep(socket.userId, threadId).map {
             case (discussion, keepOpt) =>
               socket.channel.push(Json.arr(
                 "thread", Json.obj(
-                  "id" -> keepIdStr,
+                  "id" -> threadIdStr,
                   "uri" -> discussion.url,
                   "nUrl" -> discussion.nUrl,
                   "participants" -> discussion.participants,
@@ -96,7 +95,7 @@ class SharedWsMessagingController @Inject() (
         }
     },
     "add_participants_to_thread" -> {
-      case JsString(keepIdStr) +: (data: JsValue) +: _ =>
+      case JsString(threadIdStr) +: (data: JsValue) +: _ =>
         val (users, emailContacts, orgs) = data match {
           case JsArray(participantsJson) =>
             val (users, emailContacts, orgs) = messagingCommander.parseRecipients(participantsJson)
@@ -110,8 +109,8 @@ class SharedWsMessagingController @Inject() (
 
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
-            discussionCommander.addParticipantsToThread(socket.userId, keepId, users, emailContacts, orgs)
+          MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+            discussionCommander.addParticipantsToThread(socket.userId, threadId, users, emailContacts, orgs)
           }
         }
     },
@@ -126,10 +125,10 @@ class SharedWsMessagingController @Inject() (
     },
     // inbox notification/thread handlers
     "get_one_thread" -> {
-      case JsNumber(requestId) +: JsString(keepIdStr) +: _ =>
-        Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
+      case JsNumber(requestId) +: JsString(threadIdStr) +: _ =>
+        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
           (for {
-            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, keepId, needsPageImages(socket))
+            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, threadId, needsPageImages(socket))
           } yield {
             socket.channel.push(Json.arr(requestId.toLong, json.obj))
           }).onFailure {
@@ -282,12 +281,11 @@ class SharedWsMessagingController @Inject() (
             val recipient = Recipient(socket.userId)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
-          Message.decodePublicIdStr(notifId).map(ElizaMessage.fromCommonId).foreach { messageId =>
-            val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-            val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
-            val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
-            websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
-          }
+          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+          val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
+          val messageId = basicMessageCommander.getElizaMessageId(notifId)
+          val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
+          websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
         }
     },
 
@@ -300,9 +298,8 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
-          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
-            messagingCommander.setUnread(socket.userId, messageId)
-          }
+          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
+          messagingCommander.setUnread(socket.userId, messageId)
         }
     },
     "set_message_read" -> {
@@ -315,31 +312,30 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
         } {
-          Message.decodePublicIdStr(messageIdStr).map(ElizaMessage.fromCommonId).foreach { messageId =>
-            messagingCommander.setRead(socket.userId, messageId)
-            messagingCommander.setLastSeen(socket.userId, messageId)
-          }
+          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
+          messagingCommander.setRead(socket.userId, messageId)
+          messagingCommander.setLastSeen(socket.userId, messageId)
         }
     },
     "mute_thread" -> {
-      case JsString(idStr) +: _ =>
+      case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        legacyNotificationCheck.ifNotifExists(idStr) { notif =>
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = true)
         } {
-          Keep.decodePublicIdStr(idStr).foreach { keepId =>
-            discussionCommander.muteThread(socket.userId, keepId)
+          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
+            discussionCommander.muteThread(socket.userId, threadId)
           }
         }
     },
     "unmute_thread" -> {
-      case JsString(idStr) +: _ =>
+      case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        legacyNotificationCheck.ifNotifExists(idStr) { notif =>
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
         } {
-          Keep.decodePublicIdStr(idStr).foreach { keepId =>
-            discussionCommander.unmuteThread(socket.userId, keepId)
+          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
+            discussionCommander.unmuteThread(socket.userId, threadId)
           }
         }
     },

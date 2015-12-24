@@ -7,10 +7,12 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ CrossServiceMessage, Message }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
+import com.keepit.model.Keep
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -23,6 +25,18 @@ class ElizaDiscussionController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
+
+  private def makeCrossServiceMessage(thread: MessageThread, message: ElizaMessage): CrossServiceMessage = {
+    require(message.thread == thread.id.get)
+    CrossServiceMessage(
+      id = ElizaMessage.toCommonId(message.id.get),
+      seq = ElizaMessage.toCommonSeq(message.seq),
+      keep = thread.keepId, // todo(Léo): add keepId to ElizaMessage
+      sentAt = message.createdAt,
+      sentBy = message.from.asUser,
+      text = message.messageText
+    )
+  }
 
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     import GetDiscussionsForKeeps._
@@ -39,7 +53,8 @@ class ElizaDiscussionController @Inject() (
     val crossServiceMsgs = db.readOnlyReplica { implicit s =>
       input.msgIds.map { msgId =>
         val msg = messageRepo.get(ElizaMessage.fromCommonId(msgId))
-        msgId -> ElizaMessage.toCrossServiceMessage(msg)
+        val thread = threadRepo.get(msg.thread)
+        msgId -> makeCrossServiceMessage(thread, msg)
       }.toMap
     }
     val output = Response(crossServiceMsgs)
@@ -59,7 +74,7 @@ class ElizaDiscussionController @Inject() (
     import SendMessageOnKeep._
     val input = request.body.as[Request]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
+    discussionCommander.sendMessage(input.userId, input.text, KeepId(input.keepId), source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }
@@ -95,7 +110,8 @@ class ElizaDiscussionController @Inject() (
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = Action { request =>
     val messages = db.readOnlyMaster { implicit session =>
       val elizaMessages = messageRepo.getBySequenceNumber(ElizaMessage.fromCommonSeq(seqNum), fetchSize)
-      elizaMessages.map(ElizaMessage.toCrossServiceMessage)
+      val threadsById = threadRepo.getByIds(elizaMessages.map(_.thread).toSet)
+      elizaMessages.map(message => makeCrossServiceMessage(threadsById(message.thread), message))
     }
     Ok(Json.toJson(messages))
   }

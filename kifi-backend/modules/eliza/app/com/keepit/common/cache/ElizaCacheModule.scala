@@ -19,12 +19,12 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def messageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessageThreadKeepIdCache(stats, accessLog, (outerRepo, 30 days))
+    new MessageThreadExternalIdCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
   def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MessagesByKeepIdCache(stats, accessLog, (outerRepo, 30 days))
+    new MessagesForThreadIdCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides

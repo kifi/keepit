@@ -1,24 +1,30 @@
 package com.keepit.eliza.controllers.ext
 
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.discussion.Message
 import com.keepit.eliza.model._
+import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ ElizaThreadInfo, ElizaDiscussionCommander, MessagingCommander, ElizaEmailCommander }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
-import com.keepit.model.Keep
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
-import com.keepit.common.core._
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.json.{ Json, JsValue }
+import play.api.libs.json.{ JsSuccess, Json, JsValue, JsObject }
+
+import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 class ExtMessagingController @Inject() (
     discussionCommander: ElizaDiscussionCommander,
@@ -56,7 +62,7 @@ class ExtMessagingController @Inject() (
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
-          "parentId" -> threadInfo.keepId,
+          "parentId" -> MessageThreadId.format.writes(threadInfo.threadId),
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo),
           "messages" -> messages.reverse))
@@ -67,9 +73,9 @@ class ExtMessagingController @Inject() (
 
   }
 
-  def sendMessageReplyAction(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
+  def sendMessageReplyAction(threadIdStr: String) = UserAction.async(parse.tolerantJson) { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
         val tStart = currentDateTime
         val o = request.body
         val (text, source) = (
@@ -80,24 +86,17 @@ class ExtMessagingController @Inject() (
         contextBuilder += ("source", "extension")
         (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
         contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
-        discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build).map { message =>
+        discussionCommander.sendMessage(request.userId, text, threadId, source)(contextBuilder.build).map { message =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
-          Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
+          Ok(Json.obj("id" -> message.pubId, "parentId" -> threadIdStr, "createdAt" -> message.sentAt))
         }
-      case Failure(error) => {
-        log.error(error.getMessage)
-        Future.successful(BadRequest("invalid_keep_id"))
-      }
+      case None => Future.successful(BadRequest("invalid_thread_id"))
     }
   }
 
-  def getEmailPreview(messagePubId: PublicId[Message]) = UserAction.async { request =>
-    Message.decodePublicId(messagePubId) match {
-      case Success(messageId) => emailCommander.getEmailPreview(ElizaMessage.fromCommonId(messageId)).imap(Ok(_))
-      case Failure(_) => Future.successful(BadRequest("invalid_message_id"))
-    }
-
+  def getEmailPreview(msgExtId: String) = UserAction.async { request =>
+    emailCommander.getEmailPreview(ExternalId[ElizaMessage](msgExtId)).map(Ok(_))
   }
 
 }

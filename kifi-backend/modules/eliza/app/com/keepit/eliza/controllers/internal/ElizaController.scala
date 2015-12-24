@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.time.Clock
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza._
@@ -144,12 +144,12 @@ class ElizaController @Inject() (
     Ok(Json.toJson(threadStats))
   }
 
-  def getParticipantsByThreadExtId(pubKeepId: PublicId[Keep]) = Action { request =>
-    val participants = Keep.decodePublicId(pubKeepId).toOption.flatMap { keepId =>
-      db.readOnlyReplica { implicit s =>
-        messageThreadRepo.getByKeepId(keepId).map(_.participants.allUsers)
-      }
-    }.getOrElse(Set.empty)
+  def getParticipantsByThreadExtId(idStr: String) = Action { request =>
+    val extIdOpt = MessageThreadId.fromIdString(idStr).flatMap {
+      case ThreadExternalId(extId) => Some(extId)
+      case KeepId(kid) => db.readOnlyReplica { implicit s => messageThreadRepo.getByKeepId(kid).map(_.externalId) }
+    }
+    val participants = extIdOpt.map(extId => elizaStatsCommander.getThreadByExtId(extId).participants.allUsers).getOrElse(Set.empty)
     Ok(Json.toJson(participants))
   }
 }

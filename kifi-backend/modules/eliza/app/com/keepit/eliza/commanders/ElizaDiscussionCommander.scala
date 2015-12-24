@@ -25,10 +25,10 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
-  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
-  def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
-  def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
+  def sendMessage(userId: Id[User], txt: String, extThreadId: MessageThreadId, source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
+  def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
+  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
+  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
@@ -79,7 +79,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
     val elizaMsgs = db.readOnlyReplica { implicit s =>
-      messageRepo.getByKeep(keepId, fromId = fromIdOpt, limit = limit)
+      messageThreadRepo.getByKeepId(keepId).map { thread =>
+        messageRepo.getByThread(thread.id.get, fromId = fromIdOpt, limit = limit)
+      }.getOrElse(Seq.empty)
     }
     externalizeMessages(elizaMsgs).map { extMessageMap =>
       elizaMsgs.flatMap(em => extMessageMap.get(em.id.get))
@@ -89,21 +91,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion] = getDiscussionsForKeeps(Set(keepId)).imap(dm => dm(keepId))
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
     val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
-    val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
-    val recentsByKeep = keepIds.map { keepId =>
-      keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = MESSAGES_TO_INCLUDE)
+    val threadIds = threadsByKeep.values.map(_.id.get).toSet
+    val countsByThread = messageRepo.getAllMessageCounts(threadIds)
+    val recentsByThread = threadIds.map { threadId =>
+      threadId -> messageRepo.getByThread(threadId, fromId = None, limit = MESSAGES_TO_INCLUDE)
     }.toMap
 
-    val extMessageMapFut = externalizeMessages(recentsByKeep.values.toSeq.flatten)
+    val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)
 
     extMessageMapFut.map { extMessageMap =>
       threadsByKeep.map {
         case (kid, thread) =>
           kid -> Discussion(
             startedAt = thread.createdAt,
-            numMessages = countsByKeep.getOrElse(kid, 0),
+            numMessages = countsByThread.getOrElse(thread.id.get, 0),
             locator = thread.deepLocator,
-            messages = recentsByKeep(kid).flatMap(em => extMessageMap.get(em.id.get))
+            messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
     }
@@ -139,8 +142,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateMessageThreadWithUser(keepId: Id[Keep], userId: Id[User]): Future[MessageThread] = {
-    val futureMessageThread = getOrCreateMessageThreadForKeep(keepId)
+  private def getOrCreateMessageThreadWithUser(extThreadId: MessageThreadId, userId: Id[User]): Future[MessageThread] = {
+    val futureMessageThread = extThreadId match {
+      case ThreadExternalId(threadId) => db.readOnlyMaster { implicit session => Future.successful(messageThreadRepo.get(threadId)) }
+      case KeepId(keepId) => getOrCreateMessageThreadForKeep(keepId)
+    }
     futureMessageThread.map { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
@@ -156,40 +162,41 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
-    getOrCreateMessageThreadWithUser(keepId, userId).flatMap { thread =>
-      val (_, message) = messagingCommander.sendMessage(userId, thread, txt, source, None)
+  def sendMessage(userId: Id[User], txt: String, extThreadId: MessageThreadId, source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
+    getOrCreateMessageThreadWithUser(extThreadId, userId).flatMap { thread =>
+      val (_, message) = messagingCommander.sendMessage(userId, extThreadId, thread, txt, source, None)
       externalizeMessage(message)
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(keepId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, keepId, newParticipantsExtIds, emailContacts, orgs)
+  def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(extThreadId, adderUserId).flatMap { thread =>
+      messagingCommander.addParticipantsToThread(adderUserId, extThreadId, thread.id.get, newParticipantsExtIds, emailContacts, orgs)
     }
   }
 
-  def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(keepId, userId).map { _ =>
-      messagingCommander.setUserThreadMuteState(userId, keepId, mute = true)
+  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(extThreadId, userId).map { _ =>
+      messagingCommander.setUserThreadMuteState(userId, extThreadId, mute = true)
     }
   }
 
-  def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(keepId, userId).map { _ =>
-      messagingCommander.setUserThreadMuteState(userId, keepId, mute = false)
+  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(extThreadId, userId).map { _ =>
+      messagingCommander.setUserThreadMuteState(userId, extThreadId, mute = false)
     }
   }
 
   // TODO(ryan): make this do batch processing...
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int] = db.readWrite { implicit s =>
     for {
-      ut <- userThreadRepo.getUserThread(userId, keepId)
+      mt <- messageThreadRepo.getByKeepId(keepId)
+      ut <- userThreadRepo.getUserThread(userId, mt.id.get)
     } yield {
-      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
+      messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
         // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
         // Then you can just set it and forget it
-        if (unreadCount == 0) userThreadRepo.markRead(userId, messageRepo.get(msgId))
+        if (unreadCount == 0) userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))
       }
     }
   }
