@@ -9,7 +9,7 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.eliza.model.MessageSender
+import com.keepit.eliza.model.{ KeepId, MessageSender }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory, _ }
@@ -23,6 +23,7 @@ import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
   implicit val context = HeimdalContext.empty
+  implicit def pubIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
@@ -93,20 +94,20 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
 
-          Await.result(discussionCommander.sendMessage(user1, "First post!", keep), Duration.Inf)
+          Await.result(discussionCommander.sendMessage(user1, "First post!", KeepId(keep)), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             th.participants.allUsers === Set(user1)
             th.participants.allNonUsers must beEmpty
-            userThreadRepo.getByKeep(keep) must haveSize(1)
+            userThreadRepo.getByThread(th.id.get) must haveSize(1)
           }
 
-          Await.result(discussionCommander.sendMessage(user2, "Second post", keep), Duration.Inf)
+          Await.result(discussionCommander.sendMessage(user2, "Second post", KeepId(keep)), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             th.participants.allUsers === Set(user1, user2)
             th.participants.allNonUsers must beEmpty
-            userThreadRepo.getByKeep(keep) must haveSize(2)
+            userThreadRepo.getByThread(th.id.get) must haveSize(2)
           }
 
           val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
@@ -124,27 +125,30 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           val user2 = Id[User](2)
 
           Await.result(for {
-            _ <- discussionCommander.sendMessage(user1, "First post!", keep)
-            _ <- discussionCommander.sendMessage(user2, "My first post too!", keep)
-            _ <- discussionCommander.sendMessage(user2, "And another post!", keep)
+            _ <- discussionCommander.sendMessage(user1, "First post!", KeepId(keep))
+            _ <- discussionCommander.sendMessage(user2, "My first post too!", KeepId(keep))
+            _ <- discussionCommander.sendMessage(user2, "And another post!", KeepId(keep))
           } yield Unit, Duration.Inf)
           val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
 
           inject[WatchableExecutionContext].drain()
 
           db.readOnlyMaster { implicit s =>
-            userThreadRepo.getUserThread(user1, keep).map(_.unread) must beSome(true)
-            userThreadRepo.getUserThread(user2, keep).map(_.unread) must beSome(false)
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
+            userThreadRepo.getUserThread(user2, mtId).map(_.unread) must beSome(false)
           }
 
           discussionCommander.markAsRead(user1, keep, msgs(1).id.get) must beSome(1)
           db.readOnlyMaster { implicit s =>
-            userThreadRepo.getUserThread(user1, keep).map(_.unread) must beSome(true)
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
           }
 
           discussionCommander.markAsRead(user1, keep, msgs.last.id.get) must beSome(0)
           db.readOnlyMaster { implicit s =>
-            userThreadRepo.getUserThread(user1, keep).map(_.unread) must beSome(false)
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(false)
           }
           inject[WatchableExecutionContext].drain()
           1 === 1

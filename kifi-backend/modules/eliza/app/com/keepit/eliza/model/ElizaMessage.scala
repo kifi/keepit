@@ -1,6 +1,9 @@
 package com.keepit.eliza.model
 
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.discussion.{ CrossServiceMessage, Message }
@@ -8,11 +11,16 @@ import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ Keep, User, NormalizedURI }
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
+import com.keepit.model.{ User, NormalizedURI }
+import MessagingTypeMappers._
+import com.keepit.common.logging.Logging
+import com.keepit.common.cache.{ CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
+import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
+import scala.slick.lifted.Query
+import scala.slick.jdbc.StaticQuery
 
 sealed trait MessageSender {
   def isSystem: Boolean = false
@@ -107,21 +115,22 @@ case class ElizaMessage(
   updatedAt: DateTime = currentDateTime,
   state: State[ElizaMessage] = ElizaMessageStates.ACTIVE,
   seq: SequenceNumber[ElizaMessage] = SequenceNumber.ZERO,
-  keepId: Id[Keep],
+  externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
+  thread: Id[MessageThread],
+  threadExtId: ExternalId[MessageThread],
   messageText: String,
   source: Option[MessageSource],
   auxData: Option[JsArray] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
-    extends ModelWithSeqNumber[ElizaMessage] {
+    extends ModelWithExternalId[ElizaMessage] with ModelWithSeqNumber[ElizaMessage] {
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
 
   def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommonId(id.get))
-  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
 
   def isActive: Boolean = state == ElizaMessageStates.ACTIVE
 }
@@ -134,8 +143,10 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[ElizaMessage]] and
     (__ \ 'seq).format[SequenceNumber[ElizaMessage]] and
-    (__ \ 'keepId).format[Id[Keep]] and
+    (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
+    (__ \ 'thread).format(Id.format[MessageThread]) and
+    (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
     (__ \ 'messageText).format[String] and
     (__ \ 'source).formatNullable[MessageSource] and
     (__ \ 'auxData).formatNullable[JsArray] and
@@ -149,8 +160,10 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     updatedAt: DateTime,
     state: State[ElizaMessage],
     seq: SequenceNumber[ElizaMessage],
-    keepId: Id[Keep],
+    externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
+    thread: Id[MessageThread],
+    threadExtId: ExternalId[MessageThread],
     messageText: String,
     source: Option[MessageSource],
     auxData: Option[JsArray],
@@ -163,8 +176,10 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       updatedAt,
       state,
       seq,
-      keepId,
+      externalId,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
+      thread,
+      threadExtId,
       messageText,
       source,
       auxData,
@@ -173,15 +188,17 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], Option[Id[User]], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
       message.updatedAt,
       message.state,
       message.seq,
-      message.keepId,
+      message.externalId,
       message.from.asUser,
+      message.thread,
+      message.threadExtId,
       message.messageText,
       message.source,
       message.auxData,
@@ -197,25 +214,37 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       messageText = message.messageText,
       createdAt = message.createdAt)
   }
+}
 
-  def toCrossServiceMessage(message: ElizaMessage): CrossServiceMessage = {
-    CrossServiceMessage(
-      id = ElizaMessage.toCommonId(message.id.get),
-      seq = ElizaMessage.toCommonSeq(message.seq),
-      keep = message.keepId,
-      sentAt = message.createdAt,
-      sentBy = message.from.asUser,
-      text = message.messageText
-    )
+case class MessagesForThread(thread: Id[MessageThread], messages: Seq[ElizaMessage]) {
+  override def equals(other: Any): Boolean = other match {
+    case mft: MessagesForThread => thread.id == mft.thread.id && messages.size == mft.messages.size
+    case _ => false
   }
+  override def hashCode = thread.id.hashCode
+  override def toString = "[MessagesForThread(%s): %s]".format(thread, messages)
 }
 
-case class MessagesKeepIdKey(keepId: Id[Keep]) extends Key[Seq[ElizaMessage]] {
-  override val version = 1
-  val namespace = "messages_by_keep_id"
-  def toKey(): String = keepId.id.toString
+object MessagesForThread {
+
+  implicit val messagesForThreadReads = (
+    (__ \ 'thread_id).read(Id.format[MessageThread]) and
+    (__ \ 'messages).read[Seq[ElizaMessage]]
+  )(MessagesForThread.apply _)
+
+  implicit val messagesForThreadWrites = (
+    (__ \ 'thread_id).write(Id.format[MessageThread]) and
+    (__ \ 'messages).write(Writes.traversableWrites[ElizaMessage])
+  )(unlift(MessagesForThread.unapply))
+
 }
 
-class MessagesByKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessagesKeepIdKey, Seq[ElizaMessage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+case class MessagesForThreadIdKey(threadId: Id[MessageThread]) extends Key[MessagesForThread] {
+  override val version = 8
+  val namespace = "messages_for_thread_id"
+  def toKey(): String = threadId.id.toString
+}
+
+class MessagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

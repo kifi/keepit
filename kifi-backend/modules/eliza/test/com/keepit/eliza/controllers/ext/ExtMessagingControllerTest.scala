@@ -26,6 +26,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
+  implicit def publicIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   implicit val context = HeimdalContext.empty
 
   def initUsers()(implicit injector: Injector): Seq[User] = {
@@ -33,6 +34,11 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
     val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
+
+  def toMessageIdStr(message: ElizaMessage)(implicit injector: Injector): String = {
+    implicit val publicIdConfig = inject[PublicIdConfiguration]
+    message.pubId.id
   }
 
   def modules = Seq(
@@ -84,11 +90,11 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
 
         val expected = Json.parse(s"""
           {
-            "id": "${message.pubId.id}",
-            "parentId": "${thread.pubKeepId.id}",
+            "id": "${toMessageIdStr(message)}",
+            "parentId": "${Keep.publicId(thread.keepId).id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
-              "id": "${thread.pubKeepId.id}",
+              "id": "${Keep.publicId(thread.keepId).id}",
               "participants":
               [
                 {
@@ -110,7 +116,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
               "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
               "messageCount":1,
               "messageTimes": {
-                "${message.pubId.id}": "${message.createdAt.toStandardTimeString}"
+                "${toMessageIdStr(message)}": "${message.createdAt.toStandardTimeString}"
               },
               "createdAt": "${thread.createdAt.toStandardTimeString}",
               "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
@@ -121,7 +127,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
             },
             "messages":[
               {
-                "id": "${message.pubId.id}",
+                "id": "${toMessageIdStr(message)}",
                 "createdAt": "${message.createdAt.toStandardTimeString}",
                 "text": "test me out",
                 "url": "https://admin.kifi.com/admin/searchExperiments",
@@ -178,8 +184,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val message = db.readOnlyMaster { implicit s => inject[MessageRepo].all } head
         val thread = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
 
-        val path2 = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.pubKeepId).toString
-        path2 === s"/eliza/messages/${thread.pubKeepId.id}"
+        val path2 = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId.id).toString
+        path2 === s"/eliza/messages/${thread.externalId}"
 
         val input = Json.parse(s"""
           {
@@ -191,7 +197,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
           }
           """)
         val request2 = FakeRequest("POST", path2).withBody(input)
-        val result2 = extMessagingController.sendMessageReplyAction(thread.pubKeepId)(request2)
+        val result2 = extMessagingController.sendMessageReplyAction(thread.externalId.id)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -203,8 +209,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         reply.messageText === "cool man!"
         val expected = Json.parse(s"""
           {
-            "id":"${reply.pubId.id}",
-            "parentId":"${reply.pubKeepId.id}",
+            "id":"${toMessageIdStr(reply)}",
+            "parentId":"${reply.threadExtId.id}",
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }
           """)

@@ -14,7 +14,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class ElizaThreadInfo(
-    keepId: PublicId[Keep],
+    threadId: MessageThreadId,
     participants: Seq[BasicUserLikeEntity],
     digest: String,
     lastAuthor: ExternalId[User],
@@ -30,7 +30,7 @@ case class ElizaThreadInfo(
 
 object ElizaThreadInfo {
   implicit def writesThreadInfo(implicit publicIdConfig: PublicIdConfiguration) = (
-    (__ \ 'id).write[PublicId[Keep]] and
+    (__ \ 'id).write(MessageThreadId.format) and
     (__ \ 'participants).write[Seq[BasicUserLikeEntity]] and
     (__ \ 'digest).write[String] and
     (__ \ 'lastAuthor).write(ExternalId.format[User]) and

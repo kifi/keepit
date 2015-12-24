@@ -77,7 +77,7 @@ class ElizaEmailCommander @Inject() (
 
     val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
       (
-        nonUserThreadRepo.getByKeepId(thread.keepId),
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get),
         thread.startedBy
       )
     }
@@ -89,7 +89,7 @@ class ElizaEmailCommander @Inject() (
 
     ThreadEmailInfo(
       uriId = thread.uriId,
-      keepId = thread.pubKeepId,
+      keepId = Keep.publicId(thread.keepId),
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
       isInitialEmail = isInitialEmail,
@@ -173,7 +173,7 @@ class ElizaEmailCommander @Inject() (
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session =>
-        nonUserThreadRepo.getByKeepId(thread.keepId)
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
 
       // Intentionally sequential execution
@@ -189,7 +189,7 @@ class ElizaEmailCommander @Inject() (
   def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
-        nonUserThreadRepo.getByKeepId(thread.keepId).map { nut =>
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
       }
@@ -206,7 +206,7 @@ class ElizaEmailCommander @Inject() (
   def notifyEmailParticipant(emailParticipantThread: NonUserThread, threadEmailData: ThreadEmailData): Future[Unit] = {
     val result = if (emailParticipantThread.muted) Future.successful(()) else {
       require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
-      require(emailParticipantThread.keepId == threadEmailData.thread.keepId, "MessageThread and NonUserThread do not match.")
+      require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
       val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED
       val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml else protoEmail.initialHtml
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
@@ -254,10 +254,10 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  def getEmailPreview(msgId: Id[ElizaMessage]): Future[Html] = {
+  def getEmailPreview(msgExtId: ExternalId[ElizaMessage]): Future[Html] = {
     val (msg, thread) = db.readOnlyReplica { implicit session =>
-      val msg = messageRepo.get(msgId)
-      val thread = threadRepo.getByKeepId(msg.keepId).get
+      val msg = messageRepo.get(msgExtId)
+      val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
     val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None, None, None, None) }

@@ -9,16 +9,15 @@ import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.MessageSource
+import com.keepit.eliza.model.{ MessageThreadId, ElizaMessage, MessageSource, MessageThread }
 import com.keepit.heimdal._
-import com.keepit.model.{ Keep, Organization, User }
+import com.keepit.model.{ Organization, User }
 import com.keepit.notify.model.Recipient
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
 
 //import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
@@ -152,7 +151,7 @@ class MobileMessagingController @Inject() (
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
-          "parentId" -> threadInfo.keepId,
+          "parentId" -> MessageThreadId.format.writes(threadInfo.threadId),
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo.copy(url = URISanitizer.sanitize(threadInfo.url), nUrl = threadInfo.nUrl.map(URISanitizer.sanitize))),
           "messages" -> messages.reverse.map(message => message.copy(url = URISanitizer.sanitize(message.url)))))
@@ -162,9 +161,9 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def sendMessageReplyAction(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
+  def sendMessageReplyAction(threadIdStr: String) = UserAction.async(parse.tolerantJson) { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
         val tStart = currentDateTime
         val o = request.body
         val (text, source) = (
@@ -173,20 +172,20 @@ class MobileMessagingController @Inject() (
         )
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
-        discussionCommander.sendMessage(request.user.id.get, text, keepId, source)(contextBuilder.build).map { message =>
+        discussionCommander.sendMessage(request.user.id.get, text, threadId, source)(contextBuilder.build).map { message =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
-          Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
+          Ok(Json.obj("id" -> message.pubId, "parentId" -> threadIdStr, "createdAt" -> message.sentAt))
         }
-      case Failure(_) => Future.successful(BadRequest("invalid_id"))
+      case None => Future.successful(BadRequest("invalid_id"))
     }
   }
 
   // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
-  def getPagedThread(pubKeepId: PublicId[Keep], pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
-        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId) map {
+  def getPagedThread(threadIdStr: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
           case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
@@ -194,13 +193,13 @@ class MobileMessagingController @Inject() (
             val page = fromMessageId match {
               case None => discussion.messages.take(pageSize)
               case Some(idString) =>
-                val publicId = Message.validatePublicId(idString).get
+                val publicId = basicMessageCommander.getMessagePublicId(idString)
                 val afterId = discussion.messages.dropWhile(_.id != publicId)
                 if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${discussion.messages.size} had no message id $publicId")
                 afterId.drop(1).take(pageSize)
             }
             Ok(Json.obj(
-              "id" -> pubKeepId,
+              "id" -> threadIdStr,
               "uri" -> url,
               "nUrl" -> nUrl,
               "keep" -> keep,
@@ -231,21 +230,21 @@ class MobileMessagingController @Inject() (
               })
             ))
         }
-      case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
+      case None => Future.successful(BadRequest("invalid_thread_id"))
     }
   }
 
   @deprecated(message = "use getPagedThread", since = "April 23, 2014")
-  def getCompactThread(pubKeepId: PublicId[Keep]) = UserAction.async { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
-        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId) map {
+  def getCompactThread(threadIdStr: String) = UserAction.async { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
           case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
             val participants: Set[BasicUserLikeEntity] = discussion.participants
             Ok(Json.obj(
-              "id" -> pubKeepId,
+              "id" -> threadIdStr,
               "uri" -> url,
               "nUrl" -> nUrl,
               "keep" -> keep,
@@ -276,7 +275,7 @@ class MobileMessagingController @Inject() (
               })
             ))
         }
-      case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
+      case None => Future.successful(BadRequest("invalid_thread_id"))
     }
   }
 
@@ -320,9 +319,9 @@ class MobileMessagingController @Inject() (
 
   // users is a string because orgs come in through that field
   @json case class AddParticipants(users: Seq[String], emails: Seq[BasicContact])
-  def addParticipantsToThreadV2(pubKeepId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    (Keep.decodePublicId(pubKeepId), request.body.asOpt[AddParticipants]) match {
-      case (Success(keepId), Some(addReq)) =>
+  def addParticipantsToThreadV2(threadIdStr: String) = UserAction(parse.tolerantJson) { request =>
+    (MessageThreadId.fromIdString(threadIdStr), request.body.asOpt[AddParticipants]) match {
+      case (Some(threadId), Some(addReq)) =>
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
 
@@ -332,16 +331,16 @@ class MobileMessagingController @Inject() (
             case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
           }
         }
-        discussionCommander.addParticipantsToThread(request.userId, keepId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
+        discussionCommander.addParticipantsToThread(request.userId, threadId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
         Ok
       case _ => BadRequest
     }
   }
 
   // Do not use, clients have moved to addParticipantsToThreadV2 which doesn't have an insane API
-  def addParticipantsToThread(pubKeepId: PublicId[Keep], users: String, emailContacts: String) = UserAction { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
+  def addParticipantsToThread(threadIdStr: String, users: String, emailContacts: String) = UserAction { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
         if (users.nonEmpty || emailContacts.nonEmpty) {
           val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
           contextBuilder += ("source", "mobile")
@@ -354,10 +353,10 @@ class MobileMessagingController @Inject() (
               case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
             }
           }
-          discussionCommander.addParticipantsToThread(request.userId, keepId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
+          discussionCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
         }
         Ok("")
-      case Failure(_) => BadRequest("invalid_keep_id")
+      case None => BadRequest("invalid_thread_id")
     }
   }
 

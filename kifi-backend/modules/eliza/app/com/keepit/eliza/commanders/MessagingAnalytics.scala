@@ -8,7 +8,7 @@ import com.keepit.realtime._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{ Keep, Organization, NotificationCategory, User }
+import com.keepit.model.{ Organization, NotificationCategory, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -43,7 +43,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.pubId.id)
-      contextBuilder += ("threadId", thread.pubKeepId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
       message.from match {
         case MessageSender.User(senderId) => contextBuilder += ("senderId", senderId.id)
         case MessageSender.NonUser(nup) => contextBuilder += ("senderId", nup.kind + "::" + nup.identifier)
@@ -72,7 +72,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("category", "messageThread")
       contextBuilder += ("os", deviceType.name)
-      contextBuilder += ("threadId", notification.id.id)
+      contextBuilder += ("threadId", MessageThreadId.toIdString(notification.id))
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
@@ -164,7 +164,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def clearedNotification(userId: Id[User], notificationOrThreadId: Either[ExternalId[Notification], PublicId[Keep]], notificationItemOrMessageId: Either[ExternalId[NotificationItem], PublicId[Message]], existingContext: HeimdalContext): Unit = {
+  def clearedNotification(userId: Id[User], notificationOrThreadId: Either[ExternalId[Notification], MessageThreadId], notificationItemOrMessageId: Either[ExternalId[NotificationItem], PublicId[Message]], existingContext: HeimdalContext): Unit = {
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
@@ -173,7 +173,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("channel", kifi)
       notificationOrThreadId.fold(
         notificationId => contextBuilder += ("notificationId", notificationId.id),
-        keepId => contextBuilder += ("threadId", keepId.id)
+        messageThreadId => contextBuilder += ("threadId", MessageThreadId.toIdString(messageThreadId))
       )
       notificationItemOrMessageId.fold(
         notificationItemId => contextBuilder += ("notificationItemId", notificationItemId.id),
@@ -189,7 +189,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "addedParticipants")
-      contextBuilder += ("threadId", thread.pubKeepId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
       if (newUserParticipants.nonEmpty) { contextBuilder += ("newUserParticipants", newUserParticipants.map(_.id)) }
       if (newNonUserParticipants.nonEmpty) { contextBuilder += ("newNonUserParticipants", newNonUserParticipants.map(_.identifier)) }
       contextBuilder += ("newParticipantKinds", newUserParticipants.map(_ => "user") ++ newNonUserParticipants.map(_.kind.name))
@@ -213,7 +213,7 @@ class MessagingAnalytics @Inject() (
         case None => contextBuilder += ("action", "replied")
       }
 
-      contextBuilder += ("threadId", thread.pubKeepId.id)
+      contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("messageId", message.pubId.id)
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       contextBuilder += ("uriId", thread.uriId.toString)
@@ -246,15 +246,15 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def changedMute(userId: Id[User], keepId: Id[Keep], mute: Boolean, existingContext: HeimdalContext): Unit = {
+  def changedMute(userId: Id[User], threadId: MessageThreadId, mute: Boolean, existingContext: HeimdalContext): Unit = {
     val changedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       val action = if (mute) "mutedConversation" else "unmutedConversation"
       contextBuilder += ("action", action)
-      contextBuilder += ("threadId", keepId.id)
-      val threadOpt = db.readOnlyReplica { implicit session => threadRepo.getByKeepId(keepId) }
+      contextBuilder += ("threadId", MessageThreadId.toIdString(threadId))
+      val threadOpt = db.readOnlyReplica { implicit session => threadRepo.getByMessageThreadId(threadId) }
       threadOpt.foreach(thread => addParticipantsInfo(contextBuilder, thread.participants))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }

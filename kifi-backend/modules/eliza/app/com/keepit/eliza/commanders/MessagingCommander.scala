@@ -72,7 +72,7 @@ class MessagingCommander @Inject() (
     }.toMap
     //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
-      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.keepId).get }
+      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.id.get).get }
     }.toMap
 
     userId2BasicUserF.map { userId2BasicUser =>
@@ -93,7 +93,7 @@ class MessagingCommander @Inject() (
           .map(u => BasicUserLikeEntity(userId2BasicUser(u))).toSeq
 
         ElizaThreadInfo(
-          keepId = thread.pubKeepId,
+          threadId = thread.threadId,
           participants = basicUsers ++ nonUsers,
           digest = lastMessage.messageText,
           lastAuthor = userId2BasicUser(lastMessage.from.asUser.get).externalId,
@@ -113,9 +113,8 @@ class MessagingCommander @Inject() (
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).flatMap {
       case Left(nUri) =>
         val threads = db.readOnlyReplica { implicit session =>
-          val keepIds = userThreadRepo.getKeepIds(userId, nUri.id)
-          val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
-          keepIds.map(threadsByKeepId(_))
+          val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
+          threadIds.map(threadRepo.get)
         }
         buildThreadInfos(userId, threads, url).map { unsortedInfos =>
           val infos = unsortedInfos sortWith { (a, b) =>
@@ -211,7 +210,7 @@ class MessagingCommander @Inject() (
             nonUserThreadRepo.save(NonUserThread(
               createdBy = from,
               participant = nonUser,
-              keepId = thread.keepId,
+              threadId = thread.id.get,
               uriId = Some(nUriId),
               notifiedCount = 0,
               lastNotifiedAt = None,
@@ -231,8 +230,9 @@ class MessagingCommander @Inject() (
       if (nonUserRecipients.nonEmpty) {
         db.readWrite { implicit session =>
           messageRepo.save(ElizaMessage(
-            keepId = thread.keepId,
             from = MessageSender.System,
+            thread = thread.id.get,
+            threadExtId = thread.externalId,
             messageText = "",
             source = source,
             auxData = Some(Json.arr("start_with_emails", from.id.toString,
@@ -243,27 +243,28 @@ class MessagingCommander @Inject() (
           ))
         }
       }
-      sendMessage(MessageSender.User(from), thread, messageText, source, Some(uri), Some(nUriId), Some(isNew))
+
+      sendMessage(MessageSender.User(from), thread.threadId, thread, messageText, source, Some(uri), Some(nUriId), Some(isNew))
     }
   }
 
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    log.info(s"Sending message from non-user with id ${nut.id} to keep ${nut.keepId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.getByKeepId(nut.keepId).get }
-    sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
+    log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId) }
+    sendMessage(MessageSender.NonUser(nut.participant), thread.threadId, thread, messageText, source, urlOpt)
   }
 
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    log.info(s"Sending message from user with id ${userThread.user} to keep ${userThread.keepId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.getByKeepId(userThread.keepId).get }
-    sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
+    log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId) }
+    sendMessage(MessageSender.User(userThread.user), thread.threadId, thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
+  def sendMessage(from: Id[User], originalThreadId: MessageThreadId, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
+    sendMessage(MessageSender.User(from), originalThreadId, thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
+  private def sendMessage(from: MessageSender, originalThreadId: MessageThreadId, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     from match {
       case MessageSender.User(id) =>
         if (!thread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
@@ -276,8 +277,9 @@ class MessagingCommander @Inject() (
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
       messageRepo.save(ElizaMessage(
-        keepId = thread.keepId,
         from = from,
+        thread = thread.id.get,
+        threadExtId = thread.externalId,
         messageText = messageText,
         source = source,
         sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(thread.url)),
@@ -285,7 +287,7 @@ class MessagingCommander @Inject() (
       ))
     }
     SafeFuture {
-      db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
+      db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
     val participantSet = thread.participants.allUsers
@@ -312,28 +314,28 @@ class MessagingCommander @Inject() (
 
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
-      notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
+      notificationDeliveryCommander.notifyMessage(user, originalThreadId, messageWithBasicUser)
     }
     // For everyone except the sender, mark their thread as unread
     db.readWrite { implicit s =>
       (thread.participants.allUsers -- from.asUser).foreach { user =>
-        userThreadRepo.markUnread(user, message.keepId)
+        userThreadRepo.markUnread(user, thread.id.get)
       }
     }
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
-      setLastSeen(sender, message.keepId, Some(message.createdAt))
+      setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session =>
-        userThreadRepo.setLastActive(sender, message.keepId, message.createdAt)
-        userThreadRepo.markRead(sender, message)
+        userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt)
+        userThreadRepo.markRead(sender, thread.id.get, message)
       }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val (numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
-      val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
+      val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, Some(message.createdAt))
+      val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }
       (numMessages, numUnread, threadActivity)
@@ -353,13 +355,13 @@ class MessagingCommander @Inject() (
       case _ => thread.allParticipants
     }
     usersToNotify.foreach { userId =>
-      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
+      notificationDeliveryCommander.sendNotificationForMessage(userId, message, originalThreadId, thread, orderedMessageWithBasicUser, threadActivity)
     }
 
     // update user thread of the sender again, might be deprecated
     (from.asUser, originalAuthorOpt) match {
       case (Some(sender), Some(originalAuthor)) =>
-        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+        notificationDeliveryCommander.notifySendMessage(sender, message, originalThreadId, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
       case _ =>
     }
 
@@ -404,13 +406,12 @@ class MessagingCommander @Inject() (
 
   def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread] = {
     db.readOnlyReplica { implicit session =>
-      val keepIds = userThreadRepo.getKeepIds(user)
-      val threadsByKeepId = threadRepo.getByKeepIds(keepIds.toSet)
-      keepIds.map(threadsByKeepId(_))
+      val threadIds = userThreadRepo.getThreadIds(user)
+      threadIds map threadRepo.get
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], originalThreadId: MessageThreadId, threadId: Id[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds.toSet).map(_.values.toSeq)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -430,12 +431,12 @@ class MessagingCommander @Inject() (
 
       val resultInfoOpt = db.readWrite { implicit session =>
 
-        val oldThread = threadRepo.getByKeepId(keepId).get
+        val oldThread = threadRepo.get(threadId)
 
         checkEmailParticipantRateLimits(adderUserId, oldThread, newNonUserParticipants)
 
         if (!oldThread.participants.contains(adderUserId)) {
-          throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to keep $keepId")
+          throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread $threadId")
         }
 
         val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
@@ -446,8 +447,9 @@ class MessagingCommander @Inject() (
         } else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
-            keepId = thread.keepId,
             from = MessageSender.System,
+            thread = thread.id.get,
+            threadExtId = thread.externalId,
             messageText = "",
             source = None,
             auxData = Some(Json.arr("add_participants", adderUserId.id.toString,
@@ -467,11 +469,11 @@ class MessagingCommander @Inject() (
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
-              messageRepo.refreshCache(thread.keepId)
+              messageRepo.refreshCache(thread.id.get)
             }
           }
 
-          notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+          notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, originalThreadId, thread, message, adderUserId)
           messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
           true
 
@@ -485,40 +487,38 @@ class MessagingCommander @Inject() (
   def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit = {
     val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(messageId)
-      (message, threadRepo.getByKeepId(message.keepId).get)
+      (message, threadRepo.get(message.thread))
     }
     db.readWrite(attempts = 2) { implicit session =>
-      userThreadRepo.markRead(userId, message)
+      userThreadRepo.markRead(userId, thread.id.get, message)
     }
-    messagingAnalytics.clearedNotification(userId, Right(message.pubKeepId), Right(message.pubId), context)
+    messagingAnalytics.clearedNotification(userId, Right(thread.threadId), Right(message.pubId), context)
 
-    notificationDeliveryCommander.notifyRead(userId, message.pubKeepId, message.pubId, thread.nUrl, message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, thread.threadId, message.pubId, thread.nUrl, message.createdAt)
   }
 
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
     val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(messageId)
-      (message, threadRepo.getByKeepId(message.keepId).get)
+      (message, threadRepo.get(message.thread))
     }
     val changed: Boolean = db.readWrite(attempts = 2) { implicit session =>
-      userThreadRepo.markUnread(userId, message.keepId)
+      userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, message.pubKeepId, message.pubId, thread.nUrl, message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, thread.threadId, message.pubId, thread.nUrl, message.createdAt)
     }
   }
 
-  def setLastSeen(userId: Id[User], keepId: Id[Keep], timestampOpt: Option[DateTime] = None): Unit = {
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None): Unit = {
     db.readWrite { implicit session =>
-      userThreadRepo.setLastSeen(userId, keepId, timestampOpt.getOrElse(clock.now))
+      userThreadRepo.setLastSeen(userId, threadId, timestampOpt.getOrElse(clock.now))
     }
   }
 
   def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
-    val message: ElizaMessage = db.readOnlyMaster { implicit session =>
-      messageRepo.get(messageId)
-    }
-    setLastSeen(userId, message.keepId, Some(message.createdAt))
+    val message = db.readOnlyMaster { implicit session => messageRepo.get(messageId) }
+    setLastSeen(userId, message.thread, Some(message.createdAt))
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
@@ -528,10 +528,10 @@ class MessagingCommander @Inject() (
   def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
   def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = false)
 
-  def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean = {
+  def setUserThreadMuteState(userId: Id[User], extThreadId: MessageThreadId, mute: Boolean)(implicit context: HeimdalContext): Boolean = {
     val (stateChanged) = db.readWrite { implicit session =>
-      threadRepo.getByKeepId(keepId).exists { thread =>
-        userThreadRepo.getUserThread(userId, thread.keepId) match {
+      threadRepo.getByMessageThreadId(extThreadId).exists { thread =>
+        userThreadRepo.getUserThread(userId, thread.id.get) match {
           case Some(ut) if ut.muted != mute =>
             userThreadRepo.setMuteState(ut.id.get, mute)
           case _ => false
@@ -539,8 +539,8 @@ class MessagingCommander @Inject() (
       }
     }
     if (stateChanged) {
-      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, Keep.publicId(keepId), mute)
-      messagingAnalytics.changedMute(userId, keepId, mute, context)
+      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, extThreadId, mute)
+      messagingAnalytics.changedMute(userId, extThreadId, mute, context)
     }
     stateChanged
   }
@@ -563,7 +563,7 @@ class MessagingCommander @Inject() (
       db.readOnlyReplica { implicit session =>
         res.collect {
           case (url, Some(nuri)) =>
-            url -> userThreadRepo.getKeepIds(userId, Some(nuri.id.get))
+            url -> userThreadRepo.getThreadIds(userId, Some(nuri.id.get))
         }
       }.toMap
     }
@@ -679,7 +679,7 @@ class MessagingCommander @Inject() (
     }
 
     if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
-      val warning = s"Keep ${thread.keepId} on uri ${thread.uriId} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
+      val warning = s"Discussion ${thread.id.get} on uri ${thread.uriId} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
       airbrake.notify(new ExternalMessagingRateLimitException(warning))
     }
 
