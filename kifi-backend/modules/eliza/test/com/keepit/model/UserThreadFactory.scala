@@ -12,7 +12,7 @@ object UserThreadFactory {
   def userThread(): PartialUserThread = {
     PartialUserThread(UserThread(
       user = Id[User](idx.incrementAndGet()),
-      threadId = Id[MessageThread](idx.incrementAndGet()),
+      keepId = Id[Keep](idx.incrementAndGet()),
       uriId = Some(Id[NormalizedURI](idx.incrementAndGet())),
       lastSeen = None,
       unread = true,
@@ -23,7 +23,7 @@ object UserThreadFactory {
   def userThreads(n: Int) = List.fill(n)(userThread())
 
   case class PartialUserThread(ut: UserThread) {
-    def withThread(thread: MessageThread) = this.copy(ut = ut.copy(threadId = thread.id.get, startedBy = thread.startedBy))
+    def withThread(thread: MessageThread) = this.copy(ut = ut.copy(keepId = thread.keepId, startedBy = thread.startedBy))
     def forUser(user: User) = this.copy(ut = ut.copy(user = user.id.get))
     def saved(implicit injector: Injector, session: RWSession): UserThread = {
       injector.getInstance(classOf[UserThreadRepo]).save(ut)

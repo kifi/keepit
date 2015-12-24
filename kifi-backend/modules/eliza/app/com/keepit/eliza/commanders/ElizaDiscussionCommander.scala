@@ -207,11 +207,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
-      messageThreadRepo.getByKeepId(keepId).map(_.id.get).foreach { threadId =>
-        messageRepo.getAllByThread(threadId).foreach(messageRepo.deactivate)
-        userThreadRepo.getByThread(threadId).foreach(userThreadRepo.deactivate)
-        messageThreadRepo.deactivate(messageThreadRepo.get(threadId))
-      }
+      messageThreadRepo.getByKeepId(keepId).foreach(messageThreadRepo.deactivate)
+      messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)
+      userThreadRepo.getByKeep(keepId).foreach(userThreadRepo.deactivate)
     }
   }
 }
