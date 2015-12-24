@@ -23,6 +23,7 @@ import com.google.inject.Inject
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model._
 import com.keepit.common.db.slick._
+import ElizaServiceClient._
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
@@ -153,9 +154,11 @@ class ElizaController @Inject() (
   }
 
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
+    import GetDiscussionsForKeeps._
+    val keepIds = request.body.as[Request].keepIds
     discussionCommander.getDiscussionsForKeeps(keepIds).map { discussions =>
-      Ok(Json.toJson(discussions))
+      val response = Response(discussions)
+      Ok(Json.toJson(response))
     }
   }
 }
