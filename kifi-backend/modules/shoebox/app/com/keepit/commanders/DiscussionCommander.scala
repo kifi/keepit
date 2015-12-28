@@ -18,11 +18,14 @@ trait DiscussionCommander {
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromId: Option[Id[Message]]): Future[Seq[Message]]
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message]
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit]
+  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
 }
 
 @Singleton
 class DiscussionCommanderImpl @Inject() (
   db: Database,
+  keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
   airbrake: AirbrakeNotifier,
@@ -81,5 +84,27 @@ class DiscussionCommanderImpl @Inject() (
       owner <- msg.sentBy.filter(userCanDeleteMessagesFrom).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
       res <- eliza.deleteMessage(msgId)
     } yield res
+  }
+
+  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = {
+    val keepPermissions = db.readOnlyReplica { implicit s =>
+      permissionCommander.getKeepPermissions(keepId, Some(userId))
+    }
+    val errs: Stream[DiscussionFail] = Stream(
+      Some(DiscussionFail.INSUFFICIENT_PERMISSIONS).filter(_ => !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS))
+    ).flatten
+
+    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+      val keep = db.readWrite { implicit s =>
+        val oldKeep = keepRepo.get(keepId)
+        val allUsers = oldKeep.connections.users ++ newUsers
+        keepCommander.persistKeep(oldKeep.withParticipants(allUsers))
+      }
+      val elizaEdit = eliza.editParticipantsOnKeep(keepId, newUsers)
+      elizaEdit.onSuccess {
+        case elizaUsers => airbrake.verify(elizaUsers == keep.connections.users)
+      }
+      elizaEdit.map { res => Unit }
+    }
   }
 }

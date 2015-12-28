@@ -657,6 +657,7 @@ class KeepCommanderImpl @Inject() (
     require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
     val keep = keepRepo.save(k)
+
     keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
 
     val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values

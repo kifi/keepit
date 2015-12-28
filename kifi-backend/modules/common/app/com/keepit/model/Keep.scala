@@ -329,11 +329,12 @@ class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermost
 
 sealed abstract class KeepPermission(val value: String)
 object KeepPermission extends Enumerator[KeepPermission] {
-  case object VIEW_KEEP extends KeepPermission("view_keep")
   case object ADD_MESSAGE extends KeepPermission("add_message")
+  case object ADD_PARTICIPANTS extends KeepPermission("add_participants")
+  case object DELETE_KEEP extends KeepPermission("delete_keep")
   case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
   case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
-  case object DELETE_KEEP extends KeepPermission("delete_keep")
+  case object VIEW_KEEP extends KeepPermission("view_keep")
   case object VIEW_MESSAGES extends KeepPermission("view_messages")
 }
 
