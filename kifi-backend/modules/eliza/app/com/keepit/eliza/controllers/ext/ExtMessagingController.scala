@@ -70,7 +70,6 @@ class ExtMessagingController @Inject() (
   def sendMessageReplyAction(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
     Keep.decodePublicId(pubKeepId) match {
       case Success(keepId) =>
-        val tStart = currentDateTime
         val o = request.body
         val (text, source) = (
           (o \ "text").as[String].trim,
@@ -81,8 +80,6 @@ class ExtMessagingController @Inject() (
         (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
         contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
         discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build).map { message =>
-          val tDiff = currentDateTime.getMillis - tStart.getMillis
-          statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
           Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
         }
       case Failure(error) => {
