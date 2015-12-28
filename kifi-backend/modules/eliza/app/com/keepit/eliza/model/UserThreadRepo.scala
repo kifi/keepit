@@ -84,12 +84,11 @@ class UserThreadRepoImpl @Inject() (
     def muted = column[Boolean]("muted", O.NotNull)
     def lastMsgFromOther = column[Option[Id[ElizaMessage]]]("last_msg_from_other", O.Nullable)
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
-    def notificationLastSeen = column[Option[DateTime]]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, keepId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, user, keepId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)

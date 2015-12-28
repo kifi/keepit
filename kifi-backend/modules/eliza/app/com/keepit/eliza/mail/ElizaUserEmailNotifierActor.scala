@@ -103,7 +103,7 @@ class ElizaUserEmailNotifierActor @Inject() (
 
     val result = if (extendedThreadItems.isEmpty) Future.successful(()) else {
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
-        s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
+        s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} " +
         s"with ${extendedThreadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
 
       val recipientUserId = userThread.user
