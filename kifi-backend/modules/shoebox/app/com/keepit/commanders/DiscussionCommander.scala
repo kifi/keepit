@@ -97,12 +97,13 @@ class DiscussionCommanderImpl @Inject() (
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
         val oldKeep = keepRepo.get(keepId)
-        val allUsers = oldKeep.connections.users ++ newUsers
+        val allUsers = oldKeep.connections.users ++ newUsers + userId
         keepCommander.persistKeep(oldKeep.withParticipants(allUsers))
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, newUsers)
+      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers)
       elizaEdit.onSuccess {
-        case elizaUsers => airbrake.verify(elizaUsers == keep.connections.users)
+        case elizaUsers =>
+          airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
       }
       elizaEdit.map { res => Unit }
     }

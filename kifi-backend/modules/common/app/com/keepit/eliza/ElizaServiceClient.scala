@@ -131,7 +131,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
-  def editParticipantsOnKeep(keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
 }
@@ -335,9 +335,9 @@ class ElizaServiceClientImpl @Inject() (
       Unit
     }
   }
-  def editParticipantsOnKeep(keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Set[Id[User]]] = {
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]] = {
     import EditParticipantsOnKeep._
-    val request = Request(keepId, newUsers)
+    val request = Request(keepId, editor, newUsers)
     call(Eliza.internal.editParticipantsOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].users
     }
@@ -400,7 +400,7 @@ object ElizaServiceClient {
     )
   }
   object EditParticipantsOnKeep {
-    case class Request(keepId: Id[Keep], newUsers: Set[Id[User]])
+    case class Request(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]])
     case class Response(users: Set[Id[User]])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]

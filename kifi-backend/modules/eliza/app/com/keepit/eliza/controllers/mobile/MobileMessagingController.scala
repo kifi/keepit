@@ -328,7 +328,7 @@ class MobileMessagingController @Inject() (
 
         val (validUserIds, validOrgIds) = addReq.users.foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
           ExternalId.asOpt[User](id) match {
-            case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
+            case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2) // TODO(ryan): why is this checking the length, that is guaranteed by the regex isn't it?
             case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
           }
         }

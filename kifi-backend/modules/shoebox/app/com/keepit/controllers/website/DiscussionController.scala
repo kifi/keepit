@@ -100,7 +100,7 @@ class DiscussionController @Inject() (
   def editParticipantsOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      extUsersToAdd <- (request.body \ "add").validate[Set[ExternalId[User]]](inputReads).map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      extUsersToAdd <- (request.body \ "add").validate[Set[ExternalId[User]]].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userMap <- db.readOnlyReplicaAsync { implicit s => userRepo.getAllUsersByExternalId(extUsersToAdd) }
       usersToAdd = extUsersToAdd.flatMap(userMap.get).map(_.id.get)
       _ <- discussionCommander.editParticipantsOnKeep(request.userId, keepId, usersToAdd)

@@ -91,6 +91,14 @@ class ElizaDiscussionController @Inject() (
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
+  def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
+    import EditParticipantsOnKeep._
+    val input = request.body.as[Request]
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers).map { allUsers =>
+      val output = Response(allUsers)
+      Ok(Json.toJson(output))
+    }
+  }
   def deleteThreadsForKeeps() = Action(parse.tolerantJson) { request =>
     import DeleteThreadsForKeeps._
     val input = request.body.as[Request]

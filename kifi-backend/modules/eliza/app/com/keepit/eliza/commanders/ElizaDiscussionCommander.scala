@@ -32,6 +32,7 @@ trait ElizaDiscussionCommander {
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
 }
 
@@ -204,6 +205,15 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
   def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
     messageRepo.deactivate(messageRepo.get(messageId))
+  }
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]] = {
+    implicit val context = HeimdalContext.empty
+    for {
+      thread <- getOrCreateMessageThreadWithUser(keepId, editor)
+      // TODO(ryan): ASAP you should change to an API that uses internal ids instead of converting back and forth
+      externalUserIds <- shoebox.getUsers(newUsers.toSeq).map(_.map(_.externalId))
+      _ <- messagingCommander.addParticipantsToThread(editor, keepId, externalUserIds, Seq.empty, Seq.empty)
+    } yield thread.allParticipants ++ newUsers
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
