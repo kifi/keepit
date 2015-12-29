@@ -236,10 +236,9 @@ class EmailTemplateProcessorImpl @Inject() (
 
         case tags.discussionLink =>
           import com.keepit.common.core._
-          val threadExtId = tagArgs(1)
-          val keepPubIdOpt = tagArgs(2).asOpt[String]
-          val accessTokenOpt = tagArgs(3).asOpt[String]
-          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> threadExtId, "kid" -> keepPubIdOpt, "at" -> accessTokenOpt).nonNullFields
+          val keepPubId = tagArgs(1)
+          val accessTokenOpt = tagArgs(2).asOpt[String]
+          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> keepPubId, "at" -> accessTokenOpt).nonNullFields
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id

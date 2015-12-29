@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.DiscussionCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.{ TraversableFormat, KeyFormat }
 import com.keepit.discussion.{ DiscussionFail, Message }
@@ -20,6 +20,7 @@ class DiscussionController @Inject() (
   discussionCommander: DiscussionCommander,
   val userActionsHelper: UserActionsHelper,
   val db: Database,
+  userRepo: UserRepo,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val ec: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
@@ -88,7 +89,21 @@ class DiscussionController @Inject() (
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
       msgPubId <- request.body.validate[PublicId[Message]](inputReads).map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       msgId <- Message.decodePublicId(msgPubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_MESSAGE_ID))
-      delete <- discussionCommander.deleteMessageOnKeep(request.userId, keepId, msgId)
+      _ <- discussionCommander.deleteMessageOnKeep(request.userId, keepId, msgId)
+    } yield {
+      NoContent
+    }).recover {
+      case fail: DiscussionFail => fail.asErrorResponse
+    }
+  }
+
+  def editParticipantsOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
+    (for {
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+      extUsersToAdd <- (request.body \ "add").validate[Set[ExternalId[User]]].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      idMap <- db.readOnlyReplicaAsync { implicit s => userRepo.convertExternalIds(extUsersToAdd) }
+      usersToAdd = extUsersToAdd.flatMap(idMap.get)
+      _ <- discussionCommander.editParticipantsOnKeep(request.userId, keepId, usersToAdd)
     } yield {
       NoContent
     }).recover {

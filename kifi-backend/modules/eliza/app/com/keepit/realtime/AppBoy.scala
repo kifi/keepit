@@ -8,7 +8,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.NonOKResponseException
-import com.keepit.eliza.model.MessageThreadId
 import com.keepit.eliza.{ OrgPushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
@@ -89,7 +88,7 @@ class AppBoy @Inject() (
       case spn: SimplePushNotification =>
         json
       case mtpn: MessageThreadPushNotification =>
-        json.as[JsObject] + ("id" -> MessageThreadId.format.writes(mtpn.id))
+        json.as[JsObject] + ("id" -> Json.toJson(mtpn.id))
       case lupn: LibraryUpdatePushNotification =>
         val pushType = lupn.category match {
           case LibraryPushNotificationCategory.LibraryChanged => "lr"

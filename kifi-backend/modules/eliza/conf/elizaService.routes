@@ -11,8 +11,8 @@ GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.Web
 
 GET     /eliza/ext/ws                     @com.keepit.eliza.controllers.shared.SharedWsMessagingController.websocket(version: Option[String], eip: Option[String])
 POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageAction()
-POST    /eliza/messages/:threadId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(threadId: String)
-GET     /eliza/emailPreview/:msgExtId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(msgExtId: String)
+POST    /eliza/messages/:keepId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
+GET     /eliza/emailPreview/:messageId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(messageId: PublicId[Message])
 
 ##########################################
 # Mobile V1
@@ -25,11 +25,11 @@ GET     /m/1/eliza/notifications/sent          @com.keepit.eliza.controllers.mob
 POST    /m/1/eliza/notifications/markAsRead @com.keepit.eliza.controllers.mobile.MobileMessagingController.markUnreadNotifications(kind: Option[String] ?= None)
 POST    /m/1/eliza/messages               @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageAction()
 GET     /m/1/eliza/messages/unreadNotificationsCount @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadNotificationsCount()
-POST    /m/1/eliza/messages/:threadId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(threadId: String)
+POST    /m/1/eliza/messages/:keepId     @com.keepit.eliza.controllers.mobile.MobileMessagingController.sendMessageReplyAction(keepId: PublicId[Keep])
 POST    /m/1/eliza/devices/:deviceType    @com.keepit.eliza.controllers.mobile.MobileDevicesController.registerDevice(deviceType:String)
-GET     /m/1/eliza/thread/:threadId       @com.keepit.eliza.controllers.mobile.MobileMessagingController.getCompactThread(threadId: String)
-POST    /m/1/eliza/thread/:threadId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThread(threadId: String, users: String, emailContacts: String)
-POST    /m/2/eliza/thread/:threadId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThreadV2(threadId: String)
+GET     /m/1/eliza/thread/:keepId       @com.keepit.eliza.controllers.mobile.MobileMessagingController.getCompactThread(keepId: PublicId[Keep])
+POST    /m/1/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThread(keepId: PublicId[Keep], users: String, emailContacts: String)
+POST    /m/2/eliza/thread/:keepId/addParticipantsToThread  @com.keepit.eliza.controllers.mobile.MobileMessagingController.addParticipantsToThreadV2(keepId: PublicId[Keep])
 GET     /m/1/eliza/getThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getThreadsByUrl(url: String)
 GET     /m/1/eliza/hasThreadsByUrl        @com.keepit.eliza.controllers.mobile.MobileMessagingController.hasThreadsByUrl(url: String)
 GET     /m/1/eliza/searchMessages         @com.keepit.eliza.controllers.mobile.MobileMessagingController.searchMessages(q: String, p: Int ?= 0, storeInHistory: Boolean ?= true)
@@ -44,7 +44,7 @@ POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.M
 ##########################################
 # Mobile V2
 ##########################################
-GET     /m/2/eliza/thread/:threadId        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getPagedThread(threadId: String, pageSize: Int ?= 1000, fromMessageId: Option[String] ?= None)
+GET     /m/2/eliza/thread/:keepId        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getPagedThread(keepId: PublicId[Keep], pageSize: Int ?= 1000, fromMessageId: Option[String] ?= None)
 GET     /m/2/eliza/notifications/messages  @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageNotifications(n: Int, before: Option[String] ?= None)
 GET     /m/2/eliza/notifications/system    @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSystemNotifications(n: Int, before: Option[String] ?= None)
 GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadCounts()
@@ -73,6 +73,8 @@ POST    /internal/eliza/getMessagesOnKeep        @com.keepit.eliza.controllers.i
 POST    /internal/eliza/editMessage              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
 POST    /internal/eliza/deleteMessage            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
 GET     /internal/eliza/keepHasAccessToken       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)
+POST    /internal/eliza/editParticipantsOnKeep   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editParticipantsOnKeep()
+POST    /internal/eliza/deleteThreadsForKeeps    @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteThreadsForKeeps()
 GET     /internal/eliza/getMessagesChanged       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)
 
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
@@ -86,7 +88,7 @@ POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.i
 POST  /internal/eliza/sharedThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getSharedThreadsForGroupByWeek
 POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.controllers.internal.ElizaController.getAllThreadsForGroupByWeek
 
-GET   /internal/eliza/getParticipantsByThreadExtId      @com.keepit.eliza.controllers.internal.ElizaController.getParticipantsByThreadExtId(threadId: String)
+GET   /internal/eliza/getParticipantsByThreadExtId      @com.keepit.eliza.controllers.internal.ElizaController.getParticipantsByThreadExtId(threadId: PublicId[Keep])
 
 GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
 

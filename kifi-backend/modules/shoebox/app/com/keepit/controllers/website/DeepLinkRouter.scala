@@ -57,20 +57,19 @@ class DeepLinkRouterImpl @Inject() (
   def generateDiscussionViewRedirect(data: JsObject, redirectToKeepPage: Boolean): Option[DeepLinkRedirect] = {
     val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
     val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
-    val messageIdOpt = (data \ DeepLinkField.MessageThreadId).asOpt[String]
+    val keepPubIdOpt = (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
+    val keepIdOpt = keepPubIdOpt.flatMap(kid => Keep.decodePublicIdStr(kid.id).toOption)
     val keepPageOpt = for {
       _ <- Some(()) if redirectToKeepPage
-      keepPubId <- (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
-      keepId <- Keep.decodePublicId(keepPubId).toOption
+      keepId <- keepIdOpt
       keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
-    } yield {
-      val accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
-      keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
-    }
+      accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
+    } yield keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
+
     for {
       uri <- uriOpt
-      messageId <- messageIdOpt
-    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/$messageId").filter(_ => keepPageOpt.isEmpty))
+      keepPubId <- keepPubIdOpt
+    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/$keepPubId").filter(_ => keepPageOpt.isEmpty))
   }
 
   def generateRedirectUrl(data: JsObject): Option[String] = {
@@ -129,7 +128,6 @@ object DeepLinkField {
   val LibraryId = "lid"
   val UserId = "uid"
   val AuthToken = "at"
-  val MessageThreadId = "id"
+  val KeepId = "id"
   val UriId = "uri"
-  val KeepId = "kid"
 }

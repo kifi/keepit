@@ -662,6 +662,7 @@ class KeepCommanderImpl @Inject() (
     require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
     val keep = keepRepo.save(k)
+
     keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
 
     val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
@@ -736,6 +737,9 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
+    session.onTransactionSuccess {
+      eliza.deleteThreadsForKeeps(Set(keep.id.get))
+    }
   }
 
   // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep

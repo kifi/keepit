@@ -703,7 +703,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(
-      id = Id[Keep](Random.nextLong()),
+      id = nextBookmarkId(),
       owner = creator,
       users = users,
       libraries = Set.empty,

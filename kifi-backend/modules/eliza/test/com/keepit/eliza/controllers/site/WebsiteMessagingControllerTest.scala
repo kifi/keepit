@@ -45,7 +45,6 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
     FakeRoverServiceClientModule()
   )
   implicit def createFakeRequest(route: Call): FakeRequest[AnyContentAsEmpty.type] = FakeRequest(route.method, route.url)
-  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[WebsiteMessagingController]
   private def route = com.keepit.eliza.controllers.site.routes.WebsiteMessagingController
 

@@ -34,6 +34,4 @@ class ElizaStatsCommander @Inject() (
       userThreadRepo.getAllThreadsForGroupByWeek(users)
     }
   }
-
-  def getThreadByExtId(extId: ExternalId[MessageThread]): MessageThread = db.readOnlyReplica { implicit session => messageThreadRepo.get(extId) }
 }

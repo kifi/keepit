@@ -266,11 +266,25 @@ class PermissionCommanderImpl @Inject() (
     val keeps = keepRepo.getByIds(keepIds)
 
     keeps.map {
-      case (kid, k) =>
-        val keepLibraries = librariesByKeep.getOrElse(kid, Set.empty)
-        val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
+      case (kId, k) =>
+        val keepLibraries = librariesByKeep.getOrElse(kId, Set.empty)
+        val keepUsers = usersByKeep.getOrElse(kId, Set.empty)
         val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
 
+        val canAddMessage = {
+          val viewerCanAddMessageViaLibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
+          }
+          viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
+        }
+        val canAddParticipants = canAddMessage
+        val canDeleteOwnMessages = true
+        val canDeleteOtherMessages = {
+          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
+          // This seems like a pretty strange operational definition...
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
+          viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
+        }
         val canViewKeep = {
           // TODO(ryan): remove deprecated permissions when more confident they're unnecessary
           val deprecatedPermissions = userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains)
@@ -281,25 +295,12 @@ class PermissionCommanderImpl @Inject() (
           deprecatedPermissions || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
         }
 
-        val canAddMessage = {
-          val viewerCanAddMessageViaLibrary = keepLibraries.exists { libId =>
-            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
-          }
-          viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
-        }
-        val canDeleteOwnMessages = true
-        val canDeleteOtherMessages = {
-          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
-          // This seems like a pretty strange operational definition...
-          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
-          viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
-        }
-
-        kid -> List(
-          canViewKeep -> KeepPermission.VIEW_KEEP,
+        kId -> List(
+          canAddParticipants -> KeepPermission.ADD_PARTICIPANTS,
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
-          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES
+          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
+          canViewKeep -> KeepPermission.VIEW_KEEP
         ).collect { case (true, p) => p }.toSet[KeepPermission]
     }
   }
