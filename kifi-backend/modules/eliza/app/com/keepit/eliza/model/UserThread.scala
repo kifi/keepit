@@ -28,7 +28,6 @@ case class UserThread(
   muted: Boolean = false,
   lastMsgFromOther: Option[Id[ElizaMessage]],
   notificationUpdatedAt: DateTime = currentDateTime,
-  notificationLastSeen: Option[DateTime] = None,
   notificationEmailed: Boolean = false,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
   startedBy: Id[User], // denormalized from MessageThread
@@ -41,7 +40,7 @@ case class UserThread(
 
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, keep = $keepId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
-    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
+    s"notificationEmailed = $notificationEmailed]"
 }
 
 object UserThreadStates extends States[UserThread]
