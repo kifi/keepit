@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfRelatedLibraries', [
-  'libraryService', 'platformService', 'signupService',
-  function (libraryService, platformService, signupService) {
+  '$stateParams', 'libraryService', 'platformService', 'signupService',
+  function ($stateParams, libraryService, platformService, signupService) {
     return {
       restrict: 'A',
       replace: true,
@@ -22,7 +22,7 @@ angular.module('kifi')
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore();
           } else {
-            signupService.register({libraryId: scope.libraryId});
+            signupService.register({modelPubId: scope.libraryId, authToken: $stateParams.authToken, intent: 'follow' });
           }
         };
 
