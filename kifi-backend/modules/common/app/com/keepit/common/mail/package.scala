@@ -100,9 +100,9 @@ package object template {
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def discussionLink(id: Id[NormalizedURI], keepPubId: PublicId[Keep]) = Tag3(tags.discussionLink, id, keepPubId.id, keepPubId).toHtml
-    def discussionLink(id: Id[NormalizedURI], keepPubId: PublicId[Keep], trackingContent: String) = {
-      Html(appendTrackingParams(Tag3(tags.discussionLink, id, keepPubId.id, keepPubId) + "&", trackingContent, openInAppIfMobile = true))
+    def discussionLink(id: Id[NormalizedURI], keepPubId: PublicId[Keep], accessToken: Option[String]) = Tag3(tags.discussionLink, id, keepPubId.id, accessToken).toHtml
+    def discussionLink(id: Id[NormalizedURI], keepPubId: PublicId[Keep], accessToken: Option[String], trackingContent: String) = {
+      Html(appendTrackingParams(Tag3(tags.discussionLink, id, keepPubId.id, accessToken) + "&", trackingContent, openInAppIfMobile = true))
     }
 
     def libraryLink(id: Id[Library], authToken: Option[String], content: String, openInAppIfMobile: Boolean = true) =

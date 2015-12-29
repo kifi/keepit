@@ -117,12 +117,14 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
       "for a discussion" in {
         withDb(modules: _*) { implicit injector =>
           val url = "http://www.google.com"
-          val uri = db.readWrite { implicit session =>
-            normalizedURIInterner.internByUri(url, contentWanted = false)
+          val (uri, keep) = db.readWrite { implicit session =>
+            val uri = normalizedURIInterner.internByUri(url, contentWanted = false)
+            val keep = KeepFactory.keep().withTitle("Random Keeps Popping Up").withUri(uri).saved
+            (uri, keep)
           }
-          val messageId = "1f871157-8bdc-42a9-a758-a602213fafb1"
-          val deepLink = Json.obj("t" -> "m", "id" -> messageId, "uri" -> uri.externalId)
-          deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/$messageId")))
+          val keepPubId = Keep.publicId(keep.id.get)
+          val deepLink = Json.obj("t" -> "m", "id" -> keepPubId, "uri" -> uri.externalId)
+          deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/$keepPubId")))
         }
       }
 
@@ -134,10 +136,9 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
             val keep = KeepFactory.keep().withTitle("Random Keeps Popping Up").withUri(uri).saved
             (uri, keep)
           }
-          val messageId = "1f871157-8bdc-42a9-a758-a602213fafb1"
-          val deepLink = Json.obj("t" -> "m", "id" -> messageId, "uri" -> uri.externalId, "kid" -> Keep.publicId(keep.id.get))
+          val deepLink = Json.obj("t" -> "m", "id" -> Keep.publicId(keep.id.get), "uri" -> uri.externalId, "at" -> "randomAccessToken")
           val redirect = deepLinkRouter.generateDiscussionViewRedirect(deepLink, redirectToKeepPage = true)
-          redirect === Some(DeepLinkRedirect(keep.path.relative, None))
+          redirect === Some(DeepLinkRedirect(keep.path.relative + "?authToken=randomAccessToken", None))
         }
       }
     }

@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -22,7 +23,7 @@ import securesocial.core.SecureSocial
 import views.html
 import views.html.mobile.mobileAppRedirect
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure, Try }
 
 @Singleton // for performance
@@ -47,6 +48,8 @@ class KifiSiteRouter @Inject() (
   airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
   deepLinkRouter: DeepLinkRouter,
+  eliza: ElizaServiceClient,
+  implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -229,28 +232,33 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
-  def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep]) = WebAppPage { implicit request =>
+  def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep], authTokenOpt: Option[String]) = WebAppPage.async { implicit request =>
     val experiments = request match {
       case ur: UserRequest[_] => ur.experiments
       case _ => Set.empty[UserExperimentType]
     }
     if (experiments.contains(UserExperimentType.ADMIN)) {
       Keep.decodePublicId(pubId) match {
-        case Failure(ex) => notFound(request)
+        case Failure(ex) => Future.successful(notFound(request))
         case Success(keepId) => {
-          val canSeeKeep = db.readOnlyReplica { implicit s =>
-            permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP)
-          }
-          val keepOpt = if (canSeeKeep) {
-            db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
-          } else {
-            None
+          val hasShoeboxPermission = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP))
+
+          val canSeeKeepFut = {
+            if (!hasShoeboxPermission && authTokenOpt.isDefined) {
+              eliza.keepHasThreadWithAccessToken(keepId, authTokenOpt.get)
+            } else Future.successful(hasShoeboxPermission)
           }
 
-          keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
+          canSeeKeepFut.map { canSeeKeep =>
+            val keepOpt = {
+              if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
+              else None
+            }
+            keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
+          }
         }
       }
-    } else notFound(request)
+    } else Future.successful(notFound(request))
   }
 
   private def lookupUser(handle: Handle) = {

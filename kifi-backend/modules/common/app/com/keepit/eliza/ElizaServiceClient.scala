@@ -131,6 +131,8 @@ trait ElizaServiceClient extends ServiceClient {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
+
+  def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
@@ -350,6 +352,11 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
+    call(Eliza.internal.keepHasAccessToken(keepId, accessToken)).map { response =>
+      (response.json \ "hasToken").as[Boolean]
+    }
+  }
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = {
     call(Eliza.internal.getMessagesChanged(seqNum, fetchSize)).map { _.json.as[Seq[CrossServiceMessage]] }
   }

@@ -1,6 +1,6 @@
 @import com.keepit.common.mail.template.helpers.discussionLink
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, isUser: Boolean)
-@keepPageLink = @{discussionLink(threadInfo.uriId, threadInfo.keepId)}
+@keepPageLink = @{discussionLink(threadInfo.uriId, threadInfo.keepId, threadInfo.nonUserAccessToken)}
 <tr>
   <td height="34"></td>
 </tr>

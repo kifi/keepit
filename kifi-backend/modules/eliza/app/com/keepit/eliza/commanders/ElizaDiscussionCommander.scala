@@ -18,6 +18,7 @@ import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.json.JsNull
 import com.keepit.common.core._
 
+import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
@@ -32,6 +33,7 @@ trait ElizaDiscussionCommander {
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
+  def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
 }
@@ -41,6 +43,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   db: Database,
   messageThreadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
   clock: Clock,
@@ -206,6 +209,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
     messageRepo.deactivate(messageRepo.get(messageId))
   }
+
+  def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean = db.readOnlyMaster { implicit s =>
+    nonUserThreadRepo.getByAccessToken(accessToken).exists(_.keepId == keepId)
+  }
+
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]] = {
     implicit val context = HeimdalContext.empty
     for {

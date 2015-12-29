@@ -99,7 +99,7 @@ class ElizaUserEmailNotifierActor @Inject() (
     airbrake.verify(userThread.notificationUpdatedAt.isBefore(now),
       s"${userThread.summary} notificationUpdatedAt ${userThread.notificationUpdatedAt} in the future (${Minutes.minutesBetween(userThread.notificationUpdatedAt, now)} min)")
 
-    val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
+    val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen)
 
     val result = if (extendedThreadItems.isEmpty) Future.successful(()) else {
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
@@ -123,7 +123,7 @@ class ElizaUserEmailNotifierActor @Inject() (
           val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map {
             case unsubUrl =>
               val threadEmailInfo: ThreadEmailInfo =
-                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, isInitialEmail = false, allUsers, allUserImageUrls, None, Some(unsubUrl), None)
+                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, isInitialEmail = false, allUsers, allUserImageUrls, Some(unsubUrl), None)
               val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
               EmailToSend(
                 from = magicAddress,
