@@ -106,7 +106,7 @@ object ProviderController extends Controller with Logging {
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
-          OAuth1Provider.CacheKey).withCookies(authenticator.toCookie)
+          OAuth1Provider.CacheKey).withCookies(Seq(authenticator.toCookie, request.cookies("modelPubId"), request.cookies("authToken"), request.cookies("intent")): _*)
       }
       case Left(error) => {
         log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")

@@ -119,18 +119,14 @@ angular.module('kifi')
       };
 
       var params = $scope.userData ? {
-        libraryId : $scope.userData.libraryId,
         intent : $scope.userData.intent,
-        libAuthToken: $scope.userData.libAuthToken,
-        orgId : $scope.userData.orgId,
-        orgAuthToken: $scope.userData.orgAuthToken
+        modelPubId: $scope.userData.modelPubId,
+        authToken: $scope.userData.authToken
       } : {};
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
 
-      var libAuthTokenQueryString = params.libAuthToken ? 'authToken='+params.libAuthToken : '';
-      var orgAuthTokenQueryString = params.orgAuthToken ? 'authToken='+params.orgAuthToken : '';
-      $scope.authTokenQueryParam = params.intent === 'follow' ? libAuthTokenQueryString : orgAuthTokenQueryString;
+      $scope.authTokenQueryParam = params.authToken ? 'authToken='+params.authToken : '';
 
       $scope.emailSubmitted = false;
 
@@ -197,10 +193,8 @@ angular.module('kifi')
           password: $scope.userData.password,
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.userData.libraryId, // todo remove me
-          libAuthToken: $scope.userData.libAuthToken,
-          orgPublicId: $scope.userData.orgId,
-          orgAuthToken: $scope.userData.orgAuthToken,
+          modelPubId: $scope.userData.modelPubId,
+          authToken: $scope.userData.authToken,
           hook: $scope.userData.hook // todo implement
         };
 

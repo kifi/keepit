@@ -104,11 +104,9 @@ angular.module('kifi')
       ////////////////////////////
       socialSignup: function (provider, opts) {
         var params = {
-          publicLibraryId : opts.libraryId || [],
           intent: opts.intent || [],
-          libAuthToken: opts.libAuthToken || [],
-          publicOrgId: opts.orgId || [],
-          orgAuthToken: opts.orgAuthToken || []
+          modelPubId: opts.modelPubId,
+          authToken: opts.authToken
         };
         return navRoute('/signup/' + provider, params);
       },

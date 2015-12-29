@@ -180,7 +180,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val path = "/auth/email-signup" + "?authToken=" + authToken
         val orgPath = "/" + org.handle.value
         val payload = Json.obj("email" -> inviteeEmail, "password" -> "raboof", "firstName" -> "Foo", "lastName" -> "Bar",
-          "orgPublicId" -> orgPubId, "orgAuthToken" -> authToken)
+          "modelPublicId" -> orgPubId, "authToken" -> authToken)
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.emailSignup()(request)
         val newUserIdOpt = session(result).getUserId()
