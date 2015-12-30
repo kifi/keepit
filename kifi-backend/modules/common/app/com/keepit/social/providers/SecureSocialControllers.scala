@@ -103,10 +103,11 @@ object ProviderController extends Controller with Logging {
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
         log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
+        val kifiCookies = Seq(request.cookies.get("modelPubId"), request.cookies.get("authToken"), request.cookies.get("intent")).flatten
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
-          OAuth1Provider.CacheKey).withCookies(Seq(authenticator.toCookie, request.cookies("modelPubId"), request.cookies("authToken"), request.cookies("intent")): _*)
+          OAuth1Provider.CacheKey).withCookies(Seq(authenticator.toCookie) ++ kifiCookies: _*)
       }
       case Left(error) => {
         log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
