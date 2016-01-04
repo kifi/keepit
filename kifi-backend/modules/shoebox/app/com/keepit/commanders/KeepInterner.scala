@@ -186,68 +186,39 @@ class KeepInternerImpl @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val keepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get, excludeState = None) }
-    val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
+    // We intern by (library, uri)
+    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get, excludeState = None) }
 
-    val (isNewKeep, wasInactiveKeep, internedKeep) = keepOpt match {
-      case Some(keep) =>
-        val wasInactiveKeep = !keep.isActive
-        val kNote = note orElse { if (wasInactiveKeep) None else keep.note }
-        val kTitle = trimmedTitle orElse { if (wasInactiveKeep) None else keep.title } orElse uri.title
-
-        val savedKeep = keep.copy(
-          userId = userId,
-          title = kTitle,
-          state = KeepStates.ACTIVE,
-          visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
-          libraryId = libraryOpt.map(_.id.get),
-          keptAt = keptAt,
-          note = kNote,
-          url = url,
-          organizationId = libraryOpt.flatMap(_.organizationId),
-          connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
-        ) |> { keep =>
-            if (wasInactiveKeep) {
-              keep.copy(createdAt = clock.now)
-            } else keep
-          } |> { keep =>
-            try {
-              keepCommander.persistKeep(keep)
-            } catch {
-              case ex: UndeclaredThrowableException =>
-                log.warn(s"[keepinterner] Persisting keep failed of ${keep.url} (${keep.id.get})", ex)
-                throw ex.getUndeclaredThrowable
-            }
-          }
-        (false, wasInactiveKeep, savedKeep)
-      case None =>
-        val keep = Keep(
-          title = trimmedTitle orElse uri.title,
-          userId = userId,
-          uriId = uri.id.get,
-          url = url,
-          source = source,
-          visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
-          libraryId = libraryOpt.map(_.id.get),
-          keptAt = keptAt,
-          note = note,
-          originalKeeperId = Some(userId),
-          organizationId = libraryOpt.flatMap(_.organizationId),
-          connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
-        )
-        val improvedKeep = try {
-          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
-            sourceAttribution.map { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
-          }
-        } catch {
-          case ex: UndeclaredThrowableException =>
-            log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
-            throw ex.getUndeclaredThrowable
-        }
-
-        (true, false, improvedKeep)
+    val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.filter(_.isActive).flatMap(_.title), uri.title).flatten.headOption
+    val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.filter(_.isActive).flatMap(_.note)).flatten.headOption
+    val keep = Keep(
+      id = existingKeepOpt.map(_.id.get),
+      createdAt = existingKeepOpt.filter(_.isActive).map(_.createdAt).getOrElse(clock.now),
+      title = kTitle,
+      userId = userId,
+      uriId = uri.id.get,
+      url = url,
+      source = source,
+      visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+      libraryId = libraryOpt.map(_.id.get),
+      keptAt = keptAt,
+      note = kNote,
+      originalKeeperId = Some(userId),
+      organizationId = libraryOpt.flatMap(_.organizationId),
+      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
+    )
+    val internedKeep = try {
+      keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+        sourceAttribution.foreach { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
+      }
+    } catch {
+      case ex: UndeclaredThrowableException =>
+        log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
+        throw ex.getUndeclaredThrowable
     }
 
+    val wasInactiveKeep = existingKeepOpt.exists(_.isInactive)
+    val isNewKeep = existingKeepOpt.isEmpty
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
