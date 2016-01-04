@@ -193,6 +193,7 @@ class KeepInternerImpl @Inject() (
     val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.filter(_.isActive).flatMap(_.note)).flatten.headOption
     val keep = Keep(
       id = existingKeepOpt.map(_.id.get),
+      externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
       createdAt = existingKeepOpt.filter(_.isActive).map(_.createdAt).getOrElse(clock.now),
       title = kTitle,
       userId = userId,
