@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TraversableFormat
 import com.keepit.common.json.TupleFormat._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.routes.Eliza
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -136,6 +137,7 @@ trait ElizaServiceClient extends ServiceClient {
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Id[User])]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -359,6 +361,13 @@ class ElizaServiceClientImpl @Inject() (
   }
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = {
     call(Eliza.internal.getMessagesChanged(seqNum, fetchSize)).map { _.json.as[Seq[CrossServiceMessage]] }
+  }
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Id[User])] = {
+    call(Eliza.internal.convertNonUserThreadToUserThread(userId: Id[User], accessToken: String)).map { res =>
+      val emailAddress = (res.json \ "emailAddress").asOpt[EmailAddress]
+      val addedBy = (res.json \ "addedBy").as[Id[User]]
+      (emailAddress, addedBy)
+    }
   }
 }
 

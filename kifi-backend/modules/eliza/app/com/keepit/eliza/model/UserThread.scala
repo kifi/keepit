@@ -56,6 +56,16 @@ object UserThread {
     lastMsgFromOther = None,
     startedBy = mt.startedBy
   )
+  def fromNonUserThread(nut: NonUserThread, user: Id[User]) = UserThread(
+    user = user,
+    keepId = nut.keepId,
+    uriId = nut.uriId,
+    lastSeen = Some(currentDateTime),
+    unread = false,
+    muted = nut.muted,
+    lastMsgFromOther = None,
+    startedBy = nut.createdBy
+  )
   def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {
     UserThreadView(
       pageTitle = messageThread.pageTitle,

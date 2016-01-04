@@ -18,6 +18,7 @@ import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.core.{ AuthHelper }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social._
@@ -110,6 +111,9 @@ class AuthCommander @Inject() (
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     emailAddressRepo: UserEmailAddressRepo,
+    emailAddressCommander: UserEmailAddressCommander,
+    keepRepo: KeepRepo,
+    keepToUserRepo: KeepToUserRepo,
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
     inviteCommander: InviteCommander,
@@ -121,6 +125,7 @@ class AuthCommander @Inject() (
     userCommander: UserCommander,
     handleCommander: HandleCommander,
     heimdalServiceClient: HeimdalServiceClient,
+    eliza: ElizaServiceClient,
     amazonSimpleMailProvider: AmazonSimpleMailProvider) extends Logging {
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
@@ -459,6 +464,24 @@ class AuthCommander @Inject() (
           true
         }
       )
+    }.getOrElse(false)
+  }
+
+  def autoJoinKeep(userId: Id[User], keepPubId: PublicId[Keep], accessToken: String): Boolean = {
+    Keep.decodePublicId(keepPubId).map { keepId =>
+      implicit val context = HeimdalContext.empty
+      eliza.convertNonUserThreadToUserThread(userId, accessToken).foreach {
+        case (emailOpt, addedBy) =>
+          db.readWrite { implicit s =>
+            val keep = keepRepo.get(keepId)
+            keepRepo.save(keep.copy(connections = keep.connections.plusUser(userId)))
+            keepToUserRepo.save(KeepToUser(keepId = keepId, userId = userId, addedBy = addedBy, uriId = keep.uriId))
+            emailOpt.map { email =>
+              emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email))
+            }
+          }
+      }
+      true
     }.getOrElse(false)
   }
 
