@@ -13,7 +13,7 @@ case class ProdMemoryUsageModule() extends MemoryUsageModule {
   @Provides
   def memoryUsageMonitorProvider(airbrakeNotifierProvider: Provider[AirbrakeNotifier]): MemoryUsageMonitor = {
     MemoryUsageMonitor { (pool, threshold, maxHeapSize, count) =>
-      if (count > 1) { // at least two incidents in a row
+      if (count % 10 == 2) { // at least two incidents in a row, only notify every 10 incidents
         airbrakeNotifierProvider.get.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
       }
     }
