@@ -410,11 +410,10 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
-    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds.toSet).map(_.values.toSeq)
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+    val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
-    val orgIds = orgs.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
     val newOrgParticipantsFuture = Future.sequence(orgIds.map { oid =>
       shoebox.hasOrganizationMembership(oid, adderUserId).flatMap {
         case true => shoebox.getOrganizationMembers(oid)
