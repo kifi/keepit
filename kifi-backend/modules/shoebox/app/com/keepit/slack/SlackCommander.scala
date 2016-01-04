@@ -86,6 +86,7 @@ class SlackCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -116,6 +117,11 @@ class SlackCommanderImpl @Inject() (
           webhook = webhook,
           lastPostedAt = None
         ))
+      }
+      slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
+        team.organizationId.foreach { orgId =>
+          orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+        }
       }
     }
   }
