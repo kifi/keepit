@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.strings.ValidLong
 import com.keepit.common.time._
 import com.keepit.common.util.{DollarAmount, DescriptionElements}
 import com.keepit.model.{Organization, User}
@@ -189,10 +190,6 @@ object UnrepeatableRewardKey {
   // an account can only reap a single referral bonus when signing up (promo or referral)
   case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred-org|$orgId" }
   case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated-org|$orgId" }
-
-  private object ValidLong {
-    def unapply(id: String): Option[Long] = Try(id.toLong).toOption
-  }
   private val referred = """^referred-org\|(\d+)$""".r
   private val wasReferred = """^wasReferred-org\|(\d+)$""".r
   private val wasCreated = """^wasCreated-org\|(\d+)$""".r
