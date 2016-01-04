@@ -272,10 +272,10 @@ class UserThreadRepoImpl @Inject() (
     else {
       val users_list = users.map(_.id).mkString(",")
       val queryStr = """
-        select thread_id, created_at, count(*) as c from user_thread
+        select keep_id, created_at, count(*) as c from user_thread
           where user_id in (""" + users_list + """)
           and created_at >= '2015-1-1'
-          group by thread_id
+          group by keep_id
           having count(*) > 1
           order by week(created_at)
           desc
@@ -291,9 +291,9 @@ class UserThreadRepoImpl @Inject() (
     else {
       val users_list = users.map(_.id).mkString(",")
       val queryStr = """
-        select thread_id, created_at, count(*) as c from user_thread
+        select keep_id, created_at, count(*) as c from user_thread
           where user_id in (""" + users_list + """)
-          group by thread_id
+          group by keep_id
           having count(*) > 1
       """
       val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
@@ -307,11 +307,11 @@ class UserThreadRepoImpl @Inject() (
     else {
       val users_list = users.map(_.id).mkString("(", ",", ")")
       sql"""
-        select thread_id, created_at, count(*) as c from user_thread
+        select keep_id, created_at, count(*) as c from user_thread
           where user_id in #$users_list
           and created_at >= '2015-1-1'
           and state = 'active'
-          group by thread_id
+          group by keep_id
           order by week(created_at)
           desc
       """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
