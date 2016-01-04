@@ -1,23 +1,22 @@
 package com.keepit.cortex.models.lda
 
-import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentation }
+import com.keepit.cortex.core.{ FeatureRepresentation, ModelVersion, StatModelName }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater, FeaturePluginMessages }
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, BaseFeatureUpdater, FeaturePluginMessages, FeatureUpdateActor, FeatureUpdatePlugin }
+import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.User
 import com.keepit.shoebox.ShoeboxServiceClient
-import math.abs
-import com.keepit.cortex.utils.MatrixUtils._
-import scala.concurrent.Await
-import scala.concurrent.duration._
+
+import scala.math.abs
 
 case class LDAUserStatUpdate(userId: Id[User])
 
@@ -104,7 +103,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   }
 
   private def processUser(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Unit = {
-    val keeperOnly = userHasActivePersona(userId)
+    val keeperOnly = false
     val model = db.readOnlyReplica { implicit s => userLDAStatsRepo.getByUser(userId, version) }
     val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, version, min_num_words, keeperOnly) }
     if (shouldComputeFeature(model, numFeat)) {
@@ -124,8 +123,8 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     def changedMuch(numOfEvidenceBefore: Int, numOfEvidenceNow: Int) = {
       val diff = abs(numOfEvidenceNow - numOfEvidenceBefore)
       if (model.get.state != UserLDAStatsStates.ACTIVE && numOfEvidenceNow >= min_num_evidence) true
-      else if (numOfEvidenceNow < min_num_evidence && model.get.state == UserLDAInterestsStates.ACTIVE) true
-      else (diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100)
+      else if (numOfEvidenceNow < min_num_evidence && model.get.state == UserLDAStatsStates.ACTIVE) true
+      else diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100
     }
 
     model.isEmpty || changedMuch(model.get.numOfEvidence, numOfEvidenceNow) || model.get.updatedAt.plusMonths(1).getMillis < currentDateTime.getMillis
@@ -150,11 +149,6 @@ class LDAUserStatDbUpdaterImpl @Inject() (
         (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore))
       case None => (None, None, None, None)
     }
-  }
-
-  private def userHasActivePersona(userId: Id[User]): Boolean = {
-    val ps = Await.result(shoebox.getUserActivePersonas(userId), 5 second)
-    ps.personas.nonEmpty
   }
 }
 

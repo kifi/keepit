@@ -8,11 +8,11 @@ import com.keepit.cortex.dbmodel.UserTopicMean
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
-import com.keepit.common.commanders.{ LDAPersonaCommander, LDARepresenterCommander, LDAInfoCommander, LDACommander }
+import com.keepit.common.commanders.{ LDARepresenterCommander, LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda._
-import com.keepit.model.{ Persona, Library, User, NormalizedURI }
+import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
 import play.api.libs.concurrent.Execution.Implicits._
@@ -25,8 +25,7 @@ class LDAController @Inject() (
   versionCommander: CortexVersionCommander,
   representer: LDARepresenterCommander,
   infoCommander: LDAInfoCommander,
-  relatedLibCommander: LDARelatedLibraryCommander,
-  personaCommander: LDAPersonaCommander)
+  relatedLibCommander: LDARelatedLibraryCommander)
     extends CortexServiceController with Logging {
 
   private val defaultVersion = ModelVersions.defaultLDAVersion
@@ -95,13 +94,13 @@ class LDAController @Inject() (
     Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
-  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action.async(parse.tolerantJson) { request =>
+  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
     val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val scoresF = lda.batchUserURIsInterests(userId, uriIds)(version)
-    scoresF.map { scores => Ok(Json.toJson(scores)) }
+    val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
+    Ok(Json.toJson(scores))
   }
 
   def userTopicMean(userId: Id[User], version: Option[Int]) = Action { request =>
@@ -210,40 +209,6 @@ class LDAController @Inject() (
     val js = request.body
     val pmis = (js \ "pmis").as[JsArray].value.map { _.as[Float] }.toArray
     infoCommander.savePMIScores(pmis)(version)
-    Ok
-  }
-
-  def getExistingPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
-    val modelOpt = personaCommander.getExistingPersonaFeature(personaId)(version)
-    Ok(Json.toJson(modelOpt.map { _.feature.mean }))
-  }
-
-  def generatePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val topicIds = (js \ "topicIds").as[Seq[Int]].map { LDATopic(_) }
-    val (feature, sampleSize) = personaCommander.generatePersonaFeature(topicIds)(version)
-    Ok(Json.obj("feature" -> feature.mean, "sampleSize" -> sampleSize))
-  }
-
-  def savePersonaFeature(version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val feature = (js \ "feature").as[Array[Float]]
-    val personaId = Id[Persona]((js \ "personaId").as[Int])
-    personaCommander.savePersonaFeature(personaId, UserTopicMean(feature))(version)
-    Ok
-  }
-
-  def evaluatePersona(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action { request =>
-    val scores = personaCommander.evaluatePersonaFeature(personaId, sampleSize = 20)(version)
-    Ok(Json.toJson(scores))
-  }
-
-  def trainPersonaFeature(personaId: Id[Persona], version: ModelVersion[DenseLDA]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-    val labels = (js \ "labels").as[Seq[Int]]
-    val rate = (js \ "rate").as[Float]
-    personaCommander.autoLearn(personaId, uriIds, labels, rate)(version)
     Ok
   }
 }

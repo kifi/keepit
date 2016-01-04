@@ -320,36 +320,6 @@ class AdminLibraryController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libId))
   }
 
-  def cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val libId: Id[Library] = Id[Library](600673) //hard coded to https://admin.kifi.com/admin/libraries/600673
-    val (lib, keeps) = db.readWrite { implicit s =>
-      libraryRepo.getOrganizationLibraries(orgId) foreach { lib =>
-        if (lib.kind == LibraryKind.SYSTEM_GUIDE) throw new Exception(s"Org $orgId already have a SYSTEM_GUIDE library $lib")
-      }
-      val origLib = libraryRepo.get(libId)
-      val newLibCandidate = origLib.copy(id = None, slug = LibrarySlug(origLib.slug.value.take(40) + "-" + RandomStringUtils.randomAlphanumeric(5)),
-        memberCount = 0, universalLink = RandomStringUtils.randomAlphanumeric(40), organizationId = Some(orgId),
-        kind = LibraryKind.SYSTEM_GUIDE, visibility = LibraryVisibility.ORGANIZATION, seq = SequenceNumber.ZERO)
-      val lib = libraryRepo.save(newLibCandidate)
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, origLib.ownerId) match {
-        case None =>
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = origLib.ownerId, access = LibraryAccess.OWNER))
-        case Some(membership) =>
-          libraryMembershipRepo.save(membership.copy(id = None, libraryId = lib.id.get, access = LibraryAccess.OWNER, seq = SequenceNumber.ZERO))
-      }
-      val image = libraryImageRepoImpl.getActiveForLibraryId(origLib.id.get).head
-      libraryImageRepoImpl.save(image.copy(id = None, libraryId = lib.id.get))
-      val keeps = keepRepo.getByLibrary(origLib.id.get, 0, 5000)
-      (lib, keeps)
-    }
-    implicit val context = HeimdalContext.empty
-    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps.toSet, withSource = Some(KeepSource.systemCopied))._2 foreach {
-      case (keep, libraryError) =>
-        throw new Exception(s"can't copy keep $keep : $libraryError")
-    }
-    Redirect(routes.AdminLibraryController.libraryView(lib.id.get))
-  }
-
   def unsafeMoveLibraryKeeps = AdminUserAction.async(parse.tolerantJson) { implicit request =>
     val fromLibraryId = (request.body \ "fromLibrary").as[Id[Library]]
     val toLibraryId = (request.body \ "toLibrary").as[Id[Library]]

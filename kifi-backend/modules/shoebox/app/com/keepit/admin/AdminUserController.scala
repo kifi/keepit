@@ -1,46 +1,37 @@
 package com.keepit.controllers.admin
 
-import java.util.concurrent.atomic.AtomicInteger
-
-import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
-import com.keepit.commanders.emails.ActivityFeedEmailSender
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.service.IpAddress
-import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
-import scala.concurrent.{ Await, Future, Promise }
-import scala.concurrent.duration.{ Duration, DurationInt }
-import scala.util.{ Failure, Success, Try }
-
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.model.{ OrganizationUserMayKnow, RichContact }
 import com.keepit.commanders._
+import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
+import com.keepit.common.service.IpAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
-import com.keepit.model._
-import com.keepit.model.{ UserEmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment }
+import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore }
-
-import play.api.data._
-import play.api.data.Forms._
+import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
+import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent, Result }
-
 import views.html
-import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahead }
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
-import com.keepit.abook.model.{ OrganizationUserMayKnow, RichContact }
+
+import scala.concurrent.duration.{ Duration, DurationInt }
+import scala.concurrent.{ Await, Future, Promise }
+import scala.util.Try
 
 case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
@@ -68,7 +59,7 @@ object UserViewTypes {
   case object UsersPotentialOrgs extends UserViewType
   case object LinkedInUsersWithoutOrgs extends UserViewType
 }
-import UserViewTypes._
+import com.keepit.controllers.admin.UserViewTypes._
 
 class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -118,21 +109,9 @@ class AdminUserController @Inject() (
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
-    activityPushSchedualer: ActivityPushScheduler,
-    activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
     userStatisticsCommander: UserStatisticsCommander,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
-
-  def createPushActivityEntities = AdminUserPage { implicit request =>
-    activityPushSchedualer.createPushActivityEntities()
-    Ok("started!")
-  }
-
-  def pushPersonaActivity(userId: Id[User]) = AdminUserPage { implicit request =>
-    activityPusher.forcePersonaActivityForUser(userId)
-    Ok("done")
-  }
 
   def merge = AdminUserPage { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when

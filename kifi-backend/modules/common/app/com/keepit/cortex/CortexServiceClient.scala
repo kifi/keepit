@@ -43,12 +43,6 @@ trait CortexServiceClient extends ServiceClient {
   def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: LDAVersionOpt): Future[Seq[Option[Float]]]
   def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]]
 
-  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: LDAVersion): Future[(Array[Float], Int)] // Int: sample size
-  def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion): Future[Option[Array[Float]]]
-  def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit
-  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]]
-  def trainPersona(personaId: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: LDAVersion): Unit
-
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
 
@@ -179,33 +173,4 @@ class CortexServiceClientImpl(
   def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]] = {
     call(Cortex.internal.similarLibraries(libId, limit)).map { r => r.json.as[Seq[Id[Library]]] }
   }
-
-  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: LDAVersion): Future[(Array[Float], Int)] = {
-    val payload = Json.obj("topicIds" -> topicIds.map { _.index })
-    call(Cortex.internal.generatePersonaFeature(version), payload).map { r =>
-      val js = r.json
-      val feature = (js \ "feature").as[Array[Float]]
-      val sampleSize = (js \ "sampleSize").as[Int]
-      (feature, sampleSize)
-    }
-  }
-
-  def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion): Future[Option[Array[Float]]] = {
-    call(Cortex.internal.getExistingPersonaFeature(personaId)).map { r => r.json.as[Option[Array[Float]]] }
-  }
-
-  def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit = {
-    val payload = Json.obj("feature" -> feature, "personaId" -> personaId)
-    call(Cortex.internal.savePersonaFeature(version), payload)
-  }
-
-  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]] = {
-    call(Cortex.internal.evaluatePersona(personaId)).map { _.json.as[Map[Id[NormalizedURI], Float]] }
-  }
-
-  def trainPersona(personaId: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: LDAVersion): Unit = {
-    val payload = Json.obj("uriIds" -> uriIds, "labels" -> labels, "rate" -> rate)
-    call(Cortex.internal.trainPersonaFeature(personaId)(version), payload).map { _ => () }
-  }
-
 }

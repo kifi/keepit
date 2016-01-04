@@ -86,7 +86,6 @@ class ShoeboxController @Inject() (
   organizationMembershipCommander: OrganizationMembershipCommander,
   s3ImageStore: S3ImageStore,
   organizationInfoCommander: OrganizationInfoCommander,
-  userPersonaRepo: UserPersonaRepo,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
   userIdentityHelper: UserIdentityHelper,
@@ -540,11 +539,6 @@ class ShoeboxController @Inject() (
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
     val libraryIds = libraryMembershipCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
-  }
-
-  def getUserActivePersonas(userId: Id[User]) = Action { request =>
-    val model = db.readOnlyReplica { implicit s => userPersonaRepo.getUserActivePersonas(userId) }
-    Ok(Json.toJson(model))
   }
 
   def getOrganizationMembers(orgId: Id[Organization]) = Action { request =>
