@@ -33,7 +33,12 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
 
-          if (url && util.validateUrl(url)) {
+          var regex = /^https?:\/\//;
+          if (!regex.test(url)) {
+            url = 'http://' + url;
+          }
+
+          if (util.validateUrl(url)) {
             keepActionService
             .keepToLibrary([{ url: url }], scope.selectedLibrary.id)
             .then(function (result) {
