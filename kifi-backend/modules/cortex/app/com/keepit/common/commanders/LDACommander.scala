@@ -41,9 +41,6 @@ trait LDACommander {
   def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[Float]]
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
   def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): LDAUserURIInterestScores
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[LDAUserURIInterestScores]
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[String]]
-  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]]
   def getSimilarLibraries(libId: Id[Library], limit: Int)(implicit version: ModelVersion[DenseLDA]): Seq[Id[Library]]
 }
 
@@ -116,43 +113,6 @@ class LDACommanderImpl @Inject() (
       val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, version)
       val userInterestStatOpt = userLDAStatRepo.getByUser(userId, version)
       computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-    }
-  }
-
-  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[LDAUserURIInterestScores] = {
-    def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
-
-    type UserFeaturesCombo = (Option[UserLDAInterests], Option[UserLDAStats], Seq[LibraryTopicMean])
-
-    def getUserFeaturesCombo(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): UserFeaturesCombo = {
-      val userInterestOpt = userTopicRepo.getByUser(userId, version)
-      val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, version)
-      val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, version) }
-      (userInterestOpt, userInterestStatOpt, libFeats)
-    }
-
-    def scoreURI(uriTopicOpt: Option[URILDATopic], userFeatCombo: UserFeaturesCombo): LDAUserURIInterestScores = {
-      val (userInterestOpt, userInterestStatOpt, libFeats) = userFeatCombo
-      val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
-      val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-      val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
-      val s5 = s2.global
-      val (topic1, topic2) = (uriTopicOpt.flatMap(_.firstTopic), uriTopicOpt.flatMap(_.secondTopic))
-      LDAUserURIInterestScores(s5, s1.recency, s3, topic1, topic2)
-    }
-
-    val junkTopics = infoCommander.inactiveTopics(version)
-
-    val (userFeatsCombo, uriTopicOpts) = db.readOnlyReplica { implicit s =>
-      val userFeatsCombo = getUserFeaturesCombo(userId, version)
-      val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, version)
-      assert(uriTopicOpts.size == uriIds.size, "retreived uri lda features size doesn't match with num of uris")
-      (userFeatsCombo, uriTopicOpts)
-    }
-
-    uriTopicOpts.map { uriTopicOpt =>
-      if (!isInJunkTopic(uriTopicOpt, junkTopics)) scoreURI(uriTopicOpt, userFeatsCombo)
-      else LDAUserURIInterestScores(None, None, None)
     }
   }
 
@@ -287,64 +247,6 @@ class LDACommanderImpl @Inject() (
     (vecOpt1, vecOpt2) match {
       case (Some(v1), Some(v2)) => Some(cosineDistance(scale(v1.mean, statOpt), scale(v2.mean, statOpt)))
       case _ => None
-    }
-
-  }
-
-  def getTopicNames(uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Option[String]] = {
-    val cutoff = (1.0f / numOfTopics) * 50
-    val topicIdOpts = db.readOnlyReplica { implicit s =>
-      uris.map { uri =>
-        uriTopicRepo.getFirstTopicAndScore(uri, version) match {
-          case Some((topic, score)) =>
-            if (score > cutoff) Some(topic.index) else None
-          case None => None
-        }
-      }
-    }
-
-    topicIdOpts.map { idOpt =>
-      idOpt match {
-        case Some(id) => infoCommander.getTopicName(id)
-        case None => None
-      }
-    }
-  }
-
-  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit version: ModelVersion[DenseLDA]): Seq[Seq[Id[Keep]]] = {
-
-    val MAX_KL_DIST = 0.5f // empirically this should be < 1.0
-    val topK = 3
-
-    def bestMatch(userFeats: Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
-
-      val bitSet = new BitSet(uriFeat.feature.get.value.size)
-      List(uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get).foreach { t => bitSet.set(t.index) }
-      var numIntersects = 0
-
-      val scored = userFeats.map {
-        case (kid, topics, ufeat) =>
-          val score = KL_divergence(ufeat.value, uriFeat.feature.get.value)
-          numIntersects = 0
-
-          topics.foreach { t =>
-            if (bitSet.get(t.index)) numIntersects += 1
-          }
-          val multiplier = if (numIntersects >= 2) 1f else 0f
-
-          (kid, score * multiplier)
-      }
-      val good = scored.filter { x => x._2 < MAX_KL_DIST && x._2 > 0 }.sortBy(_._2).take(10)
-      Random.shuffle(good).take(topK).map { _._1 }
-    }
-
-    val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, version, min_num_words = 50, limit = 200) }
-    val uriFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURIs(uris, version) }
-    uriFeats.map { uriFeatOpt =>
-      uriFeatOpt match {
-        case Some(uriFeat) if uriFeat.numOfWords > 50 => bestMatch(userFeats, uriFeat)
-        case _ => Seq()
-      }
     }
   }
 

@@ -94,15 +94,6 @@ class LDAController @Inject() (
     Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
-  def batchUserURIsInterests(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val userId = (js \ "userId").as[Id[User]]
-    val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val scores = lda.batchUserURIsInterests(userId, uriIds)(version)
-    Ok(Json.toJson(scores))
-  }
-
   def userTopicMean(userId: Id[User], version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     val feat = lda.userTopicMean(userId)
@@ -121,13 +112,6 @@ class LDAController @Inject() (
   def userLibraryScore(userId: Id[User], libId: Id[Library], version: Option[Int]) = Action { request =>
     implicit val ver = toVersion(version)
     val s = lda.userLibraryScore(userId, libId)
-    Ok(Json.toJson(s))
-  }
-
-  def userLibrariesScores(userId: Id[User], version: Option[Int]) = Action(parse.tolerantJson) { request =>
-    val libIds = request.body.as[Seq[Id[Library]]]
-    implicit val ver = toVersion(version)
-    val s = lda.userLibrariesScores(userId, libIds)
     Ok(Json.toJson(s))
   }
 
@@ -153,24 +137,6 @@ class LDAController @Inject() (
     implicit val ver = toVersion(version)
     val (infos, words) = infoCommander.unamedTopics(limit)
     Ok(Json.obj("infos" -> infos, "words" -> words))
-  }
-
-  def getTopicNames(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
-    val userId = (js \ "user").asOpt[Id[User]]
-    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, userId)
-    val res = lda.getTopicNames(uriIds)(version)
-    Ok(Json.toJson(res))
-  }
-
-  def explainFeed(implicit versionOpt: Option[Int]) = Action(parse.tolerantJson) { request =>
-    val js = request.body
-    val userId = (js \ "user").as[Id[User]]
-    val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
-    val version = getVersionForUser(versionOpt.map { ModelVersion[DenseLDA](_) }, Some(userId))
-    val explain = lda.explainFeed(userId, uris)(version)
-    Ok(Json.toJson(explain))
   }
 
   def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI], version: Option[Int]) = Action { request =>
