@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.eliza._
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.{ NotificationDeliveryCommander, MessagingCommander }
@@ -36,11 +37,13 @@ import play.api.mvc.Action
 class MessagingController @Inject() (
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   db: Database,
   uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
   messagingIndexCommander: MessagingIndexCommander,
-  notificationCommander: NotificationDeliveryCommander)
+  notificationCommander: NotificationDeliveryCommander,
+  airbrake: AirbrakeNotifier)
     extends ElizaServiceController with Logging {
 
   //for indexing data requests
@@ -64,6 +67,22 @@ class MessagingController @Inject() (
       case _ => false
     }
     Ok(Json.toJson(result))
+  }
+
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = Action { request =>
+    db.readWrite { implicit s =>
+      nonUserThreadRepo.getByAccessToken(ThreadAccessToken(accessToken)).map { nut =>
+        userThreadRepo.save(UserThread.fromNonUserThread(nut, userId))
+        nut.participant match {
+          case emailParticipant: NonUserEmailParticipant =>
+            // returns fields needed to create UserEmailAddress and KeepToUser models
+            Ok(Json.obj("emailAddress" -> emailParticipant.address, "addedBy" -> nut.createdBy))
+          case _ =>
+            airbrake.notify(s"unhandled NonUserParticipant $nut")
+            Ok(Json.obj("addedBy" -> nut.createdBy))
+        }
+      }
+    }.getOrElse(NotFound)
   }
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>

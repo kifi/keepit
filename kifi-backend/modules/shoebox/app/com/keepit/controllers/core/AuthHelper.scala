@@ -271,7 +271,8 @@ class AuthHelper @Inject() (
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
       case AutoJoinOrganization(orgPubId, authToken) =>
         authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
-      case AutoJoinKeep(keepId, authToken) => ???
+      case AutoJoinKeep(keepId, authToken) =>
+        authCommander.autoJoinKeep(user.id.get, keepId, authToken)
     }
 
     Seq(createUserValues, performPrimaryIntentAction)
