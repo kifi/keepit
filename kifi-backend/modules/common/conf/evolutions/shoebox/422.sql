@@ -9,7 +9,7 @@ CREATE TABLE slack_team (
   state VARCHAR(20) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_team_name VARCHAR(512) NOT NULL,
-  organization_id BIGINT(20) NOT NULL,
+  organization_id BIGINT(20) DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_u_slack_team_id (slack_team_id),

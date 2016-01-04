@@ -15,7 +15,7 @@ case class SlackTeam(
     state: State[SlackTeam] = SlackTeamStates.ACTIVE,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
-    organizationId: Id[Organization]) extends ModelWithState[SlackTeam] {
+    organizationId: Option[Id[Organization]]) extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamStates.ACTIVE
@@ -45,7 +45,7 @@ class SlackTeamRepoImpl @Inject() (
     state: State[SlackTeam] = SlackTeamStates.ACTIVE,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
-    organizationId: Id[Organization]) = {
+    organizationId: Option[Id[Organization]]) = {
     SlackTeam(
       id,
       createdAt,
@@ -72,7 +72,7 @@ class SlackTeamRepoImpl @Inject() (
   class SlackTeamTable(tag: Tag) extends RepoTable[SlackTeam](db, tag, "slack_team") {
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
-    def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
+    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
