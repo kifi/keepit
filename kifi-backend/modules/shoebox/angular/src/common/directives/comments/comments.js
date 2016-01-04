@@ -119,10 +119,12 @@ angular.module('kifi')
           };
 
           $scope.deleteComment = function(event, keepId, commentId) {
-            angular.element(event.target).closest('.kf-keep-comments-comment').remove();
+            var oldComments = $scope.comments;
             keepService.deleteMessageFromKeepDiscussion(keepId, commentId)
             ['catch'](function () {
-              $scope.error = 'Something went wrong. Try again?';
+              $scope.comments = oldComments;
+              $scope.visibleCount++;
+              $scope.error = 'Something went wrong. Please refresh and try again.';
             });
             $scope.comments = $scope.comments.filter(function (comment) {
               return comment.id !== commentId;
@@ -162,7 +164,7 @@ angular.module('kifi')
 
           $scope.onViewPreviousComments = function () {
             $scope.visibleCount = Math.min($scope.visibleCount + MESSAGES_PER_PAGE, $scope.comments.length); // don't go over the comments length
-            $scope.showViewPreviousComments = $scope.hasMoreToFetch;
+            $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.keep.discussion.numMessages;
 
             if ($scope.visibleCount + MESSAGES_PER_PAGE >= $scope.comments.length) { // if next time we paginate we won't have enough, preload next batch
               var last = $scope.comments.slice(0,1).pop();
