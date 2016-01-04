@@ -5,7 +5,7 @@
     <p>Contact the administrator of <span ng-bind="org | name"></span> to join this team.</p>
   </div>
   <div ng-if="org && !userLoggedIn">
-    <p class="kf-error-header">Whoa! You need to <a class="kf-link kf-link-underline kf-link-blue" href="https://www.kifi.com/signup">sign up for Kifi</a> to see these keeps.</p>
+    <p class="kf-error-header">Whoa! You need to <a class="kf-link kf-link-underline kf-link-blue" href="/signup" target="_self">sign up for Kifi</a> to see these keeps.</p>
     <p>Sign up with your <span ng-bind="org | name"></span> company email to get an invite after you join.</p>
   </div>
   <div ng-if="getStatus() !== 403 || user" ng-include="'errors/whomp.tpl.html'">
