@@ -635,34 +635,21 @@ class MessagingCommander @Inject() (
   })
 
   def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]]) = {
-    val (rawUsers, rawNonUsers, rawOrgs) = rawRecipients.foldRight((Seq.empty[ExternalId[User]], Seq.empty[BasicContact], Seq.empty[PublicId[Organization]])) { (recipient, acc) =>
-      recipient.asOpt[JsString] match { // heuristic to determine if it's a user or an org
-        case Some(JsString(id)) if id.startsWith("o") =>
-          (acc._1, acc._2, acc._3 :+ PublicId(id))
-        case Some(JsString(id)) if id.length == 36 =>
-          (acc._1 ++ ExternalId.asOpt[User](id), acc._2, acc._3)
-        case _ => // Starting in v XXXX `kind` is always sent (9/2/2015). Above can be removed after a good while.
-          recipient.asOpt[JsObject].flatMap {
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "user") =>
-              (recip \ "id").asOpt[ExternalId[User]].map { userExtId =>
-                (acc._1 :+ userExtId, acc._2, acc._3)
-              }
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "org") =>
-              (recip \ "id").asOpt[PublicId[Organization]].map { orgPubId =>
-                (acc._1, acc._2, acc._3 :+ orgPubId)
-              }
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "email") =>
-              (recip \ "email").asOpt[BasicContact].map { contact => // this is weird as heck
-                (acc._1, acc._2 :+ contact, acc._3)
-              }
-          }.getOrElse {
-            log.warn(s"[validateRecipients] Could not determine what ${recipient.toString} is supposed to be.")
-            (acc._1, acc._2, acc._3)
-          }
-      }
+    val rawCategorized = rawRecipients.flatMap {
+      case JsString(id) if id.startsWith("o") => Organization.validatePublicId(id).toOption
+      case JsString(id) if id.length == 36 => ExternalId.asOpt[User](id)
+      case recip: JsObject if (recip \ "kind").asOpt[String].contains("user") => (recip \ "id").asOpt[ExternalId[User]]
+      case recip: JsObject if (recip \ "kind").asOpt[String].contains("org") => (recip \ "id").asOpt[PublicId[Organization]]
+      case recip: JsObject if (recip \ "kind").asOpt[String].contains("email") => (recip \ "email").asOpt[BasicContact]
+      case unknown =>
+        log.warn(s"[validateRecipients] Could not determine what ${Json.stringify(unknown)} is supposed to be.")
+        None
     }
-
-    (rawUsers, rawNonUsers, rawOrgs)
+    (
+      rawCategorized.collect { case userId: ExternalId[User] @unchecked => userId },
+      rawCategorized.collect { case bc: BasicContact => bc },
+      rawCategorized.collect { case orgId: PublicId[Organization] @unchecked => orgId }
+    )
   }
 
   private def checkEmailParticipantRateLimits(user: Id[User], thread: MessageThread, nonUsers: Seq[NonUserParticipant])(implicit session: RSession): Unit = {

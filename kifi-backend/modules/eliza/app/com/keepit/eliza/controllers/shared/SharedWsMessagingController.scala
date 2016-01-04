@@ -97,17 +97,11 @@ class SharedWsMessagingController @Inject() (
     },
     "add_participants_to_thread" -> {
       case JsString(keepIdStr) +: (data: JsValue) +: _ =>
-        val (users, emailContacts, orgs) = data match {
-          case JsArray(participantsJson) =>
-            val (users, emailContacts, orgs) = messagingCommander.parseRecipients(participantsJson)
-            (users, emailContacts, orgs)
-          case _ =>
-            val (users, _, _) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
-            val (_, _, orgs) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
-            val (_, contacts, _) = messagingCommander.parseRecipients((data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
-            (users, contacts, orgs)
+        val input = data match {
+          case JsArray(elems) => elems
+          case _ => (data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty) ++ (data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty)
         }
-
+        val (users, emailContacts, orgs) = messagingCommander.parseRecipients(input)
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
           Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
