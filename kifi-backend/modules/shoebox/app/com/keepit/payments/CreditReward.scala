@@ -96,13 +96,7 @@ object RewardKind extends Enumerator[RewardKind] {
   }
 
   trait WithEmptyInfo extends WithIndependentInfo[None.type] { self: RewardKind =>
-    def infoFormat: Format[None.type] = Format(
-      Reads {
-        case JsNull => JsSuccess(None)
-        case unknown => JsError(s"Unknown RewardStatus info: $unknown")
-      },
-      Writes(None => JsNull)
-    )
+    def infoFormat = com.keepit.common.json.formatNone
   }
 
   case object Coupon extends RewardKind("coupon") with WithIndependentInfo[CreditCode] {
