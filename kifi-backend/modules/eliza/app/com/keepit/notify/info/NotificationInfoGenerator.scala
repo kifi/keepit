@@ -55,34 +55,28 @@ class NotificationInfoGenerator @Inject() (
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
 
-    val externalUserIdsF = for {
+    val userIdByExternalIdFut = for {
       orgs <- orgsF
       keeps <- keepsF
-    } yield (orgs.values.map(_.ownerId) ++ keeps.values.map(_.ownerId)).toSet
-
-    val userIdsFromExternalF = for {
-      externalIds <- externalUserIdsF
-      userIds <- shoeboxServiceClient.getUserIdsByExternalIds(externalIds).map(_.values.toSet)
+      extIds = orgs.values.map(_.ownerId) ++ keeps.values.map(_.ownerId)
+      userIds <- shoeboxServiceClient.getUserIdsByExternalIds(extIds.toSet)
     } yield userIds
 
     val batchedInfosF = for {
-      libs <- libsF
-      orgs <- orgsF
-      keeps <- keepsF
-      externalIds <- externalUserIdsF
-      fromExternalIds <- userIdsFromExternalF
-      userIds = userRequests ++ fromExternalIds
-      users <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
-      usersExternal = externalIds.zip(fromExternalIds).map {
-        case (externalId, id) => externalId -> users(id)
-      }.toMap
+      libById <- libsF
+      orgById <- orgsF
+      keepByid <- keepsF
+      userIdByExternalId <- userIdByExternalIdFut
+      userIds = userRequests ++ userIdByExternalId.values.toSet
+      userById <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
+      userByExternalId = userIdByExternalId.mapValues(userById.get(_).get)
     } yield {
       new BatchedNotificationInfos(
-        users,
-        usersExternal,
-        libs,
-        keeps,
-        orgs
+        userById,
+        userByExternalId,
+        libById,
+        keepByid,
+        orgById
       )
     }
 
