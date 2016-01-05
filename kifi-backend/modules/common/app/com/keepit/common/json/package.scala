@@ -206,6 +206,7 @@ package object json {
     }
   }
 
+  val readUnit: Reads[Unit] = Reads { _ => JsSuccess(Unit) }
   val formatNone: Format[None.type] = {
     Format(
       Reads {
