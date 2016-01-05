@@ -463,6 +463,7 @@ DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.Libr
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
 ## endpoints only for testing, should be deleted by 2016-01-10
+POST    /site/rpb/setArrangement           @com.keepit.controllers.website.UserController.setPreferredLibraryArrangement()
 GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, limit: Int ?= 10)
 GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
 
