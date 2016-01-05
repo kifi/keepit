@@ -43,11 +43,14 @@ object SlackAPI {
   def ChannelsList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/channels.list", token)
   def ChannelInfo(token: SlackAccessToken, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.info", token, channelId)
   def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
+  def PostMessage(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest) =
+    Route(GET, "https://slack.com/api/chat.postMessage", Seq[Param](token, channelId) ++ msg.asUrlParams: _*)
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
 }
 
 trait SlackClient {
-  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit]
+  def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
@@ -63,7 +66,7 @@ class SlackClientImpl(
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
 
-  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
+  def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.body) match {
@@ -79,6 +82,10 @@ class SlackClientImpl(
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
     }
+  }
+
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
+    slackCall(SlackAPI.PostMessage(token, channelId, msg)).map { _ => Unit }
   }
 
   private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {

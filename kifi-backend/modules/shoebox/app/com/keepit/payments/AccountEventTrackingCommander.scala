@@ -85,7 +85,6 @@ class AccountEventTrackingCommanderImpl @Inject() (
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "Activity",
         iconUrl = SlackMessageRequest.kifiIconUrl,
-        channel = Some(channel),
         attachments = Seq.empty,
         unfurlLinks = false,
         unfurlMedia = false

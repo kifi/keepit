@@ -21,13 +21,14 @@ class FakeSlackClientImpl extends SlackClient {
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = ???
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse] = ???
-  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
+  def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
     case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.WebhookRevoked)
     case _ =>
       pushedMessagesByWebhook.put(url, msg :: pushedMessagesByWebhook(url))
       Future.successful(())
   }
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = ???
 
   def sayInChannel(stm: SlackTeamMembership, ch: SlackChannel)(str: String): Unit = {
     val key = (stm.slackTeamId, ch.name)

@@ -34,7 +34,7 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit] = {
     val now = clock.now
-    slackClient.sendToSlack(webhook.url, msg).andThen {
+    slackClient.pushToWebhook(webhook.url, msg).andThen {
       case Success(()) =>
         db.readWrite { implicit s =>
           slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>

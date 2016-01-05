@@ -15,7 +15,7 @@ class InhouseSlackClient @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) {
   def sendToSlack(channel: InhouseSlackChannel, msg: SlackMessageRequest): Future[Unit] = {
-    slackClient.sendToSlack(channel.webhookUrl, msg)
+    slackClient.pushToWebhook(channel.webhookUrl, msg)
   }
 }
 
