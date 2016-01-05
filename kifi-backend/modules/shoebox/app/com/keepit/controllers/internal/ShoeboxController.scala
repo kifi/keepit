@@ -1,34 +1,33 @@
 package com.keepit.controllers.internal
 
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.net.URI
 import com.google.inject.Inject
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
+import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageStore, ImageSize }
+import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.notify.NotificationInfoModel
-import com.keepit.notify.model.{ NotificationKind }
+import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
+import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.normalizer._
-import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.slack.SlackCommander
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackAccessToken }
+import com.keepit.slack.{ SlackIngestionCommander, SlackInfoCommander }
+import com.keepit.slack.models.{ SlackChannelId, SlackTeamId }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -37,8 +36,7 @@ import play.api.mvc.Action
 import securesocial.core.IdentityId
 
 import scala.concurrent.Future
-import scala.util.{ Try, Failure, Success }
-import com.keepit.common.json.{ KeyFormat, TraversableFormat, EitherFormat, TupleFormat }
+import scala.util.{ Failure, Success, Try }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -90,7 +88,8 @@ class ShoeboxController @Inject() (
   permissionCommander: PermissionCommander,
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
-  slackCommander: SlackCommander,
+  slackInfoCommander: SlackInfoCommander,
+  slackIngestionCommander: SlackIngestionCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
 
@@ -602,7 +601,8 @@ class ShoeboxController @Inject() (
   def getIntegrationsBySlackChannel() = Action(parse.tolerantJson) { request =>
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
-    val integrations = slackCommander.getIntegrationsBySlackChannel(teamId, channelId)
+    val integrations = slackInfoCommander.getIntegrationsBySlackChannel(teamId, channelId)
+    SafeFuture { slackIngestionCommander.ingestFromChannelPlease(teamId, channelId) }
     Ok(Json.toJson(integrations))
   }
 
