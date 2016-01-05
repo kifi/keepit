@@ -114,6 +114,6 @@ class SlackClientImpl(
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
-    slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))
+    slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read[SlackTeamInfo])
   }
 }
