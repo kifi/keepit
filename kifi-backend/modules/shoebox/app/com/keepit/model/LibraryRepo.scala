@@ -263,7 +263,7 @@ class LibraryRepoImpl @Inject() (
     } |> { rs => // actually sort them
       arrangement match {
         case Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING) => rs.sortBy(lib => lib.name asc)
-        case Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.DESCENDING) => rs.sortBy(lib => lib.name asc)
+        case Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.DESCENDING) => rs.sortBy(lib => lib.name desc)
         case Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.ASCENDING) => rs.sortBy(lib => lib.lastKept asc)
         case Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING) => rs.sortBy(lib => lib.lastKept desc)
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.ASCENDING) => rs.sortBy(lib => (lib.memberCount asc, lib.id asc))
