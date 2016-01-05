@@ -41,9 +41,9 @@ class SlackController @Inject() (
     Redirect(redirectUrl, SEE_OTHER)
   }
 
-  private def redirectToOrg(orgId: Id[Organization], showSlackDialog: Boolean): Result = {
+  private def redirectToOrg(orgId: Id[Organization]): Result = {
     val orgUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(orgId))).get.url
-    val redirectUrl = if (showSlackDialog) orgUrl + "?showSlackDialog" else orgUrl
+    val redirectUrl = orgUrl
     Redirect(redirectUrl, SEE_OTHER)
   }
 
@@ -94,7 +94,7 @@ class SlackController @Inject() (
         case Success(orgIdOpt) =>
           slackCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
-              case Some(orgId) => redirectToOrg(orgId, showSlackDialog = true)
+              case Some(orgId) => redirectToOrg(orgId)
               case None => {
                 // todo(Léo): discuss frontend
                 val newOrgLink = {
@@ -178,13 +178,13 @@ class SlackController @Inject() (
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
-      redirectToOrg(slackTeam.organizationId.get, showSlackDialog = true)
+      redirectToOrg(slackTeam.organizationId.get)
     }
   }
 
   def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
     slackCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
-      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId, showSlackDialog = true)
+      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId)
       case Success(slackTeam) => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
       case Failure(_) => BadRequest("invalid_request")
     }
