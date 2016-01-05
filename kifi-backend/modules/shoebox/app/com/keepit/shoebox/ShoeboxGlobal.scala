@@ -1,21 +1,21 @@
 package com.keepit.shoebox
 
-import com.keepit.commanders.SuggestedSearchTermUpdatePlugin
-import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
+import com.keepit.commanders.SuggestedSearchTermUpdatePlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
+import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
-import com.keepit.shoebox.cron.{ UserIpAddressClusterCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin }
+import com.keepit.common.integration.AutogenReaperPlugin
+import com.keepit.common.mail.{ MailSenderPlugin, MailToKeepPlugin }
+import com.keepit.integrity.{ DataIntegrityPlugin, UriIntegrityPlugin }
+import com.keepit.model._
+import com.keepit.normalizer.NormalizationUpdaterPlugin
+import com.keepit.reports._
+import com.keepit.shoebox.cron.{ ActivityEmailCronPlugin, UserIpAddressClusterCronPlugin }
+import com.keepit.social.SocialGraphPlugin
+import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.Mode._
 import play.api._
-import com.keepit.social.SocialGraphPlugin
-import com.keepit.integrity.{ UriIntegrityPlugin, DataIntegrityPlugin }
-import com.keepit.common.integration.AutogenReaperPlugin
-import com.keepit.normalizer.NormalizationUpdaterPlugin
-import com.keepit.common.concurrent.ForkJoinExecContextPlugin
-import com.keepit.model._
-import net.codingwell.scalaguice.InjectorExtensions._
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -47,7 +47,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ShoeboxTasksPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityEmailCronPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ActivityPushScheduler] != null) //make sure its not lazy loaded
     require(injector.instance[SuggestedSearchTermUpdatePlugin] != null) // make sure its not lazy loaded
     require(injector.instance[UserIpAddressClusterCronPlugin] != null) // make sure its not lazy loaded
 
