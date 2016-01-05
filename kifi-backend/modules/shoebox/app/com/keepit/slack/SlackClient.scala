@@ -1,5 +1,6 @@
 package com.keepit.slack
 
+import com.keepit.common.json.readUnit
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.slack.models._
@@ -85,7 +86,7 @@ class SlackClientImpl(
   }
 
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    slackCall(SlackAPI.PostMessage(token, channelId, msg)).map { _ => Unit }
+    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit)
   }
 
   private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
