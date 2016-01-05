@@ -45,7 +45,8 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
             val systemLibs = {
               val mainLib = LibraryFactory.library().withOwner(owner).withKind(LibraryKind.SYSTEM_MAIN).saved
               val secretLib = LibraryFactory.library().withOwner(owner).withKind(LibraryKind.SYSTEM_SECRET).saved
-              Set(mainLib, secretLib)
+              val readItLaterLib = LibraryFactory.library().withOwner(owner).withKind(LibraryKind.SYSTEM_READ_IT_LATER).saved
+              Set(mainLib, secretLib, readItLaterLib)
             }
             for (lib <- systemLibs) {
               permissionCommander.getLibraryPermissions(lib.id.get, Some(owner.id.get)) === Set(

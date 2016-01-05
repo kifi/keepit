@@ -1,25 +1,34 @@
 package com.keepit.controllers.mobile
 
+import java.util
+
 import com.google.inject.Inject
+import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time.Clock
-import com.keepit.controllers.core.{AuthController, AuthHelper}
-import com.keepit.heimdal.{ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes}
+import com.keepit.controllers.core.{ AuthController, AuthHelper }
+import com.keepit.heimdal.{ ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model._
+import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.social.providers.ProviderController
-import com.keepit.social.{SocialNetworkType, UserIdentity}
+import com.keepit.social.{ SocialNetworkType, UserIdentity }
+import play.api.http.MediaRange
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsNumber, JsValue, Json}
-import play.api.mvc.{Cookie, Result, Session}
-import securesocial.core.{IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService}
+import play.api.libs.json.{ JsNumber, JsValue, Json }
+import play.api.libs.oauth.RequestToken
+import play.api.mvc.{ Cookie, Result, Session }
+import play.i18n.Lang
+import play.mvc.Http.{ RequestBody, Cookies, Request }
+import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 class MobileAuthController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -28,6 +37,7 @@ class MobileAuthController @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     installationRepo: KifiInstallationRepo,
     authHelper: AuthHelper,
+    activityPusher: ActivityPusher,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient) extends UserActions with ShoeboxServiceController with Logging {
 
@@ -115,6 +125,7 @@ class MobileAuthController @Inject() (
     } else {
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.UPDATED_EXTENSION))
     }
+    activityPusher.updatedActivity(userId)
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>

@@ -161,6 +161,10 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
     new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
 
   @Provides @Singleton
+  def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+
+  @Provides @Singleton
   def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
 

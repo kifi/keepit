@@ -15,6 +15,7 @@ class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
   libPathCommander: PathCommander,
+  userPersonaCommander: UserPersonaCommander,
   permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
   orgInfoCommander: OrganizationInfoCommander,
@@ -67,5 +68,19 @@ class ExtUserController @Inject() (
       }
       Ok(Json.toJson(res1))
     }
+  }
+
+  def getGuideInfo() = UserAction { request =>
+    val (personaKeep, libOpt) = userPersonaCommander.getPersonaKeepAndLibrary(request.userId)
+    Ok(Json.obj(
+      "keep" -> personaKeep,
+      "library" -> libOpt.map { lib =>
+        Json.obj(
+          "id" -> Library.publicId(lib.id.get),
+          "name" -> lib.name,
+          "path" -> libPathCommander.getPathForLibrary(lib),
+          "color" -> lib.color)
+      }
+    ))
   }
 }
