@@ -6,13 +6,13 @@ import com.keepit.common.db.{ ExternalId, Id, State }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model.LibraryVisibility.{ ORGANIZATION, PUBLISHED, SECRET, DISCOVERABLE }
-import org.apache.commons.lang3.RandomStringUtils.random
+import org.apache.commons.lang3.RandomStringUtils.randomAlphabetic
 
 object LibraryFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def library(): PartialLibrary = {
-    new PartialLibrary(Library(id = Some(Id[Library](idx.incrementAndGet())), name = random(5), slug = LibrarySlug(random(5)),
+    new PartialLibrary(Library(id = Some(Id[Library](idx.incrementAndGet())), name = randomAlphabetic(5), slug = LibrarySlug(randomAlphabetic(5)),
       visibility = LibraryVisibility.SECRET, ownerId = Id[User](idx.incrementAndGet()), memberCount = 1, keepCount = 0))
   }
 
