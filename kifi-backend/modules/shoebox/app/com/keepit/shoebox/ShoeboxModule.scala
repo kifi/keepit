@@ -26,7 +26,7 @@ import com.keepit.queue.{ LibrarySuggestedSearchQueueModule, NormalizationUpdate
 import com.keepit.reports._
 import com.keepit.rover.RoverServiceClientModule
 import com.keepit.search.SearchServiceClientModule
-import com.keepit.shoebox.cron.{ ActivityEmailCronModule, ActivityPushCronModule }
+import com.keepit.shoebox.cron.ActivityEmailCronModule
 import com.keepit.slack.ProdSlackClientModule
 import com.keepit.social.SecureSocialModule
 
@@ -81,7 +81,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val mailerModule = PlayMailerModule()
 
   val activityEmailCronModule = ActivityEmailCronModule()
-  val activityPushCronModule = ActivityPushCronModule()
 
   val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()
 }

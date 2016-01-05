@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.common.net.UserAgent
-import com.keepit.shoebox.cron.ActivityPusher
 import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext

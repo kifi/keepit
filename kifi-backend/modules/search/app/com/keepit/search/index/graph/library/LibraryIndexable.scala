@@ -52,18 +52,12 @@ object LibraryFields {
     val SYSTEM_MAIN = 0
     val SYSTEM_SECRET = 1
     val USER_CREATED = 2
-    val SYSTEM_PERSONA = 3
-    val SYSTEM_READ_IT_LATER = 4
-    val SYSTEM_GUIDE = 5
-    val SYSTEM_ORG_GENERAL = 6
+    val SYSTEM_ORG_GENERAL = 3
 
     @inline def toNumericCode(kind: LibraryKind) = kind match {
       case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
       case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET
       case LibraryKind.USER_CREATED => USER_CREATED
-      case LibraryKind.SYSTEM_PERSONA => SYSTEM_PERSONA
-      case LibraryKind.SYSTEM_READ_IT_LATER => SYSTEM_READ_IT_LATER
-      case LibraryKind.SYSTEM_GUIDE => SYSTEM_GUIDE
       case LibraryKind.SYSTEM_ORG_GENERAL => SYSTEM_ORG_GENERAL
     }
 
@@ -71,9 +65,6 @@ object LibraryFields {
       case `SYSTEM_MAIN` => LibraryKind.SYSTEM_MAIN
       case `SYSTEM_SECRET` => LibraryKind.SYSTEM_SECRET
       case `USER_CREATED` => LibraryKind.USER_CREATED
-      case `SYSTEM_PERSONA` => LibraryKind.SYSTEM_PERSONA
-      case `SYSTEM_READ_IT_LATER` => LibraryKind.SYSTEM_READ_IT_LATER
-      case `SYSTEM_GUIDE` => LibraryKind.SYSTEM_GUIDE
       case `SYSTEM_ORG_GENERAL` => LibraryKind.SYSTEM_ORG_GENERAL
     }
   }
@@ -85,13 +76,9 @@ object LibraryFields {
 }
 
 object LibraryIndexable {
-  def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = {
-    getVisibility(librarySearcher, libraryId.id).exists(_ == LibraryVisibility.SECRET)
-  }
+  def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = getVisibility(librarySearcher, libraryId.id).contains(LibraryVisibility.SECRET)
 
-  def isPublished(librarySearcher: Searcher, libId: Long): Boolean = {
-    getVisibility(librarySearcher, libId).exists(_ == LibraryVisibility.PUBLISHED)
-  }
+  def isPublished(librarySearcher: Searcher, libId: Long): Boolean = getVisibility(librarySearcher, libId).contains(LibraryVisibility.PUBLISHED)
 
   def getVisibility(librarySearcher: Searcher, libId: Long): Option[LibraryVisibility] = {
     librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId).map(LibraryFields.Visibility.fromNumericCode)
@@ -118,7 +105,7 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
 
   val id = library.id.get
   val sequenceNumber = library.seq
-  val isDeleted: Boolean = (library.state == LibraryStates.INACTIVE)
+  val isDeleted: Boolean = library.state == LibraryStates.INACTIVE
 
   override def buildDocument = {
     import LibraryFields._

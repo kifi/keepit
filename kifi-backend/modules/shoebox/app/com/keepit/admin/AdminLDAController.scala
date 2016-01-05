@@ -21,7 +21,6 @@ class AdminLDAController @Inject() (
     db: Database,
     userRepo: UserRepo,
     uriRepo: NormalizedURIRepo,
-    personaRepo: PersonaRepo,
     keepRepo: KeepRepo) extends AdminUserActions {
 
   val MAX_WIDTH = 15
@@ -184,10 +183,10 @@ class AdminLDAController @Inject() (
   }
 
   def unamedTopics(limit: Int, versionOpt: Option[Int]) = AdminUserPage.async { implicit request =>
-    val version = versionOpt.flatMap { int2VersionOpt(_) } getOrElse defaultVersion
+    val version = versionOpt.flatMap(int2VersionOpt).getOrElse(defaultVersion)
     cortex.unamedTopics(limit)(Some(version)).map {
       case (topicInfo, topicWords) =>
-        val words = topicWords.map { case words => getFormatted(words) }
+        val words = topicWords.map(getFormatted)
         Ok(html.admin.unamedTopics(topicInfo, words, version.version))
     }
   }
@@ -197,11 +196,9 @@ class AdminLDAController @Inject() (
     val libId = Id[Library](body.get("libId").get.toLong)
     val version = body.get("version").get.trim.toInt
 
-    val msgFut = cortex.libraryTopic(libId)(version).flatMap { feat =>
-      feat match {
-        case Some(arr) => showTopTopicDistributions(arr, topK = 10)(version)
-        case None => Future.successful("not enough information")
-      }
+    val msgFut = cortex.libraryTopic(libId)(version).flatMap {
+      case Some(arr) => showTopTopicDistributions(arr, topK = 10)(version)
+      case None => Future.successful("not enough information")
     }
 
     msgFut.map { msg =>
@@ -216,66 +213,9 @@ class AdminLDAController @Inject() (
     val libId = Id[Library](body.get("libId").get.trim.toLong)
     val version = body.get("version").get.trim.toInt
 
-    cortex.userLibraryScore(userId, libId)(version).map { scoreOpt =>
-      scoreOpt match {
-        case Some(s) => Ok(s.toString)
-        case None => Ok("na")
-      }
+    cortex.userLibraryScore(userId, libId)(version).map {
+      case Some(s) => Ok(s.toString)
+      case None => Ok("na")
     }
-  }
-
-  def persona() = personaVersioned(defaultVersion)
-
-  def personaVersioned(version: ModelVersion[DenseLDA]) = AdminUserPage.async { implicit request =>
-    cortex.ldaNumOfTopics(Some(version)).map { n =>
-      Ok(html.admin.ldaPersona(n, version.version))
-    }
-  }
-
-  def generateLDAPersonaFeature() = AdminUserPage.async { implicit request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    val pid = body.get("personaId").get.trim.toInt
-    val tids = body.get("topicIds").get.split(", ").map { x => LDATopic(x.trim.toInt) }
-    val version = body.get("version").get.trim.toInt
-    cortex.generatePersonaFeature(tids)(version).map { res =>
-      // save immediately
-      cortex.savePersonaFeature(Id[Persona](pid), res._1)(version)
-      Ok(Json.obj("feature" -> res._1, "sampleSize" -> res._2))
-    }
-  }
-
-  def evaluatePersona() = AdminUserPage.async { implicit request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    val pid = body.get("personaId").get.trim.toInt
-    val pname = db.readOnlyReplica { implicit s => personaRepo.get(Id[Persona](pid)).name.value }
-    val version = body.get("version").get.trim.toInt
-    cortex.evaluatePersona(Id[Persona](pid))(version).map { uriScores =>
-      val uids = uriScores.toArray.sortBy(-_._2).map { _._1 }
-      val scores = uids.map { uriScores(_) }.map { x => "%.3f".format(x) }
-      val titles = db.readOnlyReplica { implicit s => uids.map { uriRepo.get(_) } }.map { _.title.getOrElse("n/a") }
-      val shorterTitles = titles.map { t =>
-        val suffix = if (t.size > 80) "..." else ""
-        t.take(80) + suffix
-      }
-      Ok(Json.obj("persona" -> pname, "uids" -> uids, "titles" -> shorterTitles, "scores" -> scores))
-    }
-  }
-
-  def personaFeatureTraining() = AdminUserPage(parse.tolerantJson) { implicit request =>
-    val js = request.body
-
-    val pid = (js \ "personaId").as[String].trim.toInt
-    val version = (js \ "version").as[JsNumber].value.toInt
-    val uids = (js \ "uids").as[Seq[String]].map { _.trim.toInt }
-    val labels = (js \ "feedbacks").as[Seq[Int]]
-    val rate = ((js \ "rate").as[String].trim.toFloat min 0.1f) max 0.001f
-
-    require(uids.length == labels.length)
-
-    // ignore neutral feedbacks
-    val (uids2, labels2) = (uids zip labels).filter { _._2 != 0 }.unzip
-    cortex.trainPersona(Id[Persona](pid), uids2.map { Id[NormalizedURI](_) }, labels2, rate)(version)
-
-    Ok
   }
 }

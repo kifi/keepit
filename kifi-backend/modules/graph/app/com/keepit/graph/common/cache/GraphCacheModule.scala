@@ -167,10 +167,6 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
     new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
 
   @Provides @Singleton
-  def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
-
-  @Provides @Singleton
   def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 

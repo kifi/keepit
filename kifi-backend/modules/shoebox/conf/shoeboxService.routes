@@ -141,8 +141,6 @@ POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.Ext
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 
-GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo()
-
 ##########################################
 # Mobile
 ##########################################
@@ -233,8 +231,6 @@ POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
 GET     /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.getSettings()
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
-GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
-POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
 GET     /m/1/user/pending                       @com.keepit.controllers.mobile.MobileUserController.getPendingRequests(before: Option[DateTime] ?= None, limit: Int ?= 10)
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
@@ -795,9 +791,6 @@ GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearc
 
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 
-POST    /admin/users/createPushActivityEntities     @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
-POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admin.AdminUserController.pushPersonaActivity(id: Id[User])
-
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
 GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
@@ -817,7 +810,6 @@ POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 POST    /admin/libraries/saveSuggestedSearches          @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
-POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.admin.AdminLibraryController.cloneKifiTutorialsLibraryToOrg(orgId: Id[Organization])
 POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
 POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
@@ -870,11 +862,6 @@ GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controlle
 GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5, version: Option[Int] ?= None)
 POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
 POST    /admin/cortex/lda/userLibraryScore                 @com.keepit.controllers.admin.AdminLDAController.userLibraryScore
-GET     /adimin/cortex/lda/persona                         @com.keepit.controllers.admin.AdminLDAController.persona
-GET     /adimin/cortex/lda/persona/version                 @com.keepit.controllers.admin.AdminLDAController.personaVersioned(version: ModelVersion[DenseLDA])
-POST    /admin/cortex/lda/persona/generate                 @com.keepit.controllers.admin.AdminLDAController.generateLDAPersonaFeature
-POST    /admin/cortex/lda/persona/evaluate                 @com.keepit.controllers.admin.AdminLDAController.evaluatePersona
-POST    /admin/cortex/lda/persona/train                    @com.keepit.controllers.admin.AdminLDAController.personaFeatureTraining
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -1041,7 +1028,6 @@ GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controlle
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: UserExperimentType)
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
-GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
