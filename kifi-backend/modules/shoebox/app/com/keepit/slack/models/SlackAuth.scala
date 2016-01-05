@@ -105,7 +105,7 @@ case class SlackTeamInfo(
   id: SlackTeamId,
   name: SlackTeamName,
   domain: SlackTeamDomain,
-  emailDomain: Option[SlackTeamEmailDomain],
+  emailDomains: Seq[SlackTeamEmailDomain],
   icon: Map[Int, String])
 
 object SlackTeamInfo {
@@ -120,7 +120,7 @@ object SlackTeamInfo {
     (__ \ 'id).read[SlackTeamId] and
     (__ \ 'name).read[SlackTeamName] and
     (__ \ 'domain).read[SlackTeamDomain] and
-    (__ \ 'email_domain).read[SlackTeamEmailDomain].map(domain => Some(domain).filter(_.value.nonEmpty)) and
+    (__ \ 'email_domain).read[String].map(domains => domains.split(",").map(SlackTeamEmailDomain(_)).toSeq) and
     iconReads
   )(SlackTeamInfo.apply _)
 }
