@@ -33,8 +33,6 @@ object SlackIngestionCommander {
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
 
-case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
-
 @ImplementedBy(classOf[SlackIngestionCommanderImpl])
 trait SlackIngestionCommander {
   def ingestAllDue(): Future[Unit]
@@ -77,9 +75,7 @@ class SlackIngestionCommanderImpl @Inject() (
         val getToken = {
           val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrations.map(_.slackUserId).toSet)
           integrations.map { integration =>
-            integration.id.get -> slackMemberships.get(integration.slackUserId).map(m => (m.token, m.scopes)).collect {
-              case (Some(token), scopes) => SlackTokenWithScopes(token, scopes)
-            }
+            integration.id.get -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
           }.toMap
         }
 
