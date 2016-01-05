@@ -47,11 +47,15 @@ trait LibraryInfoCommander {
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
+
+  def rpbGetUserLibraries(viewer: Option[Id[User]], userId: Id[User], fromIdOpt: Option[Id[Library]], limit: Int): Seq[LibraryCardInfo]
+  def rpbGetOrgLibraries(viewer: Option[Id[User]], orgId: Id[Organization], fromIdOpt: Option[Id[Library]], limit: Int): Seq[LibraryCardInfo]
 }
 
 @Singleton
 class LibraryInfoCommanderImpl @Inject() (
     db: Database,
+    libraryQueryCommander: LibraryQueryCommander,
     libraryCardCommander: LibraryCardCommander,
     libraryAliasRepo: LibraryAliasRepo,
     handleCommander: HandleCommander,
@@ -547,5 +551,22 @@ class LibraryInfoCommanderImpl @Inject() (
     val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
     val includeOrgVisibleLibs = userIdOpt.exists(organizationMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
     libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
+  }
+
+  def rpbGetUserLibraries(viewer: Option[Id[User]], userId: Id[User], fromIdOpt: Option[Id[Library]], limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
+    import LibraryQuery._
+    val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForUser(userId, LibraryAccess.collaborativePermissions), fromId = fromIdOpt, limit = limit))
+    val libsById = libraryRepo.getActiveByIds(libIds.toSet)
+    val libs = libIds.flatMap(libsById.get)
+    val basicOwnersById = basicUserRepo.loadAll(libs.map(_.ownerId).toSet) // god I hate that createLibraryCardInfos makes you precompute the basic users
+    libraryCardCommander.createLibraryCardInfos(libs, basicOwnersById, viewer, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq
+  }
+  def rpbGetOrgLibraries(viewer: Option[Id[User]], orgId: Id[Organization], fromIdOpt: Option[Id[Library]], limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
+    import LibraryQuery._
+    val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForOrg(orgId), fromId = fromIdOpt, limit = limit))
+    val libsById = libraryRepo.getActiveByIds(libIds.toSet)
+    val libs = libIds.flatMap(libsById.get)
+    val basicOwnersById = basicUserRepo.loadAll(libs.map(_.ownerId).toSet) // god I hate that createLibraryCardInfos makes you precompute the basic users
+    libraryCardCommander.createLibraryCardInfos(libs, basicOwnersById, viewer, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq
   }
 }

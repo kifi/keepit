@@ -215,10 +215,21 @@ class LibraryRepoImpl @Inject() (
     val orgVisible: LibraryVisibility = LibraryVisibility.ORGANIZATION
     val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
 
-    activeRows |> { rs => // Actually perform the query
-      query.ownerId.map(ownerId => rs.filter(_.ownerId === ownerId)).getOrElse(rs)
-    } |> { rs =>
-      query.orgId.map(orgId => rs.filter(_.orgId === orgId)).getOrElse(rs)
+    activeRows |> { rs =>
+      // Actually perform the query
+      query.target match {
+        case ForOrg(orgId) => rs.filter(_.orgId === orgId)
+        case ForUser(userId, roles) =>
+          val libMemRows = libraryMembershipRepo.get.rows
+          for {
+            lib <- rs
+            lm <- libMemRows
+            if lm.libraryId === lib.id &&
+              lm.userId === userId &&
+              lm.access.inSet(roles) &&
+              (lm.listed || lib.id.inSet(extraInfo.explicitlyAllowedLibraries))
+          } yield lib
+      }
     } |> { rs => // Now drop libraries that the viewer doesn't have access to
       rs.filter { lib =>
         lib.visibility === published ||

@@ -12,8 +12,7 @@ import play.api.libs.json.{ Format, Json }
 import scala.util.Try
 
 case class LibraryQuery(
-    ownerId: Option[Id[User]] = None,
-    orgId: Option[Id[Organization]] = None,
+    target: LibraryQuery.Target,
     arrangement: Option[LibraryQuery.Arrangement] = None,
     fromId: Option[Id[Library]],
     limit: Int) {
@@ -21,6 +20,9 @@ case class LibraryQuery(
 }
 
 object LibraryQuery {
+  sealed abstract class Target
+  case class ForUser(userId: Id[User], roles: Set[LibraryAccess]) extends Target
+  case class ForOrg(orgId: Id[Organization]) extends Target
   case class Arrangement(ordering: LibraryOrdering, direction: SortDirection)
   object Arrangement {
     implicit val format: Format[Arrangement] = Json.format[Arrangement]
@@ -32,7 +34,7 @@ object LibraryQuery {
 
 @ImplementedBy(classOf[LibraryQueryCommanderImpl])
 trait LibraryQueryCommander {
-  def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement)(implicit session: RWSession): Unit
+  def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement): Unit
   def getLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]]
 }
 
@@ -46,7 +48,7 @@ class LibraryQueryCommanderImpl @Inject() (
   implicit val airbrake: AirbrakeNotifier)
     extends LibraryQueryCommander {
 
-  def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement)(implicit session: RWSession): Unit = {
+  def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement): Unit = db.readWrite { implicit s =>
     userValueRepo.setValue(userId, UserValueName.DEFAULT_LIBRARY_ARRANGEMENT, Json.stringify(Json.toJson(arrangement)))
   }
 
