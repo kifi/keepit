@@ -124,7 +124,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           }
           val keepPubId = Keep.publicId(keep.id.get)
           val deepLink = Json.obj("t" -> "m", "id" -> keepPubId, "uri" -> uri.externalId)
-          deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/$keepPubId")))
+          deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/${keepPubId.id}")))
         }
       }
 
