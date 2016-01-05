@@ -66,6 +66,7 @@ object LibraryFields {
       case `SYSTEM_SECRET` => LibraryKind.SYSTEM_SECRET
       case `USER_CREATED` => LibraryKind.USER_CREATED
       case `SYSTEM_ORG_GENERAL` => LibraryKind.SYSTEM_ORG_GENERAL
+      case _ => LibraryKind.USER_CREATED // TODO(ryan): this is a temporary measure, old data is causing match errors
     }
   }
 
