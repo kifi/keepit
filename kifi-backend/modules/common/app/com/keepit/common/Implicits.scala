@@ -1,6 +1,7 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
 import scala.collection.IterableLike
@@ -34,6 +35,12 @@ final class TryExtensionOps[A](val x: scala.util.Try[A]) extends AnyVal {
   def fold[B](f: A => B, g: Throwable => B): B = x match {
     case scala.util.Success(t) => f(t)
     case scala.util.Failure(t) => g(t)
+  }
+  def safeOption(implicit airbrake: AirbrakeNotifier): Option[A] = x match {
+    case scala.util.Success(t) => Some(t)
+    case scala.util.Failure(f) =>
+      airbrake.notify(f)
+      None
   }
 }
 

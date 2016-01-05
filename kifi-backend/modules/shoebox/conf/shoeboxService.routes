@@ -462,6 +462,10 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
+## endpoints only for testing, should be deleted by 2016-01-10
+GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, limit: Int ?= 10)
+GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
+
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
 

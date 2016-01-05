@@ -8,13 +8,17 @@ import scala.util.{Success, Failure, Try}
 
 package object json {
   object EnumFormat {
-    def reads[T](f: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
+    def reads[T](fromStr: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
       def errMsg = if (domain.nonEmpty) s"$j is not one of these: $domain" else s"Could not recognize $j"
       for {
         str <- j.validate[String]
-        v <- f(str).map(JsSuccess(_)).getOrElse(JsError(ValidationError(errMsg)))
+        v <- fromStr(str).map(JsSuccess(_)).getOrElse(JsError(ValidationError(errMsg)))
       } yield v
     }
+    def writes[T](toStr: T => String): Writes[T] = Writes { v => JsString(toStr(v)) }
+    def format[T](fromStr: (String => Option[T]), toStr: T => String, domain: Set[String] = Set.empty) = Format(
+      reads(fromStr, domain), writes(toStr)
+    )
   }
   object KeyFormat {
     def key1Reads[A](strA: String)(implicit aReads: Reads[A]): Reads[A] = Reads[A] {

@@ -170,13 +170,14 @@ object Library extends PublicIdGenerator[Library] {
 }
 
 sealed abstract class SortDirection(val value: String)
-object SortDirection {
+object SortDirection extends Enumerator[SortDirection] {
   case object ASCENDING extends SortDirection("asc")
   case object DESCENDING extends SortDirection("desc")
-  def apply(value: String) = value match {
-    case ASCENDING.value => ASCENDING
-    case DESCENDING.value => DESCENDING
-  }
+  val all = _all.toSet
+  def fromStr(str: String): Option[SortDirection] = all.find(_.value == str)
+  def apply(str: String) = fromStr(str).get
+
+  implicit val format: Format[SortDirection] = EnumFormat.format(fromStr, _.value)
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[SortDirection] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SortDirection]] = {
