@@ -187,6 +187,7 @@ angular.module('kifi')
           if (installService.hasMinimumVersion('3.0.7')) {
             extensionLiaison.openDeepLink(scope.keep.url, '/messages:all#compose');
           } else {
+            scope.triggerInstall = installService.triggerInstall;
             modalService.open({
               template: 'common/modal/installExtensionModal.tpl.html',
               scope: scope
