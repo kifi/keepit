@@ -181,6 +181,10 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new LibrariesWithWriteAccessCache(stats, accessLog, (outerRepo, 10 minutes))
 
   @Provides @Singleton
+  def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserActivePersonasCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 14 days))
+
+  @Provides @Singleton
   def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 

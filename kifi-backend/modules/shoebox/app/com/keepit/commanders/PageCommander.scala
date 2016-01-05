@@ -147,16 +147,23 @@ class PageCommander @Inject() (
   }
 
   def firstQualityFilterAndSort(libraries: Seq[Library]): Seq[Library] = {
-    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED)
-    libraries.filter { lib =>
-      allowedLibraryKinds.contains(lib.kind) && !libraryQualityHelper.isBadLibraryName(lib.name)
-    }.sortBy(lib => (-lib.memberCount, lib.name))
+    val allowedLibraryKinds: Set[LibraryKind] = Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA, LibraryKind.SYSTEM_READ_IT_LATER, LibraryKind.SYSTEM_GUIDE)
+
+    libraries.filterNot {
+      case lib if lib.state != LibraryStates.ACTIVE =>
+        log.warn(s"[firstQualityFilterAndSort] Library is inactive ${lib.id.get}")
+        true
+      case lib if !allowedLibraryKinds.contains(lib.kind) =>
+        log.warn(s"[firstQualityFilterAndSort] Library has a bad kind ${lib.kind}")
+        true
+      case lib => libraryQualityHelper.isBadLibraryName(lib.name)
+    }.sortBy(lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
   }
 
   def secondQualityFilter(libraries: Seq[Library]): Seq[Library] = libraries.filter { lib =>
     val count = lib.keepCount
     val followers = lib.memberCount
-    val descriptionCredit = lib.description.map(d => (d.length / 10).max(2)).getOrElse(0)
+    val descriptionCredit = lib.description.map(d => (d.size / 10).max(2)).getOrElse(0)
     val credit = followers + descriptionCredit
     //must have at least five keeps, if have some followers or description can do with a bit less
     //also, must not have more then 30 keeps unless has some followers or description and then we'll scale by that

@@ -1,14 +1,19 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import org.joda.time.{ DateTime, LocalTime }
-
 import scala.concurrent.duration._
+import scala.concurrent.duration.Duration._
+import com.keepit.shoebox.cron.ActivityPusher
+import org.joda.time.{ LocalTime, DateTime }
+import play.api.libs.json.Json
+
+import scala.slick.jdbc.StaticQuery
+import scala.util.Try
 
 @ImplementedBy(classOf[ActivityPushTaskRepoImpl])
 trait ActivityPushTaskRepo extends Repo[ActivityPushTask] {

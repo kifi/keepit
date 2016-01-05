@@ -202,7 +202,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>
-          library().withName("Healthy Habits").withSlug("healthy-habits").withOwner(user1).saved
+          library().withName("Healthy Habits").withSlug("healthy-habits").withOwner(user1).withKind(LibraryKind.SYSTEM_PERSONA).saved
         }
         val pubLib2 = Library.publicId(personaLib.id.get)(inject[PublicIdConfiguration])
         val result2 = getLibraryById(user1, pubLib2)

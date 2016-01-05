@@ -31,13 +31,23 @@ trait CortexServiceClient extends ServiceClient {
   def ldaDocTopic(doc: String)(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration])(implicit version: LDAVersionOpt): Unit
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])(implicit version: LDAVersionOpt = None): Future[LDAUserURIInterestScores]
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User])(implicit version: LDAVersionOpt = None): Future[(Option[Array[Float]], Option[Array[Float]])]
   def sampleURIsForTopic(topic: Int)(implicit version: LDAVersionOpt): Future[(Seq[Id[NormalizedURI]], Seq[Float])]
   def getSimilarUsers(userId: Id[User], topK: Int)(implicit version: LDAVersionOpt = None): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20)(implicit version: LDAVersionOpt = None): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
+  def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]]
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]]
   def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]]
   def userLibraryScore(userId: Id[User], libId: Id[Library])(implicit version: LDAVersionOpt): Future[Option[Float]]
+  def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: LDAVersionOpt): Future[Seq[Option[Float]]]
   def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]]
+
+  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: LDAVersion): Future[(Array[Float], Int)] // Int: sample size
+  def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion): Future[Option[Array[Float]]]
+  def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit
+  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]]
+  def trainPersona(personaId: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: LDAVersion): Unit
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -99,6 +109,11 @@ class CortexServiceClientImpl(
     call(Cortex.internal.userUriInterest(userId, uriId)).map { r => r.json.as[LDAUserURIInterestScores] }
   }
 
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[LDAUserURIInterestScores]] = {
+    val payload = Json.obj("userId" -> userId, "uriIds" -> Json.toJson(uriIds))
+    call(Cortex.internal.batchUserURIsInterests, payload, callTimeouts = longTimeout).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
+  }
+
   def userTopicMean(userId: Id[User])(implicit version: LDAVersionOpt = None): Future[(Option[Array[Float]], Option[Array[Float]])] = {
     call(Cortex.internal.userTopicMean(userId)).map { r =>
       val js = r.json
@@ -137,6 +152,16 @@ class CortexServiceClientImpl(
     }
   }
 
+  def getTopicNames(uris: Seq[Id[NormalizedURI]], userIdOpt: Option[Id[User]])(implicit version: LDAVersionOpt = None): Future[Seq[Option[String]]] = {
+    val payload = Json.obj("uris" -> uris, "user" -> userIdOpt)
+    call(Cortex.internal.getTopicNames, payload).map { r => (r.json).as[Seq[Option[String]]] }
+  }
+
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit version: LDAVersionOpt = None): Future[Seq[Seq[Id[Keep]]]] = {
+    val payload = Json.obj("user" -> userId, "uris" -> uriIds)
+    call(Cortex.internal.explainFeed, payload).map { r => (r.json).as[Seq[Seq[Id[Keep]]]] }
+  }
+
   def libraryTopic(libId: Id[Library])(implicit version: LDAVersionOpt = None): Future[Option[Array[Float]]] = {
     call(Cortex.internal.libraryTopic(libId)).map { r => (r.json).as[Option[Array[Float]]] }
   }
@@ -146,7 +171,41 @@ class CortexServiceClientImpl(
     call(Cortex.internal.userLibraryScore(userId, libId)).map { r => (r.json).as[Option[Float]] }
   }
 
+  def userLibrariesScores(userId: Id[User], libIds: Seq[Id[Library]])(implicit version: LDAVersionOpt): Future[Seq[Option[Float]]] = {
+    val payload = Json.toJson(libIds)
+    call(Cortex.internal.userLibrariesScores(userId), payload).map { r => r.json.as[Seq[Option[Float]]] }
+  }
+
   def similarLibraries(libId: Id[Library], limit: Int)(implicit version: LDAVersionOpt = None): Future[Seq[Id[Library]]] = {
     call(Cortex.internal.similarLibraries(libId, limit)).map { r => r.json.as[Seq[Id[Library]]] }
   }
+
+  def generatePersonaFeature(topicIds: Seq[LDATopic])(implicit version: LDAVersion): Future[(Array[Float], Int)] = {
+    val payload = Json.obj("topicIds" -> topicIds.map { _.index })
+    call(Cortex.internal.generatePersonaFeature(version), payload).map { r =>
+      val js = r.json
+      val feature = (js \ "feature").as[Array[Float]]
+      val sampleSize = (js \ "sampleSize").as[Int]
+      (feature, sampleSize)
+    }
+  }
+
+  def getExistingPersonaFeature(personaId: Id[Persona])(implicit version: LDAVersion): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.getExistingPersonaFeature(personaId)).map { r => r.json.as[Option[Array[Float]]] }
+  }
+
+  def savePersonaFeature(personaId: Id[Persona], feature: Array[Float])(implicit version: LDAVersion): Unit = {
+    val payload = Json.obj("feature" -> feature, "personaId" -> personaId)
+    call(Cortex.internal.savePersonaFeature(version), payload)
+  }
+
+  def evaluatePersona(personaId: Id[Persona])(implicit version: LDAVersion): Future[Map[Id[NormalizedURI], Float]] = {
+    call(Cortex.internal.evaluatePersona(personaId)).map { _.json.as[Map[Id[NormalizedURI], Float]] }
+  }
+
+  def trainPersona(personaId: Id[Persona], uriIds: Seq[Id[NormalizedURI]], labels: Seq[Int], rate: Float = 0.1f)(implicit version: LDAVersion): Unit = {
+    val payload = Json.obj("uriIds" -> uriIds, "labels" -> labels, "rate" -> rate)
+    call(Cortex.internal.trainPersonaFeature(personaId)(version), payload).map { _ => () }
+  }
+
 }
