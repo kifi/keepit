@@ -336,7 +336,7 @@ class MobileMessagingController @Inject() (
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
           _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, addReq.emails, orgIds)(contextBuilder.build)
-        } yield NoContent
+        } yield Ok
       case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
@@ -356,7 +356,7 @@ class MobileMessagingController @Inject() (
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
           _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, validEmails, orgIds)(contextBuilder.build)
-        } yield NoContent
+        } yield Ok("")
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
