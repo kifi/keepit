@@ -13,13 +13,9 @@ import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
-import com.keepit.controllers.website.DeepLinkRouter
-import com.keepit.discussion.Message
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.search.SearchServiceClient
-import com.keepit.slack.{ LibrarySlackInfo, SlackCommander }
-import com.keepit.slack.models.SlackAuthScope
+import com.keepit.slack.{ LibrarySlackInfo, SlackInfoCommander }
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -77,7 +73,7 @@ class LibraryInfoCommanderImpl @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     basicUserRepo: BasicUserRepo,
     libraryRepo: LibraryRepo,
-    slackCommander: SlackCommander,
+    slackInfoCommander: SlackInfoCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
@@ -266,7 +262,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
     // I refuse to allow something small, like Slack integrations, take down the important stuff like Libraries
     val slackInfoByLibraryId: Map[Id[Library], LibrarySlackInfo] = viewerUserIdOpt.map { viewerId =>
-      Try(slackCommander.getSlackIntegrationsForLibraries(viewerId, libIds)).recover {
+      Try(slackInfoCommander.getSlackIntegrationsForLibraries(viewerId, libIds)).recover {
         case fail =>
           airbrake.notify(s"Exploded while getting Slack integrations for user $viewerId and libraries $libIds", fail)
           Map.empty[Id[Library], LibrarySlackInfo]
