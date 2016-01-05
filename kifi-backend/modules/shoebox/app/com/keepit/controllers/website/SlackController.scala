@@ -7,7 +7,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContext }
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -61,7 +61,7 @@ class SlackController @Inject() (
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
           result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
         } yield result
-      } getOrElse Future.successful(BadRequest)
+      } getOrElse Future.successful(BadRequest("invalid_state"))
     } yield result
 
     resultFut.recover {
@@ -76,19 +76,19 @@ class SlackController @Inject() (
         case (Success(libId), Some(webhook)) =>
           slackCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest)
+        case _ => Future.successful(BadRequest("invalid_library_id"))
       }
       case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
         case (Success(integrationId), Some(webhook)) =>
           val libraryId = slackCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest)
+        case _ => Future.successful(BadRequest("invalid_integration_id"))
       }
       case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
         case Success(integrationId) =>
           val libraryId = slackCommander.turnOnChannelIngestion(integrationId, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest)
+        case _ => Future.successful(BadRequest("invalid_integration_id"))
       }
       case SetupSlackTeam => ((data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
         case Success(orgIdOpt) =>
@@ -113,7 +113,7 @@ class SlackController @Inject() (
               }
             }
           }
-        case _ => Future.successful(BadRequest)
+        case _ => Future.successful(BadRequest("invalid_organization_id"))
       }
     }
   }
