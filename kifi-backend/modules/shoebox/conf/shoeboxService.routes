@@ -465,6 +465,7 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
 
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
@@ -546,6 +547,9 @@ POST          /site/organizations/:id/sendMemberConfirmationEmail @com.keepit.co
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
+
+POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createOrganizationForSlackTeam(slackTeamId: String)
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeamToOrganization(id: PublicId[Organization], slackTeamId: String)
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
