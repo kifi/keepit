@@ -326,7 +326,12 @@ object LibraryKind extends Enumerator[LibraryKind] {
   case object USER_CREATED extends LibraryKind("user_created", 3)
 
   def all = _all.toSet
-  def get(str: String): Option[LibraryKind] = all.find(_.value == str)
+  val deprecated: Map[String, LibraryKind] = Map(
+    "system_guide" -> USER_CREATED,
+    "system_read_it_later" -> USER_CREATED,
+    "system_persona" -> USER_CREATED
+  )
+  def get(str: String): Option[LibraryKind] = all.find(_.value == str) orElse deprecated.get(str)
   def apply(str: String) = get(str).getOrElse(throw new Exception(s"unknown library kind: $str"))
 
   implicit val format: Format[LibraryKind] = Format(
