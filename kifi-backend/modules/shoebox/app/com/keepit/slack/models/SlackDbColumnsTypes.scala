@@ -1,5 +1,6 @@
 package com.keepit.slack.models
 
+import com.keepit.common.routes.Param
 import com.keepit.common.strings._
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.util.DescriptionElements
@@ -39,7 +40,6 @@ object SlackDbColumnTypes {
 
 case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
     text: String,
-    channel: Option[SlackChannelName],
     username: String,
     iconUrl: String,
     attachments: Seq[SlackAttachment],
@@ -47,6 +47,7 @@ case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
     unfurlMedia: Boolean) {
   def quiet = this.copy(unfurlLinks = false, unfurlMedia = false)
   def withAttachments(newAttachments: Seq[SlackAttachment]) = this.copy(attachments = newAttachments)
+  def asUrlParams: Seq[Param] = Seq("text" -> text, "username" -> username, "icon_url" -> iconUrl, "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia)
 }
 
 object SlackMessageRequest {
@@ -54,9 +55,8 @@ object SlackMessageRequest {
   val kifiIconUrl = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
   val pandaIconUrl = "http://i.imgur.com/A86F6aB.png"
 
-  def fromKifi(text: String, channel: Option[SlackChannelName] = None, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
+  def fromKifi(text: String, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
     text,
-    channel = channel,
     username = "Kifi",
     iconUrl = kifiIconUrl,
     attachments = attachments,
@@ -66,7 +66,6 @@ object SlackMessageRequest {
 
   def inhouse(txt: DescriptionElements) = SlackMessageRequest(
     text = DescriptionElements.formatForSlack(txt),
-    channel = None,
     username = "inhouse-kifi-bot",
     iconUrl = pandaIconUrl,
     attachments = Seq.empty,
@@ -77,7 +76,6 @@ object SlackMessageRequest {
   implicit val writes: Writes[SlackMessageRequest] = Writes { o =>
     Json.obj(
       "text" -> o.text,
-      "channel" -> o.channel,
       "username" -> o.username,
       "icon_url" -> o.iconUrl,
       "attachments" -> o.attachments,
