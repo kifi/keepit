@@ -1,15 +1,14 @@
 package com.keepit.commanders
 
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.EmailAddress
-import com.keepit.model._
-import com.keepit.heimdal._
-import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImageSize
-import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.time._
+import com.keepit.heimdal._
+import com.keepit.model._
 import org.joda.time.DateTime
 
 import scala.concurrent.ExecutionContext
@@ -141,12 +140,12 @@ class LibraryAnalytics @Inject() (
           contextBuilder += ("subAction", "importedKeeps")
         case _ =>
       }
-      contextBuilder += ("editTitle", edits.get("title").getOrElse(false))
-      contextBuilder += ("editSlug", edits.get("slug").getOrElse(false))
-      contextBuilder += ("editDescription", edits.get("description").getOrElse(false))
-      contextBuilder += ("editColor", edits.get("color").getOrElse(false))
-      contextBuilder += ("editMadePrivate", edits.get("madePrivate").getOrElse(false))
-      contextBuilder += ("editListed", edits.get("listed").getOrElse(false))
+      contextBuilder += ("editTitle", edits.getOrElse("title", false))
+      contextBuilder += ("editSlug", edits.getOrElse("slug", false))
+      contextBuilder += ("editDescription", edits.getOrElse("description", false))
+      contextBuilder += ("editColor", edits.getOrElse("color", false))
+      contextBuilder += ("editMadePrivate", edits.getOrElse("madePrivate", false))
+      contextBuilder += ("editListed", edits.getOrElse("listed", false))
       library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
       contextBuilder += ("privacySetting", getLibraryVisibility(library.visibility))
       contextBuilder += ("libraryId", library.id.get.toString)
@@ -281,9 +280,6 @@ class LibraryAnalytics @Inject() (
         contextBuilder ++= populateLibraryInfoForKeep(library).data
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, when))
       }
-      val unkept = keeps.length
-      val unkeptPrivate = keeps.count(_.isPrivate)
-      val unkeptPublic = unkept - unkeptPrivate
       userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
     }
   }
@@ -319,18 +315,14 @@ class LibraryAnalytics @Inject() (
   }
   private def addLibraryKindContext(library: Library): HeimdalContext = {
     val contextBuilder = new HeimdalContextBuilder
-    if (library.kind == LibraryKind.SYSTEM_PERSONA) {
-      contextBuilder += ("libraryKind", "personaCreated")
-    } else if (library.kind == LibraryKind.SYSTEM_GUIDE) {
-      contextBuilder += ("libraryKind", "guideCreated")
-    } else if (library.kind == LibraryKind.USER_CREATED) {
+    if (library.kind == LibraryKind.USER_CREATED) {
       contextBuilder += ("libraryKind", "userCreated")
     }
     contextBuilder.build
   }
 
   def taggedPage(tag: Collection, keep: Keep, context: HeimdalContext, taggedAt: DateTime = currentDateTime): Unit = {
-    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
+    val isDefaultTag = context.get[String]("source").contains(KeepSource.default.value)
     if (!isDefaultTag) changedTag(tag, keep, "taggedPage", context, taggedAt)
   }
 
