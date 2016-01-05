@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers.mobile
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
@@ -13,6 +14,7 @@ import com.keepit.eliza.model.MessageSource
 import com.keepit.heimdal._
 import com.keepit.model.{ Keep, Organization, User }
 import com.keepit.notify.model.Recipient
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
@@ -33,6 +35,7 @@ class MobileMessagingController @Inject() (
     notificationMessagingCommander: NotificationMessagingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,
+    shoebox: ShoeboxServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
@@ -319,45 +322,42 @@ class MobileMessagingController @Inject() (
   }
 
   // users is a string because orgs come in through that field
-  @json case class AddParticipants(users: Seq[String], emails: Seq[BasicContact])
-  def addParticipantsToThreadV2(pubKeepId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+  @json case class AddParticipants(users: Set[String], emails: Seq[BasicContact])
+  def addParticipantsToThreadV2(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
     (Keep.decodePublicId(pubKeepId), request.body.asOpt[AddParticipants]) match {
       case (Success(keepId), Some(addReq)) =>
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
 
-        val (validUserIds, validOrgIds) = addReq.users.foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
-          ExternalId.asOpt[User](id) match {
-            case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2) // TODO(ryan): why is this checking the length, that is guaranteed by the regex isn't it?
-            case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
-          }
-        }
-        discussionCommander.addParticipantsToThread(request.userId, keepId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
-        Ok
-      case _ => BadRequest
+        val (extUserIds, orgIds) = addReq.users.flatMap {
+          case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr).map(Left(_))
+          case orgIdStr if orgIdStr.startsWith("o") => Organization.decodePublicId(PublicId(orgIdStr)).toOption.map(Right(_))
+        }.partitionEithers
+        for {
+          userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
+          _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, addReq.emails, orgIds)(contextBuilder.build)
+        } yield NoContent
+      case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
 
   // Do not use, clients have moved to addParticipantsToThreadV2 which doesn't have an insane API
-  def addParticipantsToThread(pubKeepId: PublicId[Keep], users: String, emailContacts: String) = UserAction { request =>
+  def addParticipantsToThread(pubKeepId: PublicId[Keep], users: String, emailContacts: String) = UserAction.async { request =>
     Keep.decodePublicId(pubKeepId) match {
       case Success(keepId) =>
-        if (users.nonEmpty || emailContacts.nonEmpty) {
-          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-          contextBuilder += ("source", "mobile")
-          //assuming the client does the proper checks!
-          val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
-          val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
-            // This API is basically insane. Passing comma separated entities in URL params on a POST?
-            ExternalId.asOpt[User](id) match {
-              case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
-              case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
-            }
-          }
-          discussionCommander.addParticipantsToThread(request.userId, keepId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
-        }
-        Ok("")
-      case Failure(_) => BadRequest("invalid_keep_id")
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", "mobile")
+        //assuming the client does the proper checks!
+        val validEmails = emailContacts.split(",").toList.map(_.trim).filter(_.nonEmpty).map { email => BasicContact.fromString(email).get }
+        val (extUserIds, orgIds) = users.split(",").toList.map(_.trim).filter(_.nonEmpty).flatMap {
+          case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr).map(Left(_))
+          case orgIdStr if orgIdStr.startsWith("o") => Organization.decodePublicId(PublicId(orgIdStr)).toOption.map(Right(_))
+        }.partitionEithers
+        for {
+          userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
+          _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, validEmails, orgIds)(contextBuilder.build)
+        } yield NoContent
+      case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
 
