@@ -7,9 +7,11 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.test._
 import org.joda.time.DateTime
 import org.specs2.mutable._
+import com.keepit.commanders.FeedFilter._
 
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -128,9 +130,9 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val library = LibraryFactory.library().withOwner(user1).saved
           val keep = KeepFactory.keep().withUser(user1).withLibrary(library).saved
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, Some(keep.externalId), None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, Some(keep.externalId))
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None, None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, Some(keep.externalId), None, None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, Some(keep.externalId), None)
           1 === 1
         }
       }
@@ -168,5 +170,30 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         1 === 1
       }
     }
+
+    "filter recent keeps using FeedFilters" in {
+      withDb() { implicit injector =>
+        val (user1, org) = db.readWrite { implicit s =>
+          val user1 = UserFactory.user().saved
+          val user2 = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(user1).saved
+          val lib1 = LibraryFactory.library().withOwner(user1).saved
+          val lib2 = LibraryFactory.library().withOwner(user1).withOrganization(org).withCollaborators(Seq(user2)).saved
+          keeps(22).map(_.withLibrary(lib1).withUser(user1)).saved
+          keeps(18).map(_.withLibrary(lib2).withUser(user2)).saved
+          (user1, org)
+        }
+
+        val user1Id = user1.id.get
+
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, None).length must equalTo(40)
+          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OwnKeeps)).length must equalTo(22)
+          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OrganizationKeeps(org.id.get))).length must equalTo(18)
+        }
+        1 === 1
+      }
+    }
+
   }
 }

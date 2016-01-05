@@ -166,7 +166,7 @@ POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.Mobil
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 
-GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
+GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
 GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
@@ -387,7 +387,7 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
+GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
 POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], authToken: Option[String] ?= None)
