@@ -128,7 +128,9 @@ class SlackCommanderImpl @Inject() (
       }
       slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
         team.organizationId.foreach { orgId =>
-          orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+          if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
+            orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+          }
         }
       }
     }
