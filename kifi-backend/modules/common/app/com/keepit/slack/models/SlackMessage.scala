@@ -22,26 +22,6 @@ object KifiSlackApp {
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
 }
 
-@json case class SlackUserId(value: String)
-@json case class SlackUsername(value: String)
-
-object SlackUsername {
-  val slackbot = SlackUsername("slackbot")
-  val kifibot = SlackUsername("kifi-bot")
-  val doNotIngest = Set(slackbot, kifibot)
-}
-
-@json case class SlackTeamId(value: String)
-@json case class SlackTeamName(value: String)
-@json case class SlackTeamDomain(value: String)
-@json case class SlackTeamEmailDomain(value: String)
-
-@json case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
-@json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
-@json case class SlackChannel(id: SlackChannelId, name: SlackChannelName)
-
-@json case class SlackAccessToken(token: String)
-
 @json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
   def compare(that: SlackMessageTimestamp) = value compare that.value
   def toDateTime: DateTime = Try {

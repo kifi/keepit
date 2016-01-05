@@ -16,6 +16,8 @@ trait SlackClientWrapper {
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
+  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]]
+  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
 }
 
@@ -53,6 +55,13 @@ class SlackClientWrapperImpl @Inject() (
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
+  }
+
+  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]] = {
+    slackClient.getChannels(token).andThen(onRevokedToken(token))
+  }
+  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
+    slackClient.getChannelInfo(token, channelId).andThen(onRevokedToken(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
