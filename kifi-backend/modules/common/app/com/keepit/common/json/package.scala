@@ -205,6 +205,17 @@ package object json {
       }
     }
   }
+
+  val formatNone: Format[None.type] = {
+    Format(
+      Reads {
+        case JsNull => JsSuccess(None)
+        case unknown => JsError(s"Expected JsNull for None, instead: $unknown")
+      },
+      Writes(None => JsNull)
+    )
+  }
+
   object TestHelper {
     def deepCompare(a: JsValue, b: JsValue, path: String = "obj"): Option[String] = {
       (a.asOpt[JsObject], b.asOpt[JsObject]) match {

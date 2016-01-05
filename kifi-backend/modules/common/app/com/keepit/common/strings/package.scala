@@ -6,6 +6,8 @@ import org.apache.commons.lang3.StringUtils
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, JsObject, JsNull, JsString, JsUndefined }
 
+import scala.util.Try
+
 package object strings {
   val UTF8 = "UTF-8"
   implicit def fromByteArray(bytes: Array[Byte]): String = if (bytes == null) "" else new String(bytes, UTF8)
@@ -57,5 +59,13 @@ package object strings {
       val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
       regex.replaceAllIn(str, m => Matcher.quoteReplacement(replacement(m.matched)))
     }
+  }
+
+  object ValidLong {
+    def unapply(id: String): Option[Long] = Try(id.toLong).toOption
+  }
+
+  object ValidInt {
+    def unapply(id: String): Option[Int] = Try(id.toInt).toOption
   }
 }

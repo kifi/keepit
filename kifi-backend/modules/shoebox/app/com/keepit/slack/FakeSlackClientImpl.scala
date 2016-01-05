@@ -12,6 +12,7 @@ class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
   val channelLog: mutable.Map[(SlackTeamId, SlackChannelName), List[SlackMessage]] = mutable.Map.empty.withDefaultValue(List.empty)
   val membershipToken: mutable.Map[SlackAccessToken, SlackTeamMembership] = mutable.Map.empty
+  val teamByToken: mutable.Map[SlackAccessToken, SlackTeamInfo] = mutable.Map.empty
   var isSlackDown = false
   var isSlackThrowingAFit = false
   private val inc = new AtomicLong(1442527939)
@@ -67,4 +68,5 @@ class FakeSlackClientImpl extends SlackClient {
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = Future.successful(())
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = Future.successful(None)
+  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
 }
