@@ -69,7 +69,7 @@ class DeepLinkRouterImpl @Inject() (
     for {
       uri <- uriOpt
       keepPubId <- keepPubIdOpt
-    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/$keepPubId").filter(_ => keepPageOpt.isEmpty))
+    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/${keepPubId.id}").filter(_ => keepPageOpt.isEmpty))
   }
 
   def generateRedirectUrl(data: JsObject): Option[String] = {
