@@ -68,7 +68,7 @@ trait KeepCommander {
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Future[KeepInfo]
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -822,11 +822,11 @@ class KeepCommanderImpl @Inject() (
   }
 
   @StatsdTiming("KeepCommander.getKeepStream")
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean, filterOpt: Option[FeedFilter]): Future[Seq[KeepInfo]] = {
     val keepsAndTimes = db.readOnlyReplica { implicit session =>
       // TODO(ryan): when the frontend can handle a keep without a library, let them through
       // Grab 2x the required number because we're going to be dropping some
-      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
+      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined }
     }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
 
     val keeps = keepsAndTimes.map(_._1)
@@ -877,4 +877,16 @@ object HelpRankSelector {
   }
 
   def unapply(selector: HelpRankSelector) = selector.name
+}
+
+abstract class FeedFilter(val kind: String)
+object FeedFilter {
+  case object OwnKeeps extends FeedFilter("own")
+  case class OrganizationKeeps(orgId: Id[Organization]) extends FeedFilter("org")
+
+  def apply(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[FeedFilter] = kind match {
+    case OwnKeeps.kind => Some(OwnKeeps)
+    case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
+    case _ => None
+  }
 }
