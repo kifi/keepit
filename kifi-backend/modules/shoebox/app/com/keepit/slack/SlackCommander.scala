@@ -128,7 +128,9 @@ class SlackCommanderImpl @Inject() (
       }
       slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
         team.organizationId.foreach { orgId =>
-          orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+          if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
+            orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+          }
         }
       }
     }
@@ -353,11 +355,11 @@ class SlackCommanderImpl @Inject() (
     } match {
       case (Some(team), Some(token)) if team.organizationId.isEmpty =>
         slackClient.getTeamInfo(token).flatMap { teamInfo =>
-          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None, site = teamInfo.emailDomain.map(_.value))
+          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None, site = teamInfo.emailDomains.headOption.map(_.value))
           orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
             case Right(createdOrg) =>
               val orgId = createdOrg.newOrg.id.get
-              teamInfo.emailDomain.foreach { domain => orgDomainCommander.addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, domain.value)) }
+              teamInfo.emailDomains.foreach { domain => orgDomainCommander.addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, domain.value)) }
               teamInfo.icon.maxByOpt(_._1).foreach {
                 case (size, imageUrl) =>
                 // todo(Léo): upload as org avatar
