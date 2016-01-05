@@ -16,6 +16,7 @@ trait SlackClientWrapper {
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
+  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
 }
 
 @Singleton
@@ -69,6 +70,10 @@ class SlackClientWrapperImpl @Inject() (
           slackTeamMembershipRepo.save(stm.revoked)
         }
       }
+  }
+
+  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
+    slackClient.getTeamInfo(token).andThen(onRevokedToken(token))
   }
 
 }

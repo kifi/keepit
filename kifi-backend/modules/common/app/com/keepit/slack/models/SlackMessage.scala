@@ -34,6 +34,7 @@ object SlackUsername {
 @json case class SlackTeamId(value: String)
 @json case class SlackTeamName(value: String)
 @json case class SlackTeamDomain(value: String)
+@json case class SlackTeamEmailDomain(value: String)
 
 @json case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
 @json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM

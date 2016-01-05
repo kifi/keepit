@@ -23,6 +23,8 @@ case class SlackTeamMembershipInternRequest(
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
 
+case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
+
 case class SlackTeamMembership(
     id: Option[Id[SlackTeamMembership]] = None,
     createdAt: DateTime = currentDateTime,
@@ -39,6 +41,7 @@ case class SlackTeamMembership(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
   def revoked = this.copy(token = None, scopes = Set.empty)
+  def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
 }
 
 object SlackTeamMembershipStates extends States[SlackTeamMembership]

@@ -82,7 +82,7 @@ class DeepLinkRouterImpl @Inject() (
         Some(Path("me/libraries/invited").absolute)
       case DeepLinkType.FriendRequest =>
         Some(Path("friends/requests").absolute)
-      case DeepLinkType.OrganizationInvite =>
+      case DeepLinkType.OrganizationInvite | DeepLinkType.OrganizationView =>
         val orgIdOpt = (data \ DeepLinkField.OrganizationId).asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
         val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
         val authTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
@@ -107,6 +107,7 @@ class DeepLinkRouterImpl @Inject() (
 
 object DeepLinkRouter {
   def libraryLink(libId: PublicId[Library]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id)
+  def organizationLink(orgId: PublicId[Organization]): JsObject = Json.obj("t" -> DeepLinkType.OrganizationView, DeepLinkField.OrganizationId -> orgId.id)
 }
 
 object DeepLinkType {
@@ -115,6 +116,7 @@ object DeepLinkType {
   val InvitedLibraries = "il"
   val FriendRequest = "fr"
   val OrganizationInvite = "oi"
+  val OrganizationView = "ov"
   val LibraryRecommendation = "lr"
   val LibraryInvite = "li"
   val LibraryView = "lv"

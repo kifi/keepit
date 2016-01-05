@@ -40,6 +40,7 @@ object SlackAPI {
     Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
   def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
+  def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
 }
 
 trait SlackClient {
@@ -49,6 +50,7 @@ trait SlackClient {
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
+  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
 }
 
 class SlackClientImpl(
@@ -109,5 +111,9 @@ class SlackClientImpl(
     searchMessages(token, searchRequest).map { response =>
       response.messages.matches.headOption.map(_.channel.id)
     }
+  }
+
+  def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
+    slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read[SlackTeamInfo])
   }
 }

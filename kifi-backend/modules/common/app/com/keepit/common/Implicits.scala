@@ -1,6 +1,7 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
 import scala.collection.IterableLike
@@ -34,6 +35,12 @@ final class TryExtensionOps[A](val x: scala.util.Try[A]) extends AnyVal {
   def fold[B](f: A => B, g: Throwable => B): B = x match {
     case scala.util.Success(t) => f(t)
     case scala.util.Failure(t) => g(t)
+  }
+  def safeOption(implicit airbrake: AirbrakeNotifier): Option[A] = x match {
+    case scala.util.Success(t) => Some(t)
+    case scala.util.Failure(f) =>
+      airbrake.notify(f)
+      None
   }
 }
 
@@ -76,6 +83,13 @@ final class TraversableExtensionOps[A](xs: Traversable[A]) {
   def countAll: Map[A, Int] = countBy(identity)
 }
 
+final class EitherExtensionOps[A, B](xs: Traversable[Either[A, B]]) {
+  def partitionEithers = xs.foldLeft(Seq.empty[A], Seq.empty[B]) {
+    case ((as, bs), Left(a)) => (a +: as, bs)
+    case ((as, bs), Right(b)) => (as, b +: bs)
+  }
+}
+
 final class JsObjectExtensionOps(x: JsObject) {
   def nonNullFields: JsObject = JsObject(x.fields.filter { case (_, b) => b != JsNull })
 }
@@ -98,6 +112,7 @@ trait Implicits {
   implicit def iterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]): IterableExtensionOps[A, Repr] = new IterableExtensionOps(xs)
   implicit def traversableOnceExtensionOps[A](xs: TraversableOnce[A]): TraversableOnceExtensionOps[A] = new TraversableOnceExtensionOps(xs)
   implicit def traversableExtensionOps[A](xs: Traversable[A]): TraversableExtensionOps[A] = new TraversableExtensionOps(xs)
+  implicit def eitherExtensionOps[A, B](xs: Traversable[Either[A, B]]): EitherExtensionOps[A, B] = new EitherExtensionOps(xs)
   implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
   implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)
 }

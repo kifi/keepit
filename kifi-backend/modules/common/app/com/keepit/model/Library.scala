@@ -62,7 +62,7 @@ case class Library(
   def withOpenCollab(access: Option[LibraryAccess]) = this.copy(organizationMemberAccess = access)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
-  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
+  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED
   def isSystemLibrary: Boolean = !canBeModified
   def canAnyoneComment: Boolean = whoCanComment == LibraryCommentPermissions.ANYONE
 
@@ -170,13 +170,14 @@ object Library extends PublicIdGenerator[Library] {
 }
 
 sealed abstract class SortDirection(val value: String)
-object SortDirection {
+object SortDirection extends Enumerator[SortDirection] {
   case object ASCENDING extends SortDirection("asc")
   case object DESCENDING extends SortDirection("desc")
-  def apply(value: String) = value match {
-    case ASCENDING.value => ASCENDING
-    case DESCENDING.value => DESCENDING
-  }
+  val all = _all.toSet
+  def fromStr(str: String): Option[SortDirection] = all.find(_.value == str)
+  def apply(str: String) = fromStr(str).get
+
+  implicit val format: Format[SortDirection] = EnumFormat.format(fromStr, _.value)
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[SortDirection] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, SortDirection]] = {
@@ -322,13 +323,15 @@ object LibraryKind extends Enumerator[LibraryKind] {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
-  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 3)
   case object USER_CREATED extends LibraryKind("user_created", 3)
-  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 3)
-  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 4)
 
   def all = _all.toSet
-  def get(str: String): Option[LibraryKind] = all.find(_.value == str)
+  val deprecated: Map[String, LibraryKind] = Map(
+    "system_guide" -> USER_CREATED,
+    "system_read_it_later" -> USER_CREATED,
+    "system_persona" -> USER_CREATED
+  )
+  def get(str: String): Option[LibraryKind] = all.find(_.value == str) orElse deprecated.get(str)
   def apply(str: String) = get(str).getOrElse(throw new Exception(s"unknown library kind: $str"))
 
   implicit val format: Format[LibraryKind] = Format(

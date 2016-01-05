@@ -93,6 +93,8 @@ object UserValueName {
   val HIDE_EMAIL_DOMAIN_ORGANIZATIONS = UserValueName("hide_email_domain_organizations")
   val PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL = UserValueName("pending_org_domain_ownership_by_email")
 
+  val DEFAULT_LIBRARY_ARRANGEMENT = UserValueName("default_library_arrangement")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")

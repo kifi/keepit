@@ -27,7 +27,7 @@ trait ElizaDiscussionCommander {
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
@@ -168,9 +168,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
     getOrCreateMessageThreadWithUser(keepId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, keepId, newParticipantsExtIds, emailContacts, orgs)
+      messagingCommander.addParticipantsToThread(adderUserId, keepId, newUsers, emailContacts, orgs)
     }
   }
 
@@ -218,9 +218,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      // TODO(ryan): ASAP you should change to an API that uses internal ids instead of converting back and forth
-      externalUserIds <- shoebox.getUsers(newUsers.toSeq).map(_.map(_.externalId))
-      _ <- messagingCommander.addParticipantsToThread(editor, keepId, externalUserIds, Seq.empty, Seq.empty)
+      _ <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, Seq.empty, Seq.empty)
     } yield thread.allParticipants ++ newUsers
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>

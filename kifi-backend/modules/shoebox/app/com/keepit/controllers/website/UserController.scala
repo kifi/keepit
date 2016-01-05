@@ -56,6 +56,8 @@ class UserController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     elizaServiceClient: ElizaServiceClient,
     checklistCommander: ChecklistCommander,
+    libQueryCommander: LibraryQueryCommander,
+    libInfoCommander: LibraryInfoCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -537,4 +539,27 @@ class UserController @Inject() (
     NoContent
   }
 
+  def setPreferredLibraryArrangement() = UserAction(parse.tolerantJson) { request =>
+    libQueryCommander.setPreferredArrangement(request.userId, request.body.as[LibraryQuery.Arrangement])
+    NoContent
+  }
+
+  def rpbGetUserLibraries(extId: ExternalId[User], fromIdOpt: Option[String], limit: Int) = UserAction { request =>
+    if (!request.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING)) Forbidden(Json.obj("err" -> "not_exposed_to_clients"))
+    else {
+      val userId = db.readOnlyReplica { implicit s => userRepo.getByExternalId(extId).id.get }
+      val fromId = fromIdOpt.filter(_.nonEmpty).map(str => Library.decodePublicId(PublicId(str)).get)
+      val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, userId, fromId, limit)
+      Ok(Json.toJson(output))
+    }
+  }
+  def rpbGetOrgLibraries(pubId: PublicId[Organization], fromIdOpt: Option[String], limit: Int) = UserAction { request =>
+    if (!request.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING)) Forbidden(Json.obj("err" -> "not_exposed_to_clients"))
+    else {
+      val orgId = Organization.decodePublicId(pubId).get
+      val fromId = fromIdOpt.filter(_.nonEmpty).map(str => Library.decodePublicId(PublicId(str)).get)
+      val output = libInfoCommander.rpbGetOrgLibraries(request.userIdOpt, orgId, fromId, limit)
+      Ok(Json.toJson(output))
+    }
+  }
 }

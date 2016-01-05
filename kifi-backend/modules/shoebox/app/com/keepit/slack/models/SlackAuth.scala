@@ -1,6 +1,7 @@
 package com.keepit.slack.models
 
 import com.keepit.common.crypto.CryptoSupport
+import com.keepit.common.strings.ValidInt
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.kifi.macros.json
@@ -42,6 +43,10 @@ object SlackAuthScope {
 
   val push: Set[SlackAuthScope] = Set(IncomingWebhook, Commands)
   val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
+
+  val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
+  val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
+  val teamSetup = pushAnywhere ++ ingestAnywhere + TeamRead
 
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
   val dbFormat: Format[SlackAuthScope] = Format(
@@ -94,4 +99,28 @@ object SlackIdentifyResponse {
     (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
     (__ \ 'user_id).read[String].map(SlackUserId(_))
   )(SlackIdentifyResponse.apply _)
+}
+
+case class SlackTeamInfo(
+  id: SlackTeamId,
+  name: SlackTeamName,
+  domain: SlackTeamDomain,
+  emailDomains: Seq[SlackTeamEmailDomain],
+  icon: Map[Int, String])
+
+object SlackTeamInfo {
+  private val iconReads: Reads[Map[Int, String]] = {
+    val sizePattern = """^image_(\d+)$""".r
+    Reads(_.validate[JsObject].map { obj =>
+      val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
+      if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
+    })
+  }
+  implicit val slackReads: Reads[SlackTeamInfo] = (
+    (__ \ 'id).read[SlackTeamId] and
+    (__ \ 'name).read[SlackTeamName] and
+    (__ \ 'domain).read[SlackTeamDomain] and
+    (__ \ 'email_domain).read[String].map(domains => domains.split(",").map(SlackTeamEmailDomain(_)).toSeq) and
+    iconReads
+  )(SlackTeamInfo.apply _)
 }

@@ -2,14 +2,17 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
 import com.keepit.commanders._
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -35,6 +38,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
   def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int]
 
+  // PSA: Please use this function going forward, it's nonsense to have a million single-purpose queries
+  def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]]
   //
   // Profile Library Repo functions
   //
@@ -148,6 +153,8 @@ class LibraryRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
 
+  private def activeRows = rows.filter(_.state === LibraryStates.ACTIVE)
+
   def allActive()(implicit session: RSession): Seq[Library] = rows.filter(_.state === LibraryStates.ACTIVE).list
 
   override def save(library: Library)(implicit session: RWSession): Library = {
@@ -199,6 +206,71 @@ class LibraryRepoImpl @Inject() (
     space match {
       case UserSpace(userId) => getByUserId(userId, excludeState)
       case OrganizationSpace(orgId) => getByOrgId(orgId, excludeState)
+    }
+  }
+
+  def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]] = {
+    import LibraryQuery._
+    val published: LibraryVisibility = LibraryVisibility.PUBLISHED
+    val orgVisible: LibraryVisibility = LibraryVisibility.ORGANIZATION
+    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+
+    activeRows |> { rs =>
+      // Actually perform the query
+      query.target match {
+        case ForOrg(orgId) => rs.filter(_.orgId === orgId)
+        case ForUser(userId, roles) =>
+          val libMemRows = libraryMembershipRepo.get.rows
+          for {
+            lib <- rs
+            lm <- libMemRows
+            if lm.libraryId === lib.id &&
+              lm.userId === userId &&
+              lm.access.inSet(roles) &&
+              (lm.listed || lib.id.inSet(extraInfo.explicitlyAllowedLibraries))
+          } yield lib
+      }
+    } |> { rs => // Now drop libraries that the viewer doesn't have access to
+      rs.filter { lib =>
+        lib.visibility === published ||
+          (lib.visibility === orgVisible && lib.orgId.inSet(extraInfo.orgsWithVisibleLibraries)) ||
+          lib.id.inSet(extraInfo.explicitlyAllowedLibraries)
+      }
+    } |> { rs => // then prepare to sort the libraries
+      query.fromId.map { fromId =>
+        val fromLib = get(fromId)
+        arrangement.ordering match {
+          case LibraryOrdering.ALPHABETICAL =>
+            val fromName = fromLib.name
+            arrangement.direction match {
+              case SortDirection.ASCENDING => rs.filter(_.name > fromName)
+              case SortDirection.DESCENDING => rs.filter(_.name < fromName)
+            }
+          case LibraryOrdering.LAST_KEPT_INTO =>
+            val fromLastKept = fromLib.lastKept
+            arrangement.direction match {
+              case SortDirection.ASCENDING => rs.filter(_.lastKept > fromLastKept)
+              case SortDirection.DESCENDING => rs.filter(_.lastKept < fromLastKept)
+            }
+          case LibraryOrdering.MEMBER_COUNT =>
+            val fromMemberCount = fromLib.memberCount
+            arrangement.direction match {
+              case SortDirection.ASCENDING => rs.filter(lib => lib.memberCount > fromMemberCount || (lib.memberCount === fromMemberCount && lib.id > fromId))
+              case SortDirection.DESCENDING => rs.filter(lib => lib.memberCount < fromMemberCount || (lib.memberCount === fromMemberCount && lib.id < fromId))
+            }
+        }
+      }.getOrElse(rs)
+    } |> { rs => // actually sort them
+      arrangement match {
+        case Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING) => rs.sortBy(lib => lib.name asc)
+        case Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.DESCENDING) => rs.sortBy(lib => lib.name desc)
+        case Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.ASCENDING) => rs.sortBy(lib => lib.lastKept asc)
+        case Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING) => rs.sortBy(lib => lib.lastKept desc)
+        case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.ASCENDING) => rs.sortBy(lib => (lib.memberCount asc, lib.id asc))
+        case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.DESCENDING) => rs.sortBy(lib => (lib.memberCount desc, lib.id desc))
+      }
+    } |> { rs => // then take the first page of the results
+      rs.map(_.id).take(query.limit).list
     }
   }
 
@@ -553,26 +625,21 @@ class LibrarySequencingPluginImpl @Inject() (
  */
 sealed abstract class LibraryOrdering(val value: String)
 
-object LibraryOrdering {
+object LibraryOrdering extends Enumerator[LibraryOrdering] {
   case object LAST_KEPT_INTO extends LibraryOrdering("last_kept_into")
   case object ALPHABETICAL extends LibraryOrdering("alphabetical")
   case object MEMBER_COUNT extends LibraryOrdering("member_count")
 
-  def fromStr(str: String): LibraryOrdering = {
-    str match {
-      case LAST_KEPT_INTO.value => LAST_KEPT_INTO
-      case ALPHABETICAL.value => ALPHABETICAL
-      case MEMBER_COUNT.value => MEMBER_COUNT
-    }
-  }
+  val all = _all
+  def fromStr(str: String): Option[LibraryOrdering] = all.find(_.value == str)
+  def apply(str: String): LibraryOrdering = fromStr(str).get
 
-  def all: Seq[LibraryOrdering] = Seq(LAST_KEPT_INTO, ALPHABETICAL, MEMBER_COUNT)
+  implicit val format: Format[LibraryOrdering] = EnumFormat.format(fromStr, _.value)
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryOrdering] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LibraryOrdering]] = {
       stringBinder.bind(key, params) map {
-        case Right(str) =>
-          Right(LibraryOrdering.fromStr(str))
+        case Right(str) => Right(LibraryOrdering(str))
         case _ => Left("Unable to bind a LibraryOrdering")
       }
     }

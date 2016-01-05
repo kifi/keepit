@@ -7,7 +7,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ Keep, NotificationCategory, UserExperimentType, KifiExtVersion }
+import com.keepit.model._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
@@ -105,7 +105,10 @@ class SharedWsMessagingController @Inject() (
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
           Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
-            discussionCommander.addParticipantsToThread(socket.userId, keepId, users, emailContacts, orgs)
+            for {
+              userIds <- shoebox.getUserIdsByExternalIds(users.toSet).map(_.values.toList)
+              orgIds <- Future.successful(orgs.flatMap(pubId => Organization.decodePublicId(pubId).toOption))
+            } discussionCommander.addParticipantsToThread(socket.userId, keepId, userIds, emailContacts, orgIds)
           }
         }
     },
