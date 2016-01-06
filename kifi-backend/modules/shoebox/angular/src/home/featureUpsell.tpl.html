@@ -6,7 +6,7 @@
       <span class="kf-fu-body-line">Search within Slack using "/kifi".</span>
       <span class="kf-fu-body-line">Start by syncing your General library.</span>
     </div>
-    <button class="kf-fu-slack-start-btn" ng-click="clickedGetStarted()">#get-started</button>
+    <a class="kf-fu-slack-start-btn" ng-click="clickedGetStarted($event)" href="#">#get-started</button>
     <a class="kf-fu-slack-learn-link kf-link" ng-href="{{ 'https://www.kifi.com/integrations/slack' + (userLoggedIn ? '?loggedIn' : '') }}" target="_blank" ng-click="clickedLearnMore()">#learn-more</a>
   </div>
 </div>
