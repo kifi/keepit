@@ -14,9 +14,20 @@ import scala.util.{ Success, Try, Failure }
 sealed abstract class SlackChannelMagnet
 object SlackChannelMagnet {
   case class Id(id: SlackChannelId) extends SlackChannelMagnet
+  implicit def fromId(id: SlackChannelId): SlackChannelMagnet = Id(id)
+
   case class Name(name: SlackChannelName) extends SlackChannelMagnet
-  implicit def fromChannelId(id: SlackChannelId): SlackChannelMagnet = Id(id)
-  implicit def fromChannelName(name: SlackChannelName): SlackChannelMagnet = Name(name)
+  implicit def fromName(name: SlackChannelName): SlackChannelMagnet = Name(name)
+
+  case class NameAndId(name: SlackChannelName, id: SlackChannelId) extends SlackChannelMagnet
+  implicit def fromBoth(nameAndId: (SlackChannelName, SlackChannelId)): SlackChannelMagnet =
+    NameAndId(nameAndId._1, nameAndId._2)
+
+  implicit def fromNameAndMaybeId(nameAndMaybeId: (SlackChannelName, Option[SlackChannelId])): SlackChannelMagnet =
+    nameAndMaybeId match {
+      case (name, Some(id)) => fromBoth(name, id)
+      case (name, None) => fromName(name)
+    }
 }
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
@@ -42,15 +53,21 @@ class SlackClientWrapperImpl @Inject() (
     extends SlackClientWrapper with Logging {
 
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit] = {
-    val now = clock.now
     slackChannel match {
-      case SlackChannelMagnet.Id(channelId) => pushToSlackUsingToken(slackUserId, slackTeamId, channelId, msg)
-      case SlackChannelMagnet.Name(channelName) => pushToSlackViaWebhook(slackUserId, slackTeamId, channelName, msg)
+      case SlackChannelMagnet.Name(name) =>
+        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg)
+      case SlackChannelMagnet.Id(id) =>
+        pushToSlackUsingToken(slackUserId, slackTeamId, id, msg)
+      case SlackChannelMagnet.NameAndId(name, id) =>
+        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg).recoverWith {
+          case _ =>
+            pushToSlackUsingToken(slackUserId, slackTeamId, id, msg)
+        }
     }
   }
 
   private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntil {
+    FutureHelpers.doUntilAttempts {
       val workingWebhooks = db.readOnlyMaster { implicit s =>
         slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName)
       }
@@ -70,7 +87,6 @@ class SlackClientWrapperImpl @Inject() (
               )
             }
             case Failure(other) =>
-              // TODO(ryan): this is bad, if we ever get an unparseable error we're going to blow up continually forever
               airbrake.notify("Got an unparseable error while pushing to Slack.", other)
           }
 
@@ -80,7 +96,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntil {
+    FutureHelpers.doUntilAttempts {
       val workingToken = db.readOnlyMaster { implicit s =>
         slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
           case stm if stm.token.isDefined && stm.scopes.contains(SlackAuthScope.ChatWriteBot) => stm.token.get
@@ -97,7 +113,6 @@ class SlackClientWrapperImpl @Inject() (
               }
             }
             case Failure(other) =>
-              // TODO(ryan): this is bad, if we ever get an unparseable error we're going to blow up continually forever
               airbrake.notify("Got an unparseable error while pushing to Slack.", other)
           }
 

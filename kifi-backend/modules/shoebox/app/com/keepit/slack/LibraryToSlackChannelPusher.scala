@@ -165,23 +165,17 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   }
 
   private def pushUpdatesForIntegration(lts: LibraryToSlackChannel): Future[Boolean] = {
-    val (webhooks, keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s =>
-      val webhooks = slackIncomingWebhookInfoRepo.getForIntegration(lts)
-      val (keepsToPush, lastKtlIdOpt, mayHaveMore) = getKeepsToPushForIntegration(lts)
-      (webhooks, keepsToPush, lastKtlIdOpt, mayHaveMore)
-    }
+    val (keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }
 
     val hasBeenPushed = describeKeeps(keepsToPush) match {
       case None => Future.successful(true)
       case Some(futureMessage) => futureMessage.flatMap { message =>
-        FutureHelpers.exists(webhooks) { webhook =>
-          slackClient.sendToSlack(webhook.webhook, message.quiet).imap(_ => true)
-            .recover {
-              case f: SlackAPIFailure =>
-                log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} via webhook ${webhook.id.get} because $f")
-                false
-            }
-        }
+        slackClient.sendToSlack(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
+          .recover {
+            case f: SlackAPIFailure =>
+              log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
+              false
+          }
       }
     }
 
