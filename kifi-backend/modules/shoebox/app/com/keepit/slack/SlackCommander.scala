@@ -92,6 +92,7 @@ class SlackCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
   orgDomainCommander: OrganizationDomainOwnershipCommander,
+  orgAvatarCommander: OrganizationAvatarCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -359,13 +360,13 @@ class SlackCommanderImpl @Inject() (
           orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
             case Right(createdOrg) =>
               val orgId = createdOrg.newOrg.id.get
-              teamInfo.emailDomains.foreach { domain => orgDomainCommander.addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, domain.value)) }
-              teamInfo.icon.maxByOpt(_._1).foreach {
-                case (size, imageUrl) =>
-                // todo(Léo): upload as org avatar
+              val futureAvatar = teamInfo.icon.maxByOpt(_._1) match {
+                case None => Future.successful(())
+                case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
               }
-              Future.fromTry(connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get))
-
+              teamInfo.emailDomains.foreach { domain => orgDomainCommander.addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, domain.value)) }
+              val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
+              futureAvatar.flatMap { _ => Future.fromTry(connectedTeamMaybe) }
             case Left(error) => Future.failed(error)
           }
         }
