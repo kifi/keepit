@@ -9,7 +9,7 @@
         <form name="regFinalizeForm" ng-submit="registerFinalizeSubmit(regFinalizeForm)" novalidate>
           <div class="register-field-wrap register-first-block">
             <span class="register-validation">
-              <input type="text" name="firstName" ng-model="userData.firstName" placeholder="First Name" class="register-name-box right-space register-placeholder" required>
+              <input type="text" name="firstName" ng-model="userData.firstName" placeholder="First Name" class="register-name-box right-space register-placeholder" kf-autofocus required>
               <span ng-show="fieldHasError(regFinalizeForm.firstName)" class="register-help-block">Enter your first name</span>
             </span>
 
