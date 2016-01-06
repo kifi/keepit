@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] {
+  def intern(model: MessageThread)(implicit session: RWSession): MessageThread
   def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread]
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
   def getByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
@@ -68,6 +69,7 @@ class MessageThreadRepoImpl @Inject() (
   def table(tag: Tag) = new MessageThreadTable(tag)
 
   private def activeRows = rows.filter(_.state === MessageThreadStates.ACTIVE)
+  private def deadRows = rows.filter(_.state === MessageThreadStates.INACTIVE)
 
   override def invalidateCache(thread: MessageThread)(implicit session: RSession): Unit = {
     threadKeepIdCache.set(MessageThreadKeepIdKey(thread.keepId), thread)
@@ -77,7 +79,13 @@ class MessageThreadRepoImpl @Inject() (
     threadKeepIdCache.remove(MessageThreadKeepIdKey(thread.keepId))
   }
 
-  override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
+  def intern(model: MessageThread)(implicit session: RWSession): MessageThread = {
+    // There is a unique index on keepId, so if there is a dead model we will just snake it's spot
+    // If there is a live model with that keepId (but a different model id), we're kind of screwed.
+    save(model.clean().copy(
+      id = deadRows.filter(_.keepId === model.keepId).map(_.id).firstOption
+    ))
+  }
 
   def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread] = {
     activeRows.filter(row => row.participantsHash === participants.hash && row.uriId === uriId).list.filter { thread =>
