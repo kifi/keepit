@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -10,9 +11,28 @@ import com.keepit.slack.models._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try, Failure }
 
+sealed abstract class SlackChannelMagnet
+object SlackChannelMagnet {
+  case class Id(id: SlackChannelId) extends SlackChannelMagnet
+  implicit def fromId(id: SlackChannelId): SlackChannelMagnet = Id(id)
+
+  case class Name(name: SlackChannelName) extends SlackChannelMagnet
+  implicit def fromName(name: SlackChannelName): SlackChannelMagnet = Name(name)
+
+  case class NameAndId(name: SlackChannelName, id: SlackChannelId) extends SlackChannelMagnet
+  implicit def fromBoth(nameAndId: (SlackChannelName, SlackChannelId)): SlackChannelMagnet =
+    NameAndId(nameAndId._1, nameAndId._2)
+
+  implicit def fromNameAndMaybeId(nameAndMaybeId: (SlackChannelName, Option[SlackChannelId])): SlackChannelMagnet =
+    nameAndMaybeId match {
+      case (name, Some(id)) => fromBoth(name, id)
+      case (name, None) => fromName(name)
+    }
+}
+
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
-  def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit]
+  def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
@@ -32,24 +52,72 @@ class SlackClientWrapperImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends SlackClientWrapper with Logging {
 
-  def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit] = {
-    val now = clock.now
-    slackClient.pushToWebhook(webhook.url, msg).andThen {
-      case Success(()) =>
-        db.readWrite { implicit s =>
-          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-            slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
-          }
+  def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit] = {
+    slackChannel match {
+      case SlackChannelMagnet.Name(name) =>
+        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg)
+      case SlackChannelMagnet.Id(id) =>
+        pushToSlackUsingToken(slackUserId, slackTeamId, id, msg)
+      case SlackChannelMagnet.NameAndId(name, id) =>
+        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg).recoverWith {
+          case _ =>
+            pushToSlackUsingToken(slackUserId, slackTeamId, id, msg)
         }
-      case Failure(fail: SlackAPIFailure) =>
-        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a SlackAPIFailure ($fail) when posting, marking the webhook as broken")
-        db.readWrite { implicit s =>
-          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-            slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now).withLastFailure(fail))
+    }
+  }
+
+  private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
+    FutureHelpers.doUntilAttempts {
+      val firstWorkingWebhook = db.readOnlyMaster { implicit s =>
+        slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName).headOption
+      }
+      firstWorkingWebhook match {
+        case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
+        case Some(webhookInfo) =>
+          val now = clock.now
+          val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
+            case Success(_: Unit) => db.readWrite { implicit s =>
+              slackIncomingWebhookInfoRepo.save(
+                slackIncomingWebhookInfoRepo.get(webhookInfo.id.get).withCleanSlate.withLastPostedAt(now)
+              )
+            }
+            case Failure(fail: SlackAPIFailure) => db.readWrite { implicit s =>
+              slackIncomingWebhookInfoRepo.save(
+                slackIncomingWebhookInfoRepo.get(webhookInfo.id.get).withLastFailedAt(now).withLastFailure(fail)
+              )
+            }
+            case Failure(other) =>
+              airbrake.notify("Got an unparseable error while pushing to Slack.", other)
           }
+
+          pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
+      }
+    }
+  }
+
+  private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
+    FutureHelpers.doUntilAttempts {
+      val workingToken = db.readOnlyMaster { implicit s =>
+        slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
+          case stm if stm.token.isDefined && stm.scopes.contains(SlackAuthScope.ChatWriteBot) => stm.token.get
         }
-      case Failure(other) =>
-        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a garbage error when posting, marking the webhook as broken")
+      }
+      workingToken match {
+        case None => Future.failed(SlackAPIFailure.NoValidToken)
+        case Some(token) =>
+          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen {
+            case Success(_: Unit) => // If we ever kept track of successes for tokens, here is where we would note the success
+            case Failure(fail: SlackAPIFailure) => db.readWrite { implicit s =>
+              slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+                slackTeamMembershipRepo.save(stm.revoked)
+              }
+            }
+            case Failure(other) =>
+              airbrake.notify("Got an unparseable error while pushing to Slack.", other)
+          }
+
+          pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
+      }
     }
   }
 

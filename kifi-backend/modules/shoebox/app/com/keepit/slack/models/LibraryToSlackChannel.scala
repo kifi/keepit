@@ -53,6 +53,8 @@ case class LibraryToSlackChannel(
   }
 
   def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
+
+  def channel: (SlackChannelName, Option[SlackChannelId]) = (slackChannelName, slackChannelId)
 }
 
 object LibraryToSlackChannelStates extends States[LibraryToSlackChannel]

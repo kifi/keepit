@@ -141,13 +141,11 @@ class SlackCommanderImpl @Inject() (
           "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
         )
       }
-      slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet) andThen {
-        case Success(()) =>
-          libToSlackPusher.pushUpdatesToSlack(libId) andThen {
-            case Success(_) =>
-              fetchMissingChannelIds()
-          }
-      }
+      slackClient.sendToSlack(identity.userId, identity.teamId, webhook.channelName, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
+        .foreach { _ =>
+          libToSlackPusher.pushUpdatesToSlack(libId)
+            .foreach { _ => fetchMissingChannelIds() }
+        }
 
       val inhouseMsg = db.readOnlyReplica { implicit s =>
         import DescriptionElements._

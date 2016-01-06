@@ -26,5 +26,7 @@ object SlackAPIFailure {
   val TokenRevoked = SlackAPIFailure(Status.NOT_FOUND, SlackAPIFailure.Error.tokenRevoked, JsNull)
   val WebhookRevoked = SlackAPIFailure(Status.NOT_FOUND, SlackAPIFailure.Error.webhookRevoked, JsNull)
   val NoAuthCode = SlackAPIFailure(Status.BAD_REQUEST, SlackAPIFailure.Error.noAuthCode, JsNull)
+  val NoValidWebhooks = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_webhooks", JsNull)
+  val NoValidToken = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_token", JsNull)
 }
 
