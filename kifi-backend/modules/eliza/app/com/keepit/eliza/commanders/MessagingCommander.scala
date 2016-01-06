@@ -491,7 +491,7 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, Right(message.pubKeepId), Right(message.pubId), context)
 
-    notificationDeliveryCommander.notifyRead(userId, message.pubKeepId, message.pubId, thread.nUrl, message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, message.keepId, message.id.get, thread.nUrl, message.createdAt)
   }
 
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
@@ -503,7 +503,7 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, message.keepId)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, message.pubKeepId, message.pubId, thread.nUrl, message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, message.keepId, message.id.get, thread.nUrl, message.createdAt)
     }
   }
 

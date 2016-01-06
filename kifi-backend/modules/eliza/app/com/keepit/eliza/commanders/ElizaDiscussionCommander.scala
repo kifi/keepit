@@ -46,6 +46,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
+  notifDeliveryCommander: NotificationDeliveryCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   shoebox: ShoeboxServiceClient,
@@ -223,9 +224,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
+      val uts = userThreadRepo.getByKeep(keepId)
+      val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
+      s.onTransactionSuccess {
+        uts.foreach { ut =>
+          for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, lastMsg.id.get, nUrl, lastMsg.createdAt)
+          notifDeliveryCommander.notifyRemoveThread(ut.user, ut.keepId)
+        }
+      }
+      uts.foreach(userThreadRepo.deactivate)
+
       messageThreadRepo.getByKeepId(keepId).foreach(messageThreadRepo.deactivate)
       messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)
-      userThreadRepo.getByKeep(keepId).foreach(userThreadRepo.deactivate)
     }
   }
 }
