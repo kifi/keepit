@@ -113,7 +113,7 @@ class AuthCommander @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     emailAddressCommander: UserEmailAddressCommander,
     keepRepo: KeepRepo,
-    keepToUserRepo: KeepToUserRepo,
+    ktuCommander: KeepToUserCommander,
     keepCommander: KeepCommander,
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
@@ -466,13 +466,13 @@ class AuthCommander @Inject() (
   }
 
   def autoJoinKeep(userId: Id[User], keepId: Id[Keep], accessTokenOpt: Option[String]): Boolean = {
-    log.info("[finishSignup] starting keep auto join")
     implicit val context = HeimdalContext.empty
     val hasPermission = db.readOnlyMaster(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.ADD_MESSAGE))
     if (hasPermission) {
-      log.info("[finishSignup] user has permission, joining keep")
       db.readWrite { implicit s =>
-        keepCommander.addUserToKeep(keepId, userId, addedBy = Some(userId))
+        val keep = keepRepo.get(keepId)
+        ktuCommander.internKeepInUser(keep, userId, addedBy = userId)
+        keepRepo.save(keep.withConnections(keep.connections.plusUser(userId)))
       }
     }
     // user may not have explicit permission to be added, but implicit via access token from email participation. add them.
@@ -482,8 +482,9 @@ class AuthCommander @Inject() (
           db.readWrite { implicit s =>
             emailOpt.map(email => emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email)))
             addedByOpt.map { addedBy => // addedByOpt = None if no NonUserThread found for access token
-              log.info("[finishSignup] user has valid auth token, joining keep")
-              keepCommander.addUserToKeep(keepId, userId, Some(addedBy))
+              val keep = keepRepo.get(keepId)
+              ktuCommander.internKeepInUser(keep, userId, addedBy = addedBy)
+              keepRepo.save(keep.withConnections(keep.connections.plusUser(userId)))
             }
           }
       }

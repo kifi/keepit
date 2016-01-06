@@ -71,6 +71,7 @@ case class Keep(
     connections = connections.withLibraries(Set(lib.id.get))
   )
 
+  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
