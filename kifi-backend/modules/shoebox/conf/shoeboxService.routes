@@ -99,6 +99,7 @@ GET     /k/cached                   @com.keepit.controllers.website.KeepCacheCon
 ##########################################
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
+GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo
 
 POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)

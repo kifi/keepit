@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNull, Json }
 
 import com.google.inject.Inject
 
@@ -68,4 +68,6 @@ class ExtUserController @Inject() (
       Ok(Json.toJson(res1))
     }
   }
+
+  def getGuideInfo = UserAction { request => Ok(Json.obj("keep" -> JsNull, "library" -> JsNull)) }
 }
