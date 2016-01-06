@@ -68,12 +68,12 @@ class SlackClientWrapperImpl @Inject() (
 
   private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
     FutureHelpers.doUntilAttempts {
-      val workingWebhooks = db.readOnlyMaster { implicit s =>
-        slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName)
+      val firstWorkingWebhook = db.readOnlyMaster { implicit s =>
+        slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName).headOption
       }
-      workingWebhooks match {
-        case Seq() => Future.failed(SlackAPIFailure.NoValidWebhooks)
-        case webhookInfo +: _ =>
+      firstWorkingWebhook match {
+        case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
+        case Some(webhookInfo) =>
           val now = clock.now
           val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
