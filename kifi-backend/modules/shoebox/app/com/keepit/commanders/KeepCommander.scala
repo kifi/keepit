@@ -80,8 +80,6 @@ trait KeepCommander {
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
-  def addUserToKeep(keepId: Id[Keep], userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): Keep
-  def addUserToKeep(keep: Keep, userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): Keep
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -805,19 +803,6 @@ class KeepCommanderImpl @Inject() (
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
     }
-  }
-
-  def addUserToKeep(keepId: Id[Keep], userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): Keep = {
-    val keep = keepRepo.get(keepId)
-    addUserToKeep(keep, userId, addedBy)
-  }
-  def addUserToKeep(keep: Keep, userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): Keep = {
-    keepRepo.save(keep.copy(connections = keep.connections.plusUser(userId)))
-    ktuRepo.getByKeepIdAndUserId(keep.id.get, userId) match {
-      case None => ktuRepo.save(KeepToUser(keepId = keep.id.get, userId = userId, addedBy = addedBy.getOrElse(userId), uriId = keep.uriId))
-      case _ =>
-    }
-    keep
   }
 
   // combine tag info on both keeps & saves difference on the new Keep

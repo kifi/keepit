@@ -471,8 +471,7 @@ class AuthCommander @Inject() (
     if (hasPermission) {
       db.readWrite { implicit s =>
         val keep = keepRepo.get(keepId)
-        ktuCommander.internKeepInUser(keep, userId, addedBy = userId)
-        keepRepo.save(keep.withConnections(keep.connections.plusUser(userId)))
+        keepCommander.persistKeep(keep.withConnections(keep.connections.plusUser(userId)))
       }
     }
     // user may not have explicit permission to be added, but implicit via access token from email participation. add them.
@@ -483,8 +482,7 @@ class AuthCommander @Inject() (
             emailOpt.map(email => emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email)))
             addedByOpt.map { addedBy => // addedByOpt = None if no NonUserThread found for access token
               val keep = keepRepo.get(keepId)
-              ktuCommander.internKeepInUser(keep, userId, addedBy = addedBy)
-              keepRepo.save(keep.withConnections(keep.connections.plusUser(userId)))
+              keepCommander.persistKeep(keep.withConnections(keep.connections.plusUser(userId)))
             }
           }
       }
