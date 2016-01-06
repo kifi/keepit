@@ -220,7 +220,7 @@ class MessagingCommander @Inject() (
             ))
           }
           userParticipants.foreach { userId =>
-            userThreadRepo.save(UserThread.forMessageThread(thread)(userId))
+            userThreadRepo.intern(UserThread.forMessageThread(thread)(userId))
           }
         }
       } else {

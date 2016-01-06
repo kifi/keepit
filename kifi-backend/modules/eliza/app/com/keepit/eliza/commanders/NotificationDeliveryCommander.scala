@@ -181,7 +181,7 @@ class NotificationDeliveryCommander @Inject() (
       )
       db.readWrite { implicit session =>
         newParticipants.map { pUserId =>
-          userThreadRepo.save(UserThread.forMessageThread(thread)(user = pUserId))
+          userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId))
         }
 
         newNonUserParticipants.foreach { nup =>

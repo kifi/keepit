@@ -126,7 +126,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
           messageThreadRepo.getByKeepId(keepId).getOrElse {
-            val mt = messageThreadRepo.save(MessageThread(
+            val mt = messageThreadRepo.intern(MessageThread(
               uriId = csKeep.uriId,
               url = csKeep.url,
               nUrl = csKeep.url,
@@ -135,7 +135,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = csKeep.id
             ))
-            val ut = userThreadRepo.save(UserThread.forMessageThread(mt)(csKeep.owner))
+            val ut = userThreadRepo.intern(UserThread.forMessageThread(mt)(csKeep.owner))
             log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
             mt
           }
@@ -150,7 +150,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
-            val ut = userThreadRepo.save(UserThread.forMessageThread(updatedThread)(userId))
+            val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
             log.info(s"[DISC-CMDR] User $userId was added to thread ${thread.id.get} associated with keep ${thread.keepId}.")
           }
         }
