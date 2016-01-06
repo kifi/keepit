@@ -233,8 +233,6 @@ class AuthHelper @Inject() (
 
     }
 
-    log.info(s"[finishSignup] generated reg intent: $intent")
-
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
     intent match {
