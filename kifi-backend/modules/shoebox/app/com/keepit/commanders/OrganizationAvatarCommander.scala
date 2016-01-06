@@ -23,6 +23,7 @@ import scala.util.{ Failure, Success }
 trait OrganizationAvatarCommander {
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize)(implicit session: RSession): Map[Id[Organization], OrganizationAvatar]
+  def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]]
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
 }
 
@@ -69,26 +70,42 @@ class OrganizationAvatarCommanderImpl @Inject() (
         sourceFileHash = imageHash, sourceImageURL = None))
   }
 
+  def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]] = {
+    fetchAndHashRemoteImage(imageUrl).flatMap {
+      case Left(storeError) => Future.successful(Left(storeError))
+      case Right(sourceImage) =>
+        validateAndGetImageInfo(sourceImage.file) match {
+          case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
+          case Success(imageInfo) =>
+            val cropRegion = SquareImageCropRegion.center(imageInfo.width, imageInfo.height)
+            persistAndSaveOrganizationAvatars(orgId, sourceImage, imageInfo, cropRegion)
+        }
+    }
+  }
+
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashLocalImage(imageFile).flatMap {
       case Left(storeError) => Future.successful(Left(storeError))
       case Right(sourceImage) =>
         validateAndGetImageInfo(sourceImage.file) match {
           case Failure(validationError) => Future.successful(Left(ImageProcessState.InvalidImage(validationError)))
-          case Success(imageInfo) =>
-            val uploadedImagesFut = persistOrganizationAvatarsFromSourceImage(orgId, sourceImage, imageInfo, cropRegion)
-            uploadedImagesFut.imap {
-              case Left(uploadError) => Left(uploadError)
-              case Right(uploadedImages) =>
-                try {
-                  saveNewAvatars(orgId, sourceImage.hash, uploadedImages)
-                  Right(sourceImage.hash)
-                } catch {
-                  case repoError: Exception =>
-                    log.error(s"Failed to update OrganizationAvatarRepo after processing image from user uploaded file: $repoError")
-                    Left(ImageProcessState.DbPersistFailed(repoError))
-                }
-            }
+          case Success(imageInfo) => persistAndSaveOrganizationAvatars(orgId, sourceImage, imageInfo, cropRegion)
+        }
+    }
+  }
+
+  private def persistAndSaveOrganizationAvatars(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, imageInfo: RawImageInfo, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]] = {
+    val uploadedImagesFut = persistOrganizationAvatarsFromSourceImage(orgId, sourceImage, imageInfo, cropRegion)
+    uploadedImagesFut.imap {
+      case Left(uploadError) => Left(uploadError)
+      case Right(uploadedImages) =>
+        try {
+          saveNewAvatars(orgId, sourceImage.hash, uploadedImages)
+          Right(sourceImage.hash)
+        } catch {
+          case repoError: Exception =>
+            log.error(s"Failed to update OrganizationAvatarRepo after processing image from user uploaded file: $repoError")
+            Left(ImageProcessState.DbPersistFailed(repoError))
         }
     }
   }
