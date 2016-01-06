@@ -69,5 +69,15 @@ class ExtUserController @Inject() (
     }
   }
 
-  def getGuideInfo = UserAction { request => Ok(Json.obj("keep" -> JsNull, "library" -> JsNull)) }
+  def getGuideInfo = UserAction { request =>
+    Ok(Json.obj("keep" -> Json.obj(
+      "url" -> "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
+      "image" -> Json.obj("url" -> "//d1dwdv9wd966qu.cloudfront.net/img/guide/steve_960x892.d25b7d8.jpg", "width" -> 480, "height" -> 446),
+      "noun" -> "video",
+      "query" -> "steve+jobs",
+      "title" -> "Steve Jobs: How to live before you die | Talk Video | TED.com",
+      "matches" -> Json.obj("title" -> Json.toJson(Seq(Seq(0, 5), Seq(6, 4))), "url" -> Json.toJson(Seq(Seq(25, 5), Seq(31, 4)))),
+      "track" -> "steveJobsSpeech"
+    )))
+  }
 }
