@@ -64,6 +64,7 @@ class AuthHelper @Inject() (
     userValueRepo: UserValueRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
     orgRepo: OrganizationRepo,
+    ktlRepo: KeepToLibraryRepo,
     s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -168,9 +169,9 @@ class AuthHelper @Inject() (
 
   trait PostRegIntent
   case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
-  case class AutoFollowLibrary(libraryPublicId: PublicId[Library], authToken: Option[String]) extends PostRegIntent
-  case class AutoJoinOrganization(organizationPublicId: PublicId[Organization], authToken: String) extends PostRegIntent
-  case class AutoJoinKeep(keepPublicId: PublicId[Keep], authToken: String) extends PostRegIntent
+  case class AutoFollowLibrary(libraryId: Id[Library], authToken: Option[String]) extends PostRegIntent
+  case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
+  case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
   case object SlackReg extends PostRegIntent
   case object NoIntent extends PostRegIntent
@@ -196,13 +197,14 @@ class AuthHelper @Inject() (
     val authTokenFromCookie = request.cookies.get("authToken").map(_.value)
     def generateRegIntent[T](pubIdOpt: Option[String], authTokenOpt: Option[String], generator: PublicIdGenerator[T]): Option[PostRegIntent] = {
       generator match {
-        case Library => pubIdOpt.flatMap(Library.validatePublicId(_).toOption).map(pubId => AutoFollowLibrary(pubId, authTokenOpt))
+        case Library => pubIdOpt.flatMap(Library.validatePublicId(_).flatMap(Library.decodePublicId).toOption).map(id => AutoFollowLibrary(id, authTokenOpt))
         case Organization =>
           for {
             pubId <- pubIdOpt
-            orgPubId <- Organization.validatePublicId(pubId).toOption
+            orgId <- Organization.validatePublicId(pubId).flatMap(Organization.decodePublicId).toOption
             authToken <- authTokenOpt
-          } yield AutoJoinOrganization(orgPubId, authToken)
+          } yield AutoJoinOrganization(orgId, authToken)
+        case Keep => pubIdOpt.flatMap(Keep.validatePublicId(_).flatMap(Keep.decodePublicId).toOption).map(id => AutoJoinKeep(id, authTokenOpt))
         case _ => None
       }
     }
@@ -216,6 +218,7 @@ class AuthHelper @Inject() (
           }
         case "follow" => generateRegIntent[Library](modelPubIdFromCookie, authTokenFromCookie, Library)
         case "joinOrg" => generateRegIntent[Organization](modelPubIdFromCookie, authTokenFromCookie, Organization)
+        case "joinKeep" => generateRegIntent[Keep](modelPubIdFromCookie, authTokenFromCookie, Keep)
         case "waitlist" => Some(JoinTwitterWaitlist)
         case "slack" => Some(SlackReg)
         case _ => None
@@ -271,8 +274,8 @@ class AuthHelper @Inject() (
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
       case AutoJoinOrganization(orgPubId, authToken) =>
         authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
-      case AutoJoinKeep(keepId, authToken) =>
-        authCommander.autoJoinKeep(user.id.get, keepId, authToken)
+      case AutoJoinKeep(keepId, authTokenOpt) =>
+        authCommander.autoJoinKeep(user.id.get, keepId, authTokenOpt)
     }
 
     Seq(createUserValues, performPrimaryIntentAction)
@@ -285,17 +288,11 @@ class AuthHelper @Inject() (
       case ApplyCreditCode(creditCode) =>
         "/teams/new"
       case AutoFollowLibrary(libId, authTokenOpt) =>
-        val url = Library.decodePublicId(libId).map { libraryId =>
-          val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
-          libPathCommander.getPathForLibrary(library)
-        }.getOrElse("/")
-        url
-      case AutoJoinOrganization(orgPubId, authToken) =>
-        val url = Organization.decodePublicId(orgPubId).map { orgId =>
-          val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
-          s"/${handle.value}"
-        }.getOrElse("/")
-        url
+        val library = db.readOnlyMaster { implicit session => libraryRepo.get(libId) }
+        libPathCommander.getPathForLibrary(library)
+      case AutoJoinOrganization(orgId, authToken) =>
+        val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
+        s"/${handle.value}"
       case JoinTwitterWaitlist =>
         // Waitlist joining happens on this page, so nothing to do:
         "/twitter/thanks"

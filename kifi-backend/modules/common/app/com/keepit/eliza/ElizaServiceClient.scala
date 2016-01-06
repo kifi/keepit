@@ -137,7 +137,7 @@ trait ElizaServiceClient extends ServiceClient {
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
-  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Id[User])]
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -362,11 +362,11 @@ class ElizaServiceClientImpl @Inject() (
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = {
     call(Eliza.internal.getMessagesChanged(seqNum, fetchSize)).map { _.json.as[Seq[CrossServiceMessage]] }
   }
-  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Id[User])] = {
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])] = {
     call(Eliza.internal.convertNonUserThreadToUserThread(userId: Id[User], accessToken: String)).map { res =>
-      val emailAddress = (res.json \ "emailAddress").asOpt[EmailAddress]
-      val addedBy = (res.json \ "addedBy").as[Id[User]]
-      (emailAddress, addedBy)
+      val emailAddressOpt = (res.json \ "emailAddress").asOpt[EmailAddress] // none if no email found
+      val addedByOpt = (res.json \ "addedBy").asOpt[Id[User]] // none if no NonUserThread found for accessToken
+      (emailAddressOpt, addedByOpt)
     }
   }
 }

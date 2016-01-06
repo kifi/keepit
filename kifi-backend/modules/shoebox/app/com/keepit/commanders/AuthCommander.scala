@@ -114,11 +114,13 @@ class AuthCommander @Inject() (
     emailAddressCommander: UserEmailAddressCommander,
     keepRepo: KeepRepo,
     keepToUserRepo: KeepToUserRepo,
+    keepCommander: KeepCommander,
     userValueRepo: UserValueRepo,
     s3ImageStore: S3ImageStore,
     inviteCommander: InviteCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
+    permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
@@ -434,55 +436,56 @@ class AuthCommander @Inject() (
     }
   }
 
-  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library], authToken: Option[String]): Boolean = { // true for success, false for failure
+  def autoJoinLib(userId: Id[User], libId: Id[Library], authToken: Option[String]): Boolean = { // true for success, false for failure
     // Abstracting away errors and manually reporting. If someone needs the specific error, feel free to change the signature.
-    Library.decodePublicId(libPubId).map { libId =>
-      implicit val context = HeimdalContext(Map())
-      libraryMembershipCommander.joinLibrary(userId, libId, authToken).fold(
-        { libFail =>
-          airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")
-          false
-        },
-        { library =>
-          log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
-          true
-        }
-      )
-    }.getOrElse(false)
+    implicit val context = HeimdalContext(Map())
+    libraryMembershipCommander.joinLibrary(userId, libId, authToken).fold(
+      { libFail =>
+        airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")
+        false
+      },
+      { library =>
+        log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+        true
+      }
+    )
   }
 
-  def autoJoinOrg(userId: Id[User], orgPubId: PublicId[Organization], authToken: String): Boolean = {
-    Organization.decodePublicId(orgPubId).map { orgId =>
-      implicit val context = HeimdalContext.empty
-      orgInviteCommander.acceptInvitation(orgId, userId, Some(authToken)).fold(
-        { orgFail =>
-          airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
-          false
-        },
-        { org =>
-          log.info(s"[finishSignup] user(id=$userId) has successfully joined organization $org")
-          true
-        }
-      )
-    }.getOrElse(false)
+  def autoJoinOrg(userId: Id[User], orgId: Id[Organization], authToken: String): Boolean = {
+    implicit val context = HeimdalContext.empty
+    orgInviteCommander.acceptInvitation(orgId, userId, Some(authToken)).fold(
+      { orgFail =>
+        airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
+        false
+      },
+      { org =>
+        log.info(s"[finishSignup] user(id=$userId) has successfully joined organization $org")
+        true
+      }
+    )
   }
 
-  def autoJoinKeep(userId: Id[User], keepPubId: PublicId[Keep], accessToken: String): Boolean = {
-    Keep.decodePublicId(keepPubId).map { keepId =>
-      implicit val context = HeimdalContext.empty
+  def autoJoinKeep(userId: Id[User], keepId: Id[Keep], accessTokenOpt: Option[String]): Boolean = {
+    implicit val context = HeimdalContext.empty
+    val hasPermission = db.readOnlyMaster(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.ADD_MESSAGE))
+    if (hasPermission) {
+      db.readWrite { implicit s =>
+        keepCommander.addUserToKeep(keepId, userId, addedBy = Some(userId))
+      }
+    }
+    // user may not have explicit permission to be added, but implicit via access token from email participation. add them.
+    accessTokenOpt.foreach { accessToken =>
       eliza.convertNonUserThreadToUserThread(userId, accessToken).foreach {
-        case (emailOpt, addedBy) =>
+        case (emailOpt, addedByOpt) =>
           db.readWrite { implicit s =>
-            val keep = keepRepo.get(keepId)
-            keepRepo.save(keep.copy(connections = keep.connections.plusUser(userId)))
-            keepToUserRepo.save(KeepToUser(keepId = keepId, userId = userId, addedBy = addedBy, uriId = keep.uriId))
-            emailOpt.map { email =>
-              emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email))
+            emailOpt.map(email => emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email)))
+            addedByOpt.map { addedBy => // addedByOpt = None if no NonUserThread found for access token
+              keepCommander.addUserToKeep(keepId, userId, Some(addedBy))
             }
           }
       }
-      true
-    }.getOrElse(false)
+    }
+    true
   }
 
 }
