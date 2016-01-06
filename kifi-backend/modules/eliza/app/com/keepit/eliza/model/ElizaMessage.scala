@@ -114,7 +114,7 @@ case class ElizaMessage(
   auxData: Option[JsArray] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
-    extends ModelWithSeqNumber[ElizaMessage] {
+    extends Model[ElizaMessage] with ModelWithState[ElizaMessage] with ModelWithSeqNumber[ElizaMessage] {
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
