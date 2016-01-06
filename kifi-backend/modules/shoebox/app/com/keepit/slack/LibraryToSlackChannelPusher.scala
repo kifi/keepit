@@ -146,7 +146,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     log.info(s"[LTSCP] Processing $libId")
-    val integrationsToProcess = db.readWrite{ implicit s =>
+    val integrationsToProcess = db.readWrite { implicit s =>
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
 
       def isIllegal(lts: LibraryToSlackChannel) = {
@@ -157,7 +157,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       val (illegal, legal) = integrations.map(libToChannelRepo.get).partition(isIllegal)
       illegal.foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
-      legal.flatMap(libToChannelRepo.markAsProcessing(_))
+      legal.flatMap(lts => libToChannelRepo.markAsProcessing(lts.id.get))
     }
     FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet)(pushUpdatesForIntegration).imap { result =>
       result.map { case (lts, b) => lts.id.get -> b }
