@@ -125,6 +125,8 @@ class KeepRepoImpl @Inject() (
   def table(tag: Tag) = new KeepTable(tag)
   initTable()
 
+  private def activeRows = rows.filter(_.state === KeepStates.ACTIVE)
+
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
@@ -221,9 +223,9 @@ class KeepRepoImpl @Inject() (
 
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
     keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
-      val q = { for { row <- rows if row.id.inSet(missingKeys.map(_.id)) } yield row }
-      q.list.map { x => KeepIdKey(x.id.get) -> x }.toMap
-    }.map { case (key, org) => key.id -> org }
+      val missingIds = missingKeys.map(_.id)
+      activeRows.filter(_.id.inSet(missingIds)).list.map { k => KeepIdKey(k.id.get) -> k }.toMap
+    }.map { case (k, v) => k.id -> v }
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
