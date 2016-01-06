@@ -10,7 +10,7 @@
       comment="comment"
       delete-comment="deleteComment"
     ></div>
-    <div class="kf-keep-comments-input-container" ng-if="canAddComments">
+    <div class="kf-keep-comments-input-container" ng-if="canAddComments" ng-click="clickedInputBox($event)">
       <img ng-src="{{me|pic:100}}" class="kf-keep-comments-input-user-img"/>
       <div
         class="kf-keep-comments-input"

@@ -21,6 +21,7 @@
           <div class="kf-register-header" ng-if="userData.intent === 'follow' && !userData.toConnectWith">Join Kifi to get updates to this library</div>
           <div class="kf-register-header" ng-if="userData.toConnectWith">Join Kifi to connect with {{userData.toConnectWith.firstName}}</div>
           <div class="kf-register-header" ng-if="userData.intent === 'joinOrg' && !userData.invite">Sign up for Kifi to join this team</div>
+          <div class="kf-register-header kf-register-header-discuss" ng-if="userData.intent === 'joinKeep'">Sign up for Kifi to join this discussion</div>
         </div>
 
         <div class="register-modal-social-block">
