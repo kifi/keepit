@@ -225,13 +225,15 @@ class AuthHelper @Inject() (
       }
 
       lazy val intentFromQueryString = {
-        val generators: Stream[PublicIdGenerator[_]] = Stream(Library, Organization)
+        val generators: Stream[PublicIdGenerator[_]] = Stream(Library, Organization, Keep)
         generators.flatMap { generator => generateRegIntent(modelPublicId, authTokenFromQueryString, generator) }.headOption
       }
 
       intentFromCookie orElse intentFromQueryString getOrElse NoIntent
 
     }
+
+    log.info(s"[finishSignup] generated reg intent: $intent")
 
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
@@ -296,7 +298,7 @@ class AuthHelper @Inject() (
       case JoinTwitterWaitlist =>
         // Waitlist joining happens on this page, so nothing to do:
         "/twitter/thanks"
-      case NoIntent =>
+      case AutoJoinKeep(_, _) | NoIntent =>
         request.session.get(SecureSocial.OriginalUrlKey).getOrElse {
           request.headers.get(USER_AGENT).flatMap { agentString =>
             val agent = UserAgent(agentString)
