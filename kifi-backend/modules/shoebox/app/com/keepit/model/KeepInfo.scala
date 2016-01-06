@@ -44,7 +44,8 @@ case class KeepInfo(
     organization: Option[BasicOrganization] = None,
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
-    discussion: Option[Discussion]) {
+    discussion: Option[Discussion],
+    permissions: Set[KeepPermission]) {
 
   def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
     id = pubId.get,
@@ -94,12 +95,15 @@ object KeepInfo {
         "organization" -> o.organization,
         "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
         "note" -> o.note,
-        "discussion" -> o.discussion
+        "discussion" -> o.discussion,
+        "permissions" -> o.permissions
       ).nonNullFields
     }
   }
 
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None, discussion = None)
+    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
+      bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId),
+      sourceAttribution = None, discussion = None, permissions = Set.empty)
   }
 }
