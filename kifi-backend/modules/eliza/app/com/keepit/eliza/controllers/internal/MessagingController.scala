@@ -81,8 +81,8 @@ class MessagingController @Inject() (
             airbrake.notify(s"unhandled NonUserParticipant $nut")
             Ok(Json.obj("addedBy" -> nut.createdBy))
         }
-      }
-    }.getOrElse(NotFound)
+      }.getOrElse(Ok)
+    }
   }
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>

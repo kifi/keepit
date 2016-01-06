@@ -103,5 +103,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = Future.successful(true)
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]] = ???
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = Future.successful(Seq.empty)
-  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Id[User])] = Future.successful((None, Id[User](1)))
+  def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])] = Future.successful((None, Some(Id[User](1)))) // should be different userId than arg
 }
