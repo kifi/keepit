@@ -116,7 +116,7 @@ case class MessageThread(
     startedBy: Id[User],
     participants: MessageThreadParticipants,
     pageTitle: Option[String],
-    keepId: Id[Keep]) extends Model[MessageThread] {
+    keepId: Id[Keep]) extends Model[MessageThread] with ModelWithState[MessageThread] {
   def participantsHash: Int = participants.hash
   def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
