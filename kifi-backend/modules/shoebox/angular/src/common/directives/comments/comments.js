@@ -100,7 +100,8 @@ angular.module('kifi')
           $scope.clickedInputBox = function(event) {
             var commentBox = getCommentBox(element);
             if (!$rootScope.userLoggedIn && commentBox && event.which === 1) {
-              signupService.register({ intent: 'joinKeep' });
+              commentBox.blur();
+              signupService.register({ intent: 'joinKeep', modelPubId: $scope.keep.pubId, authToken: $stateParams.authToken });
             }
           };
 
