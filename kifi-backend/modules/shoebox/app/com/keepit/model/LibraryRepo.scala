@@ -29,14 +29,10 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
-  def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
-  def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
-  def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
-  def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int]
 
   // PSA: Please use this function going forward, it's nonsense to have a million single-purpose queries
   def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]]
@@ -274,19 +270,6 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  private def getByUserIdAndName(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b).firstOption
-  }
-  private def getByOrgIdAndName(orgId: Id[Organization], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    (for (b <- rows if b.name === name && b.orgId === orgId && b.state =!= excludeState.orNull) yield b).firstOption
-  }
-  def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library] = {
-    space match {
-      case UserSpace(userId) => getByUserIdAndName(userId, name, excludeState)
-      case OrganizationSpace(orgId) => getByOrgIdAndName(orgId, name, excludeState)
-    }
-  }
-
   private def getByUserIdAndSlug(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
     (for (b <- rows if b.slug === slug && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b).firstOption
   }
@@ -345,28 +328,10 @@ class LibraryRepoImpl @Inject() (
     (for { t <- rows if t.ownerId === ownerId && t.state =!= excludeState.orNull } yield t).list
   }
 
-  def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]])(implicit session: RSession): List[Library] = {
-    (for { t <- rows if t.ownerId.inSet(ownerIds) && t.state =!= excludeState.orNull } yield t).list
-  }
-
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession) = {
     val updateTime = Some(clock.now)
     (for { t <- rows if t.id === libraryId } yield (t.lastKept)).update(updateTime)
     invalidateCache(get(libraryId).copy(lastKept = updateTime))
-  }
-
-  def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]])(implicit session: RSession): Boolean = {
-    (for { t <- rows if t.ownerId === ownerId && t.kind.inSet(kinds) && t.state =!= excludeState.orNull } yield t).firstOption.isDefined
-  }
-
-  private val countLibrariesForOrgByVisibilityCompiled = Compiled { (organizationId: Column[Id[Organization]], excludeState: Column[State[Library]]) =>
-    (for (row <- rows if row.orgId === organizationId && row.state =!= excludeState) yield row).groupBy(_.visibility) map {
-      case (s, results) => (s -> results.length)
-    }
-  }
-
-  def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int] = {
-    countLibrariesForOrgByVisibilityCompiled(orgId, excludeState).list.toMap.withDefaultValue(0)
   }
 
   //

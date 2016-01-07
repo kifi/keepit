@@ -436,28 +436,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
       }
     }
 
-    def getFriendsWhoCreatedLibraries(friends: Set[Id[User]]): Future[Map[Id[User], Seq[LibraryInfoView]]] = {
-      val libraries = db.readOnlyReplica { implicit session =>
-        filterAndSortLibrariesByAge(libraryRepo.getAllByOwners(friends), libraryAgePredicate)
-      }
-
-      // groups libraries by owner to "score" each library based on how many other libraries are in the collection
-      // from the same owner, then sorts all of the libraries by the score to promote selecting libraries owned by
-      // different users
-      val ownerDiversifiedLibraries = libraries.groupBy(_.ownerId).map { case (_, libs) => libs.zipWithIndex }.
-        toSeq.flatten.sortBy(_._2).take(maxFriendsWhoCreatedLibraries).map(_._1)
-
-      val fullLibInfosF = createFullLibraryInfos(toUserId, ownerDiversifiedLibraries)
-
-      fullLibInfosF.map { libInfos =>
-        val libraryInfoViews = libInfos.map { case (libId, libInfo) => BaseLibraryInfoView(libId, libInfo) }
-
-        libraryInfoViews.zip(ownerDiversifiedLibraries).groupBy(_._2.ownerId) map {
-          case (ownerId, libInfoViews) => ownerId -> libInfoViews.map(_._1)
-        }
-      }
-    }
-
     /*
      * filters out non-published libraries, libraries with "bad" names, libraries with zero keeps,
      * and libraries that don't pass the optional predicate argument

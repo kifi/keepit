@@ -63,13 +63,13 @@ class LibrarySiteMapGenerator @Inject() (
       val libIds = libraryRepo.getAllPublishedNonEmptyLibraries(MinKeepCount).take(50000)
       libIds
     } map { ids =>
-      val libs = ids.map { id =>
+      val libs = ids.flatMap { id =>
         db.readOnlyMaster { implicit s =>
           val lib = libraryRepo.get(id)
           if (lib.lastKept.isDefined && lib.keepCount >= MinKeepCount && !userCommander.getAllFakeUsers().contains(lib.ownerId)) Some(lib -> userRepo.load(lib.ownerId))
           else None
         }
-      }.flatten
+      }
       val libsSize = libs.size
       if (libsSize > 45000) airbrake.notify(s"there are $libsSize libraries for sitemap (MinKeepCount=$MinKeepCount), need to paginate the list!")
       val urlset =
