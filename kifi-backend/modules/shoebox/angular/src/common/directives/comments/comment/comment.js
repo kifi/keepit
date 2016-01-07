@@ -18,7 +18,6 @@ angular.module('kifi')
           $scope.me = profileService.me;
           var isAdmin = profileService.isAdmin();
           $scope.canSeeCommentActions = (
-            isAdmin &&
             $scope.me.id === ($scope.comment.sentBy && $scope.comment.sentBy.id) ||
             $scope.me.id === ($scope.keep.user && $scope.keep.user.id) ||
             $scope.me.id === ($scope.keep.library && $scope.keep.library.owner && $scope.keep.library.owner.id)
