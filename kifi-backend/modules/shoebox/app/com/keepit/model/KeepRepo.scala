@@ -183,8 +183,10 @@ class KeepRepoImpl @Inject() (
       countByLibraryCache.remove(CountByLibraryKey(id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
     }
-    keepByIdCache.remove(KeepIdKey(keep.id.get))
-    basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
+    keep.id.foreach { keepId =>
+      keepByIdCache.remove(KeepIdKey(keepId))
+      basicKeepByIdCache.remove(BasicKeepIdKey(keepId))
+    }
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
   }
