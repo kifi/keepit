@@ -77,7 +77,7 @@ function removeMostJsComments(code) {
 
 var chromeInjectionFooter = lazypipe()
   .pipe(function () {
-    return gulpif(['scripts/**/*.js', '!**/iframes/**'], map(function (code, filename) {
+    return gulpif(['scripts/**/*.js'], map(function (code, filename) {
       var shortName = filename.replace(/^scripts\//, '');
       return code.toString() + "api.injected['" + filename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
     }));
@@ -159,12 +159,8 @@ gulp.task('html2js', function () {
       .replace(/'/g, '\\\'')
       .trim();
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
-    if (/^html\/iframes\/.*$/.test(relativeFilename)) {
-      return 'document.body.innerHTML=\'' + contents + '\';\n';
-    } else {
-      var baseFilename = relativeFilename.replace(/\.[^/.]+$/, ""); // strip file extension
-      return 'k.templates[\'' + baseFilename + '\']=\'' + contents + '\';\n';
-    }
+    var baseFilename = relativeFilename.replace(/\.[^/.]+$/, ""); // strip file extension
+    return 'k.templates[\'' + baseFilename + '\']=\'' + contents + '\';\n';
   };
 
   var common = gulp.src(htmlFiles, {base: './'})
@@ -219,7 +215,7 @@ gulp.task('styles', function () {
   }
 
   function mainStylesOnly(pipefun) {
-    return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), map(pipefun));
+    return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.))'), map(pipefun));
   }
 
   return gulp.src(styleFiles, {base: './'})
