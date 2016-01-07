@@ -14,8 +14,8 @@ k.sendChooser = k.sendChooser || (function () {
       enterToSend: true,
       updateKeyTip: function (value) {
         if (value != null) {
-          this.parent.find('.kifi-compose-tip').attr('data-prefix', value ? '' : KEY_PREFIX);
-          this.parent.find('.kifi-compose-tip-alt').attr('data-prefix', value ? KEY_PREFIX : '');
+          this.parent.find('.kifi-send-chooser-tip').attr('data-prefix', value ? '' : KEY_PREFIX);
+          this.parent.find('.kifi-send-chooser-tip-alt').attr('data-prefix', value ? KEY_PREFIX : '');
         }
       },
       reflectPrefs: function (prefs) {
@@ -36,7 +36,7 @@ k.sendChooser = k.sendChooser || (function () {
 
     function renderMenuItem($tip) {
       var $alt = $(
-        '<span class="kifi-compose-tip-alt" data-prefix="' + (self.enterToSend ? KEY_PREFIX : '') + '">' +
+        '<span class="kifi-send-chooser-tip-alt" data-prefix="' + (self.enterToSend ? KEY_PREFIX : '') + '">' +
         $tip[0].firstChild.textContent +
         '</span>'
       )
@@ -53,7 +53,7 @@ k.sendChooser = k.sendChooser || (function () {
       return $alt;
     }
 
-    $sendChooserParent.on('mousedown', '.kifi-compose-tip', function (e) {
+    $sendChooserParent.on('mousedown', '.kifi-send-chooser-tip', function (e) {
       if (e.originalEvent.isTrusted === false) {
         return;
       }
@@ -62,7 +62,7 @@ k.sendChooser = k.sendChooser || (function () {
       var $tip = $(this);
       var $alt = renderMenuItem($tip);
 
-      var $menu = $('<span class="kifi-compose-tip-menu"/>').append($alt).insertAfter($tip);
+      var $menu = $('<span class="kifi-send-chooser-tip-menu"/>').append($alt).insertAfter($tip);
       $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
       $alt.css('visibility', '').mouseup(hide.bind(null, true));
       document.addEventListener('mousedown', docMouseDown, true);

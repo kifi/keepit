@@ -1,7 +1,7 @@
 .kifi-send-chooser {
   display: inline-block;
 }
-.kifi-compose-tip {
+.kifi-send-chooser-tip {
   display: inline-block;
   position: relative;
   border: 1px solid transparent;
@@ -13,37 +13,37 @@
   color: #999;
   cursor: pointer;
 }
-.kifi-compose-tip::before,
-.kifi-compose-tip-alt::before {
+.kifi-send-chooser-tip::before,
+.kifi-send-chooser-tip-alt::before {
   content: attr(data-prefix);
 }
-.kifi-compose-tip.kifi-active {
+.kifi-send-chooser-tip.kifi-active {
   border-color: #d2d2d2;
   cursor: default;
 }
-.kifi-compose-tip.kifi-active:hover,
-.kifi-compose-tip-alt:hover,
-.kifi-compose-tip-alt.kifi-hover {
+.kifi-send-chooser-tip.kifi-active:hover,
+.kifi-send-chooser-tip-alt:hover,
+.kifi-send-chooser-tip-alt.kifi-hover {
   background-color: #fff;
   color: #000;
 }
-span.kifi-compose-tip-tri {
+span.kifi-send-chooser-tip-tri {
   display: inline-block;
   line-height: inherit;
   vertical-align: bottom;
   margin-left: 7px;
 }
-.kifi-compose-tip.kifi-active>.kifi-compose-tip-tri {
+.kifi-send-chooser-tip.kifi-active>.kifi-send-chooser-tip-tri {
   visibility: hidden;
 }
-span.kifi-compose-tip-menu {
+span.kifi-send-chooser-tip-menu {
   display: inline-block;
   position: relative;
   top: 0px;
   line-height: 28px;
   vertical-align: top;
 }
-span.kifi-compose-tip-alt {
+span.kifi-send-chooser-tip-alt {
   position: absolute;
   z-index: 101;
   bottom: 0;
