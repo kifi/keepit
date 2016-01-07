@@ -28,24 +28,6 @@ class NewKeepsInLibraryCommander @Inject() (
     }
   }
 
-  private def getOldestLeastViewdKeeps(userId: Id[User], max: Int): Seq[mutable.Stack[Keep]] = {
-    db.readOnlyReplica { implicit session =>
-      //get only libraries I'm not an owner of
-      val libs = mutable.Stack(libraryMembershipRepo.getWithUserId(userId).filterNot(_.access == OWNER).sortBy(k => (k.lastViewed, k.id)): _*)
-      //yes, ugly double mutable code. need to think of a way to make it more functional
-      val libraryKeeps = ArrayBuffer[mutable.Stack[Keep]]()
-      while (libraryKeeps.size < max && libs.nonEmpty) {
-        val libraryMembership: LibraryMembership = libs.pop()
-        val since = lastDateToGetKeepsFrom(libraryMembership)
-        val keeps = keepRepo.getKeepsFromLibrarySince(since, libraryMembership.libraryId, max) filterNot pornUrl
-        val keptByUser = keepRepo.getByUserAndUriIds(userId, keeps.map(_.uriId).toSet)
-        val keepsNotKeptByUser = keeps.filterNot(keptByUser.contains)
-        if (keeps.nonEmpty) libraryKeeps.append(mutable.Stack(keepsNotKeptByUser: _*))
-      }
-      libraryKeeps
-    }
-  }
-
   private def pornUrl(keep: Keep)(implicit session: RSession): Boolean = {
     val restricted = normalizedUriRepo.get(keep.uriId).restriction.isDefined
     if (restricted) log.info(s"keep uriId=${keep.uriId} is restricted, filtering out")
@@ -61,14 +43,5 @@ class NewKeepsInLibraryCommander @Inject() (
       oldKeepsPerLib.append(layer: _*)
     }
     oldKeepsPerLib.sortBy(k => (k.createdAt, k.id)).take(max)
-  }
-
-  def getLastEmailViewedKeeps(userId: Id[User], max: Int): Seq[Keep] = {
-    //picking sample size that could be up to max * max * 2 from the set we're actually sorting
-    //it a bit inefficient but in practice it will be a small number.
-    val libraryKeeps = getOldestLeastViewdKeeps(userId, max * 2)
-
-    val keepsFromLibraries = pickOldestKeepFromEachLibrary(libraryKeeps, max)
-    keepsFromLibraries
   }
 }

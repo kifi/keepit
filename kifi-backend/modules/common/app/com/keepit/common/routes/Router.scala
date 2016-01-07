@@ -151,7 +151,6 @@ object Shoebox extends Service {
     def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getDetailedLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/database/canViewLibrary")
-    def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getPersonalKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getPersonalKeeps", Param("userId", userId))
     def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
     def getLibraryCardInfos() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryCardInfos")

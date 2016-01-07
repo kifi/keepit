@@ -439,12 +439,6 @@ class ShoeboxController @Inject() (
     Ok(JsBoolean(authorized))
   }
 
-  def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = Action { request =>
-    val keeps = newKeepsInLibraryCommander.getLastEmailViewedKeeps(userId, max)
-    libraryCommander.updateLastEmailSent(userId, keeps)
-    Ok(Json.toJson(keeps))
-  }
-
   def getPersonalKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
     val keepDataByUriId = keepDecorator.getPersonalKeeps(userId, uriIds)
