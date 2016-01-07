@@ -1,10 +1,10 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.core.{ futureExtensionOps, anyExtensionOps }
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -15,10 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
-import play.api.libs.json.JsNull
-import com.keepit.common.core._
 
-import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
@@ -46,6 +43,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
+  notifDeliveryCommander: NotificationDeliveryCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   shoebox: ShoeboxServiceClient,
@@ -223,9 +221,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
+      val uts = userThreadRepo.getByKeep(keepId)
+      val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
+      s.onTransactionSuccess {
+        uts.foreach { ut =>
+          for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, lastMsg.id.get, nUrl, lastMsg.createdAt)
+          notifDeliveryCommander.notifyRemoveThread(ut.user, ut.keepId)
+        }
+      }
+      uts.foreach(userThreadRepo.deactivate)
+
       messageThreadRepo.getByKeepId(keepId).foreach(messageThreadRepo.deactivate)
       messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)
-      userThreadRepo.getByKeep(keepId).foreach(userThreadRepo.deactivate)
     }
   }
 }
