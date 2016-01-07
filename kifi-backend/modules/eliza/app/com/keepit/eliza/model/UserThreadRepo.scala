@@ -185,12 +185,12 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts = {
-    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
+    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId and state = 'active'").first
     UnreadThreadCounts(total, unmuted)
   }
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts = {
-    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending").first
+    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and state = 'active'").first
     UnreadThreadCounts(total, unmuted)
   }
 
@@ -283,6 +283,7 @@ class UserThreadRepoImpl @Inject() (
       val queryStr = """
         select keep_id, created_at, count(*) as c from user_thread
           where user_id in (""" + users_list + """)
+          and state = 'active'
           and created_at >= '2015-1-1'
           group by keep_id
           having count(*) > 1
@@ -302,6 +303,7 @@ class UserThreadRepoImpl @Inject() (
       val queryStr = """
         select keep_id, created_at, count(*) as c from user_thread
           where user_id in (""" + users_list + """)
+          and state = 'active'
           group by keep_id
           having count(*) > 1
       """
