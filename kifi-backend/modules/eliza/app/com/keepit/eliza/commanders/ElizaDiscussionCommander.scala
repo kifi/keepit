@@ -1,10 +1,10 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.core.{ futureExtensionOps, anyExtensionOps }
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -15,10 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
-import play.api.libs.json.JsNull
-import com.keepit.common.core._
 
-import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])

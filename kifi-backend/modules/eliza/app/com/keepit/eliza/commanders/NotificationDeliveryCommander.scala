@@ -221,7 +221,8 @@ class NotificationDeliveryCommander @Inject() (
     sendToUser(userId, Json.arr("message", keepId, message))
 
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_read", nUrl, Keep.publicId(keepId), creationDate, Message.publicId(ElizaMessage.toCommonId(messageId))))
+    // TODO(ryan): stop manually forcing the date to go to millis, fix the Json formatter
+    sendToUser(userId, Json.arr("message_read", nUrl, Keep.publicId(keepId), creationDate.getMillis, Message.publicId(ElizaMessage.toCommonId(messageId))))
     notifyUnreadCount(userId, keepId)
   }
 
