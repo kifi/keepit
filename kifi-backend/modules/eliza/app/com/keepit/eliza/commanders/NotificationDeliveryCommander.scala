@@ -273,32 +273,30 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def buildNotificationForMessageThreads(userId: Id[User], keeps: Set[Id[Keep]]): Future[Map[Id[Keep], MessageNotification]] = {
+    val threadsByIdFut = db.readOnlyMasterAsync { implicit s => threadRepo.getByKeepIds(keeps) }
+    val lastMsgByIdFut = db.readOnlyMasterAsync { implicit s => keeps.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap }
+    val mutedByIdFut = db.readOnlyMasterAsync { implicit s => keeps.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap }
+    val threadActivityByIdFut = db.readOnlyMasterAsync { implicit s =>
+      keeps.map { keepId =>
+        keepId ->
+          userThreadRepo.getThreadActivity(keepId).sortBy { uta =>
+            (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
+          }
+      }.toMap
+    }
     for {
-      threadsById <- db.readOnlyMasterAsync { implicit s => threadRepo.getByKeepIds(keeps) }
+      threadsById <- threadsByIdFut
       allUsers = threadsById.values.flatMap(_.allParticipants).toSet
       basicUserByIdMap <- shoebox.getBasicUsers(allUsers.toSeq)
-      lastMsgById <- db.readOnlyMasterAsync { implicit s =>
-        threadsById.map {
-          case (keepId, _) => keepId -> messageRepo.getLatest(keepId)
-        }
-      }
-      threadActivityById <- db.readOnlyMasterAsync { implicit s =>
-        threadsById.map {
-          case (keepId, _) => keepId ->
-            userThreadRepo.getThreadActivity(keepId).sortBy { uta =>
-              (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
-            }
-        }
-      }
+      lastMsgById <- lastMsgByIdFut
+      mutedById <- mutedByIdFut
+      threadActivityById <- threadActivityByIdFut
       msgCountsById <- db.readOnlyMasterAsync { implicit s =>
         threadActivityById.map {
           case (keepId, activity) =>
             val lastSeenOpt = activity.find(_.userId == userId).flatMap(_.lastSeen)
             keepId -> messageRepo.getMessageCounts(keepId, lastSeenOpt)
         }
-      }
-      mutedById <- db.readOnlyMasterAsync { implicit s =>
-        threadsById.map { case (keepId, _) => keepId -> userThreadRepo.isMuted(userId, keepId) }
       }
     } yield lastMsgById.collect {
       case (keepId, Some(message)) =>
