@@ -111,22 +111,6 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
           1 === 1
         }
       }
-      "match getByUserIdAndLibraryId" in {
-        // def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
-        withDb(modules: _*) { implicit injector =>
-          db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val libs = randomLibs(10, owner = user)
-
-            for (lib <- libs) {
-              val expected = inject[KeepRepo].getByUserIdAndLibraryId(user.id.get, lib.id.get)
-              val actual = inject[KeepToLibraryRepo].getByUserIdAndLibraryId(user.id.get, lib.id.get)
-              expected.map(_.id.get) === actual.map(_.keepId)
-            }
-          }
-          1 === 1
-        }
-      }
       "match getByLibraryIds" in {
         // def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
         withDb(modules: _*) { implicit injector =>
