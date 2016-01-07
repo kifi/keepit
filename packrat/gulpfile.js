@@ -87,7 +87,7 @@ var chromeInjectionFooter = lazypipe()
 
 var firefoxExplicitGlobals = lazypipe()
   .pipe(function () {
-    return gulpif(['**/scripts/**/*.js', '!**/iframes/**', '!**/lib/**'], map(function (code, filename) {
+    return gulpif(['**/scripts/**/*.js', '!**/lib/**'], map(function (code, filename) {
       return explicitGlobals(code.toString());
     }));
   });
@@ -108,7 +108,7 @@ function wrapWithModuleCode(code, filename, relative) {
 
 var firefoxInjectionModule = lazypipe()
   .pipe(function () {
-    return gulpif(['**/scripts/**/*.js', '!**iframes/**'], map(function (code, filename) {
+    return gulpif(['**/scripts/**/*.js'], map(function (code, filename) {
       if (code.toString().indexOf('api.identify(') !== -1) {
         return code;
       } else {
@@ -120,8 +120,9 @@ var firefoxInjectionModule = lazypipe()
 var firefoxAdapterInjectionModule = lazypipe()
   .pipe(function () {
     return gulpif(['**/scripts/**/*.js'], map(function (code, filename) {
-      if (code.toString().indexOf('@module') !== -1) {
-        return wrapWithModuleCode(code, filename, 'adapters/firefox/data');
+      var codeString = code.toString();
+      if (codeString.indexOf('@module') !== -1) {
+        return wrapWithModuleCode(explicitGlobals(codeString), filename, 'adapters/firefox/data');
       } else {
         return code;
       }
