@@ -2,9 +2,11 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
 import com.keepit.discussion.Message
+import com.keepit.social.BasicUser
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.http.Status._
 import play.api.mvc.PathBindable
@@ -257,16 +259,20 @@ case class BasicKeep(
   url: String,
   visibility: LibraryVisibility,
   libraryId: Option[PublicId[Library]],
-  ownerId: ExternalId[User])
+  ownerId: ExternalId[User],
+  attribution: Option[(SlackAttribution, Option[BasicUser])])
 
 object BasicKeep {
+  import com.keepit.common.json.TupleFormat._
+  implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'ownerId).format[ExternalId[User]]
+    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'slackAttribution).formatNullable[(SlackAttribution, Option[BasicUser])]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
