@@ -272,6 +272,9 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(request.userId, notification, request.force)
   }
 
+  def buildNotificationForMessageThread(userId: Id[User], keep: Id[Keep]): Future[Option[MessageNotification]] = {
+    buildNotificationForMessageThreads(userId, Set(keep)).map(_.get(keep))
+  }
   def buildNotificationForMessageThreads(userId: Id[User], keeps: Set[Id[Keep]]): Future[Map[Id[Keep], MessageNotification]] = {
     val threadsByIdFut = db.readOnlyMasterAsync { implicit s => threadRepo.getByKeepIds(keeps) }
     val lastMsgByIdFut = db.readOnlyMasterAsync { implicit s => keeps.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap }
