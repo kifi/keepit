@@ -263,14 +263,7 @@ k.panes.thread = k.panes.thread || function () {
     };
     var $rendered;
     if (m.auxData && m.auxData.length) {
-      $rendered = $(k.render('html/keeper/message_aux', m, templates))
-        .on('click', '.kifi-message-email-view', function() {
-          api.require('scripts/iframe_dialog.js', function() {
-            api.port.emit('auth_info', function (info) {
-              iframeDialog.toggle('viewEmail', info.origin, {msgId: m.id});
-            });
-          });
-        });
+      $rendered = $(k.render('html/keeper/message_aux', m, templates));
     } else {
       $rendered = $(k.render('html/keeper/message_discussion', m, templates));
     }
