@@ -210,9 +210,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
       recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(_ -> ktl)).takeWhile {
         case (keep, _) =>
+          // A keep is fine to push if:
+          //     It has a good title and is stable (i.e., it hasn't been updated in the last `n` seconds)
+          //         OR
+          //     It's been long enough that we're tired of waiting for it to become good/stable
+          //         OR
+          //     It's not from a human being (i.e., the keep source is not manual)
           val isTitleGoodEnough = keep.title.isDefined || (keep.keptAt isBefore (now minus maxTitleDelayFromKept))
           val isKeepStable = keep.updatedAt isBefore (now minus delayFromUpdatedAt)
-          (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt))
+          (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt)) || !KeepSource.manual.contains(keep.source)
       } unzip match {
         case (stableRecentKeeps, stableRecentKtls) =>
           (stableRecentKeeps, lib, stableRecentKtls.lastOption.map(_.id.get), stableRecentKtls.length < recentKtls.length)
