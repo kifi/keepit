@@ -20,6 +20,8 @@ var remember = require('gulp-remember');
 var livereload = require('gulp-livereload');
 var gutil = require('gulp-util');
 var map = require('./gulp/vinyl-map.js');
+var filenames = require('gulp-filenames');
+var explicitGlobals = require('explicit-globals');
 
 var target = 'local';
 
@@ -83,6 +85,49 @@ var chromeInjectionFooter = lazypipe()
     }));
   });
 
+var firefoxExplicitGlobals = lazypipe()
+  .pipe(function () {
+    return gulpif(['**/scripts/**/*.js', '!**/iframes/**', '!**/lib/**'], map(function (code, filename) {
+      return explicitGlobals(code.toString());
+    }));
+  });
+
+function wrapWithModuleCode(code, filename, relative) {
+  if (relative) {
+    filename = path.relative(relative, filename);
+  }
+  var top = '\
+  \nvar init_module = init_module || {}; \
+  \ninit_module[\'' + filename + '\'] = function () { \
+  \ninit_module[\'' + filename + '\'] = function () {}; \
+  \n';
+  var bottom = '\n};\n'
+
+  return top + code.toString() + bottom;
+}
+
+var firefoxInjectionModule = lazypipe()
+  .pipe(function () {
+    return gulpif(['**/scripts/**/*.js', '!**iframes/**'], map(function (code, filename) {
+      if (code.toString().indexOf('api.identify(') !== -1) {
+        return code;
+      } else {
+        return wrapWithModuleCode(code, filename);
+      }
+    }));
+  });
+
+var firefoxAdapterInjectionModule = lazypipe()
+  .pipe(function () {
+    return gulpif(['**/scripts/**/*.js'], map(function (code, filename) {
+      if (code.toString().indexOf('@module') !== -1) {
+        return wrapWithModuleCode(code, filename, 'adapters/firefox/data');
+      } else {
+        return code;
+      }
+    }));
+  });
+
 gulp.task('clean', function () {
   return gulp.src(outDir, {read: false})
     .pipe(rimraf());
@@ -106,8 +151,11 @@ gulp.task('copy', function () {
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
     .pipe(cache('firefox-adapters'))
+    .pipe(rename(function () {}))
+    .pipe(firefoxAdapterInjectionModule())
     .pipe(map(removeMostJsComments))
-    .pipe(gulp.dest(outDir));
+    .pipe(gulp.dest(outDir))
+    .pipe(filenames('firefox-deps'));
 
   var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
@@ -119,7 +167,11 @@ gulp.task('copy', function () {
     .pipe(cache('resources'));
 
   var firefoxResources = resources.pipe(clone())
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+    .pipe(rename(function () {}))
+    .pipe(firefoxExplicitGlobals())
+    .pipe(firefoxInjectionModule())
+    .pipe(gulp.dest(outDir + '/firefox/data'))
+    .pipe(filenames('firefox-deps'));
 
   var chromeResources = resources.pipe(clone())
     .pipe(rename(function () {})) // very obscure way to make sure filenames use a relative path
@@ -143,7 +195,8 @@ gulp.task('copy', function () {
     .pipe(cache('background'))
     .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/firefox/lib'));
+    .pipe(gulp.dest(outDir + '/firefox/lib'))
+    .pipe(filenames('firefox-deps'));
 
   return es.merge(
     chromeAdapters, firefoxAdapters, sharedAdapters,
@@ -169,10 +222,13 @@ gulp.task('html2js', function () {
     .pipe(rename(function (path) {
       path.extname = '.js';
       path.dirname = 'scripts/' + path.dirname;
-    }));
+    }))
+    .pipe(filenames('firefox-deps'));
 
   var firefox = common.pipe(clone())
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+    .pipe(firefoxExplicitGlobals())
+    .pipe(firefoxInjectionModule())
+    .pipe(gulp.dest(outDir + '/firefox/data'))
 
   var chrome = common.pipe(clone())
     .pipe(chromeInjectionFooter())
@@ -290,7 +346,10 @@ gulp.task('meta', function () {
       if (type === 'contentScripts') {
         var payloadMatch = payload.match(contentScriptRe);
         var asap = payloadMatch[1], regex = payloadMatch[2];
-        contentScriptItems.push('["' + filename + '", ' + regex + ', ' + asap + ']');
+        contentScriptItems.push({
+          data: [ filename, regex, asap ],
+          string: '["' + filename + '", ' + regex + ', ' + asap + ']'
+        });
       } else {
         if (type === 'styleDeps') {
           styleDeps[filename] = styleDeps[filename] || [];
@@ -301,14 +360,32 @@ gulp.task('meta', function () {
         }
       }
     }
+
+    var flatScriptDeps = [
+      rwsocketScript
+    ].concat(filenames.get('firefox-deps')
+    .filter(function (dep) {
+      return (
+        dep.slice(-3) === '.js' && // only script files
+        ~dep.indexOf('scripts/') && // make sure it's in the scripts folder
+        !~dep.indexOf('firefox/lib/') && // but not in the backend-script lib folder
+        contentScriptItems.map(function (csi) { return csi.data[0]; }).indexOf(dep) === -1 // and don't add top-level scripts to the deps
+      );
+    })
+    .map(function (dep) {
+      return dep.replace(/firefox\/data\//g, '');
+    }));
+
     return JSON.stringify([
-      ' [\n  ' + contentScriptItems.join(',\n  ') + ']',
+      ' [\n  ' + contentScriptItems.map(function (csi) { return csi.string; }).join(',\n  ') + ']',
       JSON.stringify(styleDeps, undefined, 2),
-      JSON.stringify(scriptDeps, undefined, 2)
+      JSON.stringify(scriptDeps, undefined, 2),
+      JSON.stringify(flatScriptDeps, undefined, 2)
     ]);
   };
 
   var preMeta = gulp.src(tabScripts, {base: './'})
+    .pipe(filenames('firefox-deps'))
     .pipe(cache('meta'))
     .pipe(map(extractMetadata))
     .pipe(remember('meta'))
@@ -331,6 +408,7 @@ gulp.task('meta', function () {
       return 'exports.contentScripts =' + data[0] +
         ';\nexports.styleDeps = ' + data[1] +
         ';\nexports.scriptDeps = ' + data[2] +
+        ';\nexports.flatScriptDeps = ' + data[3] +
         ";\nif (/^Mac/.test(require('sdk/system').platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));

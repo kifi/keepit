@@ -681,20 +681,26 @@ var workerOnApiRequire = errors.wrap(function workerOnApiRequire(page, worker, i
     log('[api:require]', page.id, o);
     mergeArr(page.injectedCss, o.styles);
     mergeArr(injectedJs, o.scripts);
-    worker.port.emit('api:inject', o.styles, o.scripts.map(self.data.load), callbackId);
+    worker.port.emit('api:inject', o.styles, o.scripts, callbackId);
   } else {
     log('[api:require] page hidden', page.id, o);
   }
 });
 
+function unique(xs) {
+  return xs.filter(function(x, i) {
+    return xs.indexOf(x) === i;
+  });
+}
 const {PageMod} = require('sdk/page-mod');
-require('./meta').contentScripts.forEach(function (arr) {
+const meta = require('./meta');
+meta.contentScripts.forEach(function (arr) {
   const path = arr[0], urlRe = arr[1], o = deps(path);
   log('defining PageMod:', path, 'deps:', o);
   PageMod({
     include: urlRe,
     contentStyleFile: o.styles.map(self.data.url),
-    contentScriptFile: o.scripts.map(self.data.url),
+    contentScriptFile: unique(o.scripts.concat(meta.flatScriptDeps)).map(self.data.url),
     contentScriptWhen: arr[2] ? 'start' : 'ready',
     contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
     attachTo: ['existing', 'top'],

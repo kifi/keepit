@@ -6,6 +6,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/title_from_url.js
 // @require scripts/html/search/google.js
@@ -17,7 +18,22 @@ api.identify('googleInject');
 // Google inject regex accurate as of 2015-08-21. This is helpful: https://en.wikipedia.org/wiki/List_of_Google_domains
 // (same as match pattern above)
 var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[bcy]|m[mtxy]|n[afgip]|om|p[aeghkry]|qa|s[abglv]|t[jnrw]|u[ay]|v[cn])|co\.(?:ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|pn|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[cdelmstz]|b[aefgijsty]|cat|c[acdfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aefglmpry]|h[nrtu]|i[emqsto]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|r[osuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(?:|search|webhp)(?:[?#].*)?$/;
+// line comment to kill regex syntax highlighting
+
 var pageSession = Math.random().toString(16).slice(2);
+
+api.require([
+  'scripts/api.js',
+  'scripts/lib/jquery.js',
+  'scripts/lib/jquery-ui-position.min.js',
+  'scripts/lib/jquery-hoverfu.js',
+  'scripts/lib/mustache.js',
+  'scripts/render.js',
+  'scripts/title_from_url.js',
+  'scripts/html/search/google.js',
+  'scripts/html/search/google_hits.js',
+  'scripts/html/search/google_hit.js'
+], function () {
 
 $.fn.layout = function () {
   return this.each(function () {this.clientHeight});  // forces layout
@@ -1181,3 +1197,5 @@ if (searchUrlRe.test(document.URL)) !function () {
     return String(n).replace(insertCommasRe, '$1,');
   }
 }();
+
+});
