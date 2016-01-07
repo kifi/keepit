@@ -1,25 +1,21 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.eliza.model.{ MessageSource, MessageThread }
+import com.keepit.eliza.model.MessageSource
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
-import org.joda.time.DateTime
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.{ JsNull, JsObject }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
