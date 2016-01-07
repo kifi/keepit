@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.time._
-import com.keepit.common.db.{ State, States, Model, Id }
+import com.keepit.common.db._
 import com.keepit.model.{ Keep, User, NormalizedURI }
 
 import play.api.libs.json._
@@ -32,7 +32,7 @@ case class UserThread(
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
   startedBy: Id[User], // denormalized from MessageThread
   accessToken: ThreadAccessToken = ThreadAccessToken())
-    extends Model[UserThread] with ParticipantThread {
+    extends Model[UserThread] with ModelWithState[UserThread] with ParticipantThread {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)

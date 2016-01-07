@@ -20,6 +20,15 @@ case class SquareImageCropRegion(offset: ImageOffset, s: Int) {
   def size: ImageSize = ImageSize(s, s)
 }
 
+object SquareImageCropRegion {
+  def center(w: Int, h: Int): SquareImageCropRegion = {
+    import Math.{ max, min }
+    val offset = ImageOffset(x = max(0, w - h) / 2, y = max(0, h - w) / 2)
+    val size = min(w, h)
+    SquareImageCropRegion(offset, size)
+  }
+}
+
 object ImageSize {
   implicit val format = (
     (__ \ 'width).format[Int] and

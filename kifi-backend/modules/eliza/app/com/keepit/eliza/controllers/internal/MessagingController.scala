@@ -72,7 +72,7 @@ class MessagingController @Inject() (
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = Action { request =>
     db.readWrite { implicit s =>
       nonUserThreadRepo.getByAccessToken(ThreadAccessToken(accessToken)).map { nut =>
-        userThreadRepo.save(UserThread.fromNonUserThread(nut, userId))
+        userThreadRepo.intern(UserThread.fromNonUserThread(nut, userId))
         nut.participant match {
           case emailParticipant: NonUserEmailParticipant =>
             // returns fields needed to create UserEmailAddress and KeepToUser models
@@ -81,8 +81,8 @@ class MessagingController @Inject() (
             airbrake.notify(s"unhandled NonUserParticipant $nut")
             Ok(Json.obj("addedBy" -> nut.createdBy))
         }
-      }
-    }.getOrElse(NotFound)
+      }.getOrElse(Ok)
+    }
   }
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>

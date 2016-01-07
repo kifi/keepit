@@ -114,7 +114,7 @@ case class ElizaMessage(
   auxData: Option[JsArray] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
-    extends ModelWithSeqNumber[ElizaMessage] {
+    extends Model[ElizaMessage] with ModelWithState[ElizaMessage] with ModelWithSeqNumber[ElizaMessage] {
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
@@ -211,7 +211,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
 }
 
 case class MessagesKeepIdKey(keepId: Id[Keep]) extends Key[Seq[ElizaMessage]] {
-  override val version = 1
+  override val version = 2
   val namespace = "messages_by_keep_id"
   def toKey(): String = keepId.id.toString
 }

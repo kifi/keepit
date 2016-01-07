@@ -1,13 +1,16 @@
 <div class="kf-keep-card-attribution">
   <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.user && !keep.sourceAttribution.slack" ng-href="{{::keep.user|profileUrl}}"
      ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-  <span class="svg-slack kf-keep-card-attribution-keeper-pic kf-keep-card-attribution-no-border" ng-if="::keep.sourceAttribution.slack"></span>
+  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.sourceAttribution.slack && keep.sourceAttribution.kifi" ng-href="{{::keep.sourceAttribution.kifi|profileUrl}}"
+     ng-style="{ 'background-image' : 'url(' + (keep.sourceAttribution.kifi|pic:100) + ')' }"></a>
+  <span class="svg-slack kf-keep-card-attribution-keeper-pic kf-keep-card-attribution-no-border" ng-if="::keep.sourceAttribution.slack && !keep.sourceAttribution.kifi"></span>
   <div class="kf-keep-card-attribution-message">
     <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
     <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
        ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
     </a></span>
-    <span ng-if="::keep.sourceAttribution.slack">@<span ng-bind="keep.sourceAttribution.slack.message.username"></span> added this</span>
+    <span ng-if="::keep.sourceAttribution.slack"><a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-bind="keep.sourceAttribution.kifi ?
+      keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName : '@' + keep.sourceAttribution.slack.message.username"></a> added this</span>
     <span ng-if="::!keep.sourceAttribution.slack">kept this</span>
     <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
     into
@@ -58,7 +61,7 @@
     <a class="kf-keep-tweet-link"
        ng-if="::keep.sourceAttribution.twitter.screenName"
        href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
-       target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
+       target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span><span ng-bind="'@' + keep.sourceAttribution.twitter.screenName"></span>
     </a>
     <span ng-if="isAdmin && keep.summary.hasContent">·</span>
     <span ng-if="isAdmin && keep.summary.hasContent"><a

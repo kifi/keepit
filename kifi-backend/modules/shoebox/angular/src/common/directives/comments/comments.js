@@ -3,8 +3,8 @@
 angular.module('kifi')
 
   .directive('kfKeepComments', [
-    '$window', '$timeout', 'profileService', 'keepService',
-    function ($window, $timeout, profileService, keepService) {
+    '$window', '$timeout', '$rootScope', '$stateParams', 'profileService', 'keepService', 'signupService',
+    function ($window, $timeout, $rootScope, $stateParams, profileService, keepService, signupService) {
       var MARK_READ_TIMEOUT = 3000;
 
       function bySentAt(a, b) {
@@ -39,7 +39,7 @@ angular.module('kifi')
           $scope.comments = [];
           $scope.visibleCount = 0;
           $scope.me = profileService.me;
-          $scope.canAddComments = $scope.keep.library && $scope.keep.library.permissions && $scope.keep.library.permissions.indexOf('add_comments') !== -1;
+          $scope.canAddComments = $scope.keep.permissions.indexOf('add_comments') !== -1;
 
           if (!$scope.keep.discussion) {
             $scope.keep.discussion = {
@@ -94,6 +94,13 @@ angular.module('kifi')
             var commentBox = getCommentBox(element);
             if (commentBox && commentBox.textContent === '') {
               commentBox.innerHTML = '';
+            }
+          };
+
+          $scope.clickedInputBox = function(event) {
+            var commentBox = getCommentBox(element);
+            if (!$rootScope.userLoggedIn && commentBox && event.which === 1) {
+              signupService.register({ intent: 'joinKeep', modelPubId: $scope.keep.pubId, authToken: $stateParams.authToken });
             }
           };
 

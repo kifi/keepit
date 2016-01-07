@@ -2,7 +2,7 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.json.TupleFormat
+import com.keepit.common.json.{ TraversableFormat, EnumFormat, TupleFormat }
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
 import com.keepit.discussion.Message
@@ -73,6 +73,7 @@ case class Keep(
     connections = connections.withLibraries(Set(lib.id.get))
   )
 
+  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
@@ -342,6 +343,20 @@ object KeepPermission extends Enumerator[KeepPermission] {
   case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
   case object VIEW_KEEP extends KeepPermission("view_keep")
   case object VIEW_MESSAGES extends KeepPermission("view_messages")
+
+  def all: Set[KeepPermission] = _all.toSet
+
+  val format: Format[KeepPermission] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
+
+  implicit val writes = Writes(format.writes)
+  val reads = Reads(format.reads)
+  implicit val safeSetReads = TraversableFormat.safeSetReads[KeepPermission](reads)
+
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String): KeepPermission = get(str).getOrElse(throw new Exception(s"Unknown KeepPermission $str"))
 }
 
 sealed abstract class KeepFail(val status: Int, val err: String) extends Exception(err) with NoStackTrace {

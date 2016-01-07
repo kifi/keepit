@@ -446,9 +446,10 @@ class AuthController @Inject() (
       val creditCodeCookie = request.cookies.get("creditCode")
       val discardedCookies = Seq(cookieIntent, cookieModelPubId, cookieAuthToken, creditCodeCookie).flatten.map(c => DiscardingCookie(c.name))
 
-      def extractPublicId[T](companion: PublicIdGenerator[T]): Option[PublicId[T]] = cookieModelPubId.flatMap(cookie => companion.validatePublicId(cookie.value).toOption)
-      val pubLibIdOpt = extractPublicId(Library)
-      val pubOrgIdOpt = extractPublicId(Organization)
+      def extractModelId[T](companion: PublicIdGenerator[T]): Option[Id[T]] = cookieModelPubId.flatMap(cookie => companion.validatePublicId(cookie.value).flatMap(companion.decodePublicId).toOption)
+      val libIdOpt = extractModelId(Library)
+      val orgIdOpt = extractModelId(Organization)
+      val keepIdOpt = extractModelId(Keep)
       val authTokenOpt = cookieAuthToken.map(_.value)
 
       request match {
@@ -461,12 +462,18 @@ class AuthController @Inject() (
 
             val redirect = cookieIntent.map(_.value).map {
               case "follow" =>
-                pubLibIdOpt.foreach { pubLibId => authCommander.autoJoinLib(ur.userId, pubLibId, authTokenOpt) }
+                libIdOpt.foreach { libId => authCommander.autoJoinLib(ur.userId, libId, authTokenOpt) }
                 // todo redirect to library if `joinedSuccessfully`
                 Redirect(homeUrl)
               case "joinOrg" =>
-                (pubOrgIdOpt, authTokenOpt) match {
-                  case (Some(pubOrgId), Some(authToken)) => authCommander.autoJoinOrg(ur.userId, pubOrgId, authToken)
+                (orgIdOpt, authTokenOpt) match {
+                  case (Some(orgId), Some(authToken)) => authCommander.autoJoinOrg(ur.userId, orgId, authToken)
+                  case _ =>
+                }
+                Redirect(homeUrl)
+              case "joinKeep" =>
+                (keepIdOpt, authTokenOpt) match {
+                  case (Some(keepId), authTokenOpt) => authCommander.autoJoinKeep(ur.userId, keepId, authTokenOpt)
                   case _ =>
                 }
                 Redirect(homeUrl)

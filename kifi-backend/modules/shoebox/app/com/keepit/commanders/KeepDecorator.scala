@@ -49,6 +49,7 @@ class KeepDecoratorImpl @Inject() (
     organizationInfoCommander: OrganizationInfoCommander,
     searchClient: SearchServiceClient,
     keepSourceCommander: KeepSourceCommander,
+    permissionCommander: PermissionCommander,
     eliza: ElizaServiceClient,
     rover: RoverServiceClient,
     airbrake: AirbrakeNotifier,
@@ -134,6 +135,7 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
+      val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, perspectiveUserIdOpt))
 
       for {
         augmentationInfos <- augmentationFuture
@@ -186,7 +188,8 @@ class KeepDecoratorImpl @Inject() (
               organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
               note = keep.note,
-              discussion = discussionsByKeep.get(keep.id.get)
+              discussion = discussionsByKeep.get(keep.id.get),
+              permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
             )
         }
         keepsInfo

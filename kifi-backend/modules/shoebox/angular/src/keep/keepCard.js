@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$state', '$analytics', '$q', 'extensionLiaison', 'util', 'installService', 'libraryService',
-  'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
+  'modalService', 'keepActionService', '$location', 'undoService', '$rootScope', 'profileService',
   '$injector',
   function ($state, $analytics, $q, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService, $rootScope, profileService,
+      modalService, keepActionService, $location, undoService, $rootScope, profileService,
       $injector) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
@@ -246,7 +246,7 @@ angular.module('kifi')
         //
 
         (function (keep) {
-          scope.hasKeepCommentsPermission = profileService.hasExperiment('keep_comments');
+          scope.hasKeepCommentsPermission =  $location.search().special || profileService.hasExperiment('keep_comments');
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);

@@ -91,7 +91,7 @@ class HttpRedirectIngestionHelper @Inject() (
 
   private def hasFishy301(uriId: Id[NormalizedURI], url: String, redirectedAt: DateTime): Future[Boolean] = {
     val existingRestriction = db.readOnlyMaster { implicit session => uriRepo.get(uriId).restriction }
-    if (existingRestriction == Some(Restriction.http(301))) {
+    if (existingRestriction.contains(Restriction.http(301))) {
       Future.successful(true)
     } else {
       val recentKeeps: Set[Keep] = db.readOnlyReplica { implicit session =>

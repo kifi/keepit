@@ -120,10 +120,6 @@
     "images/*.gif",
     "images/*.jpg",
     "images/*.png",
-    "images/*.svg",
-    "scripts/html/iframes/*.js",
-    "scripts/iframes/*.js",
-    "scripts/iframes/lib/*.js",
-    "styles/iframes/*.css"
+    "images/*.svg"
   ]
 }

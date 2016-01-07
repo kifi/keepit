@@ -1,10 +1,10 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.core.{ futureExtensionOps, anyExtensionOps }
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -15,10 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
-import play.api.libs.json.JsNull
-import com.keepit.common.core._
 
-import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
@@ -46,6 +43,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
+  notifDeliveryCommander: NotificationDeliveryCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   shoebox: ShoeboxServiceClient,
@@ -126,7 +124,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
           messageThreadRepo.getByKeepId(keepId).getOrElse {
-            val mt = messageThreadRepo.save(MessageThread(
+            val mt = messageThreadRepo.intern(MessageThread(
               uriId = csKeep.uriId,
               url = csKeep.url,
               nUrl = csKeep.url,
@@ -135,7 +133,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = csKeep.id
             ))
-            val ut = userThreadRepo.save(UserThread.forMessageThread(mt)(csKeep.owner))
+            val ut = userThreadRepo.intern(UserThread.forMessageThread(mt)(csKeep.owner))
             log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
             mt
           }
@@ -150,7 +148,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
-            val ut = userThreadRepo.save(UserThread.forMessageThread(updatedThread)(userId))
+            val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
             log.info(s"[DISC-CMDR] User $userId was added to thread ${thread.id.get} associated with keep ${thread.keepId}.")
           }
         }
@@ -223,9 +221,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
+      val uts = userThreadRepo.getByKeep(keepId)
+      val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
+      s.onTransactionSuccess {
+        uts.foreach { ut =>
+          for { nUrl <- nUrlOpt; lastMsg <- lastMsgOpt } notifDeliveryCommander.notifyRead(ut.user, ut.keepId, lastMsg.id.get, nUrl, lastMsg.createdAt)
+          notifDeliveryCommander.notifyRemoveThread(ut.user, ut.keepId)
+        }
+      }
+      uts.foreach(userThreadRepo.deactivate)
+
       messageThreadRepo.getByKeepId(keepId).foreach(messageThreadRepo.deactivate)
       messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)
-      userThreadRepo.getByKeep(keepId).foreach(userThreadRepo.deactivate)
     }
   }
 }

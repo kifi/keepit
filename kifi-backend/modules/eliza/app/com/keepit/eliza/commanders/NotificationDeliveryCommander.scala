@@ -181,7 +181,7 @@ class NotificationDeliveryCommander @Inject() (
       )
       db.readWrite { implicit session =>
         newParticipants.map { pUserId =>
-          userThreadRepo.save(UserThread.forMessageThread(thread)(user = pUserId))
+          userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId))
         }
 
         newNonUserParticipants.foreach { nup =>
@@ -220,21 +220,22 @@ class NotificationDeliveryCommander @Inject() (
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", keepId, message))
 
-  def notifyRead(userId: Id[User], keepId: PublicId[Keep], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_read", nUrl, keepId, creationDate, messageId.id))
+  def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
+    // TODO(ryan): stop manually forcing the date to go to millis, fix the Json formatter
+    sendToUser(userId, Json.arr("message_read", nUrl, Keep.publicId(keepId), creationDate.getMillis, Message.publicId(ElizaMessage.toCommonId(messageId))))
     notifyUnreadCount(userId, keepId)
   }
 
-  def notifyUnread(userId: Id[User], keepId: PublicId[Keep], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_unread", nUrl, keepId, creationDate, messageId.id))
+  def notifyUnread(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
+    sendToUser(userId, Json.arr("message_unread", nUrl, Keep.publicId(keepId), creationDate, Message.publicId(ElizaMessage.toCommonId(messageId))))
     notifyUnreadCount(userId, keepId)
   }
 
-  private def notifyUnreadCount(userId: Id[User], keepId: PublicId[Keep]): Unit = {
+  private def notifyUnreadCount(userId: Id[User], keepId: Id[Keep]): Unit = {
     val (_, unreadUnmutedThreadCount, unreadNotificationCount) = getUnreadCounts(userId)
     val totalUnreadCount = unreadUnmutedThreadCount + unreadNotificationCount
     sendToUser(userId, Json.arr("unread_notifications_count", totalUnreadCount, unreadUnmutedThreadCount, unreadNotificationCount))
-    val notification = MessageThreadPushNotification(keepId, totalUnreadCount, None, None)
+    val notification = MessageThreadPushNotification(Keep.publicId(keepId), totalUnreadCount, None, None)
     sendPushNotification(userId, notification)
   }
 
@@ -245,8 +246,8 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(userId, MessageCountPushNotification(totalUnreadCount))
   }
 
-  def notifyRemoveThread(userId: Id[User], keepId: PublicId[Keep]): Unit =
-    sendToUser(userId, Json.arr("remove_thread", keepId))
+  def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit =
+    sendToUser(userId, Json.arr("remove_thread", Keep.publicId(keepId)))
 
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)

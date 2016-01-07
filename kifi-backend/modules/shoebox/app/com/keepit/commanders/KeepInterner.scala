@@ -187,14 +187,13 @@ class KeepInternerImpl @Inject() (
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
     // We intern by (library, uri)
-    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get, excludeState = None) }
+    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get) }
 
-    val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.filter(_.isActive).flatMap(_.title), uri.title).flatten.headOption
-    val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.filter(_.isActive).flatMap(_.note)).flatten.headOption
+    val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.title), uri.title).flatten.headOption
+    val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.note)).flatten.headOption
     val keep = Keep(
       id = existingKeepOpt.map(_.id.get),
       externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
-      createdAt = existingKeepOpt.filter(_.isActive).map(_.createdAt).getOrElse(clock.now),
       title = kTitle,
       userId = userId,
       uriId = uri.id.get,
@@ -204,7 +203,7 @@ class KeepInternerImpl @Inject() (
       libraryId = libraryOpt.map(_.id.get),
       keptAt = keptAt,
       note = kNote,
-      originalKeeperId = Some(userId),
+      originalKeeperId = existingKeepOpt.map(_.userId) orElse Some(userId),
       organizationId = libraryOpt.flatMap(_.organizationId),
       connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
     )
@@ -218,7 +217,7 @@ class KeepInternerImpl @Inject() (
         throw ex.getUndeclaredThrowable
     }
 
-    val wasInactiveKeep = existingKeepOpt.exists(_.isInactive)
+    val wasInactiveKeep = false // we do not resurrect dead keeps anymore
     val isNewKeep = existingKeepOpt.isEmpty
     (isNewKeep, wasInactiveKeep, internedKeep)
   }

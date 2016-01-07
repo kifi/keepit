@@ -18,6 +18,7 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
+  def intern(model: UserThread)(implicit session: RWSession): UserThread
   // Simple lookup queries
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread]
   def getUserThread(userId: Id[User], keepId: Id[Keep])(implicit session: RSession): Option[UserThread]
@@ -94,6 +95,7 @@ class UserThreadRepoImpl @Inject() (
   def table(tag: Tag) = new UserThreadTable(tag)
   initTable()
 
+  private def deadRows = rows.filter(_.state === UserThreadStates.INACTIVE)
   private def activeRows = rows.filter(_.state === UserThreadStates.ACTIVE)
 
   override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {
@@ -102,6 +104,13 @@ class UserThreadRepoImpl @Inject() (
 
   override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
+  }
+
+  def intern(model: UserThread)(implicit session: RWSession): UserThread = {
+    // There is a unique index on (userId, keepId), so snake the id from any dead model that collides
+    save(model.copy(
+      deadRows.filter(row => row.user === model.user && row.keepId === model.keepId).map(_.id).firstOption
+    ))
   }
 
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread] = {

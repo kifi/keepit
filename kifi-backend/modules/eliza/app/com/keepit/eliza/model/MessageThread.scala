@@ -116,7 +116,7 @@ case class MessageThread(
     startedBy: Id[User],
     participants: MessageThreadParticipants,
     pageTitle: Option[String],
-    keepId: Id[Keep]) extends Model[MessageThread] {
+    keepId: Id[Keep]) extends Model[MessageThread] with ModelWithState[MessageThread] {
   def participantsHash: Int = participants.hash
   def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
@@ -172,7 +172,7 @@ object MessageThread {
 }
 
 case class MessageThreadKeepIdKey(keepId: Id[Keep]) extends Key[MessageThread] {
-  override val version = 1
+  override val version = 2
   val namespace = "message_thread_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
