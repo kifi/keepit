@@ -70,6 +70,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
     }
   }
+  import KeepPermission._
+  val keepPermissions = Seq(ADD_PARTICIPANTS, DELETE_OTHER_MESSAGES, ADD_MESSAGE, VIEW_KEEP, DELETE_OWN_MESSAGES)
 
   "allKeeps" in {
     withDb(controllerTestModules: _*) { implicit injector =>
@@ -147,7 +149,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Amazon",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(libraryCard(lib1.id.get))}
+            "library": ${Json.toJson(libraryCard(lib1.id.get))},
+            "permissions": ${Json.toJson(keepPermissions)}
             },
           {
             "id":"${bookmark1.externalId.toString}",
@@ -174,7 +177,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Google",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(libraryCard(lib1.id.get))}
+            "library": ${Json.toJson(libraryCard(lib1.id.get))},
+            "permissions": ${Json.toJson(keepPermissions)}
             }
         ]}
       """)
@@ -240,7 +244,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
+                      "permissions": ${Json.toJson(keepPermissions)}
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -263,7 +268,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
+                      "permissions": ${Json.toJson(keepPermissions)}
                     }
                   ],
                   "helprank":"click"
@@ -384,7 +390,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"${pubLibId1.id}",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))},
+                "permissions": ${Json.toJson(keepPermissions)}
               }
             ]
           }

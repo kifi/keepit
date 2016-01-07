@@ -39,7 +39,7 @@ angular.module('kifi')
           $scope.comments = [];
           $scope.visibleCount = 0;
           $scope.me = profileService.me;
-          $scope.canAddComments = $scope.keep.library && $scope.keep.library.permissions && $scope.keep.library.permissions.indexOf('add_comments') !== -1;
+          $scope.canAddComments = $scope.keep.permissions.indexOf('add_comments') !== -1;
 
           if (!$scope.keep.discussion) {
             $scope.keep.discussion = {

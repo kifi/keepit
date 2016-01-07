@@ -2,6 +2,7 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
+import com.keepit.common.json.{ TraversableFormat, EnumFormat }
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
 import com.keepit.discussion.Message
@@ -337,6 +338,20 @@ object KeepPermission extends Enumerator[KeepPermission] {
   case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
   case object VIEW_KEEP extends KeepPermission("view_keep")
   case object VIEW_MESSAGES extends KeepPermission("view_messages")
+
+  def all: Set[KeepPermission] = _all.toSet
+
+  val format: Format[KeepPermission] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
+
+  implicit val writes = Writes(format.writes)
+  val reads = Reads(format.reads)
+  implicit val safeSetReads = TraversableFormat.safeSetReads[KeepPermission](reads)
+
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String): KeepPermission = get(str).getOrElse(throw new Exception(s"Unknown KeepPermission $str"))
 }
 
 sealed abstract class KeepFail(val status: Int, val err: String) extends Exception(err) with NoStackTrace {
