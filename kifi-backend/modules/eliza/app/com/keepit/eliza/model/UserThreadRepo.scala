@@ -185,12 +185,14 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts = {
-    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId and state = 'active'").first
+    val threads = activeRows.filter(ut => ut.user === userId && ut.uriId === uriId)
+    val (total, unmuted) = (threads.length, threads.filter(t => t.unread && !t.muted).length).run
     UnreadThreadCounts(total, unmuted)
   }
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts = {
-    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and state = 'active'").first
+    val threads = activeRows.filter(ut => ut.user === userId && ut.unread)
+    val (total, unmuted) = (threads.length, threads.filter(!_.muted).length).run
     UnreadThreadCounts(total, unmuted)
   }
 
