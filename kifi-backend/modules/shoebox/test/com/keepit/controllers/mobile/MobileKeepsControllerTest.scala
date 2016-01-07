@@ -218,64 +218,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       status(result) must equalTo(OK)
       contentType(result) must beSome("application/json")
 
-      val expected = Json.parse(s"""
-                  {"collection":null,
-                   "before":null,
-                   "after":null,
-                   "keeps":[
-                    {
-                      "id":"${keeps1(1).externalId.toString}",
-                      "pubId":"${Keep.publicId(keeps1(1).id.get).id}",
-                      "url":"${keeps1(1).url}",
-                      "path":"${keeps1(1).path.relative}",
-                      "isPrivate":${keeps1(1).isPrivate},
-                      "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
-                      "createdAt":"${keeps1(1).keptAt.toStandardTimeString}",
-                      "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(1).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
-                      "keepersOmitted": 0,
-                      "keepersTotal": 3,
-                      "libraries":[],
-                      "librariesOmitted": 0,
-                      "librariesTotal": 0,
-                      "collections":[],
-                      "tags":[],
-                      "hashtags":[],
-                      "summary":{},
-                      "siteName":"Kifi",
-                      "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
-                      "permissions": ${Json.toJson(keepPermissions)}
-                    },
-                    {
-                      "id":"${keeps1(0).externalId.toString}",
-                      "pubId":"${Keep.publicId(keeps1(0).id.get).id}",
-                      "url":"${keeps1(0).url}",
-                      "path":"${keeps1(0).path.relative}",
-                      "isPrivate":${keeps1(0).isPrivate},
-                      "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
-                      "createdAt":"${keeps1(0).keptAt.toStandardTimeString}",
-                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
-                      "keepers":[],
-                      "keepersOmitted": 0,
-                      "keepersTotal": 1,
-                      "libraries":[],
-                      "librariesOmitted": 0,
-                      "librariesTotal": 0,
-                      "collections":[],
-                      "tags":[],
-                      "hashtags":[],
-                      "summary":{},
-                      "siteName":"FortyTwo",
-                      "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
-                      "permissions": ${Json.toJson(keepPermissions)}
-                    }
-                  ],
-                  "helprank":"click"
-                  }
-                """)
-      Json.parse(contentAsString(result)) must equalTo(expected)
+      val jsonResult = contentAsJson(result)
+      (jsonResult \ "collection") must beEqualTo(JsNull)
+      (jsonResult \ "before") must beEqualTo(JsNull)
+      (jsonResult \ "after") must beEqualTo(JsNull)
+      val jsonKeeps = (jsonResult \ "keeps").as[Seq[JsObject]]
+      jsonKeeps.length must beEqualTo(2)
+      (jsonKeeps.head \ "id").as[ExternalId[Keep]] must beEqualTo(keeps1(1).externalId)
+      (jsonKeeps.last \ "id").as[ExternalId[Keep]] must beEqualTo(keeps1(0).externalId)
     }
   }
 
@@ -359,45 +309,16 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         count = Integer.MAX_VALUE,
         withPageInfo = false
       )(request)
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
-      val expected = Json.parse(s"""
-          {
-            "collection":null,
-            "before":null,
-            "after":"${bookmark1.externalId.toString}",
-            "keeps":[
-              {
-                "id":"${bookmark2.externalId.toString}",
-                "pubId":"${Keep.publicId(bookmark2.id.get).id}",
-                "title":"A1",
-                "url":"http://www.amazon.com",
-                "path":"${bookmark2.path.relative}",
-                "isPrivate":false,
-                "createdAt": "${bookmark2.keptAt}",
-                "user":{"id":"${user.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test1"},
-                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"${pubLibId1.id}"}],
-                "keepers":[],
-                "keepersOmitted": 0,
-                "keepersTotal": 1,
-                "libraries":[],
-                "librariesOmitted": 0,
-                "librariesTotal": 0,
-                "collections":[],
-                "tags":[],
-                "hashtags":[],
-                "summary":{},
-                "siteName":"Amazon",
-                "libraryId":"${pubLibId1.id}",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))},
-                "permissions": ${Json.toJson(keepPermissions)}
-              }
-            ]
-          }
-        """)
-      val actual = contentAsJson(result)
-      TestHelper.deepCompare(actual, expected) must beNone
+      val jsonResult = contentAsJson(result)
+      (jsonResult \ "collection") must beEqualTo(JsNull)
+      (jsonResult \ "before") must beEqualTo(JsNull)
+      (jsonResult \ "after").as[ExternalId[Keep]] must beEqualTo(bookmark1.externalId)
+      val jsonKeeps = (jsonResult \ "keeps").as[Seq[JsObject]]
+      jsonKeeps.length must beEqualTo(1)
+      (jsonKeeps.head \ "id").as[ExternalId[Keep]] must beEqualTo(bookmark2.externalId)
     }
   }
 
