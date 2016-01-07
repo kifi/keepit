@@ -116,6 +116,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander: KeepToLibraryCommander,
     ktuRepo: KeepToUserRepo,
     ktuCommander: KeepToUserCommander,
+    keepSourceCommander: KeepSourceCommander,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
@@ -146,6 +147,9 @@ class KeepCommanderImpl @Inject() (
       val users = userRepo.getAllUsers(keeps.collect {
         case (id, keep) => keep.userId
       }.toSeq)
+      val attributions = keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(keeps.values.flatMap(_.id).toSet).collect {
+        case (keepId, (attr: SlackAttribution, userOpt)) => keepId -> (attr, userOpt)
+      }
       keeps.map {
         case (id, keep) => id -> BasicKeep(
           keep.externalId,
@@ -153,7 +157,8 @@ class KeepCommanderImpl @Inject() (
           keep.url,
           keep.visibility,
           keep.libraryId.map(Library.publicId),
-          users(keep.userId).externalId
+          users(keep.userId).externalId,
+          attributions.get(id)
         )
       }
     }
