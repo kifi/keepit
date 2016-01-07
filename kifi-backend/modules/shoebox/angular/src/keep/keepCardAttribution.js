@@ -15,7 +15,7 @@ angular.module('kifi')
       templateUrl: 'keep/keepCardAttribution.tpl.html',
       link: function (scope) {
         var isAdmin = (profileService.me.experiments || []).indexOf('admin') !== -1;
-        scope.showKeepPageLink = !$state.is('keepPage') && isAdmin;
+        scope.showKeepPageLink = scope.keep.path && !$state.is('keepPage') && profileService.hasExperiment('keep_comments');
       }
     };
   }
