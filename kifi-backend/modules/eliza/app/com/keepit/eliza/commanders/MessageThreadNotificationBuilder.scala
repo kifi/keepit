@@ -87,11 +87,12 @@ object MessageThreadNotification {
 @ImplementedBy(classOf[MessageThreadNotificationBuilderImpl])
 trait MessageThreadNotificationBuilder {
   import MessageThreadNotificationBuilder.PrecomputedInfo
+
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]]
   def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]]
 
   // Convenience methods, just wrappers around the real methods above
-  def buildForKeep(userId: Id[User], keepId: Id[Keep]): Future[Option[MessageThreadNotification]]
+  def buildForKeep(userId: Id[User], keepId: Id[Keep], precomputed: Option[PrecomputedInfo.BuildForKeep] = None): Future[Option[MessageThreadNotification]]
 }
 
 object MessageThreadNotificationBuilder {
@@ -102,6 +103,20 @@ object MessageThreadNotificationBuilder {
       mutedById: Option[Map[Id[Keep], Boolean]] = None,
       threadActivityById: Option[Map[Id[Keep], Seq[UserThreadActivity]]] = None,
       msgCountById: Option[Map[Id[Keep], MessageCount]] = None)
+    case class BuildForKeep(
+        thread: Option[MessageThread] = None,
+        lastMsg: Option[Option[ElizaMessage]] = None,
+        mutedById: Option[Boolean] = None,
+        threadActivity: Option[Seq[UserThreadActivity]] = None,
+        msgCount: Option[MessageCount] = None) {
+      def pluralize(keepId: Id[Keep]) = BuildForKeeps(
+        thread.map(x => Map(keepId -> x)),
+        lastMsg.map(x => Map(keepId -> x)),
+        mutedById.map(x => Map(keepId -> x)),
+        threadActivity.map(x => Map(keepId -> x)),
+        msgCount.map(x => Map(keepId -> x))
+      )
+    }
 
     case class BuildForUsers(dummy: Int)
   }
@@ -118,10 +133,11 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends MessageThreadNotificationBuilder {
 
-  def buildForKeep(userId: Id[User], keepId: Id[Keep]): Future[Option[MessageThreadNotification]] =
-    buildForKeeps(userId, Set(keepId)).map(_.get(keepId))
-
   import MessageThreadNotificationBuilder.PrecomputedInfo
+
+  def buildForKeep(userId: Id[User], keepId: Id[Keep], precomputed: Option[PrecomputedInfo.BuildForKeep] = None): Future[Option[MessageThreadNotification]] =
+    buildForKeeps(userId, Set(keepId), precomputed.map(_.pluralize(keepId))).map(_.get(keepId))
+
   def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]] = {
     val infoFut = db.readOnlyMasterAsync { implicit s =>
       val threadsById = precomputed.flatMap(_.threadById).getOrElse {
