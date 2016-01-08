@@ -40,6 +40,7 @@ object LibraryFactory {
       case LibraryKind.SYSTEM_SECRET => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_SECRET, visibility = LibraryVisibility.SECRET))
       case LibraryKind.USER_CREATED => this.copy(library = library.copy(kind = LibraryKind.USER_CREATED))
       case LibraryKind.SYSTEM_ORG_GENERAL => this.copy(library = library.copy(kind = LibraryKind.SYSTEM_ORG_GENERAL))
+      case LibraryKind.SLACK_CHANNEL => this.copy(library = library.copy(kind = LibraryKind.SLACK_CHANNEL))
     }
     def withState(state: State[Library]) = this.copy(library = library.copy(state = state))
     def withVisibility(viz: LibraryVisibility) = this.copy(library = library.copy(visibility = viz))
