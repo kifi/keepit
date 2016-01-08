@@ -1,0 +1,8 @@
+@import com.keepit.slack.models._
+@(stms: Iterable[SlackTeamMembership])
+
+<ul>
+    @for( stm <- stms ) {
+        <li> @stm.slackUsername in stm.slackTeamName </li>
+    }
+</ul>
