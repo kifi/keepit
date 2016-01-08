@@ -24,7 +24,7 @@ case class SlackChannelInfo(
 object SlackChannelInfo {
   implicit val reads: Reads[SlackChannelInfo] = (
     (__ \ 'id).read[SlackChannelId] and
-    (__ \ 'name).read[SlackChannelName] and
+    (__ \ 'name).read[String].map(name => SlackChannelName("#" + name)) and
     (__ \ 'creator).read[SlackUserId] and
     (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
     (__ \ 'is_archived).read[Boolean] and
