@@ -517,7 +517,7 @@ var socketHandlers = {
   },
   remove_notification: function (th) {
     log('[socket:remove_notification]', th);
-    remove_notification(th);
+    removeNotificationPopups(th);
     tellVisibleTabsNoticeCountIfChanged();
   },
   all_notifications_visited: function(id, time) {
