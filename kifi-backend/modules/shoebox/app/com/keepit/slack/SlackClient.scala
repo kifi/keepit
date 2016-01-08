@@ -41,7 +41,7 @@ object SlackAPI {
     val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
     Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
-  def ChannelsList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/channels.list", token)
+  def ChannelsList(token: SlackAccessToken, excludeArchived: Boolean) = Route(GET, "https://slack.com/api/channels.list", token, "exclude_archived" -> (if (excludeArchived) 1 else 0))
   def ChannelInfo(token: SlackAccessToken, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.info", token, channelId)
   def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
   def PostMessage(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest) =
@@ -58,7 +58,7 @@ trait SlackClient {
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]]
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]]
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
 }
 
@@ -129,8 +129,8 @@ class SlackClientImpl(
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
     slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
   }
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]] = {
-    slackCall[Seq[SlackChannelInfo]](SlackAPI.ChannelsList(token))((__ \ 'channels).read)
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]] = {
+    slackCall[Seq[SlackChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived))((__ \ 'channels).read)
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
     slackCall[SlackChannelInfo](SlackAPI.ChannelInfo(token, channelId))((__ \ 'channel).read)

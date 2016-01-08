@@ -26,10 +26,10 @@ object SlackChannelInfo {
     (__ \ 'id).read[SlackChannelId] and
     (__ \ 'name).read[SlackChannelName] and
     (__ \ 'creator).read[SlackUserId] and
-    (__ \ 'created).read[SlackTimestamp] and
+    (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
     (__ \ 'is_archived).read[Boolean] and
     (__ \ 'num_members).read[Int] and
-    (__ \ 'topic \ 'value).readNullable[SlackChannelTopic] and
-    (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose]
+    (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
+    (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))
   )(SlackChannelInfo.apply _)
 }

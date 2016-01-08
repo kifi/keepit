@@ -36,7 +36,7 @@ trait SlackClientWrapper {
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]]
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]]
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
 }
@@ -125,8 +125,8 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
 
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]] = {
-    slackClient.getChannels(token).andThen(onRevokedToken(token))
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]] = {
+    slackClient.getChannels(token, excludeArchived).andThen(onRevokedToken(token))
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
     slackClient.getChannelInfo(token, channelId).andThen(onRevokedToken(token))
