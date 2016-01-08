@@ -8,6 +8,9 @@ import com.keepit.common.time._
 import com.keepit.model.{ User, Organization }
 import org.joda.time.DateTime
 
+case class InvalidSlackSetupException(userId: Id[User], team: Option[SlackTeam], membership: Option[SlackTeamMembership])
+  extends Exception(s"Invalid Slack setup for user $userId in team $team with membership $membership")
+
 case class UnauthorizedSlackTeamOrganizationModificationException(team: Option[SlackTeam], userId: Id[User], newOrganizationId: Option[Id[Organization]])
   extends Exception(s"Unauthorized request from user $userId to connect ${team.map(_.toString) getOrElse "unkwown SlackTeam"} with organization $newOrganizationId.")
 

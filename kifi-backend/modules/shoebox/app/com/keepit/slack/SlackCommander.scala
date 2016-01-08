@@ -45,6 +45,7 @@ trait SlackCommander {
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization]): Try[SlackTeam]
   def getOrganizationsToConnect(userId: Id[User]): Map[Id[Organization], OrganizationInfo]
   def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannel, Either[LibraryFail, Library]]]
 }
 
 @Singleton
@@ -410,6 +411,36 @@ class SlackCommanderImpl @Inject() (
             status = SlackIntegrationStatus.On
           ))
         }
+    }
+  }
+
+  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannel, Either[LibraryFail, Library]]] = {
+    val (teamOpt, membershipOpt, integratedChannelIds) = db.readOnlyMaster { implicit session =>
+      val teamOpt = slackTeamRepo.getBySlackTeamId(teamId)
+      val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == teamId)
+      val integratedChannelIds = teamOpt.flatMap(_.organizationId).map { orgId =>
+        channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == teamId).flatMap(_.slackChannelId).toSet
+      } getOrElse Set.empty
+      (teamOpt, membershipOpt, integratedChannelIds)
+    }
+    (teamOpt, membershipOpt) match {
+      case (Some(team), Some(membership)) if membership.token.isDefined && team.organizationId.isDefined =>
+        slackClient.getChannels(membership.token.get).map { channels =>
+          def shouldBeIgnored(channel: SlackChannelInfo) = integratedChannelIds.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
+          channels.sortBy(_.createdAt).collect {
+            case channel if !shouldBeIgnored(channel) =>
+              SlackChannel(channel.channelId, channel.channelName) -> setupSlackChannel(team, membership, channel)
+          }.toMap tap { newLibraries =>
+            if (newLibraries.values.forall(_.isRight)) {
+              channels.map(_.createdAt).maxOpt.foreach { lastChannelCreatedAt =>
+                db.readWrite { implicit sessio =>
+                  slackTeamRepo.save(team.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)))
+                }
+              }
+            }
+          }
+        }
+      case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
     }
   }
 }
