@@ -58,7 +58,7 @@ class LibraryNewKeepsCommander @Inject() (
       val message = {
         sourceOpt.collect {
           case (attr: SlackAttribution, slackKeeperOpt) =>
-            val name = slackKeeperOpt.map(_.fullName).getOrElse(s"@${attr.message.username}")
+            val name = slackKeeperOpt.map(_.fullName).getOrElse(s"@${attr.message.username.value}")
             s"$name added to #${attr.message.channel.name.value}" + titleString
         } getOrElse {
           s"${keeper.fullName} kept to $libTrunc" + titleString
