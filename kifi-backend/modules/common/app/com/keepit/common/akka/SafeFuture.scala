@@ -39,5 +39,7 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
 object SafeFuture {
   def apply[T](func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func })
   def apply[T](name: String)(func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func }, Some(name))
+
+  def swallow(f: => Future[Unit])(implicit executor: ExecutionContext) = new SafeFuture(Try(f).recover { case fail => Future.failed(fail) }.get)
 }
 

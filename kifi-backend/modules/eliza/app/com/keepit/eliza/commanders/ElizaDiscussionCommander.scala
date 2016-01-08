@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -213,9 +214,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
     // I care so little if this actually works
     // If it fails we'll airbrake, but we're moving on with our lives
-    Try(tryToFixThreadNotif(keepForDeletedMsg)).recover {
-      case f => airbrake.notify(f)
-    }
+    SafeFuture.swallow(tryToFixThreadNotif(keepForDeletedMsg))
   }
 
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean = db.readOnlyMaster { implicit s =>
@@ -246,16 +245,15 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  // TODO(ryan): if you were a better person this would return a Future[Unit] or a Map[Id[User], Future[Unit]] or something
-  private def tryToFixThreadNotif(keepId: Id[Keep]): Unit = {
+  private def tryToFixThreadNotif(keepId: Id[Keep]): Future[Unit] = {
     db.readOnlyMaster { implicit s =>
       for {
         thread <- messageThreadRepo.getByKeepId(keepId)
         lastMsg <- messageRepo.getLatest(keepId)
       } yield (thread, lastMsg)
-    }.foreach {
+    }.map {
       case (thread, lastMsg) =>
-        shoebox.getBasicUsers(thread.allParticipants.toSeq).foreach { basicUserById =>
+        shoebox.getBasicUsers(thread.allParticipants.toSeq).map { basicUserById =>
           val basicNonUserParticipants = thread.participants.allNonUsers.map(NonUserParticipant.toBasicNonUser)
             .map(nu => BasicUserLikeEntity(nu))
           val messageWithBasicUser = MessageWithBasicUser(
@@ -279,7 +277,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
             notifDeliveryCommander.notifyMessage(user, lastMsg.pubKeepId, messageWithBasicUser)
           }
         }
-    }
+    }.getOrElse(Future.successful(Unit))
   }
 
 }
