@@ -603,7 +603,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val resultJson = contentAsJson(result1)
         (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
           BasicOrganizationView(
-            BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
+            BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/8ea954ccffeb8d21891af94ad02b9876_200x200-0x0-200x200_cs.png")),
             OrganizationViewerInfo(invite = None, emails = Set.empty, permissions = permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
           )
         ))
