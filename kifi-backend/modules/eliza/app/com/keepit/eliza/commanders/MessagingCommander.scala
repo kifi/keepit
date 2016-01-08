@@ -332,7 +332,7 @@ class MessagingCommander @Inject() (
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val (numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
+      val MessageCount(numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
       val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }

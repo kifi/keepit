@@ -191,7 +191,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     for {
       ut <- userThreadRepo.getUserThread(userId, keepId)
     } yield {
-      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
+      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING).unread tap { unreadCount =>
         // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
         // Then you can just set it and forget it
         if (unreadCount == 0) userThreadRepo.markRead(userId, messageRepo.get(msgId))

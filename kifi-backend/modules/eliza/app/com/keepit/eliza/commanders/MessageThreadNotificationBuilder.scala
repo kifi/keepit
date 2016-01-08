@@ -1,21 +1,20 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.model._
-import com.keepit.model.{ User, NotificationCategory, DeepLocator, Keep }
+import com.keepit.model.{ DeepLocator, Keep, NotificationCategory, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 
 // This is the thing we send to clients so they can display the little
 // "notification" card that summarizes a message thread
@@ -87,13 +86,23 @@ object MessageThreadNotification {
 
 @ImplementedBy(classOf[MessageThreadNotificationBuilderImpl])
 trait MessageThreadNotificationBuilder {
-  def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], MessageThreadNotification]]
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]]): Future[Map[Id[User], MessageThreadNotification]]
+  import MessageThreadNotificationBuilder.PrecomputedInfo
+  def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]]
+  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]]
+
+  // Convenience methods, just wrappers around the real methods above
+  def buildForKeep(userId: Id[User], keepId: Id[Keep]): Future[Option[MessageThreadNotification]]
 }
 
 object MessageThreadNotificationBuilder {
   object PrecomputedInfo {
-    case class BuildForKeeps(dummy: Int)
+    case class BuildForKeeps(
+      threadById: Option[Map[Id[Keep], MessageThread]] = None,
+      lastMsgById: Option[Map[Id[Keep], Option[ElizaMessage]]] = None,
+      mutedById: Option[Map[Id[Keep], Boolean]] = None,
+      threadActivityById: Option[Map[Id[Keep], Seq[UserThreadActivity]]] = None,
+      msgCountById: Option[Map[Id[Keep], MessageCount]] = None)
+
     case class BuildForUsers(dummy: Int)
   }
 }
@@ -109,32 +118,46 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends MessageThreadNotificationBuilder {
 
-  def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], MessageThreadNotification]] = {
+  def buildForKeep(userId: Id[User], keepId: Id[Keep]): Future[Option[MessageThreadNotification]] =
+    buildForKeeps(userId, Set(keepId)).map(_.get(keepId))
+
+  import MessageThreadNotificationBuilder.PrecomputedInfo
+  def buildForKeeps(userId: Id[User], keepIds: Set[Id[Keep]], precomputed: Option[PrecomputedInfo.BuildForKeeps] = None): Future[Map[Id[Keep], MessageThreadNotification]] = {
     val infoFut = db.readOnlyMasterAsync { implicit s =>
-      val threadsById = messageThreadRepo.getByKeepIds(keepIds)
-      val lastMsgById = keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
-      val mutedById = keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
-      val threadActivityById = keepIds.map { keepId =>
-        keepId -> userThreadRepo.getThreadActivity(keepId).sortBy { uta =>
-          (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
-        }
-      }.toMap
-      val msgCountsById = threadActivityById.map {
-        case (keepId, activity) =>
-          val lastSeenOpt = activity.find(_.userId == userId).flatMap(_.lastSeen)
-          keepId -> messageRepo.getMessageCounts(keepId, lastSeenOpt)
+      val threadsById = precomputed.flatMap(_.threadById).getOrElse {
+        messageThreadRepo.getByKeepIds(keepIds)
       }
-      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountsById)
+      val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
+        keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
+      }
+      val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
+        keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
+      }
+      val threadActivityById = precomputed.flatMap(_.threadActivityById).getOrElse {
+        keepIds.map { keepId =>
+          keepId -> userThreadRepo.getThreadActivity(keepId).sortBy { uta =>
+            (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
+          }
+        }.toMap
+      }
+      val msgCountById = precomputed.flatMap(_.msgCountById).getOrElse {
+        threadActivityById.map {
+          case (keepId, activity) =>
+            val lastSeenOpt = activity.find(_.userId == userId).flatMap(_.lastSeen)
+            keepId -> messageRepo.getMessageCounts(keepId, lastSeenOpt)
+        }
+      }
+      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountById)
     }
     for {
-      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountsById) <- infoFut
+      (threadsById, lastMsgById, mutedById, threadActivityById, msgCountById) <- infoFut
       allUsers = threadsById.values.flatMap(_.allParticipants).toSet
       basicUserByIdMap <- shoebox.getBasicUsers(allUsers.toSeq)
     } yield lastMsgById.collect {
       case (keepId, Some(message)) =>
         val thread = threadsById(keepId)
         val threadActivity = threadActivityById(keepId)
-        val (numMessages, numUnread) = msgCountsById(keepId)
+        val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
 
         def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
@@ -175,6 +198,6 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
   }
 
-  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]]): Future[Map[Id[User], MessageThreadNotification]] = ???
+  def buildForUsers(keepId: Id[Keep], userIds: Set[Id[User]], precomputed: Option[PrecomputedInfo.BuildForUsers] = None): Future[Map[Id[User], MessageThreadNotification]] = ???
 }
 

@@ -55,8 +55,6 @@ class NotificationDeliveryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  implicit val messageNotificationWrites: Writes[MessageThreadNotification] = MessageThreadNotification.writes
-
   def notifySendMessage(from: Id[User], message: ElizaMessage, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = MessageThreadNotification(
       message = message,
@@ -208,19 +206,13 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(request.userId, notification, request.force)
   }
 
-  def buildNotificationForMessageThread(userId: Id[User], keep: Id[Keep]): Future[Option[MessageThreadNotification]] = {
-    buildNotificationForMessageThreads(userId, Set(keep)).map(_.get(keep))
-  }
-  def buildNotificationForMessageThreads(userId: Id[User], keeps: Set[Id[Keep]]): Future[Map[Id[Keep], MessageThreadNotification]] =
-    threadNotifBuilder.buildForKeeps(userId, keeps)
-
   def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     val (uts, mts) = db.readOnlyReplica { implicit session =>
       val uts = userThreadRepo.getThreadsForUser(userId, utq)
       val mtMap = threadRepo.getByKeepIds(uts.map(_.keepId).toSet)
       (uts, mtMap)
     }
-    val notifJsonsByThreadFut = buildNotificationForMessageThreads(userId, mts.keySet)
+    val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, mts.keySet)
     notifJsonsByThreadFut.flatMap { notifJsonsByThread =>
       val inputs = uts.flatMap { ut => notifJsonsByThread.get(ut.keepId).map(notif => (Json.toJson(notif), ut.unread, ut.uriId)) }
       notificationJsonMaker.make(inputs, includeUriSummary)
@@ -236,7 +228,7 @@ class NotificationDeliveryCommander @Inject() (
         case None => authorActivityInfos.length
       }
       val (numMessages: Int, numUnread: Int, muted: Boolean) = db.readOnlyMaster { implicit session =>
-        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
+        val MessageCount(numMessages, numUnread) = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
         val muted = userThreadRepo.isMuted(userId, thread.keepId)
         (numMessages, numUnread, muted)
       }
