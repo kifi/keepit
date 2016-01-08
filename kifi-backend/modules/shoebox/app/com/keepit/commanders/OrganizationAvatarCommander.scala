@@ -49,15 +49,15 @@ class OrganizationAvatarCommanderImpl @Inject() (
   }
 
   private def defaultOrgImages(orgId: Id[Organization]): Seq[OrganizationAvatar] = {
-    //hard coded detault image at https://djty7jcqog9qu.cloudfront.net/oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg
-    val imageHash = ImageHash("076fccc32247ae67bb75d48879230953")
+    //hard coded detault image at https://djty7jcqog9qu.cloudfront.net/oa/8ea954ccffeb8d21891af94ad02b9876_200x200-0x0-200x200_cs.png
+    val imageHash = ImageHash("8ea954ccffeb8d21891af94ad02b9876")
     Seq(
       OrganizationAvatar(organizationId = orgId,
         width = 100,
         height = 100,
         format = ImageFormat.JPG,
         kind = ProcessImageOperation.CropScale,
-        imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"),
+        imagePath = ImagePath("oa/8ea954ccffeb8d21891af94ad02b9876_1024x1024-0x0-100x100_cs.jpg"),
         source = ImageSource.Unknown,
         sourceFileHash = imageHash, sourceImageURL = None),
       OrganizationAvatar(organizationId = orgId,
@@ -65,7 +65,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
         height = 200,
         format = ImageFormat.JPG,
         kind = ProcessImageOperation.CropScale,
-        imagePath = ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"),
+        imagePath = ImagePath("oa/8ea954ccffeb8d21891af94ad02b9876_200x200-0x0-200x200_cs.png"),
         source = ImageSource.Unknown,
         sourceFileHash = imageHash, sourceImageURL = None))
   }
