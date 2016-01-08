@@ -515,6 +515,11 @@ var socketHandlers = {
       tellVisibleTabsNoticeCountIfChanged();
     }
   },
+  remove_notification: function (th) {
+    log('[socket:remove_notification]', th);
+    remove_notification(th);
+    tellVisibleTabsNoticeCountIfChanged();
+  },
   all_notifications_visited: function(id, time) {
     log('[socket:all_notifications_visited]', id, time);
     markAllThreadsRead(id, time);
