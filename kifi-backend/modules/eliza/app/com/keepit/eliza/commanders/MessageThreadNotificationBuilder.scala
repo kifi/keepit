@@ -9,7 +9,7 @@ import com.keepit.discussion.Message
 import com.keepit.eliza.model._
 import com.keepit.model.{ DeepLocator, Keep, NotificationCategory, User }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -102,19 +102,22 @@ object MessageThreadNotificationBuilder {
       lastMsgById: Option[Map[Id[Keep], Option[ElizaMessage]]] = None,
       mutedById: Option[Map[Id[Keep], Boolean]] = None,
       threadActivityById: Option[Map[Id[Keep], Seq[UserThreadActivity]]] = None,
-      msgCountById: Option[Map[Id[Keep], MessageCount]] = None)
+      msgCountById: Option[Map[Id[Keep], MessageCount]] = None,
+      basicUserMap: Option[Map[Id[User], BasicUser]] = None)
     case class BuildForKeep(
         thread: Option[MessageThread] = None,
         lastMsg: Option[Option[ElizaMessage]] = None,
         mutedById: Option[Boolean] = None,
         threadActivity: Option[Seq[UserThreadActivity]] = None,
-        msgCount: Option[MessageCount] = None) {
+        msgCount: Option[MessageCount] = None,
+        basicUserMap: Option[Map[Id[User], BasicUser]] = None) {
       def pluralize(keepId: Id[Keep]) = BuildForKeeps(
         thread.map(x => Map(keepId -> x)),
         lastMsg.map(x => Map(keepId -> x)),
         mutedById.map(x => Map(keepId -> x)),
         threadActivity.map(x => Map(keepId -> x)),
-        msgCount.map(x => Map(keepId -> x))
+        msgCount.map(x => Map(keepId -> x)),
+        basicUserMap
       )
     }
 
@@ -167,8 +170,10 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     }
     for {
       (threadsById, lastMsgById, mutedById, threadActivityById, msgCountById) <- infoFut
-      allUsers = threadsById.values.flatMap(_.allParticipants).toSet
-      basicUserByIdMap <- shoebox.getBasicUsers(allUsers.toSeq)
+      basicUserByIdMap <- precomputed.flatMap(_.basicUserMap).map(Future.successful).getOrElse {
+        val allUsers = threadsById.values.flatMap(_.allParticipants).toSet
+        shoebox.getBasicUsers(allUsers.toSeq)
+      }
     } yield lastMsgById.collect {
       case (keepId, Some(message)) =>
         val thread = threadsById(keepId)
