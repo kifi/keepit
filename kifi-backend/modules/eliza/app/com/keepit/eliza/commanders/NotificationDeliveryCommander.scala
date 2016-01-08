@@ -247,7 +247,7 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit =
-    sendToUser(userId, Json.arr("remove_thread", Keep.publicId(keepId)))
+    sendToUser(userId, Json.arr("remove_notification", Keep.publicId(keepId)))
 
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
