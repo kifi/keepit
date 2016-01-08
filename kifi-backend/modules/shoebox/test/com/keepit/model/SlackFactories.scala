@@ -85,7 +85,8 @@ object SlackChannelToLibraryFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
       slackChannelName = SlackChannelName(ra(10)),
-      libraryId = Id[Library](idx.incrementAndGet())
+      libraryId = Id[Library](idx.incrementAndGet()),
+      status = SlackIntegrationStatus.Off
     ))
   }
   case class PartialSlackChannelToLibrary(stl: SlackChannelToLibrary) {
@@ -109,7 +110,8 @@ object LibraryToSlackChannelFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
       slackChannelName = SlackChannelName(ra(10)),
-      libraryId = Id[Library](idx.incrementAndGet())
+      libraryId = Id[Library](idx.incrementAndGet()),
+      status = SlackIntegrationStatus.Off
     ))
   }
 
@@ -118,6 +120,7 @@ object LibraryToSlackChannelFactory {
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(lts = lts.copy(slackChannelName = SlackChannelName(cn)))
     def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))
+    def on() = this.copy(lts = lts.withStatus(SlackIntegrationStatus.On))
     def withStatus(newStatus: SlackIntegrationStatus) = this.copy(lts = lts.copy(status = newStatus))
   }
 

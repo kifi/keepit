@@ -117,7 +117,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, LibrarySpace.fromUserId(slackAccount.userId), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, LibrarySpace.fromUserId(slackAccount.userId), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get, status = SlackIntegrationStatus.On)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
         db.readWrite { implicit session =>
           val saved = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)

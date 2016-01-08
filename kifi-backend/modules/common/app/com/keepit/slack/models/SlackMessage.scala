@@ -22,8 +22,8 @@ object KifiSlackApp {
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
 }
 
-@json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
-  def compare(that: SlackMessageTimestamp) = value compare that.value
+@json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
+  def compare(that: SlackTimestamp) = value compare that.value
   def toDateTime: DateTime = Try {
     new DateTime(value.split('.').head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
   }.getOrElse(throw new Exception(s"Could not parse a date-time out of $value"))
@@ -136,7 +136,7 @@ case class SlackMessage(
   messageType: SlackMessageType,
   userId: SlackUserId,
   username: SlackUsername,
-  timestamp: SlackMessageTimestamp,
+  timestamp: SlackTimestamp,
   channel: SlackChannel,
   text: String,
   attachments: Seq[SlackAttachment],
@@ -147,7 +147,7 @@ object SlackMessage {
     (__ \ "type").format[SlackMessageType] and
     (__ \ "user").format[SlackUserId] and
     (__ \ "username").format[SlackUsername] and
-    (__ \ "ts").format[SlackMessageTimestamp] and
+    (__ \ "ts").format[SlackTimestamp] and
     (__ \ "channel").format[SlackChannel] and
     (__ \ "text").format[String] and
     (__ \ "attachments").formatNullable[Seq[SlackAttachment]].inmap[Seq[SlackAttachment]](_.getOrElse(Seq.empty), Some(_).filter(_.nonEmpty)) and

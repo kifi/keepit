@@ -102,7 +102,7 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes]): Future[Option[SlackMessageTimestamp]] = {
+  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes]): Future[Option[SlackTimestamp]] = {
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
         getTokenWithScopes(integration.id.get) match {
@@ -136,7 +136,7 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def doIngest(tokenWithScopes: SlackTokenWithScopes, integration: SlackChannelToLibrary): Future[Option[SlackMessageTimestamp]] = {
+  private def doIngest(tokenWithScopes: SlackTokenWithScopes, integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
@@ -154,7 +154,7 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackMessageTimestamp], Set[SlackMessage]) = {
+  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
@@ -215,7 +215,7 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackMessageTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)

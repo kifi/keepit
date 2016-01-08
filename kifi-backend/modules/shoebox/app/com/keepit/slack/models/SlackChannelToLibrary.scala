@@ -24,11 +24,11 @@ case class SlackChannelToLibrary(
   slackChannelId: Option[SlackChannelId],
   slackChannelName: SlackChannelName,
   libraryId: Id[Library],
-  status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
+  status: SlackIntegrationStatus,
   nextIngestionAt: Option[DateTime] = None,
   lastIngestingAt: Option[DateTime] = None,
   lastIngestedAt: Option[DateTime] = None,
-  lastMessageTimestamp: Option[SlackMessageTimestamp] = None)
+  lastMessageTimestamp: Option[SlackTimestamp] = None)
     extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with ModelWithMaybeCopy[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -62,7 +62,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
-  def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackMessageTimestamp)(implicit session: RWSession): Unit
+  def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackTimestamp)(implicit session: RWSession): Unit
   def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
   def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
@@ -103,7 +103,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     nextIngestionAt: Option[DateTime],
     lastIngestingAt: Option[DateTime],
     lastIngestedAt: Option[DateTime],
-    lastMessageTimestamp: Option[SlackMessageTimestamp]) = {
+    lastMessageTimestamp: Option[SlackTimestamp]) = {
     SlackChannelToLibrary(
       id,
       createdAt,
@@ -156,7 +156,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def nextIngestionAt = column[Option[DateTime]]("next_ingestion_at", O.Nullable)
     def lastIngestingAt = column[Option[DateTime]]("last_ingesting_at", O.Nullable)
     def lastIngestedAt = column[Option[DateTime]]("last_ingested_at", O.Nullable)
-    def lastMessageTimestamp = column[Option[SlackMessageTimestamp]]("last_message_timestamp", O.Nullable)
+    def lastMessageTimestamp = column[Option[SlackTimestamp]]("last_message_timestamp", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, userId, organizationId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
@@ -207,7 +207,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
           slackChannelName = request.slackChannelName,
-          libraryId = request.libraryId
+          libraryId = request.libraryId,
+          status = request.status
         )
         save(newIntegration)
     }
@@ -234,7 +235,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     (for (r <- rows if r.id.inSet(ids.toSet)) yield (r.updatedAt, r.lastIngestingAt)).update((now, lastIngestingAt))
   }
 
-  def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackMessageTimestamp)(implicit session: RWSession): Unit = {
+  def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackTimestamp)(implicit session: RWSession): Unit = {
     val now = clock.now()
     (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastMessageTimestamp)).update((now, Some(lastMessageTimestamp)))
   }

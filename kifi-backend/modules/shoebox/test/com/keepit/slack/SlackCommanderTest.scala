@@ -126,7 +126,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             val slackTeam = SlackTeamFactory.team()
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
 
             (user, lib, org, lts, stl)
@@ -165,7 +165,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             val slackTeam = SlackTeamFactory.team()
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
 
             (user, lib, lts, stl)
@@ -193,7 +193,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             val slackTeam = SlackTeamFactory.team()
 
             val stm = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
 
             (owner, member, org, lib, lts)
           }
