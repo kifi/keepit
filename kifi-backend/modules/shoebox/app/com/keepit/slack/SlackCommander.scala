@@ -431,7 +431,7 @@ class SlackCommanderImpl @Inject() (
     }
     (teamOpt, membershipOpt) match {
       case (Some(team), Some(membership)) if membership.token.isDefined && team.organizationId.isDefined =>
-        slackClient.getChannels(membership.token.get).map { channels =>
+        slackClient.getChannels(membership.token.get, excludeArchived = true).map { channels =>
           def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || integratedChannelIds.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
           channels.sortBy(_.createdAt).collect {
             case channel if !shouldBeIgnored(channel) =>
