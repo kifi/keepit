@@ -24,7 +24,7 @@ case class SlackChannelToLibrary(
   slackChannelId: Option[SlackChannelId],
   slackChannelName: SlackChannelName,
   libraryId: Id[Library],
-  status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
+  status: SlackIntegrationStatus,
   nextIngestionAt: Option[DateTime] = None,
   lastIngestingAt: Option[DateTime] = None,
   lastIngestedAt: Option[DateTime] = None,
@@ -207,7 +207,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
           slackChannelName = request.slackChannelName,
-          libraryId = request.libraryId
+          libraryId = request.libraryId,
+          status = request.status
         )
         save(newIntegration)
     }

@@ -85,7 +85,8 @@ object SlackChannelToLibraryFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
       slackChannelName = SlackChannelName(ra(10)),
-      libraryId = Id[Library](idx.incrementAndGet())
+      libraryId = Id[Library](idx.incrementAndGet()),
+      status = SlackIntegrationStatus.On
     ))
   }
   case class PartialSlackChannelToLibrary(stl: SlackChannelToLibrary) {
@@ -109,7 +110,8 @@ object LibraryToSlackChannelFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
       slackChannelName = SlackChannelName(ra(10)),
-      libraryId = Id[Library](idx.incrementAndGet())
+      libraryId = Id[Library](idx.incrementAndGet()),
+      status = SlackIntegrationStatus.On
     ))
   }
 
