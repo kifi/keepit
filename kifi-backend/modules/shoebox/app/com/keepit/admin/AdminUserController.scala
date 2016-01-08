@@ -22,6 +22,7 @@ import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -111,6 +112,7 @@ class AdminUserController @Inject() (
     activityEmailSender: ActivityFeedEmailSender,
     userIpAddressCommander: UserIpAddressCommander,
     userStatisticsCommander: UserStatisticsCommander,
+    slackTeamMembershipRepo: SlackTeamMembershipRepo,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -267,17 +269,22 @@ class AdminUserController @Inject() (
       (libs, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
+    val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
+      slackTeamMembershipRepo.getByUserId(userId)
+    }
+
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       contacts <- contactsF
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
+      slackInfo <- slackInfoF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
       Ok(html.admin.user(user, chatStats, keepCount, libs, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs))
+        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
   }
 

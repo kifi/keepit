@@ -1,3 +1,4 @@
+@import com.keepit.slack.models._
 @(user: User,
   userThreadStats: com.keepit.eliza.model.UserThreadStats,
   totalKeeps: Int,
@@ -17,7 +18,8 @@
   invitedBy: Seq[User],
   potentialOrganizations: Seq[Organization],
   ignoreForPotentialOrganizations: Boolean,
-  recommendedOrganizations: Seq[(Organization, Double)]
+  recommendedOrganizations: Seq[(Organization, Double)],
+  slackTeamMemberships: Seq[SlackTeamMembership]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -67,6 +69,7 @@
       </tr>
       <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
       <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
+      <tr><th>Slack Memberships</th><td>@adminHelper.slackMembershipsDisplay(slackTeamMemberships)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>
