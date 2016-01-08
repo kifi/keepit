@@ -34,7 +34,7 @@ object SlackDbColumnTypes {
 
   def timestamp(db: DataBaseComponent) = {
     import db.Driver.simple._
-    MappedColumnType.base[SlackMessageTimestamp, String](_.value, SlackMessageTimestamp(_))
+    MappedColumnType.base[SlackTimestamp, String](_.value, SlackTimestamp(_))
   }
 }
 
