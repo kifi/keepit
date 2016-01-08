@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.time._
-import com.keepit.discussion.{ Discussion, Message }
+import com.keepit.discussion.{ DiscussionFail, Discussion, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -121,7 +121,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       messageThreadRepo.getByKeepId(keepId)
     }.map(Future.successful).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
-        val csKeep = csKeeps.getOrElse(keepId, throw new Exception(s"Tried to create message thread for dead keep $keepId"))
+        val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie

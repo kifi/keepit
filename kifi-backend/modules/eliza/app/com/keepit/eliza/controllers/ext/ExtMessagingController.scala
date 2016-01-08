@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.ext
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionFail, Message }
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.{ ElizaThreadInfo, ElizaDiscussionCommander, MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
@@ -68,8 +68,9 @@ class ExtMessagingController @Inject() (
   }
 
   def sendMessageReplyAction(pubKeepId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    Keep.decodePublicId(pubKeepId) match {
-      case Success(keepId) =>
+    (for {
+      keepId <- Keep.decodePublicId(pubKeepId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+      message <- {
         val o = request.body
         val (text, source) = (
           (o \ "text").as[String].trim,
@@ -79,13 +80,14 @@ class ExtMessagingController @Inject() (
         contextBuilder += ("source", "extension")
         (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
         contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
-        discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build).map { message =>
-          Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
-        }
-      case Failure(error) => {
-        log.error(error.getMessage)
-        Future.successful(BadRequest("invalid_keep_id"))
+        discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build)
       }
+    } yield {
+      Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
+    }).recover {
+      case f: DiscussionFail =>
+        airbrake.notify(f)
+        f.asErrorResponse
     }
   }
 
