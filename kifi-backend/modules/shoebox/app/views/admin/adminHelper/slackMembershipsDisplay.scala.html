@@ -3,6 +3,6 @@
 
 <ul>
     @for( stm <- stms ) {
-        <li> @stm.slackUsername in stm.slackTeamName </li>
+        <li> @{"@" + stm.slackUsername.value} in @{stm.slackTeamName.value} </li>
     }
 </ul>
