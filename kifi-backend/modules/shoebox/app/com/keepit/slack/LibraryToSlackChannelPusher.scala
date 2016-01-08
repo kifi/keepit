@@ -91,7 +91,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   }
 
   def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
-    libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
+    libToChannelRepo.getActiveByLibrary(libId).filter(_.status == SlackIntegrationStatus.On).foreach { lts =>
       val updatedLts = lts.withNextPushAtLatest(when)
       if (updatedLts != lts) libToChannelRepo.save(updatedLts)
     }

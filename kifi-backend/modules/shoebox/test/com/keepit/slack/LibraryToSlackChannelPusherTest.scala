@@ -113,6 +113,20 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           1 === 1
         }
       }
+      "do not activate integrations that are turned off" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, lib, lts) = db.readWrite { implicit s =>
+            val owner = UserFactory.user().saved
+            val lib = LibraryFactory.library().withOwner(owner).saved
+            val lts = LibraryToSlackChannelFactory.lts().withLibrary(lib).saved
+            (owner, lib, lts)
+          }
+
+          db.readWrite { implicit s => inject[LibraryToSlackChannelRepo].save(lts.withStatus(SlackIntegrationStatus.Off)) }
+          libToSlackPusher.schedule(lib.id.get)
+          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(lts.id.get).status === SlackIntegrationStatus.Off }
+        }
+      }
     }
     "format messages properly" in {
       "push the right message depending on the number of new keeps" in {
