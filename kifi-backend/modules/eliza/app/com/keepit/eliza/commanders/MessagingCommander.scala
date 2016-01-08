@@ -332,7 +332,7 @@ class MessagingCommander @Inject() (
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
     val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val (numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
+      val MessageCount(numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
       val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }
@@ -357,25 +357,20 @@ class MessagingCommander @Inject() (
     }
 
     // update user thread of the sender again, might be deprecated
-    (from.asUser, originalAuthorOpt) match {
-      case (Some(sender), Some(originalAuthor)) =>
-        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
-      case _ =>
+    for (sender <- from.asUser; originalAuthor <- originalAuthorOpt) {
+      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
 
     // update non user threads of non user recipients
     notificationDeliveryCommander.updateEmailParticipantThreads(thread, message)
-    if (isNew.exists(identity)) { notificationDeliveryCommander.notifyEmailParticipants(thread) }
+    if (isNew.contains(true)) { notificationDeliveryCommander.notifyEmailParticipants(thread) }
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
-      (nUriIdOpt match {
-        case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url.toString(), contentWanted = true).map(_.id.get) //Note, this also needs to include canonical/og when we have detached threads
-      }) foreach { nUriId =>
-        db.readWrite { implicit session =>
-          messageRepo.updateUriId(message, nUriId)
-        }
+      nUriIdOpt.map(Future.successful).getOrElse {
+        shoebox.internNormalizedURI(url.toString(), contentWanted = true).map(_.id.get) //Note, this also needs to include canonical/og when we have detached threads
+      }.foreach { nUriId =>
+        db.readWrite { implicit s => messageRepo.updateUriId(message, nUriId) }
       }
     }
     messagingAnalytics.sentMessage(from, message, thread, isNew, context)
