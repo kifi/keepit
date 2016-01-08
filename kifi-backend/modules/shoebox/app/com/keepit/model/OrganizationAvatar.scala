@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.db.{ Id, Model, State, States }
+import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
@@ -12,19 +12,20 @@ import play.api.libs.json._
 import scala.concurrent.duration.Duration
 
 case class OrganizationAvatar(
-    id: Option[Id[OrganizationAvatar]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE,
-    organizationId: Id[Organization],
-    width: Int,
-    height: Int,
-    format: ImageFormat,
-    kind: ProcessImageOperation,
-    imagePath: ImagePath,
-    source: ImageSource,
-    sourceFileHash: ImageHash,
-    sourceImageURL: Option[String]) extends BaseImage with Model[OrganizationAvatar] {
+  id: Option[Id[OrganizationAvatar]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE,
+  organizationId: Id[Organization],
+  width: Int,
+  height: Int,
+  format: ImageFormat,
+  kind: ProcessImageOperation,
+  imagePath: ImagePath,
+  source: ImageSource,
+  sourceFileHash: ImageHash,
+  sourceImageURL: Option[String])
+    extends BaseImage with Model[OrganizationAvatar] with ModelWithState[OrganizationAvatar] {
   def isOriginal = kind == ProcessImageOperation.Original
 
   def dimensions = ImageSize(width, height)
