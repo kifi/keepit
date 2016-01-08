@@ -24,7 +24,7 @@ case class LibraryToSlackChannel(
   slackChannelId: Option[SlackChannelId],
   slackChannelName: SlackChannelName,
   libraryId: Id[Library],
-  status: SlackIntegrationStatus,
+  status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
   lastProcessedAt: Option[DateTime] = None,
   lastProcessedKeep: Option[Id[KeepToLibrary]] = None,
   lastProcessingAt: Option[DateTime] = None,
@@ -200,7 +200,8 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     val now = clock.now
     getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
-        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName).withNextPushAt(now)
+        val updatedStatus = if (integration.status == SlackIntegrationStatus.On) integration.status else request.status
+        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName).withStatus(updatedStatus)
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>
@@ -211,10 +212,8 @@ class LibraryToSlackChannelRepoImpl @Inject() (
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
           slackChannelName = request.slackChannelName,
-          libraryId = request.libraryId,
-          status = request.status,
-          nextPushAt = Some(now)
-        )
+          libraryId = request.libraryId
+        ).withStatus(request.status)
         save(newIntegration)
     }
   }
