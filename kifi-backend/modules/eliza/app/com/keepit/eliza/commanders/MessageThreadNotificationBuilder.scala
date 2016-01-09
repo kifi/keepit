@@ -107,14 +107,14 @@ object MessageThreadNotificationBuilder {
     case class BuildForKeep(
         thread: Option[MessageThread] = None,
         lastMsg: Option[Option[ElizaMessage]] = None,
-        mutedById: Option[Boolean] = None,
+        muted: Option[Boolean] = None,
         threadActivity: Option[Seq[UserThreadActivity]] = None,
         msgCount: Option[MessageCount] = None,
         basicUserMap: Option[Map[Id[User], BasicUser]] = None) {
       def pluralize(keepId: Id[Keep]) = BuildForKeeps(
         thread.map(x => Map(keepId -> x)),
         lastMsg.map(x => Map(keepId -> x)),
-        mutedById.map(x => Map(keepId -> x)),
+        muted.map(x => Map(keepId -> x)),
         threadActivity.map(x => Map(keepId -> x)),
         msgCount.map(x => Map(keepId -> x)),
         basicUserMap
