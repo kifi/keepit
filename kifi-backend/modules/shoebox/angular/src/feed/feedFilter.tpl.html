@@ -1,0 +1,10 @@
+<div>
+  <div class="custom-select kf-feed-filter-select kf-feed-filter-display">
+    <select ng-options="option.text for option in filter.options" ng-model="filter.selected" ng-change="updateSelect()"></select>
+  </div>
+  <div class="custom-select kf-feed-filter-select kf-feed-filter-hidden">
+    <select>
+      <option class="kf-feed-filter-hidden-option" ng-repeat="option in [filter.selected]"></option>
+    </select>
+  </div>
+</div>
