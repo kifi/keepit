@@ -202,8 +202,8 @@ class MessageThreadNotificationBuilderImpl @Inject() (
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
         val unseenAuthors: Int = lastSeenOpt match {
-          case Some(lastSeen) => authorActivityInfos.count(_.lastActive.get.isAfter(lastSeen))
-          case None => authorActivityInfos.length
+          case Some(lastSeen) => authorActivityInfos.count(uta => uta.userId != userId && uta.lastActive.get.isAfter(lastSeen))
+          case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> MessageThreadNotification(
           message = message,
