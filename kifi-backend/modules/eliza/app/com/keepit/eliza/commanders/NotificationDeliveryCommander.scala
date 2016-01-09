@@ -233,7 +233,7 @@ class NotificationDeliveryCommander @Inject() (
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
     }
 
-    if (!muted) {
+    if (!message.from.asUser.contains(userId) && !muted) {
       val sender = messageWithBasicUser.user match {
         case Some(BasicUserLikeEntity.user(bu)) => bu.firstName + ": "
         case Some(BasicUserLikeEntity.nonUser(bnu)) => bnu.firstName.getOrElse(bnu.id) + ": "
