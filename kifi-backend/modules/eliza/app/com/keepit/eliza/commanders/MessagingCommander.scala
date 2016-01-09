@@ -348,17 +348,8 @@ class MessagingCommander @Inject() (
       } ++ basicNonUserParticipants
     )
 
-    val usersToNotify = from match {
-      case MessageSender.User(id) => thread.allParticipantsExcept(id)
-      case _ => thread.allParticipants
-    }
-    usersToNotify.foreach { userId =>
+    thread.allParticipants.foreach { userId =>
       notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
-    }
-
-    // update user thread of the sender again, might be deprecated
-    for (sender <- from.asUser; originalAuthor <- originalAuthorOpt) {
-      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
     }
 
     // update non user threads of non user recipients
