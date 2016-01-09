@@ -31,6 +31,7 @@ var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'
 var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var firefoxScriptModuleFiles = ['**/scripts/**/*.js', '!scripts/lib/jquery.js', '!scripts/lib/mustache.js', '!scripts/lib/underscore.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
   'main.js',
@@ -108,7 +109,7 @@ function wrapWithModuleCode(code, filename, relative) {
 
 var firefoxInjectionModule = lazypipe()
   .pipe(function () {
-    return gulpif(['**/scripts/**/*.js'], map(function (code, filename) {
+    return gulpif(firefoxScriptModuleFiles, map(function (code, filename) {
       if (code.toString().indexOf('api.identify(') !== -1) {
         return code;
       } else {
@@ -119,7 +120,7 @@ var firefoxInjectionModule = lazypipe()
 
 var firefoxAdapterInjectionModule = lazypipe()
   .pipe(function () {
-    return gulpif(['**/scripts/**/*.js'], map(function (code, filename) {
+    return gulpif(firefoxScriptModuleFiles, map(function (code, filename) {
       var codeString = code.toString();
       if (codeString.indexOf('@module') !== -1) {
         return wrapWithModuleCode(explicitGlobals(codeString), filename, 'adapters/firefox/data');
