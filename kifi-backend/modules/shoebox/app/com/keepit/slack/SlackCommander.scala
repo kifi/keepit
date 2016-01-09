@@ -335,7 +335,6 @@ class SlackCommanderImpl @Inject() (
                 case None => Future.successful(())
                 case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
               }
-              teamInfo.emailDomains.foreach { domain => orgDomainCommander.addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, domain.value)) }
               val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
               futureAvatar.flatMap { _ =>
                 Future.fromTry(connectedTeamMaybe).flatMap { _ =>
