@@ -46,7 +46,8 @@ class ShoeboxTasksPlugin @Inject() (
       libToSlackPusher.findAndPushUpdatesForRipestLibraries()
     }
 
-    scheduleTaskOnOneMachine(system, 10 minutes, 1 hour, "slack digests") {
+    // TODO(ryan): make these way slower, no need to run this that often
+    scheduleTaskOnOneMachine(system, 5 minutes, 1 minute, "slack digests") {
       slackCommander.pushDigestNotificationsForRipeTeams()
     }
 
