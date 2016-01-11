@@ -47,7 +47,7 @@ class ShoeboxTasksPlugin @Inject() (
     }
 
     scheduleTaskOnOneMachine(system, 10 minutes, 1 hour, "slack digests") {
-      libToSlackPusher.findAndPushUpdatesForRipestLibraries()
+      slackCommander.pushDigestNotificationsForRipeTeams()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {

@@ -30,6 +30,7 @@ case class SlackTeam(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamStates.ACTIVE
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
+  def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = time)
 }
 

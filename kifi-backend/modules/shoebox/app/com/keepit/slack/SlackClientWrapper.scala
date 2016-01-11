@@ -40,6 +40,7 @@ trait SlackClientWrapper {
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]]
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
+  def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]]
 }
 
 @Singleton
@@ -148,6 +149,18 @@ class SlackClientWrapperImpl @Inject() (
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
     slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
+  }
+
+  def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]] = {
+    val tokens = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeam(teamId).flatMap(_.token)
+    }
+    FutureHelpers.foldLeftUntil(tokens)(Option.empty[SlackChannelId]) {
+      case (_, token) => getChannels(token).map { channels =>
+        val generalChannelOpt = channels.find(_.channelName == SlackChannelName("#general")).map(_.channelId)
+        (generalChannelOpt, generalChannelOpt.isDefined)
+      }
+    }
   }
 
   private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {

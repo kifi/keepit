@@ -496,17 +496,26 @@ class SlackCommanderImpl @Inject() (
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createSlackDigest(team).map(describeDigest) }
-    val pushOpt = for {
-      msg <- msgOpt
-      generalChannel <- team.generalChannelId
-    } yield {
-      slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
-        case Success(_: Unit) => db.readWrite { implicit s =>
-          slackTeamRepo.save(slackTeamRepo.get(team.id.get).withLastDigestNotificationAt(now))
+    val generalChannelFut = team.generalChannelId match {
+      case Some(channelId) => Future.successful(Some(channelId))
+      case None => slackClient.getGeneralChannelId(team.slackTeamId)
+    }
+    generalChannelFut.flatMap { generalChannelOpt =>
+      val pushOpt = for {
+        msg <- msgOpt
+        generalChannel <- generalChannelOpt
+      } yield {
+        slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
+          case Success(_: Unit) =>
+            db.readWrite { implicit s =>
+              slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
+            }
+            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Pushed a digest to", team.slackTeamName.value)))
+            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, msg)
         }
       }
+      pushOpt.getOrElse(Future.successful(Unit))
     }
-    pushOpt.getOrElse(Future.successful(Unit))
   }
 }
 
