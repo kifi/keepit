@@ -233,32 +233,26 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep], authTokenOpt: Option[String]) = WebAppPage.async { implicit request =>
-    val experiments = request match {
-      case ur: UserRequest[_] => ur.experiments
-      case _ => Set.empty[UserExperimentType]
-    }
-    if (experiments.contains(UserExperimentType.ADMIN)) {
-      Keep.decodePublicId(pubId) match {
-        case Failure(ex) => Future.successful(notFound(request))
-        case Success(keepId) => {
-          val hasShoeboxPermission = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP))
+    Keep.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(notFound(request))
+      case Success(keepId) => {
+        val hasShoeboxPermission = db.readOnlyReplica(implicit s => permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP))
 
-          val canSeeKeepFut = {
-            if (!hasShoeboxPermission && authTokenOpt.isDefined) {
-              eliza.keepHasThreadWithAccessToken(keepId, authTokenOpt.get)
-            } else Future.successful(hasShoeboxPermission)
-          }
+        val canSeeKeepFut = {
+          if (!hasShoeboxPermission && authTokenOpt.isDefined) {
+            eliza.keepHasThreadWithAccessToken(keepId, authTokenOpt.get)
+          } else Future.successful(hasShoeboxPermission)
+        }
 
-          canSeeKeepFut.map { canSeeKeep =>
-            val keepOpt = {
-              if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
-              else None
-            }
-            keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
+        canSeeKeepFut.map { canSeeKeep =>
+          val keepOpt = {
+            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
+            else None
           }
+          keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
         }
       }
-    } else Future.successful(notFound(request))
+    }
   }
 
   private def lookupUser(handle: Handle) = {

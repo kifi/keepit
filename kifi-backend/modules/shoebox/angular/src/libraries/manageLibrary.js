@@ -42,7 +42,6 @@ angular.module('kifi')
         scope.currentPageOrigin = '';
         scope.showError = false;
         scope.me = profileService.me;
-        scope.hasCommentExperiment = profileService.hasExperiment('keep_comments');
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null

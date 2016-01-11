@@ -32,9 +32,9 @@ class DeepLinkRouterImpl @Inject() (
     implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
 
   def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] = {
-    lazy val redirectToKeepPage = request match { // only go to keep page if user doesn't have extension (and admin exp for now)
-      case ur: UserRequest[_] => ur.experiments.contains(UserExperimentType.ADMIN) && (ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate))
-      case _ => false
+    lazy val redirectToKeepPage = request match {
+      case ur: UserRequest[_] => ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate)
+      case _ => true
     }
 
     (data \ "t").asOpt[String].flatMap {

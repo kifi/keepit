@@ -288,17 +288,17 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // keep pages
         val keepPath = inject[PathCommander].pathForKeep(keep)
-        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
 
-        actionsHelper.setUser(user2, Set(UserExperimentType.ADMIN))
+        actionsHelper.setUser(user2)
         route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
 
         libraryCommander.modifyLibrary(lib.id.get, lib.ownerId, LibraryModifications(visibility = Some(LibraryVisibility.SECRET)))
-        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
 
-        actionsHelper.setUser(user2, Set(UserExperimentType.ADMIN))
+        actionsHelper.setUser(user2)
         route(FakeRequest("GET", "/"+keepPath.relative)) must be404
 
 
@@ -345,7 +345,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         val deepLinkKeep = keep // see keep page tests above
         val kid = Keep.publicId(deepLinkKeep.id.get)
         val uriExtId = db.readOnlyMaster(implicit s => uriRepo.get(keep.uriId).externalId)
-        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        actionsHelper.setUser(user1)
         val request = FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22m%22%2C%22uri%22%3A%22${uriExtId}%22%2C%22id%22%3A%22${kid.id}%22%7D")
         contentAsString(route(request).get) must contain(keep.path.relative)
       }
