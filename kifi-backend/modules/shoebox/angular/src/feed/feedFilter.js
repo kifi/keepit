@@ -7,7 +7,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'feed/feedFilter.tpl.html',
-      replace: false,
+      replace: true,
       scope: {
         filter: '=',
         updateCallback: '&'
