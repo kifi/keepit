@@ -515,7 +515,7 @@ class SlackCommanderImpl @Inject() (
         inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Failed to get the general channel for team ${team.slackTeamId} because ${f.getMessage}")))
     }
     generalChannelFut.flatMap { generalChannelOpt =>
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"General channel for team ${team.id.get} is $generalChannelOpt")))
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Team ${team.id.get} has general $generalChannelOpt. Trying to push a digest to it: ${msgOpt.map(_.text)}")))
       val pushOpt = for {
         msg <- msgOpt
         generalChannel <- generalChannelOpt
@@ -526,7 +526,8 @@ class SlackCommanderImpl @Inject() (
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
             inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Pushed a digest to", team.slackTeamName.value)))
-            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, msg)
+          case Failure(fail) =>
+            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)))
         }
       }
       pushOpt.getOrElse(Future.successful(Unit))
