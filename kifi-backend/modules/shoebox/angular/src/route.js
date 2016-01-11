@@ -271,7 +271,7 @@ angular.module('kifi')
         controller: 'UserProfileFollowersCtrl'
       })
       .state('keepPage', {
-        url: '/k/:title/:pubId',
+        url: '/k/:title/:pubId?authToken',
         templateUrl: 'keep/keepPage.tpl.html',
         controller: 'KeepPageCtrl'
       })

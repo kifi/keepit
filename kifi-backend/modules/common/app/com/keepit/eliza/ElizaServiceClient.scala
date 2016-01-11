@@ -356,6 +356,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
     call(Eliza.internal.keepHasAccessToken(keepId, accessToken)).map { response =>
+      log.info(s"[keepAccessToken] keepId=$keepId, accessToken=$accessToken, hasToken=${(response.json \ "hasToken").as[Boolean]}")
       (response.json \ "hasToken").as[Boolean]
     }
   }

@@ -68,7 +68,7 @@ angular.module('kifi')
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId&filterKind=:filterKind&filterId=:filterId', 60),
 
-      getKeep: get(shoebox, '/keeps/:id'),
+      getKeep: get(shoebox, '/keeps/:id?authToken=:authToken'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),
       addKeepsToLibrary: post(shoebox, '/libraries/:id/keeps'),
       copyKeepsToLibrary: post(shoebox, '/libraries/copy'),
