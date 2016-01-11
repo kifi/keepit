@@ -76,12 +76,16 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
-    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recoverWith {
-      // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
-      // and that swallows the stack trace. This hack will manually expose the stack trace
-      case boxFail: java.util.concurrent.ExecutionException => Future.failed(new Exception(boxFail.getCause.getStackTrace.toList.mkString("\n")))
-    }.recover {
-      case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
+    FutureHelpers.accumulateRobustly(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).imap { results =>
+      results.collect {
+        // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
+        // and that swallows the stack trace. This hack will manually expose the stack trace
+        case (lib, Left(boxFail: java.util.concurrent.ExecutionException)) =>
+          airbrake.notify(boxFail.getCause.getStackTrace.toList.mkString("\n"))
+        case (lib, Left(fail)) =>
+          airbrake.notify(s"Pushing slack updates to library $lib failed because of $fail")
+      }
+      Unit
     }
   }
 
