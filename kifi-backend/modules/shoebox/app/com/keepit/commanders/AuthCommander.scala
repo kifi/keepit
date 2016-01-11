@@ -307,16 +307,6 @@ class AuthCommander @Inject() (
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
   }
 
-  def fillUserProfile(provider: IdentityProvider, oauth2Info: OAuth2Info): Try[SocialUser] =
-    Try {
-      provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info)))
-    }
-
-  def fillUserProfile(provider: IdentityProvider, oauth1Info: OAuth1Info): Try[SocialUser] =
-    Try {
-      provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth1Info = Some(oauth1Info)))
-    }
-
   def getUserIdentity(identityId: IdentityId): Option[UserIdentity] = UserService.find(identityId).map {
     case userIdentity: UserIdentity => userIdentity
     case unexpectedIdentity => throw new IllegalStateException(s"Unexpected identity: $unexpectedIdentity")
