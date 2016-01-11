@@ -44,6 +44,9 @@ class DiscussionCommanderImpl @Inject() (
     }
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+      db.readWrite { implicit s =>
+        keepCommander.addUsersToKeep(keepId, userId, Set(userId))
+      }
       eliza.sendMessageOnKeep(userId, text, keepId)
     }
   }
