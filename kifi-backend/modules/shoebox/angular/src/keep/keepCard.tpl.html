@@ -156,8 +156,8 @@
           </div>
         </div>
       </div>
-      <div ng-if="hasKeepCommentsPermission && galleryView" kf-keep-comments keep="keep"></div>
-      <span ng-if="hasKeepCommentsPermission && !galleryView && keep.discussion.numMessages"
+      <div ng-if="galleryView" kf-keep-comments keep="keep"></div>
+      <span ng-if="!galleryView && keep.discussion.numMessages"
             class="kf-keep-card-view-comments kf-link"
             ng-bind-template="View Comments ({{keep.discussion.numMessages}})"
             ng-click="toggleExpandCard()"></span>

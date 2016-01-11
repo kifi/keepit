@@ -21,7 +21,7 @@ angular.module('kifi')
             $scope.me.id === ($scope.keep.user && $scope.keep.user.id) ||
             $scope.me.id === ($scope.keep.library && $scope.keep.library.owner && $scope.keep.library.owner.id)
           );
-          $scope.showKeepPageLink = $scope.keep.path && !$state.is('keepPage') && profileService.hasExperiment('keep_comments');
+          $scope.showKeepPageLink = $scope.keep.path && !$state.is('keepPage');
 
           $scope.openLookHere = function(event) {
             event.preventDefault();
