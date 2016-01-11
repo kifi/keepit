@@ -72,6 +72,7 @@ class SlackCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  attributionRepo: KeepSourceAttributionRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
@@ -455,8 +456,11 @@ class SlackCommanderImpl @Inject() (
   }
 
   def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
+    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Scheduled plugin: pushing digest notifs")))
     val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications)
+      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications) tap { teams =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("The ripe teams are: " + teams.map(_.id.get))))
+      }
     }
     for {
       ripeTeams <- ripeTeamsFut
@@ -465,15 +469,20 @@ class SlackCommanderImpl @Inject() (
   }
 
   private def createSlackDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
+    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Creating slack digest for team ${slackTeam.slackTeamId}")))
     for {
       org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
       numIngestedKeepsByLibrary = {
-        val librariesIngestedInto = libRepo.getActiveByIds(channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).map(_.libraryId).toSet)
+        val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId)
+        val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
+        val librariesIngestedInto = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
         librariesIngestedInto.map {
           case (libId, lib) =>
             val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
-            val newKeeps = keepRepo.getByIds(newKeepIds).values.toList
-            val numIngestedKeeps = newKeeps.count(_.source == KeepSource.slack)
+            val newSlackKeeps = keepRepo.getByIds(newKeepIds).values.filter(_.source == KeepSource.slack).map(_.id.get).toSet
+            val numIngestedKeeps = attributionRepo.getByKeepIds(newSlackKeeps).values.collect {
+              case SlackAttribution(msg) if teamChannelIds.contains(msg.channel.id) => 1
+            }.sum
             lib -> numIngestedKeeps
         }
       }
@@ -494,6 +503,7 @@ class SlackCommanderImpl @Inject() (
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
+    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Pushing digest notif for team ${team.id.get}")))
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createSlackDigest(team).map(describeDigest) }
     val generalChannelFut = team.generalChannelId match {
@@ -501,6 +511,7 @@ class SlackCommanderImpl @Inject() (
       case None => slackClient.getGeneralChannelId(team.slackTeamId)
     }
     generalChannelFut.flatMap { generalChannelOpt =>
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"[RPB-2016-01-11] General channel for team ${team.id.get} is $generalChannelOpt")))
       val pushOpt = for {
         msg <- msgOpt
         generalChannel <- generalChannelOpt
