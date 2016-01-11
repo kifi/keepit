@@ -73,7 +73,7 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
     }
     FutureHelpers.exists(slackTeamMembers) { slackUserId =>
-      pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel, msg).map(_ => true)
+      pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel, msg).map(_ => true).recover { case f => false }
     }.map(_ => Unit)
   }
 
@@ -110,7 +110,7 @@ class SlackClientWrapperImpl @Inject() (
     FutureHelpers.doUntilAttempts {
       val workingToken = db.readOnlyMaster { implicit s =>
         slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
-          case stm if stm.token.isDefined && stm.scopes.contains(SlackAuthScope.ChatWriteBot) => stm.token.get
+          case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
         }
       }
       workingToken match {
