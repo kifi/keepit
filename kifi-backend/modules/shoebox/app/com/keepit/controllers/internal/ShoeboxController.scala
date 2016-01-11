@@ -86,6 +86,7 @@ class ShoeboxController @Inject() (
   organizationInfoCommander: OrganizationInfoCommander,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
+  discussionCommander: DiscussionCommander,
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
@@ -617,9 +618,17 @@ class ShoeboxController @Inject() (
     val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), input.creator, libraryOpt = None, source = KeepSource.discussion)
     val keep = internResponse.newKeeps.head
     db.readWrite { implicit s =>
-      input.users.foreach { uid => ktuCommander.internKeepInUser(keep, uid, input.creator) }
+      keepCommander.persistKeep(keep.withParticipants(input.users))
     }
     val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).values.head
     Ok(Json.toJson(csKeep))
+  }
+
+  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
+    val users = (request.body \ "users").as[Set[Id[User]]]
+    db.readWrite { implicit s =>
+      keepCommander.addUsersToKeep(keepId, adderId, users)
+    }
+    Ok
   }
 }

@@ -74,6 +74,7 @@ trait KeepCommander {
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
@@ -668,12 +669,20 @@ class KeepCommanderImpl @Inject() (
 
     val keep = keepRepo.save(k)
 
-    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
+    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, userId) }
 
     val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep
+  }
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+    val oldKeep = keepRepo.get(keepId)
+    val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
+
+    newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
+
+    newKeep
   }
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
     val keep = keepRepo.getNoCache(keepId)
