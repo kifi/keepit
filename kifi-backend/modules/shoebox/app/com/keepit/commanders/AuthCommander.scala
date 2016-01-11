@@ -321,19 +321,6 @@ class AuthCommander @Inject() (
     getUserIdentity(IdentityHelpers.toIdentityId(address)).exists(_.userId.isDefined)
   }
 
-  def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(provider.id)) match {
-      case None =>
-        log.warn(s"[exchangeLongTermToken(${provider.id})] provider not found")
-        Future.successful(oauth2Info)
-      case Some(oauthProvider) =>
-        oauthProvider.exchangeLongTermToken(oauth2Info).map { tokenInfo =>
-          log.info(s"[exchangeLongTermToken(${provider.id}) orig=${oauth2Info.accessToken.take(5)}... new=${tokenInfo.accessToken} isIdentical=${tokenInfo.accessToken.token.equals(oauth2Info.accessToken)}")
-          OAuth2TokenInfo.toOAuth2Info(tokenInfo)
-        }
-    }
-  }
-
   def signupWithTrustedSocialUser(providerName: String, socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
     val userIdentity = saveUserIdentity(socialUser)
     val (payload, newSession) = userIdentity.userId match {
