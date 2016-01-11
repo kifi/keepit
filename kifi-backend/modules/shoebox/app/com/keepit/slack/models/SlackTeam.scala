@@ -23,6 +23,7 @@ case class SlackTeam(
   slackTeamName: SlackTeamName,
   organizationId: Option[Id[Organization]],
   lastChannelCreatedAt: Option[SlackTimestamp] = None,
+  generalChannelId: Option[SlackChannelId],
   lastDigestNotificationAt: DateTime = currentDateTime)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
@@ -52,6 +53,7 @@ class SlackTeamRepoImpl @Inject() (
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackTeamNameColumnType = SlackDbColumnTypes.teamName(db)
   implicit val slackTimestampColumnType = SlackDbColumnTypes.timestamp(db)
+  implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
 
   private def teamFromDbRow(id: Option[Id[SlackTeam]] = None,
     createdAt: DateTime = currentDateTime,
@@ -61,6 +63,7 @@ class SlackTeamRepoImpl @Inject() (
     slackTeamName: SlackTeamName,
     organizationId: Option[Id[Organization]],
     lastChannelCreatedAt: Option[SlackTimestamp],
+    generalChannelId: Option[SlackChannelId],
     lastDigestNotificationAt: DateTime) = {
     SlackTeam(
       id,
@@ -71,6 +74,7 @@ class SlackTeamRepoImpl @Inject() (
       slackTeamName,
       organizationId,
       lastChannelCreatedAt,
+      generalChannelId,
       lastDigestNotificationAt
     )
   }
@@ -84,6 +88,7 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.slackTeamName,
     slackTeam.organizationId,
     slackTeam.lastChannelCreatedAt,
+    slackTeam.generalChannelId,
     slackTeam.lastDigestNotificationAt
   ))
 
@@ -94,8 +99,9 @@ class SlackTeamRepoImpl @Inject() (
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def lastChannelCreatedAt = column[Option[SlackTimestamp]]("last_channel_created_at", O.Nullable)
+    def generalChannelId = column[Option[SlackChannelId]]("general_channel_id", O.Nullable)
     def lastDigestNotificationAt = column[DateTime]("last_digest_notification_at", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, lastDigestNotificationAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
@@ -114,7 +120,7 @@ class SlackTeamRepoImpl @Inject() (
         val updatedTeam = team.withName(identity.teamName)
         if (team == updatedTeam) team else save(updatedTeam)
       case inactiveTeamOpt =>
-        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = identity.teamId, slackTeamName = identity.teamName, organizationId = None)
+        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = identity.teamId, slackTeamName = identity.teamName, organizationId = None, generalChannelId = None)
         save(newTeam)
     }
   }

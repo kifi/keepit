@@ -494,7 +494,19 @@ class SlackCommanderImpl @Inject() (
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
-    ???
+    val now = clock.now
+    val msgOpt = db.readOnlyMaster { implicit s => createSlackDigest(team).map(describeDigest) }
+    val pushOpt = for {
+      msg <- msgOpt
+      generalChannel <- team.generalChannelId
+    } yield {
+      slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
+        case Success(_: Unit) => db.readWrite { implicit s =>
+          slackTeamRepo.save(slackTeamRepo.get(team.id.get).withLastDigestNotificationAt(now))
+        }
+      }
+    }
+    pushOpt.getOrElse(Future.successful(Unit))
   }
 }
 
