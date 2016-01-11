@@ -108,7 +108,7 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], authTokenOpt: Option[String]) = UserAction.async { request =>
+  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], authTokenOpt: Option[String]) = MaybeUserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
       case Failure(ex) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)

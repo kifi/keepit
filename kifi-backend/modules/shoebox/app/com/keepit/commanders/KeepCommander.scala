@@ -233,20 +233,22 @@ class KeepCommanderImpl @Inject() (
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-      ) match {
-          case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
-          case Some(keep) => {
-            val canViewShoebox = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-            val canViewFut = {
-              if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
-              else Future.successful(canViewShoebox)
-            }
-            canViewFut.flatMap { canView =>
-              if (canView) Future.successful(keep)
-              else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
-            }
-          }
+      )
+    } match {
+      case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
+      case Some(keep) => {
+        val canViewShoebox = db.readOnlyReplica { implicit s =>
+          permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
         }
+        val canViewFut = {
+          if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
+          else Future.successful(canViewShoebox)
+        }
+        canViewFut.flatMap { canView =>
+          if (canView) Future.successful(keep)
+          else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+        }
+      }
     }
 
     keepFut.flatMap { keep =>
