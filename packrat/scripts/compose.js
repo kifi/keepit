@@ -3,6 +3,7 @@
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
 // @require scripts/friend_search.js
+// @require scripts/send_chooser.js
 // @require scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
 // @require scripts/snap.js
@@ -10,17 +11,7 @@
 k.compose = k.compose || (function() {
   'use strict';
 
-  var KEY_PREFIX = MOD_KEYS.c + '-';
-
   var $forms = $();
-  var enterToSend;
-
-  function updateKeyTip($form) {
-    if (enterToSend != null) {
-      $form.find('.kifi-compose-tip').attr('data-prefix', enterToSend ? '' : KEY_PREFIX);
-      $form.find('.kifi-compose-tip-alt').attr('data-prefix', enterToSend ? KEY_PREFIX : '');
-    }
-  }
 
   function saveDraft($form, $to, editor, trackData) {
     if ($form.is($forms) && !$form.data('submitted')) {
@@ -251,7 +242,7 @@ k.compose = k.compose || (function() {
     }
 
     $form.keydown(function (e) {
-      if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
+      if (e.which === 13 && !e.shiftKey && !e.altKey && !sendChooser.enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
         e.preventDefault();
         submit(e);
       }
@@ -323,41 +314,9 @@ k.compose = k.compose || (function() {
         .layout()
         .addClass('kifi-showing');
       }
-    })
-    .on('mousedown', '.kifi-compose-tip', function (e) {
-      if (e.originalEvent.isTrusted === false) return;
-      e.preventDefault();
-      var $tip = $(this);
-      var $alt = $('<span class="kifi-compose-tip-alt" data-prefix="' + (enterToSend ? KEY_PREFIX : '') + '">' + $tip[0].firstChild.textContent + '</span>')
-        .css({'min-width': $tip.outerWidth(), 'visibility': 'hidden'})
-        .hover(function () {
-          this.classList.add('kifi-hover');
-        }, function () {
-          this.classList.remove('kifi-hover');
-        });
-      var $menu = $('<span class="kifi-compose-tip-menu"/>').append($alt).insertAfter($tip);
-      $tip.css('min-width', $alt.outerWidth()).addClass('kifi-active');
-      $alt.css('visibility', '').mouseup(hide.bind(null, true));
-      document.addEventListener('mousedown', docMouseDown, true);
-      function docMouseDown(e) {
-        hide($alt[0].contains(e.target));
-        if ($tip[0].contains(e.target)) {
-          e.stopPropagation();
-        }
-        e.preventDefault();
-      }
-      function hide(toggle) {
-        document.removeEventListener('mousedown', docMouseDown, true);
-        $tip.removeClass('kifi-active');
-        $menu.remove();
-        if (toggle) {
-          enterToSend = !enterToSend;
-          log('[enterToSend]', enterToSend);
-          updateKeyTip($forms);
-          api.port.emit('set_enter_to_send', enterToSend);
-        }
-      }
     });
+
+    var sendChooser = k.sendChooser($form.find('.kifi-compose-send-chooser'));
 
     $form.find('.kifi-compose-submit')
     .click(function (e) {
@@ -378,9 +337,7 @@ k.compose = k.compose || (function() {
         return $form[0];
       },
       reflectPrefs: function (prefs) {
-        enterToSend = prefs.enterToSend;
-        updateKeyTip($form);
-
+        sendChooser.reflectPrefs(prefs);
         var lookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !lookHereMode);
         if (lookHereMode) {

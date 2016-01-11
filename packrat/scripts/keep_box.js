@@ -14,6 +14,7 @@
 // @require scripts/render.js
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
+// @require scripts/send_chooser.js
 
 k.keepBox = k.keepBox || (function () {
   'use strict';
@@ -379,7 +380,7 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
-  function addKeepBindings($view, libraryId, keepId, note, autoClose) {
+  function addKeepBindings($view, libraryId, keepId, note, autoClose, sendChooser) {
     var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
     var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 2400);
     var debouncedSaveKeepNoteIfChanged = _.debounce(saveKeepNoteIfChanged, 2400);
@@ -407,7 +408,7 @@ k.keepBox = k.keepBox || (function () {
       }
     })
     .on('keydown', function (e) {
-      if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
+      if ((e.keyCode === 13 || e.keyCode === 108) && !e.shiftKey && !e.altKey && !sendChooser.enterToSend === (e.metaKey || e.ctrlKey)  && !e.isDefaultPrevented()) { // enter, numpad enter
         hide(e, 'enter');
         e.preventDefault();
       } else if (e.keyCode === 8 && !e.isDefaultPrevented() && !e.target.contentEditable &&
@@ -844,6 +845,8 @@ k.keepBox = k.keepBox || (function () {
       $view.find('.kifi-keep-box-keep-image-picker').addClass('kifi-empty');
     }
 
+    var sendChooser = k.sendChooser($view.find('.kifi-keep-box-send-chooser'));
+
     var imageIdx = showImage ? 0 : -1;
     $view.data({
       library: library,
@@ -861,7 +864,7 @@ k.keepBox = k.keepBox || (function () {
       saveKeepImageIfChanged($view);
     }
 
-    addKeepBindings($view, library.id, keep.id, keep.note || '', autoClose);
+    addKeepBindings($view, library.id, keep.id, keep.note || '', autoClose, sendChooser);
 
     api.port.emit('track_pane_view', {
       type: 'keepDetails',
