@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$window', '$rootScope', '$scope', '$q', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService',
-  function($window, $rootScope, $scope, $q, $analytics, feedService, Paginator, routeService, modalService) {
+  '$window', '$rootScope', '$scope', '$q', '$timeout', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService', 'profileService',
+  function($window, $rootScope, $scope, $q, $timeout, $analytics, feedService, Paginator, routeService, modalService, profileService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[$scope.feed.length - 1];
 
@@ -12,7 +12,7 @@ angular.module('kifi')
         deferred = deferred || $q.defer();
         results = results || [];
 
-        feedService.getFeed(limit, streamEnd && streamEnd.id).then(function (keepData) {
+        feedService.getFeed(limit, streamEnd && streamEnd.id, null, $scope.feedFilter.selected).then(function (keepData) {
           results = results.concat(keepData.keeps);
 
           if (keepData.keeps.length === 0 || results.length >= limit) {
@@ -33,6 +33,22 @@ angular.module('kifi')
 
     $scope.feed = [];
 
+    var me = profileService.me;
+    $scope.isAdmin = profileService.isAdmin();
+    var orgs = me.orgs || [];
+
+    $scope.feedFilter = {};
+    var orgFilterOptions = orgs.map(function(org) {
+      return { value: 'org', id: org.id, text: org.name };
+    });
+    $scope.feedFilter.options = [
+      { value: '', text: 'Your Stream' },
+      { value: 'own', text: 'Your Keeps' }
+    ].concat(orgFilterOptions);
+
+    // assumes this is the default setting's index ('All Keeps' 1/4/16, could be stored in prefs later on)
+    $scope.feedFilter.selected = $scope.feedFilter.options[0];
+
     $scope.scrollDistance = '0';
     $scope.hasMoreKeeps = function () {
       return feedLazyLoader.hasMore();
@@ -41,7 +57,7 @@ angular.module('kifi')
       return !feedLazyLoader.hasLoaded();
     };
     $scope.fetchKeeps = function () {
-      feedLazyLoader
+      return feedLazyLoader
       .fetch()
       .then(function (keeps) {
         $scope.feed = keeps;
@@ -64,6 +80,12 @@ angular.module('kifi')
         $analytics.eventTrack('user_viewed_content', { source: 'feed', contentType: 'keep', keep: keep.id,
           libraryId: keep.library && keep.library.id, orgId: keep.organization && keep.organization.id });
       }
+    };
+
+    $scope.updateFeedFilter = function() {
+      $scope.feed = [];
+      feedLazyLoader.reset();
+      $scope.fetchKeeps();
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {
