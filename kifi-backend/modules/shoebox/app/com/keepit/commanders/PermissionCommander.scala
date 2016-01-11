@@ -98,7 +98,7 @@ class PermissionCommanderImpl @Inject() (
 
   @StatsdTiming("PermissionCommander.getLibraryPermissions")
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
-    getLibrariesPermissions(Set(libId), userIdOpt).get(libId).get
+    getLibrariesPermissions(Set(libId), userIdOpt).getOrElse(libId, Set.empty)
   }
 
   @StatsdTiming("PermissionCommander.getLibrariesPermissions")
