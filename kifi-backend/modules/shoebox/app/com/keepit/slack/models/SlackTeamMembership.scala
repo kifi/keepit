@@ -24,6 +24,9 @@ case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], members
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
 
 case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
+object SlackTokenWithScopes {
+  def unapply(stm: SlackTeamMembership): Option[(SlackAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
+}
 
 case class SlackTeamMembership(
     id: Option[Id[SlackTeamMembership]] = None,
