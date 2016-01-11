@@ -528,9 +528,10 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
+    var linkToKeep = (o.keep.libraries.length === 1 || (o.keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1));
 
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, o.keep));
+    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
