@@ -34,32 +34,21 @@ class UserIdentityHelper @Inject() (
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     userIdentityCache: UserIdentityCache) {
-  import SocialUserHelpers._
+  import IdentityHelpers._
 
-  def getOwnerId(identityId: IdentityId, emailAddress: Option[EmailAddress] = None)(implicit session: RSession): Option[Id[User]] = {
+  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = {
     import SocialNetworks._
     val networkType = parseNetworkType(identityId)
     val socialId = parseSocialId(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
-        val validEmailAddress = EmailAddress.validate(socialId.id).toOption orElse emailAddress getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social, emailAddress)}"))
+        val validEmailAddress = EmailAddress.validate(socialId.id).toOption getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social)}"))
         emailRepo.getOwner(validEmailAddress)
       }
 
-      case socialNetwork if SUPPORTED.contains(socialNetwork) => {
-        socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId) orElse {
-          if (verifiedEmailProviders.contains(socialNetwork)) emailAddress.flatMap(emailRepo.getOwner(_))
-          else None
-        }
-      }
-
+      case socialNetwork if SUPPORTED.contains(socialNetwork) => socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId)
       case unsupportedNetwork => throw new Exception(s"Unsupported authentication network: $unsupportedNetwork")
     }
-  }
-
-  def getOwnerId(socialUser: SocialUser)(implicit session: RSession): Option[Id[User]] = {
-    val emailAddress = parseEmailAddress(socialUser).toOption
-    getOwnerId(socialUser.identityId, emailAddress)
   }
 
   def getUserIdentityByUserId(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
@@ -115,7 +104,7 @@ class SecureSocialUserPluginImpl @Inject() (
   clock: Clock)
     extends UserService with SecureSocialUserPlugin with Logging {
 
-  import SocialUserHelpers._
+  import IdentityHelpers._
 
   private def reportExceptions[T](f: => T): T = try f catch {
     case ex: Throwable =>
@@ -213,7 +202,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def getExistingUserOrAllowSignup(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean)(implicit session: RSession): Either[User, Boolean] = {
-    val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser)
+    val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser.identityId)
     (userId orElse socialUserOwnerId) match {
       case None => Right(allowSignup)
       case Some(existingUserId) if socialUserOwnerId.exists(_ != existingUserId) => {
@@ -273,7 +262,7 @@ class SecureSocialUserPluginImpl @Inject() (
       case Some(existingInfo) if existingInfo.state != SocialUserInfoStates.INACTIVE => {
         //todo(eishay): send a direct fetch request, social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         val updatedState = if (existingInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED) SocialUserInfoStates.CREATED else existingInfo.state
-        val updatedInfo = existingInfo.withCredentials(socialUser).withState(updatedState).copy(userId = userIdOpt)
+        val updatedInfo = existingInfo.withCredentials(socialUser).withState(updatedState).copy(userId = userIdOpt orElse existingInfo.userId)
         val savedInfo = if (updatedInfo != existingInfo) socialUserInfoRepo.save(updatedInfo) else existingInfo
         val isNewIdentity = savedInfo.userId != existingInfo.userId
         (savedInfo, isNewIdentity)
@@ -312,7 +301,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
   app: Application)
     extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging {
 
-  import SocialUserHelpers._
+  import IdentityHelpers._
 
   private def reportExceptionsAndTime[T](tag: String)(f: => T): Either[Error, T] = timing(tag) {
     try Right(f) catch {
@@ -325,7 +314,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
 
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = timing(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
     val userId = db.readOnlyMaster { implicit session =>
-      userIdentityHelper.getOwnerId(authenticator.identityId, None)
+      userIdentityHelper.getOwnerId(authenticator.identityId)
     }
     UserSession(
       userId = userId,
