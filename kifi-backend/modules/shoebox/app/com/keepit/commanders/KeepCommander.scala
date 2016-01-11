@@ -132,6 +132,7 @@ class KeepCommanderImpl @Inject() (
     facebookPublishingCommander: FacebookPublishingCommander,
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
+    userExperimentRepo: UserExperimentRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
@@ -826,7 +827,8 @@ class KeepCommanderImpl @Inject() (
     val keepsAndTimes = db.readOnlyReplica { implicit session =>
       // TODO(ryan): when the frontend can handle a keep without a library, let them through
       // Grab 2x the required number because we're going to be dropping some
-      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined }
+      val hasNoLibExperiment = userExperimentRepo.hasExperiment(userId, UserExperimentType.KEEP_NOLIB)
+      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
     }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
 
     val keeps = keepsAndTimes.map(_._1)
