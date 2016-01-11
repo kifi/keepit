@@ -38,6 +38,7 @@ object SlackTeamStates extends States[SlackTeam]
 trait SlackTeamRepo extends Repo[SlackTeam] {
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam]
 }
 
 @Singleton
@@ -116,6 +117,9 @@ class SlackTeamRepoImpl @Inject() (
         val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = identity.teamId, slackTeamName = identity.teamName, organizationId = None)
         save(newTeam)
     }
+  }
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam] = {
+    activeRows.filter(row => row.lastDigestNotificationAt < lastPushOlderThan).list
   }
 
 }

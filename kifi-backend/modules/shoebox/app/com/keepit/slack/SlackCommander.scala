@@ -12,12 +12,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
+import org.joda.time.Period
 import play.api.http.Status._
 import play.api.libs.json._
 
@@ -26,6 +27,7 @@ import scala.util.{ Failure, Success, Try }
 
 object SlackCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
+  val minPeriodBetweenDigestNotifications = Period.weeks(1)
 }
 
 @ImplementedBy(classOf[SlackCommanderImpl])
@@ -46,6 +48,7 @@ trait SlackCommander {
   def getOrganizationsToConnect(userId: Id[User]): Map[Id[Organization], OrganizationInfo]
   def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannel, Either[LibraryFail, Library]]]
+  def pushDigestNotificationsForRipeTeams(): Future[Unit]
 }
 
 @Singleton
@@ -67,6 +70,8 @@ class SlackCommanderImpl @Inject() (
   orgAvatarCommander: OrganizationAvatarCommander,
   libraryCommander: LibraryCommander,
   libRepo: LibraryRepo,
+  ktlRepo: KeepToLibraryRepo,
+  keepRepo: KeepRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
@@ -447,6 +452,49 @@ class SlackCommanderImpl @Inject() (
         }
       case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
     }
+  }
+
+  def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
+    val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
+      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications)
+    }
+    for {
+      ripeTeams <- ripeTeamsFut
+      pushes <- FutureHelpers.accumulateRobustly(ripeTeams)(pushDigestNotificationForTeam)
+    } yield Unit
+  }
+
+  private def createSlackDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
+    for {
+      org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+      numIngestedKeepsByLibrary = {
+        val librariesIngestedInto = libRepo.getActiveByIds(channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).map(_.libraryId).toSet)
+        librariesIngestedInto.map {
+          case (libId, lib) =>
+            val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
+            val newKeeps = keepRepo.getByIds(newKeepIds).values.toList
+            val numIngestedKeeps = newKeeps.count(_.source == KeepSource.slack)
+            lib -> numIngestedKeeps
+        }
+      }
+      digest <- Some(SlackTeamDigest(slackTeam, org, numIngestedKeepsByLibrary)).filter(_.numIngestedKeeps >= 10)
+    } yield digest
+  }
+
+  private def describeDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
+    import DescriptionElements._
+    val lines = List(
+      List(DescriptionElements("We have captured", digest.numIngestedKeeps, "from", digest.slackTeam.slackTeamName.value)),
+      digest.numIngestedKeepsByLibrary.collect {
+        case (lib, num) if num > 0 => DescriptionElements("    - ", num, "were saved in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
+      }.toList,
+      List(DescriptionElements("Check them at at", digest.org, "'s page on Kifi, or search throught them using the /kifi Slack command"))
+    ).flatten
+
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
+  }
+  private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
+    ???
   }
 }
 
