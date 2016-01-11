@@ -38,12 +38,12 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           slackCommander.registerAuthorization(user1.id.get, auth, ident)
           db.readOnlyMaster { implicit s =>
             inject[SlackTeamMembershipRepo].all must haveSize(1)
-            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user1.id.get
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId must beSome(user1.id.get)
           }
           slackCommander.registerAuthorization(user2.id.get, auth, ident)
           db.readOnlyMaster { implicit s =>
             inject[SlackTeamMembershipRepo].all must haveSize(1)
-            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user2.id.get
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId must beSome(user2.id.get)
           }
           1 === 1
         }

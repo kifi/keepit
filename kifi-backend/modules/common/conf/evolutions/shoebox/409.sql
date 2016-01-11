@@ -7,7 +7,7 @@ CREATE TABLE slack_team_membership (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
-  user_id BIGINT(20) NOT NULL,
+  user_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_username VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,

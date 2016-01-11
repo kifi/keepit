@@ -32,7 +32,7 @@ object SlackTeamMembershipFactory {
   def membership(): PartialSlackTeamMembership = {
     val owner = Id[User](idx.incrementAndGet())
     PartialSlackTeamMembership(SlackTeamMembership(
-      userId = owner,
+      userId = Some(owner),
       slackUserId = SlackUserId(ran(10)),
       slackUsername = SlackUsername(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
@@ -43,7 +43,7 @@ object SlackTeamMembershipFactory {
   }
 
   case class PartialSlackTeamMembership(stm: SlackTeamMembership) {
-    def withUser(user: User) = this.copy(stm = stm.copy(userId = user.id.get))
+    def withUser(user: User) = this.copy(stm = stm.copy(userId = Some(user.id.get)))
     def withTeam(team: TestingSlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.teamId, slackTeamName = team.teamName))
     def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
   }
@@ -90,7 +90,7 @@ object SlackChannelToLibraryFactory {
     ))
   }
   case class PartialSlackChannelToLibrary(stl: SlackChannelToLibrary) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(space = LibrarySpace.fromUserId(stm.userId), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(space = LibrarySpace.fromUserId(stm.userId.get), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(stl = stl.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(stl = stl.copy(slackChannelName = SlackChannelName(cn)))
     def withNextIngestionAt(time: DateTime) = this.copy(stl = stl.copy(nextIngestionAt = Some(time)))
@@ -116,7 +116,7 @@ object LibraryToSlackChannelFactory {
   }
 
   case class PartialLibraryToSlackChannel(lts: LibraryToSlackChannel) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(space = LibrarySpace.fromUserId(stm.userId), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(space = LibrarySpace.fromUserId(stm.userId.get), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(lts = lts.copy(slackChannelName = SlackChannelName(cn)))
     def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))

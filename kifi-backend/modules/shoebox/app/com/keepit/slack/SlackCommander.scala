@@ -81,7 +81,7 @@ class SlackCommanderImpl @Inject() (
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
       slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
-        userId = userId,
+        userId = Some(userId),
         slackUserId = identity.userId,
         slackUsername = identity.userName,
         slackTeamId = auth.teamId,
@@ -376,9 +376,11 @@ class SlackCommanderImpl @Inject() (
 
   def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     require(membership.slackTeamId == team.slackTeamId, s"SlackTeam ${team.id.get}/${team.slackTeamId.value} doesn't match SlackTeamMembership ${membership.id.get}/${membership.slackTeamId.value}")
+    require(membership.userId.isDefined, s"SlackTeamMembership ${membership.id.get} doesn't belong to any user.")
 
+    val userId = membership.userId.get
     val libraryName = channel.channelName.value
-    val librarySpace = LibrarySpace(membership.userId, team.organizationId)
+    val librarySpace = LibrarySpace(userId, team.organizationId)
 
     val initialValues = LibraryInitialValues(
       name = libraryName,
@@ -391,12 +393,12 @@ class SlackCommanderImpl @Inject() (
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
       space = Some(librarySpace)
     )
-    libraryCommander.createLibrary(initialValues, membership.userId) tap {
+    libraryCommander.createLibrary(initialValues, userId) tap {
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
           libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
-            requesterId = membership.userId,
+            requesterId = userId,
             space = librarySpace,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
@@ -406,7 +408,7 @@ class SlackCommanderImpl @Inject() (
             status = SlackIntegrationStatus.On
           ))
           channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
-            requesterId = membership.userId,
+            requesterId = userId,
             space = librarySpace,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,

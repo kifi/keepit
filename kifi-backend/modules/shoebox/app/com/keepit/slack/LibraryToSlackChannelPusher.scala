@@ -151,7 +151,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
       def isIllegal(lts: LibraryToSlackChannel) = {
         slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
-          !permissionCommander.getLibraryPermissions(libId, Some(stm.userId)).contains(LibraryPermission.VIEW_LIBRARY)
+          !permissionCommander.getLibraryPermissions(libId, stm.userId).contains(LibraryPermission.VIEW_LIBRARY)
         }
       }
       val (illegal, legal) = integrations.map(libToChannelRepo.get).partition(isIllegal)
