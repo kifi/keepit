@@ -46,6 +46,11 @@ class ShoeboxTasksPlugin @Inject() (
       libToSlackPusher.findAndPushUpdatesForRipestLibraries()
     }
 
+    // TODO(ryan): make these way slower, no need to run this that often
+    scheduleTaskOnOneMachine(system, 5 minutes, 1 minute, "slack digests") {
+      slackCommander.pushDigestNotificationsForRipeTeams()
+    }
+
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
       planRenewalCommander.processDueRenewals()
       paymentProcessingCommander.processDuePayments()
