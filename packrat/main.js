@@ -517,8 +517,7 @@ var socketHandlers = {
   },
   remove_notification: function (th) {
     log('[socket:remove_notification]', th);
-    removeNotificationPopups(th);
-    tellVisibleTabsNoticeCountIfChanged();
+    removeNotification(th);
   },
   all_notifications_visited: function(id, time) {
     log('[socket:all_notifications_visited]', id, time);
@@ -1571,6 +1570,29 @@ function insertNewNotification(n) {
     });
     return true;
   }
+}
+
+function removeNotification(threadId) {
+  var n0 = notificationsById[threadId];
+
+  if (n0) {
+    markRead(threadId, n0.id, +new Date());
+    removeNotificationPopups(threadId);
+
+    ['all', 'page', 'unread', 'sent'].map(function (kind) {
+      var tl = notificationLists[kind];
+      if (tl && tl.remove(threadId, log) && kind === 'page') {
+        forEachTabAt(n0.url, function (tab) {
+          sendPageThreadCount(tab, tl);
+        });
+      }
+    });
+  }
+
+  delete notificationsById[threadId];
+  delete threadReadAt[threadId];
+
+  tellVisibleTabsNoticeCountIfChanged();
 }
 
 function updateIfJustRead(th) {
