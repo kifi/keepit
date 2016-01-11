@@ -493,11 +493,11 @@ class SlackCommanderImpl @Inject() (
   private def describeDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
     val lines = List(
-      List(DescriptionElements("We have captured", digest.numIngestedKeeps, "from", digest.slackTeam.slackTeamName.value)),
+      List(DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackTeam.slackTeamName.value)),
       digest.numIngestedKeepsByLibrary.collect {
         case (lib, num) if num > 0 => DescriptionElements("    - ", num, "were saved in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
       }.toList,
-      List(DescriptionElements("Check them at at", digest.org, "'s page on Kifi, or search throught them using the /kifi Slack command"))
+      List(DescriptionElements("Check them at at", digest.org, "'s page on Kifi, or search through them using the /kifi Slack command"))
     ).flatten
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
