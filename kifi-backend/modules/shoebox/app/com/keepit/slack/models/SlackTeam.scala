@@ -15,18 +15,21 @@ case class UnauthorizedSlackTeamOrganizationModificationException(team: Option[S
   extends Exception(s"Unauthorized request from user $userId to connect ${team.map(_.toString) getOrElse "unkwown SlackTeam"} with organization $newOrganizationId.")
 
 case class SlackTeam(
-    id: Option[Id[SlackTeam]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    state: State[SlackTeam] = SlackTeamStates.ACTIVE,
-    slackTeamId: SlackTeamId,
-    slackTeamName: SlackTeamName,
-    organizationId: Option[Id[Organization]],
-    lastChannelCreatedAt: Option[SlackTimestamp] = None) extends ModelWithState[SlackTeam] {
+  id: Option[Id[SlackTeam]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[SlackTeam] = SlackTeamStates.ACTIVE,
+  slackTeamId: SlackTeamId,
+  slackTeamName: SlackTeamName,
+  organizationId: Option[Id[Organization]],
+  lastChannelCreatedAt: Option[SlackTimestamp] = None,
+  lastDigestNotificationAt: DateTime = currentDateTime)
+    extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamStates.ACTIVE
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
+  def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = time)
 }
 
 object SlackTeamStates extends States[SlackTeam]
@@ -56,7 +59,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     organizationId: Option[Id[Organization]],
-    lastChannelCreatedAt: Option[SlackTimestamp]) = {
+    lastChannelCreatedAt: Option[SlackTimestamp],
+    lastDigestNotificationAt: DateTime) = {
     SlackTeam(
       id,
       createdAt,
@@ -65,7 +69,8 @@ class SlackTeamRepoImpl @Inject() (
       slackTeamId,
       slackTeamName,
       organizationId,
-      lastChannelCreatedAt
+      lastChannelCreatedAt,
+      lastDigestNotificationAt
     )
   }
 
@@ -77,7 +82,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.slackTeamId,
     slackTeam.slackTeamName,
     slackTeam.organizationId,
-    slackTeam.lastChannelCreatedAt
+    slackTeam.lastChannelCreatedAt,
+    slackTeam.lastDigestNotificationAt
   ))
 
   type RepoImpl = SlackTeamTable
@@ -87,7 +93,8 @@ class SlackTeamRepoImpl @Inject() (
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def lastChannelCreatedAt = column[Option[SlackTimestamp]]("last_channel_created_at", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def lastDigestNotificationAt = column[DateTime]("last_digest_notification_at", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, lastDigestNotificationAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
