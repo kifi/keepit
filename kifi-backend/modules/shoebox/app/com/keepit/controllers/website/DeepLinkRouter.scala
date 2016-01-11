@@ -34,7 +34,7 @@ class DeepLinkRouterImpl @Inject() (
   def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] = {
     lazy val redirectToKeepPage = request match {
       case ur: UserRequest[_] => ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate)
-      case _ => true
+      case _ => (data \ DeepLinkField.AuthToken).asOpt[String].isDefined
     }
 
     (data \ "t").asOpt[String].flatMap {
