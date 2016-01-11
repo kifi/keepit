@@ -204,7 +204,7 @@ class SecureSocialUserPluginImpl @Inject() (
   private def getExistingUserOrAllowSignup(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean)(implicit session: RSession): Either[User, Boolean] = {
     val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser.identityId)
     (userId orElse socialUserOwnerId) match {
-      case None => Right(allowSignup)
+      case None => Right(allowSignup) // todo(Léo): check for existing email address here rather than in AuthCommander?
       case Some(existingUserId) if socialUserOwnerId.exists(_ != existingUserId) => {
         val message = s"User $existingUserId passed a SocialUser owned by user ${socialUserOwnerId.get}: $socialUser"
         log.warn(message)
