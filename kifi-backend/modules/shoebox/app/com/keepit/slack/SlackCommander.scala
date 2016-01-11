@@ -510,8 +510,12 @@ class SlackCommanderImpl @Inject() (
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)
     }
+    generalChannelFut.onFailure {
+      case f =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Failed to get the general channel for team ${team.slackTeamId} because ${f.getMessage}")))
+    }
     generalChannelFut.flatMap { generalChannelOpt =>
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"[RPB-2016-01-11] General channel for team ${team.id.get} is $generalChannelOpt")))
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"General channel for team ${team.id.get} is $generalChannelOpt")))
       val pushOpt = for {
         msg <- msgOpt
         generalChannel <- generalChannelOpt

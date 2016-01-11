@@ -159,7 +159,7 @@ class SlackClientWrapperImpl @Inject() (
       case (_, token) => getChannels(token).map { channels =>
         val generalChannelOpt = channels.find(_.channelName == SlackChannelName("#general")).map(_.channelId)
         (generalChannelOpt, generalChannelOpt.isDefined)
-      }
+      }.recover { case x => (None, false) }
     }
   }
 
