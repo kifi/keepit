@@ -275,6 +275,16 @@ angular.module('kifi')
         templateUrl: 'keep/keepPage.tpl.html',
         controller: 'KeepPageCtrl'
       })
+      .state('slackIntegrationTeamChooser', {
+        url : '/integrations/slack/teams?:slackTeamId',
+        templateUrl: 'integrations/slack/teamChooser.tpl.html',
+        controller: 'SlackIntegrationTeamChooserCtrl'
+      })
+      .state('slackIntegrationFullSync', {
+        url: '/intregrations/slack/fullsync',
+        templateUrl: 'integrations/slack/fullSync.tpl.html',
+        controller: 'SlackIntegrationFullSyncCtrl'
+      })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:handle/:librarySlug?authToken',

@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window', '$rootScope',
-  function ($window, $rootScope) {
+  '$window', '$rootScope', 'messageTicker',
+  function ($window, $rootScope, messageTicker) {
     return {
       restrict: 'A',
       require: '^kfModal',
       scope: {
-        getLibrary: '&library'
+        getLibrary: '&library',
+        getOrg: '&org'
       },
       templateUrl: 'orgProfile/orgProfileSlackUpsell.tpl.html',
       link: function ($scope, element, attrs, kfModalCtrl) {
@@ -25,6 +26,27 @@ angular.module('kifi')
           if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
             $window.location = getSlackLink();
           }
+        };
+
+        $scope.onClickedSynOnlyGeneral = function() {
+          var library = $scope.getLibrary();
+          if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
+            $window.location = getSlackLink();
+          }
+          kfModalCtrl.close();
+        };
+
+        $scope.onClickedSyncAllSlackChannels = function() {
+          var org = $scope.getOrg();
+          if (org && org.slack && org.slack.link) {
+            $window.location = org.slack.link;
+          } else {
+            messageTicker({
+              text: 'Unable to retrieve Team information, please refresh and try again.',
+              type: 'red'
+            });
+          }
+          kfModalCtrl.close();
         };
 
         $scope.close = function() {
