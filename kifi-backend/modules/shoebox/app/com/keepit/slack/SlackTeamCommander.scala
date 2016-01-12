@@ -274,9 +274,9 @@ class SlackTeamCommanderImpl @Inject() (
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
-            log.info("Pushed a digest to", team.slackTeamName.value)
+            slackLog.info("Pushed a digest to", team.slackTeamName.value)
           case Failure(fail) =>
-            log.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
+            slackLog.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
         }
       }
       pushOpt.getOrElse(Future.successful(Unit))

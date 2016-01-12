@@ -8,7 +8,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 trait SlackLogging {
   val inhouseSlackClient: InhouseSlackClient
   val loggingDestination: InhouseSlackChannel
-  object log {
+  object slackLog {
     def info(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "good")
     def warn(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "warning")
     def error(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "danger")
