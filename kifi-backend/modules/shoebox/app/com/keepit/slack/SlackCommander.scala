@@ -458,11 +458,8 @@ class SlackCommanderImpl @Inject() (
   }
 
   def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
-    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Scheduled plugin: pushing digest notifs")))
     val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications) tap { teams =>
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("The ripe teams are: " + teams.map(_.id.get))))
-      }
+      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications)
     }
     for {
       ripeTeams <- ripeTeamsFut
@@ -471,13 +468,15 @@ class SlackCommanderImpl @Inject() (
   }
 
   private def createSlackDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
-    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Creating slack digest for team ${slackTeam.slackTeamId}")))
     for {
       org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
       numIngestedKeepsByLibrary = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId)
         val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
-        val librariesIngestedInto = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
+        val librariesIngestedInto = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet).filter {
+          case (_, lib) =>
+            Set[LibraryVisibility](LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED).contains(lib.visibility)
+        }
         librariesIngestedInto.map {
           case (libId, lib) =>
             val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
@@ -499,25 +498,23 @@ class SlackCommanderImpl @Inject() (
       digest.numIngestedKeepsByLibrary.collect {
         case (lib, num) if num > 0 => DescriptionElements("    - ", num, "were saved in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
       }.toList,
-      List(DescriptionElements("Check them at at", digest.org, "'s page on Kifi, or search through them using the /kifi Slack command"))
+      List(DescriptionElements(
+        "Check them at at", digest.org, "'s page on Kifi,",
+        "search through them using the /kifi Slack command,",
+        "and see them in your Google searches when you install the", "browser extension" --> LinkElement(PathCommander.browserExtension)
+      ))
     ).flatten
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
-    inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Pushing digest notif for team ${team.id.get}")))
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createSlackDigest(team).map(describeDigest) }
     val generalChannelFut = team.generalChannelId match {
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)
     }
-    generalChannelFut.onFailure {
-      case f =>
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Failed to get the general channel for team ${team.slackTeamId} because ${f.getMessage}")))
-    }
     generalChannelFut.flatMap { generalChannelOpt =>
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements(s"Team ${team.id.get} has general $generalChannelOpt. Trying to push a digest to it: ${msgOpt.map(_.text)}")))
       val pushOpt = for {
         msg <- msgOpt
         generalChannel <- generalChannelOpt
