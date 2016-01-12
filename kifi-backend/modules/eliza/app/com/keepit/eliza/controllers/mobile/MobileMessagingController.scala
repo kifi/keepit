@@ -174,9 +174,17 @@ class MobileMessagingController @Inject() (
           (o \ "text").as[String].trim,
           (o \ "source").asOpt[MessageSource]
         )
+
+        val headerSource = UserAgent(request) match {
+          case ua if ua.isKifiAndroidApp || ua.isAndroid => Some(MessageSource.ANDROID)
+          case ua if ua.isIphone || ua.isKifiAndroidApp => Some(MessageSource.IPHONE)
+          case otherwise =>
+            log.warn(s"[sendMessageReplyAction] Unknown UA $otherwise")
+            None
+        }
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
-        discussionCommander.sendMessage(request.user.id.get, text, keepId, source)(contextBuilder.build).map { message =>
+        discussionCommander.sendMessage(request.user.id.get, text, keepId, headerSource.orElse(source))(contextBuilder.build).map { message =>
           val tDiff = currentDateTime.getMillis - tStart.getMillis
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
           Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
