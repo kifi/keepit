@@ -91,11 +91,7 @@ class SlackTeamCommanderImpl @Inject() (
               }
               val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
               futureAvatar.flatMap { _ =>
-                Future.fromTry(connectedTeamMaybe).flatMap { _ =>
-                  setupLatestSlackChannels(userId, slackTeamId).map { _ =>
-                    db.readOnlyMaster { implicit session => slackTeamRepo.get(team.id.get) }
-                  }
-                }
+                Future.fromTry(connectedTeamMaybe)
               }
             case Left(error) => Future.failed(error)
           }
