@@ -2,10 +2,9 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
+import com.keepit.slack.OrganizationSlackInfo
 import com.keepit.social.BasicUser
-import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -20,7 +19,8 @@ case class OrganizationInfo(
     members: Seq[BasicUser],
     numMembers: Int,
     numLibraries: Int,
-    config: Option[ExternalOrganizationConfiguration]) {
+    config: Option[ExternalOrganizationConfiguration],
+    slack: Option[OrganizationSlackInfo]) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
@@ -35,60 +35,9 @@ object OrganizationInfo {
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
-    (__ \ 'config).writeNullable[ExternalOrganizationConfiguration]
+    (__ \ 'config).writeNullable[ExternalOrganizationConfiguration] and
+    (__ \ 'slack).writeNullable[OrganizationSlackInfo]
   )(unlift(OrganizationInfo.unapply))
-}
-
-case class OrganizationMembershipInfo(role: OrganizationRole)
-object OrganizationMembershipInfo {
-  implicit val format: Format[OrganizationMembershipInfo] = Format(
-    Reads { j => (j.as[JsObject] \ "role").validate[OrganizationRole].map(OrganizationMembershipInfo(_)) },
-    Writes { omi => Json.obj("role" -> omi.role) }
-  )
-}
-
-case class OrganizationViewerInfo(
-  invite: Option[OrganizationInviteInfo],
-  emails: Set[EmailAddress],
-  permissions: Set[OrganizationPermission],
-  membership: Option[OrganizationMembershipInfo])
-object OrganizationViewerInfo {
-  implicit val internalFormat: OFormat[OrganizationViewerInfo] = (
-    (__ \ 'invite).formatNullable[OrganizationInviteInfo] and
-    (__ \ 'emails).format[Set[EmailAddress]] and
-    (__ \ 'permissions).format[Set[OrganizationPermission]] and
-    (__ \ 'membership).formatNullable[OrganizationMembershipInfo]
-  )(OrganizationViewerInfo.apply, unlift(OrganizationViewerInfo.unapply))
-}
-
-case class OrganizationInviteInfo(
-  inviter: BasicUser,
-  email: Option[EmailAddress],
-  lastInvited: DateTime)
-object OrganizationInviteInfo {
-  implicit val internalFormat: Format[OrganizationInviteInfo] = (
-    (__ \ 'inviter).format[BasicUser] and
-    (__ \ 'email).formatNullable[EmailAddress] and
-    (__ \ 'lastInvited).format[DateTime]
-  )(OrganizationInviteInfo.apply, unlift(OrganizationInviteInfo.unapply))
-
-  def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
-    OrganizationInviteInfo(inviter, invite.emailAddress, invite.createdAt)
-  }
-}
-
-case class BasicOrganizationView(
-  basicOrganization: BasicOrganization,
-  viewerInfo: OrganizationViewerInfo)
-object BasicOrganizationView {
-  val reads: Reads[BasicOrganizationView] = (
-    __.read[BasicOrganization] and
-    (__ \ 'viewer).read[OrganizationViewerInfo]
-  )(BasicOrganizationView.apply _)
-  val writes: Writes[BasicOrganizationView] = Writes { bov =>
-    BasicOrganization.defaultFormat.writes(bov.basicOrganization) ++ Json.obj("viewer" -> OrganizationViewerInfo.internalFormat.writes(bov.viewerInfo))
-  }
-  implicit val internalFormat = Format(reads, writes)
 }
 
 case class OrganizationView(
