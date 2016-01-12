@@ -5,6 +5,7 @@ import scala.reflect.macros.Context
 
 case class Location(className: String, methodName: String, line: Int) {
   def location = s"[${className}][${methodName}]:${line}"
+  def context: String = s"${className.stripPrefix("class ")}.${methodName.stripPrefix("method ")}"
 }
 
 object Location {

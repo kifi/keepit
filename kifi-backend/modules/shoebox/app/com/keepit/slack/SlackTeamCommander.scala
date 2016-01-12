@@ -9,17 +9,16 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.SlackLogging
 import com.keepit.common.time._
-import com.keepit.common.util.{ Ord, DescriptionElements, LinkElement }
+import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
-import org.joda.time.{ Period, Days, Interval }
+import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.reflect.macros.whitebox
 import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
@@ -57,8 +56,9 @@ class SlackTeamCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
-  inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander with Logging {
+  val inhouseSlackClient: InhouseSlackClient)
+    extends SlackTeamCommander with SlackLogging {
+  val loggingDestination = InhouseSlackChannel.TEST_RYAN
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, userHasNoOrg) = db.readWrite { implicit session =>
@@ -274,9 +274,9 @@ class SlackTeamCommanderImpl @Inject() (
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
-            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Pushed a digest to", team.slackTeamName.value)))
+            log.info("Pushed a digest to", team.slackTeamName.value)
           case Failure(fail) =>
-            inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.inhouse(DescriptionElements("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)))
+            log.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
         }
       }
       pushOpt.getOrElse(Future.successful(Unit))
