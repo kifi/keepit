@@ -179,16 +179,22 @@ class SlackController @Inject() (
 
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
-      redirectToOrg(slackTeam.organizationId.get)
+    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).flatMap { slackTeam =>
+      slackTeamCommander.setupLatestSlackChannels(request.userId, slackTeam.slackTeamId).map { _ =>
+        redirectToOrg(slackTeam.organizationId.get)
+      }
     }
   }
 
-  def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
+  def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
-      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId)
-      case Success(slackTeam) => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
-      case Failure(_) => BadRequest("invalid_request")
+      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) =>
+        slackTeamCommander.setupLatestSlackChannels(request.request.userId, slackTeam.slackTeamId).map { _ =>
+          redirectToOrg(slackTeam.organizationId.get)
+        }
+      case Success(slackTeam) => Future.failed(new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam"))
+      case Failure(_) => Future.successful(BadRequest("invalid_request"))
     }
   }
 }
