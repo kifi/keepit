@@ -11,13 +11,15 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ Ord, DescriptionElements, LinkElement }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
+import org.joda.time.{ Period, Days, Interval }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.reflect.macros.whitebox
 import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
@@ -233,23 +235,29 @@ class SlackTeamCommanderImpl @Inject() (
             lib -> numIngestedKeeps
         }
       }
-      digest <- Some(SlackTeamDigest(slackTeam, org, numIngestedKeepsByLibrary)).filter(_.numIngestedKeeps >= 10)
+      digest <- Some(SlackTeamDigest(
+        slackTeam = slackTeam,
+        timeSinceLastDigest = new Period(slackTeam.lastDigestNotificationAt, clock.now),
+        org = org,
+        numIngestedKeepsByLibrary = numIngestedKeepsByLibrary
+      )).filter(_.numIngestedKeeps >= 10)
     } yield digest
   }
 
   private def describeDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
+    val topLibraries = digest.numIngestedKeepsByLibrary.toList.sortBy { case (lib, numKeeps) => numKeeps }(Ord.descending).take(3).collect { case (lib, numKeeps) if numKeeps > 0 => lib }
     val lines = List(
-      List(DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackTeam.slackTeamName.value)),
-      digest.numIngestedKeepsByLibrary.collect {
-        case (lib, num) if num > 0 => DescriptionElements("    - ", num, "were saved in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
-      }.toList,
-      List(DescriptionElements(
+      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getDays, "days"),
+      DescriptionElements("Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
+        DescriptionElements.unwordsPretty(topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))))
+      ),
+      DescriptionElements(
         "Check them at at", digest.org, "'s page on Kifi,",
         "search through them using the /kifi Slack command,",
         "and see them in your Google searches when you install the", "browser extension" --> LinkElement(PathCommander.browserExtension)
-      ))
-    ).flatten
+      )
+    )
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
   }
