@@ -180,7 +180,7 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === true // TODO: make false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
       agent.isAndroid === true
       agent.isOldIE === false
