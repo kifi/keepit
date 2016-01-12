@@ -64,11 +64,11 @@ object SlackMessageRequest {
     unfurlMedia = true
   )
 
-  def inhouse(txt: DescriptionElements) = SlackMessageRequest(
+  def inhouse(txt: DescriptionElements, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
     text = DescriptionElements.formatForSlack(txt),
     username = "inhouse-kifi-bot",
     iconUrl = pandaIconUrl,
-    attachments = Seq.empty,
+    attachments = attachments,
     unfurlLinks = false,
     unfurlMedia = false
   )
