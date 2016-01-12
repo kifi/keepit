@@ -21,6 +21,7 @@ object NonUserKind {
 }
 object NonUserKinds {
   val email = NonUserKind("email")
+  val slack = NonUserKind("slack")
 }
 
 case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
