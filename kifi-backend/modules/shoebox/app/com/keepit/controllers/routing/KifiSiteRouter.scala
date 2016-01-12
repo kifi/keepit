@@ -233,6 +233,11 @@ class KifiSiteRouter @Inject() (
   }
 
   def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep], authTokenOpt: Option[String]) = WebAppPage.async { implicit request =>
+    import UserExperimentType._
+    val experiments = request match {
+      case ur: UserRequest[_] => ur.experiments
+      case _ => Set.empty[UserExperimentType]
+    }
     Keep.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(notFound(request))
       case Success(keepId) => {
@@ -246,7 +251,10 @@ class KifiSiteRouter @Inject() (
 
         canSeeKeepFut.map { canSeeKeep =>
           val keepOpt = {
-            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
+            if (canSeeKeep) db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }.filter { keep =>
+              val numLibs = keep.connections.libraries.size
+              numLibs == 1 || (numLibs == 0 && experiments.contains(KEEP_NOLIB)) || (numLibs > 1 && experiments.contains(KEEP_MULTILIB))
+            }
             else None
           }
           keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
