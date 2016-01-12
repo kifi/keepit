@@ -6,7 +6,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
-import com.keepit.slack.{ SlackCommander, LibraryToSlackChannelPusher, SlackIngestionCommander }
+import com.keepit.slack.{ SlackTeamCommander, SlackCommander, LibraryToSlackChannelPusher, SlackIngestionCommander }
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
@@ -24,6 +24,7 @@ class ShoeboxTasksPlugin @Inject() (
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackCommander: SlackCommander,
+    slackTeamCommander: SlackTeamCommander,
     slackIngestionCommander: SlackIngestionCommander,
     libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
@@ -48,7 +49,7 @@ class ShoeboxTasksPlugin @Inject() (
 
     // TODO(ryan): make these way slower, no need to run this that often
     scheduleTaskOnOneMachine(system, 5 minutes, 1 minute, "slack digests") {
-      slackCommander.pushDigestNotificationsForRipeTeams()
+      slackTeamCommander.pushDigestNotificationsForRipeTeams()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {

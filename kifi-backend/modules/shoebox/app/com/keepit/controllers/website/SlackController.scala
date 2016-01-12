@@ -13,7 +13,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.slack.models._
-import com.keepit.slack.{ SlackAuthenticatedAction, SlackClient, SlackCommander }
+import com.keepit.slack.{ SlackTeamCommander, SlackAuthenticatedAction, SlackClient, SlackCommander }
 import play.api.libs.json._
 import play.api.mvc.Result
 
@@ -24,6 +24,7 @@ import scala.util.{ Failure, Success }
 class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
+    slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
@@ -92,7 +93,7 @@ class SlackController @Inject() (
       }
       case SetupSlackTeam => ((data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
         case Success(orgIdOpt) =>
-          slackCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
+          slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
               case None => {
@@ -102,7 +103,7 @@ class SlackController @Inject() (
                   val url = com.keepit.controllers.website.routes.SlackController.createOrganizationForSlackTeam(slackTeam.slackTeamId.value).url
                   message -> url
                 }
-                val connectLinks = slackCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
+                val connectLinks = slackTeamCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
                   case (_, org) =>
                     val message = s"Connect your Kifi organization ${org.name} with your Slack team ${slackTeam.slackTeamName.value}"
                     val url = com.keepit.controllers.website.routes.SlackController.connectSlackTeamToOrganization(org.orgId, slackTeam.slackTeamId.value).url
@@ -177,13 +178,13 @@ class SlackController @Inject() (
 
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
+    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
       redirectToOrg(slackTeam.organizationId.get)
     }
   }
 
   def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
-    slackCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
+    slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
       case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId)
       case Success(slackTeam) => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
       case Failure(_) => BadRequest("invalid_request")
