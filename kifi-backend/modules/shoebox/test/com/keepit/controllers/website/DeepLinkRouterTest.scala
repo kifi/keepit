@@ -133,7 +133,8 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           val url = "http://www.google.com"
           val (uri, keep) = db.readWrite { implicit session =>
             val uri = normalizedURIInterner.internByUri(url, contentWanted = false)
-            val keep = KeepFactory.keep().withTitle("Random Keeps Popping Up").withUri(uri).saved
+            val library = LibraryFactory.library().saved
+            val keep = KeepFactory.keep().withTitle("Random Keeps Popping Up").withUri(uri).withLibrary(library).saved
             (uri, keep)
           }
           val deepLink = Json.obj("t" -> "m", "id" -> Keep.publicId(keep.id.get), "uri" -> uri.externalId, "at" -> "randomAccessToken")

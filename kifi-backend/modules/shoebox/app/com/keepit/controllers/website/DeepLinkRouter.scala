@@ -63,6 +63,7 @@ class DeepLinkRouterImpl @Inject() (
       _ <- Some(()) if redirectToKeepPage
       keepId <- keepIdOpt
       keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
+      _ <- Some(()) if keep.connections.libraries.size == 1 // redirect user to keep.url for library-less keep pages
       accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
     } yield keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
 
