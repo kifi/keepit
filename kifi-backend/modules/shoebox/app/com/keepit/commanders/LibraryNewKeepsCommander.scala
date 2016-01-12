@@ -28,6 +28,7 @@ class LibraryNewKeepsCommander @Inject() (
     elizaClient: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
     libPathCommander: PathCommander,
+    keepSourceCommander: KeepSourceCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) {
 
@@ -41,17 +42,29 @@ class LibraryNewKeepsCommander @Inject() (
     val toBeNotified = relevantFollowers - keep.userId
     if (toBeNotified.nonEmpty) {
       val keeper = usersById(keep.userId)
+      val sourceOpt = db.readOnlyReplica { implicit s =>
+        keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(Set(keep.id.get)).values.headOption
+      }
+
       if (toBeNotified.size > 150) {
         airbrake.notify(s"Warning: Library with lots of subscribers ${toBeNotified.size}. Time to make the code better!")
       }
+
       val libTrunc = if (library.name.length > 30) { library.name.take(25) + "…" } else { library.name }
-      val message = keep.title match {
-        case Some(title) =>
-          val trunc = if (title.length > 30) { title.take(25) + "…" } else { title }
-          s"“$trunc” added to $libTrunc"
-        case None =>
-          s"New keep added to $libTrunc"
+      val titleString = keep.title.map {
+        case title if title.length > 30 => title.take(25) + "..."
+        case title => title
+      }.map(title => s": $title").getOrElse("")
+      val message = {
+        sourceOpt.collect {
+          case (attr: SlackAttribution, slackKeeperOpt) =>
+            val name = slackKeeperOpt.map(_.fullName).getOrElse(s"@${attr.message.username.value}")
+            s"$name added to #${attr.message.channel.name.value}" + titleString
+        } getOrElse {
+          s"${keeper.fullName} kept to $libTrunc" + titleString
+        }
       }
+
       FutureHelpers.sequentialExec(toBeNotified) { userId =>
         elizaClient.sendLibraryPushNotification(
           userId,

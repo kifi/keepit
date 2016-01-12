@@ -130,12 +130,6 @@ class AuthCommander @Inject() (
     eliza: ElizaServiceClient,
     amazonSimpleMailProvider: AmazonSimpleMailProvider) extends Logging {
 
-  def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
-    db.readOnlyMaster { implicit s =>
-      emailAddressRepo.getByAddress(addr).isDefined
-    }
-  }
-
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], email: EmailAddress, passwordInfoOpt: Option[PasswordInfo],
     firstName: String, lastName: String, isComplete: Boolean): (UserIdentity, Id[User]) = {
     if (email.address.trim.isEmpty) {
@@ -313,112 +307,47 @@ class AuthCommander @Inject() (
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
   }
 
-  def fillUserProfile(provider: IdentityProvider, oauth2Info: OAuth2Info): Try[SocialUser] =
-    Try {
-      provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info)))
-    }
-
-  def fillUserProfile(provider: IdentityProvider, oauth1Info: OAuth1Info): Try[SocialUser] =
-    Try {
-      provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth1Info = Some(oauth1Info)))
-    }
-
-  def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
-
-  def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(provider.id)) match {
-      case None =>
-        log.warn(s"[exchangeLongTermToken(${provider.id})] provider not found")
-        Future.successful(oauth2Info)
-      case Some(oauthProvider) =>
-        oauthProvider.exchangeLongTermToken(oauth2Info).map { tokenInfo =>
-          log.info(s"[exchangeLongTermToken(${provider.id}) orig=${oauth2Info.accessToken.take(5)}... new=${tokenInfo.accessToken} isIdentical=${tokenInfo.accessToken.token.equals(oauth2Info.accessToken)}")
-          OAuth2TokenInfo.toOAuth2Info(tokenInfo)
-        }
-    }
+  def getUserIdentity(identityId: IdentityId): Option[UserIdentity] = UserService.find(identityId).map {
+    case userIdentity: UserIdentity => userIdentity
+    case unexpectedIdentity => throw new IllegalStateException(s"Unexpected identity: $unexpectedIdentity")
   }
 
-  def signupWithTrustedSocialUser(providerName: String, socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
-    getSocialUserOpt(socialUser.identityId) match { // *note* checks for social users with credentials
-      case None =>
-        db.readWrite { implicit rw =>
-          // userId must not be set in this case
-          val socialId = SocialId(socialUser.identityId.userId)
-          val networkType = SocialNetworkType(socialUser.identityId.providerId)
+  def saveUserIdentity(identity: Identity): UserIdentity = UserService.save(identity) match {
+    case userIdentity: UserIdentity => userIdentity
+    case unexpectedIdentity => throw new IllegalStateException(s"Unexpected identity: $unexpectedIdentity")
+  }
 
-          socialUserInfoRepo.getOpt(socialId, networkType) match { // double check if social user already exists in DB
-            case None =>
-              log.info(s"[signupWithTrustedSocialUser] NO social user found in DB for ($socialId, $networkType)")
-              socialUserInfoRepo.save(SocialUserInfo(
-                fullName = socialUser.fullName,
-                pictureUrl = socialUser.avatarUrl,
-                state = SocialUserInfoStates.FETCHED_USING_SELF,
-                socialId = socialId,
-                networkType = networkType,
-                credentials = Some(socialUser)
-              ))
-            case Some(sui) => // update all fields to latest field anyway
-              log.info(s"[signupWithTrustedSocialUser] social user found in DB for ($socialId, $networkType), $sui")
-              socialUserInfoRepo.save(sui.copy(
-                fullName = socialUser.fullName,
-                pictureUrl = socialUser.avatarUrl,
-                state = SocialUserInfoStates.FETCHED_USING_SELF,
-                socialId = socialId,
-                networkType = networkType,
-                credentials = Some(socialUser)
-              ))
-          }
+  def isEmailAddressAlreadyOwned(identity: Identity): Boolean = IdentityHelpers.parseEmailAddress(identity).toOption.exists { address =>
+    getUserIdentity(IdentityHelpers.toIdentityId(address)).exists(_.userId.isDefined)
+  }
 
-        } tap { sui => log.info(s"[doAccessTokenSignup] created socialUserInfo(${sui.id}) $socialUser") }
-        val payload = if (socialUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
-          Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
-        else
-          Json.obj("code" -> "continue_signup")
-        log.info(s"[accessTokenSignup($providerName)] created social user(${socialUser.identityId}) email=${socialUser.email}; payload=$payload")
-        Authenticator.create(socialUser).fold(
-          error => throw error,
-          authenticator =>
-            Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
-              .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-              .withCookies(authenticator.toCookie)
-        )
-      case Some(identity) => // social user exists
-        db.readOnlyMaster(attempts = 2) { implicit s =>
-          socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
-        } match {
-          case None => // kifi user does not exist
-            val payload = if (socialUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
-              Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
-            else
-              Json.obj("code" -> "continue_signup")
-            log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${socialUser.identityId} email=${socialUser.email}; payload=$payload")
-            Authenticator.create(identity).fold(
-              error => throw error,
-              authenticator =>
-                Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
-                  .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-            )
-          case Some(userId) =>
-            val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
-            Authenticator.create(identity).fold(
-              error => throw error,
-              authenticator =>
-                Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-                  .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                  .withCookies(authenticator.toCookie)
-            )
-        }
+  def signupWithTrustedSocialUser(socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
+    val userIdentity = saveUserIdentity(socialUser)
+    val (payload, newSession) = userIdentity.userId match {
+      case Some(userId) => (
+        Json.obj("code" -> "user_logged_in"),
+        Events.fire(new LoginEvent(userIdentity))
+      )
+      case None => (
+        if (isEmailAddressAlreadyOwned(socialUser)) Json.obj("code" -> "connect_option", "uri" -> signUpUrl) else Json.obj("code" -> "continue_signup"),
+        None
+      )
     }
+    Authenticator.create(userIdentity).fold(
+      error => throw error,
+      authenticator =>
+        Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
+          .withSession(newSession.getOrElse(request.session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+          .withCookies(authenticator.toCookie)
+    )
   }
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
     log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
     // more fine-grained error handling required
     val resOpt = for {
-      identity <- UserService.find(identityId)
-      sui <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) }
-      userId <- sui.userId
+      identity <- getUserIdentity(identityId)
+      userId <- identity.userId
     } yield {
       log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userId")
       val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
@@ -470,8 +399,7 @@ class AuthCommander @Inject() (
     val hasPermission = db.readOnlyMaster(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.ADD_MESSAGE))
     if (hasPermission) {
       db.readWrite { implicit s =>
-        val keep = keepRepo.get(keepId)
-        keepCommander.persistKeep(keep.withConnections(keep.connections.plusUser(userId)))
+        keepCommander.addUsersToKeep(keepId, userId, Set(userId))
       }
     }
     // user may not have explicit permission to be added, but implicit via access token from email participation. add them.
@@ -481,8 +409,7 @@ class AuthCommander @Inject() (
           db.readWrite { implicit s =>
             emailOpt.map(email => emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email)))
             addedByOpt.map { addedBy => // addedByOpt = None if no NonUserThread found for access token
-              val keep = keepRepo.get(keepId)
-              keepCommander.persistKeep(keep.withConnections(keep.connections.plusUser(userId)))
+              keepCommander.addUsersToKeep(keepId, addedBy, Set(userId))
             }
           }
       }

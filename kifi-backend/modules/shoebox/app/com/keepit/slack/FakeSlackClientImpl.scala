@@ -37,7 +37,7 @@ class FakeSlackClientImpl extends SlackClient {
       messageType = SlackMessageType("message"),
       userId = stm.slackUserId,
       username = stm.slackUsername,
-      timestamp = SlackMessageTimestamp(s"$msgId.00000"),
+      timestamp = SlackTimestamp(s"$msgId.00000"),
       channel = ch,
       text = str,
       attachments = Seq.empty,
@@ -67,9 +67,9 @@ class FakeSlackClientImpl extends SlackClient {
       ))
   }
 
-  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = Future.successful(())
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = Future.successful(None)
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]] = ???
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]] = ???
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = ???
 }

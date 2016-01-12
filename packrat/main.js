@@ -515,6 +515,10 @@ var socketHandlers = {
       tellVisibleTabsNoticeCountIfChanged();
     }
   },
+  remove_notification: function (th) {
+    log('[socket:remove_notification]', th);
+    removeNotification(th);
+  },
   all_notifications_visited: function(id, time) {
     log('[socket:all_notifications_visited]', id, time);
     markAllThreadsRead(id, time);
@@ -523,8 +527,10 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
+    var linkToKeep = (o.keep.libraries.length === 1 || (o.keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1));
+
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, o.keep));
+    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
@@ -1564,6 +1570,29 @@ function insertNewNotification(n) {
     });
     return true;
   }
+}
+
+function removeNotification(threadId) {
+  var n0 = notificationsById[threadId];
+
+  if (n0) {
+    markRead(threadId, n0.id, +new Date());
+    removeNotificationPopups(threadId);
+
+    ['all', 'page', 'unread', 'sent'].map(function (kind) {
+      var tl = notificationLists[kind];
+      if (tl && tl.remove(threadId, log) && kind === 'page') {
+        forEachTabAt(n0.url, function (tab) {
+          sendPageThreadCount(tab, tl);
+        });
+      }
+    });
+  }
+
+  delete notificationsById[threadId];
+  delete threadReadAt[threadId];
+
+  tellVisibleTabsNoticeCountIfChanged();
 }
 
 function updateIfJustRead(th) {

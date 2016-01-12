@@ -9,8 +9,12 @@
     <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
        ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
     </a></span>
-    <span ng-if="::keep.sourceAttribution.slack"><a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-bind="keep.sourceAttribution.kifi ?
-      keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName : '@' + keep.sourceAttribution.slack.message.username"></a> added this</span>
+    <span ng-if="::keep.sourceAttribution.slack">
+      <a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-if="keep.sourceAttribution.kifi"
+        ng-bind="keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName"></a>
+      <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" ng-if="!keep.sourceAttribution.kifi" ng-bind="'@' + keep.sourceAttribution.slack.message.username"></a>
+      added this
+    </span>
     <span ng-if="::!keep.sourceAttribution.slack">kept this</span>
     <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
     into

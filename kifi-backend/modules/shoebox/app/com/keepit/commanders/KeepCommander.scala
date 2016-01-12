@@ -74,6 +74,7 @@ trait KeepCommander {
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
@@ -116,6 +117,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander: KeepToLibraryCommander,
     ktuRepo: KeepToUserRepo,
     ktuCommander: KeepToUserCommander,
+    keepSourceCommander: KeepSourceCommander,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
@@ -147,6 +149,9 @@ class KeepCommanderImpl @Inject() (
       val users = userRepo.getAllUsers(keeps.collect {
         case (id, keep) => keep.userId
       }.toSeq)
+      val attributions = keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(keeps.values.flatMap(_.id).toSet).collect {
+        case (keepId, (attr: SlackAttribution, userOpt)) => keepId -> (attr, userOpt)
+      }
       keeps.map {
         case (id, keep) => id -> BasicKeep(
           keep.externalId,
@@ -154,7 +159,8 @@ class KeepCommanderImpl @Inject() (
           keep.url,
           keep.visibility,
           keep.libraryId.map(Library.publicId),
-          users(keep.userId).externalId
+          users(keep.userId).externalId,
+          attributions.get(id)
         )
       }
     }
@@ -228,20 +234,22 @@ class KeepCommanderImpl @Inject() (
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-      ) match {
-          case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
-          case Some(keep) => {
-            val canViewShoebox = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-            val canViewFut = {
-              if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
-              else Future.successful(canViewShoebox)
-            }
-            canViewFut.flatMap { canView =>
-              if (canView) Future.successful(keep)
-              else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
-            }
-          }
+      )
+    } match {
+      case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
+      case Some(keep) => {
+        val canViewShoebox = db.readOnlyReplica { implicit s =>
+          permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
         }
+        val canViewFut = {
+          if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
+          else Future.successful(canViewShoebox)
+        }
+        canViewFut.flatMap { canView =>
+          if (canView) Future.successful(keep)
+          else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+        }
+      }
     }
 
     keepFut.flatMap { keep =>
@@ -664,12 +672,20 @@ class KeepCommanderImpl @Inject() (
 
     val keep = keepRepo.save(k)
 
-    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
+    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, userId) }
 
     val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep
+  }
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+    val oldKeep = keepRepo.get(keepId)
+    val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
+
+    newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
+
+    newKeep
   }
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
     val keep = keepRepo.getNoCache(keepId)

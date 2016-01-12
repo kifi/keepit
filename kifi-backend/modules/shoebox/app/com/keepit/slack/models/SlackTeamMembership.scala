@@ -12,7 +12,7 @@ import play.api.libs.json.{ Json, JsValue }
 import scala.util.{ Success, Failure, Try }
 
 case class SlackTeamMembershipInternRequest(
-  userId: Id[User],
+  userId: Option[Id[User]],
   slackUserId: SlackUserId,
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
@@ -24,13 +24,16 @@ case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], members
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
 
 case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
+object SlackTokenWithScopes {
+  def unapply(stm: SlackTeamMembership): Option[(SlackAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
+}
 
 case class SlackTeamMembership(
     id: Option[Id[SlackTeamMembership]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[SlackTeamMembership] = SlackTeamMembershipStates.ACTIVE,
-    userId: Id[User],
+    userId: Option[Id[User]],
     slackUserId: SlackUserId,
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
@@ -77,7 +80,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[SlackTeamMembership],
-    userId: Id[User],
+    userId: Option[Id[User]],
     slackUserId: SlackUserId,
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
@@ -116,7 +119,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
   type RepoImpl = SlackTeamMembershipTable
 
   class SlackTeamMembershipTable(tag: Tag) extends RepoTable[SlackTeamMembership](db, tag, "slack_team_membership") {
-    def userId = column[Id[User]]("user_id", O.NotNull)
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackUsername = column[SlackUsername]("slack_username", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
@@ -142,7 +145,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
         val updated = membership.copy(
-          userId = request.userId, // let a Kifi user steal a slack membership
+          userId = request.userId orElse membership.userId, // let a Kifi user steal a slack membership
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
           token = Some(request.token),

@@ -58,7 +58,7 @@ class AppBoy @Inject() (
     updatedDevice
   }
 
-  // When this is the only push provider, refactor this to just take userId and notification. No need to get list of devices.
+  // When this is the only push provider, refactor this to just take userId and notification. No need to get list of devices. // 1/7/16 this is the only push provider, but seems like allDevices is being used quite a bit
   def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
     val activeDevices = if (force) allDevices else allDevices.filter(_.state == DeviceStates.ACTIVE)

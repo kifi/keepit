@@ -9,6 +9,10 @@ import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import play.api.libs.json.Json
 
+object ImageUrls {
+  val SLACK_LOGO: String = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
+}
+
 @Singleton
 class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {
   private def genericInfoFn[N <: NotificationEvent](
@@ -100,11 +104,28 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
+
+      val attributionOpt = newKeep.attribution
+      val image = {
+        val slackImage: Option[NotificationImage] = attributionOpt.map { case (_, userOpt) =>
+          userOpt.map(UserImage).getOrElse(PublicImage(ImageUrls.SLACK_LOGO))
+        }
+        slackImage.getOrElse(UserImage(keeper))
+      }
+      val body = {
+        val kifiBody = s"${keeper.firstName} just kept ${newKeep.title.getOrElse("a new item")}"
+        val slackBody = attributionOpt.map { case (slackAttr, userOpt) =>
+          s"${userOpt.map(_.firstName).getOrElse(s"@${slackAttr.message.username.value}")} just added in #${slackAttr.message.channel.name.value}" +
+            newKeep.title.map(title => s": $title").getOrElse("")
+        }
+        slackBody.getOrElse(kifiBody)
+      }
+      import com.keepit.common.json.TupleFormat.tuple2Writes
       StandardNotificationInfo(
         url = newKeep.url,
-        image = UserImage(keeper),
+        image = image,
         title = s"New keep in ${libraryKept.name}",
-        body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
+        body = body,
         linkText = "Go to page",
         locator = Some(MessageThread.locator(Keep.publicId(event.keepId))),
         extraJson = Some(Json.obj(
@@ -112,7 +133,8 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
           "library" -> Json.toJson(libraryKept),
           "keep" -> Json.obj(
             "id" -> newKeep.id,
-            "url" -> newKeep.url
+            "url" -> newKeep.url,
+            "attr" -> Json.toJson(newKeep.attribution)
           )
         )),
         category = NotificationCategory.User.NEW_KEEP

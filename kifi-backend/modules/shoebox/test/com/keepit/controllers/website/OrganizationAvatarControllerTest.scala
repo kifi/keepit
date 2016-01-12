@@ -72,7 +72,7 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
 
           status(result) === FORBIDDEN
           db.readOnlyMaster { implicit s =>
-            inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).sourceFileHash.hash === "076fccc32247ae67bb75d48879230953" //the default
+            inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).sourceFileHash.hash === "8ea954ccffeb8d21891af94ad02b9876" //the default
           }
           1 === 1
         }

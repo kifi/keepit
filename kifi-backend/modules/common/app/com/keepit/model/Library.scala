@@ -324,6 +324,7 @@ object LibraryKind extends Enumerator[LibraryKind] {
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
   case object USER_CREATED extends LibraryKind("user_created", 3)
+  case object SLACK_CHANNEL extends LibraryKind("slack_channel", 4)
 
   def all = _all.toSet
   val deprecated: Map[String, LibraryKind] = Map(

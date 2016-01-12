@@ -9,7 +9,7 @@ import com.keepit.model.{ SocialUserInfo, UserCred, User }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import securesocial.core.{ IdentityId, PasswordInfo, AuthenticationMethod, SocialUser }
+import securesocial.core._
 
 import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Try }
@@ -37,7 +37,7 @@ object UserIdentity {
   def apply(user: User, emailAddress: EmailAddress, cred: Option[UserCred]): UserIdentity = {
     val passwordInfo = cred.map(actualCred => PasswordInfo(hasher = "bcrypt", password = actualCred.credentials))
     val socialUser = SocialUser(
-      identityId = SocialUserHelpers.toIdentityId(emailAddress),
+      identityId = IdentityHelpers.toIdentityId(emailAddress),
       firstName = user.firstName,
       lastName = user.lastName,
       fullName = user.fullName,
@@ -63,8 +63,8 @@ case class UserIdentityIdentityIdKey(id: IdentityId) extends Key[UserIdentity] {
 }
 
 object UserIdentityIdentityIdKey {
-  def apply(networkType: SocialNetworkType, socialId: SocialId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(SocialUserHelpers.toIdentityId(networkType, socialId))
-  def apply(emailAddress: EmailAddress): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(SocialUserHelpers.toIdentityId(emailAddress))
+  def apply(networkType: SocialNetworkType, socialId: SocialId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
+  def apply(emailAddress: EmailAddress): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(emailAddress))
 }
 
 class UserIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -77,18 +77,17 @@ object NewUserIdentity {
   def unapply(u: NewUserIdentity) = Some(u.userId, u.socialUser)
 }
 
-object SocialUserHelpers {
+object IdentityHelpers {
   def parseNetworkType(identityId: IdentityId): SocialNetworkType = SocialNetworkType(identityId.providerId)
-  def parseNetworkType(socialUser: SocialUser): SocialNetworkType = parseNetworkType(socialUser.identityId)
+  def parseNetworkType(identity: Identity): SocialNetworkType = parseNetworkType(identity.identityId)
 
   def parseSocialId(identityId: IdentityId): SocialId = identityId.userId.trim match {
     case socialId if socialId.nonEmpty => SocialId(socialId)
     case _ => throw new IllegalArgumentException(s"Invalid social id from IdentityId: $identityId")
   }
-  def parseSocialId(socialUser: SocialUser): SocialId = parseSocialId(socialUser.identityId)
-
-  def parseEmailAddress(socialUser: SocialUser): Try[EmailAddress] = socialUser.email match {
-    case None => Failure(new IllegalArgumentException(s"Email address not fount in SocialUser: $socialUser"))
+  def parseSocialId(identity: Identity): SocialId = parseSocialId(identity.identityId)
+  def parseEmailAddress(identity: Identity): Try[EmailAddress] = identity.email match {
+    case None => Failure(new IllegalArgumentException(s"Email address not fount in $identity"))
     case Some(address) => EmailAddress.validate(address)
   }
 

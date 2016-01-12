@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -9,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.time._
-import com.keepit.discussion.{ Discussion, Message }
+import com.keepit.discussion.{ DiscussionFail, Discussion, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -17,6 +18,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
@@ -119,7 +121,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       messageThreadRepo.getByKeepId(keepId)
     }.map(Future.successful).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
-        val csKeep = csKeeps.getOrElse(keepId, throw new Exception(s"Tried to create message thread for dead keep $keepId"))
+        val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
@@ -189,7 +191,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     for {
       ut <- userThreadRepo.getUserThread(userId, keepId)
     } yield {
-      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
+      messageRepo.countByKeep(keepId, Some(msgId), SortDirection.ASCENDING).unread tap { unreadCount =>
         // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
         // Then you can just set it and forget it
         if (unreadCount == 0) userThreadRepo.markRead(userId, messageRepo.get(msgId))
@@ -204,8 +206,15 @@ class ElizaDiscussionCommanderImpl @Inject() (
     externalizeMessage(editedMsg)
   }
 
-  def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
-    messageRepo.deactivate(messageRepo.get(messageId))
+  def deleteMessage(messageId: Id[ElizaMessage]): Unit = {
+    val keepForDeletedMsg = db.readWrite { implicit s =>
+      val msg = messageRepo.get(messageId)
+      messageRepo.deactivate(msg)
+      msg.keepId
+    }
+    // I care so little if this actually works
+    // If it fails we'll airbrake, but we're moving on with our lives
+    SafeFuture.swallow(tryToFixThreadNotif(keepForDeletedMsg))
   }
 
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean = db.readOnlyMaster { implicit s =>
@@ -235,4 +244,40 @@ class ElizaDiscussionCommanderImpl @Inject() (
       messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)
     }
   }
+
+  private def tryToFixThreadNotif(keepId: Id[Keep]): Future[Unit] = {
+    db.readOnlyMaster { implicit s =>
+      for {
+        thread <- messageThreadRepo.getByKeepId(keepId)
+        lastMsg <- messageRepo.getLatest(keepId)
+      } yield (thread, lastMsg)
+    }.map {
+      case (thread, lastMsg) =>
+        shoebox.getBasicUsers(thread.allParticipants.toSeq).map { basicUserById =>
+          val basicNonUserParticipants = thread.participants.allNonUsers.map(NonUserParticipant.toBasicNonUser)
+            .map(nu => BasicUserLikeEntity(nu))
+          val messageWithBasicUser = MessageWithBasicUser(
+            lastMsg.pubId,
+            lastMsg.createdAt,
+            lastMsg.messageText,
+            lastMsg.source,
+            None,
+            lastMsg.sentOnUrl.getOrElse(""),
+            thread.nUrl,
+            lastMsg.from match {
+              case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
+              case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+              case _ => None
+            },
+            thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++ basicNonUserParticipants.toSeq
+          )
+
+          // send message through websockets immediately
+          thread.allParticipants.foreach { user =>
+            notifDeliveryCommander.notifyMessage(user, lastMsg.pubKeepId, messageWithBasicUser)
+          }
+        }
+    }.getOrElse(Future.successful(Unit))
+  }
+
 }
