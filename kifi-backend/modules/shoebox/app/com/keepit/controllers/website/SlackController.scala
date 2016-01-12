@@ -98,22 +98,7 @@ class SlackController @Inject() (
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
-              case None => {
-                // todo(Léo): discuss frontend
-                val newOrgLink = {
-                  val message = s"Create new Kifi organization for your Slack team ${slackTeam.slackTeamName.value}"
-                  val url = com.keepit.controllers.website.routes.SlackController.createOrganizationForSlackTeam(slackTeam.slackTeamId.value).url
-                  message -> url
-                }
-                val connectLinks = slackTeamCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
-                  case (_, org) =>
-                    val message = s"Connect your Kifi organization ${org.name} with your Slack team ${slackTeam.slackTeamName.value}"
-                    val url = com.keepit.controllers.website.routes.SlackController.connectSlackTeamToOrganization(org.orgId, slackTeam.slackTeamId.value).url
-                    message -> url
-                }
-                val payload = JsObject((newOrgLink +: connectLinks).map { case (message, url) => message -> JsString(url) })
-                Ok(payload)
-              }
+              case None => Redirect("/integrations/slack/teams", SEE_OTHER)
             }
           }
         case _ => Future.successful(BadRequest("invalid_organization_id"))
