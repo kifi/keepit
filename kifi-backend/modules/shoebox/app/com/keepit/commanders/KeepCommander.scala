@@ -134,6 +134,7 @@ class KeepCommanderImpl @Inject() (
     facebookPublishingCommander: FacebookPublishingCommander,
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
+    userExperimentRepo: UserExperimentRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
@@ -233,20 +234,22 @@ class KeepCommanderImpl @Inject() (
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-      ) match {
-          case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
-          case Some(keep) => {
-            val canViewShoebox = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-            val canViewFut = {
-              if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
-              else Future.successful(canViewShoebox)
-            }
-            canViewFut.flatMap { canView =>
-              if (canView) Future.successful(keep)
-              else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
-            }
-          }
+      )
+    } match {
+      case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
+      case Some(keep) => {
+        val canViewShoebox = db.readOnlyReplica { implicit s =>
+          permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
         }
+        val canViewFut = {
+          if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
+          else Future.successful(canViewShoebox)
+        }
+        canViewFut.flatMap { canView =>
+          if (canView) Future.successful(keep)
+          else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+        }
+      }
     }
 
     keepFut.flatMap { keep =>
@@ -840,7 +843,8 @@ class KeepCommanderImpl @Inject() (
     val keepsAndTimes = db.readOnlyReplica { implicit session =>
       // TODO(ryan): when the frontend can handle a keep without a library, let them through
       // Grab 2x the required number because we're going to be dropping some
-      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined }
+      val hasNoLibExperiment = userExperimentRepo.hasExperiment(userId, UserExperimentType.KEEP_NOLIB)
+      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
     }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
 
     val keeps = keepsAndTimes.map(_._1)

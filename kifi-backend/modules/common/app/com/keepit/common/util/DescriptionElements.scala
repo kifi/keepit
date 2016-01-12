@@ -82,6 +82,11 @@ object DescriptionElements {
 
   def mkElements(els: Seq[DescriptionElements], e: BasicElement): DescriptionElements = SequenceOfElements(intersperseWith(els, e))
   def unlines(els: Seq[DescriptionElements]): DescriptionElements = mkElements(els, "\n")
+  def unwordsPretty(els: Seq[DescriptionElements]): DescriptionElements = els match {
+    case Seq() => Seq()
+    case Seq(x) => Seq(x)
+    case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements("and"))
+  }
 
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)

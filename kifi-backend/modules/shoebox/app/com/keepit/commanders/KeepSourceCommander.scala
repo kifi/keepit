@@ -45,7 +45,7 @@ class KeepSourceCommanderImpl @Inject() (
   }
 
   private def getSlackAccountOwners(userIds: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, Id[User]] = {
-    slackTeamMembershipRepo.getBySlackUserIds(userIds).mapValues(_.userId)
+    slackTeamMembershipRepo.getBySlackUserIds(userIds).flatMap { case (slackUserId, membership) => membership.userId.map(slackUserId -> _) }
   }
 
   def getSourceAttributionWithBasicUserForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])] = {

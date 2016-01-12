@@ -68,7 +68,7 @@ class SlackIngestionCommanderImpl @Inject() (
 
         val isAllowed = integrations.map { integration =>
           integration.id.get -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
-            permissionCommander.getLibraryPermissions(integration.libraryId, Some(stm.userId)).contains(LibraryPermission.ADD_KEEPS)
+            permissionCommander.getLibraryPermissions(integration.libraryId, stm.userId).contains(LibraryPermission.ADD_KEEPS)
           }
         }.toMap
 
@@ -161,9 +161,10 @@ class SlackIngestionCommanderImpl @Inject() (
     log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val (userId, library) = db.readOnlyMaster { implicit session =>
-      val userId = slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).map(_.userId).getOrElse {
-        airbrake.notify(s"Could not find a slack team membership for ${(integration.slackTeamId, integration.slackUserId)} for stl ${integration.id.get}")
-        throw new Exception(s"Could not find slack team membership for integration $integration")
+      val userId = slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).flatMap(_.userId).getOrElse {
+        val message = s"Could not find a valid SlackMembership for ${(integration.slackTeamId, integration.slackUserId)} for stl ${integration.id.get}"
+        airbrake.notify(message)
+        throw new IllegalStateException(message)
       }
       val library = libraryRepo.get(integration.libraryId)
       (userId, library)

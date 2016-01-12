@@ -64,6 +64,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackTimestamp)(implicit session: RWSession): Unit
   def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
+  def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
@@ -244,6 +245,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.lastIngestedAt, r.nextIngestionAt, r.status)).update((now, None, Some(now), nextIngestionAt, status))
   }
 
+  def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[SlackChannelToLibrary] = {
+    activeRows.filter(r => r.slackTeamId === teamId).list
+  }
   def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary] = {
     activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId === channelId).list
   }

@@ -132,6 +132,7 @@ case class MessageThread(
   }
   def withKeepId(newKeepId: Id[Keep]): MessageThread = this.copy(keepId = newKeepId)
 
+  def withParticipants(participants: MessageThreadParticipants) = this.copy(participants = participants)
   def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[NonUserParticipant] = Set.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
     val newNonUsers = nonUsers.map(_ -> when).toMap
