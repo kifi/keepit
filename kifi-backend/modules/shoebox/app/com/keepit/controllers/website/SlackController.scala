@@ -13,7 +13,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.slack.models._
-import com.keepit.slack.{ SlackAuthenticatedAction, SlackClient, SlackCommander }
+import com.keepit.slack._
 import play.api.libs.json._
 import play.api.mvc.Result
 
@@ -24,6 +24,8 @@ import scala.util.{ Failure, Success }
 class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
+    slackIntegrationCommander: SlackIntegrationCommander,
+    slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
@@ -74,25 +76,25 @@ class SlackController @Inject() (
     action match {
       case SetupLibraryIntegrations => (Library.decodePublicId(data), slackAuth.incomingWebhook) match {
         case (Success(libId), Some(webhook)) =>
-          slackCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
+          slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_library_id"))
       }
       case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
         case (Success(integrationId), Some(webhook)) =>
-          val libraryId = slackCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
+          val libraryId = slackIntegrationCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_integration_id"))
       }
       case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
         case Success(integrationId) =>
-          val libraryId = slackCommander.turnOnChannelIngestion(integrationId, slackIdentity)
+          val libraryId = slackIntegrationCommander.turnOnChannelIngestion(integrationId, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_integration_id"))
       }
       case SetupSlackTeam => ((data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
         case Success(orgIdOpt) =>
-          slackCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
+          slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
               case None => {
@@ -102,7 +104,7 @@ class SlackController @Inject() (
                   val url = com.keepit.controllers.website.routes.SlackController.createOrganizationForSlackTeam(slackTeam.slackTeamId.value).url
                   message -> url
                 }
-                val connectLinks = slackCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
+                val connectLinks = slackTeamCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
                   case (_, org) =>
                     val message = s"Connect your Kifi organization ${org.name} with your Slack team ${slackTeam.slackTeamName.value}"
                     val url = com.keepit.controllers.website.routes.SlackController.connectSlackTeamToOrganization(org.orgId, slackTeam.slackTeamId.value).url
@@ -150,7 +152,7 @@ class SlackController @Inject() (
           }.toSet
         }
         if (libraryAccessCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
-          slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
+          slackIntegrationCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
             Ok(Json.toJson(response))
           }.recover {
             case fail: LibraryFail => fail.asErrorResponse
@@ -167,7 +169,7 @@ class SlackController @Inject() (
       case JsSuccess(dels, _) =>
         val libToSlackDels = dels.collect { case Left(ltsId) => LibraryToSlackChannel.decodePublicId(ltsId).get }.toSet
         val slackToLibDels = dels.collect { case Right(stlId) => SlackChannelToLibrary.decodePublicId(stlId).get }.toSet
-        slackCommander.deleteIntegrations(SlackIntegrationDeleteRequest(request.userId, libToSlackDels, slackToLibDels)).map { response =>
+        slackIntegrationCommander.deleteIntegrations(SlackIntegrationDeleteRequest(request.userId, libToSlackDels, slackToLibDels)).map { response =>
           Ok(Json.toJson(response))
         }.recover {
           case fail: LibraryFail => fail.asErrorResponse
@@ -177,13 +179,13 @@ class SlackController @Inject() (
 
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
+    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
       redirectToOrg(slackTeam.organizationId.get)
     }
   }
 
   def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
-    slackCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
+    slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
       case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId)
       case Success(slackTeam) => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
       case Failure(_) => BadRequest("invalid_request")
