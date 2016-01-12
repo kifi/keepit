@@ -6,7 +6,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
-import com.keepit.slack.{ SlackTeamCommander, SlackCommander, LibraryToSlackChannelPusher, SlackIngestionCommander }
+import com.keepit.slack._
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
@@ -23,7 +23,7 @@ class ShoeboxTasksPlugin @Inject() (
     messageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
-    slackCommander: SlackCommander,
+    slackIntegrationCommander: SlackIntegrationCommander,
     slackTeamCommander: SlackTeamCommander,
     slackIngestionCommander: SlackIngestionCommander,
     libToSlackPusher: LibraryToSlackChannelPusher,
@@ -40,7 +40,7 @@ class ShoeboxTasksPlugin @Inject() (
     }
 
     scheduleTaskOnLeader(system, 1 minute, 30 seconds, "fetching missing Slack channel ids") {
-      slackCommander.fetchMissingChannelIds()
+      slackIntegrationCommander.fetchMissingChannelIds()
     }
 
     scheduleTaskOnOneMachine(system, 1 minute, 20 seconds, "slack pushing") {
