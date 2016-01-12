@@ -98,7 +98,7 @@ class SlackController @Inject() (
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
-              case None => Redirect(s"/integrations/slack/team/${slackTeam.slackTeamId.value}", SEE_OTHER)
+              case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
             }
           }
         case _ => Future.successful(BadRequest("invalid_organization_id"))
