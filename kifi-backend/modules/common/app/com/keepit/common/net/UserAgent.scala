@@ -13,17 +13,17 @@ case class UserAgent(
     possiblyBot: Boolean,
     typeName: String,
     version: String) {
-  val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
-  val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" && this.toString.contains(UserAgent.KifiMarker)
-  val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
-  val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
-  val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
-  val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
-  val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
-  val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
-  val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
+  lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
+  lazy val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" && this.toString.contains(UserAgent.KifiMarker)
+  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
+  lazy val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
+  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
+  lazy val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
+  lazy val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
+  lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
+  lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
 
-  override def toString = {
+  override def toString() = {
     s"""UserAgent($userAgent, $name, $operatingSystemFamily, $operatingSystemName, $possiblyBot, $typeName, $version;; $isKifiIphoneApp,$isKifiAndroidApp,$isIphone, $isAndroid, $isMobile, $isMobileWeb, $canRunExtensionIfUpToDate, $isOldIE)"""
   }
 }
