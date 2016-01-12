@@ -597,7 +597,7 @@ class AuthHelper @Inject() (
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
-            authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
+            authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
           }
         } recover {
           case t: Throwable =>
@@ -615,7 +615,7 @@ class AuthHelper @Inject() (
       case Some(provider) =>
         provider.getUserProfileInfo(oauth1Info) map { info =>
           val filledUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
+          authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
             airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")

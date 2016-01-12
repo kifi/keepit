@@ -321,7 +321,7 @@ class AuthCommander @Inject() (
     getUserIdentity(IdentityHelpers.toIdentityId(address)).exists(_.userId.isDefined)
   }
 
-  def signupWithTrustedSocialUser(providerName: String, socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
+  def signupWithTrustedSocialUser(socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
     val userIdentity = saveUserIdentity(socialUser)
     val (payload, newSession) = userIdentity.userId match {
       case Some(userId) => (
