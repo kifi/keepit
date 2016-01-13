@@ -231,6 +231,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>
       val uts = userThreadRepo.getByKeep(keepId)
+      val nuts = nonUserThreadRepo.getByKeepId(keepId)
       val (nUrlOpt, lastMsgOpt) = (messageThreadRepo.getByKeepId(keepId).map(_.nUrl), messageRepo.getLatest(keepId))
       s.onTransactionSuccess {
         uts.foreach { ut =>
@@ -239,6 +240,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
         }
       }
       uts.foreach(userThreadRepo.deactivate)
+      nuts.foreach(nonUserThreadRepo.deactivate)
 
       messageThreadRepo.getByKeepId(keepId).foreach(messageThreadRepo.deactivate)
       messageRepo.getAllByKeep(keepId).foreach(messageRepo.deactivate)

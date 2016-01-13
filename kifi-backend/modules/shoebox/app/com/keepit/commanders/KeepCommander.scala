@@ -843,9 +843,14 @@ class KeepCommanderImpl @Inject() (
     val keepsAndTimesFut = filterOpt match {
       case Some(filter: ElizaFeedFilter) =>
         val beforeId = beforeExtId.flatMap(extId => db.readOnlyReplica(implicit s => keepRepo.get(extId).id))
-        eliza.getElizaKeepStream(userId, limit, beforeId, filter).map { keepIdsAndLastActivity =>
-          val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getByIds(keepIdsAndLastActivity.map(_._1).toSet))
-          keepIdsAndLastActivity.map { case (keepId, lastActivity) => (keepsByIds(keepId), lastActivity) }
+        eliza.getElizaKeepStream(userId, limit, beforeId, filter).map { lastActivityByKeepId =>
+          val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getByIds(lastActivityByKeepId.keySet))
+          Future {
+            // make sure eliza is up-to-date on keeps that have been deleted
+            val zombieThreadKeepIds = lastActivityByKeepId.keySet -- keepsByIds.keySet
+            eliza.deleteThreadsForKeeps(zombieThreadKeepIds)
+          }
+          keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toSeq
         }
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
         Future.successful {

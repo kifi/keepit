@@ -39,7 +39,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
-  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Seq[(Id[Keep], DateTime)]
+  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Map[Id[Keep], DateTime]
 
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
@@ -128,7 +128,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Seq[(Id[Keep], DateTime)] = {
+  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Map[Id[Keep], DateTime] = {
     val unmutedRows = activeRows.filter(row => row.state === UserThreadStates.ACTIVE && row.user === userId && !row.muted)
     val rowsBeforeId = beforeId match {
       case Some(keepId) =>
@@ -145,7 +145,7 @@ class UserThreadRepoImpl @Inject() (
       .sortBy(_.notificationUpdatedAt desc)
       .take(limit)
       .map(row => (row.keepId, row.notificationUpdatedAt))
-      .list
+      .list.toMap
   }
 
   def getKeepIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[Keep]] = {
