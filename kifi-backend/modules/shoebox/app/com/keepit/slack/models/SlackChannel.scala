@@ -1,16 +1,11 @@
 package com.keepit.slack.models
 
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.{DataBaseComponent, DbRepo, Repo}
 import com.keepit.common.db._
-
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
-import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
-import com.keepit.model.{ User, Organization }
 import org.joda.time.DateTime
-import org.joda.time.DateTime
-import com.keepit.common.time._
 
 case class SlackChannel(
   id: Option[Id[SlackChannel]],
