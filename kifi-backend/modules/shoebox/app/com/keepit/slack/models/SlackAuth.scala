@@ -129,7 +129,7 @@ case class SlackUserInfo(
   firstName: Option[String],
   lastName: Option[String],
   fullName: Option[String],
-  emailAddress: Option[EmailAddress],
+  emailAddress: EmailAddress,
   icon: Map[Int, String])
 
 object SlackUserInfo {
@@ -139,7 +139,7 @@ object SlackUserInfo {
     (__ \ 'profile \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'profile \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'profile \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'profile \ 'email).readNullable[EmailAddress] and
+    (__ \ 'profile \ 'email).read[EmailAddress] and
     (__ \ 'profile).read(SlackIconReads)
   )(SlackUserInfo.apply _)
 }
