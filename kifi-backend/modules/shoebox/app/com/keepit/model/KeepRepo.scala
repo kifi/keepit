@@ -8,8 +8,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.model.FeedFilter._
 import org.joda.time.DateTime
+import com.keepit.model.FeedFilter._
 
 import scala.slick.jdbc.{ GetResult, PositionedResult }
 
