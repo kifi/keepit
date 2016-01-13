@@ -146,7 +146,9 @@ class S3ImageStoreImpl @Inject() (
               }
               (actualPictureName, putObj)
             }
-            case nonOkResponse => None //ignore
+            case nonOkResponse =>
+              airbrake.notify(s"NonOkResponse when getting imageUrl=$originalImageUrl for userId=$userId: ${nonOkResponse.body}")
+              None //ignore
           }
 
           future onFailure { case e => airbrake.notify(s"Failed to upload picture $pictureName - $externalId from $pictureSource to S3", e) }
