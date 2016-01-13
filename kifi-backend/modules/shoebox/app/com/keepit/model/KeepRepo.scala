@@ -648,11 +648,10 @@ class KeepRepoImpl @Inject() (
     }
 
     val keepInOrgFilter = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }
-    val keepAddedByUserFilter = filterOpt.collect { case OwnKeeps => s"""AND ktu.added_by = $userId""" }
 
     val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_lm_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
     val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_om_WHERE_THIS_USER AND $added_at_BEFORE ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
-    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE ${keepAddedByUserFilter.getOrElse("")}"""
+    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE"""
 
     val fromQuery = filterOpt match {
       case Some(OwnKeeps) => keepsFromUser
@@ -669,8 +668,9 @@ class KeepRepoImpl @Inject() (
       LIMIT $limit
     """.as[(Id[Keep], DateTime)].list
 
+    val shouldFilterByUser = filterOpt.contains(OwnKeeps)
     val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
-    val keepsById = getByIds(keepIds.toSet)
+    val keepsById = getByIds(keepIds.toSet).filter { case (keepId, keep) => !shouldFilterByUser || keep.userId == userId }
     keepsAndFirstAddedAt.map { case (keepId, firstAddedAt) => keepsById(keepId) -> firstAddedAt }
   }
 
