@@ -11,6 +11,7 @@ import scala.util.{ Failure, Try }
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
+  val Identify = SlackAuthScope("identify")
   val Commands = SlackAuthScope("commands")
   val ChannelsWrite = SlackAuthScope("channels:write")
   val ChannelsHistory = SlackAuthScope("channels:history")
@@ -48,6 +49,9 @@ object SlackAuthScope {
   val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
   val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
   val teamSetup = pushAnywhere ++ ingestAnywhere + TeamRead
+
+  val userSignup: Set[SlackAuthScope] = Set(UsersRead)
+  val userLogin: Set[SlackAuthScope] = Set(Identify)
 
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
   val dbFormat: Format[SlackAuthScope] = Format(

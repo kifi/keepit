@@ -79,8 +79,10 @@ object SlackAuthenticatedAction {
   case object TurnOnLibraryPush extends SlackAuthenticatedAction[PublicId[LibraryToSlackChannel]]("turn_on_library_push")
   case object TurnOnChannelIngestion extends SlackAuthenticatedAction[PublicId[SlackChannelToLibrary]]("turn_on_channel_ingestion")
   case object SetupSlackTeam extends SlackAuthenticatedAction[Option[PublicId[Organization]]]("setup_slack_team")
+  case object Signup extends SlackAuthenticatedAction[None.type]("signup")(formatNone)
+  case object Login extends SlackAuthenticatedAction[None.type]("login")(formatNone)
 
-  val all: Set[SlackAuthenticatedAction[_]] = Set(SetupLibraryIntegrations, TurnOnLibraryPush, TurnOnChannelIngestion, SetupSlackTeam)
+  val all: Set[SlackAuthenticatedAction[_]] = Set(SetupLibraryIntegrations, TurnOnLibraryPush, TurnOnChannelIngestion, SetupSlackTeam, Signup, Login)
 
   case class UnknownSlackAuthenticatedActionException(action: String) extends Exception(s"Unknown SlackAuthenticatedAction: $action")
   def fromString(action: String): Try[SlackAuthenticatedAction[_]] = {
