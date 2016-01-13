@@ -28,8 +28,7 @@ trait SlackTeamCommander {
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization]): Try[SlackTeam]
   def getOrganizationsToConnect(userId: Id[User]): Map[Id[Organization], OrganizationInfo]
   def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library]
-  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannel, Either[LibraryFail, Library]]]
-  def pushDigestNotificationsForRipeTeams(): Future[Unit]
+  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannelIdAndName, Either[LibraryFail, Library]]]
 }
 
 @Singleton
@@ -171,7 +170,7 @@ class SlackTeamCommanderImpl @Inject() (
     }
   }
 
-  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannel, Either[LibraryFail, Library]]] = {
+  def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannelIdAndName, Either[LibraryFail, Library]]] = {
     val (teamOpt, membershipOpt, integratedChannelIds) = db.readOnlyMaster { implicit session =>
       val teamOpt = slackTeamRepo.getBySlackTeamId(teamId)
       val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == teamId)
@@ -186,7 +185,7 @@ class SlackTeamCommanderImpl @Inject() (
           def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || integratedChannelIds.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
           channels.sortBy(_.createdAt).collect {
             case channel if !shouldBeIgnored(channel) =>
-              SlackChannel(channel.channelId, channel.channelName) -> setupSlackChannel(team, membership, channel)
+              SlackChannelIdAndName(channel.channelId, channel.channelName) -> setupSlackChannel(team, membership, channel)
           }.toMap tap { newLibraries =>
             if (newLibraries.values.forall(_.isRight)) {
               channels.map(_.createdAt).maxOpt.foreach { lastChannelCreatedAt =>
@@ -198,88 +197,6 @@ class SlackTeamCommanderImpl @Inject() (
           }
         }
       case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
-    }
-  }
-
-  def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
-    val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackCommander.minPeriodBetweenDigestNotifications)
-    }
-    for {
-      ripeTeams <- ripeTeamsFut
-      pushes <- FutureHelpers.accumulateRobustly(ripeTeams)(pushDigestNotificationForTeam)
-    } yield Unit
-  }
-
-  private def createSlackDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
-    for {
-      org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
-      numIngestedKeepsByLibrary = {
-        val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId)
-        val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
-        val librariesIngestedInto = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet).filter {
-          case (_, lib) =>
-            Set[LibraryVisibility](LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED).contains(lib.visibility)
-        }
-        librariesIngestedInto.map {
-          case (libId, lib) =>
-            val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
-            val newSlackKeeps = keepRepo.getByIds(newKeepIds).values.filter(_.source == KeepSource.slack).map(_.id.get).toSet
-            val numIngestedKeeps = attributionRepo.getByKeepIds(newSlackKeeps).values.collect {
-              case SlackAttribution(msg) if teamChannelIds.contains(msg.channel.id) => 1
-            }.sum
-            lib -> numIngestedKeeps
-        }
-      }
-      digest <- Some(SlackTeamDigest(
-        slackTeam = slackTeam,
-        timeSinceLastDigest = new Period(slackTeam.lastDigestNotificationAt, clock.now),
-        org = org,
-        numIngestedKeepsByLibrary = numIngestedKeepsByLibrary
-      )).filter(_.numIngestedKeeps >= 10)
-    } yield digest
-  }
-
-  private def describeDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
-    import DescriptionElements._
-    val topLibraries = digest.numIngestedKeepsByLibrary.toList.sortBy { case (lib, numKeeps) => numKeeps }(Ord.descending).take(3).collect { case (lib, numKeeps) if numKeeps > 0 => lib }
-    val lines = List(
-      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getDays, "days"),
-      DescriptionElements("Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
-        DescriptionElements.unwordsPretty(topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))))
-      ),
-      DescriptionElements(
-        "Check them at at", digest.org, "'s page on Kifi,",
-        "search through them using the /kifi Slack command,",
-        "and see them in your Google searches when you install the", "browser extension" --> LinkElement(PathCommander.browserExtension)
-      )
-    )
-
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
-  }
-  private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
-    val now = clock.now
-    val msgOpt = db.readOnlyMaster { implicit s => createSlackDigest(team).map(describeDigest) }
-    val generalChannelFut = team.generalChannelId match {
-      case Some(channelId) => Future.successful(Some(channelId))
-      case None => slackClient.getGeneralChannelId(team.slackTeamId)
-    }
-    generalChannelFut.flatMap { generalChannelOpt =>
-      val pushOpt = for {
-        msg <- msgOpt
-        generalChannel <- generalChannelOpt
-      } yield {
-        slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
-          case Success(_: Unit) =>
-            db.readWrite { implicit s =>
-              slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
-            }
-            slackLog.info("Pushed a digest to", team.slackTeamName.value)
-          case Failure(fail) =>
-            slackLog.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
-        }
-      }
-      pushOpt.getOrElse(Future.successful(Unit))
     }
   }
 }

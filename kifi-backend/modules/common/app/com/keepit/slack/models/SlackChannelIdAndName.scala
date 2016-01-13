@@ -7,7 +7,7 @@ import play.api.libs.json._
 
 @json case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
 @json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
-@json case class SlackChannel(id: SlackChannelId, name: SlackChannelName)
+@json case class SlackChannelIdAndName(id: SlackChannelId, name: SlackChannelName)
 @json case class SlackChannelTopic(value: String)
 @json case class SlackChannelPurpose(value: String)
 

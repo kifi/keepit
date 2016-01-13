@@ -47,7 +47,7 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             ktlRepo.getCountByLibraryId(lib.id.get) === 0
           }
 
-          val ch = SlackChannel(SlackChannelId("C123123"), integration.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
           slackClient.sayInChannel(stm, ch)("<http://www.google.com|Google>")
           val resFut = inject[SlackIngestionCommander].ingestAllDue()
           val res = Await.result(resFut, Duration.Inf)
@@ -82,7 +82,7 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             "and there can be multiple: <http://www.microsoft.com|Microsoft> <http://www.kifi.com|Kifi>" -> 2
           )
 
-          val ch = SlackChannel(SlackChannelId("C123123"), integration.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
           for ((msg, expectedLinkCount) <- msgsAndCounts) {
             now = now.plusHours(2)
             inject[FakeClock].setTimeValue(now)

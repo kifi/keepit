@@ -30,7 +30,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = ???
 
-  def sayInChannel(stm: SlackTeamMembership, ch: SlackChannel)(str: String): Unit = {
+  def sayInChannel(stm: SlackTeamMembership, ch: SlackChannelIdAndName)(str: String): Unit = {
     val key = (stm.slackTeamId, ch.name)
     val msgId = inc.incrementAndGet()
     val msg = SlackMessage(

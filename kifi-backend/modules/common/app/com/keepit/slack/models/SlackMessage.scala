@@ -137,7 +137,7 @@ case class SlackMessage(
   userId: SlackUserId,
   username: SlackUsername,
   timestamp: SlackTimestamp,
-  channel: SlackChannel,
+  channel: SlackChannelIdAndName,
   text: String,
   attachments: Seq[SlackAttachment],
   permalink: String)
@@ -148,7 +148,7 @@ object SlackMessage {
     (__ \ "user").format[SlackUserId] and
     (__ \ "username").format[SlackUsername] and
     (__ \ "ts").format[SlackTimestamp] and
-    (__ \ "channel").format[SlackChannel] and
+    (__ \ "channel").format[SlackChannelIdAndName] and
     (__ \ "text").format[String] and
     (__ \ "attachments").formatNullable[Seq[SlackAttachment]].inmap[Seq[SlackAttachment]](_.getOrElse(Seq.empty), Some(_).filter(_.nonEmpty)) and
     (__ \ "permalink").format[String]
