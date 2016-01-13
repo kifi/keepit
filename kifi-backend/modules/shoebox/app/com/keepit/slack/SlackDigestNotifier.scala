@@ -180,13 +180,9 @@ class SlackDigestNotifierImpl @Inject() (
     import DescriptionElements._
     val lines = List(
       DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getDays, "days"),
-      DescriptionElements("They have been kept into",
+      DescriptionElements("You can find them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))))
-      ),
-      DescriptionElements(
-        "You can search through them using the /kifi Slack command,",
-        "and see them in your Google searches when you install the", "browser extension" --> LinkElement(PathCommander.browserExtension)
-      )
+      ), "or search them using the /kifi Slack command."
     )
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
