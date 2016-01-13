@@ -670,8 +670,9 @@ class KeepRepoImpl @Inject() (
 
     val shouldFilterByUser = filterOpt.contains(OwnKeeps)
     val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
-    val keepsById = getByIds(keepIds.toSet).filter { case (keepId, keep) => !shouldFilterByUser || keep.userId == userId }
+    val keepsById = getByIds(keepIds.toSet)
     keepsAndFirstAddedAt.map { case (keepId, firstAddedAt) => keepsById(keepId) -> firstAddedAt }
+      .filter { case (keep, _) => !shouldFilterByUser || keep.userId == userId }
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
