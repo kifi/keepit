@@ -87,7 +87,8 @@ object DescriptionElements {
   def unwordsPretty(els: Seq[DescriptionElements]): DescriptionElements = els match {
     case Seq() => Seq()
     case Seq(x) => Seq(x)
-    case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements("and"))
+    case Seq(x, y) => Seq(x, "and", y)
+    case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements(", and"))
   }
 
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
