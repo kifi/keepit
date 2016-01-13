@@ -1,8 +1,8 @@
 package com.keepit.slack.models
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.slick.{DataBaseComponent, DbRepo, Repo}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -22,6 +22,7 @@ case class SlackChannel(
   def withUpdateTime(time: DateTime) = this.copy(updatedAt = time)
   def withLastNotificationAt(time: DateTime) = this.copy(lastNotificationAt = time)
 
+  def idAndName: (SlackChannelId, SlackChannelName) = (slackChannelId, slackChannelName)
   def isActive: Boolean = state == SlackChannelStates.ACTIVE
 }
 
