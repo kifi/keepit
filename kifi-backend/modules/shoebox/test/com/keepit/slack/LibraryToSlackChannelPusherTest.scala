@@ -187,7 +187,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             (user, lib, stm, lts, stl, siw.webhook)
           }
 
-          val ch = SlackChannel(SlackChannelId("C123123"), libToSlack.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), libToSlack.slackChannelName)
           db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)

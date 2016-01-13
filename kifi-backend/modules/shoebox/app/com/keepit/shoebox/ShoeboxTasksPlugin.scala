@@ -24,7 +24,7 @@ class ShoeboxTasksPlugin @Inject() (
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackIntegrationCommander: SlackIntegrationCommander,
-    slackTeamCommander: SlackTeamCommander,
+    slackDigestNotifier: SlackDigestNotifier,
     slackIngestionCommander: SlackIngestionCommander,
     libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
@@ -49,7 +49,8 @@ class ShoeboxTasksPlugin @Inject() (
 
     // TODO(ryan): make these way slower, no need to run this that often
     scheduleTaskOnOneMachine(system, 5 minutes, 1 minute, "slack digests") {
-      slackTeamCommander.pushDigestNotificationsForRipeTeams()
+      slackDigestNotifier.pushDigestNotificationsForRipeTeams()
+      slackDigestNotifier.pushDigestNotificationsForRipeChannels()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {

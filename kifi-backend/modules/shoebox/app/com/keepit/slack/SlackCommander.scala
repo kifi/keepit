@@ -17,7 +17,6 @@ import scala.util.{ Failure, Success, Try }
 
 object SlackCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
-  val minPeriodBetweenDigestNotifications = Period.minutes(1) // TODO(ryan): make this way slower
 }
 
 @ImplementedBy(classOf[SlackCommanderImpl])

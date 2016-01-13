@@ -11,3 +11,8 @@ case class SlackTeamDigest(
   def numIngestedKeeps = numIngestedKeepsByLibrary.values.sum
 }
 
+case class SlackChannelDigest(
+  slackChannel: SlackChannel,
+  timeSinceLastDigest: Period,
+  numIngestedKeeps: Int,
+  libraries: Seq[Library])
