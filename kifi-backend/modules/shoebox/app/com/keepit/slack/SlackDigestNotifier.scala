@@ -27,6 +27,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[SlackDigestNotifierImpl])
 trait SlackDigestNotifier {
   def pushDigestNotificationsForRipeTeams(): Future[Unit]
+  def pushDigestNotificationsForRipeChannels(): Future[Unit]
 }
 
 @Singleton
@@ -56,6 +57,10 @@ class SlackDigestNotifierImpl @Inject() (
   val inhouseSlackClient: InhouseSlackClient)
     extends SlackDigestNotifier with SlackLogging {
   val loggingDestination = InhouseSlackChannel.TEST_RYAN
+
+  def pushDigestNotificationsForRipeChannels(): Future[Unit] = {
+    ???
+  }
 
   def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
     val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
