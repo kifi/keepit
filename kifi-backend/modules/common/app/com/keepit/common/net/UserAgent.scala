@@ -13,11 +13,11 @@ case class UserAgent(
     possiblyBot: Boolean,
     typeName: String,
     version: String) {
-  lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
-  lazy val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" && userAgent.contains(UserAgent.KifiMarker)
-  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
-  lazy val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
-  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
+  lazy val isKifiIphoneApp: Boolean = isIphone && userAgent.contains(UserAgent.KifiMarker)
+  lazy val isKifiAndroidApp: Boolean = isAndroid && userAgent.contains(UserAgent.KifiMarker)
+  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || userAgent.contains("CFNetwork")
+  lazy val isAndroid: Boolean = operatingSystemFamily == "Android"
+  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
   lazy val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
   lazy val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
