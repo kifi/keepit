@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.BasicUser
 import com.keepit.payments._
 
@@ -45,6 +46,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     orgInviteRepo: OrganizationInviteRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
+    slackInfoCommander: SlackInfoCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
@@ -167,6 +169,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
+    val slackInfo = viewerIdOpt.map(slackInfoCommander.getOrganizationSlackInfo(orgId, _))
 
     OrganizationInfo(
       orgId = Organization.publicId(orgId),
@@ -179,7 +182,8 @@ class OrganizationInfoCommanderImpl @Inject() (
       members = membersAsBasicUsers,
       numMembers = memberCount,
       numLibraries = numLibraries,
-      config = config)
+      config = config,
+      slack = slackInfo)
   }
 
   private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {

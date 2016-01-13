@@ -61,7 +61,7 @@ class UserAgentTest extends Specification {
       agent === UserAgent(str, "", "Android", "Android", true, "", "")
       agent.isMobile === true
       agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === true
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
       agent.isAndroid === true
       agent.isOldIE === false
@@ -180,7 +180,7 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === true // TODO: make false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
       agent.isAndroid === true
       agent.isOldIE === false
@@ -188,7 +188,7 @@ class UserAgentTest extends Specification {
     }
 
     "parse from android app" in {
-      val str = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I337M Build/KOT49H)"
+      val str = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I337M Build/KOT49H; Kifi)"
       val agent = UserAgent(str)
       agent === UserAgent(str, "Dalvik", "Android", "Android", false, "Android", "unknown")
       agent.isMobile === true

@@ -38,6 +38,7 @@ object SlackTeamStates extends States[SlackTeam]
 
 @ImplementedBy(classOf[SlackTeamRepoImpl])
 trait SlackTeamRepo extends Repo[SlackTeam] {
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam]
@@ -110,6 +111,10 @@ class SlackTeamRepoImpl @Inject() (
   initTable()
   override def deleteCache(membership: SlackTeam)(implicit session: RSession): Unit = {}
   override def invalidateCache(membership: SlackTeam)(implicit session: RSession): Unit = {}
+
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
+    activeRows.filter(row => row.organizationId === orgId).list.toSet
+  }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.state =!= excludeState.orNull).firstOption

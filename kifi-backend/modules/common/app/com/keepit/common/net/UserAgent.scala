@@ -14,7 +14,7 @@ case class UserAgent(
     typeName: String,
     version: String) {
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
-  lazy val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" // TODO: use a custom User-Agent header in our Android app
+  lazy val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" && userAgent.contains(UserAgent.KifiMarker)
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
   lazy val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
@@ -22,6 +22,10 @@ case class UserAgent(
   lazy val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
+
+  override def toString() = {
+    s"""UserAgent($userAgent, $name, $operatingSystemFamily, $operatingSystemName, $possiblyBot, $typeName, $version;; $isKifiIphoneApp,$isKifiAndroidApp,$isIphone, $isAndroid, $isMobile, $isMobileWeb, $canRunExtensionIfUpToDate, $isOldIE)"""
+  }
 }
 
 object UserAgent extends Logging {
@@ -29,6 +33,7 @@ object UserAgent extends Logging {
   val UnknownUserAgent = UserAgent("", "", "", "", true, "", "")
 
   val KifiIphoneAppTypeName = "kifi iphone app"
+  val KifiMarker = "Kifi"
 
   private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   private val TabletIndicators = Set("iPad", "Tablet")

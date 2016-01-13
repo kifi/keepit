@@ -12,6 +12,7 @@ import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, Extern
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import com.keepit.slack.SlackAuthenticatedAction.SetupSlackTeam
 import com.keepit.slack.models._
 import com.keepit.slack._
 import play.api.libs.json._
@@ -97,22 +98,7 @@ class SlackController @Inject() (
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
-              case None => {
-                // todo(Léo): discuss frontend
-                val newOrgLink = {
-                  val message = s"Create new Kifi organization for your Slack team ${slackTeam.slackTeamName.value}"
-                  val url = com.keepit.controllers.website.routes.SlackController.createOrganizationForSlackTeam(slackTeam.slackTeamId.value).url
-                  message -> url
-                }
-                val connectLinks = slackTeamCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
-                  case (_, org) =>
-                    val message = s"Connect your Kifi organization ${org.name} with your Slack team ${slackTeam.slackTeamName.value}"
-                    val url = com.keepit.controllers.website.routes.SlackController.connectSlackTeamToOrganization(org.orgId, slackTeam.slackTeamId.value).url
-                    message -> url
-                }
-                val payload = JsObject((newOrgLink +: connectLinks).map { case (message, url) => message -> JsString(url) })
-                Ok(payload)
-              }
+              case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
             }
           }
         case _ => Future.successful(BadRequest("invalid_organization_id"))
@@ -196,5 +182,10 @@ class SlackController @Inject() (
       case Success(slackTeam) => Future.failed(new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam"))
       case Failure(_) => Future.successful(BadRequest("invalid_request"))
     }
+  }
+
+  def connectSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_))).url
+    Redirect(link, SEE_OTHER)
   }
 }

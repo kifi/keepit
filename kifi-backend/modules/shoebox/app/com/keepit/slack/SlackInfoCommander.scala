@@ -1,8 +1,6 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -12,7 +10,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.slack.SlackAuthenticatedAction.{ SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
+import com.keepit.slack.SlackAuthenticatedAction.{ SetupSlackTeam, SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
 import com.keepit.slack.models._
 import com.kifi.macros.json
 
@@ -42,6 +40,11 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
+@json
+case class OrganizationSlackInfo(
+  link: String,
+  slackTeams: Set[SlackTeamId])
+
 object SlackInfoCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
 }
@@ -51,6 +54,7 @@ trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo
 }
 
 @Singleton
@@ -160,5 +164,11 @@ class SlackInfoCommanderImpl @Inject() (
         spaces = integrationSpaces
       )
     }
+  }
+
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo = {
+    val slackTeams = db.readOnlyMaster { implicit session => slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId) }
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None).url
+    OrganizationSlackInfo(link, slackTeams)
   }
 }

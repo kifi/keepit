@@ -1103,7 +1103,8 @@ api.port.on({
     }
     var msgs = messageData[id];
     if (msgs) {
-      emitThreadToTab(id, msgs, keep, tab);
+      var linkToKeep = (keep.libraries.length === 1 || (keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1));
+      emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
     } else {
       // TODO: remember that this tab needs this thread until it gets it or its pane changes?
       socket.send(['get_thread', id]);
