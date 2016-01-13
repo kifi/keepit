@@ -110,7 +110,7 @@ object IdentityHelpers {
   }
 
   def toIdentityId(teamId: SlackTeamId, userId: SlackUserId): IdentityId = IdentityId(userId = s"${teamId.value}|${userId.value}", providerId = SocialNetworks.SLACK.authProvider)
-  def parseSlackId(identityId: IdentityId): (SlackTeamId, SlackUserId) = identityId.userId.trim.split("|").toSeq.filter(_.nonEmpty) match {
+  def parseSlackId(identityId: IdentityId): (SlackTeamId, SlackUserId) = identityId.userId.trim.split('|').toSeq.filter(_.nonEmpty) match {
     case Seq(teamIdStr, userIdStr) => (SlackTeamId(teamIdStr), SlackUserId(userIdStr))
     case _ => throw new IllegalArgumentException(s"Invalid Slack credentials from IdentityId: $identityId")
   }
