@@ -93,7 +93,11 @@ class S3ImageStoreImpl @Inject() (
           if (suiOpt.exists(_.networkType != SocialNetworks.FORTYTWO)) {
             uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(suiOpt.get.networkType), None, setDefault = true)(suiOpt.get.getPictureUrl).map {
               case res =>
-                avatarUrlByExternalId(width, user.externalId, res.head._1)
+                res.headOption.map { case (imageUrl, _) => avatarUrlByExternalId(width, user.externalId, imageUrl) }
+                  .getOrElse {
+                    airbrake.notify(s"couldn't upload image for userId=${user.id.get} socialUserInfoId=${suiOpt.get.id.get}")
+                    S3UserPictureConfig.defaultImage
+                  }
             }
           } else {
             Future.successful(S3UserPictureConfig.defaultImage)
