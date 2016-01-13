@@ -22,7 +22,7 @@ import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.models.SlackTeamMembershipRepo
+import com.keepit.slack.models.{ SlackTeamMembershipStates, SlackTeamMembershipRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -860,6 +860,7 @@ class AdminUserController @Inject() (
         val installations = kifiInstallationRepo.all(userId)
         val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
         val keeps = keepRepo.getByUser(userId)
+        val slackMemberships = slackTeamMembershipRepo.getByUserId(userId).map(m => s"${m.slackTeamId.value}|${m.slackUserId.value}")
         val socialUsers = socialUserInfoRepo.getByUser(userId)
         val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
         val userConnections = userConnectionRepo.getConnectedUsers(userId)
@@ -873,6 +874,7 @@ class AdminUserController @Inject() (
           "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
           "tags" -> tags,
           "keeps" -> keeps,
+          "slackMemberships" -> slackMemberships,
           "socialUsers" -> socialUsers,
           "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
           "userConnections" -> userConnections
@@ -896,6 +898,9 @@ class AdminUserController @Inject() (
       socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
       socialUserInfoRepo.deleteCache(sui)
     }
+
+    // Slack
+    slackTeamMembershipRepo.getByUserId(userId).foreach(membership => slackTeamMembershipRepo.save(membership.copy(userId = None, state = SlackTeamMembershipStates.INACTIVE)))
 
     // URI Graph
     keepRepo.getByUser(userId).foreach(keepCommander.deactivateKeep)

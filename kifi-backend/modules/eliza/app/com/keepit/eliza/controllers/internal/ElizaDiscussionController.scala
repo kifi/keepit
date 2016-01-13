@@ -128,9 +128,7 @@ class ElizaDiscussionController @Inject() (
 
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long], filter: ElizaFeedFilter) = Action {
     val beforeKeepId = beforeId.map(Id[Keep])
-    val keepIdsAndLastUpdated = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
-
-    import com.keepit.common.json.TupleFormat.tuple2Writes
-    Ok(Json.obj("keepIdsAndLastUpdated" -> Json.toJson(keepIdsAndLastUpdated)))
+    val lastActivityByKeepId = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
+    Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
   }
 }

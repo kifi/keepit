@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model._
@@ -11,18 +12,19 @@ import com.keepit.slack.models._
 import org.joda.time.Period
 import play.api.libs.json._
 import com.keepit.common.json.formatNone
+import com.keepit.common.core._
 
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 
 object SlackCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
-  val minPeriodBetweenDigestNotifications = Period.minutes(1) // TODO(ryan): make this way slower
 }
 
 @ImplementedBy(classOf[SlackCommanderImpl])
 trait SlackCommander {
   def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
+  def unsafeConnectSlackMembership(slackTeamId: SlackTeamId, slackUserId: SlackUserId, userId: Id[User])(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -48,7 +50,8 @@ class SlackCommanderImpl @Inject() (
         slackTeamName = auth.teamName,
         token = auth.accessToken,
         scopes = auth.scopes
-      ))
+      )) tap autojoinOrganization
+
       auth.incomingWebhook.foreach { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
@@ -58,12 +61,24 @@ class SlackCommanderImpl @Inject() (
           lastPostedAt = None
         ))
       }
-      userIdOpt.foreach { userId =>
-        slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
-          team.organizationId.foreach { orgId =>
-            if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
-              orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
-            }
+    }
+  }
+
+  def unsafeConnectSlackMembership(slackTeamId: SlackTeamId, slackUserId: SlackUserId, userId: Id[User])(implicit session: RWSession): Boolean = {
+    val membership = slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).get // must have been interned previously
+    if (membership.userId.contains(userId)) false
+    else {
+      slackTeamMembershipRepo.save(membership.copy(userId = Some(userId))) tap autojoinOrganization
+      true
+    }
+  }
+
+  private def autojoinOrganization(membership: SlackTeamMembership)(implicit session: RWSession): Unit = {
+    membership.userId.foreach { userId =>
+      slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
+        team.organizationId.foreach { orgId =>
+          if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
+            orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
           }
         }
       }

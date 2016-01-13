@@ -1,12 +1,14 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ AuthCommander, PermissionCommander, LibraryAccessCommander }
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, PermissionCommander, LibraryAccessCommander }
+import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
+import com.keepit.common.mail.EmailAddress
+import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -32,6 +34,7 @@ class SlackController @Inject() (
     slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
     authCommander: AuthCommander,
+    authHelper: AuthHelper,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
@@ -78,7 +81,7 @@ class SlackController @Inject() (
     }
   }
 
-  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: Request[_]): Future[Result] = {
+  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: MaybeUserRequest[_]): Future[Result] = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     import SlackAuthenticatedAction._
     action match {
@@ -119,12 +122,16 @@ class SlackController @Inject() (
           firstName = userInfo.firstName.getOrElse(""),
           lastName = userInfo.lastName.getOrElse(""),
           fullName = userInfo.fullName.getOrElse(""),
-          email = userInfo.emailAddress.map(_.address),
+          email = Some(userInfo.emailAddress.address),
           avatarUrl = userInfo.icon.maxByOpt(_._1).map(_._2),
           authMethod = AuthenticationMethod.OAuth2,
           oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
         )
-        authCommander.signupWithTrustedSocialUser(socialUser, signUpUrl)
+
+        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.emailAddress, userInfo.firstName.getOrElse(""), userInfo.lastName.getOrElse(""), None, None, None, None, None, None, None)
+        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+        val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(socialFinalizeInfo, socialUser, inviteExtIdOpt)
+        authHelper.finishSignup(user, userInfo.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
       }
     }
   }

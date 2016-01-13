@@ -43,6 +43,7 @@ trait SlackIngestionCommander {
 class SlackIngestionCommanderImpl @Inject() (
     db: Database,
     integrationRepo: SlackChannelToLibraryRepo,
+    slackChannelRepo: SlackChannelRepo,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     permissionCommander: PermissionCommander,
     libraryRepo: LibraryRepo,
@@ -156,7 +157,6 @@ class SlackIngestionCommanderImpl @Inject() (
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
-    val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
     log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
@@ -173,6 +173,10 @@ class SlackIngestionCommanderImpl @Inject() (
       val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, userId, library, KeepSource.slack)(HeimdalContext.empty)
       (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case SlackAttribution(message) => message })
     }
+    messages.headOption.foreach { msg =>
+      db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
+    }
+    val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     lastMessageTimestamp.foreach { timestamp =>
       db.readWrite { implicit session =>
         integrationRepo.updateLastMessageTimestamp(integration.id.get, timestamp)
