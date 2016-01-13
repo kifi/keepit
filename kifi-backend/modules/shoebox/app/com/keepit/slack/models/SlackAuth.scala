@@ -1,6 +1,7 @@
 package com.keepit.slack.models
 
 import com.keepit.common.crypto.CryptoSupport
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -10,6 +11,7 @@ import scala.util.{ Failure, Try }
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
+  val Identify = SlackAuthScope("identify")
   val Commands = SlackAuthScope("commands")
   val ChannelsWrite = SlackAuthScope("channels:write")
   val ChannelsHistory = SlackAuthScope("channels:history")
@@ -47,6 +49,9 @@ object SlackAuthScope {
   val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
   val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
   val teamSetup = pushAnywhere ++ ingestAnywhere + TeamRead
+
+  val userSignup: Set[SlackAuthScope] = Set(UsersRead)
+  val userLogin: Set[SlackAuthScope] = Set(Identify)
 
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
   val dbFormat: Format[SlackAuthScope] = Format(
@@ -109,18 +114,41 @@ case class SlackTeamInfo(
   icon: Map[Int, String])
 
 object SlackTeamInfo {
-  private val iconReads: Reads[Map[Int, String]] = {
-    val sizePattern = """^image_(\d+)$""".r
-    Reads(_.validate[JsObject].map { obj =>
-      val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
-      if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
-    })
-  }
   implicit val slackReads: Reads[SlackTeamInfo] = (
     (__ \ 'id).read[SlackTeamId] and
     (__ \ 'name).read[SlackTeamName] and
     (__ \ 'domain).read[SlackTeamDomain] and
     (__ \ 'email_domain).read[String].map(domains => domains.split(",").map(SlackTeamEmailDomain(_)).toSeq) and
-    (__ \ 'icon).read(iconReads)
+    (__ \ 'icon).read(SlackIconReads)
   )(SlackTeamInfo.apply _)
 }
+
+case class SlackUserInfo(
+  id: SlackUserId,
+  name: SlackUsername,
+  firstName: Option[String],
+  lastName: Option[String],
+  fullName: Option[String],
+  emailAddress: Option[EmailAddress],
+  icon: Map[Int, String])
+
+object SlackUserInfo {
+  implicit val slackReads: Reads[SlackUserInfo] = (
+    (__ \ 'id).read[SlackUserId] and
+    (__ \ 'name).read[SlackUsername] and
+    (__ \ 'profile \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'profile \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'profile \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'profile \ 'email).readNullable[EmailAddress] and
+    (__ \ 'profile).read(SlackIconReads)
+  )(SlackUserInfo.apply _)
+}
+
+object SlackIconReads extends Reads[Map[Int, String]] {
+  private val sizePattern = """^image_(\d+)$""".r
+  def reads(value: JsValue) = value.validate[JsObject].map { obj =>
+    val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
+    if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
+  }
+}
+

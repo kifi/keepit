@@ -1,13 +1,13 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, LibraryAccessCommander }
+import com.keepit.commanders.{ AuthCommander, PermissionCommander, LibraryAccessCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContext }
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -15,8 +15,11 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.slack.SlackAuthenticatedAction.SetupSlackTeam
 import com.keepit.slack.models._
 import com.keepit.slack._
+import com.keepit.social.IdentityHelpers
 import play.api.libs.json._
-import play.api.mvc.Result
+import play.api.mvc.{ Request, RequestHeader, Result }
+import securesocial.core.{ OAuth2Info, AuthenticationMethod, SocialUser }
+import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
@@ -28,6 +31,7 @@ class SlackController @Inject() (
     slackIntegrationCommander: SlackIntegrationCommander,
     slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
+    authCommander: AuthCommander,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
@@ -37,6 +41,8 @@ class SlackController @Inject() (
     val db: Database,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+
+  val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): Result = {
     val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
@@ -50,7 +56,7 @@ class SlackController @Inject() (
     Redirect(redirectUrl, SEE_OTHER)
   }
 
-  def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { request =>
+  def registerSlackAuthorization(codeOpt: Option[String], state: String) = MaybeUserAction.async { implicit request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
@@ -58,11 +64,11 @@ class SlackController @Inject() (
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
-        slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+        slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
         for {
           stateValue <- SlackState.toJson(SlackState(state)).toOption
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
-          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
+          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userIdOpt, slackAuth, slackIdentity, _, _)))
         } yield result
       } getOrElse Future.successful(BadRequest("invalid_state"))
     } yield result
@@ -72,36 +78,53 @@ class SlackController @Inject() (
     }
   }
 
-  private def processAuthorizedAction[T](userId: Id[User], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit context: HeimdalContext): Future[Result] = {
+  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: Request[_]): Future[Result] = {
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     import SlackAuthenticatedAction._
     action match {
-      case SetupLibraryIntegrations => (Library.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Success(libId), Some(webhook)) =>
+      case SetupLibraryIntegrations => (authUserId, Library.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Some(userId), Success(libId), Some(webhook)) =>
           slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_library_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Success(integrationId), Some(webhook)) =>
+        case (Success(integrationId), Some(webhook)) if authUserId.isDefined =>
           val libraryId = slackIntegrationCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_integration_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
-        case Success(integrationId) =>
+        case Success(integrationId) if authUserId.isDefined =>
           val libraryId = slackIntegrationCommander.turnOnChannelIngestion(integrationId, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_integration_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
-      case SetupSlackTeam => ((data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
-        case Success(orgIdOpt) =>
+      case SetupSlackTeam => (authUserId, (data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
+        case (Some(userId), Success(orgIdOpt)) =>
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
               case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
             }
           }
-        case _ => Future.successful(BadRequest("invalid_organization_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
+      }
+
+      case Login => Future.successful(authCommander.loginWithTrustedSocialIdentity(IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId)))
+
+      case Signup => slackClient.getUserInfo(slackAuth.accessToken, slackIdentity.userId).map { userInfo =>
+        val socialUser = SocialUser(
+          identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
+          firstName = userInfo.firstName.getOrElse(""),
+          lastName = userInfo.lastName.getOrElse(""),
+          fullName = userInfo.fullName.getOrElse(""),
+          email = userInfo.emailAddress.map(_.address),
+          avatarUrl = userInfo.icon.maxByOpt(_._1).map(_._2),
+          authMethod = AuthenticationMethod.OAuth2,
+          oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
+        )
+        authCommander.signupWithTrustedSocialUser(socialUser, signUpUrl)
       }
     }
   }
