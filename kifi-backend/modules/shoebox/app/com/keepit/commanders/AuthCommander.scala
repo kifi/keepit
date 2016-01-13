@@ -12,7 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
-import com.keepit.common.oauth.{ ProviderIds, OAuth2ProviderRegistry, OAuth2Configuration }
+import com.keepit.common.oauth.{ OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry, OAuth2Configuration }
 import com.keepit.common.performance.timing
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock

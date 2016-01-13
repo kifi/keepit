@@ -72,6 +72,7 @@ object AnonymousEventTypes {
 object NonUserEventTypes {
   val MESSAGED = EventType("messaged")
   val WAS_NOTIFIED = EventType("was_notified")
+  val SEARCHED = EventType("searched")
 }
 
 object VisitorEventTypes {

@@ -43,18 +43,6 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === false
     }
-    "parse browser versions iPhone app" in {
-      val str = "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"
-      val agent = UserAgent(str)
-      agent === UserAgent(str, "iKeefee", "iOS", "iPhone", false, UserAgent.KifiIphoneAppTypeName, "1.0")
-      agent.isMobile === true
-      agent.isKifiIphoneApp === true
-      agent.isKifiAndroidApp === false
-      agent.isIphone === true
-      agent.isAndroid === false
-      agent.isOldIE === false
-      agent.possiblyBot === false
-    }
     "parse browser versions Android app" in {
       val str = "??? Android ???" // TODO: insert actual Android app user agent string
       val agent = UserAgent(str)

@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
+import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipInternRequest, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -33,20 +34,24 @@ class UserIdentityHelper @Inject() (
     emailRepo: UserEmailAddressRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userIdentityCache: UserIdentityCache) {
+    userIdentityCache: UserIdentityCache,
+    slackMembershipRepo: SlackTeamMembershipRepo) {
   import IdentityHelpers._
 
   def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = {
     import SocialNetworks._
     val networkType = parseNetworkType(identityId)
-    val socialId = parseSocialId(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
-        val validEmailAddress = EmailAddress.validate(socialId.id).toOption getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social)}"))
+        val validEmailAddress = EmailAddress.validate(identityId.userId).toOption getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social)}"))
         emailRepo.getOwner(validEmailAddress)
       }
-
-      case socialNetwork if SUPPORTED.contains(socialNetwork) => socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId)
+      case SLACK =>
+        val (slackTeamId, slackUserId) = parseSlackId(identityId)
+        slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap(_.userId)
+      case socialNetwork if social.contains(socialNetwork) =>
+        val socialId = parseSocialId(identityId)
+        socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId)
       case unsupportedNetwork => throw new Exception(s"Unsupported authentication network: $unsupportedNetwork")
     }
   }
@@ -58,18 +63,22 @@ class UserIdentityHelper @Inject() (
         val userCred = userCredRepo.findByUserIdOpt(userId)
         Some(UserIdentity(user, email, userCred))
       case _ =>
-        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).headOption.flatMap { info =>
+        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
+        }.headOption orElse {
+          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map { membership =>
+            val user = userRepo.get(userId)
+            UserIdentity(user, membership.slackTeamId, membership.slackUserId, membership.token)
+          }
         }
     }
   }
 
   def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = userIdentityCache.getOrElseOpt(UserIdentityIdentityIdKey(identityId)) {
-    val socialId = SocialId(identityId.userId)
-    val networkType = SocialNetworkType(identityId.providerId)
+    val networkType = parseNetworkType(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
-        EmailAddress.validate(socialId.id).toOption.flatMap { email =>
+        EmailAddress.validate(identityId.userId).toOption.flatMap { email =>
           emailRepo.getByAddress(email).map { emailAddr =>
             val userId = emailAddr.userId
             val user = userRepo.get(userId)
@@ -78,7 +87,18 @@ class UserIdentityHelper @Inject() (
           }
         }
       }
+      case SLACK =>
+        Try(parseSlackId(identityId)).toOption.flatMap {
+          case (slackTeamId, slackUserId) =>
+            slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap { membership =>
+              membership.userId.map { userId =>
+                val user = userRepo.get(userId)
+                UserIdentity(user, membership.slackTeamId, membership.slackUserId, membership.token)
+              }
+            }
+        }
       case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
+        val socialId = parseSocialId(identityId)
         socialUserInfoRepo.getOpt(socialId, networkType).flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
         }
@@ -96,6 +116,7 @@ class SecureSocialUserPluginImpl @Inject() (
   imageStore: S3ImageStore,
   airbrake: AirbrakeNotifier,
   emailRepo: UserEmailAddressRepo,
+  slackMembershipRepo: SlackTeamMembershipRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
@@ -142,6 +163,7 @@ class SecureSocialUserPluginImpl @Inject() (
               userCredRepo.internUserPassword(userId, socialUser.passwordInfo.get.password)
               (isNewEmailAddress, None)
             }
+            case SLACK => (connectSlackMembership(userId, socialUser), None)
             case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
               val (socialUserInfo, isNewSocialUserInfo) = internSocialUserInfo(Some(userId), socialUser)
               (isNewSocialUserInfo, Some(socialUserInfo))
@@ -274,6 +296,16 @@ class SecureSocialUserPluginImpl @Inject() (
         )
         (socialUserInfoRepo.save(newInfo), true)
       }
+    }
+  }
+
+  private def connectSlackMembership(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Boolean = {
+    val (slackTeamId, slackUserId) = parseSlackId(socialUser.identityId)
+    val membership = slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).get // should have been interned by SlackCommander
+    if (membership.userId.contains(userId)) false
+    else {
+      slackMembershipRepo.save(membership.copy(userId = Some(userId)))
+      true
     }
   }
 

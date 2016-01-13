@@ -2,6 +2,7 @@ package com.keepit.search.controllers.slack
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -10,17 +11,22 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.time.Clock
 import com.keepit.common.util.LinkElement
+import com.keepit.heimdal.{ NonUserEventTypes, UserEventTypes, NonUserEvent, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
+import com.keepit.search.tracking.SearchEventCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
 import com.keepit.common.core._
+import com.keepit.common.time._
+import com.keepit.social.NonUserKinds
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -45,6 +51,10 @@ class SlackSearchController @Inject() (
     uriSearchCommander: UriSearchCommander,
     httpClient: HttpClient,
     airbrake: AirbrakeNotifier,
+    searchEventCommander: SearchEventCommander,
+    heimdal: HeimdalServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    clock: Clock,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
@@ -61,7 +71,7 @@ class SlackSearchController @Inject() (
           case integrations =>
             command.text match {
               case CommandText.help() => doHelp(command.channelName, integrations)
-              case CommandText.search(query) => doSearch(request, integrations, query)
+              case CommandText.search(query) => doSearch(request, integrations, command)
             }
         }
         futureResponse.imap(response => Ok(Json.toJson(response)))
@@ -118,7 +128,9 @@ class SlackSearchController @Inject() (
     }
   }
 
-  private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, query: String): Future[SlackCommandResponse] = {
+  private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, command: SlackCommandRequest): Future[SlackCommandResponse] = {
+    val startTime = clock.now()
+    val query = command.text
     val futureLibraries = shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
@@ -164,6 +176,26 @@ class SlackSearchController @Inject() (
             color = Some("good")
           )
         }
+
+        val processingTime = startTime.getMillis - clock.now().getMillis
+        SafeFuture {
+          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+          contextBuilder += ("source", "slack")
+          contextBuilder += ("maxResults", maxUris)
+          contextBuilder += ("topkifiResults", relevantHits.size)
+          contextBuilder += ("query", command.text)
+          contextBuilder += ("slackTeamId", command.teamId.value)
+          contextBuilder += ("slackUserId", command.userId.value)
+          contextBuilder += ("slackChannelId", command.channelId.value)
+          contextBuilder += ("kifiProcessingTime", processingTime)
+          val context = contextBuilder.build
+          val event = {
+            request.userIdOpt.map(UserEvent(_, context, UserEventTypes.SEARCHED, clock.now()))
+              .getOrElse(NonUserEvent(command.username.value, NonUserKinds.slack, context, NonUserEventTypes.SEARCHED))
+          }
+          heimdal.trackEvent(event)
+        }
+
         val text = {
           if (relevantHits.isEmpty) s"We couldn't find any relevant link for '$query' :("
           else s"Top links for '$query':"

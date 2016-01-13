@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.{ zones, Clock }
+import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalServiceClient }
@@ -61,7 +62,8 @@ class UserRepoImpl @Inject() (
   usernameCache: UsernameCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl],
-  emailRepo: Provider[UserEmailAddressRepo])
+  emailRepo: Provider[UserEmailAddressRepo],
+  slackMembershipRepo: Provider[SlackTeamMembershipRepo])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -157,6 +159,9 @@ class UserRepoImpl @Inject() (
       emailRepo.get().getAllByUser(id).foreach { email =>
         userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
       }
+      slackMembershipRepo.get().getByUserId(id).foreach { membership =>
+        userIdentityCache.remove(UserIdentityIdentityIdKey(membership.slackTeamId, membership.slackUserId))
+      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
@@ -172,6 +177,9 @@ class UserRepoImpl @Inject() (
         }
         emailRepo.get().getAllByUser(id).foreach { email =>
           userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
+        }
+        slackMembershipRepo.get().getByUserId(id).foreach { membership =>
+          userIdentityCache.remove(UserIdentityIdentityIdKey(membership.slackTeamId, membership.slackUserId))
         }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)

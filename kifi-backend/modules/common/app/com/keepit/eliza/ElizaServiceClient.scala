@@ -130,6 +130,7 @@ trait ElizaServiceClient extends ServiceClient {
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
+  def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Seq[(Id[Keep], DateTime)]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
 
@@ -301,6 +302,12 @@ class ElizaServiceClientImpl @Inject() (
     val request = Request(keepIds)
     call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
       response.json.as[Response].discussions
+    }
+  }
+
+  def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Seq[(Id[Keep], DateTime)]] = {
+    call(Eliza.internal.getElizaKeepStream(userId, limit, beforeId, filter)).map { response =>
+      response.json.as[Seq[(Id[Keep], DateTime)]]
     }
   }
 
