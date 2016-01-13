@@ -1,14 +1,12 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, PermissionCommander, LibraryAccessCommander }
+import com.keepit.commanders.{ AuthCommander, PermissionCommander, LibraryAccessCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.mail.EmailAddress
-import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -34,7 +32,6 @@ class SlackController @Inject() (
     slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
     authCommander: AuthCommander,
-    authHelper: AuthHelper,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
@@ -114,10 +111,7 @@ class SlackController @Inject() (
         case _ => Future.successful(BadRequest("invalid_integration"))
       }
 
-      case Login => Future.successful {
-        authCommander.loginWithTrustedSocialIdentity(IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId))
-
-      }
+      case Login => Future.successful(authCommander.loginWithTrustedSocialIdentity(IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId)))
 
       case Signup => slackClient.getUserInfo(slackAuth.accessToken, slackIdentity.userId).map { userInfo =>
         val socialUser = SocialUser(
@@ -125,16 +119,12 @@ class SlackController @Inject() (
           firstName = userInfo.firstName.getOrElse(""),
           lastName = userInfo.lastName.getOrElse(""),
           fullName = userInfo.fullName.getOrElse(""),
-          email = Some(userInfo.emailAddress.address),
+          email = userInfo.emailAddress.map(_.address),
           avatarUrl = userInfo.icon.maxByOpt(_._1).map(_._2),
           authMethod = AuthenticationMethod.OAuth2,
           oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
         )
-
-        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.emailAddress, userInfo.firstName.getOrElse(""), userInfo.lastName.getOrElse(""), None, None, None, None, None, None, None)
-        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-        val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(socialFinalizeInfo, socialUser, inviteExtIdOpt)
-        authHelper.finishSignup(user, userInfo.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
+        authCommander.signupWithTrustedSocialUser(socialUser, signUpUrl)
       }
     }
   }
