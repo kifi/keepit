@@ -44,20 +44,12 @@ class SlackTeamCommanderImpl @Inject() (
   orgCommander: OrganizationCommander,
   orgAvatarCommander: OrganizationAvatarCommander,
   libraryCommander: LibraryCommander,
-  libRepo: LibraryRepo,
-  ktlRepo: KeepToLibraryRepo,
-  keepRepo: KeepRepo,
-  attributionRepo: KeepSourceAttributionRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
-  clock: Clock,
-  airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
-  implicit val publicIdConfig: PublicIdConfiguration,
-  val inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander with SlackLogging {
-  val loggingDestination = InhouseSlackChannel.TEST_RYAN
+  implicit val publicIdConfig: PublicIdConfiguration)
+    extends SlackTeamCommander {
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, userHasNoOrg) = db.readWrite { implicit session =>
