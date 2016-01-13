@@ -1,6 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.{ Singleton, Provides }
+import com.keepit.slack.SlackCommander
 import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social.providers.PasswordAuthentication
 import securesocial.controllers.TemplatesPlugin
@@ -46,9 +47,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     userCreationCommander: UserCreationCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
+    slackCommander: SlackCommander,
     userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, slackMembershipRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, slackMembershipRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, slackCommander, userIdentityHelper, clock
   )
 
   @Singleton

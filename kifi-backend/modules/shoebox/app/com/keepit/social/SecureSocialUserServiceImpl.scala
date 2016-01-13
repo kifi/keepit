@@ -14,7 +14,8 @@ import com.keepit.model._
 import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
-import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipInternRequest, SlackTeamMembershipRepo }
+import com.keepit.slack.SlackCommander
+import com.keepit.slack.models.{ SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -121,6 +122,7 @@ class SecureSocialUserPluginImpl @Inject() (
   userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
+  slackCommander: SlackCommander,
   userIdentityHelper: UserIdentityHelper,
   clock: Clock)
     extends UserService with SecureSocialUserPlugin with Logging {
@@ -301,12 +303,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def connectSlackMembership(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Boolean = {
     val (slackTeamId, slackUserId) = parseSlackId(socialUser.identityId)
-    val membership = slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).get // should have been interned by SlackCommander
-    if (membership.userId.contains(userId)) false
-    else {
-      slackMembershipRepo.save(membership.copy(userId = Some(userId)))
-      true
-    }
+    slackCommander.unsafeConnectSlackMembership(slackTeamId, slackUserId, userId)
   }
 
   private def uploadProfileImage(user: User, socialUser: SocialUser): Future[Unit] = {
