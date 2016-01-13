@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, JsValue }
 
@@ -63,7 +64,8 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
 @Singleton
 class SlackTeamMembershipRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[SlackTeamMembership] with SlackTeamMembershipRepo {
+    val clock: Clock,
+    userIdentityCache: UserIdentityCache) extends DbRepo[SlackTeamMembership] with SlackTeamMembershipRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -132,8 +134,11 @@ class SlackTeamMembershipRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === SlackTeamMembershipStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamMembershipTable(tag)
   initTable()
-  override def deleteCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {}
-  override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {}
+  override def deleteCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {
+    userIdentityCache.remove(UserIdentityIdentityIdKey(membership.slackTeamId, membership.slackUserId))
+  }
+
+  override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = deleteCache(membership)
 
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership] = {
     activeRows.filter(row => row.slackTeamId === slackTeamId).list.toSet
