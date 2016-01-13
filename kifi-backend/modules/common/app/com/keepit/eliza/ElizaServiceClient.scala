@@ -307,7 +307,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Seq[(Id[Keep], DateTime)]] = {
     call(Eliza.internal.getElizaKeepStream(userId, limit, beforeId, filter)).map { response =>
-      response.json.as[Seq[(Id[Keep], DateTime)]]
+      (response.json \ "keepIdsAndLastUpdated").as[Seq[(Id[Keep], DateTime)]]
     }
   }
 
