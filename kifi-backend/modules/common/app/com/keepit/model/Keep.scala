@@ -9,7 +9,7 @@ import com.keepit.discussion.Message
 import com.keepit.social.BasicUser
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.http.Status._
-import play.api.mvc.PathBindable
+import play.api.mvc.{ QueryStringBindable, PathBindable }
 import play.api.mvc.Results._
 
 import scala.concurrent.duration._
@@ -366,4 +366,49 @@ object KeepFail extends Enumerator[KeepFail] {
   case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
+}
+
+abstract class FeedFilter(val kind: String)
+abstract class ShoeboxFeedFilter(kind: String) extends FeedFilter(kind)
+abstract class ElizaFeedFilter(kind: String) extends FeedFilter(kind)
+object FeedFilter {
+  case object OwnKeeps extends ShoeboxFeedFilter("own")
+  case class OrganizationKeeps(orgId: Id[Organization]) extends ShoeboxFeedFilter("org")
+  case object Unread extends ElizaFeedFilter("unread")
+  case object Sent extends ElizaFeedFilter("sent")
+
+  def apply(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[FeedFilter] = kind match {
+    case OwnKeeps.kind => Some(OwnKeeps)
+    case Unread.kind => Some(Unread)
+    case Sent.kind => Some(Sent)
+    case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
+    case _ => None
+  }
+
+  def toElizaFilter(kind: String): Option[ElizaFeedFilter] = kind match {
+    case Unread.kind => Some(Unread)
+    case Sent.kind => Some(Sent)
+    case _ => None
+  }
+
+  def toShoeboxFilter(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[ShoeboxFeedFilter] = {
+    kind match {
+      case OwnKeeps.kind => Some(OwnKeeps)
+      case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
+      case _ => None
+    }
+  }
+
+  implicit def elizaQueryStringBinder(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[ElizaFeedFilter] = new QueryStringBindable[ElizaFeedFilter] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ElizaFeedFilter]] = {
+      stringBinder.bind(key, params) map {
+        case Right(kind) => toElizaFilter(kind).toRight(left = "Unable to bind an ElizaFeedFilter")
+        case _ => Left("Unable to bind an ElizaFeedFilter")
+      }
+    }
+
+    override def unbind(key: String, filter: ElizaFeedFilter): String = {
+      stringBinder.unbind(key, filter.kind)
+    }
+  }
 }

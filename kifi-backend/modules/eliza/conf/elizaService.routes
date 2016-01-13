@@ -76,6 +76,7 @@ GET     /internal/eliza/keepHasAccessToken       @com.keepit.eliza.controllers.i
 POST    /internal/eliza/editParticipantsOnKeep   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editParticipantsOnKeep()
 POST    /internal/eliza/deleteThreadsForKeeps    @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteThreadsForKeeps()
 GET     /internal/eliza/getMessagesChanged       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)
+GET     /internal/eliza/getElizaKeepStream       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long] ?= None, filter: ElizaFeedFilter)
 
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 

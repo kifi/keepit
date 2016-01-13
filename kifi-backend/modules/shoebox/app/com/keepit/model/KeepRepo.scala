@@ -9,8 +9,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.commanders.FeedFilter
-import com.keepit.commanders.FeedFilter._
+import com.keepit.model.FeedFilter
+import com.keepit.model.FeedFilter._
 
 import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 
@@ -59,7 +59,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[FeedFilter])(implicit session: RSession): Seq[(Keep, DateTime)]
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter])(implicit session: RSession): Seq[(Keep, DateTime)]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
@@ -508,7 +508,7 @@ class KeepRepoImpl @Inject() (
     keeps.list.toSet
   }
 
-  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[FeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)] = {
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val ktl_JOIN_lm_WHERE_THIS_USER = s"""keep_to_library ktl inner join library_membership lm on (ktl.library_id = lm.library_id) where lm.state = 'active' and ktl.state = 'active' and lm.user_id = $userId"""
@@ -544,14 +544,14 @@ class KeepRepoImpl @Inject() (
       // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated added_at fields.
     }
 
-    val keepInOrg = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }
-    val keepAddedByUser = filterOpt.collect { case OwnKeeps => s"""AND ktu.added_by = $userId""" }
+    val keepInOrgFilter = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }
+    val keepAddedByUserFilter = filterOpt.collect { case OwnKeeps => s"""AND ktu.added_by = $userId""" }
 
     val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_lm_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
-    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_om_WHERE_THIS_USER AND $added_at_BEFORE ${keepInOrg.getOrElse("")} GROUP BY ktl.keep_id"""
-    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE ${keepAddedByUser.getOrElse("")}"""
+    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_om_WHERE_THIS_USER AND $added_at_BEFORE ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
+    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE ${keepAddedByUserFilter.getOrElse("")}"""
 
-    val keepQuery = filterOpt match {
+    val fromQuery = filterOpt match {
       case Some(OwnKeeps) => keepsFromUser
       case Some(OrganizationKeeps(orgId)) => keepsFromOrganizations
       case _ => s"""($keepsFromLibraries) UNION ($keepsFromOrganizations) UNION ($keepsFromUser)"""
@@ -559,7 +559,7 @@ class KeepRepoImpl @Inject() (
 
     val keepsAndFirstAddedAt = sql"""
       SELECT k.id as keep_id, min(k.first_added_at) as added_at
-      FROM (#$keepQuery) as k
+      FROM (#$fromQuery) as k
       GROUP BY k.id
       HAVING #$added_at_AFTER AND #$added_at_BEFORE
       ORDER BY added_at DESC, keep_id DESC

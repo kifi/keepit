@@ -10,11 +10,9 @@ import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.SQLInterpolation_WarningsFixed
 import com.keepit.eliza.commanders.{ UnreadThreadCounts, UserThreadQuery }
-import com.keepit.model.{ Keep, User, NormalizedURI }
+import com.keepit.model.{ ElizaFeedFilter, FeedFilter, Keep, User, NormalizedURI }
 
 import org.joda.time.DateTime
-
-import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
@@ -41,6 +39,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
+  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Seq[(Id[Keep], DateTime)]
 
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(keepId: Id[Keep])(implicit session: RSession): Seq[UserThreadActivity]
@@ -126,6 +125,26 @@ class UserThreadRepoImpl @Inject() (
       .filter(row => row.user === userId && row.unread && !row.muted)
       .sortBy(row => row.notificationUpdatedAt desc)
       .take(howMany)
+      .list
+  }
+
+  def getThreadStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter)(implicit session: RSession): Seq[(Id[Keep], DateTime)] = {
+    val unmutedRows = activeRows.filter(row => row.state === UserThreadStates.ACTIVE && row.user === userId && !row.muted)
+    val rowsBeforeId = beforeId match {
+      case Some(keepId) =>
+        val beforeTime = getUserThread(userId, keepId).map(_.notificationUpdatedAt)
+        unmutedRows.filter(_.notificationUpdatedAt < beforeTime)
+      case None => unmutedRows
+    }
+    val filteredRows = filter match {
+      case FeedFilter.Unread => rowsBeforeId.filter(_.unread)
+      case FeedFilter.Sent => rowsBeforeId.filter(_.startedBy === userId)
+      case unknown => throw new Exception(s"invalid ElizaFeedFilter $unknown")
+    }
+    filteredRows
+      .sortBy(_.notificationUpdatedAt desc)
+      .take(limit)
+      .map(row => (row.keepId, row.notificationUpdatedAt))
       .list
   }
 
