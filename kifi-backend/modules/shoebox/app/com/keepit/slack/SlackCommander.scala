@@ -10,6 +10,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import org.joda.time.Period
 import play.api.libs.json._
+import com.keepit.common.json.formatNone
 
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
@@ -21,7 +22,7 @@ object SlackCommander {
 
 @ImplementedBy(classOf[SlackCommanderImpl])
 trait SlackCommander {
-  def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
 }
 
 @Singleton
@@ -36,11 +37,11 @@ class SlackCommanderImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander with Logging {
 
-  def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
       slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
-        userId = Some(userId),
+        userId = userIdOpt,
         slackUserId = identity.userId,
         slackUsername = identity.userName,
         slackTeamId = auth.teamId,
@@ -57,10 +58,12 @@ class SlackCommanderImpl @Inject() (
           lastPostedAt = None
         ))
       }
-      slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
-        team.organizationId.foreach { orgId =>
-          if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
-            orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+      userIdOpt.foreach { userId =>
+        slackTeamRepo.getBySlackTeamId(auth.teamId).foreach { team =>
+          team.organizationId.foreach { orgId =>
+            if (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty) {
+              orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, userId, userId))
+            }
           }
         }
       }

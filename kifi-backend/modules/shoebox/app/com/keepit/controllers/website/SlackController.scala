@@ -58,7 +58,7 @@ class SlackController @Inject() (
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
-        slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+        slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
         for {
           stateValue <- SlackState.toJson(SlackState(state)).toOption
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
