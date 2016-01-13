@@ -72,7 +72,7 @@ object UserIdentity {
 }
 
 case class UserIdentityIdentityIdKey(id: IdentityId) extends Key[UserIdentity] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_identity_by_identity_id"
   def toKey(): String = id.providerId + "_" + id.userId
 }
