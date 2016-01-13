@@ -80,6 +80,7 @@ case class UserIdentityIdentityIdKey(id: IdentityId) extends Key[UserIdentity] {
 object UserIdentityIdentityIdKey {
   def apply(networkType: SocialNetworkType, socialId: SocialId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
   def apply(emailAddress: EmailAddress): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(emailAddress))
+  def apply(teamId: SlackTeamId, userId: SlackUserId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(teamId, userId))
 }
 
 class UserIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
