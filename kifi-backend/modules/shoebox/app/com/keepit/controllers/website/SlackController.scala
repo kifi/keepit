@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, PermissionCommander, LibraryAccessCommander }
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
@@ -81,7 +81,7 @@ class SlackController @Inject() (
     }
   }
 
-  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: Request[_]): Future[Result] = {
+  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: MaybeUserRequest[_]): Future[Result] = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     import SlackAuthenticatedAction._
     action match {
