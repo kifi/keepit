@@ -205,7 +205,7 @@ class NotificationDeliveryCommander @Inject() (
     }
   }
 
-  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = SafeFuture {
+  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity]): Unit = SafeFuture {
     val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
     val (msgCount, muted) = db.readOnlyMaster { implicit session =>
       val msgCount = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
@@ -234,12 +234,12 @@ class NotificationDeliveryCommander @Inject() (
     }
 
     if (!message.from.asUser.contains(userId) && !muted) {
-      val sender = messageWithBasicUser.user match {
+      val senderStr = sender match {
         case Some(BasicUserLikeEntity.user(bu)) => bu.firstName + ": "
         case Some(BasicUserLikeEntity.nonUser(bnu)) => bnu.firstName.getOrElse(bnu.id) + ": "
         case _ => ""
       }
-      val notifText = sender + MessageFormatter.toText(message.messageText)
+      val notifText = senderStr + MessageFormatter.toText(message.messageText)
       val sound = if (msgCount.total > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
       val notification = MessageThreadPushNotification(thread.pubKeepId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
       sendPushNotification(userId, notification)
