@@ -3,9 +3,9 @@ package com.keepit.slack.models
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import com.kifi.macros.json
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.util.{ Failure, Try }
 
