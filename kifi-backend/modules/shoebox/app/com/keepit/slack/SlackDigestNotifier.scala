@@ -31,9 +31,9 @@ trait SlackDigestNotifier {
 }
 
 object SlackDigestNotifier {
-  val minPeriodBetweenTeamDigests = Period.minutes(1) // TODO(ryan): make this way slower
-  val minPeriodBetweenChannelDigests = Period.minutes(1) // TODO(ryan): make this way slower
-  val minIngestedKeepsForChannelDigest = 3
+  val minPeriodBetweenTeamDigests = Period.weeks(1)
+  val minPeriodBetweenChannelDigests = Period.days(4)
+  val minIngestedKeepsForChannelDigest = 5
   val minIngestedKeepsForTeamDigest = 10
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
@@ -76,7 +76,9 @@ class SlackDigestNotifierImpl @Inject() (
 
   def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
     val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenTeamDigests)
+      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenTeamDigests).filter {
+        _.slackTeamId == SlackDigestNotifier.KifiSlackTeamId
+      }
     }
     for {
       ripeTeams <- ripeTeamsFut
