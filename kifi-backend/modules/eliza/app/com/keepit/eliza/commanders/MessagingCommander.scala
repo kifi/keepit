@@ -294,6 +294,12 @@ class MessagingCommander @Inject() (
     val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
       .map(nu => BasicUserLikeEntity(nu))
 
+    val sender = message.from match {
+      case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
+      case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+      case _ => None
+    }
+
     val messageWithBasicUser = MessageWithBasicUser(
       message.pubId,
       message.createdAt,
@@ -331,25 +337,14 @@ class MessagingCommander @Inject() (
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
-    val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val MessageCount(numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
-      val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
+    val threadActivity: Seq[UserThreadActivity] = db.readOnlyMaster { implicit session =>
+      userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }
-      (numMessages, numUnread, threadActivity)
     }
 
-    val originalAuthorOpt = threadActivity.filter(_.started).zipWithIndex.headOption.map(_._2)
-    val numAuthors = threadActivity.count(_.lastActive.isDefined)
-
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(
-      participants = threadActivity.map { ta =>
-        BasicUserLikeEntity(id2BasicUser(ta.userId))
-      } ++ basicNonUserParticipants
-    )
-
     thread.allParticipants.foreach { userId =>
-      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
+      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, sender, threadActivity)
     }
 
     // update non user threads of non user recipients
