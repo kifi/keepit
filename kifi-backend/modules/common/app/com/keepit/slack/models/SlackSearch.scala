@@ -1,9 +1,8 @@
 package com.keepit.slack.models
 
+import com.kifi.macros.json
 import org.joda.time.LocalDate
 import play.api.libs.json.{ Json, Reads }
-import play.api.libs.functional.syntax._
-import com.kifi.macros.json
 
 case class SlackSearchRequest(query: SlackSearchRequest.Query, optional: SlackSearchRequest.Param*)
 

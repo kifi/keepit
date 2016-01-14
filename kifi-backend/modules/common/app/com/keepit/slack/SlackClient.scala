@@ -1,19 +1,18 @@
 package com.keepit.slack
 
+import com.keepit.common.core._
 import com.keepit.common.json.readUnit
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
+import com.keepit.common.net.{ DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.slack.models._
 import play.api.http.Status
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.{ Failure, Success }
 
 object SlackAPI {
-  import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
+  import com.keepit.common.routes.{ GET, Method, Param, ServiceRoute }
 
   case class Route(method: Method, path: String, params: Param*)
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
@@ -33,7 +32,7 @@ object SlackAPI {
     implicit def fromSearchParam(searchParam: SlackSearchRequest.Param): Param = Param(searchParam.name, searchParam.value)
   }
 
-  import SlackParams._
+  import com.keepit.slack.SlackAPI.SlackParams._
 
   def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId]) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)

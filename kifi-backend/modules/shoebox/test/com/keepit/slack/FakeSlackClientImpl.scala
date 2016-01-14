@@ -2,11 +2,21 @@ package com.keepit.slack
 
 import java.util.concurrent.atomic.AtomicLong
 
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 
 import scala.collection.mutable
 import scala.concurrent.Future
-import scala.util.Try
+
+case class FakeSlackClientModule() extends SlackClientModule {
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def slackClient(): SlackClient = {
+    new FakeSlackClientImpl()
+  }
+}
 
 class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
