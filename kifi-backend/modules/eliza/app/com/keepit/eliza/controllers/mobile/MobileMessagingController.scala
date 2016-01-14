@@ -152,7 +152,7 @@ class MobileMessagingController @Inject() (
     contextBuilder += ("source", "mobile")
 
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
-      case (message, threadInfo, _, messages) =>
+      case (message, threadInfo, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
           "parentId" -> threadInfo.keepId,
