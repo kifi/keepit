@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.util.DollarAmount
+import com.keepit.common.util.{ Paginator, DollarAmount }
 import com.keepit.controllers.admin.AdminAccountView
 import com.keepit.model.{ OrganizationExperimentType, OrganizationExperimentRepo, OrganizationRepo }
 import org.joda.time.{ DateTime, Period }
@@ -50,6 +50,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
   }
 
   def generateDashboard(): AdminPaymentsDashboard = db.readOnlyMaster { implicit session =>
+    val totalMoneyEarned = accountEventRepo.adminTotalMoneyEarned
     val fakeAccountIds = {
       val fakeOrgIds = orgExpRepo.getOrganizationsByExperiment(OrganizationExperimentType.FAKE).toSet
       paidAccountRepo.getByOrgIds(fakeOrgIds).values.map(_.id.get).toSet
@@ -118,6 +119,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
       History(old = old.sum, cur = cur.sum)
     }
     AdminPaymentsDashboard(
+      totalMoneyEarned = totalMoneyEarned,
       plans = plans,
       diffPeriod = diffPeriod,
       totalAmortizedDailyIncome = totalDailyIncome,
@@ -137,6 +139,7 @@ case class History[T](cur: T, old: T) {
   def map[B](f: (T => B)) = History(cur = f(cur), old = f(old))
 }
 case class AdminPaymentsDashboard(
+  totalMoneyEarned: DollarAmount,
   plans: Seq[PaidPlan],
   diffPeriod: Period,
   totalAmortizedDailyIncome: History[DollarAmount],
