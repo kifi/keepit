@@ -9,13 +9,23 @@
     <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
        ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
     </a></span>
-    <span ng-if="::keep.sourceAttribution.slack">
+    <span ng-if="::keep.sourceAttribution.slack && !showAsDiscussion">
       <a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-if="keep.sourceAttribution.kifi"
         ng-bind="keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName"></a>
       <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" ng-if="!keep.sourceAttribution.kifi" ng-bind="'@' + keep.sourceAttribution.slack.message.username"></a>
       added this
     </span>
-    <span ng-if="::!keep.sourceAttribution.slack">kept this</span>
+    <span ng-if="::!keep.sourceAttribution.slack && !showAsDiscussion">kept this</span>
+    <span ng-if="::showAsDiscussion">started a discussion</span>
+    <span ng-if="::showAsDiscussion && keep.participants.length > 1">with
+      <span class="kf-keep-card-attribution-discussion-members-list-item"
+            ng-repeat="participant in keep.participants | filter:({id: '!'+keep.user.id}) | limitTo: (keep.participants.length > 4 ? 2 : 3)">
+        <a class="kf-link" ng-href="{{::participant|profileUrl}}" ng-bind="participant.firstName"></a>
+      </span>
+      <span class="kf-keep-card-attribution-discussion-members-list-item"
+            ng-if="::keep.participants.length > 4"
+            ng-bind="(keep.participants.length - 3)+' others'"></span>
+    </span>
     <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
     into
     </span>
@@ -58,7 +68,7 @@
 
     <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack">
       <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
-        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>#<span ng-bind="keep.sourceAttribution.slack.message.channel.name">
+        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>#<span ng-bind="keep.sourceAttribution.slack.message.channel.name"></span>
       </a>
     </span>
 
@@ -70,12 +80,12 @@
     <span ng-if="isAdmin && keep.summary.hasContent">·</span>
     <span ng-if="isAdmin && keep.summary.hasContent"><a
       ng-href="https://www.kifi.com/k/cached?id={{keep.id}}" target="_blank">Saved</a></span>
-    <span ng-if="::keep.createdAt">·</span>
+    <span ng-if="::attributionTime">·</span>
     <a class="kf-keep-card-attribution-page-link kf-link" ng-if="showKeepPageLink" ng-href="{{::keep.path}}">
-      <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
-            title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+      <time ng-attr-datetime="{{::attributionTime}}" am-time-ago="::attributionTime"
+            title="{{attributionTime|localTime}}" ng-if="::attributionTime"></time>
     </a>
-    <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
-           title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt && !showKeepPageLink"></time>
+    <time ng-attr-datetime="{{::attributionTime}}" am-time-ago="::attributionTime"
+           title="{{attributionTime|localTime}}" ng-if="::attributionTime && !showKeepPageLink"></time>
   </div>
 </div>

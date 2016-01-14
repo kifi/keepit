@@ -6,6 +6,9 @@
         'mine': (keep.user.id === me.id)}">
 
     <div class="kf-keep-card kf-flex-column">
+      <div class="kf-keep-card-activity-attribution-container" ng-if="::showActivityAttribution">
+        <div kf-keep-card-activity-attribution keep="keep"></div>
+      </div>
       <div class="kf-keep-card-attribution-container">
         <div kf-keep-card-attribution
              keep="keep"
