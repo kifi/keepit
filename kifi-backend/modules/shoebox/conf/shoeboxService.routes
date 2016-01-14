@@ -553,6 +553,7 @@ GET           /site/organizations/:id/rewards                   @com.keepit.cont
 GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.connectSlackTeam(slackTeamId: Option[String] ?= None)
 POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createOrganizationForSlackTeam(slackTeamId: String)
 POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeamToOrganization(id: PublicId[Organization], slackTeamId: String)
+GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
