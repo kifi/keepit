@@ -85,7 +85,7 @@ var injectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js'], map(function (code, filename) {
       var shortName = filename.replace(/^scripts\//, '');
-      return code.toString() + "api.injected['" + filename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
+      return code.toString() + "api.injected['" + filename + "']=1;\n//# sourceURL=http://kifi/" + shortName + '\n';
     }));
   });
 
