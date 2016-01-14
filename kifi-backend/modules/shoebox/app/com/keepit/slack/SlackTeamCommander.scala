@@ -107,7 +107,10 @@ class SlackTeamCommanderImpl @Inject() (
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization]): Try[SlackTeam] = {
     db.readWrite { implicit session =>
       slackTeamRepo.getBySlackTeamId(slackTeamId) match {
-        case Some(team) if !team.organizationId.contains(newOrganizationId) && canConnectSlackTeamToOrganization(team, userId, newOrganizationId) => Success(slackTeamRepo.save(team.copy(organizationId = Some(newOrganizationId), lastChannelCreatedAt = None)))
+        case Some(team) if canConnectSlackTeamToOrganization(team, userId, newOrganizationId) => Success {
+          if (team.organizationId.contains(newOrganizationId)) team
+          else slackTeamRepo.save(team.copy(organizationId = Some(newOrganizationId), lastChannelCreatedAt = None))
+        }
         case teamOpt => Failure(UnauthorizedSlackTeamOrganizationModificationException(teamOpt, userId, Some(newOrganizationId)))
       }
     }
