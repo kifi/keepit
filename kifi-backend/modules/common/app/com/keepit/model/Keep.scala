@@ -73,6 +73,8 @@ case class Keep(
   def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
+
+  def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
