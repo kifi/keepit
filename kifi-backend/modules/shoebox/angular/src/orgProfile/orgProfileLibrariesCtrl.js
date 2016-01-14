@@ -146,7 +146,7 @@ angular.module('kifi')
 
     var slackIntPromoP;
     // query param handling
-    var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
+    var showSlackDialog = initParams.getAndClear('showSlackDialog');
     if (showSlackDialog) {
       slackIntPromoP = $q.when(true);
     } else if (Object.keys(profileService.prefs).length === 0) {
@@ -157,8 +157,9 @@ angular.module('kifi')
       slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
     }
 
+    var forcePromo = initParams.getAndClear('forceSlackDialog');
     slackIntPromoP.then(function(showPromo) {
-      if (showPromo) {
+      if (forcePromo || showPromo) {
         profileService.savePrefs({ slack_int_promo: false });
         libraryService
         .getLibraryByHandleAndSlug(organization.handle, 'general')
@@ -166,7 +167,8 @@ angular.module('kifi')
           modalService.open({
             template: 'orgProfile/orgProfileSlackUpsellModal.tpl.html',
             modalData: {
-              library: library
+              library: library,
+              org: organization
             }
           });
         });

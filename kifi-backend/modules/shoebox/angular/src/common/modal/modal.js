@@ -80,7 +80,7 @@ angular.module('kifi')
     require: '^kfModal',
     link: function (scope, element, attrs, kfModalCtrl) {
       element.removeAttr('title');  // TODO: use a different attribute name for modal title
-
+  
       var modalDefaults = scope.$parent.modalDefaults || {};
 
       scope.title = attrs.title || modalDefaults.title || '';

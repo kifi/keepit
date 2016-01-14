@@ -1,0 +1,73 @@
+
+.si-org-selector-container-wrapper
+  display: flex
+  flex-direction: column
+  align-items: center
+  width: 100%
+
+.si-org-selector-container
+  display: flex
+  flex-direction: column
+  width: 600px
+  margin-top: 40px
+  padding: 20px
+  background-color: white
+  border-radius: 10px
+  box-shadow: 0px 1px 1px 1px #00000022
+
+  .si-org-selector-header
+    font-size: 30px
+    color: #333
+    font-weight: bold
+    text-align: center
+
+  .si-org-selector-inner-container
+    margin-top: 20px
+    margin-left: 50px
+    margin-right: 50px
+
+
+.si-org-selector-org-row
+  display: flex
+  justify-content: flex-start
+  flex-direction: row
+  align-items: center
+  height: 64px
+  cursor: pointer
+
+  &:hover
+    background-color: #F3F3F3
+
+  img
+    margin: 8px
+    width: 48px
+    height: 48px
+    border-radius: 10%
+    box-shadow: 0px 1px 1px 1px #00000022
+
+  h1
+    font-size: 18px
+    text-align: center
+    margin-left: 5px
+    font-weight: bold
+
+.si-org-selector-org-row-selected
+  background-color: #EEEEEE !important
+
+.si-org-selector-bottom
+  margin-top: 10px
+  display: flex
+  width: 100%
+  flex-direction: column
+  align-items: center
+
+  .si-org-selector-bottom-create-team
+    font-size: 14px
+    margin-bottom: 20px
+
+
+.si-org-selector-done-enabled
+  opacity : 1.0
+
+.si-org-selector-done-disabled
+  opacity : .5
