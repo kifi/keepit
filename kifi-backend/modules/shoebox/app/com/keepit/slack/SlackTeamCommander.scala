@@ -25,7 +25,7 @@ import scala.util.{ Failure, Success, Try }
 trait SlackTeamCommander {
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
-  def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization]): Try[SlackTeam]
+  def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Future[SlackTeam]
   def getOrganizationsToConnect(userId: Id[User]): Map[Id[Organization], OrganizationInfo]
   def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def setupLatestSlackChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[Map[SlackChannelIdAndName, Either[LibraryFail, Library]]]
@@ -56,7 +56,7 @@ class SlackTeamCommanderImpl @Inject() (
       (slackTeamRepo.internSlackTeam(identity), orgMembershipRepo.getAllByUserId(userId).isEmpty)
     }
     organizationId match {
-      case Some(orgId) => Future.fromTry(connectSlackTeamToOrganization(userId, slackTeam.slackTeamId, orgId))
+      case Some(orgId) => connectSlackTeamToOrganization(userId, slackTeam.slackTeamId, orgId)
       case None if slackTeam.organizationId.isEmpty && userHasNoOrg => createOrganizationForSlackTeam(userId, slackTeam.slackTeamId)
       case _ => Future.successful(slackTeam)
     }
@@ -81,9 +81,7 @@ class SlackTeamCommanderImpl @Inject() (
                 case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
               }
               val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
-              futureAvatar.flatMap { _ =>
-                Future.fromTry(connectedTeamMaybe)
-              }
+              futureAvatar.flatMap { _ => connectedTeamMaybe }
             case Left(error) => Future.failed(error)
           }
         }
@@ -97,7 +95,7 @@ class SlackTeamCommanderImpl @Inject() (
     isSlackTeamMember && hasOrgPermissions
   }
 
-  def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization]): Try[SlackTeam] = {
+  def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization])(implicit context: HeimdalContext): Future[SlackTeam] = {
     db.readWrite { implicit session =>
       slackTeamRepo.getBySlackTeamId(slackTeamId) match {
         case Some(team) if canConnectSlackTeamToOrganization(team, userId, newOrganizationId) => Success {
@@ -106,6 +104,9 @@ class SlackTeamCommanderImpl @Inject() (
         }
         case teamOpt => Failure(UnauthorizedSlackTeamOrganizationModificationException(teamOpt, userId, Some(newOrganizationId)))
       }
+    } match {
+      case Success(team) => setupLatestSlackChannels(userId, team.slackTeamId).map { _ => db.readOnlyMaster { implicit session => slackTeamRepo.get(team.id.get) } }
+      case Failure(error) => Future.failed(error)
     }
   }
 
