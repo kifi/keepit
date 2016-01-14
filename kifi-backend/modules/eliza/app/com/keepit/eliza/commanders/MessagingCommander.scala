@@ -565,7 +565,7 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Option[DiscussionKeep], Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
