@@ -25,6 +25,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def adminCountByKind(kinds: Set[AccountEventKind])(implicit session: RSession): Int
   def adminGetByKind(kinds: Set[AccountEventKind], pg: Paginator)(implicit session: RSession): Seq[AccountEvent]
   def adminGetByKindAndDate(kinds: Set[AccountEventKind], start: DateTime, end: DateTime)(implicit session: RSession): Set[AccountEvent]
+  def adminTotalMoneyEarned(implicit session: RSession): DollarAmount
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 }
@@ -117,6 +118,9 @@ class AccountEventRepoImpl @Inject() (
   }
   def adminGetByKindAndDate(kinds: Set[AccountEventKind], start: DateTime, end: DateTime)(implicit session: RSession): Set[AccountEvent] = {
     adminGetByKindHelper(kinds).filter(_.eventTime.between(start, end)).list.toSet
+  }
+  def adminTotalMoneyEarned(implicit session: RSession): DollarAmount = {
+    activeRows.map(_.paymentCharge).sum.run.get
   }
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
