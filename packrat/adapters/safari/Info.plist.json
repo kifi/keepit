@@ -1,0 +1,30 @@
+{
+  "Author": "kifi",
+  "Builder Version": "11601.3.9",
+  "CFBundleDisplayName": "kifi",
+  "CFBundleIdentifier": "com.fortytwo.kifi",
+  "CFBundleInfoDictionaryVersion": "6.0",
+  "CFBundleShortVersionString": "1.0",
+  "CFBundleVersion": "1",
+  "Chrome": {
+    "Global Page": "global.html"
+  },
+  "Content": {
+    "Scripts": {
+      "Start": [
+        "listeners.js",
+        "scripts/api.js"
+      ]
+    }
+  },
+  "Description": "kifi",
+  "DeveloperIdentifier": "V4GCE6T8A5",
+  "ExtensionInfoDictionaryVersion": "1.0",
+  "Permissions": {
+    "Website Access": {
+      "Include Secure Pages": true,
+      "Level": "All"
+    }
+  },
+  "Website": "https://www.kifi.com"
+}

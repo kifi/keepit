@@ -30,6 +30,7 @@
     "karma-jasmine": "~0.1.5",
     "lazypipe": "~0.2.2",
     "new-from": "0.0.3",
+    "plist": "^1.2.0",
     "run-sequence": "~0.3.6",
     "through2": "~0.5.1",
     "vinyl-map": "~1.0.1",
