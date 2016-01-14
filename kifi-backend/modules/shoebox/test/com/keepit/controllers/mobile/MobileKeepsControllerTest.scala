@@ -22,6 +22,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.{ KeepToCollection, UserFactory, _ }
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -150,6 +151,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "siteName":"Amazon",
             "libraryId":"${pubLibId1.id}",
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
+            "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "permissions": ${Json.toJson(keepPermissions)}
             },
           {
@@ -178,6 +180,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "siteName":"Google",
             "libraryId":"${pubLibId1.id}",
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
+            "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "permissions": ${Json.toJson(keepPermissions)}
             }
         ]}
