@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window', '$rootScope', 'messageTicker',
-  function ($window, $rootScope, messageTicker) {
+  '$window', '$rootScope', 'messageTicker', '$analytics',
+  function ($window, $rootScope, messageTicker, $analytics) {
     return {
       restrict: 'A',
       require: '^kfModal',
