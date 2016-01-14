@@ -3,8 +3,24 @@
   ng-class="{ 'editable': !readonly, 'focus': focus }"
 >
   <div ng-show="!readonly" class="kf-click-to-edit-wrapper" ng-click="selectAll()">
-    <span class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester" ng-bind="view.editableValue"></span>
-    <textarea ng-attr-placeholder="{{ focus ? undefined : inputPlaceholder }}" class="kf-click-to-edit-textarea" ng-model="view.editableValue" ng-keydown="editEvent($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-style="view.textareaHeight"></textarea>
+    <!--
+      bind the tester with an extra char on the end
+      so that the browser doesn't trim off the trailing whitespace
+    -->
+    <span
+      class="kf-click-to-edit-textarea kf-click-to-edit-textarea-tester"
+      ng-bind="view.editableValue + '.'"
+    ></span>
+    <textarea
+      class="kf-click-to-edit-textarea"
+      ng-attr-placeholder="{{ focus ? undefined : inputPlaceholder }}"
+      ng-model="view.editableValue"
+      ng-trim="false"
+      ng-keydown="editEvent($event)"
+      ng-focus="onFocus()"
+      ng-blur="onBlur()"
+      ng-style="view.textareaHeight"
+    ></textarea>
   </div>
   <p class="kf-click-to-edit-p" ng-if="readonly && !linkable" ng-bind="view.editableValue"></p>
   <p class="kf-click-to-edit-p" ng-if="readonly && linkable">
