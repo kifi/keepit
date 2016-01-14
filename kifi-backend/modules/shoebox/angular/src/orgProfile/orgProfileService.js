@@ -188,6 +188,9 @@ angular.module('kifi')
 
         return defaultAttributes;
       },
+      getSlackIntegrationsForOrg: function (org) {
+        return net.getSlackIntegrationsForOrg(org.id).then(getResponseData);
+      },
       trackEvent: function (eventName, organization, attributes) {
         var defaultAttributes = api.getCommonTrackingAttributes(organization);
         attributes = _.extend(defaultAttributes, attributes || {});

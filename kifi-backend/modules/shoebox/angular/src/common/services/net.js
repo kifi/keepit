@@ -98,6 +98,7 @@ angular.module('kifi')
       // slack
       createOrganizationForSlackTeam: post(shoebox, '/site/organizations/create/slack?slackTeamId=:slackTeamId'),
       connectSlackTeamToOrganization: post(shoebox, '/site/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
+      getSlackIntegrationsForOrg: get(shoebox, '/organizations/:id/slack/list'),
 
 
       // eliza

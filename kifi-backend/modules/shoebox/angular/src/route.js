@@ -205,6 +205,13 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'earn-credits'
       })
+      .state('orgProfile.settings.integrations', {
+        url: '/integrations',
+        controller: 'IntegrationsCtrl',
+        templateUrl: 'teamSettings/integrations.tpl.html',
+        activetab: 'settings',
+        activenav: 'integrations'
+      })
       .state('teams', {
         url: '/teams',
         'abstract': true,
