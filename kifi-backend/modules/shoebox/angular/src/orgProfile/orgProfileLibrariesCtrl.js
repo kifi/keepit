@@ -158,8 +158,9 @@ angular.module('kifi')
     }
 
     var forcePromo = initParams.getAndClear('forceSlackDialog');
+    var isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
     slackIntPromoP.then(function(showPromo) {
-      if (forcePromo || showPromo) {
+      if (isAdmin && (forcePromo || showPromo)) {
         profileService.savePrefs({ slack_int_promo: false });
         libraryService
         .getLibraryByHandleAndSlug(organization.handle, 'general')
