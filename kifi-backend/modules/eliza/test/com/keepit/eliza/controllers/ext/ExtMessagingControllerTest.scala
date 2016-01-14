@@ -146,7 +146,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                     "username": "test"
                   }
                 ]
-              }]
+              }],
+              "keep": null
           }
           """)
         inject[WatchableExecutionContext].drain()
