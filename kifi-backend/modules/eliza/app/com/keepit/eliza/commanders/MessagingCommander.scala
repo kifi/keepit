@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionKeep, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
@@ -559,7 +559,7 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Option[DiscussionKeep], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
@@ -593,8 +593,10 @@ class MessagingCommander @Inject() (
             nonUserRecipients <- nonUserRecipientsFuture
             orgParticipants <- orgParticipantsFuture
             (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
+            discussionKeepFut = shoebox.getDiscussionKeepsByIds(userId, Set(thread.keepId))
             messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
             Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
+            discussionKeepsById <- discussionKeepFut
           } yield {
             val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
               case NonUserEmailParticipant(address) => (Right(address), "message")
@@ -603,7 +605,7 @@ class MessagingCommander @Inject() (
 
             val tDiff = currentDateTime.getMillis - tStart.getMillis
             statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
-            (message, threadInfo, messagesWithBasicUser)
+            (message, threadInfo, discussionKeepsById.get(thread.keepId), messagesWithBasicUser)
           }
         }
       }
