@@ -1,9 +1,11 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.LibraryInfoCommander
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
@@ -13,6 +15,7 @@ import com.keepit.model._
 import com.keepit.slack.SlackAuthenticatedAction.{ SetupSlackTeam, SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import play.api.libs.json.{ Writes, Json, Format }
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -45,6 +48,14 @@ case class OrganizationSlackInfo(
   link: String,
   slackTeams: Set[SlackTeamId])
 
+case class OrganizationSlackIntegrationsInfo(
+  libraries: Map[PublicId[Library], LibrarySlackInfo],
+  numLibraries: Int)
+object OrganizationSlackIntegrationsInfo {
+  private implicit val helperWrites = TraversableFormat.mapWrites[PublicId[Library], LibrarySlackInfo](_.id)
+  implicit val writes: Writes[OrganizationSlackIntegrationsInfo] = Json.writes[OrganizationSlackIntegrationsInfo]
+}
+
 object SlackInfoCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
 }
@@ -53,6 +64,7 @@ object SlackInfoCommander {
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo
 }
@@ -67,6 +79,7 @@ class SlackInfoCommanderImpl @Inject() (
   libToChannelRepo: LibraryToSlackChannelRepo,
   basicUserRepo: BasicUserRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  libInfoCommander: LibraryInfoCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -148,6 +161,17 @@ class SlackInfoCommanderImpl @Inject() (
 
       }.toMap
     }
+  }
+
+  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo = {
+    val libIds = db.readOnlyReplica { implicit s =>
+      libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(userId), Offset(0), Limit(Int.MaxValue)).map(_.id.get).toSet
+    }
+    val integrationInfoByLib = getSlackIntegrationsForLibraries(userId, libIds)
+    OrganizationSlackIntegrationsInfo(
+      libraries = integrationInfoByLib.map { case (libId, info) => Library.publicId(libId) -> info },
+      numLibraries = libIds.size
+    )
   }
 
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations = {

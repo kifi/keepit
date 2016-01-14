@@ -1,30 +1,29 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, PermissionCommander, LibraryAccessCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.mail.EmailAddress
 import com.keepit.controllers.core.AuthHelper
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.slack.SlackAuthenticatedAction.SetupSlackTeam
-import com.keepit.slack.models._
 import com.keepit.slack._
+import com.keepit.slack.models._
 import com.keepit.social.IdentityHelpers
 import play.api.libs.json._
-import play.api.mvc.{ Request, RequestHeader, Result }
-import securesocial.core.{ OAuth2Info, AuthenticationMethod, SocialUser }
-import com.keepit.common.core._
+import play.api.mvc.Result
+import securesocial.core.{ AuthenticationMethod, OAuth2Info, SocialUser }
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Success
 
 @Singleton
 class SlackController @Inject() (
@@ -38,6 +37,7 @@ class SlackController @Inject() (
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
+    slackInfoCommander: SlackInfoCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val permissionCommander: PermissionCommander,
     val userActionsHelper: UserActionsHelper,
@@ -211,5 +211,9 @@ class SlackController @Inject() (
   def connectSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
     val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_))).url
     Redirect(link, SEE_OTHER)
+  }
+
+  def getOrgIntegrations(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>
+    Ok(Json.toJson(slackInfoCommander.getSlackIntegrationsForOrg(request.request.userId, request.orgId)))
   }
 }
