@@ -31,8 +31,8 @@ trait SlackDigestNotifier {
 }
 
 object SlackDigestNotifier {
-  val minPeriodBetweenTeamDigests = Period.week(1)
-  val minPeriodBetweenChannelDigests = Period.days(4) // TODO(ryan): make this way slower
+  val minPeriodBetweenTeamDigests = Period.minutes(1) // TODO(ryan): make this way slower
+  val minPeriodBetweenChannelDigests = Period.minutes(1) // TODO(ryan): make this way slower
   val minIngestedKeepsForChannelDigest = 3
   val minIngestedKeepsForTeamDigest = 10
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
