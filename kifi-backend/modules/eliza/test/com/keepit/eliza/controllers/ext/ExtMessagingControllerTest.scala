@@ -117,8 +117,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
               "lastMessageRead": "${message.createdAt.toStandardTimeString}",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
               "url": "https://admin.kifi.com/admin/searchExperiments",
-              "muted":false,
-              "keep": null
+              "muted":false
             },
             "messages":[
               {
