@@ -117,7 +117,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
               "lastMessageRead": "${message.createdAt.toStandardTimeString}",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
               "url": "https://admin.kifi.com/admin/searchExperiments",
-              "muted":false
+              "muted":false,
+              "keep": null
             },
             "messages":[
               {
@@ -146,9 +147,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                     "username": "test"
                   }
                 ]
-              }],
-              "keep": null
-          }
+              }]
+            }
           """)
         inject[WatchableExecutionContext].drain()
         contentAsJson(result) === expected
