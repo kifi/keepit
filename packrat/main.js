@@ -1041,6 +1041,9 @@ api.port.on({
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
+      if (o.threadInfo && o.threadInfo.keep) {
+        keepData[o.threadInfo.id] = o.threadInfo.keep;
+      }
       respond({threadId: o.parentId});
     }, function (req) {
       log('#c00', '[send_message] resp:', req);
