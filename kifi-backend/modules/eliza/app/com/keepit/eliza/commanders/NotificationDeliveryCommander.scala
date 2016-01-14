@@ -205,7 +205,7 @@ class NotificationDeliveryCommander @Inject() (
     }
   }
 
-  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity]): Unit = SafeFuture {
+  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity], forceOverwrite: Boolean = false): Unit = SafeFuture {
     val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
     val (msgCount, muted) = db.readOnlyMaster { implicit session =>
       val msgCount = messageRepo.getMessageCounts(thread.keepId, lastSeenOpt)
@@ -219,7 +219,7 @@ class NotificationDeliveryCommander @Inject() (
       threadActivity = Some(orderedActivityInfo),
       msgCount = Some(msgCount)
     )
-    val notifFut = threadNotifBuilder.buildForKeep(userId, thread.keepId, precomputed = Some(precomputedInfo)).map(_.get)
+    val notifFut = threadNotifBuilder.buildForKeep(userId, thread.keepId, precomputed = Some(precomputedInfo)).map(_.get).map(_.copy(forceOverwrite = forceOverwrite))
 
     messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
     shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
@@ -233,6 +233,19 @@ class NotificationDeliveryCommander @Inject() (
       notificationRouter.sendToUser(userId, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
     }
 
+    //This is mostly for testing and monitoring
+    notificationRouter.sendNotification(Some(userId), UserThreadNotification(message.keepId, message.id.get))
+  }
+
+  def sendPushNotificationForMessage(userId: Id[User], message: ElizaMessage, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity]): Unit = SafeFuture {
+    val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
+    val (msgCount, muted, unreadThreads, unreadNotifs) = db.readOnlyMaster { implicit session =>
+      val msgCount = messageRepo.getMessageCounts(message.keepId, lastSeenOpt)
+      val muted = userThreadRepo.isMuted(userId, message.keepId)
+      val unreadThreads = userThreadRepo.getUnreadThreadCounts(userId).unmuted
+      val unreadNotifications = notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+      (msgCount, muted, unreadThreads, unreadNotifications)
+    }
     if (!message.from.asUser.contains(userId) && !muted) {
       val senderStr = sender match {
         case Some(BasicUserLikeEntity.user(bu)) => bu.firstName + ": "
@@ -241,12 +254,9 @@ class NotificationDeliveryCommander @Inject() (
       }
       val notifText = senderStr + MessageFormatter.toText(message.messageText)
       val sound = if (msgCount.total > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
-      val notification = MessageThreadPushNotification(thread.pubKeepId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
+      val notification = MessageThreadPushNotification(message.pubKeepId, unreadThreads + unreadNotifs, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
       sendPushNotification(userId, notification)
     }
-
-    //This is mostly for testing and monitoring
-    notificationRouter.sendNotification(Some(userId), UserThreadNotification(message.keepId, message.id.get))
   }
 
   private def trimAtBytes(str: String, len: Int, charset: Charset) = { //Conner's Algorithm

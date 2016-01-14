@@ -273,7 +273,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           }
 
           thread.allParticipants.foreach { user =>
-            notifDeliveryCommander.sendNotificationForMessage(user, lastMsg, thread, sender, threadActivity)
+            notifDeliveryCommander.sendNotificationForMessage(user, lastMsg, thread, sender, threadActivity, forceOverwrite = true)
           }
         }
     }.getOrElse(Future.successful(Unit))
