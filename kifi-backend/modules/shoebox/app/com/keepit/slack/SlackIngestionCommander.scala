@@ -157,10 +157,12 @@ class SlackIngestionCommanderImpl @Inject() (
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
-    val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
-    log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
+    val slackUsers = messages.map(_.userId).toSet
+    val userBySlackId = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
+    }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
-    val (userId, library) = db.readOnlyMaster { implicit session =>
+    val (integrationOwner, library) = db.readOnlyMaster { implicit session =>
       val userId = slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).flatMap(_.userId).getOrElse {
         val message = s"Could not find a valid SlackMembership for ${(integration.slackTeamId, integration.slackUserId)} for stl ${integration.id.get}"
         airbrake.notify(message)
@@ -169,10 +171,15 @@ class SlackIngestionCommanderImpl @Inject() (
       val library = libraryRepo.get(integration.libraryId)
       (userId, library)
     }
-    val ingestedMessages = {
-      val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, userId, library, KeepSource.slack)(HeimdalContext.empty)
-      (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case SlackAttribution(message) => message })
+    val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.getOrElse(msg.userId, integrationOwner)).map {
+      case (user, msgs) => user -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
     }
+    log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarksByUser.values.flatten.map(_.url).toSet}")
+    val ingestedMessages = rawBookmarksByUser.flatMap {
+      case (user, rawBookmarks) =>
+        val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, user, library, KeepSource.slack)(HeimdalContext.empty)
+        (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case SlackAttribution(message) => message })
+    }.toSet
     messages.headOption.foreach { msg =>
       db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
     }
