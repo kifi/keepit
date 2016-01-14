@@ -350,6 +350,7 @@ class MessagingCommander @Inject() (
 
     thread.allParticipants.foreach { userId =>
       notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, sender, threadActivity)
+      notificationDeliveryCommander.sendPushNotificationForMessage(userId, message, sender, threadActivity)
     }
 
     // update non user threads of non user recipients
@@ -564,7 +565,7 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Option[DiscussionKeep], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
@@ -598,10 +599,8 @@ class MessagingCommander @Inject() (
             nonUserRecipients <- nonUserRecipientsFuture
             orgParticipants <- orgParticipantsFuture
             (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
-            discussionKeepFut = shoebox.getDiscussionKeepsByIds(userId, Set(thread.keepId))
             messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
             Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
-            discussionKeepOpt = discussionKeepFut.map(_.get(thread.keepId))
           } yield {
             val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
               case NonUserEmailParticipant(address) => (Right(address), "message")

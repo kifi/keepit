@@ -527,7 +527,7 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
-    var linkToKeep = (o.keep.libraries.length === 1 || (o.keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1));
+    var linkToKeep = shouldLinkToKeep(o.keep)
 
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
     forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
@@ -562,6 +562,15 @@ var socketHandlers = {
     }
   }
 };
+
+function shouldLinkToKeep(keep) {
+  return keep && (
+    keep.libraries && (
+      keep.libraries.length === 1 ||
+      (keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1)
+    )
+  );
+}
 
 function emitAllTabs(name, data, options) {
   return api.tabs.each(function(tab) {
@@ -1103,7 +1112,7 @@ api.port.on({
     }
     var msgs = messageData[id];
     if (msgs) {
-      var linkToKeep = (keep.libraries.length === 1 || (keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1));
+      var linkToKeep = shouldLinkToKeep(keep);
       emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
     } else {
       // TODO: remember that this tab needs this thread until it gets it or its pane changes?

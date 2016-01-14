@@ -53,13 +53,14 @@ class ExtMessagingController @Inject() (
     }
 
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
-      case (message, threadInfo, messages) =>
+      case (message, threadInfo, keepOpt, messages) =>
         Ok(Json.obj(
           "id" -> message.pubId,
           "parentId" -> threadInfo.keepId,
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo),
-          "messages" -> messages.reverse))
+          "messages" -> messages.reverse,
+          "keep" -> keepOpt))
     }.recover {
       case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
         Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
