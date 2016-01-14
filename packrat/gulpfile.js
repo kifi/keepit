@@ -81,7 +81,7 @@ function removeMostJsComments(code) {
   return code.toString().replace(/^([^'"\/]*)\s*\/\/.*$/mg, '$1');
 }
 
-var injectionFooter = lazypipe()
+var webkitInjectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js'], map(function (code, filename) {
       var shortName = filename.replace(/^scripts\//, '');
@@ -151,7 +151,7 @@ gulp.task('copy', function () {
       path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
     }))
     .pipe(map(removeMostJsComments))
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var safariAdapters = gulp.src(safariAdapterFiles, {base: './'})
@@ -165,7 +165,7 @@ gulp.task('copy', function () {
       path.dirname = path.dirname.replace(/^adapters\/safari\/?/, 'kifi.safariextension/');
     }))
     .pipe(map(removeMostJsComments))
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
@@ -186,7 +186,6 @@ gulp.task('copy', function () {
   var resources = gulp.src(resourceFiles, { base: './' })
     .pipe(cache('resources'));
 
-
   var firefoxResources = resources.pipe(clone())
     .pipe(rename(function () {}))
     .pipe(firefoxExplicitGlobals())
@@ -196,12 +195,12 @@ gulp.task('copy', function () {
 
   var chromeResources = resources.pipe(clone())
     .pipe(rename(function () {})) // very obscure way to make sure filenames use a relative path
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var safariResources = resources.pipe(clone())
     .pipe(rename(function () {}))
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/kifi.safariextension'));
 
   var chromeIcons = gulp.src('icons/kifi.{48,128,256}.png')
@@ -262,11 +261,11 @@ gulp.task('html2js', function () {
     .pipe(gulp.dest(outDir + '/firefox/data'))
 
   var chrome = common.pipe(clone())
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var safari = common.pipe(clone())
-    .pipe(injectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/kifi.safariextension'));
 
 
@@ -306,8 +305,9 @@ gulp.task('styles', function () {
     return code.toString().replace(/\/images\//g, ffBaseUri);
   }
 
-  var someHash = 'deadbeef';
-  var safariBaseUri = 'safari-extension://com.fortytwo.kifi-V4GCE6T8A5/' + someHash + '/';
+  // We use a relative path here because Safari auto-generates some hash
+  // and appends it to the extension package baseURI
+  var safariBaseUri = '../../images/';
   function safarify(code) {
     return code.toString().replace(/\/images\//g, safariBaseUri);
   }
