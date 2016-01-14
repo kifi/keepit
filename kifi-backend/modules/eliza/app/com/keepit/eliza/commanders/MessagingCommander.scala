@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionKeep, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
@@ -66,6 +66,7 @@ class MessagingCommander @Inject() (
     val allInvolvedUsers = threads.flatMap(_.participants.allUsers)
     //get all basic users
     val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
+    val discussionKeepsByKeepIdF = shoebox.getDiscussionKeepsByIds(userId, threads.map(_.keepId).toSet)
     //get all messages
     val messagesByThread: Map[Id[MessageThread], Seq[ElizaMessage]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getThreadMessages(thread))
@@ -75,7 +76,10 @@ class MessagingCommander @Inject() (
       threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.keepId).get }
     }.toMap
 
-    userId2BasicUserF.map { userId2BasicUser =>
+    for {
+      userId2BasicUser <- userId2BasicUserF
+      discussionKeepsByKeepId <- discussionKeepsByKeepIdF
+    } yield {
       threads.map { thread =>
 
         val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
@@ -104,7 +108,8 @@ class MessagingCommander @Inject() (
           lastMessageRead = userThreads(thread.id.get).lastSeen,
           nUrl = Some(thread.nUrl),
           url = requestUrl,
-          muted = userThreads(thread.id.get).muted)
+          muted = userThreads(thread.id.get).muted,
+          keep = discussionKeepsByKeepId.get(thread.keepId))
       }
     }
   }
@@ -593,8 +598,10 @@ class MessagingCommander @Inject() (
             nonUserRecipients <- nonUserRecipientsFuture
             orgParticipants <- orgParticipantsFuture
             (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
+            discussionKeepFut = shoebox.getDiscussionKeepsByIds(userId, Set(thread.keepId))
             messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
             Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
+            discussionKeepOpt = discussionKeepFut.map(_.get(thread.keepId))
           } yield {
             val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
               case NonUserEmailParticipant(address) => (Right(address), "message")
