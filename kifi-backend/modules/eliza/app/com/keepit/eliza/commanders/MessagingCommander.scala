@@ -345,6 +345,7 @@ class MessagingCommander @Inject() (
 
     thread.allParticipants.foreach { userId =>
       notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, sender, threadActivity)
+      notificationDeliveryCommander.sendPushNotificationForMessage(userId, message, sender, threadActivity)
     }
 
     // update non user threads of non user recipients
