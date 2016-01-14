@@ -47,7 +47,7 @@ case class SlackAttachment(
 object SlackAttachment {
   case class Author(name: String, link: Option[String], icon: Option[String])
   case class Title(value: String, link: Option[String])
-  @json case class Field(title: String, value: String, short: Option[Boolean])
+  @json case class Field(title: String, value: JsValue, short: Option[Boolean])
 
   def fromTitleAndImage(title: Title, thumbUrl: Option[String], color: String) = SlackAttachment(
     fallback = None,
