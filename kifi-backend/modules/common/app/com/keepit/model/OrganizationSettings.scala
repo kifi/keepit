@@ -19,7 +19,7 @@ case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
 
   def diff(that: OrganizationSettings): Set[Feature] = {
     this.kvs.collect {
-      case (feature, setting) if that.kvs(feature) != setting => feature
+      case (feature, setting) if !that.kvs.get(feature).contains(setting) => feature
     }.toSet
   }
 }
