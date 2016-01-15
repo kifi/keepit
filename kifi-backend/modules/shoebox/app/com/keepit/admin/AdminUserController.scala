@@ -900,7 +900,7 @@ class AdminUserController @Inject() (
     }
 
     // Slack
-    slackTeamMembershipRepo.getByUserId(userId).foreach(membership => slackTeamMembershipRepo.save(membership.copy(userId = None, state = SlackTeamMembershipStates.INACTIVE)))
+    slackTeamMembershipRepo.getByUserId(userId).foreach(slackTeamMembershipRepo.deactivate)
 
     // URI Graph
     keepRepo.getByUser(userId).foreach(keepCommander.deactivateKeep)
