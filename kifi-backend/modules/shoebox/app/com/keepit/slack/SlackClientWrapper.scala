@@ -184,12 +184,16 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
-    case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.tokenRevoked, _)) =>
-      db.readWrite { implicit s =>
-        slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-          slackTeamMembershipRepo.save(stm.revoked)
-        }
+    case Failure(_@ SlackAPIFailure(_, SlackAPIFailure.Error.tokenRevoked, _)) => db.readWrite { implicit s =>
+      slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+        slackTeamMembershipRepo.save(stm.revoked)
       }
+    }
+    case Failure(_@ SlackAPIFailure(_, SlackAPIFailure.Error.accountInactive, _)) => db.readWrite { implicit s =>
+      slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+        slackTeamMembershipRepo.deactivate(stm)
+      }
+    }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {

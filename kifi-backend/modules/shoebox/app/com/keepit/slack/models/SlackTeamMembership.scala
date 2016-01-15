@@ -62,8 +62,10 @@ case class SlackTeamMembership(
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
-  def revoked = this.copy(token = None, scopes = Set.empty)
   def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
+
+  def revoked = this.copy(token = None, scopes = Set.empty)
+  def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
 }
 
 object SlackTeamMembershipStates extends States[SlackTeamMembership]
@@ -77,6 +79,8 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
+
+  def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -199,6 +203,9 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership] = {
     activeRows.filter(_.userId === userId).list
+  }
+  def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
 
