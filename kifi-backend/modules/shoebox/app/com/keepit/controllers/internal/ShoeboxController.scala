@@ -26,7 +26,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.{ SlackIngestionCommander, SlackInfoCommander }
+import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
 import com.keepit.slack.models.{ SlackChannelId, SlackTeamId }
 import com.keepit.social._
 import org.joda.time.DateTime
@@ -90,7 +90,7 @@ class ShoeboxController @Inject() (
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
-  slackIngestionCommander: SlackIngestionCommander,
+  slackIntegrationCommander: SlackIntegrationCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
 
@@ -597,7 +597,7 @@ class ShoeboxController @Inject() (
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
     val integrations = slackInfoCommander.getIntegrationsBySlackChannel(teamId, channelId)
-    SafeFuture { slackIngestionCommander.ingestFromChannelPlease(teamId, channelId) }
+    SafeFuture { slackIntegrationCommander.ingestFromChannelPlease(teamId, channelId) }
     Ok(Json.toJson(integrations))
   }
 

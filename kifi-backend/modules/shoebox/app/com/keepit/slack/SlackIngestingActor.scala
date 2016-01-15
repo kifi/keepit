@@ -1,16 +1,18 @@
 package com.keepit.slack
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ PermissionCommander, RawBookmarkRepresentation, KeepInterner }
+import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
+import com.kifi.juggle._
 import com.keepit.model._
+import com.keepit.slack.models.SlackIntegration.{ ForbiddenSlackIntegration, BrokenSlackIntegration }
 import com.keepit.slack.models._
 import org.joda.time.Period
 import com.keepit.common.time._
@@ -20,27 +22,21 @@ import com.keepit.common.core._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-object SlackIngestionCommander {
+object SlackIngestionConfig {
   val nextIngestionDelayAfterFailure = Period.minutes(10)
   val nextIngestionDelayWithoutNewMessages = Period.minutes(2)
   val nextIngestionDelayAfterNewMessages = Period.seconds(30)
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val integrationBatchSize = 10
+  val channelIngestionConcurrency = 1
   val messageBatchSize = 25
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
 
-@ImplementedBy(classOf[SlackIngestionCommanderImpl])
-trait SlackIngestionCommander {
-  def ingestAllDue(): Future[Unit]
-  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
-}
-
 @Singleton
-class SlackIngestionCommanderImpl @Inject() (
+class SlackIngestingActor @Inject() (
     db: Database,
     integrationRepo: SlackChannelToLibraryRepo,
     slackChannelRepo: SlackChannelRepo,
@@ -52,54 +48,46 @@ class SlackIngestionCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val ec: ExecutionContext) extends SlackIngestionCommander with Logging {
+    implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
-  import SlackIngestionCommander._
-  import SlackIntegration._
+  import SlackIngestionConfig._
 
-  def ingestAllDue(): Future[Unit] = {
-    log.info("[SLACK-INGEST] Processing all due integrations.")
-    FutureHelpers.doUntil {
-      val (integrations, isAllowed, getTokenWithScopes) = db.readWrite { implicit session =>
-        val integrationIds = integrationRepo.getRipeForIngestion(integrationBatchSize, ingestionTimeout)
-        log.info(s"[SLACK-INGEST] Found ${integrationIds.length}/$integrationBatchSize integrations to process next.")
-        integrationRepo.markAsIngesting(integrationIds: _*)
-        val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
-        val integrations = integrationIds.map(integrationsByIds(_))
+  protected val minConcurrentTasks = channelIngestionConcurrency
+  protected val maxConcurrentTasks = channelIngestionConcurrency
 
-        val isAllowed = integrations.map { integration =>
-          integration.id.get -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
+  protected def pullTasks(limit: Int): Future[Seq[Id[SlackChannelToLibrary]]] = {
+    db.readWrite { implicit session =>
+      val integrationIds = integrationRepo.getRipeForIngestion(limit, ingestionTimeout)
+      log.info(s"[SLACK-INGEST] Found ${integrationIds.length}/$limit integrations to process next.")
+      integrationRepo.markAsIngesting(integrationIds: _*)
+      Future.successful(integrationIds)
+    }
+  }
+
+  protected def processTasks(integrationIds: Seq[Id[SlackChannelToLibrary]]): Map[Id[SlackChannelToLibrary], Future[Unit]] = {
+    val (integrationsByIds, isAllowed, getTokenWithScopes) = db.readOnlyMaster { implicit session =>
+      val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
+
+      val isAllowed = integrationsByIds.map {
+        case (integrationId, integration) =>
+          integrationId -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
             permissionCommander.getLibraryPermissions(integration.libraryId, stm.userId).contains(LibraryPermission.ADD_KEEPS)
           }
+      }.toMap
+
+      val getTokenWithScopes = {
+        val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrationsByIds.values.map(_.slackUserId).toSet)
+        integrationsByIds.map {
+          case (integrationId, integration) =>
+            integrationId -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
         }.toMap
+      }
 
-        val getToken = {
-          val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrations.map(_.slackUserId).toSet)
-          integrations.map { integration =>
-            integration.id.get -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
-          }.toMap
-        }
-
-        (integrations, isAllowed, getToken)
-      }
-      log.info(s"[SLACK-INGEST] Now processing ${integrations.length} integrations.")
-      val allIngestedFuture = FutureHelpers.sequentialExec(integrations) {
-        case integration => ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ()).recover {
-          case error =>
-            log.error(s"[SLACK-INGEST] Something went wrong", error)
-            //airbrake.notify(s"[SLACK-INGEST] Something went wrong", error) // please fix do this doesn't send so aggressively
-            ()
-        }
-      }
-      allIngestedFuture.imap { _ =>
-        log.info(s"[SLACK-INGEST] Done processing ${integrations.length} integrations.]")
-        integrations.isEmpty
-      }
-    } recover {
-      case error =>
-        log.error(s"[SLACK-INGEST] Something went *very* wrong", error)
-        airbrake.notify(s"[SLACK-INGEST] Something went *very* wrong", error)
-        ()
+      (integrationsByIds, isAllowed, getTokenWithScopes)
+    }
+    integrationsByIds.map {
+      case (integrationId, integration) =>
+        integrationId -> ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ())
     }
   }
 
@@ -247,9 +235,5 @@ class SlackIngestionCommanderImpl @Inject() (
         }
     }
 
-  }
-
-  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>
-    integrationRepo.ingestFromChannelWithin(teamId, channelId, maxIngestionDelayAfterCommand)
   }
 }
