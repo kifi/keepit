@@ -146,7 +146,7 @@ angular.module('kifi')
 
     var slackIntPromoP;
     // query param handling
-    var showSlackDialog = initParams.getAndClear('showSlackDialog');
+    var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
     if (showSlackDialog) {
       slackIntPromoP = $q.when(true);
     } else if (Object.keys(profileService.prefs).length === 0) {
@@ -157,7 +157,7 @@ angular.module('kifi')
       slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
     }
 
-    var forcePromo = initParams.getAndClear('forceSlackDialog');
+    var forcePromo = $stateParams.forceSlackDialog || initParams.getAndClear('forceSlackDialog');
     slackIntPromoP.then(function(showPromo) {
       if (forcePromo || showPromo) {
         profileService.savePrefs({ slack_int_promo: false });
