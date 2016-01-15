@@ -35,7 +35,6 @@ object SlackIngestionConfig {
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
 
-@Singleton
 class SlackIngestingActor @Inject() (
     db: Database,
     integrationRepo: SlackChannelToLibraryRepo,
