@@ -4,9 +4,10 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
+import com.keepit.social.{ UserIdentity, UserIdentityIdentityIdKey, UserIdentityCache }
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, JsValue }
 
@@ -27,6 +28,23 @@ case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], members
 case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
 object SlackTokenWithScopes {
   def unapply(stm: SlackTeamMembership): Option[(SlackAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
+}
+
+object SlackTeamMembership {
+  def toIdentity(membership: SlackTeamMembership): UserIdentity = {
+    UserIdentity(
+      membership.userId,
+      SlackIdentity(
+        membership.slackTeamId,
+        membership.slackTeamName,
+        membership.slackUserId,
+        membership.slackUsername,
+        membership.token,
+        membership.scopes,
+        None // todo(Léo): add SlackUserInfo to membership
+      )
+    )
+  }
 }
 
 case class SlackTeamMembership(

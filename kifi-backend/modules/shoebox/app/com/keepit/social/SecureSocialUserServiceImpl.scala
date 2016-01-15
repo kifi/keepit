@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import com.keepit.common.oauth.{ SlackIdentity, EmailPasswordIdentity }
 import com.keepit.common.performance._
 
 import com.google.inject.{ Inject, Singleton }
@@ -15,7 +16,7 @@ import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
 import com.keepit.slack.SlackCommander
-import com.keepit.slack.models.{ SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -27,7 +28,7 @@ import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander,
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Success, Try }
 
 @Singleton
 class UserIdentityHelper @Inject() (
@@ -67,10 +68,7 @@ class UserIdentityHelper @Inject() (
         socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
         }.headOption orElse {
-          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map { membership =>
-            val user = userRepo.get(userId)
-            UserIdentity(user, membership.slackTeamId, membership.slackUserId, membership.token)
-          }
+          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map(SlackTeamMembership.toIdentity)
         }
     }
   }
@@ -90,13 +88,7 @@ class UserIdentityHelper @Inject() (
       }
       case SLACK =>
         Try(parseSlackId(identityId)).toOption.flatMap {
-          case (slackTeamId, slackUserId) =>
-            slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap { membership =>
-              membership.userId.map { userId =>
-                val user = userRepo.get(userId)
-                UserIdentity(user, membership.slackTeamId, membership.slackUserId, membership.token)
-              }
-            }
+          case (slackTeamId, slackUserId) => slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map(SlackTeamMembership.toIdentity)
         }
       case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
         val socialId = parseSocialId(identityId)
