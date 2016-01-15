@@ -242,7 +242,7 @@ class EmailTemplateProcessorImpl @Inject() (
           if (shouldDeepLink) {
             val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> keepPubId, "at" -> accessTokenOpt).nonNullFields
             config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
-          } else uri.url
+          } else uri.url + "/?"
 
         case tags.organizationId => Organization.publicId(org.id.get).id
         case tags.organizationName => org.name
