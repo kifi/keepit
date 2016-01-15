@@ -17,6 +17,8 @@ orgStats: OrganizationStatistics
         </td></tr>
     <tr><td>Created At</td>
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Slack Libs</td>
+        <td>@orgStats.libStats.slackLibCount</td></tr>
     <tr><td>Libs prv/org/pub</td>
         <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td></tr>
     <tr><td>Num Keeps ever/last week</td>

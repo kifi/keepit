@@ -68,15 +68,16 @@ case class MemberStatistics(
 
   dateLastManualKeep: Option[DateTime])
 
-case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
+case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int, slackLibCount: Int)
 
 object LibCountStatistics {
   def apply(allLibs: Iterable[Library]): LibCountStatistics = {
-    val libs = allLibs.filter(_.kind == LibraryKind.USER_CREATED)
+    val libs = allLibs.filter { l => l.kind == LibraryKind.USER_CREATED || l.kind == LibraryKind.SLACK_CHANNEL }
     LibCountStatistics(
       libs.count(_.isSecret),
       libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
-      libs.count(_.isPublished))
+      libs.count(_.isPublished),
+      allLibs.count(_.kind == LibraryKind.SLACK_CHANNEL))
   }
 }
 
