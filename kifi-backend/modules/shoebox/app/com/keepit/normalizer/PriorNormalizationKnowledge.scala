@@ -26,7 +26,8 @@ class PriorNormalizationKnowledge @Inject() (
       Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
         val uriWithPreferredSchemeOption = getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
 
-        if (!uriWithPreferredSchemeOption.contains(prenormalizedUri)) slackLog.warn(s"uriString=$uriString, prenormalized=$prenormalizedUri, schemed=$uriWithPreferredSchemeOption")
+        if (uriWithPreferredSchemeOption.nonEmpty && !uriWithPreferredSchemeOption.contains(prenormalizedUri))
+          slackLog.warn(s"uriString=$uriString, prenormalized=$prenormalizedUri, schemed=$uriWithPreferredSchemeOption")
 
         val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
         result.toString()
