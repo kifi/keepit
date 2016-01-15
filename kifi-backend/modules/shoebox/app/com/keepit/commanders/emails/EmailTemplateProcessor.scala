@@ -238,8 +238,11 @@ class EmailTemplateProcessorImpl @Inject() (
           import com.keepit.common.core._
           val keepPubId = tagArgs(1)
           val accessTokenOpt = tagArgs(2).asOpt[String]
-          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> keepPubId, "at" -> accessTokenOpt).nonNullFields
-          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+          val shouldDeepLink = tagArgs(3).as[Boolean]
+          if (shouldDeepLink) {
+            val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> keepPubId, "at" -> accessTokenOpt).nonNullFields
+            config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+          } else uri.url
 
         case tags.organizationId => Organization.publicId(org.id.get).id
         case tags.organizationName => org.name
