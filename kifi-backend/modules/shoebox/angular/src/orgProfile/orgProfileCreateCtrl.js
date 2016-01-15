@@ -69,7 +69,7 @@ angular.module('kifi')
         function next() {
           profileService.fetchMe();
           profileService.fetchPrefs(); // To invalidate credit code, if any.
-          $state.go('orgProfile.libraries', { handle: org.handle, openInviteModal: true, addMany: true  });
+          $state.go('orgProfile.libraries', { handle: org.handle, forceSlackDialog: true });
         }
       })
       ['catch'](function () {

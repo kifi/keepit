@@ -127,7 +127,8 @@ angular.module('kifi')
       .state('orgProfile.libraries', {
         url: '?openInviteModal&addMany',
         params: {
-          showSlackDialog: false
+          showSlackDialog: false, // shows the "integrate general with Slack" dialog
+          forceSlackDialog: false // show the "integrate all your Slack channels with your Kifi team" dialog
         },
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
