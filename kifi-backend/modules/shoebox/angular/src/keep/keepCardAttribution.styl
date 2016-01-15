@@ -31,7 +31,14 @@
   .kf-privacy-container
     display: inline-block
 
-//
+.kf-keep-card-attribution-discussion-members-list-item:after
+  content: ", "
+
+.kf-keep-card-attribution-discussion-members-list-item:last-child:after
+  content: ""
+
+.kf-keep-card-attribution-discussion-members-list-item:nth-last-child(2):after
+  content: " & "
 
 .kf-keep-card-attribution-message
   display: block

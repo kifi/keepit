@@ -1,0 +1,15 @@
+<div class="kf-keep-card-activity-attribution" ng-show="lastComment">
+  <div class="kf-keep-card-activity-attribution-message">
+    <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
+    <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
+       ng-href="{{::keep.user|profileUrl}}"
+       ng-bind="::lastComment.sentBy|name"/>
+    </a></span>
+    commented on this
+    <span ng-if="::lastComment.sentAt">·
+      <span><time ng-attr-datetime="{{::lastComment.sentAt}}" am-time-ago="::lastComment.sentAt"
+          title="{{::lastComment.sentAt|localTime}}"></time></span>
+    </span>
+  </div>
+  <div class="kf-keep-card-activity-attribution-divider"></div>
+</div>
