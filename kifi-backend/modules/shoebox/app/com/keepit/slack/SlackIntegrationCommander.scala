@@ -31,6 +31,7 @@ trait SlackIntegrationCommander {
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
   def fetchMissingChannelIds(): Future[Unit]
+  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
 }
 
 @Singleton
@@ -250,5 +251,9 @@ class SlackIntegrationCommanderImpl @Inject() (
             Future.successful(())
         }
     }
+  }
+
+  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>
+    channelToLibRepo.ingestFromChannelWithin(teamId, channelId, SlackIngestionConfig.maxIngestionDelayAfterCommand)
   }
 }
