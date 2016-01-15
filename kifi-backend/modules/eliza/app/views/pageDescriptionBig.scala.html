@@ -1,10 +1,10 @@
 @import com.keepit.common.mail.template.helpers.discussionLink
 
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, isUser: Boolean)
-@visitThisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, shouldDeepLink = isUser, "clickedArticleVisitLink")}
-@articleTitleUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser, "clickedArticleTitle")}
-@articleDomainUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser, "clickedArticleDomain")}
-@articleImageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser, "clickedArticleImage")}
+@visitThisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, shouldDeepLink = isUser)}
+@articleTitleUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
+@articleDomainUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
+@articleImageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   @threadInfo.heroImageUrl.map{ heroImageUrl =>
     <tr>
