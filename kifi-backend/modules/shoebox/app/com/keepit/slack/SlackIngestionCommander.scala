@@ -235,7 +235,7 @@ class SlackIngestionCommanderImpl @Inject() (
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)
-    val pageSize = PageSize((limit getOrElse 100) max PageSize.max)
+    val pageSize = PageSize((limit getOrElse 100) min PageSize.max)
     FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
