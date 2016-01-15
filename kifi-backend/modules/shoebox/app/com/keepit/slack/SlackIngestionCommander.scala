@@ -87,7 +87,7 @@ class SlackIngestionCommanderImpl @Inject() (
         case integration => ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ()).recover {
           case error =>
             log.error(s"[SLACK-INGEST] Something went wrong", error)
-            airbrake.notify(s"[SLACK-INGEST] Something went wrong", error)
+            //airbrake.notify(s"[SLACK-INGEST] Something went wrong", error) // please fix do this doesn't send so aggressively
             ()
         }
       }
@@ -128,7 +128,8 @@ class SlackIngestionCommanderImpl @Inject() (
             airbrake.notify(s"Marking Slack integration ${integration.id.get} as broken.", broken)
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
+            //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
+            log.warn(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>
