@@ -1,11 +1,11 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.LibraryInfoCommander
+import com.keepit.commanders.{ OrganizationInfoCommander, LibraryInfoCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.json.TraversableFormat
+import com.keepit.common.json.{ KeyFormat, TraversableFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
@@ -49,10 +49,10 @@ case class OrganizationSlackInfo(
   slackTeams: Set[SlackTeamId])
 
 case class OrganizationSlackIntegrationsInfo(
-  libraries: Map[PublicId[Library], LibrarySlackInfo],
+  libraries: Seq[(BasicLibrary, LibrarySlackInfo)],
   numLibraries: Int)
 object OrganizationSlackIntegrationsInfo {
-  private implicit val helperWrites = TraversableFormat.mapWrites[PublicId[Library], LibrarySlackInfo](_.id)
+  private implicit val helperWrites = KeyFormat.key2Writes[BasicLibrary, LibrarySlackInfo]("library", "slack")
   implicit val writes: Writes[OrganizationSlackIntegrationsInfo] = Json.writes[OrganizationSlackIntegrationsInfo]
 }
 
@@ -80,6 +80,7 @@ class SlackInfoCommanderImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   libInfoCommander: LibraryInfoCommander,
+  orgInfoCommander: OrganizationInfoCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -164,12 +165,21 @@ class SlackInfoCommanderImpl @Inject() (
   }
 
   def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo = {
-    val libIds = db.readOnlyReplica { implicit s =>
-      libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(userId), Offset(0), Limit(Int.MaxValue)).map(_.id.get).toSet
+    val (libIds, basicLibsById) = db.readOnlyReplica { implicit s =>
+      val libs = libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(userId), Offset(0), Limit(Int.MaxValue))
+      assert(libs.forall(_.organizationId.contains(orgId)))
+      val owners = libs.map(_.ownerId).toSet
+      val basicUserById = basicUserRepo.loadAll(owners)
+      val basicOrg = orgInfoCommander.getBasicOrganizationHelper(orgId).get
+      val basicLibsById = libs.map { lib =>
+        lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), Some(basicOrg.handle))
+      }.toMap
+      (libs.map(_.id.get).toSet, basicLibsById)
     }
     val integrationInfoByLib = getSlackIntegrationsForLibraries(userId, libIds)
+
     OrganizationSlackIntegrationsInfo(
-      libraries = integrationInfoByLib.map { case (libId, info) => Library.publicId(libId) -> info },
+      libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), integrationInfoByLib(libId)) },
       numLibraries = libIds.size
     )
   }
