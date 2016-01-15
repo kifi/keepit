@@ -47,6 +47,17 @@ var api = api || (function () {
       case 'api:disconnect':
         onDisconnect();
         break;
+      case 'api:play':
+        var src = msg[2].src;
+        var el = document.querySelector('audio[data-kifi-play]');
+        if (!el) {
+          el = document.createElement('audio');
+          el.setAttribute('data-kifi-play', '');
+          document.body.appendChild(el);
+        }
+        el.src = src;
+        el.play();
+        break;
       default:
         var data = msg[2];
         log('[onMessage]', kind, data != null ? data : '');
@@ -73,19 +84,36 @@ var api = api || (function () {
   function injectContentScript(injected, callbackId) {
     var lazyLoad = eval;
     var {scripts, styles} = injected;
+    var loadsLeft = styles.length;
 
-    // styles.forEach(function (path) {
-    //   var el = document.createElement('link');
-    //   el.rel = 'stylesheet';
-    //   el.href = api.url(path);
-    //   el.addEventListener('load', onLoad);
-    //   (document.head || document.body).appendChild(el);
-    // });
     scripts.forEach(function (js) {
       lazyLoad(js);
     });
 
-    invokeCallback();
+    if (loadsLeft === 0) {
+      invokeCallback();
+    }
+
+    styles.forEach(function (path) {
+      var href = api.url(path);
+      var el;
+      if (document.querySelector('link[href="' + href + '"]') === null) {
+        el = document.createElement('link');
+        el.rel = 'stylesheet';
+        el.type = 'text/css';
+        el.href = href;
+        el.addEventListener('load', onLoad);
+        (document.head || document.body).appendChild(el);
+      } else {
+        onLoad();
+      }
+    });
+
+    function onLoad() {
+      if (--loadsLeft === 0) {
+        invokeCallback();
+      }
+    }
 
     function invokeCallback() {
       var cb = callbacks[callbackId];
@@ -145,9 +173,12 @@ var api = api || (function () {
     },
     require: function(paths, callback) {
       var injected = api.injected;
+      if (typeof paths === 'string') {
+        paths = [paths];
+      }
       api.port.emit('api:require', { paths, injected }, function (paths) {
-        markInjected(paths);
-        callback(paths);
+        markInjected(paths.scripts.concat(paths.styles));
+        callback();
       });
     },
     url: function(path) {

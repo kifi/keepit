@@ -93,15 +93,7 @@ var api = api || (function () {
       }
     },
     'api:onConnect': function (data, respond, page) {
-      var url = data.url;
-      var id = page.id;
-      var tab = getBrowserTabById(page.id);
-
-      if (page.url !== url) {
-        removeTab(id);
-        page = pages[id] = createPage(id, url, createPort(tab));
-      }
-      log('[api:onConnect] %s %s', page.id, data.url);
+      l`${CGREEN}['api:onConnect'] %s${page.id} %s${page.ulr} %O${data}`;
     },
     'api:DOMContentLoaded': function (data, _, tab) {
       var page = pages[tab.id];
@@ -145,6 +137,7 @@ var api = api || (function () {
   function injectContent(page, scriptPaths, stylePaths, callback) {
     var loadsLeft = (scriptPaths || []).length;// + (stylePaths || []).length;
     var scripts = [];
+    var styles = [];
     scriptPaths.forEach(function (p) {
       loadContent(p, function (text) {
         scripts.push(text);
@@ -152,21 +145,17 @@ var api = api || (function () {
       })
     });
 
-    var pageUrlMatch = page.url.match(urlWithoutPathRe);
-    var whitelist = pageUrlMatch && [ pageUrlMatch[0] + '/*'];
-
     stylePaths.forEach(function (p) {
-      p = safari.extension.baseURI + p;
-      safari.extension.addContentStyleSheetFromURL(p, whitelist);
+      styles.push(p);
     });
 
     done();
 
     function done() {
       if (loadsLeft === 0) {
-        page._port.postMessage('api:inject', { scripts });
+        page._port.postMessage('api:inject', { scripts, styles });
         if (callback) {
-          callback({ scripts });
+          callback({ scripts, styles });
         }
       } else {
         loadsLeft--;
@@ -231,7 +220,7 @@ var api = api || (function () {
   safari.application.addEventListener('navigate', function (e) {
     var target = e.target;
     l`${CRED}[application.navigate] %s${target.id} %s${target.url} %O${e}`;
-  });
+  }, true);
 
   safari.application.addEventListener('activate', function (e) {
     if (e.target instanceof SafariBrowserWindow) {
@@ -301,6 +290,32 @@ var api = api || (function () {
       api.tabs.on.blur.dispatch(pages[tab.id]);
     });
 
+    tab.addEventListener('beforeNavigate', function (e) {
+      var id = tab.id;
+      var page = pages[tab.id];
+      var url = e.url;
+      var match = url.match(googleSearchRe);
+
+      if (page.url !== url) {
+        removeTab(id);
+        page = pages[id] = createPage(id, url, createPort(tab));
+      }
+
+      l`${CGREEN}[onBeforeNavigate] %s${tab.id} %s${url} %s${match}`;
+
+      if (match) {
+        var query;
+        try {
+          query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
+        } catch (e) {
+          log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+        }
+        if (query) {
+          api.on.search.dispatch(query, ~url.indexOf('sourceid=chrome') ? 'o' : 'n');
+        }
+      }
+    });
+
     tab.addEventListener('navigate', function (e) {
       log(CGRAY, '[tabs.navigate] %s %s', tab.id, tab.url);
       api.tabs.on.loading.dispatch(pages[tab.id]);
@@ -325,6 +340,9 @@ var api = api || (function () {
     delete pages[tabId];
   }
 
+  var stripHashRe = /^[^#]*/;
+  var googleSearchRe = /^https?:\/\/www\.google\.[a-z]{2,3}(?:\.[a-z]{2})?\/(?:|search|webhp)[\?#](?:.*&)?q=([^&#]*)/;
+  var plusRe = /\+/g;
   var httpRe = /^https?:/;
   var hostRe = /^https?:\/\/[^\/]*/;
   return {
@@ -385,9 +403,12 @@ var api = api || (function () {
     },
     noop: function() {},
     play: function(path) {
-      var el = document.createElement('audio');
-      el.src = path;
-      el.play();
+      // Safari's extension global page can't play HTML5 audio,
+      // so just tell the client page to do it
+      var activeTab = safari.application.activeBrowserWindow.activeTab;
+      var activePage = pages[activeTab.id];
+      var src =  safari.extension.baseURI + path;
+      activePage._port.postMessage('api:play', { src });
     },
     port: {
       on: function (handlers) {
@@ -521,7 +542,12 @@ var api = api || (function () {
         }
       },
       get: function (tabId) {
-        return pages[tabId];
+        var page = pages[tabId];
+        if (page.url) {
+          return pages[tabId];
+        } else {
+          return null;
+        }
       },
       getFocused: function () {
         var selectedTab = safari.application.activeBrowserWindow.activeTab;
