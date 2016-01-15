@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -48,7 +49,8 @@ class SlackTeamCommanderImpl @Inject() (
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
   implicit val executionContext: ExecutionContext,
-  implicit val publicIdConfig: PublicIdConfiguration)
+  implicit val publicIdConfig: PublicIdConfiguration,
+  inhouseSlackClient: InhouseSlackClient)
     extends SlackTeamCommander {
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
@@ -105,7 +107,11 @@ class SlackTeamCommanderImpl @Inject() (
         case teamOpt => Failure(UnauthorizedSlackTeamOrganizationModificationException(teamOpt, userId, Some(newOrganizationId)))
       }
     } match {
-      case Success(team) => setupLatestSlackChannels(userId, team.slackTeamId).map { _ => db.readOnlyMaster { implicit session => slackTeamRepo.get(team.id.get) } }
+      case Success(team) =>
+        SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
+        ))))
+        setupLatestSlackChannels(userId, team.slackTeamId).map { _ => db.readOnlyMaster { implicit session => slackTeamRepo.get(team.id.get) } }
       case Failure(error) => Future.failed(error)
     }
   }
@@ -184,6 +190,10 @@ class SlackTeamCommanderImpl @Inject() (
               SlackChannelIdAndName(channel.channelId, channel.channelName) -> setupSlackChannel(team, membership, channel)
           }.toMap tap { newLibraries =>
             if (newLibraries.values.forall(_.isRight)) {
+              SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+                "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
+                team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+              ))))
               channels.map(_.createdAt).maxOpt.foreach { lastChannelCreatedAt =>
                 db.readWrite { implicit sessio =>
                   slackTeamRepo.save(team.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)))
