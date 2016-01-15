@@ -202,7 +202,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           val keepPubId = Keep.publicId(keepId)(inject[PublicIdConfiguration])
 
           val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"m","uri":"${uri.externalId}","id":"${keepPubId.id}"}""", "ascii")
-          val html = Html(s"""${discussionLink(uri.id.get, keepPubId, None, false)}""")
+          val html = Html(s"""${discussionLink(uri.id.get, keepPubId, None, true)}""")
           val processor = inject[EmailTemplateProcessorImpl]
           val emailToSend = EmailToSend(
             from = SystemEmailAddress.NOTIFICATIONS,
