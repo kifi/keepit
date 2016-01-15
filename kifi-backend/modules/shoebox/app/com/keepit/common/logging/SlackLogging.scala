@@ -15,7 +15,7 @@ trait SlackLogging extends Debouncing {
     def error(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "danger")
 
     private def sendLog(fromLine: Location, text: DescriptionElements, color: String): Unit = {
-      debounce(fromLine.location, Period.millis(100)) {
+      debounce(fromLine.location, Period.seconds(5)) {
         val msg = SlackMessageRequest.inhouse(
           DescriptionElements.fromLocation(fromLine),
           attachments = Seq(SlackAttachment(color = Some(color), text = Some(DescriptionElements.formatForSlack(text))))
