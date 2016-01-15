@@ -17,6 +17,7 @@ import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
+import com.keepit.slack.models.{SlackTeamId, SlackUserId}
 import com.keepit.typeahead.UserPrefixSearchRequest
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -179,6 +180,8 @@ object Shoebox extends Service {
     def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
+    def getUserIdFromSlackUserId(slackUserId: SlackUserId) = ServiceRoute(GET, "/internal/shoebox/database/getUserIdFromSlackUserId", Param("slackUserId", slackUserId.value))
+    def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
   }
 }

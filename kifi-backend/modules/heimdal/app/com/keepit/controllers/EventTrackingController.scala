@@ -11,8 +11,11 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.tracking.LibraryViewTrackingCommander
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.slack.models.SlackUserId
+import com.keepit.social.NonUserKinds
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
+import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration._
@@ -47,7 +50,12 @@ class EventTrackingController @Inject() (
     event match {
       case userEvent: UserEvent => handleUserEvent(userEvent).map(e => clientTrackEvent(e))
       case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent).map(e => clientTrackEvent(e))
-      case nonUserEvent: NonUserEvent => handleNonUserEvent(nonUserEvent).map(e => clientTrackEvent(e))
+      case nonUserEvent: NonUserEvent => {
+        tryNonUserToUserEventConversion(nonUserEvent).map {
+          case Left(nue: NonUserEvent) => handleNonUserEvent(nue).map(e => clientTrackEvent(e))
+          case Right(ue: UserEvent) => handleUserEvent(ue).map(e => clientTrackEvent(e))
+        }
+      }
       case systemEvent: SystemEvent => clientTrackEvent(systemEvent)
       case anonEvent: AnonymousEvent => clientTrackEvent(anonEvent)
     }
@@ -111,6 +119,19 @@ class EventTrackingController @Inject() (
       }
     }
     Future.successful(event)
+  }
+
+  // used when clients don't have a Id[User] for an action, but have some identifier that can be traced to a User
+  private def tryNonUserToUserEventConversion(nonUserEvent: NonUserEvent): Future[Either[NonUserEvent, UserEvent]] = {
+    nonUserEvent.kind match {
+      case NonUserKinds.slack => // nonUserEvent.identifier should be a SlackUserId
+        shoeboxClient.getUserIdFromSlackUserId(SlackUserId(nonUserEvent.identifier)).map { userIdOpt =>
+          userIdOpt
+            .map(userId => Right(UserEvent(userId, nonUserEvent.context, nonUserEvent.eventType)))
+            .getOrElse(Left(nonUserEvent))
+        }
+      case _ => Future.successful(Left(nonUserEvent))
+    }
   }
 
   def readIncomingEvent(): Unit = {

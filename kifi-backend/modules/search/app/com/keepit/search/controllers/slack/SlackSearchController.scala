@@ -20,7 +20,7 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
-import com.keepit.search.tracking.SearchEventCommander
+import com.keepit.search.tracking.{ BasicSearchContext, SearchEventCommander, SearchAnalytics }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
@@ -51,7 +51,7 @@ class SlackSearchController @Inject() (
     uriSearchCommander: UriSearchCommander,
     httpClient: HttpClient,
     airbrake: AirbrakeNotifier,
-    searchEventCommander: SearchEventCommander,
+    searchAnalytics: SearchAnalytics,
     heimdal: HeimdalServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     clock: Clock,
@@ -177,23 +177,37 @@ class SlackSearchController @Inject() (
           )
         }
 
-        val processingTime = startTime.getMillis - clock.now().getMillis
+        val processingTime = clock.now().getMillis - startTime.getMillis
         SafeFuture {
           val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-          contextBuilder += ("source", "slack")
-          contextBuilder += ("maxResults", maxUris)
-          contextBuilder += ("topkifiResults", relevantHits.size)
-          contextBuilder += ("query", command.text)
+          val searchContext = BasicSearchContext(
+            origin = "slack",
+            guided = false,
+            sessionId = "", // shall we generate a sessionId here?
+            refinement = None,
+            uuid = uriSearchResult.uuid,
+            searchExperiment = uriSearchResult.searchExperimentId,
+            query = command.text,
+            filterByPeople = None,
+            filterByTime = None,
+            maxResults = Some(maxUris),
+            kifiResults = relevantHits.size,
+            kifiResultsWithLibraries = Some(relevantHits.count(_.libraryId.isDefined)),
+            kifiExpanded = None,
+            kifiTime = Some(processingTime.toInt),
+            kifiShownTime = None,
+            thirdPartyShownTime = None,
+            kifiResultsClicked = None,
+            thirdPartyResultsClicked = None,
+            chunkDelta = None,
+            chunksSplit = None
+          )
           contextBuilder += ("slackTeamId", command.teamId.value)
-          contextBuilder += ("slackUserId", command.userId.value)
+          contextBuilder += ("slackUsername", command.username.value)
           contextBuilder += ("slackChannelId", command.channelId.value)
-          contextBuilder += ("kifiProcessingTime", processingTime)
-          val context = contextBuilder.build
-          val event = {
-            request.userIdOpt.map(UserEvent(_, context, UserEventTypes.SEARCHED, clock.now()))
-              .getOrElse(NonUserEvent(command.username.value, NonUserKinds.slack, context, NonUserEventTypes.SEARCHED))
-          }
-          heimdal.trackEvent(event)
+          val heimdalContext = contextBuilder.build
+          val endedWith = "unload"
+          searchAnalytics.searched(request.userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
         }
 
         val text = {

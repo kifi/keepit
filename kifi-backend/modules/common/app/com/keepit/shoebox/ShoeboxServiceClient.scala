@@ -23,7 +23,9 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
+import com.keepit.shoebox.ShoeboxServiceClient.GetUserIdFromSlackUserId
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
+import com.keepit.shoebox.ShoeboxServiceClient.GetSlackTeamInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -133,7 +135,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-
+  def getUserIdFromSlackUserId(slackUserId: SlackUserId): Future[Option[Id[User]]]
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[(Id[Organization], SlackTeamName)]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
 }
@@ -858,6 +861,23 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
+
+  def getUserIdFromSlackUserId(slackUserId: SlackUserId): Future[Option[Id[User]]] = {
+    import GetUserIdFromSlackUserId._
+    call(Shoebox.internal.getUserIdFromSlackUserId(slackUserId)).map {
+      _.json.as[Response].userIdOpt
+    }
+  }
+
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[(Id[Organization], SlackTeamName)]] = {
+    import GetSlackTeamInfo._
+    call(Shoebox.internal.getSlackTeamInfo(slackTeamId)).map {
+      _.json.asOpt[Response].map {
+        case Response(orgId: Id[Organization], teamName: SlackTeamName) => (orgId, teamName)
+      }
+    }
+  }
+
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     import InternKeep._
     val request = Request(creator, users, uriId, url, title, note)
@@ -865,11 +885,21 @@ class ShoeboxServiceClientImpl @Inject() (
       response.json.as[CrossServiceKeep]
     }
   }
+
 }
 
 object ShoeboxServiceClient {
   object InternKeep {
     case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
     implicit val requestFormat: Format[Request] = Json.format[Request]
+  }
+  object GetUserIdFromSlackUserId {
+    case class Response(userIdOpt: Option[Id[User]])
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object GetSlackTeamInfo {
+    case class Response(orgId: Id[Organization], teamName: SlackTeamName)
+    implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

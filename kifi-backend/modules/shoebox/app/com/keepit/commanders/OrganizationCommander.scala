@@ -87,7 +87,7 @@ class OrganizationCommanderImpl @Inject() (
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
     (badName, badSiteUrl) match {
       case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
+      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
       case _ => None
     }
   }
