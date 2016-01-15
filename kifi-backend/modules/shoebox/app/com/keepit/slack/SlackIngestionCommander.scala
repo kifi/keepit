@@ -143,9 +143,12 @@ class SlackIngestionCommanderImpl @Inject() (
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
           FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
+            /*
             slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
               case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
             }
+            */
+            Future.successful(Unit)
           } imap { _ =>
             (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
           }
