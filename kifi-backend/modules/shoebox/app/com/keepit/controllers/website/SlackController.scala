@@ -119,19 +119,19 @@ class SlackController @Inject() (
       case Signup => slackClient.getUserInfo(slackAuth.accessToken, slackIdentity.userId).map { userInfo =>
         val socialUser = SocialUser(
           identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
-          firstName = userInfo.firstName.getOrElse(""),
-          lastName = userInfo.lastName.getOrElse(""),
-          fullName = userInfo.fullName.getOrElse(""),
-          email = Some(userInfo.emailAddress.address),
-          avatarUrl = userInfo.icon.maxByOpt(_._1).map(_._2),
+          firstName = userInfo.profile.firstName.getOrElse(""),
+          lastName = userInfo.profile.lastName.getOrElse(""),
+          fullName = userInfo.profile.fullName.getOrElse(""),
+          email = Some(userInfo.profile.emailAddress.address),
+          avatarUrl = userInfo.profile.icon.maxByOpt(_._1).map(_._2),
           authMethod = AuthenticationMethod.OAuth2,
           oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
         )
 
-        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.emailAddress, userInfo.firstName.getOrElse(""), userInfo.lastName.getOrElse(""), None, None, None, None, None, None, None)
+        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.profile.emailAddress, userInfo.profile.firstName.getOrElse(""), userInfo.profile.lastName.getOrElse(""), None, None, None, None, None, None, None)
         val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
         val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(socialFinalizeInfo, socialUser, inviteExtIdOpt)
-        authHelper.finishSignup(user, userInfo.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
+        authHelper.finishSignup(user, userInfo.profile.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
       }
     }
   }
