@@ -20,6 +20,7 @@ class PriorNormalizationKnowledge @Inject() (
     URI.parse(uriString).flatMap { parsedUri =>
       Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
         val uriWithPreferredSchemeOption = getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
+
         val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
         result.toString()
       }

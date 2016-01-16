@@ -43,25 +43,13 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === false
     }
-    "parse browser versions iPhone app" in {
-      val str = "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"
-      val agent = UserAgent(str)
-      agent === UserAgent(str, "iKeefee", "iOS", "iPhone", false, UserAgent.KifiIphoneAppTypeName, "1.0")
-      agent.isMobile === true
-      agent.isKifiIphoneApp === true
-      agent.isKifiAndroidApp === false
-      agent.isIphone === true
-      agent.isAndroid === false
-      agent.isOldIE === false
-      agent.possiblyBot === false
-    }
     "parse browser versions Android app" in {
       val str = "??? Android ???" // TODO: insert actual Android app user agent string
       val agent = UserAgent(str)
       agent === UserAgent(str, "", "Android", "Android", true, "", "")
       agent.isMobile === true
       agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === true
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
       agent.isAndroid === true
       agent.isOldIE === false
@@ -180,7 +168,7 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === true // TODO: make false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
       agent.isAndroid === true
       agent.isOldIE === false
@@ -188,7 +176,7 @@ class UserAgentTest extends Specification {
     }
 
     "parse from android app" in {
-      val str = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I337M Build/KOT49H)"
+      val str = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I337M Build/KOT49H; Kifi)"
       val agent = UserAgent(str)
       agent === UserAgent(str, "Dalvik", "Android", "Android", false, "Android", "unknown")
       agent.isMobile === true

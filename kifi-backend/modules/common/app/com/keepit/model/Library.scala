@@ -62,7 +62,7 @@ case class Library(
   def withOpenCollab(access: Option[LibraryAccess]) = this.copy(organizationMemberAccess = access)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
-  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED
+  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SLACK_CHANNEL
   def isSystemLibrary: Boolean = !canBeModified
   def canAnyoneComment: Boolean = whoCanComment == LibraryCommentPermissions.ANYONE
 
@@ -324,6 +324,7 @@ object LibraryKind extends Enumerator[LibraryKind] {
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
   case object USER_CREATED extends LibraryKind("user_created", 3)
+  case object SLACK_CHANNEL extends LibraryKind("slack_channel", 4)
 
   def all = _all.toSet
   val deprecated: Map[String, LibraryKind] = Map(

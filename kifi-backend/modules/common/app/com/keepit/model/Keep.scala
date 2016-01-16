@@ -2,51 +2,48 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.json.{ TraversableFormat, EnumFormat, TupleFormat }
+import com.keepit.common.cache._
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
+import com.keepit.common.db._
+import com.keepit.common.json.{ EnumFormat, TraversableFormat, TupleFormat }
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.strings.StringWithNoLineBreaks
+import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.social.BasicUser
-import org.apache.commons.lang3.RandomStringUtils
+import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.mvc.PathBindable
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import play.api.mvc.Results._
 
 import scala.concurrent.duration._
-import org.joda.time.DateTime
-import com.keepit.common.cache._
-import com.keepit.common.logging.AccessLog
-import com.keepit.common.db._
-import com.keepit.common.strings.StringWithNoLineBreaks
-import com.keepit.common.time._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdGenerator, ModelWithPublicId, PublicId }
-
-import scala.util.Try
 import scala.util.control.NoStackTrace
-import scala.util.hashing.MurmurHash3
 
 case class Keep(
   id: Option[Id[Keep]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  state: State[Keep] = KeepStates.ACTIVE,
+  seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
+  note: Option[String] = None,
   uriId: Id[NormalizedURI],
   url: String, // denormalized for efficiency
-  visibility: LibraryVisibility, // denormalized from this keep’s library
   userId: Id[User],
-  state: State[Keep] = KeepStates.ACTIVE,
-  source: KeepSource,
-  seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
-  libraryId: Option[Id[Library]],
-  keptAt: DateTime = currentDateTime,
-  note: Option[String] = None,
   originalKeeperId: Option[Id[User]] = None,
-  organizationId: Option[Id[Organization]] = None,
+  source: KeepSource,
+  keptAt: DateTime = currentDateTime,
+  lastActivityAt: DateTime = currentDateTime,
+  messageSeq: Option[SequenceNumber[Message]] = None,
   connections: KeepConnections,
-  messageSeq: Option[SequenceNumber[Message]] = None)
+  libraryId: Option[Id[Library]], // deprecated, prefer connections.libraries
+  visibility: LibraryVisibility, // deprecated, prefer KeepToLibrary.visibility
+  organizationId: Option[Id[Organization]] = None)
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
@@ -76,6 +73,8 @@ case class Keep(
   def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
+
+  def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
@@ -106,49 +105,27 @@ object Keep extends PublicIdGenerator[Keep] {
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
-  def fromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
-    title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
-    url: String, userId: Id[User],
-    state: State[Keep], source: KeepSource,
-    seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]],
-    connections: Option[KeepConnections], lh: LibrariesHash, ph: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, url,
-      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)),
-      organizationId, connections.getOrElse(KeepConnections(libraryId.toSet, Set(userId))), messageSeq)
-  }
-
-  def toDbRow(k: Keep) = {
-    Some(
-      (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
-        k.uriId, if (k.isActive) Some(true) else None, k.url,
-        k.userId, k.state, k.source,
-        k.seq, k.libraryId, k.visibility, k.keptAt,
-        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId,
-        Some(k.connections), k.connections.librariesHash, k.connections.participantsHash, k.messageSeq)
-    )
-  }
-
   implicit val format: Format[Keep] = (
     (__ \ 'id).formatNullable[Id[Keep]] and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format[State[Keep]] and
+    (__ \ 'seq).format[SequenceNumber[Keep]] and
     (__ \ 'externalId).format[ExternalId[Keep]] and
     (__ \ 'title).formatNullable[String] and
+    (__ \ 'note).formatNullable[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'userId).format[Id[User]] and
-    (__ \ 'state).format[State[Keep]] and
-    (__ \ 'source).format[KeepSource] and
-    (__ \ 'seq).format[SequenceNumber[Keep]] and
-    (__ \ 'libraryId).formatNullable[Id[Library]] and
-    (__ \ 'keptAt).format[DateTime] and
-    (__ \ 'note).formatNullable[String] and
     (__ \ 'originalKeeperId).formatNullable[Id[User]] and
-    (__ \ 'organizationId).formatNullable[Id[Organization]] and
+    (__ \ 'source).format[KeepSource] and
+    (__ \ 'keptAt).format[DateTime] and
+    (__ \ 'lastActivityAt).format[DateTime] and
+    (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
     (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]]
+    (__ \ 'libraryId).formatNullable[Id[Library]] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'organizationId).formatNullable[Id[Organization]]
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -171,7 +148,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 13
+  override val version = 14
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -189,7 +166,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -264,7 +241,6 @@ case class BasicKeep(
   attribution: Option[(SlackAttribution, Option[BasicUser])])
 
 object BasicKeep {
-  import com.keepit.common.json.TupleFormat._
   implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
@@ -342,7 +318,6 @@ object KeepPermission extends Enumerator[KeepPermission] {
   case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
   case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
   case object VIEW_KEEP extends KeepPermission("view_keep")
-  case object VIEW_MESSAGES extends KeepPermission("view_messages")
 
   def all: Set[KeepPermission] = _all.toSet
 
@@ -367,4 +342,49 @@ object KeepFail extends Enumerator[KeepFail] {
   case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
+}
+
+abstract class FeedFilter(val kind: String)
+abstract class ShoeboxFeedFilter(kind: String) extends FeedFilter(kind)
+abstract class ElizaFeedFilter(kind: String) extends FeedFilter(kind)
+object FeedFilter {
+  case object OwnKeeps extends ShoeboxFeedFilter("own")
+  case class OrganizationKeeps(orgId: Id[Organization]) extends ShoeboxFeedFilter("org")
+  case object Unread extends ElizaFeedFilter("unread")
+  case object Sent extends ElizaFeedFilter("sent")
+
+  def apply(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[FeedFilter] = kind match {
+    case OwnKeeps.kind => Some(OwnKeeps)
+    case Unread.kind => Some(Unread)
+    case Sent.kind => Some(Sent)
+    case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
+    case _ => None
+  }
+
+  def toElizaFilter(kind: String): Option[ElizaFeedFilter] = kind match {
+    case Unread.kind => Some(Unread)
+    case Sent.kind => Some(Sent)
+    case _ => None
+  }
+
+  def toShoeboxFilter(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[ShoeboxFeedFilter] = {
+    kind match {
+      case OwnKeeps.kind => Some(OwnKeeps)
+      case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
+      case _ => None
+    }
+  }
+
+  implicit def elizaQueryStringBinder(implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[ElizaFeedFilter] = new QueryStringBindable[ElizaFeedFilter] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ElizaFeedFilter]] = {
+      stringBinder.bind(key, params) map {
+        case Right(kind) => toElizaFilter(kind).toRight(left = "Unable to bind an ElizaFeedFilter")
+        case _ => Left("Unable to bind an ElizaFeedFilter")
+      }
+    }
+
+    override def unbind(key: String, filter: ElizaFeedFilter): String = {
+      stringBinder.unbind(key, filter.kind)
+    }
+  }
 }

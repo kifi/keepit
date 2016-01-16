@@ -26,8 +26,8 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.{ SlackIngestionCommander, SlackInfoCommander }
-import com.keepit.slack.models.{ SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
+import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackUserId, SlackTeamRepo, SlackTeamMembershipRepo }
+import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -86,12 +86,13 @@ class ShoeboxController @Inject() (
   organizationInfoCommander: OrganizationInfoCommander,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
+  discussionCommander: DiscussionCommander,
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
-  slackIngestionCommander: SlackIngestionCommander,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackTeamRepo: SlackTeamRepo,
+  slackIntegrationCommander: SlackIntegrationCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
 
@@ -465,7 +466,7 @@ class ShoeboxController @Inject() (
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
-    val keepById = db.readOnlyReplica { implicit s => keepRepo.getByIds(keepIds) }
+    val keepById = db.readOnlyMaster { implicit s => keepRepo.getByIds(keepIds) }
     val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
@@ -598,7 +599,7 @@ class ShoeboxController @Inject() (
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
     val integrations = slackInfoCommander.getIntegrationsBySlackChannel(teamId, channelId)
-    SafeFuture { slackIngestionCommander.ingestFromChannelPlease(teamId, channelId) }
+    SafeFuture { slackIntegrationCommander.ingestFromChannelPlease(teamId, channelId) }
     Ok(Json.toJson(integrations))
   }
 
@@ -638,9 +639,17 @@ class ShoeboxController @Inject() (
     val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), input.creator, libraryOpt = None, source = KeepSource.discussion)
     val keep = internResponse.newKeeps.head
     db.readWrite { implicit s =>
-      input.users.foreach { uid => ktuCommander.internKeepInUser(keep, uid, input.creator) }
+      keepCommander.persistKeep(keep.withParticipants(input.users))
     }
     val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).values.head
     Ok(Json.toJson(csKeep))
+  }
+
+  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
+    val users = (request.body \ "users").as[Set[Id[User]]]
+    db.readWrite { implicit s =>
+      keepCommander.addUsersToKeep(keepId, adderId, users)
+    }
+    Ok
   }
 }

@@ -1,39 +1,51 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, LibraryAccessCommander }
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.commanders._
+import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContext }
+import com.keepit.controllers.core.AuthHelper
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import com.keepit.slack.SlackAuthenticatedAction.SetupSlackTeam
+import com.keepit.slack._
 import com.keepit.slack.models._
-import com.keepit.slack.{ SlackAuthenticatedAction, SlackClient, SlackCommander }
+import com.keepit.social.IdentityHelpers
 import play.api.libs.json._
 import play.api.mvc.Result
+import securesocial.core.{ AuthenticationMethod, OAuth2Info, SocialUser }
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Success
 
 @Singleton
 class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
+    slackIntegrationCommander: SlackIntegrationCommander,
+    slackTeamCommander: SlackTeamCommander,
     libraryAccessCommander: LibraryAccessCommander,
+    authCommander: AuthCommander,
+    authHelper: AuthHelper,
     deepLinkRouter: DeepLinkRouter,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
+    slackInfoCommander: SlackInfoCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val permissionCommander: PermissionCommander,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+
+  val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): Result = {
     val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
@@ -47,7 +59,7 @@ class SlackController @Inject() (
     Redirect(redirectUrl, SEE_OTHER)
   }
 
-  def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { request =>
+  def registerSlackAuthorization(codeOpt: Option[String], state: String) = MaybeUserAction.async { implicit request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
@@ -55,11 +67,11 @@ class SlackController @Inject() (
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
-        slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+        slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
         for {
           stateValue <- SlackState.toJson(SlackState(state)).toOption
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
-          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
+          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userIdOpt, slackAuth, slackIdentity, _, _)))
         } yield result
       } getOrElse Future.successful(BadRequest("invalid_state"))
     } yield result
@@ -69,51 +81,57 @@ class SlackController @Inject() (
     }
   }
 
-  private def processAuthorizedAction[T](userId: Id[User], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit context: HeimdalContext): Future[Result] = {
+  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: MaybeUserRequest[_]): Future[Result] = {
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     import SlackAuthenticatedAction._
     action match {
-      case SetupLibraryIntegrations => (Library.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Success(libId), Some(webhook)) =>
-          slackCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
+      case SetupLibraryIntegrations => (authUserId, Library.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Some(userId), Success(libId), Some(webhook)) =>
+          slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_library_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Success(integrationId), Some(webhook)) =>
-          val libraryId = slackCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
+        case (Success(integrationId), Some(webhook)) if authUserId.isDefined =>
+          val libraryId = slackIntegrationCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_integration_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
-        case Success(integrationId) =>
-          val libraryId = slackCommander.turnOnChannelIngestion(integrationId, slackIdentity)
+        case Success(integrationId) if authUserId.isDefined =>
+          val libraryId = slackIntegrationCommander.turnOnChannelIngestion(integrationId, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(BadRequest("invalid_integration_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
       }
-      case SetupSlackTeam => ((data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
-        case Success(orgIdOpt) =>
-          slackCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
+      case SetupSlackTeam => (authUserId, (data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
+        case (Some(userId), Success(orgIdOpt)) =>
+          slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
-              case None => {
-                // todo(Léo): discuss frontend
-                val newOrgLink = {
-                  val message = s"Create new Kifi organization for your Slack team ${slackTeam.slackTeamName.value}"
-                  val url = com.keepit.controllers.website.routes.SlackController.createOrganizationForSlackTeam(slackTeam.slackTeamId.value).url
-                  message -> url
-                }
-                val connectLinks = slackCommander.getOrganizationsToConnect(userId).toSeq.sortBy(_._2.name).map {
-                  case (_, org) =>
-                    val message = s"Connect your Kifi organization ${org.name} with your Slack team ${slackTeam.slackTeamName.value}"
-                    val url = com.keepit.controllers.website.routes.SlackController.connectSlackTeamToOrganization(org.orgId, slackTeam.slackTeamId.value).url
-                    message -> url
-                }
-                val payload = JsObject((newOrgLink +: connectLinks).map { case (message, url) => message -> JsString(url) })
-                Ok(payload)
-              }
+              case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
             }
           }
-        case _ => Future.successful(BadRequest("invalid_organization_id"))
+        case _ => Future.successful(BadRequest("invalid_integration"))
+      }
+
+      case Login => Future.successful(authCommander.loginWithTrustedSocialIdentity(IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId)))
+
+      case Signup => slackClient.getUserInfo(slackAuth.accessToken, slackIdentity.userId).map { userInfo =>
+        val socialUser = SocialUser(
+          identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
+          firstName = userInfo.firstName.getOrElse(""),
+          lastName = userInfo.lastName.getOrElse(""),
+          fullName = userInfo.fullName.getOrElse(""),
+          email = Some(userInfo.emailAddress.address),
+          avatarUrl = userInfo.icon.maxByOpt(_._1).map(_._2),
+          authMethod = AuthenticationMethod.OAuth2,
+          oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
+        )
+
+        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.emailAddress, userInfo.firstName.getOrElse(""), userInfo.lastName.getOrElse(""), None, None, None, None, None, None, None)
+        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+        val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(socialFinalizeInfo, socialUser, inviteExtIdOpt)
+        authHelper.finishSignup(user, userInfo.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
       }
     }
   }
@@ -150,7 +168,7 @@ class SlackController @Inject() (
           }.toSet
         }
         if (libraryAccessCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
-          slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
+          slackIntegrationCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
             Ok(Json.toJson(response))
           }.recover {
             case fail: LibraryFail => fail.asErrorResponse
@@ -167,7 +185,7 @@ class SlackController @Inject() (
       case JsSuccess(dels, _) =>
         val libToSlackDels = dels.collect { case Left(ltsId) => LibraryToSlackChannel.decodePublicId(ltsId).get }.toSet
         val slackToLibDels = dels.collect { case Right(stlId) => SlackChannelToLibrary.decodePublicId(stlId).get }.toSet
-        slackCommander.deleteIntegrations(SlackIntegrationDeleteRequest(request.userId, libToSlackDels, slackToLibDels)).map { response =>
+        slackIntegrationCommander.deleteIntegrations(SlackIntegrationDeleteRequest(request.userId, libToSlackDels, slackToLibDels)).map { response =>
           Ok(Json.toJson(response))
         }.recover {
           case fail: LibraryFail => fail.asErrorResponse
@@ -177,16 +195,25 @@ class SlackController @Inject() (
 
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
+    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
       redirectToOrg(slackTeam.organizationId.get)
     }
   }
 
-  def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
-    slackCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
-      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) => redirectToOrg(request.orgId)
-      case Success(slackTeam) => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
-      case Failure(_) => BadRequest("invalid_request")
+  def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId).map { slackTeam =>
+      if (slackTeam.organizationId.contains(request.orgId)) redirectToOrg(slackTeam.organizationId.get)
+      else throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
     }
+  }
+
+  def connectSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_))).url
+    Redirect(link, SEE_OTHER)
+  }
+
+  def getOrgIntegrations(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>
+    Ok(Json.toJson(slackInfoCommander.getSlackIntegrationsForOrg(request.request.userId, request.orgId)))
   }
 }

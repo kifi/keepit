@@ -53,12 +53,14 @@ object LibraryFields {
     val SYSTEM_SECRET = 1
     val USER_CREATED = 2
     val SYSTEM_ORG_GENERAL = 3
+    val SLACK_CHANNEL = 4
 
     @inline def toNumericCode(kind: LibraryKind) = kind match {
       case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
       case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET
       case LibraryKind.USER_CREATED => USER_CREATED
       case LibraryKind.SYSTEM_ORG_GENERAL => SYSTEM_ORG_GENERAL
+      case LibraryKind.SLACK_CHANNEL => SLACK_CHANNEL
     }
 
     @inline def fromNumericCode(kind: Long) = kind match {
@@ -66,6 +68,7 @@ object LibraryFields {
       case `SYSTEM_SECRET` => LibraryKind.SYSTEM_SECRET
       case `USER_CREATED` => LibraryKind.USER_CREATED
       case `SYSTEM_ORG_GENERAL` => LibraryKind.SYSTEM_ORG_GENERAL
+      case `SLACK_CHANNEL` => LibraryKind.SLACK_CHANNEL
       case _ => LibraryKind.USER_CREATED // TODO(ryan): this is a temporary measure, old data is causing match errors
     }
   }

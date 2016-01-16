@@ -127,7 +127,8 @@ angular.module('kifi')
       .state('orgProfile.libraries', {
         url: '?openInviteModal&addMany',
         params: {
-          showSlackDialog: false
+          showSlackDialog: false, // shows the "integrate general with Slack" dialog
+          forceSlackDialog: false // show the "integrate all your Slack channels with your Kifi team" dialog
         },
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
@@ -271,9 +272,19 @@ angular.module('kifi')
         controller: 'UserProfileFollowersCtrl'
       })
       .state('keepPage', {
-        url: '/k/:title/:pubId',
+        url: '/k/:title/:pubId?authToken',
         templateUrl: 'keep/keepPage.tpl.html',
         controller: 'KeepPageCtrl'
+      })
+      .state('slackIntegrationTeamChooser', {
+        url : '/integrations/slack/teams?:slackTeamId',
+        templateUrl: 'integrations/slack/teamChooser.tpl.html',
+        controller: 'SlackIntegrationTeamChooserCtrl'
+      })
+      .state('slackIntegrationFullSync', {
+        url: '/intregrations/slack/fullsync',
+        templateUrl: 'integrations/slack/fullSync.tpl.html',
+        controller: 'SlackIntegrationFullSyncCtrl'
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {

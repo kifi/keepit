@@ -80,23 +80,30 @@ class AirbrakeSender @Inject() (
 
   var firstErrorReported = false
 
-  val defaultFailureHandler: Request => PartialFunction[Throwable, Unit] = { url =>
-    {
-      case ex: Exception => if (!firstErrorReported) {
-        firstErrorReported = true
-        val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
-        log.error(s"can't deal with error: $he")
-        if (ex.getMessage.contains("Project is rate limited")) {
-          pagerDutySender.openIncident(s"[${service.currentService}] Airbrake over Rate Limit!", ex)
-        } else {
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
-            to = Seq(SystemEmailAddress.ENG),
-            category = NotificationCategory.System.HEALTHCHECK,
-            subject = s"[${service.currentService}] [WARNING] Could not send airbrake error (Airbrake down?)",
-            htmlBody = ex.getMessage))
+  val defaultFailureHandler: JsValue => Request => PartialFunction[Throwable, Unit] = { body =>
+    url =>
+      {
+        case ex: Exception => if (!firstErrorReported) {
+          firstErrorReported = true
+          val he = healthcheck.addError(AirbrakeError(ex, message = Some("Fail to send airbrake message")))
+          log.error(s"can't deal with error: $he")
+          if (ex.getMessage.contains("Project is rate limited")) {
+            pagerDutySender.openIncident(s"[${service.currentService}] Airbrake over Rate Limit!", ex)
+          } else if (ex.getMessage.contains("Request exceeds")) {
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
+              to = Seq(SystemEmailAddress.ENG),
+              category = NotificationCategory.System.HEALTHCHECK,
+              subject = s"[${service.currentService}] [WARNING] Error was too big",
+              htmlBody = ex.getMessage + "\n\n" + body.toString.take(2048)))
+          } else {
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
+              to = Seq(SystemEmailAddress.ENG),
+              category = NotificationCategory.System.HEALTHCHECK,
+              subject = s"[${service.currentService}] [WARNING] Could not send airbrake error (Airbrake down?)",
+              htmlBody = ex.getMessage))
+          }
         }
       }
-    }
   }
 
   def sendDeployment(payload: String): Unit = {
@@ -111,7 +118,7 @@ class AirbrakeSender @Inject() (
     val futureResult = httpClient
       .withHeaders("Content-Type" -> "application/json")
       .withTimeout(CallTimeouts(responseTimeout = Some(60000)))
-      .postFuture(DirectUrl(s"https://airbrake.io/api/v3/projects/$projectId/notices?key=$apiKey"), json, defaultFailureHandler)
+      .postFuture(DirectUrl(s"https://airbrake.io/api/v3/projects/$projectId/notices?key=$apiKey"), json, defaultFailureHandler(json))
     futureResult.onSuccess {
       case res: ClientResponse =>
         try {

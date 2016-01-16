@@ -777,13 +777,18 @@
   height: @lib-height;
   border-top: 1px solid @lib-border-color;
   background-color: @footer-color;
-  text-align: center;
+}
+.kifi-keep-box-footer-buttons {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
 }
 .kifi-keep-box-new-lib-create,
 .kifi-keep-box-done {
   display: inline-block;
-  margin-top: 7px;
   line-height: 28px;
+  height: 28px;
   font-size: 12px;
   font-weight: bold;
   -webkit-font-smoothing: antialiased;
@@ -948,7 +953,7 @@
   @border-width: 1px;
   @radius: 10px;
   position: absolute;
-  left: 72px;
+  left: 12px;
   bottom: 12px;
   width: @radius * 2;
   height: @radius * 2;
@@ -957,6 +962,7 @@
   border: @border-width solid @border-color;
   border-radius: 50%;
   transition: border-color 0s @duration;
+  text-align: center;
   &.kifi-going {
     border-color: transparent;
   }

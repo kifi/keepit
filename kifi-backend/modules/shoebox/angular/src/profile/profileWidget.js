@@ -148,7 +148,7 @@ angular.module('kifi')
 
         scope.declineInvite = function(org) {
           orgProfileService.declineOrgMemberInvite(org.id);
-          org.notDeclined = false;
+          org.declined = true;
         };
 
         scope.sendMemberConfirmationEmail = function(email, org) {

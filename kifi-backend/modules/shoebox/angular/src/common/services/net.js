@@ -66,9 +66,9 @@ angular.module('kifi')
       removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
       sendMemberConfirmationEmail: post(shoebox, '/organizations/:id/sendMemberConfirmationEmail'),
 
-      getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
+      getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId&filterKind=:filterKind&filterId=:filterId', 60),
 
-      getKeep: get(shoebox, '/keeps/:id'),
+      getKeep: get(shoebox, '/keeps/:id?authToken=:authToken'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),
       addKeepsToLibrary: post(shoebox, '/libraries/:id/keeps'),
       copyKeepsToLibrary: post(shoebox, '/libraries/copy'),
@@ -94,6 +94,11 @@ angular.module('kifi')
       // library slack integration
       modifyLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/modify'),
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
+
+      // slack
+      createOrganizationForSlackTeam: post(shoebox, '/site/organizations/create/slack?slackTeamId=:slackTeamId'),
+      connectSlackTeamToOrganization: post(shoebox, '/site/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
+
 
       // eliza
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),

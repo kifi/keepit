@@ -28,13 +28,13 @@ angular.module('kifi')
     });
 
     var api = {
-      getFeed: function (limit, beforeId, afterId) {
+      getFeed: function (limit, beforeId, afterId, filter) {
         ml.specs.getsFeed = new ml.Spec([
           new ml.Assert('Feed retrieved in 5 seconds or less', 5000),
           new ml.Expect('Feed returns a list', function(data) { return typeof data.length !== 'undefined'; })
         ]);
 
-        return net.getKeepStream(limit, beforeId, afterId)
+        return net.getKeepStream(limit, beforeId || '', afterId || '', (filter || {}).value, (filter || {}).id)
         .then(function (response) {
           ml.specs.getsFeed.respond([null, response.data.keeps]);
           return response.data;

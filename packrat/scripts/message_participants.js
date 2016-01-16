@@ -246,9 +246,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 			var other = participants.length <= 2 ? participants.filter(function (user) {
 				return user.id !== k.me.id;
 			})[0] : null;
+			var attr = (this.parent.keep && this.parent.keep.keptBy) || other;
 			return {
 				onKeep: onKeep,
-				participantName: other ? this.getFullName(other) : null,
+				participantName: attr ? this.getFullName(attr) : null,
 				isOverflowed: this.isOverflowed(),
 				participantCount: participantsCount,
 				avatars: this.renderAvatars(),

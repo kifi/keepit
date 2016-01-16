@@ -15,6 +15,8 @@ import com.keepit.common.cache.CacheSizeLimitExceededException
 import play.api.libs.json.{ JsArray, JsValue }
 import scala.slick.jdbc.StaticQuery
 
+case class MessageCount(total: Int, unread: Int)
+
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage] {
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
@@ -24,14 +26,14 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def getFromIdToId(fromId: Id[ElizaMessage], toId: Id[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
-  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
+  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): MessageCount
   def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
   def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage]
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
 
   // PSA: please just use this method going forward, it has the cleanest API
-  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
+  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
 }
@@ -125,13 +127,14 @@ class MessageRepoImpl @Inject() (
     activeRows.map(_.id).max.run.getOrElse(Id(0))
   }
 
-  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
-    afterOpt.map { after =>
+  def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): MessageCount = {
+    val (total, unread) = afterOpt.map { after =>
       StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where keep_id = $keepId").first
     } getOrElse {
       val n = activeRows.filter(row => row.keepId === keepId).length.run
       (n, n)
     }
+    MessageCount(total, unread)
   }
 
   def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
@@ -155,8 +158,9 @@ class MessageRepoImpl @Inject() (
         }
     }
   }
-  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int = {
-    getByThreadHelper(keepId, fromId, dir).length.run
+  def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount = {
+    val (total, unread) = (getByThreadHelper(keepId, None, dir).length, getByThreadHelper(keepId, fromId, dir).length).run
+    MessageCount(total, unread)
   }
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
     val threads = getByThreadHelper(keepId, fromId, dir)

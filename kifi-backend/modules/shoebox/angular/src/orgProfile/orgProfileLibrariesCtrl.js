@@ -157,8 +157,9 @@ angular.module('kifi')
       slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
     }
 
+    var forcePromo = $stateParams.forceSlackDialog || initParams.getAndClear('forceSlackDialog');
     slackIntPromoP.then(function(showPromo) {
-      if (showPromo) {
+      if (forcePromo || showPromo) {
         profileService.savePrefs({ slack_int_promo: false });
         libraryService
         .getLibraryByHandleAndSlug(organization.handle, 'general')
@@ -166,7 +167,8 @@ angular.module('kifi')
           modalService.open({
             template: 'orgProfile/orgProfileSlackUpsellModal.tpl.html',
             modalData: {
-              library: library
+              library: library,
+              org: organization
             }
           });
         });

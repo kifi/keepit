@@ -32,13 +32,17 @@ object SlackChannelMagnet {
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
+  def sendToSlackTeam(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
+  def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit]
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
-  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]]
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]]
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
+  def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]]
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
 }
 
 @Singleton
@@ -63,6 +67,33 @@ class SlackClientWrapperImpl @Inject() (
           case _ =>
             pushToSlackUsingToken(slackUserId, slackTeamId, id, msg)
         }
+    }
+  }
+
+  def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit] = {
+    val slackTeamMembers = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+    }
+    FutureHelpers.exists(slackTeamMembers) { slackUserId =>
+      pushToSlackViaWebhook(slackUserId, slackTeamId, slackChannel._2, msg).recoverWith {
+        case _ =>
+          pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel._1, msg)
+      }.map(_ => true).recover { case f => false }
+    }.flatMap {
+      case true => Future.successful(Unit)
+      case false => Future.failed(SlackAPIFailure.NoValidWebhooks)
+    }
+  }
+
+  def sendToSlackTeam(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
+    val slackTeamMembers = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+    }
+    FutureHelpers.exists(slackTeamMembers) { slackUserId =>
+      pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel, msg).map(_ => true).recover { case f => false }
+    }.flatMap {
+      case true => Future.successful(Unit)
+      case false => Future.failed(SlackAPIFailure.NoValidWebhooks)
     }
   }
 
@@ -99,7 +130,7 @@ class SlackClientWrapperImpl @Inject() (
     FutureHelpers.doUntilAttempts {
       val workingToken = db.readOnlyMaster { implicit s =>
         slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
-          case stm if stm.token.isDefined && stm.scopes.contains(SlackAuthScope.ChatWriteBot) => stm.token.get
+          case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
         }
       }
       workingToken match {
@@ -125,14 +156,14 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
 
-  def getChannels(token: SlackAccessToken): Future[Seq[SlackChannelInfo]] = {
-    slackClient.getChannels(token).andThen(onRevokedToken(token))
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]] = {
+    slackClient.getChannels(token, excludeArchived).andThen(onRevokedToken(token))
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
     slackClient.getChannelInfo(token, channelId).andThen(onRevokedToken(token))
   }
 
-  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
     slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
   }
 
@@ -140,17 +171,37 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
   }
 
+  def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]] = {
+    val tokens = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeam(teamId).flatMap(_.token)
+    }
+    FutureHelpers.foldLeftUntil(tokens)(Option.empty[SlackChannelId]) {
+      case (_, token) => getChannels(token).map { channels =>
+        val generalChannelOpt = channels.find(_.channelName == SlackChannelName("#general")).map(_.channelId)
+        (generalChannelOpt, generalChannelOpt.isDefined)
+      }.recover { case x => (None, false) }
+    }
+  }
+
   private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
-    case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.tokenRevoked, _)) =>
-      db.readWrite { implicit s =>
-        slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-          slackTeamMembershipRepo.save(stm.revoked)
-        }
+    case Failure(_@ SlackAPIFailure(_, SlackAPIFailure.Error.tokenRevoked, _)) => db.readWrite { implicit s =>
+      slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+        slackTeamMembershipRepo.save(stm.revoked)
       }
+    }
+    case Failure(_@ SlackAPIFailure(_, SlackAPIFailure.Error.accountInactive, _)) => db.readWrite { implicit s =>
+      slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+        slackTeamMembershipRepo.deactivate(stm)
+      }
+    }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
     slackClient.getTeamInfo(token).andThen(onRevokedToken(token))
+  }
+
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = {
+    slackClient.getUserInfo(token, userId).andThen(onRevokedToken(token))
   }
 
 }

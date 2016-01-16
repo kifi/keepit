@@ -5,7 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
-import com.keepit.discussion.{ DiscussionKeep, Discussion, Message }
+import com.keepit.discussion.{ DiscussionKeep, Discussion }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, OWrites, Writes }
@@ -45,6 +45,7 @@ case class KeepInfo(
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
     discussion: Option[Discussion],
+    participants: Seq[BasicUser],
     permissions: Set[KeepPermission]) {
 
   def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
@@ -96,6 +97,7 @@ object KeepInfo {
         "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
         "note" -> o.note,
         "discussion" -> o.discussion,
+        "participants" -> o.participants,
         "permissions" -> o.permissions
       ).nonNullFields
     }
@@ -104,6 +106,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, participants = Seq.empty, permissions = Set.empty)
   }
 }

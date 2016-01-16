@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionKeep, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
@@ -66,6 +66,7 @@ class MessagingCommander @Inject() (
     val allInvolvedUsers = threads.flatMap(_.participants.allUsers)
     //get all basic users
     val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
+    val discussionKeepsByKeepIdF = shoebox.getDiscussionKeepsByIds(userId, threads.map(_.keepId).toSet)
     //get all messages
     val messagesByThread: Map[Id[MessageThread], Seq[ElizaMessage]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getThreadMessages(thread))
@@ -75,7 +76,10 @@ class MessagingCommander @Inject() (
       threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.keepId).get }
     }.toMap
 
-    userId2BasicUserF.map { userId2BasicUser =>
+    for {
+      userId2BasicUser <- userId2BasicUserF
+      discussionKeepsByKeepId <- discussionKeepsByKeepIdF
+    } yield {
       threads.map { thread =>
 
         val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
@@ -104,7 +108,8 @@ class MessagingCommander @Inject() (
           lastMessageRead = userThreads(thread.id.get).lastSeen,
           nUrl = Some(thread.nUrl),
           url = requestUrl,
-          muted = userThreads(thread.id.get).muted)
+          muted = userThreads(thread.id.get).muted,
+          keep = discussionKeepsByKeepId.get(thread.keepId))
       }
     }
   }
@@ -294,6 +299,12 @@ class MessagingCommander @Inject() (
     val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
       .map(nu => BasicUserLikeEntity(nu))
 
+    val sender = message.from match {
+      case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
+      case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+      case _ => None
+    }
+
     val messageWithBasicUser = MessageWithBasicUser(
       message.pubId,
       message.createdAt,
@@ -331,51 +342,27 @@ class MessagingCommander @Inject() (
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
-    val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity]) = db.readOnlyMaster { implicit session =>
-      val (numMessages, numUnread) = messageRepo.getMessageCounts(message.keepId, Some(message.createdAt))
-      val threadActivity = userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
+    val threadActivity: Seq[UserThreadActivity] = db.readOnlyMaster { implicit session =>
+      userThreadRepo.getThreadActivity(message.keepId).sortBy { uta =>
         (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
       }
-      (numMessages, numUnread, threadActivity)
     }
 
-    val originalAuthorOpt = threadActivity.filter(_.started).zipWithIndex.headOption.map(_._2)
-    val numAuthors = threadActivity.count(_.lastActive.isDefined)
-
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(
-      participants = threadActivity.map { ta =>
-        BasicUserLikeEntity(id2BasicUser(ta.userId))
-      } ++ basicNonUserParticipants
-    )
-
-    val usersToNotify = from match {
-      case MessageSender.User(id) => thread.allParticipantsExcept(id)
-      case _ => thread.allParticipants
-    }
-    usersToNotify.foreach { userId =>
-      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, orderedMessageWithBasicUser, threadActivity)
-    }
-
-    // update user thread of the sender again, might be deprecated
-    (from.asUser, originalAuthorOpt) match {
-      case (Some(sender), Some(originalAuthor)) =>
-        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
-      case _ =>
+    thread.allParticipants.foreach { userId =>
+      notificationDeliveryCommander.sendNotificationForMessage(userId, message, thread, sender, threadActivity)
+      notificationDeliveryCommander.sendPushNotificationForMessage(userId, message, sender, threadActivity)
     }
 
     // update non user threads of non user recipients
     notificationDeliveryCommander.updateEmailParticipantThreads(thread, message)
-    if (isNew.exists(identity)) { notificationDeliveryCommander.notifyEmailParticipants(thread) }
+    if (isNew.contains(true)) { notificationDeliveryCommander.notifyEmailParticipants(thread) }
 
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach { url =>
-      (nUriIdOpt match {
-        case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url.toString(), contentWanted = true).map(_.id.get) //Note, this also needs to include canonical/og when we have detached threads
-      }) foreach { nUriId =>
-        db.readWrite { implicit session =>
-          messageRepo.updateUriId(message, nUriId)
-        }
+      nUriIdOpt.map(Future.successful).getOrElse {
+        shoebox.internNormalizedURI(url.toString(), contentWanted = true).map(_.id.get) //Note, this also needs to include canonical/og when we have detached threads
+      }.foreach { nUriId =>
+        db.readWrite { implicit s => messageRepo.updateUriId(message, nUriId) }
       }
     }
     messagingAnalytics.sentMessage(from, message, thread, isNew, context)
@@ -455,6 +442,7 @@ class MessagingCommander @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
+          shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
 
           Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
 

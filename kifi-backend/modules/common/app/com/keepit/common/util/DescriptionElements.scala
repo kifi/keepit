@@ -4,6 +4,7 @@ import java.net.URLEncoder
 
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
+import com.keepit.macros.Location
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -64,6 +65,7 @@ object DescriptionElements {
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
+  implicit def fromLocation(location: Location): BasicElement = s"${location.context}: ${location.line}"
 
   private val prettyTime = new PrettyTime()
   implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
@@ -82,6 +84,12 @@ object DescriptionElements {
 
   def mkElements(els: Seq[DescriptionElements], e: BasicElement): DescriptionElements = SequenceOfElements(intersperseWith(els, e))
   def unlines(els: Seq[DescriptionElements]): DescriptionElements = mkElements(els, "\n")
+  def unwordsPretty(els: Seq[DescriptionElements]): DescriptionElements = els match {
+    case Seq() => Seq()
+    case Seq(x) => Seq(x)
+    case Seq(x, y) => Seq[DescriptionElements](x, "and", y)
+    case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements(", and"))
+  }
 
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)

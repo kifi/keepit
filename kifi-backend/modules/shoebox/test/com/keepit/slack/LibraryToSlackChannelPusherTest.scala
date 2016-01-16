@@ -3,9 +3,9 @@ package com.keepit.slack
 import java.util.concurrent.ExecutionException
 
 import com.google.inject.Injector
-import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FutureHelpers, FakeExecutionContextModule }
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time
@@ -23,6 +23,7 @@ import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
@@ -34,6 +35,11 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
     FakeSocialGraphModule(),
     FakeClockModule()
   )
+
+  def ingestFromSlackSurely()(implicit injector: Injector): Unit = {
+    inject[ActorInstance[SlackIngestingActor]].ref ! IfYouCouldJustGoAhead
+    inject[WatchableExecutionContext].drain()
+  }
 
   def pushUpdatesToSlackSurely(libraryId: Id[Library])(implicit injector: Injector): Map[Id[LibraryToSlackChannel], Boolean] = {
     fakeClock += LibraryToSlackChannelPusher.maxDelayFromKeptAt
@@ -187,14 +193,14 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             (user, lib, stm, lts, stl, siw.webhook)
           }
 
-          val ch = SlackChannel(SlackChannelId("C123123"), libToSlack.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), libToSlack.slackChannelName)
           db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")
 
           slackClient.sayInChannel(stm, ch)("I love sharing links like <http://www.google.com>")
-          Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
+          ingestFromSlackSurely()
 
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)

@@ -62,7 +62,7 @@ class AdminOrganizationController @Inject() (
     val all = db.readOnlyReplica { implicit s =>
       orgRepo.allActive
     }
-    val filteredOrgs = all.filter(orgFilter).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
+    val filteredOrgs = all.filter(_.state == OrganizationStates.ACTIVE).filter(orgFilter).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
     val orgsCount = filteredOrgs.length
     val startingIndex = page * pageSize
     val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
@@ -90,7 +90,7 @@ class AdminOrganizationController @Inject() (
     val orgs = db.readOnlyReplica { implicit s =>
       val orgIds = libRepo.orgsWithMostLibs().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
-      orgIds.map(id => allOrgs(id))
+      orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
     Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
       Ok(html.admin.organizations(
@@ -237,7 +237,7 @@ class AdminOrganizationController @Inject() (
 
   def findOrganizationByName(orgName: String) = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
-      orgRepo.searchOrgsByNameFuzzy(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
+      orgRepo.searchOrgsByNameFuzzy(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse).filter(_.state == OrganizationStates.ACTIVE)
     }
     if (orgs.isEmpty) {
       Future.successful(Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)).flashing(

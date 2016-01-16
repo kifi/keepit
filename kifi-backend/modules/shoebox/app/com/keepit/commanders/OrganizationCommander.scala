@@ -95,7 +95,7 @@ class OrganizationCommanderImpl @Inject() (
   private def validateOrganizationSettings(orgId: Id[Organization], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {
     def onlyModifyingEditableSettings = {
       val currentSettings = orgConfigRepo.getByOrgId(orgId).settings
-      val editedFeatures = currentSettings diff newSettings
+      val editedFeatures = currentSettings editedFeatures newSettings
 
       val plan = planManagementCommander.currentPlanHelper(orgId)
       val editableFeatures = paidPlanRepo.get(plan.id.get).editableFeatures

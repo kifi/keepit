@@ -183,6 +183,7 @@ object Shoebox extends Service {
     def getUserIdFromSlackUserId(slackUserId: SlackUserId) = ServiceRoute(GET, "/internal/shoebox/database/getUserIdFromSlackUserId", Param("slackUserId", slackUserId.value))
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
+    def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
   }
 }
 
@@ -267,13 +268,14 @@ object Eliza extends Service {
     def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
     def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
+    def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter) = ServiceRoute(GET, "/internal/eliza/getElizaKeepStream", Param("userId", userId), Param("limit", limit), Param("beforeId", beforeId.map(_.id)), Param("filter", filter.kind))
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
     def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = ServiceRoute(GET, "/internal/eliza/keepHasAccessToken", Param("keepId", keepId), Param("accessToken", accessToken))
     def editParticipantsOnKeep() = ServiceRoute(POST, "/internal/eliza/editParticipantsOnKeep")
     def deleteThreadsForKeeps() = ServiceRoute(POST, "/internal/eliza/deleteThreadsForKeeps")
     def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(PUT, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
+    def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
   }
 }
 

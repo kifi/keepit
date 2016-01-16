@@ -25,7 +25,7 @@ import com.keepit.common.core._
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
-import scala.util.Success
+import scala.util.{ Try, Success }
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -34,6 +34,7 @@ class AdminBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   libraryRepo: LibraryRepo,
+  keepToLibraryRepo: KeepToLibraryRepo,
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
@@ -306,5 +307,23 @@ class AdminBookmarksController @Inject() (
     val updated = keepCommander.replaceTagOnKeeps(keepIds, Hashtag(oldTag), Hashtag(newTag))
 
     Ok(updated.toString)
+  }
+
+  // Warning! This deletes all keeps in a library, even if they're somewhere else as well.
+  // They'll be gone! Forever! No recovery!
+  def deleteAllKeepsFromLibrary() = AdminUserAction(parse.json) { implicit request =>
+    val libraryId = (request.body \ "libraryId").as[Id[Library]]
+
+    val keeps = db.readOnlyReplica { implicit session =>
+      keepToLibraryRepo.getAllByLibraryId(libraryId).map(_.keepId)
+    }
+
+    db.readWrite(attempts = 5) { implicit session =>
+      keeps.foreach { keepId =>
+        keepCommander.deactivateKeep(keepRepo.get(keepId))
+      }
+    }
+
+    Ok(keeps.length.toString)
   }
 }

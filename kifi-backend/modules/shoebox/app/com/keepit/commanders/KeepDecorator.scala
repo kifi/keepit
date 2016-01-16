@@ -71,6 +71,7 @@ class KeepDecoratorImpl @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
+      val ktusByKeep = db.readOnlyMaster(implicit s => ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet))
       val entitiesFutures = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
@@ -89,7 +90,8 @@ class KeepDecoratorImpl @Inject() (
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
+          val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers) } //cached
         }
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
@@ -189,6 +191,7 @@ class KeepDecoratorImpl @Inject() (
               sourceAttribution = sourceAttrOpt,
               note = keep.note,
               discussion = discussionsByKeep.get(keep.id.get),
+              participants = ktusByKeep(keep.id.get).map(ktu => idToBasicUser(ktu.userId)),
               permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
             )
         }
