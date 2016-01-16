@@ -27,7 +27,6 @@ GET     /integrations/slack/start  @com.keepit.controllers.routing.KifiSiteRoute
 GET     /integrations/slack/teams  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /pricing                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
 GET     /credits                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
-GET     /integrations              @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/integrations", noTeam = "/teams/new")
 GET     /organizations             @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
