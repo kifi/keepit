@@ -64,8 +64,10 @@ class SlackDigestNotifierImpl @Inject() (
   def pushDigestNotificationsForRipeChannels(): Future[Unit] = {
     val ripeChannelsFut = db.readOnlyReplicaAsync { implicit s =>
       // TODO(ryan): right now this only sends digests to channels in the Kifi slack team, once it works change that
-      slackChannelRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenChannelDigests).filter {
-        _.slackTeamId == SlackDigestNotifier.KifiSlackTeamId
+      slackChannelRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenChannelDigests).filter { ch =>
+        val isKifi = ch.slackTeamId == SlackDigestNotifier.KifiSlackTeamId
+        val isGeneralChannel = slackTeamRepo.getBySlackTeamId(ch.slackTeamId).exists(_.generalChannelId.contains(ch.slackChannelId))
+        isKifi && !isGeneralChannel
       }
     }
     for {
@@ -142,7 +144,7 @@ class SlackDigestNotifierImpl @Inject() (
       )))).withFullMarkdown
     ) ++ RandomChoice.choice(kifiSlackTipAttachments)
 
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments)
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
     val now = clock.now
@@ -196,8 +198,8 @@ class SlackDigestNotifierImpl @Inject() (
       DescriptionElements("We have captured", digest.numIngestedKeeps, "links from",
         digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getHours, "hours"),
       DescriptionElements("You can browse through them in",
-        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.getPathForLibrary(lib)))))
-    ))))
+        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
+    )))).quiet
   }
   private def pushDigestNotificationForChannel(channel: SlackChannel): Future[Unit] = {
     val now = clock.now
