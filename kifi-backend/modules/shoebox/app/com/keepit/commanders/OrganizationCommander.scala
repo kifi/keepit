@@ -174,7 +174,7 @@ class OrganizationCommanderImpl @Inject() (
     val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
 
     val members = orgMembershipRepo.getAllByOrgId(orgId)
-    if (currentConfig.settings != settings) {
+    if (currentConfig.settings != newConfig.settings) {
       session.onTransactionSuccess {
         members.foreach(mem => eliza.flush(mem.userId))
       }
