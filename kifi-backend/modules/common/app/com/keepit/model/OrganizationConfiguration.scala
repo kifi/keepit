@@ -16,7 +16,7 @@ case class OrganizationConfiguration(
 
   def withId(id: Id[OrganizationConfiguration]): OrganizationConfiguration = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationConfiguration = this.copy(updatedAt = now)
-  def withSettings(newSettings: OrganizationSettings): OrganizationConfiguration = this.copy(settings = newSettings)
+  def withSettings(newSettings: OrganizationSettings): OrganizationConfiguration = this.copy(settings = settings.overwriteWith(newSettings))
   def sanitizeForDelete: OrganizationConfiguration = this.copy(
     state = OrganizationConfigurationStates.INACTIVE
   )
