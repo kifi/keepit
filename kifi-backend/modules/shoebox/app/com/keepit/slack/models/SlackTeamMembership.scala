@@ -20,7 +20,8 @@ case class SlackTeamMembershipInternRequest(
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
   token: SlackAccessToken,
-  scopes: Set[SlackAuthScope])
+  scopes: Set[SlackAuthScope],
+  slackUser: Option[SlackUserInfo])
 
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
@@ -41,7 +42,7 @@ object SlackTeamMembership {
         membership.slackUsername,
         membership.token,
         membership.scopes,
-        None // todo(Léo): add SlackUserInfo to membership
+        membership.slackUser
       )
     )
   }
@@ -58,7 +59,8 @@ case class SlackTeamMembership(
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
-    scopes: Set[SlackAuthScope]) extends ModelWithState[SlackTeamMembership] {
+    scopes: Set[SlackAuthScope],
+    slackUser: Option[SlackUserInfo]) extends ModelWithState[SlackTeamMembership] {
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
@@ -110,7 +112,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
-    scopes: JsValue) = {
+    scopes: JsValue,
+    slackUser: Option[JsValue]) = {
     SlackTeamMembership(
       id,
       createdAt,
@@ -122,7 +125,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
       slackTeamId,
       slackTeamName,
       token,
-      scopes.as[Set[SlackAuthScope]]
+      scopes.as[Set[SlackAuthScope]],
+      slackUser.map(_.as[SlackUserInfo])
     )
   }
 
@@ -137,7 +141,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.slackTeamId,
     membership.slackTeamName,
     membership.token,
-    Json.toJson(membership.scopes)
+    Json.toJson(membership.scopes),
+    membership.slackUser.map(Json.toJson(_))
   ))
 
   type RepoImpl = SlackTeamMembershipTable
@@ -150,7 +155,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
     def token = column[Option[SlackAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamMembershipStates.ACTIVE)
@@ -176,7 +182,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
           token = Some(request.token),
-          scopes = request.scopes
+          scopes = request.scopes,
+          slackUser = request.slackUser orElse membership.slackUser
         )
         if (updated == membership) membership else save(updated)
       case inactiveMembershipOpt =>
@@ -188,7 +195,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackTeamId = request.slackTeamId,
           slackTeamName = request.slackTeamName,
           token = Some(request.token),
-          scopes = request.scopes
+          scopes = request.scopes,
+          slackUser = request.slackUser
         )
         save(newMembership)
     }

@@ -9,7 +9,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.slack.models._
-import org.joda.time.Period
 import play.api.libs.json._
 import com.keepit.common.json.formatNone
 import com.keepit.common.core._
@@ -49,7 +48,8 @@ class SlackCommanderImpl @Inject() (
         slackTeamId = auth.teamId,
         slackTeamName = auth.teamName,
         token = auth.accessToken,
-        scopes = auth.scopes
+        scopes = auth.scopes,
+        slackUser = None
       )) tap autojoinOrganization
 
       auth.incomingWebhook.foreach { webhook =>

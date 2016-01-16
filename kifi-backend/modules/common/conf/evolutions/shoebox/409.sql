@@ -14,6 +14,7 @@ CREATE TABLE slack_team_membership (
   slack_team_name VARCHAR(512) NOT NULL,
   token VARCHAR(512) NOT NULL,
   scopes text NOT NULL,
+  slack_user text NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
