@@ -18,15 +18,19 @@ class ExtPageController @Inject() (
 
   def getPageInfo() = UserAction.async(parse.tolerantJson) { request =>
     userIpAddressCommander.logUserByRequest(request)
-    val url = (request.body \ "url").as[String]
-    URI.parse(url) match {
-      case Success(uri) =>
-        pageCommander.getPageInfo(uri, request.userId, request.experiments).map { info =>
-          Ok(Json.toJson(info))
-        }
-      case Failure(e) =>
-        log.error(s"Error parsing url: $url", e)
-        Future.successful(BadRequest(Json.obj("error" -> s"Error parsing url: $url")))
+    (request.body \ "url").asOpt[String].map { url =>
+      URI.parse(url) match {
+        case Success(uri) =>
+          pageCommander.getPageInfo(uri, request.userId, request.experiments).map { info =>
+            Ok(Json.toJson(info))
+          }
+        case Failure(e) =>
+          log.error(s"Error parsing url: $url", e)
+          Future.successful(BadRequest(Json.obj("error" -> "error_parsing_url", "url" -> url)))
+      }
+    }.getOrElse {
+      log.warn(s"No url given: ${request.body}")
+      Future.successful(BadRequest(Json.obj("error" -> s"no_url_given")))
     }
   }
 
