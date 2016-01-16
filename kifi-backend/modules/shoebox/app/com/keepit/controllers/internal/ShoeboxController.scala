@@ -611,10 +611,9 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(attributions))
   }
 
-  def getUserIdFromSlackUserId(id: String) = Action { request =>
-    val slackUserId = SlackUserId(id)
+  def getUserIdFromSlackTeamAndUserIds(teamId: String, slackUserId: String) = Action { request =>
     val userIdOpt = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackUserIds(Set(slackUserId)).values.headOption.map(_.userId)
+      slackTeamMembershipRepo.getBySlackTeamAndUser(SlackTeamId(teamId), SlackUserId(slackUserId)).map(_.userId)
     }
     Ok(Json.obj("userIdOpt" -> userIdOpt))
   }

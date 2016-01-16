@@ -207,7 +207,14 @@ class SlackSearchController @Inject() (
           contextBuilder += ("slackChannelId", command.channelId.value)
           val heimdalContext = contextBuilder.build
           val endedWith = "unload"
-          searchAnalytics.searched(request.userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
+
+          request.userIdOpt
+            .map(userId => Future.successful(Some(userId)))
+            .getOrElse(shoeboxClient.getUserIdFromSlackTeamAndUserIds(command.teamId, command.userId))
+            .recover { case _ => None }
+            .foreach { userIdOpt =>
+              searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
+            }
         }
 
         val text = {

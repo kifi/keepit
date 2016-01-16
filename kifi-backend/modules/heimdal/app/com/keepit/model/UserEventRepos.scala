@@ -128,16 +128,17 @@ class UserDiscussionViewedAugmentor(eventContextHelper: EventContextHelper)(impl
   }
 }
 
-class UserSlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
-  def isDefinedAt(userEvent: UserEvent) = SlackEventTypes.contains(userEvent.eventType)
+class SlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: ShoeboxServiceClient) extends EventAugmentor[HeimdalEvent] {
+  def isDefinedAt(event: HeimdalEvent) = SlackEventTypes.contains(event.eventType)
 
-  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+  def apply(event: HeimdalEvent): Future[Seq[(String, ContextData)]] = {
     val emptyResponse = Future.successful(Seq.empty[(String, ContextData)])
 
-    userEvent.context.get[String]("slackTeamId").map { id =>
+    event.context.get[String]("slackTeamId").map { id =>
       shoebox.getSlackTeamInfo(SlackTeamId(id)).flatMap {
         case Some((orgId, teamName)) =>
-          val orgUserValuesFut = eventContextHelper.getOrgUserValues(orgId, userEvent.userId)
+          val userIdOpt = Some(event).collect { case ue: UserEvent => ue.userId }
+          val orgUserValuesFut = userIdOpt.map(eventContextHelper.getOrgUserValues(orgId, _)).getOrElse(emptyResponse)
           val orgSpecificValuesFut = eventContextHelper.getOrgSpecificValues(orgId)
           for {
             orgUserValues <- orgUserValuesFut
