@@ -27,7 +27,7 @@ var api = api || (function () {
         break;
       case 'api:inject':
         injectContentScript(msg[1], msg[2]);
-        // markInjected(msg[1]);
+        markInjected(msg[1]);
         break;
       case 'api:log':
         var enable = msg[1], buf = log.buffer;
@@ -135,7 +135,7 @@ var api = api || (function () {
 
   return {
     identify: noop,
-    injected: {'scripts/api.js': 1},
+    injected: {'scripts/does-not-exist.js': 1},//{'scripts/api.js': 1},
     mutationsFirePromptly: true,
     noop: noop,
     onEnd: [],
@@ -187,27 +187,66 @@ var api = api || (function () {
   };
 }());
 
-if (window.top === window) {
+var oneOnDOMContentLoaded = once(onDOMContentLoaded);
+
+function once(cb) {
+  var called = false;
+  return function () {
+    if (!called) {
+      called = true;
+      cb.apply(this, arguments);
+    }
+  }
+}
+
+function onApiConnect() {
+  log('[api:onConnect] %s', window.location.href);
   api.port.emit('api:onConnect', { url: window.location.href });
 
+  log('[api:onConnect] visibilityState is %s', document.visibilityState);
   if (document.visibilityState === 'visible') {
-    document.addEventListener('DOMContentLoaded', function () {
-      api.port.emit('api:DOMContentLoaded', { actual: true, url: window.location.href });
-    });
+    log('[api:onConnect] readyState is %s', document.readyState);
+    if (document.readyState === 'complete' || document.readyState === 'loaded') {
+      oneOnDOMContentLoaded(false);
+    } else {
+      document.addEventListener('DOMContentLoaded', oneOnDOMContentLoaded.bind(null, true));
+    }
   } else {
-    document.addEventListener('visbilitychange', function () {
-      if (document.visibilityState === 'visible') {
-        api.port.emit('api:DOMContentLoaded', { actual: false, url: window.location.href });
-      }
-    });
-  };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  }
 
-  window.addEventListener('beforeunload', function () {
-    api.port.emit('api:beforeunload', { url: window.location.href });
-  });
-  window.addEventListener('unload', function () {
-    api.port.emit('api:unload', { url: window.location.href });
-  });
+  window.addEventListener('beforeunload', onBeforeUnload);
+  window.addEventListener('unload', onUnload);
+}
+
+
+function onDOMContentLoaded(actual) {
+  var injected = api.injected;
+  var url = window.location.href;
+  var data = { injected, actual, url };
+  log('[api:DOMContentLoaded] actual: %s, url: %s, injected: %O', data.actual, data.url, data.injected);
+  api.port.emit('api:DOMContentLoaded', data);
+}
+
+function onVisibilityChange(e) {
+  log('[onVisibilityChange] %O, current visibilityState: %s', e, document.visibilityState);
+  if (document.visibilityState === 'visible') {
+    oneOnDOMContentLoaded(false);
+  }
+}
+
+function onBeforeUnload(e) {
+  log('[onBeforeUnload] %O', e);
+  api.port.emit('api:beforeunload', { url: window.location.href });
+}
+
+function onUnload() {
+  log('[onUnload] %O', e);
+  api.port.emit('api:unload', { url: window.location.href });
+}
+
+if (window.top === window) {
+  onApiConnect();
 }
 
 // var log = log || function () {
@@ -232,9 +271,9 @@ if (window.top === window) {
 //   log.buffer = [];
 //   return log;
 // }();
-var hexRe = /^#[0-9a-f]{3}$/i;
 function log(a0) {
   'use strict';
+  var hexRe = /^#[0-9a-f]{3}$/i;
   var args = arguments;
   if (hexRe.test(a0)) {
     args[0] = '%c' + args[1];

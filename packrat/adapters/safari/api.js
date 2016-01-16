@@ -97,13 +97,14 @@ var api = api || (function () {
     },
     'api:DOMContentLoaded': function (data, _, tab) {
       var page = pages[tab.id];
+      var {injected} = data;
       if (page) {
         if (page.url === tab.url) {
           log('[api:onDOMContentLoaded] %s %s', tab.id, tab.url);
         } else {
           log(CRED, '[api:onDOMContentLoaded] %s url mismatch:\n%s\n%s', tab.id, tab.url, page.url);
         }
-        injectContentScripts(page);
+        injectContentScripts(page, injected);
       } else {
         log(CRED, '[api:onDOMContentLoaded] no page for', tab.id, tab.url);
       }
@@ -126,10 +127,10 @@ var api = api || (function () {
     injectContent(page, scripts, styles, callback);
   }
 
-  function injectContentScripts(page) {
+  function injectContentScripts(page, injected) {
     var paths = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url); }).map(function (cs) { return cs[0]; });
     if (paths.length) {
-      var {scripts, styles} = deps(paths);
+      var {scripts, styles} = deps(paths, injected);
       injectContent(page, scripts, styles);
     }
   }
@@ -294,7 +295,7 @@ var api = api || (function () {
       var id = tab.id;
       var page = pages[tab.id];
       var url = e.url;
-      var match = url.match(googleSearchRe);
+      var match = googleSearchRe.exec(url);
 
       if (page.url !== url) {
         removeTab(id);

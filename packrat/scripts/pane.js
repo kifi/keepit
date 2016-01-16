@@ -135,12 +135,21 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         notifyPageOfResize(true);
       }
       if ($pane[0].offsetWidth) {
-        $pane.on('transitionend', function f(e) {
-        if (e.target === this) {
-          $(this).off(e.type, f);
+
+        var paneTransitionEnd = function paneTransitionEnd(e) {
+          if (e.target === this) {
+            clearTimeout(timerId);
+            $(this).off(e.type, paneTransitionEnd);
+            onPaneShown();
+          }
+        };
+
+        var timerId = setTimeout(function () {
+          $pane.off('transitionend', paneTransitionEnd);
           onPaneShown();
-        }
-      });
+        }, 300);
+
+        $pane.on('transitionend', paneTransitionEnd);
       } else {
         setTimeout(function f(ms) {
           log('[onPaneShown:delayed]', ms);
