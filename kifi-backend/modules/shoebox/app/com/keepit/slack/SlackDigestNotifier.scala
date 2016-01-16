@@ -14,7 +14,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLogging
 import com.keepit.common.time._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.util.{ RandomChoice, DescriptionElements, LinkElement, Ord }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -22,7 +22,7 @@ import com.keepit.slack.models._
 import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Random, Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackDigestNotifierImpl])
 trait SlackDigestNotifier {
@@ -31,8 +31,8 @@ trait SlackDigestNotifier {
 }
 
 object SlackDigestNotifier {
-  val minPeriodBetweenTeamDigests = Period.weeks(1)
-  val minPeriodBetweenChannelDigests = Period.days(4)
+  val minPeriodBetweenTeamDigests = Period.minutes(1)
+  val minPeriodBetweenChannelDigests = Period.minutes(1)
   val minIngestedKeepsForChannelDigest = 5
   val minIngestedKeepsForTeamDigest = 10
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
@@ -115,22 +115,34 @@ class SlackDigestNotifierImpl @Inject() (
     } yield digest
   }
 
+  private val kifiSlackTipAttachments: IndexedSeq[SlackAttachment] = {
+    import DescriptionElements._
+    IndexedSeq(
+      SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.magnifyingGlass, "Search them using the `kifi` Slack command"
+      )))).withFullMarkdown,
+      SlackAttachment(color = Some(LibraryColor.ORANGE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        "See them on Google by installing the", "browser extension" --> LinkElement(PathCommander.browserExtension)
+      )))).withFullMarkdown
+    )
+  }
+
   private def describeTeamDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
     val topLibraries = digest.numIngestedKeepsByLibrary.toList.sortBy { case (lib, numKeeps) => numKeeps }(Ord.descending).take(3).collect { case (lib, numKeeps) if numKeeps > 0 => lib }
-    val lines = List(
-      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getDays, "days"),
-      DescriptionElements("Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
+    val text = DescriptionElements.unlines(List(
+      DescriptionElements("Your team has been busy!", SlackEmoji.bee),
+      DescriptionElements("We have collected", s"${digest.numIngestedKeeps} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
+        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getHours, "hours", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+    ))
+    val attachments = List(
+      SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        "Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
         DescriptionElements.unwordsPretty(topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))))
-      ),
-      DescriptionElements(
-        "Check them at at", digest.org, "'s page on Kifi,",
-        "search through them using the /kifi Slack command,",
-        "and see them in your Google searches when you install the", "browser extension" --> LinkElement(PathCommander.browserExtension)
-      )
-    )
+      )))).withFullMarkdown
+    ) ++ RandomChoice.choice(kifiSlackTipAttachments)
 
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments)
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
     val now = clock.now
@@ -180,14 +192,12 @@ class SlackDigestNotifierImpl @Inject() (
 
   private def describeChannelDigest(digest: SlackChannelDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
-    val lines = List(
-      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from", digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getDays, "days"),
-      DescriptionElements("You can find them in",
-        DescriptionElements.unwordsPretty(digest.libraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute)))),
-        "or search them using the /kifi Slack command.")
-    )
-
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(lines)))
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from",
+        digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getHours, "hours"),
+      DescriptionElements("You can browse through them in",
+        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.getPathForLibrary(lib)))))
+    ))))
   }
   private def pushDigestNotificationForChannel(channel: SlackChannel): Future[Unit] = {
     val now = clock.now

@@ -6,6 +6,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.macros.Location
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
+import com.keepit.slack.models.SlackEmoji
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -66,6 +67,7 @@ object DescriptionElements {
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
   implicit def fromLocation(location: Location): BasicElement = s"${location.context}: ${location.line}"
+  implicit def fromSlackEmoji(emoji: SlackEmoji): BasicElement = emoji.value
 
   private val prettyTime = new PrettyTime()
   implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
