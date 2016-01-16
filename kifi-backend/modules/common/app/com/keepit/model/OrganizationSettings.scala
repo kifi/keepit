@@ -17,9 +17,9 @@ case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
     case (feature: FeatureWithPermissions, setting: FeatureSetting) => feature.extraPermissionsFor(roleOpt, setting)
   }.toSet.flatten
 
-  def diff(that: OrganizationSettings): Set[Feature] = {
+  def editedFeatures(that: OrganizationSettings): Set[Feature] = {
     this.kvs.collect {
-      case (feature, setting) if !that.kvs.get(feature).contains(setting) => feature
+      case (feature, setting) if that.kvs.contains(feature) && that.kvs(feature) != setting => feature
     }.toSet
   }
 }
