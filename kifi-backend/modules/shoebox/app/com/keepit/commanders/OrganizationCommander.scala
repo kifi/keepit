@@ -171,7 +171,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
     val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+    val newConfig = orgConfigRepo.save(currentConfig.updateSettings(settings))
 
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     if (currentConfig.settings != settings) {
