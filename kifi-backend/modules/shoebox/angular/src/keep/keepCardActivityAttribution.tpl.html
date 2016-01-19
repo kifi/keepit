@@ -1,8 +1,8 @@
 <div class="kf-keep-card-activity-attribution" ng-show="lastComment">
   <div class="kf-keep-card-activity-attribution-message">
     <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
-    <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
-       ng-href="{{::keep.user|profileUrl}}"
+    <span><a class="kf-link"
+       ng-href="{{::lastComment.sentBy|profileUrl}}"
        ng-bind="::lastComment.sentBy|name"/>
     </a></span>
     commented on this
