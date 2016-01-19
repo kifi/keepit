@@ -17,7 +17,7 @@
       <tbody>
         <tr ng-repeat="b in billingEvents">
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
-          <td class="kf-team-activity-entry">
+          <td>
             <span kf-structured-text segments="b.description"></span>
           </td>
           <td

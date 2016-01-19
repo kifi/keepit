@@ -22,8 +22,8 @@ object KifiSlackApp {
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
 }
 
-@json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
-  def compare(that: SlackMessageTimestamp) = value compare that.value
+@json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
+  def compare(that: SlackTimestamp) = value compare that.value
   def toDateTime: DateTime = Try {
     new DateTime(value.split('.').head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
   }.getOrElse(throw new Exception(s"Could not parse a date-time out of $value"))
@@ -32,50 +32,25 @@ object KifiSlackApp {
 @json case class SlackMessageType(value: String)
 
 case class SlackAttachment(
-  fallback: Option[String] = None,
-  color: Option[String] = None,
-  pretext: Option[String] = None,
-  service: Option[String] = None,
-  author: Option[SlackAttachment.Author] = None,
-  title: Option[SlackAttachment.Title] = None,
-  text: Option[String] = None,
-  fields: Seq[SlackAttachment.Field] = Seq.empty,
-  fromUrl: Option[String] = None,
-  imageUrl: Option[String] = None,
-  thumbUrl: Option[String] = None)
+    fallback: Option[String] = None,
+    color: Option[String] = None,
+    pretext: Option[String] = None,
+    service: Option[String] = None,
+    author: Option[SlackAttachment.Author] = None,
+    title: Option[SlackAttachment.Title] = None,
+    text: Option[String] = None,
+    fields: Seq[SlackAttachment.Field] = Seq.empty,
+    fromUrl: Option[String] = None,
+    imageUrl: Option[String] = None,
+    thumbUrl: Option[String] = None,
+    markdownIn: Option[Set[String]] = None) {
+  def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
+}
 
 object SlackAttachment {
   case class Author(name: String, link: Option[String], icon: Option[String])
   case class Title(value: String, link: Option[String])
-  @json case class Field(title: String, value: String, short: Boolean)
-
-  def fromTitleAndImage(title: Title, thumbUrl: Option[String], color: String) = SlackAttachment(
-    fallback = None,
-    color = Some(color),
-    pretext = None,
-    service = None,
-    author = None,
-    title = Some(title),
-    text = None,
-    fields = Seq.empty,
-    fromUrl = None,
-    imageUrl = None,
-    thumbUrl = thumbUrl
-  )
-
-  def minimal(fallback: String, text: String) = SlackAttachment(
-    fallback = Some(fallback),
-    color = None,
-    pretext = None,
-    service = None,
-    author = None,
-    title = None,
-    text = Some(text),
-    fields = Seq.empty,
-    fromUrl = None,
-    imageUrl = None,
-    thumbUrl = None
-  )
+  @json case class Field(title: String, value: JsValue, short: Option[Boolean])
 
   def applyFromSlack(
     fallback: Option[String],
@@ -91,10 +66,11 @@ object SlackAttachment {
     fields: Option[Seq[SlackAttachment.Field]],
     fromUrl: Option[String],
     imageUrl: Option[String],
-    thumbUrl: Option[String]): SlackAttachment = {
+    thumbUrl: Option[String],
+    markdownIn: Option[Set[String]]): SlackAttachment = {
     val author = authorName.map(Author(_, authorLink, authorIcon))
     val title = titleValue.map(Title(_, titleLink))
-    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), fromUrl, imageUrl, thumbUrl)
+    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), fromUrl, imageUrl, thumbUrl, markdownIn)
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
@@ -111,24 +87,26 @@ object SlackAttachment {
     Some(attachment.fields).filter(_.nonEmpty): Option[Seq[SlackAttachment.Field]],
     attachment.fromUrl: Option[String],
     attachment.imageUrl: Option[String],
-    attachment.thumbUrl: Option[String]
+    attachment.thumbUrl: Option[String],
+    attachment.markdownIn: Option[Set[String]]
   ))
 
   implicit val format: Format[SlackAttachment] = (
-    (__ \ "fallback").formatNullable[String] and
-    (__ \ "color").formatNullable[String] and
-    (__ \ "pretext").formatNullable[String] and
-    (__ \ "service_name").formatNullable[String] and
-    (__ \ "author_name").formatNullable[String] and
-    (__ \ "author_link").formatNullable[String] and
-    (__ \ "author_icon").formatNullable[String] and
-    (__ \ "title").formatNullable[String] and
-    (__ \ "title_link").formatNullable[String] and
-    (__ \ "text").formatNullable[String] and
-    (__ \ "fields").formatNullable[Seq[SlackAttachment.Field]] and
-    (__ \ "from_url").formatNullable[String] and
-    (__ \ "image_url").formatNullable[String] and
-    (__ \ "thumb_url").formatNullable[String]
+    (__ \ 'fallback).formatNullable[String] and
+    (__ \ 'color).formatNullable[String] and
+    (__ \ 'pretext).formatNullable[String] and
+    (__ \ 'service_name).formatNullable[String] and
+    (__ \ 'author_name).formatNullable[String] and
+    (__ \ 'author_link).formatNullable[String] and
+    (__ \ 'author_icon).formatNullable[String] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'title_link).formatNullable[String] and
+    (__ \ 'text).formatNullable[String] and
+    (__ \ 'fields).formatNullable[Seq[SlackAttachment.Field]] and
+    (__ \ 'from_url).formatNullable[String] and
+    (__ \ 'image_url).formatNullable[String] and
+    (__ \ 'thumb_url).formatNullable[String] and
+    (__ \ 'mrkdwn_in).formatNullable[Set[String]]
   )(applyFromSlack, unlift(unapplyToSlack))
 }
 
@@ -136,8 +114,8 @@ case class SlackMessage(
   messageType: SlackMessageType,
   userId: SlackUserId,
   username: SlackUsername,
-  timestamp: SlackMessageTimestamp,
-  channel: SlackChannel,
+  timestamp: SlackTimestamp,
+  channel: SlackChannelIdAndName,
   text: String,
   attachments: Seq[SlackAttachment],
   permalink: String)
@@ -147,8 +125,8 @@ object SlackMessage {
     (__ \ "type").format[SlackMessageType] and
     (__ \ "user").format[SlackUserId] and
     (__ \ "username").format[SlackUsername] and
-    (__ \ "ts").format[SlackMessageTimestamp] and
-    (__ \ "channel").format[SlackChannel] and
+    (__ \ "ts").format[SlackTimestamp] and
+    (__ \ "channel").format[SlackChannelIdAndName] and
     (__ \ "text").format[String] and
     (__ \ "attachments").formatNullable[Seq[SlackAttachment]].inmap[Seq[SlackAttachment]](_.getOrElse(Seq.empty), Some(_).filter(_.nonEmpty)) and
     (__ \ "permalink").format[String]
@@ -160,6 +138,13 @@ object SlackMessage {
 case class SlackReaction(value: String)
 object SlackReaction {
   val checkMark = SlackReaction("heavy_check_mark")
+}
+
+case class SlackEmoji(value: String)
+object SlackEmoji {
+  val bee = SlackEmoji(":bee:")
+  val gear = SlackEmoji(":gear:")
+  val magnifyingGlass = SlackEmoji(":mag_right:")
 }
 
 sealed abstract class SlackCommand(val value: String)

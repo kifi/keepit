@@ -43,7 +43,8 @@ class MessagingController @Inject() (
   messagingCommander: MessagingCommander,
   messagingIndexCommander: MessagingIndexCommander,
   notificationCommander: NotificationDeliveryCommander,
-  airbrake: AirbrakeNotifier)
+  airbrake: AirbrakeNotifier,
+  clock: Clock)
     extends ElizaServiceController with Logging {
 
   //for indexing data requests
@@ -73,6 +74,10 @@ class MessagingController @Inject() (
     db.readWrite { implicit s =>
       nonUserThreadRepo.getByAccessToken(ThreadAccessToken(accessToken)).map { nut =>
         userThreadRepo.intern(UserThread.fromNonUserThread(nut, userId))
+        threadRepo.getByKeepId(nut.keepId).map { thread =>
+          val newParticipants = MessageThreadParticipants(thread.participants.userParticipants + (userId -> clock.now()), thread.participants.nonUserParticipants - nut.participant)
+          threadRepo.save(thread.withParticipants(newParticipants))
+        }
         nut.participant match {
           case emailParticipant: NonUserEmailParticipant =>
             // returns fields needed to create UserEmailAddress and KeepToUser models

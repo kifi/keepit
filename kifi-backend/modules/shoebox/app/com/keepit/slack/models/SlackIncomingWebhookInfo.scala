@@ -11,18 +11,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.core._
 
-case class SlackIncomingWebhook(
-  channelName: SlackChannelName,
-  url: String,
-  configUrl: String)
-object SlackIncomingWebhook {
-  implicit val reads: Reads[SlackIncomingWebhook] = (
-    (__ \ 'channel).read[SlackChannelName] and
-    (__ \ 'url).read[String] and
-    (__ \ 'configuration_url).read[String]
-  )(SlackIncomingWebhook.apply _)
-}
-
 // track revokedSince
 case class SlackIncomingWebhookInfo(
     id: Option[Id[SlackIncomingWebhookInfo]] = None,

@@ -246,12 +246,12 @@ angular.module('kifi')
         //
 
         (function (keep) {
-          scope.hasKeepCommentsPermission =  $location.search().special || profileService.hasExperiment('keep_comments');
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
+          scope.showActivityAttribution = $state.is('home.feed') && profileService.hasExperiment('keep_nolib');
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:

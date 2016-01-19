@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionKeep, Message }
 import org.joda.time.DateTime
 
 import com.keepit.common.db._
@@ -25,7 +25,8 @@ case class ElizaThreadInfo(
     lastMessageRead: Option[DateTime],
     nUrl: Option[String],
     url: String,
-    muted: Boolean) {
+    muted: Boolean,
+    keep: Option[DiscussionKeep]) {
 }
 
 object ElizaThreadInfo {
@@ -43,6 +44,7 @@ object ElizaThreadInfo {
     (__ \ 'lastMessageRead).writeNullable[DateTime] and
     (__ \ 'nUrl).writeNullable[String] and
     (__ \ 'url).write[String] and
-    (__ \ 'muted).write[Boolean]
+    (__ \ 'muted).write[Boolean] and
+    (__ \ 'keep).writeNullable[DiscussionKeep]
   )(unlift(ElizaThreadInfo.unapply))
 }

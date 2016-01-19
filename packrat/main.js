@@ -517,8 +517,7 @@ var socketHandlers = {
   },
   remove_notification: function (th) {
     log('[socket:remove_notification]', th);
-    removeNotificationPopups(th);
-    tellVisibleTabsNoticeCountIfChanged();
+    removeNotification(th);
   },
   all_notifications_visited: function(id, time) {
     log('[socket:all_notifications_visited]', id, time);
@@ -528,7 +527,7 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
-    var linkToKeep = experiments.indexOf('keep_comments') !== -1;
+    var linkToKeep = shouldLinkToKeep(o.keep)
 
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
     forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
@@ -563,6 +562,15 @@ var socketHandlers = {
     }
   }
 };
+
+function shouldLinkToKeep(keep) {
+  return keep && (
+    keep.libraries && (
+      keep.libraries.length === 1 ||
+      (keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1)
+    )
+  );
+}
 
 function emitAllTabs(name, data, options) {
   return api.tabs.each(function(tab) {
@@ -1033,6 +1041,9 @@ api.port.on({
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
+      if (o.threadInfo && o.threadInfo.keep) {
+        keepData[o.threadInfo.id] = o.threadInfo.keep;
+      }
       respond({threadId: o.parentId});
     }, function (req) {
       log('#c00', '[send_message] resp:', req);
@@ -1104,7 +1115,8 @@ api.port.on({
     }
     var msgs = messageData[id];
     if (msgs) {
-      emitThreadToTab(id, msgs, keep, tab);
+      var linkToKeep = shouldLinkToKeep(keep);
+      emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
     } else {
       // TODO: remember that this tab needs this thread until it gets it or its pane changes?
       socket.send(['get_thread', id]);
@@ -1571,6 +1583,29 @@ function insertNewNotification(n) {
     });
     return true;
   }
+}
+
+function removeNotification(threadId) {
+  var n0 = notificationsById[threadId];
+
+  if (n0) {
+    markRead(threadId, n0.id, +new Date());
+    removeNotificationPopups(threadId);
+
+    ['all', 'page', 'unread', 'sent'].map(function (kind) {
+      var tl = notificationLists[kind];
+      if (tl && tl.remove(threadId, log) && kind === 'page') {
+        forEachTabAt(n0.url, function (tab) {
+          sendPageThreadCount(tab, tl);
+        });
+      }
+    });
+  }
+
+  delete notificationsById[threadId];
+  delete threadReadAt[threadId];
+
+  tellVisibleTabsNoticeCountIfChanged();
 }
 
 function updateIfJustRead(th) {

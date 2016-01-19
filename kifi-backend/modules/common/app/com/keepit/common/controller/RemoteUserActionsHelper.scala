@@ -10,7 +10,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ SocialNetworkType, SocialId }
 import play.api.mvc.Request
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.Identity
+import securesocial.core.{ IdentityId, Identity }
 
 import scala.concurrent.Future
 
@@ -30,9 +30,5 @@ class RemoteUserActionsHelper @Inject() (
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = shoebox.getUserIdentityByUserId(userId)
-
-  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful { getSecureSocialUserFromRequest }
-
-  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = shoebox.getUserIdentity(identity.identityId).map(_.flatMap(_.userId))
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = shoebox.getUserIdByIdentityId(identityId)
 }

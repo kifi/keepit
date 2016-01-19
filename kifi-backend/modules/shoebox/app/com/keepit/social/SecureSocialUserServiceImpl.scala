@@ -14,6 +14,8 @@ import com.keepit.model._
 import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
+import com.keepit.slack.SlackCommander
+import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -25,7 +27,7 @@ import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander,
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Success, Try }
 
 @Singleton
 class UserIdentityHelper @Inject() (
@@ -33,33 +35,26 @@ class UserIdentityHelper @Inject() (
     emailRepo: UserEmailAddressRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userIdentityCache: UserIdentityCache) {
-  import SocialUserHelpers._
+    identityUserIdCache: IdentityUserIdCache,
+    slackMembershipRepo: SlackTeamMembershipRepo) {
+  import IdentityHelpers._
 
-  def getOwnerId(identityId: IdentityId, emailAddress: Option[EmailAddress] = None)(implicit session: RSession): Option[Id[User]] = {
+  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = identityUserIdCache.getOrElseOpt(IdentityUserIdKey(identityId)) {
     import SocialNetworks._
     val networkType = parseNetworkType(identityId)
-    val socialId = parseSocialId(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
-        val validEmailAddress = EmailAddress.validate(socialId.id).toOption orElse emailAddress getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social, emailAddress)}"))
+        val validEmailAddress = EmailAddress.validate(identityId.userId).toOption getOrElse (throw new IllegalStateException(s"Invalid address for email authentication: ${(networkType, social)}"))
         emailRepo.getOwner(validEmailAddress)
       }
-
-      case socialNetwork if SUPPORTED.contains(socialNetwork) => {
-        socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId) orElse {
-          if (verifiedEmailProviders.contains(socialNetwork)) emailAddress.flatMap(emailRepo.getOwner(_))
-          else None
-        }
-      }
-
+      case SLACK =>
+        val (slackTeamId, slackUserId) = parseSlackId(identityId)
+        slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).flatMap(_.userId)
+      case socialNetwork if social.contains(socialNetwork) =>
+        val socialId = parseSocialId(identityId)
+        socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId)
       case unsupportedNetwork => throw new Exception(s"Unsupported authentication network: $unsupportedNetwork")
     }
-  }
-
-  def getOwnerId(socialUser: SocialUser)(implicit session: RSession): Option[Id[User]] = {
-    val emailAddress = parseEmailAddress(socialUser).toOption
-    getOwnerId(socialUser.identityId, emailAddress)
   }
 
   def getUserIdentityByUserId(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
@@ -69,18 +64,19 @@ class UserIdentityHelper @Inject() (
         val userCred = userCredRepo.findByUserIdOpt(userId)
         Some(UserIdentity(user, email, userCred))
       case _ =>
-        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).headOption.flatMap { info =>
+        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
+        }.headOption orElse {
+          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map(SlackTeamMembership.toIdentity)
         }
     }
   }
 
-  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = userIdentityCache.getOrElseOpt(UserIdentityIdentityIdKey(identityId)) {
-    val socialId = SocialId(identityId.userId)
-    val networkType = SocialNetworkType(identityId.providerId)
+  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
+    val networkType = parseNetworkType(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
-        EmailAddress.validate(socialId.id).toOption.flatMap { email =>
+        EmailAddress.validate(identityId.userId).toOption.flatMap { email =>
           emailRepo.getByAddress(email).map { emailAddr =>
             val userId = emailAddr.userId
             val user = userRepo.get(userId)
@@ -89,7 +85,12 @@ class UserIdentityHelper @Inject() (
           }
         }
       }
+      case SLACK =>
+        Try(parseSlackId(identityId)).toOption.flatMap {
+          case (slackTeamId, slackUserId) => slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map(SlackTeamMembership.toIdentity)
+        }
       case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
+        val socialId = parseSocialId(identityId)
         socialUserInfoRepo.getOpt(socialId, networkType).flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
         }
@@ -107,15 +108,17 @@ class SecureSocialUserPluginImpl @Inject() (
   imageStore: S3ImageStore,
   airbrake: AirbrakeNotifier,
   emailRepo: UserEmailAddressRepo,
+  slackMembershipRepo: SlackTeamMembershipRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
+  slackCommander: SlackCommander,
   userIdentityHelper: UserIdentityHelper,
   clock: Clock)
     extends UserService with SecureSocialUserPlugin with Logging {
 
-  import SocialUserHelpers._
+  import IdentityHelpers._
 
   private def reportExceptions[T](f: => T): T = try f catch {
     case ex: Throwable =>
@@ -153,6 +156,7 @@ class SecureSocialUserPluginImpl @Inject() (
               userCredRepo.internUserPassword(userId, socialUser.passwordInfo.get.password)
               (isNewEmailAddress, None)
             }
+            case SLACK => (connectSlackMembership(userId, socialUser), None)
             case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
               val (socialUserInfo, isNewSocialUserInfo) = internSocialUserInfo(Some(userId), socialUser)
               (isNewSocialUserInfo, Some(socialUserInfo))
@@ -213,9 +217,9 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def getExistingUserOrAllowSignup(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean)(implicit session: RSession): Either[User, Boolean] = {
-    val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser)
+    val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser.identityId)
     (userId orElse socialUserOwnerId) match {
-      case None => Right(allowSignup)
+      case None => Right(allowSignup) // todo(Léo): check for existing email address here rather than in AuthCommander?
       case Some(existingUserId) if socialUserOwnerId.exists(_ != existingUserId) => {
         val message = s"User $existingUserId passed a SocialUser owned by user ${socialUserOwnerId.get}: $socialUser"
         log.warn(message)
@@ -273,7 +277,7 @@ class SecureSocialUserPluginImpl @Inject() (
       case Some(existingInfo) if existingInfo.state != SocialUserInfoStates.INACTIVE => {
         //todo(eishay): send a direct fetch request, social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         val updatedState = if (existingInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED) SocialUserInfoStates.CREATED else existingInfo.state
-        val updatedInfo = existingInfo.withCredentials(socialUser).withState(updatedState).copy(userId = userIdOpt)
+        val updatedInfo = existingInfo.withCredentials(socialUser).withState(updatedState).copy(userId = userIdOpt orElse existingInfo.userId)
         val savedInfo = if (updatedInfo != existingInfo) socialUserInfoRepo.save(updatedInfo) else existingInfo
         val isNewIdentity = savedInfo.userId != existingInfo.userId
         (savedInfo, isNewIdentity)
@@ -286,6 +290,11 @@ class SecureSocialUserPluginImpl @Inject() (
         (socialUserInfoRepo.save(newInfo), true)
       }
     }
+  }
+
+  private def connectSlackMembership(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Boolean = {
+    val (slackTeamId, slackUserId) = parseSlackId(socialUser.identityId)
+    slackCommander.unsafeConnectSlackMembership(slackTeamId, slackUserId, userId)
   }
 
   private def uploadProfileImage(user: User, socialUser: SocialUser): Future[Unit] = {
@@ -312,7 +321,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
   app: Application)
     extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging {
 
-  import SocialUserHelpers._
+  import IdentityHelpers._
 
   private def reportExceptionsAndTime[T](tag: String)(f: => T): Either[Error, T] = timing(tag) {
     try Right(f) catch {
@@ -325,7 +334,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
 
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = timing(s"sessionFromAuthenticator ${authenticator.identityId.userId}") {
     val userId = db.readOnlyMaster { implicit session =>
-      userIdentityHelper.getOwnerId(authenticator.identityId, None)
+      userIdentityHelper.getOwnerId(authenticator.identityId)
     }
     UserSession(
       userId = userId,

@@ -7,7 +7,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.Keep
+import com.keepit.model.{ FeedFilter, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
@@ -23,6 +23,7 @@ class ElizaDiscussionController @Inject() (
   db: Database,
   messageRepo: MessageRepo,
   threadRepo: MessageThreadRepo,
+  userThreadRepo: UserThreadRepo,
   implicit val publicIdConfig: PublicIdConfiguration,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
@@ -123,5 +124,11 @@ class ElizaDiscussionController @Inject() (
       elizaMessages.map(ElizaMessage.toCrossServiceMessage)
     }
     Ok(Json.toJson(messages))
+  }
+
+  def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long], filter: ElizaFeedFilter) = Action {
+    val beforeKeepId = beforeId.map(Id[Keep])
+    val lastActivityByKeepId = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
+    Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
   }
 }

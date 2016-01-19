@@ -1,5 +1,10 @@
 <main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
-  <section ng-if="!isLoading() && feed.length === 0" class="kf-feed-item">
+  <div class="kf-feed-header-container">
+    <div kf-feed-filter filter="feedFilter" update-callback="updateFeedFilter()" ng-if="isAdmin"></div>
+    <div kf-card-style-selector ></div>
+  </div>
+
+  <section ng-if="::!isLoading() && feed.length === 0" class="kf-feed-item kf-feed-empty">
     <header class="kf-feed-top">
       <h3>Your stream is currently empty</h3>
     </header>
@@ -27,12 +32,11 @@
     </div>
   </section>
 
-  <div class="kf-feed-header-container" ng-if="!(isLoading() && feed.length == 0)">
-    <div kf-card-style-selector></div>
-  </div>
-
-  <section class="kf-feed-item" ng-if="::((!isLoading() || undefined) && feed.length < 10)">
-    <div class="kf-feed-top"><h3>Add a keep</h3></div>
+  <section class="kf-feed-item kf-feed-add" ng-if="!isLoading() && feed.length < 10">
+    <div class="kf-feed-filter-empty" ng-if="feed.length === 0 && (feedFilter.selected.value === 'unread' || feedFilter.selected.value === 'sent')">
+      <h4 ng-bind="'You have no ' + (feedFilter.selected.value === 'unread' ? 'unread' : 'sent') + ' discussions'"></h4>
+    </div>
+    <div class="kf-feed-top"><h3>Add a keep<span ng-if="feedFilter.selected.value === 'org'" ng-bind="' to ' + feedFilter.selected.text"></span></h3></div>
       <div class="kf-keep kf-feed-empty-add-keep">
         <div kf-create-keep-widget></div>
       </div>

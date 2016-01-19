@@ -1,20 +1,21 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core._
+import com.keepit.commanders.{ OrganizationInfoCommander, LibraryInfoCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json.{ KeyFormat, TraversableFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.slack.SlackAuthenticatedAction.{ SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
+import com.keepit.slack.SlackAuthenticatedAction.{ SetupSlackTeam, SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import play.api.libs.json.{ Writes, Json, Format }
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -42,6 +43,19 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
+@json
+case class OrganizationSlackInfo(
+  link: String,
+  slackTeams: Set[SlackTeamId])
+
+case class OrganizationSlackIntegrationsInfo(
+  libraries: Seq[(BasicLibrary, LibrarySlackInfo)],
+  numLibraries: Int)
+object OrganizationSlackIntegrationsInfo {
+  private implicit val helperWrites = KeyFormat.key2Writes[BasicLibrary, LibrarySlackInfo]("library", "slack")
+  implicit val writes: Writes[OrganizationSlackIntegrationsInfo] = Json.writes[OrganizationSlackIntegrationsInfo]
+}
+
 object SlackInfoCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
 }
@@ -50,7 +64,9 @@ object SlackInfoCommander {
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo
 }
 
 @Singleton
@@ -63,6 +79,8 @@ class SlackInfoCommanderImpl @Inject() (
   libToChannelRepo: LibraryToSlackChannelRepo,
   basicUserRepo: BasicUserRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  libInfoCommander: LibraryInfoCommander,
+  orgInfoCommander: OrganizationInfoCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -146,6 +164,26 @@ class SlackInfoCommanderImpl @Inject() (
     }
   }
 
+  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo = {
+    val (libIds, basicLibsById) = db.readOnlyReplica { implicit s =>
+      val libs = libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(userId), Offset(0), Limit(Int.MaxValue))
+      assert(libs.forall(_.organizationId.contains(orgId)))
+      val owners = libs.map(_.ownerId).toSet
+      val basicUserById = basicUserRepo.loadAll(owners)
+      val basicOrg = orgInfoCommander.getBasicOrganizationHelper(orgId).get
+      val basicLibsById = libs.map { lib =>
+        lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), Some(basicOrg.handle))
+      }.toMap
+      (libs.map(_.id.get).toSet, basicLibsById)
+    }
+    val integrationInfoByLib = getSlackIntegrationsForLibraries(userId, libIds)
+
+    OrganizationSlackIntegrationsInfo(
+      libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), integrationInfoByLib(libId)) },
+      numLibraries = libIds.size
+    )
+  }
+
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations = {
     db.readOnlyMaster { implicit session =>
       val channelToLibIntegrations = channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId)
@@ -160,5 +198,11 @@ class SlackInfoCommanderImpl @Inject() (
         spaces = integrationSpaces
       )
     }
+  }
+
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo = {
+    val slackTeams = db.readOnlyMaster { implicit session => slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId) }
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None).url
+    OrganizationSlackInfo(link, slackTeams)
   }
 }

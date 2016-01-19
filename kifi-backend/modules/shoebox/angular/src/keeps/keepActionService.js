@@ -102,8 +102,8 @@ angular.module('kifi')
       });
     }
 
-    function getFullKeepInfo(id) {
-      return net.getKeep(id).then(function (result) {
+    function getFullKeepInfo(id, authToken) {
+      return net.getKeep(id, authToken).then(function (result) {
         return result.data;
       });
     }

@@ -37,7 +37,7 @@ object SlackSearchController {
   val idealImageSize = ProcessedImageSize.Small.idealSize
 
   object CommandText {
-    val help = """^(?:|-h|(?:--|—)help)$""".r
+    val help = """^(?:|-h|(?:--|—)?help)$""".r
     val search = """^(.+)$""".r
   }
 

@@ -373,11 +373,12 @@ class AuthHelper @Inject() (
     modelPublicId: Option[String],
     authToken: Option[String],
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
-    require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+    val identityOpt = request.identityId.flatMap(UserService.find(_))
+    require(identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     log.info(s"Handling SocialFinalizeInfo: $sfi")
 
-    val identity = request.identityOpt.get
+    val identity = identityOpt.get
     if (identity.identityId.userId.trim.isEmpty) {
       throw new Exception(s"empty social id for $identity joining model id $modelPublicId with $sfi")
     }
@@ -414,7 +415,7 @@ class AuthHelper @Inject() (
   def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, modelPublicId: Option[String], authToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityId, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
         val libraryPubId = modelPublicId.filter(_.startsWith("l")).map(pubId => PublicId[Library](pubId))
         val verifiedEmail = verifySignupEmail(request.userId, email, libraryPubId, authToken)
@@ -550,13 +551,13 @@ class AuthHelper @Inject() (
   }
 
   def doUploadBinaryPicture(implicit request: MaybeUserRequest[play.api.libs.Files.TemporaryFile]): Result = {
-    request.userOpt.orElse(request.identityOpt) match {
+    request.userOpt.orElse(request.identityId) match {
       case Some(userInfo) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {
           case Success((token, pictureUrl)) =>
             Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
-            airbrake.notify("Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
+            airbrake.notify(s"Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
             BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
@@ -564,7 +565,7 @@ class AuthHelper @Inject() (
   }
 
   def doUploadFormEncodedPicture(implicit request: MaybeUserRequest[MultipartFormData[play.api.libs.Files.TemporaryFile]]) = {
-    request.userOpt.orElse(request.identityOpt) match {
+    request.userOpt.orElse(request.identityId) match {
       case Some(_) =>
         request.body.file("picture").map { picture =>
           s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
@@ -597,7 +598,7 @@ class AuthHelper @Inject() (
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
-            authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
+            authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
           }
         } recover {
           case t: Throwable =>
@@ -615,7 +616,7 @@ class AuthHelper @Inject() (
       case Some(provider) =>
         provider.getUserProfileInfo(oauth1Info) map { info =>
           val filledUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
+          authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
             airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")

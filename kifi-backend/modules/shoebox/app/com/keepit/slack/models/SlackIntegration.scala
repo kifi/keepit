@@ -52,7 +52,8 @@ case class SlackIntegrationCreateRequest(
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
     slackChannelName: SlackChannelName,
-    libraryId: Id[Library]) extends SlackIntegrationRequest {
+    libraryId: Id[Library],
+    status: SlackIntegrationStatus) extends SlackIntegrationRequest {
 }
 
 case class SlackIntegrationModification(

@@ -32,9 +32,9 @@ class DeepLinkRouterImpl @Inject() (
     implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
 
   def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] = {
-    lazy val redirectToKeepPage = request match { // only go to keep page if user doesn't have extension (and admin exp for now)
-      case ur: UserRequest[_] => ur.experiments.contains(UserExperimentType.ADMIN) && (ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate))
-      case _ => false
+    lazy val redirectToKeepPage = request match {
+      case ur: UserRequest[_] => ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate)
+      case _ => (data \ DeepLinkField.AuthToken).asOpt[String].isDefined
     }
 
     (data \ "t").asOpt[String].flatMap {
@@ -63,6 +63,7 @@ class DeepLinkRouterImpl @Inject() (
       _ <- Some(()) if redirectToKeepPage
       keepId <- keepIdOpt
       keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
+      _ <- Some(()) if keep.connections.libraries.size == 1 // redirect user to keep.url for library-less keep pages
       accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
     } yield keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
 

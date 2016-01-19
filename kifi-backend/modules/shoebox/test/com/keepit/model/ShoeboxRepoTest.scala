@@ -87,13 +87,14 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // SlackTeamMembershipRepo
         val slackTeamMembershipRepo = inject[SlackTeamMembershipRepo]
         val slackAccount = SlackTeamMembershipInternRequest(
-          user.id.get,
+          Some(user.id.get),
           SlackUserId("UFAKE"),
           SlackUsername("@fake"),
           SlackTeamId("TFAKE"),
           SlackTeamName("Fake"),
           SlackAccessToken("fake_token"),
-          Set(SlackAuthScope.SearchRead)
+          Set(SlackAuthScope.SearchRead),
+          slackUser = None
         )
         db.readWrite { implicit session =>
           val saved = slackTeamMembershipRepo.internMembership(slackAccount)
@@ -117,7 +118,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, LibrarySpace.fromUserId(slackAccount.userId), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId.get, LibrarySpace.fromUserId(slackAccount.userId.get), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get, status = SlackIntegrationStatus.On)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
         db.readWrite { implicit session =>
           val saved = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
@@ -134,7 +135,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // SlackTeamToOrganization
         val slackTeamRepo = inject[SlackTeamRepo]
         db.readWrite { implicit session =>
-          val saved = slackTeamRepo.save(SlackTeam(slackTeamId = slackAccount.slackTeamId, slackTeamName = slackAccount.slackTeamName, organizationId = Some(org.id.get)))
+          val saved = slackTeamRepo.save(SlackTeam(slackTeamId = slackAccount.slackTeamId, slackTeamName = slackAccount.slackTeamName, organizationId = Some(org.id.get), generalChannelId = None))
           slackTeamRepo.getBySlackTeamId(integrationRequest.slackTeamId) must beSome(saved)
         }
       }

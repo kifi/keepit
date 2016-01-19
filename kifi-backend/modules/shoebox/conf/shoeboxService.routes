@@ -550,8 +550,10 @@ GET           /site/organizations/:id/referralCode              @com.keepit.cont
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
-GET          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createOrganizationForSlackTeam(slackTeamId: String)
-GET          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeamToOrganization(id: PublicId[Organization], slackTeamId: String)
+GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.connectSlackTeam(slackTeamId: Option[String] ?= None)
+POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createOrganizationForSlackTeam(slackTeamId: String)
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeamToOrganization(id: PublicId[Organization], slackTeamId: String)
+GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -612,6 +614,7 @@ POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/reprocessNotes @com.keepit.controllers.admin.AdminBookmarksController.reprocessNotesOfKeeps(appendTagsToNote: Boolean)
 POST    /admin/bookmarks/replaceTags @com.keepit.controllers.admin.AdminBookmarksController.replaceTagOnKeeps()
 POST    /admin/bookmarks/removeTag  @com.keepit.controllers.admin.AdminBookmarksController.removeTagFromKeeps()
+DELETE  /admin/bookmarks/emptyLibrary @com.keepit.controllers.admin.AdminBookmarksController.deleteAllKeepsFromLibrary()
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
@@ -923,6 +926,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 
 GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
 GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
+GET     /internal/shoebox/auth/getUserIdByIdentityId                   @com.keepit.controllers.internal.ShoeboxController.getUserIdByIdentityId(providerId: String, id: String)
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
@@ -1024,6 +1028,7 @@ GET      /internal/shoebox/database/getUserIdFromSlackTeamAndUserIds       @com.
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: String)
 
 POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
+POST     /internal/shoebox/database/addUsersToKeep   @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 

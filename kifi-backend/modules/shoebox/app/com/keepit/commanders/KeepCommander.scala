@@ -74,6 +74,7 @@ trait KeepCommander {
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
@@ -133,6 +134,7 @@ class KeepCommanderImpl @Inject() (
     facebookPublishingCommander: FacebookPublishingCommander,
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
+    userExperimentRepo: UserExperimentRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
@@ -232,20 +234,22 @@ class KeepCommanderImpl @Inject() (
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-      ) match {
-          case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
-          case Some(keep) => {
-            val canViewShoebox = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-            val canViewFut = {
-              if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
-              else Future.successful(canViewShoebox)
-            }
-            canViewFut.flatMap { canView =>
-              if (canView) Future.successful(keep)
-              else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
-            }
-          }
+      )
+    } match {
+      case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
+      case Some(keep) => {
+        val canViewShoebox = db.readOnlyReplica { implicit s =>
+          permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
         }
+        val canViewFut = {
+          if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
+          else Future.successful(canViewShoebox)
+        }
+        canViewFut.flatMap { canView =>
+          if (canView) Future.successful(keep)
+          else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+        }
+      }
     }
 
     keepFut.flatMap { keep =>
@@ -668,12 +672,20 @@ class KeepCommanderImpl @Inject() (
 
     val keep = keepRepo.save(k)
 
-    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
+    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, userId) }
 
     val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep
+  }
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+    val oldKeep = keepRepo.get(keepId)
+    val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
+
+    newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
+
+    newKeep
   }
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
     val keep = keepRepo.getNoCache(keepId)
@@ -828,24 +840,43 @@ class KeepCommanderImpl @Inject() (
 
   @StatsdTiming("KeepCommander.getKeepStream")
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean, filterOpt: Option[FeedFilter]): Future[Seq[KeepInfo]] = {
-    val keepsAndTimes = db.readOnlyReplica { implicit session =>
-      // TODO(ryan): when the frontend can handle a keep without a library, let them through
-      // Grab 2x the required number because we're going to be dropping some
-      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, filterOpt).filter { case (k, _) => k.libraryId.isDefined }
-    }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
+    val keepsAndTimesFut = filterOpt match {
+      case Some(filter: ElizaFeedFilter) =>
+        val beforeId = beforeExtId.flatMap(extId => db.readOnlyReplica(implicit s => keepRepo.get(extId).id))
+        eliza.getElizaKeepStream(userId, limit, beforeId, filter).map { lastActivityByKeepId =>
+          val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getByIds(lastActivityByKeepId.keySet))
+          Future {
+            // make sure eliza is up-to-date on keeps that have been deleted
+            val zombieThreadKeepIds = lastActivityByKeepId.keySet -- keepsByIds.keySet
+            eliza.deleteThreadsForKeeps(zombieThreadKeepIds)
+          }
+          keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toList
+        }
+      case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
+        Future.successful {
+          db.readOnlyReplica { implicit session =>
+            // Grab 2x the required number because we're going to be dropping some
+            val hasNoLibExperiment = userExperimentRepo.hasExperiment(userId, UserExperimentType.KEEP_NOLIB)
+            keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, shoeboxFilterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
+          }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
+        }
+    }
 
-    val keeps = keepsAndTimes.map(_._1)
-    val firstAddedAt = keepsAndTimes.map { case (k, addedAt) => k.id.get -> addedAt }.toMap
-    def getKeepTimestamp(keep: Keep) = firstAddedAt(keep.id.get)
+    keepsAndTimesFut.flatMap { keepsAndTimes =>
 
-    keepDecorator.decorateKeepsIntoKeepInfos(
-      Some(userId),
-      showPublishedLibraries = false,
-      keeps,
-      ProcessedImageSize.Large.idealSize,
-      sanitizeUrls = sanitizeUrls,
-      getTimestamp = getKeepTimestamp
-    )
+      val keeps = keepsAndTimes.map(_._1)
+      val firstAddedAt = keepsAndTimes.map { case (k, addedAt) => k.id.get -> addedAt }.toMap
+      def getKeepTimestamp(keep: Keep) = firstAddedAt(keep.id.get)
+
+      keepDecorator.decorateKeepsIntoKeepInfos(
+        Some(userId),
+        showPublishedLibraries = false,
+        keeps,
+        ProcessedImageSize.Large.idealSize,
+        sanitizeUrls = sanitizeUrls,
+        getTimestamp = getKeepTimestamp
+      )
+    }
   }
 
   private val autoFixNoteLimiter = new ReactiveLock()
@@ -882,16 +913,4 @@ object HelpRankSelector {
   }
 
   def unapply(selector: HelpRankSelector) = selector.name
-}
-
-abstract class FeedFilter(val kind: String)
-object FeedFilter {
-  case object OwnKeeps extends FeedFilter("own")
-  case class OrganizationKeeps(orgId: Id[Organization]) extends FeedFilter("org")
-
-  def apply(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[FeedFilter] = kind match {
-    case OwnKeeps.kind => Some(OwnKeeps)
-    case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
-    case _ => None
-  }
 }

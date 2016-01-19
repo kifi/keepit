@@ -7,7 +7,7 @@ import com.keepit.slack.models.SlackChannelIntegrationsCache
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
-import com.keepit.social.{ UserIdentityCache, BasicUserUserIdCache }
+import com.keepit.social.{ IdentityUserIdCache, BasicUserUserIdCache }
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
@@ -54,7 +54,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Provides @Singleton
   def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserIdentityCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+    new IdentityUserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

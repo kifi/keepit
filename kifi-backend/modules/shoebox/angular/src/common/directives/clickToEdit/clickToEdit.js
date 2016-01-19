@@ -28,8 +28,7 @@ angular.module('kifi')
         $scope.editEvent = function($event) {
           if ($event.which === 27) {
             $scope.cancel();
-          }
-          else if ($event.which === 13) {
+          } else if ($event.which === 13 && !($event.shiftKey || $event.metaKey || $event.ctrlKey)) {
             $event.preventDefault();
             $scope.save();
           }

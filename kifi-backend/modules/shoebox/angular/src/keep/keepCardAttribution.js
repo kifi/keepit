@@ -14,7 +14,11 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'keep/keepCardAttribution.tpl.html',
       link: function (scope) {
-        scope.showKeepPageLink = scope.keep.path && !$state.is('keepPage') && profileService.hasExperiment('keep_comments');
+        var keep = scope.keep;
+        var discussion = keep && keep.discussion;
+        scope.showKeepPageLink = scope.keep.path && !$state.is('keepPage');
+        scope.showAsDiscussion = scope.keep && !scope.keep.libraryId && profileService.hasExperiment('keep_nolib');
+        scope.attributionTime = (scope.showAsDiscussion && discussion && discussion.startedAt) || (keep && keep.createdAt);
       }
     };
   }

@@ -39,6 +39,10 @@ case class Tag3[S, T, U](label: TagLabel, arg0: S, arg1: T, arg2: U)(implicit va
   def args = Seq(writerS.writes(arg0), writerT.writes(arg1), writerU.writes(arg2))
 }
 
+case class Tag4[S, T, U, V](label: TagLabel, arg0: S, arg1: T, arg2: U, arg3: V)(implicit val writerS: Writes[S], writerT: Writes[T], writerU: Writes[U], writerV: Writes[V]) extends Tag {
+  def args = Seq(writerS.writes(arg0), writerT.writes(arg1), writerU.writes(arg2), writerV.writes(arg3))
+}
+
 object TagLabel {
   implicit val format = new Format[TagLabel] {
     def reads(js: JsValue) = JsSuccess(TagLabel(js.as[JsString].value))

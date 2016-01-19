@@ -1,6 +1,6 @@
 @import com.keepit.common.mail.template.helpers.discussionLink
-@(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, messages: Seq[com.keepit.eliza.model.ExtendedThreadItem], isAdded: Boolean)
-@thisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, threadInfo.nonUserAccessToken)}
+@(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, messages: Seq[com.keepit.eliza.model.ExtendedThreadItem], isAdded: Boolean, isUser: Boolean)
+@thisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, threadInfo.nonUserAccessToken, shouldDeepLink = isUser)}
 <td class="txt_p" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#999999;line-height:16px;">@if(isAdded) {
   @if(threadInfo.invitedByUser.nonEmpty){<span class="txt_p" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:16px;font-weight:bold;">@threadInfo.invitedByUser.get.fullName</span> added you} else {You were added} to a discussion with
   @smartEmailParticipantsList(threadInfo.participants, threadInfo.invitedByUser.map(_.fullName).toSeq)

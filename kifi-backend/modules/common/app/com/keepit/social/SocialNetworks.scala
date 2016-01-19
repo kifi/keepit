@@ -35,10 +35,9 @@ object SocialNetworkType {
 }
 
 object SocialNetworks {
-  val SUPPORTED = Seq(FACEBOOK, TWITTER, LINKEDIN)
-  val ALL = Seq(FACEBOOK, TWITTER, LINKEDIN, FORTYTWO, EMAIL)
+  val ALL = Seq(FACEBOOK, TWITTER, LINKEDIN, FORTYTWO, EMAIL, SLACK)
   val REFRESHING = Seq(FACEBOOK, TWITTER, LINKEDIN)
-  val verifiedEmailProviders: Set[SocialNetworkType] = Set(FACEBOOK, TWITTER, LINKEDIN)
+  val verifiedEmailProviders: Set[SocialNetworkType] = Set(FACEBOOK, TWITTER, LINKEDIN, SLACK)
   val social: Set[SocialNetworkType] = Set(FACEBOOK, TWITTER, LINKEDIN)
   case object LINKEDIN extends SocialNetworkType("linkedin", "LinkedIn", "linkedin")
   case object FACEBOOK extends SocialNetworkType("facebook", "Facebook", "facebook")
@@ -46,6 +45,7 @@ object SocialNetworks {
   case object FORTYTWO extends SocialNetworkType("fortytwo", "FortyTwo", "userpass") // hack -- userpass is overloaded with secure social provider -- should be separated
   case object FORTYTWO_NF extends SocialNetworkType("fortytwoNF", "FortyTwoNF", "userpass") // this hack is getting worse
   case object EMAIL extends SocialNetworkType("email", "Email", "userpass") // hack -- userpass is overloaded with secure social provider -- should be separated
+  case object SLACK extends SocialNetworkType("slack", "Slack", "slack")
 
   def getPictureUrl(networkType: SocialNetworkType, socialId: SocialId)(preferredSize: Option[ImageSize]): Option[String] = networkType match {
     case FACEBOOK => {
