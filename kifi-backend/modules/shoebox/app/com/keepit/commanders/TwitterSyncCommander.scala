@@ -42,7 +42,7 @@ class TwitterSyncCommander @Inject() (
 
   def internTwitterSync(userTokenToUse: Option[Id[User]], libraryId: Id[Library], handle: TwitterHandle, target: SyncTarget): TwitterSyncState = {
     db.readWrite { implicit session =>
-      syncStateRepo.getByHandleAndLibraryId(handle, libraryId) match {
+      syncStateRepo.getByHandleAndLibraryId(handle, libraryId, target) match {
         case Some(existing) if existing.state == TwitterSyncStateStates.ACTIVE =>
           existing
         case Some(notActive) =>
