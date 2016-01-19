@@ -246,7 +246,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 			var other = participants.length <= 2 ? participants.filter(function (user) {
 				return user.id !== k.me.id;
 			})[0] : null;
-			var attr = (this.parent.keep && this.parent.keep.keptBy) || other;
+
+			var keptBy = (this.parent.keep && this.parent.keep.keptBy);
+			var attr = (keptBy && keptBy.id !== k.me.id ? keptBy : other);
+
 			return {
 				onKeep: onKeep,
 				participantName: attr ? this.getFullName(attr) : null,
