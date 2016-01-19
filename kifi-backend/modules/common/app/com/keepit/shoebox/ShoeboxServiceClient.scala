@@ -40,8 +40,6 @@ import scala.util.Try
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]]
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]]
   def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]]
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getUser(userId: Id[User]): Future[Option[User]]
@@ -194,15 +192,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = {
-    call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
-      r.json.asOpt[UserIdentity]
-    }
-  }
-
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = {
-    call(Shoebox.internal.getUserIdentityByUserId(userId)).map { r =>
-      r.json.asOpt[UserIdentity]
   def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]] = {
     cacheProvider.identityUserIdCache.getOrElseFutureOpt(IdentityUserIdKey(identityId)) {
       call(Shoebox.internal.getUserIdByIdentityId(providerId = identityId.providerId, id = identityId.userId)).map { r =>

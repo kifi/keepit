@@ -132,12 +132,9 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }
       }
       authenticatorOpt.map { auth =>
-        shoebox.getUserIdentity(auth.identityId).map {
-          case Some(identity) if identity.userId.isDefined =>
-            identity.userId
-          case _ =>
-            log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${auth.identityId.providerId} :: ${auth.identityId.userId}.")
-            None
+        shoebox.getUserIdByIdentityId(auth.identityId).map { userIdOpt =>
+          if (userIdOpt.isEmpty) log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${auth.identityId.providerId} :: ${auth.identityId.userId}.")
+          userIdOpt
         }
       }.getOrElse {
         log.warn(s"[getUserIdFromRequest] Could not find user. ${request.headers.toSimpleMap.toString}")

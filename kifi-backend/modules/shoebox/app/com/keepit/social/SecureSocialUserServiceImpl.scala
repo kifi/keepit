@@ -1,6 +1,5 @@
 package com.keepit.social
 
-import com.keepit.common.oauth.{ SlackIdentity, EmailPasswordIdentity }
 import com.keepit.common.performance._
 
 import com.google.inject.{ Inject, Singleton }
