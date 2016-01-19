@@ -99,7 +99,7 @@ class AuthHelper @Inject() (
     val hasher = Registry.hashers.currentHasher
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
-    UserService.find(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
+    authCommander.getUserIdentity(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
       case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
         // User exists with these credentials
         val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
@@ -373,7 +373,7 @@ class AuthHelper @Inject() (
     modelPublicId: Option[String],
     authToken: Option[String],
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
-    val identityOpt = request.identityId.flatMap(UserService.find(_))
+    val identityOpt = request.identityId.flatMap(authCommander.getUserIdentity)
     require(identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     log.info(s"Handling SocialFinalizeInfo: $sfi")

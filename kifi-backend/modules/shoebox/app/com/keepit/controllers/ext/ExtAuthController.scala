@@ -163,7 +163,7 @@ class ExtAuthController @Inject() (
   def logOut = MaybeUserAction { implicit request => // code mostly copied from LoginPage.logout
     val user = for (
       authenticator <- SecureSocial.authenticatorFromRequest;
-      user <- UserService.find(authenticator.identityId)
+      user <- authCommander.getUserIdentity(authenticator.identityId)
     ) yield {
       Authenticator.delete(authenticator.id)
       user
