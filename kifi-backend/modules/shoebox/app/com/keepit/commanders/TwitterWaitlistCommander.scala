@@ -126,7 +126,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           db.readWrite { implicit session =>
             twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED))
           }
-          val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle)
+          val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle, SyncTarget.Tweets)
 
           updateUserShow(sui, handle).andThen {
             case Success(Some(show)) =>

@@ -15,6 +15,7 @@ trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState]
   def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle]
   def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
+  def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState]
   def getByUserIdUsed(userIdUsed: Id[User])(implicit session: RSession): Seq[TwitterSyncState]
 
   // This needs to be rewritten. Does not work as expected.
@@ -29,6 +30,7 @@ class TwitterSyncStateRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val twitterHandleColumnType = MappedColumnType.base[TwitterHandle, String](_.value, TwitterHandle(_))
+  implicit val syncTargetColumnType = MappedColumnType.base[SyncTarget, String](_.value, SyncTarget.get(_))
 
   type RepoImpl = TwitterSyncStateTable
 
@@ -39,8 +41,9 @@ class TwitterSyncStateRepoImpl @Inject() (
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def maxTweetIdSeen = column[Option[Long]]("max_tweet_id_seen", O.Nullable)
     def minTweetIdSeen = column[Option[Long]]("min_tweet_id_seen", O.Nullable)
+    def syncTarget = column[Option[SyncTarget]]("sync_target", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, userId.?, twitterHandle, lastFetchedAt, libraryId, maxTweetIdSeen, minTweetIdSeen) <> ((TwitterSyncState.apply _).tupled, TwitterSyncState.unapply)
+    def * = (id.?, createdAt, updatedAt, state, userId.?, twitterHandle, lastFetchedAt, libraryId, maxTweetIdSeen, minTweetIdSeen, syncTarget) <> ((TwitterSyncState.applyFromDbRow _).tupled, TwitterSyncState.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new TwitterSyncStateTable(tag)
@@ -69,7 +72,12 @@ class TwitterSyncStateRepoImpl @Inject() (
   }
 
   def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
-    (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).firstOption
+    val all = (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).list
+    all.find(_.state == TwitterSyncStateStates.ACTIVE).orElse(all.headOption)
+  }
+
+  def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState] = {
+    (for { row <- rows if row.twitterHandle === handle } yield row).list
   }
 
   // This needs to be rewritten. Does not work as expected.

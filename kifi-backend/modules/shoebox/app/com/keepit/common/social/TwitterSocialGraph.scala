@@ -1,46 +1,39 @@
 package com.keepit.common.social
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.commanders.{ PathCommander, KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
+import com.keepit.commanders.{ LibraryImageCommander, PathCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.store.S3ImageStore
-import com.keepit.common.time._
-import com.keepit.common.core._
-import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
-import com.keepit.common.core._
-import com.keepit.common.time.Clock
-import com.keepit.eliza.{ UserPushNotificationCategory, LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.common.oauth.{ OAuth1Configuration, ProviderIds, TwitterOAuthProvider, TwitterUserInfo }
+import com.keepit.common.social.TwitterSyncError.{ HandleDoesntExist, RateLimit, TokenExpired, UnknownError }
+import com.keepit.common.store.S3ImageStore
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
-import com.keepit.notify.NotificationInfoModel
 import com.keepit.social._
 import com.keepit.social.twitter.{ TwitterHandle, TwitterUserId }
 import com.ning.http.client.providers.netty.NettyResponse
-import play.api.http.Status._
 import play.api.Play.current
-import play.api.libs.json.JsValue
-import play.api.libs.oauth.OAuthCalculator
-import play.api.libs.ws.{ WSSignatureCalculator, WSResponse, WS }
-import securesocial.core.{ IdentityId, OAuth2Settings }
-import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
-import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
-import twitter4j.conf.ConfigurationBuilder
-
-import scala.concurrent.{ ExecutionContext, Await, Future }
-import scala.concurrent.duration._
-import scala.util.{ Success, Failure, Try }
-import scala.collection.JavaConversions._
-
+import play.api.http.Status._
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.json.{ JsValue, _ }
+import play.api.libs.oauth.OAuthCalculator
+import play.api.libs.ws.{ WS, WSResponse }
+import securesocial.core.{ IdentityId, OAuth2Settings }
+import twitter4j.conf.ConfigurationBuilder
+import twitter4j.media.{ ImageUpload, ImageUploadFactory, MediaProvider }
+import twitter4j.{ StatusUpdate, Twitter, TwitterFactory }
+
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 case class PagedIds(
   prev: TwitterUserId,
@@ -77,7 +70,8 @@ trait TwitterSocialGraph extends SocialGraph {
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
   def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] //uses app auth if no social user info is given
+  def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] //uses app auth if no social user info is given
+  def fetchHandleFavourites(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]]
 }
 
 class TwitterSocialGraphImpl @Inject() (
@@ -143,6 +137,7 @@ class TwitterSocialGraphImpl @Inject() (
   }
 
   // make this async
+  // Protip: Just don't commit it then before dependencies are built around it.
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = {
     val token = json.as[OAuth1TokenInfo]
     val idF = twtrOAuthProvider.getUserProfileInfo(token) map { resp =>
@@ -239,7 +234,7 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterUserId, resp: WSResponse, params: Any): Unit = {
+  private def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterUserId, resp: WSResponse, params: Any): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
     def warn(notify: Boolean): Unit = {
       val errorMessage = resp.status match {
@@ -296,7 +291,7 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterUserId, endpoint: String): Future[Seq[TwitterUserId]] = {
+  protected def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterUserId, endpoint: String): Future[Seq[TwitterUserId]] = {
     def pagedFetchIds(page: Int, cursor: TwitterUserId, count: Long): Future[Seq[TwitterUserId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
       val queryStrings = Seq("user_id" -> userId.id.toString, "cursor" -> cursor.id.toString, "count" -> count.toString)
@@ -353,64 +348,80 @@ class TwitterSocialGraphImpl @Inject() (
         s"PhotoSizeLimit:${conf.getPhotoSizeLimit},ShortURLLength:${conf.getShortURLLength},ShortURLLengthHttps:${conf.getShortURLLengthHttps},CharactersReservedPerMedia:${conf.getCharactersReservedPerMedia},limits:$limits", e)
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
-    val stackTrace = new StackTrace()
+  def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = {
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
-    val sigOpt: Option[OAuthCalculator] = socialUserInfoOpt.flatMap { socialUserInfo =>
-      if (socialUserInfo.state != SocialUserInfoStates.TOKEN_EXPIRED)
-        Some(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
-      else
-        None
-    } orElse {
-      Some(OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret)))
-    }
-    sigOpt match {
-      case Some(sig) =>
-        val query = Seq("screen_name" -> Some(handle.value), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
+    val query = Seq("screen_name" -> Some(handle.value), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
 
-        log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
-        val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
-        call.get().map { response =>
-          if (response.status == 200) {
-            response.json.as[JsArray].value.map(_.as[JsObject])
-          } else if (response.status == 429 || response.status == 420) { //rate limit
-            log.warn(s"[twfetch-err] Rate limited for [$endpoint] $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}", stackTrace)
-            Seq.empty
-          } else if (response.status == 401) { //token not good
-            airbrake.notify(s"Token expired for $handle [$endpoint], status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
-            socialUserInfoOpt.foreach { sui =>
-              db.readWrite { implicit s =>
-                socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
-              }
-            }
-            Seq.empty
-          } else if (response.status == 404) {
-            val errorCodes = (response.json \\ "code").map(_.as[Int])
-            if (errorCodes.contains(34)) { // "Sorry, that page does not exist"
-              log.warn(s"Failed to fetch page $handle because it does not exist. Inactivating Twitter Sync State... resp: ${response.json}")
-              socialUserInfoOpt.flatMap(_.userId).map { userId =>
-                db.readWrite { implicit s =>
-                  twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId).map { twitterSync =>
-                    twitterSyncStateRepo.save(twitterSync.copy(state = TwitterSyncStateStates.INACTIVE))
-                  }
-                }
-              }
-            }
-            log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
-            Seq.empty
-          } else {
-            log.warn(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
-            Seq.empty
-          }
-        }.recover {
-          case t: Throwable =>
-            log.warn(s"[twfetch-err] Fetching [$endpoint] error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", stackTrace.withCause(t))
-            Seq.empty
-        }
-      case None =>
-        Future.successful(Seq.empty)
-    }
-
+    fetch(endpoint, query, socialUserInfoOpt, handle)
   }
 
+  def fetchHandleFavourites(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = {
+    val endpoint = "https://api.twitter.com/1.1/favorites/list.json"
+    val query = Seq("screen_name" -> Some(handle.value), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
+
+    fetch(endpoint, query, socialUserInfoOpt, handle)
+  }
+
+  private def fetch(endpoint: String, query: Seq[(String, String)], socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle): Future[Either[TwitterSyncError, Seq[JsObject]]] = {
+    val stackTrace = new StackTrace()
+    val sig: OAuthCalculator = socialUserInfoOpt.flatMap { socialUserInfo =>
+      if (socialUserInfo.state != SocialUserInfoStates.TOKEN_EXPIRED) {
+        Some(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      } else {
+        None
+      }
+    } getOrElse {
+      OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
+    }
+
+    log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. $query")
+    val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
+    call.get().map { response =>
+      if (response.status == 200) {
+        Right(response.json.as[JsArray].value.map(_.as[JsObject]))
+      } else if (response.status == 429 || response.status == 420) { //rate limit
+        Left(RateLimit)
+      } else if (response.status == 401) { //token not good
+        Left(TokenExpired(socialUserInfoOpt))
+      } else if (response.status == 404) {
+        val errorCodes = (response.json \\ "code").map(_.as[Int])
+        if (errorCodes.contains(34)) { // "Sorry, that page does not exist"
+          Left(HandleDoesntExist(handle))
+        } else {
+          Left(UnknownError(query.toString, response.json.toString))
+        }
+      } else {
+        Left(UnknownError(query.toString, response.json.toString))
+      }
+    }.recover {
+      case t: Throwable =>
+        Left(UnknownError(query.toString, t.getMessage))
+    }
+  }
+
+  private def handleSyncFetchFailure(error: TwitterSyncError) = {
+    error match {
+      case TokenExpired(Some(sui)) =>
+        db.readWrite { implicit s =>
+          socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
+        }
+      case HandleDoesntExist(handle) =>
+        db.readWrite { implicit s =>
+          twitterSyncStateRepo.getAllByHandle(handle).map { twitterSync =>
+            twitterSyncStateRepo.save(twitterSync.copy(state = TwitterSyncStateStates.INACTIVE))
+          }
+        }
+      case other =>
+        log.warn(s"[twfetch-err] Fetching error $other")
+    }
+  }
+
+}
+
+sealed trait TwitterSyncError
+object TwitterSyncError {
+  case object RateLimit extends TwitterSyncError
+  case class TokenExpired(suiOpt: Option[SocialUserInfo]) extends TwitterSyncError
+  case class HandleDoesntExist(handle: TwitterHandle) extends TwitterSyncError
+  case class UnknownError(request: String, response: String) extends TwitterSyncError
 }
