@@ -20,9 +20,8 @@ import scala.util.Random
 @ImplementedBy(classOf[EventContextHelperImpl])
 trait EventContextHelper {
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
-  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
-  def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]]
-  def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]]
+  def getOrgSpecificValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]]
+  def getOrgUserValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]]
   def getLibraryEventValues(libraryId: Id[Library], userId: Id[User]): Future[Seq[(String, ContextData)]]
   def getOrganizationIdByExtThreadId(threadExtId: String): Future[Option[Id[Organization]]]
 }
@@ -45,13 +44,13 @@ class EventContextHelperImpl @Inject() (
     }
   }
 
-  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
+  private def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
     orgTrackingValuesCache.getOrElseFuture(OrgTrackingValuesKey(orgId)) {
       shoebox.getOrgTrackingValues(orgId)
     }
   }
 
-  def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
+  def getOrgSpecificValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
 
     val userWithMostClickedKeepsFut = orgMemberWithMostClickedKeepsCache.getOrElseFuture(OrgMemberWithMostClickedKeepsKey(orgId)) {
@@ -72,7 +71,7 @@ class EventContextHelperImpl @Inject() (
     }
   }
 
-  def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]] = {
+  def getOrgUserValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]] = {
 
     val basicOrgFut = shoebox.getBasicOrganizationsByIds(Set(orgId)).map { orgsById => orgsById.values.head } // cached
     val orgUserRelationsFut = shoebox.getOrganizationUserRelationship(orgId, userId)

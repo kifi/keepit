@@ -26,8 +26,8 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.slack.models.{ SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
 import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -90,6 +90,8 @@ class ShoeboxController @Inject() (
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
+  slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
@@ -603,6 +605,24 @@ class ShoeboxController @Inject() (
     }
     implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
+  }
+
+  def getUserIdFromSlackTeamAndUserIds(teamId: String, slackUserId: String) = Action { request =>
+    val userIdOpt = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeamAndUser(SlackTeamId(teamId), SlackUserId(slackUserId)).map(_.userId)
+    }
+    Ok(Json.obj("userIdOpt" -> userIdOpt))
+  }
+
+  def getSlackTeamInfo(id: String) = Action { request =>
+    val slackTeamId = SlackTeamId(id)
+    db.readOnlyMaster { implicit s =>
+      slackTeamRepo.getBySlackTeamId(slackTeamId).map { slackTeam =>
+        val orgId = slackTeam.organizationId
+        val teamName = slackTeam.slackTeamName
+        Ok(Json.obj("orgId" -> orgId, "teamName" -> teamName.value))
+      }.getOrElse(Ok)
+    }
   }
 
   def internKeep() = Action(parse.tolerantJson) { request =>

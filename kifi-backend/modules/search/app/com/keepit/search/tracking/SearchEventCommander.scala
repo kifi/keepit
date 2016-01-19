@@ -19,7 +19,7 @@ class SearchEventCommander @Inject() (
     searchAnalytics: SearchAnalytics) extends Logging {
 
   def searched(userId: Id[User], searchedAt: DateTime, searchContext: BasicSearchContext, endedWith: String)(implicit context: HeimdalContext) = {
-    searchAnalytics.searched(userId, searchedAt, searchContext, endedWith, context)
+    searchAnalytics.searched(Left(userId), searchedAt, searchContext, endedWith, context)
   }
 
   def clickedKifiResult(userId: Id[User], searchContext: BasicSearchContext, query: String, searchResultUrl: String, resultPosition: Int, isDemo: Boolean, clickedAt: DateTime, kifiHitContext: KifiHitContext)(implicit context: HeimdalContext) = {

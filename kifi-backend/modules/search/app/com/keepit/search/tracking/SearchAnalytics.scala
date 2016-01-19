@@ -13,7 +13,8 @@ import com.keepit.common.net.URI
 import com.keepit.heimdal._
 import com.keepit.model.{ Library, User }
 import com.keepit.search.{ SearchConfigExperiment, ArticleHit, ArticleSearchResult, ArticleSearchResultStore }
-import com.keepit.social.BasicUser
+import com.keepit.slack.models.{ SlackUserId, SlackUsername }
+import com.keepit.social.{ NonUserKinds, NonUserKind, BasicUser }
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -137,16 +138,21 @@ class SearchAnalytics @Inject() (
     airbrake: AirbrakeNotifier) extends Logging {
 
   def searched(
-    userId: Id[User],
+    kifiOrSlackUserId: Either[Id[User], SlackUserId],
     searchedAt: DateTime,
     basicSearchContext: BasicSearchContext,
     endedWith: String,
     existingContext: HeimdalContext) = {
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= existingContext.data
-    processBasicSearchContext(userId, basicSearchContext, contextBuilder)
+    processBasicSearchContext(kifiOrSlackUserId.left.toOption, basicSearchContext, contextBuilder)
     contextBuilder += ("endedWith", endedWith)
-    heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.SEARCHED, searchedAt))
+    val context = contextBuilder.build
+    val event = kifiOrSlackUserId.fold[HeimdalEvent](
+      { userId => UserEvent(userId, context, UserEventTypes.SEARCHED) },
+      { slackUserId => NonUserEvent(slackUserId.value, NonUserKinds.slack, context, NonUserEventTypes.SEARCHED) }
+    )
+    heimdal.trackEvent(event)
   }
 
   def clickedSearchResult(
@@ -160,7 +166,7 @@ class SearchAnalytics @Inject() (
 
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= existingContext.data
-    processBasicSearchContext(userId, basicSearchContext, contextBuilder)
+    processBasicSearchContext(Some(userId), basicSearchContext, contextBuilder)
 
     // Click Information
 
@@ -203,7 +209,7 @@ class SearchAnalytics @Inject() (
     }.collectFirst { case Some(x) => x }
   }
 
-  private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
+  private def processBasicSearchContext(userIdOpt: Option[Id[User]], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
     for {
       latestSearchResult <- getArticleSearchResult(searchContext.uuid)
       initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
@@ -213,7 +219,7 @@ class SearchAnalytics @Inject() (
       addOriginInformation(contextBuilder, searchContext.origin)
       contextBuilder += ("sessionId", searchContext.sessionId)
       searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
-      contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
+      userIdOpt.foreach(userId => contextBuilder += ("searchId", obfuscate(initialSearchId, userId)))
 
       // Search Parameters
       searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
@@ -294,6 +300,7 @@ class SearchAnalytics @Inject() (
       case Some(otherHost) => (otherHost.name, "Unknown")
       case None if rawOrigin.toLowerCase == "mobile" || rawOrigin.toLowerCase() == "ios app" => ("iOS App", "iOS App")
       case None if rawOrigin.toLowerCase == "android App" => ("Android App", "Android App")
+      case None if rawOrigin.toLowerCase == "slack" => ("Slack", "Slack")
       case None => (rawOrigin, "Unknown")
     }
     contextBuilder += ("origin", origin)

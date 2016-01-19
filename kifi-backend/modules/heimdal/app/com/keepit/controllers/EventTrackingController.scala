@@ -11,8 +11,11 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.tracking.LibraryViewTrackingCommander
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.slack.models.SlackUserId
+import com.keepit.social.NonUserKinds
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
+import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration._
@@ -44,7 +47,6 @@ class EventTrackingController @Inject() (
   private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
 
   private def trackInternalEvent(event: HeimdalEvent): Unit = {
-    if (event.eventType.name.toLowerCase.contains("messaged")) event.context.data.get("allParticipantsInOrgId").foreach(orgId => log.info(s"[OrgTracking:trackInternalEvent] allParticipantsInOrgId=$orgId"))
     event match {
       case userEvent: UserEvent => handleUserEvent(userEvent).map(e => clientTrackEvent(e))
       case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent).map(e => clientTrackEvent(e))
@@ -77,14 +79,12 @@ class EventTrackingController @Inject() (
       new UserKifiCampaignIdAugmentor(shoeboxClient),
       new UserOrgValuesAugmentor(eventContextHelper),
       new UserKeepViewedAugmentor(eventContextHelper),
-      new UserDiscussionViewedAugmentor(eventContextHelper)
+      new UserDiscussionViewedAugmentor(eventContextHelper),
+      new SlackInfoAugmentor(eventContextHelper, shoeboxClient)
     )
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
 
-    if (rawUserEvent.eventType.name.toLowerCase.contains("messaged")) { // debugging
-      rawUserEvent.context.data.get("allParticipantsInOrgId").foreach(orgId => log.info(s"[OrgTracking:handleUserEvent] allParticipantsInOrgId=$orgId"))
-    }
 
     val userEventF = EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).map { ctx =>
       userEvent.copy(context = ctx)
@@ -100,7 +100,7 @@ class EventTrackingController @Inject() (
   }
 
   private def handleNonUserEvent(rawNonUserEvent: NonUserEvent) = {
-    val augmentors = Seq(NonUserIdentifierAugmentor)
+    val augmentors = Seq(NonUserIdentifierAugmentor, new SlackInfoAugmentor(eventContextHelper, shoeboxClient))
 
     val nonUserEventF = EventAugmentor.safelyAugmentContext(rawNonUserEvent, augmentors: _*).map { ctx =>
       rawNonUserEvent.copy(context = ctx)
