@@ -121,6 +121,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
   val userIdentityByIdentityId = MutableMap[IdentityId, UserIdentity]()
+  val userIdByIdentityId = MutableMap[IdentityId, Id[User]]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -131,8 +132,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   // Fake data initialization methods
 
-  def saveUserIdentity(identityId: IdentityId, identity: UserIdentity): Unit = {
-    userIdentityByIdentityId += (identityId -> identity)
+  def saveUserIdentity(identityId: IdentityId, userId: Id[User]): Unit = {
+    userIdByIdentityId += (identityId -> userId)
   }
 
   def saveUsers(users: User*): Seq[User] = {
@@ -331,6 +332,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = Future.successful(userIdentityByIdentityId.get(identityId))
 
   def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = Future.successful(None)
+  def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful(userIdByIdentityId.get(identityId))
 
   def getUser(id: Id[User]): Future[Option[User]] = {
     val user = Option(allUsers(id))

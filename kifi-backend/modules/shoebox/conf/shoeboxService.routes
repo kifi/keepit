@@ -926,6 +926,7 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 
 GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
 GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
+GET     /internal/shoebox/auth/getUserIdByIdentityId                   @com.keepit.controllers.internal.ShoeboxController.getUserIdByIdentityId(providerId: String, id: String)
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
