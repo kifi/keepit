@@ -850,7 +850,7 @@ class KeepCommanderImpl @Inject() (
             val zombieThreadKeepIds = lastActivityByKeepId.keySet -- keepsByIds.keySet
             eliza.deleteThreadsForKeeps(zombieThreadKeepIds)
           }
-          keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toList
+          keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toList.sortBy(-_._2.getMillis)
         }
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
         Future.successful {
