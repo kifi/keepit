@@ -34,6 +34,7 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int]
 
+  def deactivate(model: NonUserThread)(implicit session: RWSession): Unit
 }
 
 /**
@@ -140,6 +141,10 @@ class NonUserThreadRepoImpl @Inject() (
     val relevantThreads = for (row <- rows if row.createdBy === userId && row.createdAt > since) yield row
     val recentRecipients = relevantThreads.groupBy(_.emailAddress).map { case (recipient, threads) => (recipient, threads.length) }
     recentRecipients.run.toMap.collect { case (Some(k), v) => k -> v }
+  }
+
+  def deactivate(model: NonUserThread)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 
 }

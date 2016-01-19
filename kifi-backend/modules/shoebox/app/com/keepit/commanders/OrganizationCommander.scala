@@ -87,7 +87,7 @@ class OrganizationCommanderImpl @Inject() (
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
     (badName, badSiteUrl) match {
       case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
+      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
       case _ => None
     }
   }
@@ -95,7 +95,7 @@ class OrganizationCommanderImpl @Inject() (
   private def validateOrganizationSettings(orgId: Id[Organization], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {
     def onlyModifyingEditableSettings = {
       val currentSettings = orgConfigRepo.getByOrgId(orgId).settings
-      val editedFeatures = currentSettings diff newSettings
+      val editedFeatures = currentSettings editedFeatures newSettings
 
       val plan = planManagementCommander.currentPlanHelper(orgId)
       val editableFeatures = paidPlanRepo.get(plan.id.get).editableFeatures
@@ -171,7 +171,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
     val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+    val newConfig = orgConfigRepo.save(currentConfig.updateSettings(settings))
 
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     if (currentConfig.settings != settings) {

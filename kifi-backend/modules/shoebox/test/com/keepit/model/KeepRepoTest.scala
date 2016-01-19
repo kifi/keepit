@@ -11,7 +11,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.test._
 import org.joda.time.DateTime
 import org.specs2.mutable._
-import com.keepit.commanders.FeedFilter._
+import com.keepit.model.FeedFilter._
 
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 

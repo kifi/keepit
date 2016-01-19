@@ -43,7 +43,9 @@ angular.module('kifi')
     });
     $scope.feedFilter.options = [
       { value: '', text: 'Your Stream' },
-      { value: 'own', text: 'Your Keeps' }
+      { value: 'own', text: 'Your Keeps' },
+      { value: 'unread', text: 'Unread'},
+      { value: 'sent', text: 'Sent'}
     ].concat(orgFilterOptions);
 
     // assumes this is the default setting's index ('All Keeps' 1/4/16, could be stored in prefs later on)

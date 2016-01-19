@@ -4,9 +4,9 @@
     <div class="kf-fu-body">
       <span class="kf-fu-body-line">Automatically keep URLs from Slack.</span>
       <span class="kf-fu-body-line">Search within Slack using "/kifi".</span>
-      <span class="kf-fu-body-line">Start by syncing your General library.</span>
+      <span class="kf-fu-body-line">Do the full integration or sync your general channel.</span>
     </div>
-    <a class="kf-fu-slack-start-btn" ng-click="clickedGetStarted($event)" href="#">#get-started</button>
-    <a class="kf-fu-slack-learn-link kf-link" ng-href="{{ 'https://www.kifi.com/integrations/slack' + (userLoggedIn ? '?loggedIn' : '') }}" target="_blank" ng-click="clickedLearnMore()">#learn-more</a>
+    <a class="kf-fu-slack-start-btn" ng-click="onClickedSyncAllSlackChannels($event)" href="#">Sync all Slack Channels</a>
+    <a class="kf-fu-slack-learn-link kf-link" href="https://www.kifi.com/integrations/slack?loggedIn">learn more</a>
   </div>
 </div>

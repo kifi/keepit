@@ -73,6 +73,8 @@ case class NonUserThread(
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
+
+  def sanitizeForDelete = this.copy(state = NonUserThreadStates.INACTIVE)
 }
 
 object NonUserThreadStates extends States[NonUserThread]

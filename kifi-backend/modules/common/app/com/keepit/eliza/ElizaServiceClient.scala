@@ -130,6 +130,7 @@ trait ElizaServiceClient extends ServiceClient {
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
+  def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
 
@@ -304,6 +305,13 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]] = {
+    import GetElizaKeepStream._
+    call(Eliza.internal.getElizaKeepStream(userId, limit, beforeId, filter)).map { response =>
+      response.json.as[Response].lastActivityByKeepId
+    }
+  }
+
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
     import MarkKeepsAsReadForUser._
     val request = Request(userId, lastSeenByKeep)
@@ -401,6 +409,10 @@ object ElizaServiceClient {
     case class Request(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int)
     case class Response(msgs: Seq[Message])
     implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetElizaKeepStream {
+    case class Response(lastActivityByKeepId: Map[Id[Keep], DateTime])
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object EditMessage {

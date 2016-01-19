@@ -1,0 +1,46 @@
+<div>
+    <div ng-if="!canEditIntegrations" style="text-align: center">
+        Sadly, you are not allowed to be on this page, ask a team admin / owner for more information!
+    </div>
+    <div ng-if="canEditIntegrations">
+        <h1 class="kf-heading kf-ts-integrations-header">Integrations</h1>
+        <div class="kf-ts-integrations">
+
+            <span class="kf-ts-integrations-desc">Integrate with Slack to automatically create keeps from links messaged on Slack. You can also send keeps to Slack. <a href="https://www.kifi.com/integrations/slack?loggedIn">Learn More</a></span>
+            <span class="kf-ts-integrations-marketing-text">Sync all of your team's Slack channels with Kifi (not including private groups or DMs). Kifi will create a library for each channel, and all links sent on Slack will be saved.</span>
+
+            <button
+                    class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-ts-integrations-sync"
+                    tabindex="0"
+                    ng-click="onClickedSyncAllSlackChannels()"
+                    ng-bind="'Sync all Slack Channels'"></button>
+
+            <span class="kf-ts-integrations-marketing-text">Or visit <a ng-href="{{profile.handle}}/libraries">your</a> libraries to do integrations one at a time</span>
+
+            <div ng-if="integrations.length" class="kf-container" style="margin-top: 20px">
+                <div class="kf-container-header"><span>Integrations</span></div>
+                <!--scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()"-->
+                <table class="kf-ts-integrations-table" smart-scroll scroll-distance="'100%'">
+                    <thead>
+                    <tr>
+                        <th style="text-align: left">Library & Slack Channel</th>
+                        <th>Kifi -> Slack</th>
+                        <th>Slack -> Kifi</th>
+                    </tr>
+                    </thead>
+                    <tr ng-repeat="integration in integrations">
+                        <td style="text-align: left"><strong>{{integration.library.name}}</strong> <span class="kf-ts-integrations-subtext">(Kifi)</span>  - <strong>{{integration.integration.channelName}}</strong> <span class="kf-ts-integrations-subtext">(Slack)</span></td>
+                        <td>
+                            <input ng-model="integration.kifiToSlack" ng-change="onKifiToSlackChanged(integration)"  type="checkbox" />
+                        </td>
+                        <td>
+                            <input ng-model="integration.slackToKifi" ng-change="onSlackToKifiChanged(integration)"  type="checkbox" />
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+</div>

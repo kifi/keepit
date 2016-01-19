@@ -123,6 +123,11 @@ angular.module('kifi')
         modelPubId: $scope.userData.modelPubId,
         authToken: $scope.userData.authToken
       } : {};
+      Object.keys(params).forEach(function (k) {
+        if (params[k] === null || params[k] === undefined || params[k] === '') {
+          delete params[k];
+        }
+      });
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
 
@@ -194,9 +199,15 @@ angular.module('kifi')
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
           modelPubId: $scope.userData.modelPubId,
-          authToken: $scope.userData.authToken,
+          authToken: $scope.userData.authToken || '',
           hook: $scope.userData.hook // todo implement
         };
+
+        ['modelPubId', 'authToken'].forEach(function (k) {
+          if (fields[k] === null || fields[k] === undefined || fields[k] === '') {
+            delete fields[k];
+          }
+        });
 
         registrationService.emailFinalize(fields).then(function (resp) {
           modalService.close();

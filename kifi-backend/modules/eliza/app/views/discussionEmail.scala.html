@@ -166,7 +166,7 @@
                 <td height="20" style="line-height:1px;font-size:1px;">&nbsp;</td>
               </tr>
               <tr>
-                @discussionEmailHeader(threadInfo, messages, isAdded)
+                @discussionEmailHeader(threadInfo, messages, isAdded, isUser)
               </tr>
               <tr>
                 <td height="26"></td>
@@ -185,14 +185,14 @@
                                 <tr>
                                   <td class="aside">
                                     @if(isSmall) {
-                                      @pageDescriptionSmall(threadInfo)
+                                      @pageDescriptionSmall(threadInfo, isUser)
                                     } else {
-                                      @pageDescriptionBig(threadInfo)
+                                      @pageDescriptionBig(threadInfo, isUser)
                                     }
                                   </td>
                                 </tr>
                                 @{messages.map(message =>
-                                  emailMessageBlock(threadInfo, message.imageUrl, message.senderShortName, message.senderFullName, message.segments)
+                                  emailMessageBlock(threadInfo, message.imageUrl, message.senderShortName, message.senderFullName, message.segments, isUser)
                                 )}
                               </table></td>
                             <td width="2" bgcolor="#f3f3f3"></td>

@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.reflection.Enumerator
 import play.api.libs.json.{ JsString, JsSuccess, JsValue, Format }
 
 case class EventType(name: String)
@@ -72,9 +73,17 @@ object AnonymousEventTypes {
 object NonUserEventTypes {
   val MESSAGED = EventType("messaged")
   val WAS_NOTIFIED = EventType("was_notified")
+  val SEARCHED = EventType("searched")
 }
 
 object VisitorEventTypes {
   val VIEWED_LIBRARY = EventType("viewed_library")
   val VIEWED_CONTENT = EventType("viewed_content")
+}
+
+object SlackEventTypes extends Enumerator[EventType] {
+  val SEARCHED = EventType("searched")
+  val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
+
+  def contains(eventType: EventType) = _all.contains(eventType)
 }

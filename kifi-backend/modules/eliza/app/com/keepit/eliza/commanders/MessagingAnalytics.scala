@@ -227,7 +227,6 @@ class MessagingAnalytics @Inject() (
               .foreach { sharedOrgs =>
                 if (sharedOrgs.nonEmpty) contextBuilder += ("allParticipantsInOrgId", Random.shuffle(sharedOrgs).head.toString)
                 val context = contextBuilder.build
-                context.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage] successfully tracking allParticipantsInOrgId=$orgId") }
                 heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
                 heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
                 heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))

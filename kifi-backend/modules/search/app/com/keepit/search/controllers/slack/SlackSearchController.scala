@@ -2,6 +2,7 @@ package com.keepit.search.controllers.slack
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -10,17 +11,22 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.time.Clock
 import com.keepit.common.util.LinkElement
+import com.keepit.heimdal.{ NonUserEventTypes, UserEventTypes, NonUserEvent, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
+import com.keepit.search.tracking.{ BasicSearchContext, SearchEventCommander, SearchAnalytics }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
 import com.keepit.common.core._
+import com.keepit.common.time._
+import com.keepit.social.NonUserKinds
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -45,6 +51,10 @@ class SlackSearchController @Inject() (
     uriSearchCommander: UriSearchCommander,
     httpClient: HttpClient,
     airbrake: AirbrakeNotifier,
+    searchAnalytics: SearchAnalytics,
+    heimdal: HeimdalServiceClient,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    clock: Clock,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
@@ -61,7 +71,7 @@ class SlackSearchController @Inject() (
           case integrations =>
             command.text match {
               case CommandText.help() => doHelp(command.channelName, integrations)
-              case CommandText.search(query) => doSearch(request, integrations, query)
+              case CommandText.search(query) => doSearch(request, integrations, command)
             }
         }
         futureResponse.imap(response => Ok(Json.toJson(response)))
@@ -118,7 +128,9 @@ class SlackSearchController @Inject() (
     }
   }
 
-  private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, query: String): Future[SlackCommandResponse] = {
+  private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, command: SlackCommandRequest): Future[SlackCommandResponse] = {
+    val startTime = clock.now()
+    val query = command.text
     val futureLibraries = shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
@@ -164,6 +176,47 @@ class SlackSearchController @Inject() (
             color = Some("good")
           )
         }
+
+        val processingTime = clock.now().getMillis - startTime.getMillis
+        SafeFuture {
+          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+          val searchContext = BasicSearchContext(
+            origin = "slack",
+            guided = false,
+            sessionId = "", // shall we generate a sessionId here?
+            refinement = None,
+            uuid = uriSearchResult.uuid,
+            searchExperiment = uriSearchResult.searchExperimentId,
+            query = command.text,
+            filterByPeople = None,
+            filterByTime = None,
+            maxResults = Some(maxUris),
+            kifiResults = relevantHits.size,
+            kifiResultsWithLibraries = Some(relevantHits.count(_.libraryId.isDefined)),
+            kifiExpanded = None,
+            kifiTime = Some(processingTime.toInt),
+            kifiShownTime = None,
+            thirdPartyShownTime = None,
+            kifiResultsClicked = None,
+            thirdPartyResultsClicked = None,
+            chunkDelta = None,
+            chunksSplit = None
+          )
+          contextBuilder += ("slackTeamId", command.teamId.value)
+          contextBuilder += ("slackUsername", command.username.value)
+          contextBuilder += ("slackChannelId", command.channelId.value)
+          val heimdalContext = contextBuilder.build
+          val endedWith = "unload"
+
+          request.userIdOpt
+            .map(userId => Future.successful(Some(userId)))
+            .getOrElse(shoeboxClient.getUserIdFromSlackTeamAndUserIds(command.teamId, command.userId))
+            .recover { case _ => None }
+            .foreach { userIdOpt =>
+              searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
+            }
+        }
+
         val text = {
           if (relevantHits.isEmpty) s"We couldn't find any relevant link for '$query' :("
           else s"Top links for '$query':"

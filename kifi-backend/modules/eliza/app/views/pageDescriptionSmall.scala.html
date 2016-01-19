@@ -1,10 +1,10 @@
 @import com.keepit.common.mail.template.helpers.discussionLink
 
-@(threadInfo: com.keepit.eliza.model.ThreadEmailInfo)
-@visitThisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, "clickedArticleVisitLink")}
-@articleTitleUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, "clickedArticleTitle")}
-@articleDomainUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, "clickedArticleDomain")}
-@articleImageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, "clickedArticleImage")}
+@(threadInfo: com.keepit.eliza.model.ThreadEmailInfo, isUser: Boolean)
+@visitThisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, shouldDeepLink = isUser)}
+@articleTitleUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
+@articleDomainUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
+@articleImageUrl = @{discussionLink(threadInfo.uriId, threadInfo.keepId, None, isUser)}
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   <tr>
     <td height="14" style="line-height:1px;font-size:1px;">&nbsp;</td>

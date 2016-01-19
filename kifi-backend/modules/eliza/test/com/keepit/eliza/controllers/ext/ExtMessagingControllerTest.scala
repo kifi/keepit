@@ -147,7 +147,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                   }
                 ]
               }]
-          }
+            }
           """)
         inject[WatchableExecutionContext].drain()
         contentAsJson(result) === expected

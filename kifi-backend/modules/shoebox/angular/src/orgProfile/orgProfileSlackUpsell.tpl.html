@@ -1,4 +1,4 @@
-<div kf-basic-modal-content title="Integrate Kifi with Slack" with-ok with-cta action-text="#get-started" action="integrateWithSlack()">
+<div kf-basic-modal-content title="Integrate Kifi with Slack" without-buttons with-cta >
   <div class="kf-org-profile-slack-upsell">
     <div class="kf-org-profile-slack-upsell-logos">
       <div class="kf-org-profile-slack-upsell-logo kf-org-profile-slack-upsell-kifi"></div>
@@ -9,14 +9,22 @@
       <div class="kf-org-profile-slack-upsell-logo kf-org-profile-slack-upsell-slack"></div>
     </div>
     <p>
-      Get the most out of Kifi by importing and syncing all links shared within Slack.
-      You'll be able to search those links within Slack or Google.
-      Start by integrating
-      <span class="kf-org-profile-slack-upsell-lib"><span class="kf-org-profile-slack-upsell-card" ng-style="{ 'color': getLibrary().color }"></span> General</span>
-      with Slack.
+      Sync all of your team’s channels on Slack with Kifi
+      (not including private groups or DM’s). Kifi will create
+      a library for each Slack channel & all links messaged
+      in Slack will be bookmarked.
+      <!--<span class="kf-org-profile-slack-upsell-lib"><span class="kf-org-profile-slack-upsell-card" ng-style="{ 'color': getLibrary().color }"></span> General</span>-->
     </p>
     <div class="kf-org-profile-slack-upsell-learn-wrap">
-      <a class="kf-link kf-link-underline" ng-href="{{ 'https://www.kifi.com/integrations/slack' + (userLoggedIn ? '?loggedIn' : '') }}" target="_blank">Learn more</a>
+      <span class="kf-link-blue" style="cursor: pointer" ng-click="onClickedSynOnlyGeneral()">Just sync #general</span>
+      <button
+              class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+              tabindex="0"
+              ng-click="onClickedSyncAllSlackChannels()"
+              ng-bind="'Sync all Slack Channels'"
+      ></button>
     </div>
   </div>
+
+
 </div>

@@ -21,11 +21,11 @@ class ShoeboxTasksPlugin @Inject() (
     quartz: ActorInstance[QuartzActor],
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
     messageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
+    slackIngestingActor: ActorInstance[SlackIngestingActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackIntegrationCommander: SlackIntegrationCommander,
-    slackTeamCommander: SlackTeamCommander,
-    slackIngestionCommander: SlackIngestionCommander,
+    slackDigestNotifier: SlackDigestNotifier,
     libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
@@ -33,10 +33,6 @@ class ShoeboxTasksPlugin @Inject() (
     log.info("ShoeboxTasksPlugin onStart")
     scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
       twitterSyncCommander.syncAll()
-    }
-
-    scheduleTaskOnLeader(system, 3 minute, 20 seconds, "slack ingestion") {
-      slackIngestionCommander.ingestAllDue()
     }
 
     scheduleTaskOnLeader(system, 1 minute, 30 seconds, "fetching missing Slack channel ids") {
@@ -49,7 +45,8 @@ class ShoeboxTasksPlugin @Inject() (
 
     // TODO(ryan): make these way slower, no need to run this that often
     scheduleTaskOnOneMachine(system, 5 minutes, 1 minute, "slack digests") {
-      slackTeamCommander.pushDigestNotificationsForRipeTeams()
+      slackDigestNotifier.pushDigestNotificationsForRipeTeams()
+      slackDigestNotifier.pushDigestNotificationsForRipeChannels()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
@@ -59,10 +56,11 @@ class ShoeboxTasksPlugin @Inject() (
 
     scheduleTaskOnLeader(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion)
     scheduleTaskOnLeader(messageIngestionActor.system, 500 seconds, 3 minute, messageIngestionActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(slackIngestingActor.system, 3 minute, 20 seconds, slackIngestingActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop() {
-    Seq(messageIngestionActor).foreach(_.ref ! Close)
+    Seq(messageIngestionActor, slackIngestingActor).foreach(_.ref ! Close)
     super.onStop()
   }
 

@@ -1,7 +1,8 @@
 package com.keepit.slack
 
-import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.google.inject.Injector
+import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -14,17 +15,20 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-
-class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class SlackIngestionTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeSocialGraphModule(),
     FakeClockModule()
   )
+
+  def ingestFromSlackSurely()(implicit injector: Injector): Unit = {
+    inject[ActorInstance[SlackIngestingActor]].ref ! IfYouCouldJustGoAhead
+    inject[WatchableExecutionContext].drain()
+  }
 
   "SlackIngestionCommander" should {
     "create keeps for integrations that need to be processed" in {
@@ -47,10 +51,9 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             ktlRepo.getCountByLibraryId(lib.id.get) === 0
           }
 
-          val ch = SlackChannel(SlackChannelId("C123123"), integration.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
           slackClient.sayInChannel(stm, ch)("<http://www.google.com|Google>")
-          val resFut = inject[SlackIngestionCommander].ingestAllDue()
-          val res = Await.result(resFut, Duration.Inf)
+          ingestFromSlackSurely()
 
           db.readOnlyMaster { implicit s =>
             val x = inject[SlackChannelToLibraryRepo].get(integration.id.get)
@@ -82,13 +85,13 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             "and there can be multiple: <http://www.microsoft.com|Microsoft> <http://www.kifi.com|Kifi>" -> 2
           )
 
-          val ch = SlackChannel(SlackChannelId("C123123"), integration.slackChannelName)
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
           for ((msg, expectedLinkCount) <- msgsAndCounts) {
             now = now.plusHours(2)
             inject[FakeClock].setTimeValue(now)
             val preIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             slackClient.sayInChannel(stm, ch)(msg)
-            Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
+            ingestFromSlackSurely()
             val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             (postIngestCount === preIngestCount + expectedLinkCount).setMessage(s"got ${postIngestCount - preIngestCount} links out of $msg")
           }

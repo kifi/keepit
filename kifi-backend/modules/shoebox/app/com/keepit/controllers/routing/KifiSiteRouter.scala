@@ -336,7 +336,7 @@ class KifiSiteRouter @Inject() (
 
   private object NonActiveUserFilter extends ActionFilter[MaybeUserRequest] {
     protected def filter[A](request: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful {
-      if ((request.userOpt.isEmpty && request.identityOpt.isDefined) || request.userOpt.exists(user => user.state == UserStates.INCOMPLETE_SIGNUP)) {
+      if ((request.userOpt.isEmpty && request.identityId.isDefined) || request.userOpt.exists(user => user.state == UserStates.INCOMPLETE_SIGNUP)) {
         Some(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage()))
       } else if (request.userOpt.exists(user => user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE)) {
         Some(Redirect("/logout"))

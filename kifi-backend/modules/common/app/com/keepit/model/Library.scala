@@ -62,7 +62,7 @@ case class Library(
   def withOpenCollab(access: Option[LibraryAccess]) = this.copy(organizationMemberAccess = access)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
-  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED
+  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SLACK_CHANNEL
   def isSystemLibrary: Boolean = !canBeModified
   def canAnyoneComment: Boolean = whoCanComment == LibraryCommentPermissions.ANYONE
 

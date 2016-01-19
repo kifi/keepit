@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.{ zones, Clock }
+import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalServiceClient }
@@ -54,14 +55,14 @@ class UserRepoImpl @Inject() (
   val clock: Clock,
   val externalIdCache: UserExternalIdCache,
   val idCache: UserIdCache,
-  userIdentityCache: UserIdentityCache,
   airbrake: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
   userMetadataCache: UserMetadataCache,
   usernameCache: UsernameCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl],
-  emailRepo: Provider[UserEmailAddressRepo])
+  emailRepo: Provider[UserEmailAddressRepo],
+  slackMembershipRepo: Provider[SlackTeamMembershipRepo])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -154,9 +155,6 @@ class UserRepoImpl @Inject() (
         usernameCache.remove(UsernameKey(username.original))
         basicUserCache.remove(BasicUserUserIdKey(id))
       }
-      emailRepo.get().getAllByUser(id).foreach { email =>
-        userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
-      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
@@ -169,9 +167,6 @@ class UserRepoImpl @Inject() (
         user.primaryUsername.foreach { username =>
           usernameCache.set(UsernameKey(username.original), user)
           basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
-        }
-        emailRepo.get().getAllByUser(id).foreach { email =>
-          userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
         }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)

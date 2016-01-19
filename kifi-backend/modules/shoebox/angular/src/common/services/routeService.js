@@ -108,6 +108,11 @@ angular.module('kifi')
           modelPubId: opts.modelPubId,
           authToken: opts.authToken
         };
+        Object.keys(params).forEach(function (k) {
+          if (params[k] === null || params[k] === undefined || params[k] === '') {
+            delete params[k];
+          }
+        });
         return navRoute('/signup/' + provider, params);
       },
 

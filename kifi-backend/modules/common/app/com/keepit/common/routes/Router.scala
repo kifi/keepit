@@ -17,6 +17,7 @@ import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
+import com.keepit.slack.models.{SlackTeamId, SlackUserId}
 import com.keepit.typeahead.UserPrefixSearchRequest
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -80,8 +81,7 @@ case object PUT extends Method("PUT")
 
 object Shoebox extends Service {
   object internal {
-    def getUserIdentity(providerId: String, id: String) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentity", Param("providerId", providerId), Param("id", id))
-    def getUserIdentityByUserId(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentityByUserId", Param("userId", userId))
+    def getUserIdByIdentityId(providerId: String, id: String) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdByIdentityId", Param("providerId", providerId), Param("id", id))
     def getNormalizedURI(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
     def getNormalizedUriByUrlOrPrenormalize() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize")
@@ -179,6 +179,8 @@ object Shoebox extends Service {
     def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
+    def getUserIdFromSlackTeamAndUserIds(teamId: SlackTeamId, slackUserId: SlackUserId) = ServiceRoute(GET, "/internal/shoebox/database/getUserIdFromSlackTeamAndUserIds", Param("teamId", teamId.value), Param("slackUserId", slackUserId.value))
+    def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
     def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
   }
@@ -265,6 +267,7 @@ object Eliza extends Service {
     def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
     def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
+    def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter) = ServiceRoute(GET, "/internal/eliza/getElizaKeepStream", Param("userId", userId), Param("limit", limit), Param("beforeId", beforeId.map(_.id)), Param("filter", filter.kind))
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
     def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = ServiceRoute(GET, "/internal/eliza/keepHasAccessToken", Param("keepId", keepId), Param("accessToken", accessToken))

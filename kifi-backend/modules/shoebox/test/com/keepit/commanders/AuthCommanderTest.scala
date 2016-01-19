@@ -16,7 +16,9 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.social.{ SocialNetworks, SocialId }
+import com.keepit.slack.SlackCommander
+import com.keepit.slack.models._
+import com.keepit.social.{ IdentityHelpers, SocialNetworks, SocialId }
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
@@ -81,6 +83,49 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
         res1.session.getUserId.isDefined === true
         res1.session.getUserId.get === user.id.get
       }
+    }
+  }
+
+  "login via Slack" in {
+    running(new ShoeboxApplication(modules: _*)) {
+
+      val user = db.readWrite { implicit rw => UserFactory.user().saved }
+      val slackTeamId = SlackTeamId("T12")
+      val slackUserId = SlackUserId("U42")
+      val identityId = IdentityHelpers.toIdentityId(slackTeamId, slackUserId)
+
+      val authCommander = inject[AuthCommander]
+      implicit val request = FakeRequest("POST", "/")
+
+      // No SlackTeamMembership yet
+      val res = authCommander.loginWithTrustedSocialIdentity(identityId)
+      res.header.status === NOT_FOUND
+      res.session.getUserId.isDefined === false
+
+      // Register Slack authorization
+      slackCommander.registerAuthorization(
+        Some(user.id.get),
+        SlackAuthorizationResponse(
+          accessToken = SlackAccessToken("fake"),
+          scopes = Set(),
+          teamName = SlackTeamName("fake"),
+          teamId = slackTeamId,
+          incomingWebhook = None
+        ),
+        SlackIdentifyResponse(
+          url = "fake.slack.com",
+          teamName = SlackTeamName("fake"),
+          userName = SlackUsername("fake"),
+          teamId = slackTeamId,
+          userId = slackUserId
+        )
+      )
+
+      val res1 = authCommander.loginWithTrustedSocialIdentity(identityId)
+      println(res1)
+      res1.header.status === OK
+      res1.session.getUserId.isDefined === true
+      res1.session.getUserId.get === user.id.get
     }
   }
 }

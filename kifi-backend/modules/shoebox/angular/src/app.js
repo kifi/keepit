@@ -84,7 +84,7 @@ angular.module('kifi', [
 .factory('initParams', [
   '$location',
   function ($location) {
-    var names = ['m', 'o', 'install', 'intent', 'showSlackDialog', 'slack'];
+    var names = ['m', 'o', 'install', 'intent', 'showSlackDialog', 'slack', 'forceSlackDialog'];
     var scrub = ['kcid', 'utm_campaign', 'utm_content', 'utm_medium', 'utm_source', 'utm_term', 'dat', 'kma'];
     var search = $location.search();
     var params = _.pick(search, names);
@@ -176,6 +176,29 @@ angular.module('kifi', [
       } else {
         profileService.initLoggedOut();
       }
+
+      $rootScope.$on('$stateChangeStart', function(evt, to, params) {
+        /*
+        this allows a way to redirect via the state provider to other states
+        example would be the backend sending to a particular 'link' but the frontend
+        may choose to change how it is routed, this way the backend doesn't have to
+        change where the frontend is routed to, provides a sort of indirection-layer
+        for deep linking
+        redirectTo object is currently specified as:
+        {
+          state: 'home.feed', -> the state to go to
+          params: {} -> params that would like to be tagged on as well
+        }
+        params that are on the defined state route (/a/b/:c/?:d) will already
+        show up in the params handed in, so we merge the params handed in with
+        the redirect params to create a final params object
+        */
+        if (to.redirectTo) {
+          evt.preventDefault();
+          var newParams = angular.extend({}, params, to.redirectTo.params);
+          $state.go(to.redirectTo.state, newParams);
+        }
+      });
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
         $scope.errorStatus = $scope.errorParams = null;

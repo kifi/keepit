@@ -1,19 +1,18 @@
 package com.keepit.slack
 
+import com.keepit.common.core._
 import com.keepit.common.json.readUnit
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
+import com.keepit.common.net.{ DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.slack.models._
 import play.api.http.Status
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.{ Failure, Success }
 
 object SlackAPI {
-  import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
+  import com.keepit.common.routes.{ GET, Method, Param, ServiceRoute }
 
   case class Route(method: Method, path: String, params: Param*)
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
@@ -29,10 +28,11 @@ object SlackAPI {
     implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
     implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
     implicit def fromChannelId(channelId: SlackChannelId): Param = Param("channel", channelId.value)
+    implicit def fromUserId(userId: SlackUserId): Param = Param("user", userId.value)
     implicit def fromSearchParam(searchParam: SlackSearchRequest.Param): Param = Param(searchParam.name, searchParam.value)
   }
 
-  import SlackParams._
+  import com.keepit.slack.SlackAPI.SlackParams._
 
   def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId]) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
@@ -47,6 +47,7 @@ object SlackAPI {
   def PostMessage(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest) =
     Route(GET, "https://slack.com/api/chat.postMessage", Seq[Param](token, channelId) ++ msg.asUrlParams: _*)
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
+  def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
 }
 
 trait SlackClient {
@@ -60,6 +61,7 @@ trait SlackClient {
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]]
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
 }
 
 class SlackClientImpl(
@@ -134,5 +136,9 @@ class SlackClientImpl(
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
     slackCall[SlackChannelInfo](SlackAPI.ChannelInfo(token, channelId))((__ \ 'channel).read)
+  }
+
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = {
+    slackCall[SlackUserInfo](SlackAPI.UserInfo(token, userId))((__ \ 'user).read)
   }
 }

@@ -120,7 +120,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
-  val userIdentityByIdentityId = MutableMap[IdentityId, UserIdentity]()
+  val userIdByIdentityId = MutableMap[IdentityId, Id[User]]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -131,8 +131,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   // Fake data initialization methods
 
-  def saveUserIdentity(identityId: IdentityId, identity: UserIdentity): Unit = {
-    userIdentityByIdentityId += (identityId -> identity)
+  def saveUserIdentity(identityId: IdentityId, userId: Id[User]): Unit = {
+    userIdByIdentityId += (identityId -> userId)
   }
 
   def saveUsers(users: User*): Seq[User] = {
@@ -328,9 +328,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(userOpt)
   }
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = Future.successful(userIdentityByIdentityId.get(identityId))
-
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = Future.successful(None)
+  def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful(userIdByIdentityId.get(identityId))
 
   def getUser(id: Id[User]): Future[Option[User]] = {
     val user = Option(allUsers(id))
@@ -698,6 +696,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
+  def getUserIdFromSlackUserId(slackUserId: SlackUserId): Future[Option[Id[User]]] = Future.successful(None)
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[(Id[Organization], SlackTeamName)]] = Future.successful(None)
 
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(

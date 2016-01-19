@@ -1023,6 +1023,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su",
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
+                "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "permissions": ${Json.toJson(keepPermissions)}
               },
               {
@@ -1048,6 +1049,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su",
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
+                "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "permissions": ${Json.toJson(keepPermissions)}
               }
             ],
@@ -1299,18 +1301,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (keeps(0), keeps(1), keeps(2))
         }
 
-        contentAsJson(result1) === Json.parse(
-          s"""
-            {
-              "keeps":
-              [{"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","path":"${k1.path.relative}","isPrivate":false, "libraryId":"${pubId1.id}", "permissions":${JsArray()}},
-              {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","path":"${k2.path.relative}","isPrivate":false, "libraryId":"${pubId1.id}", "permissions":${JsArray()}},
-              {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","path":"${k3.path.relative}","isPrivate":false, "libraryId":"${pubId1.id}", "permissions":${JsArray()}}],
-              "failures":[],
-              "alreadyKept":[]
-            }
-          """.stripMargin
-        )
+        val jsonResult1 = contentAsJson(result1)
+        val keepsResult1 = (jsonResult1 \ "keeps").as[Seq[JsObject]]
+        keepsResult1.map(obj => (obj \ "id").as[ExternalId[Keep]]) must beEqualTo(Seq(k1, k2, k3).map(_.externalId))
 
         val request2 = FakeRequest("POST", testPath2).withBody(json)
         val result2 = libraryController.addKeeps(pubId2)(request2)
@@ -1323,19 +1316,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (keeps(0), keeps(1), keeps(2))
         }
 
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-            {
-              "keeps":[
-                {"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11","url":"http://www.hi.com11","path":"${k4.path.relative}","isPrivate":true, "libraryId":"${pubId2.id}", "permissions": []},
-                {"id":"${k5.externalId}","pubId": "${Keep.publicId(k5.id.get).id}","title":"title 21","url":"http://www.hi.com21","path":"${k5.path.relative}","isPrivate":true, "libraryId":"${pubId2.id}", "permissions": []},
-                {"id":"${k6.externalId}","pubId": "${Keep.publicId(k6.id.get).id}","title":"title 31","url":"http://www.hi.com31","path":"${k6.path.relative}","isPrivate":true, "libraryId":"${pubId2.id}", "permissions": []}
-              ],
-              "failures":[],
-              "alreadyKept":[]
-            }
-          """.stripMargin
-        ))
+        val jsonResult2 = contentAsJson(result2)
+        val keepsResult2 = (jsonResult2 \ "keeps").as[Seq[JsObject]]
+        keepsResult2.map(obj => (obj \ "id").as[ExternalId[Keep]]) must beEqualTo(Seq(k4, k5, k6).map(_.externalId))
 
         val request3 = FakeRequest("POST", testPath2).withBody(
           Json.obj(
@@ -1345,15 +1328,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
 
-        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
-          s"""
-              {
-                "keeps":[],
-                "failures":[],
-                "alreadyKept":[{"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11zzz","url":"http://www.hi.com11","path":"k/title-11zzz/${Keep.publicId(k4.id.get).id}","isPrivate":true, "libraryId":"${pubId2.id}", "permissions": []}]
-              }
-            """.stripMargin
-        ))
+        val jsonResult3 = contentAsJson(result3)
+        val alreadyKept = (jsonResult3 \ "alreadyKept").as[Seq[JsObject]]
+        alreadyKept.size === 1
+        (alreadyKept.head \ "id").as[ExternalId[Keep]] must beEqualTo(k4.externalId)
       }
     }
 

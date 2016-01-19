@@ -39,7 +39,8 @@ case class MessageThreadNotification(
   numAuthors: Int,
   numUnseenAuthors: Int,
   numMessages: Int,
-  numUnreadMessages: Int)
+  numUnreadMessages: Int,
+  forceOverwrite: Boolean) // this flag will tell the extension to overwrite any existing notifications with this keep id
 object MessageThreadNotification {
   // TODO(ryan): pray for forgiveness for this travesty
   def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
@@ -61,7 +62,8 @@ object MessageThreadNotification {
     numAuthors = numAuthors,
     numUnseenAuthors = numUnseenAuthors,
     numMessages = numMessages,
-    numUnreadMessages = numUnread
+    numUnreadMessages = numUnread,
+    forceOverwrite = false
   )
   implicit def writes: Writes[MessageThreadNotification] = (
     (__ \ 'id).write[PublicId[Message]] and
@@ -80,7 +82,8 @@ object MessageThreadNotification {
     (__ \ 'authors).write[Int] and
     (__ \ 'unreadAuthors).write[Int] and
     (__ \ 'messages).write[Int] and
-    (__ \ 'unreadMessages).write[Int]
+    (__ \ 'unreadMessages).write[Int] and
+    (__ \ 'overwrite).write[Boolean]
   )(unlift(MessageThreadNotification.unapply))
 }
 

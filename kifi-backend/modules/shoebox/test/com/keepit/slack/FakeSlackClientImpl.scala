@@ -2,11 +2,21 @@ package com.keepit.slack
 
 import java.util.concurrent.atomic.AtomicLong
 
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 
 import scala.collection.mutable
 import scala.concurrent.Future
-import scala.util.Try
+
+case class FakeSlackClientModule() extends SlackClientModule {
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def slackClient(): SlackClient = {
+    new FakeSlackClientImpl()
+  }
+}
 
 class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
@@ -30,7 +40,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = ???
 
-  def sayInChannel(stm: SlackTeamMembership, ch: SlackChannel)(str: String): Unit = {
+  def sayInChannel(stm: SlackTeamMembership, ch: SlackChannelIdAndName)(str: String): Unit = {
     val key = (stm.slackTeamId, ch.name)
     val msgId = inc.incrementAndGet()
     val msg = SlackMessage(
@@ -72,4 +82,5 @@ class FakeSlackClientImpl extends SlackClient {
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]] = ???
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = ???
+  def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
 }
