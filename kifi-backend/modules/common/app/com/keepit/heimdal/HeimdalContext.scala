@@ -165,7 +165,7 @@ class HeimdalContextBuilder extends Logging {
         this ++= HeimdalContextBuilder.getUserFields(userRequest.user)
         userRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(userRequest.experiments)
-        Try(SocialNetworkType(userRequest.identityOpt.get.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
+        Try(SocialNetworkType(userRequest.identityId.get.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
       case _ =>
     }
   }

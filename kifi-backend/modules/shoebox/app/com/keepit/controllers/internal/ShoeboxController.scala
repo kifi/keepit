@@ -107,6 +107,12 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(identity))
   }
 
+  def getUserIdByIdentityId(providerId: String, id: String) = Action { request =>
+    val identityId = IdentityId(providerId = providerId, userId = id)
+    val ownerId = db.readOnlyMaster { implicit session => userIdentityHelper.getOwnerId(identityId) }
+    Ok(Json.toJson(ownerId))
+  }
+
   def getUserOpt(id: ExternalId[User]) = Action { request =>
     val userOpt = db.readOnlyReplica { implicit s => userRepo.getOpt(id) } //using cache
     userOpt match {

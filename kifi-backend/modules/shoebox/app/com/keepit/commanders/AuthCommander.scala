@@ -238,9 +238,10 @@ class AuthCommander @Inject() (
     }
   }
 
-  def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
-    log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
+  def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityIdOpt: Option[IdentityId], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
+    log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identityId=$identityIdOpt, inviteExtId=$inviteExtIdOpt")
 
+    val identityOpt = identityIdOpt.flatMap(UserService.find(_))
     val resultFuture = SafeFuture {
       val (passwordInfo, email) = db.readOnlyMaster { implicit session =>
         val passwordInfo = userCredRepo.findByUserIdOpt(userId).map { userCred =>

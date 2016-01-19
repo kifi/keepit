@@ -146,8 +146,8 @@ class InviteController @Inject() (db: Database,
         }
         invitation match {
           case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
-            if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-              log.warn(s"request identity is ${request.identityOpt} and sender is ${invite.senderUserId}, redirecting to home")
+            if (request.identityId.isDefined || invite.senderUserId.isEmpty) {
+              log.warn(s"request identity is ${request.identityId} and sender is ${invite.senderUserId}, redirecting to home")
               resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
             } else {
               val senderUserId = invite.senderUserId.get

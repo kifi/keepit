@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import play.api.Play
 import play.api.mvc.Request
-import securesocial.core.Identity
+import securesocial.core.{ IdentityId, Identity }
 
 import scala.concurrent.Future
 
@@ -29,7 +29,7 @@ case class MaybeAppFakeUserActionsModule() extends UserActionsModule {
 class MaybeAppFakeUserActionsHelper(
     val airbrake: AirbrakeNotifier,
     val impersonateCookie: ImpersonateCookie,
-    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
+    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with Logging {
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[UserExperimentType] = Set[UserExperimentType]()
@@ -55,7 +55,6 @@ class MaybeAppFakeUserActionsHelper(
   }
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(None)
-  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
-  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId] = None
 }

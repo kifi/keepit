@@ -57,21 +57,6 @@ object UserIdentity {
   )(UserIdentity.apply, unlift(UserIdentity.unapply))
 }
 
-case class UserIdentityIdentityIdKey(id: IdentityId) extends Key[UserIdentity] {
-  override val version = 2
-  val namespace = "user_identity_by_identity_id"
-  def toKey(): String = id.providerId + "_" + id.userId
-}
-
-object UserIdentityIdentityIdKey {
-  def apply(networkType: SocialNetworkType, socialId: SocialId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
-  def apply(emailAddress: EmailAddress): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(emailAddress))
-  def apply(teamId: SlackTeamId, userId: SlackUserId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(teamId, userId))
-}
-
-class UserIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserIdentityIdentityIdKey, UserIdentity](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 class NewUserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends MaybeUserIdentity(userId, socialUser)
 
 object NewUserIdentity {
@@ -105,3 +90,18 @@ object IdentityHelpers {
 
   def getIdentityId(session: UserSessionView): IdentityId = IdentityId(session.socialId.id, session.provider.name)
 }
+
+case class IdentityUserIdKey(id: IdentityId) extends Key[Id[User]] {
+  override val version = 1
+  val namespace = "user_id_by_identity_id"
+  def toKey(): String = id.providerId + "_" + id.userId
+}
+
+object IdentityUserIdKey {
+  def apply(networkType: SocialNetworkType, socialId: SocialId): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
+  def apply(emailAddress: EmailAddress): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(emailAddress))
+  def apply(teamId: SlackTeamId, userId: SlackUserId): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(teamId, userId))
+}
+
+class IdentityUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[IdentityUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

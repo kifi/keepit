@@ -322,7 +322,7 @@ class MobileUserController @Inject() (
     val body =
       s"""<pre>
          |User: ${request.userIdOpt}
-         |Identity: ${request.identityOpt}
+         |Identity: ${request.identityId}
          |IP: ${request.remoteAddress}
          |Agent: ${request.userAgentOpt}
          |

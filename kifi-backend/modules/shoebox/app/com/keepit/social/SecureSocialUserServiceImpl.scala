@@ -1,6 +1,5 @@
 package com.keepit.social
 
-import com.keepit.common.oauth.{ SlackIdentity, EmailPasswordIdentity }
 import com.keepit.common.performance._
 
 import com.google.inject.{ Inject, Singleton }
@@ -36,11 +35,11 @@ class UserIdentityHelper @Inject() (
     emailRepo: UserEmailAddressRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userIdentityCache: UserIdentityCache,
+    identityUserIdCache: IdentityUserIdCache,
     slackMembershipRepo: SlackTeamMembershipRepo) {
   import IdentityHelpers._
 
-  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = {
+  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = identityUserIdCache.getOrElseOpt(IdentityUserIdKey(identityId)) {
     import SocialNetworks._
     val networkType = parseNetworkType(identityId)
     networkType match {
@@ -73,7 +72,7 @@ class UserIdentityHelper @Inject() (
     }
   }
 
-  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = userIdentityCache.getOrElseOpt(UserIdentityIdentityIdKey(identityId)) {
+  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
     val networkType = parseNetworkType(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {

@@ -12,7 +12,7 @@ trait WsTestBehavior { self: TestInjectorProvider =>
 
   def setupUserIdentity(implicit injector: Injector): Unit = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveUserIdentity(FakeSecureSocial.FAKE_IDENTITY_ID, FakeSecureSocial.fakeUserIdentity(Some(Id(1))))
+    fakeShoeboxServiceClient.saveUserIdentity(FakeSecureSocial.FAKE_IDENTITY_ID, Id(1))
   }
 
   def setupUserExperiment(enabled: Boolean)(implicit injector: Injector): Unit = {
