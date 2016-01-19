@@ -31,10 +31,10 @@ trait SlackDigestNotifier {
 }
 
 object SlackDigestNotifier {
-  val minPeriodBetweenTeamDigests = Period.minutes(1)
-  val minPeriodBetweenChannelDigests = Period.minutes(1)
-  val minIngestedKeepsForChannelDigest = 5
-  val minIngestedKeepsForTeamDigest = 10
+  val minPeriodBetweenTeamDigests = Period.seconds(10)
+  val minPeriodBetweenChannelDigests = Period.seconds(10)
+  val minIngestedKeepsForChannelDigest = 2
+  val minIngestedKeepsForTeamDigest = 2
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
 
@@ -117,6 +117,47 @@ class SlackDigestNotifierImpl @Inject() (
     } yield digest
   }
 
+  private val kifiHellos: IndexedSeq[DescriptionElements] = {
+    import DescriptionElements._
+    IndexedSeq(
+      DescriptionElements("Look at this boatload :rowboat: of links!"),
+      DescriptionElements("Your Kifi game is strong :muscle:! Take a look at all these links!"),
+      DescriptionElements("Wow! Your team is killing it :skull: lately! Keep up the good work!"),
+      DescriptionElements("Surprise! I brought you a gift :gift:! It’s all the links your team found this week. I’m bad at keeping secrets"),
+      DescriptionElements("Your team captured links this week like it was taking candy :candy: from a baby :baby:. And I’d bet they’d be good at that, too."),
+      DescriptionElements("Your team is turning into a link finding factory :factory:!"),
+      DescriptionElements("Your Kifi game is on point :point_up:! Look at this boatload of links!"),
+      DescriptionElements("Man, your team really hit the links :golf: hard this week! See what I mean?!"),
+      DescriptionElements("Give a man a fish and he’ll eat for a day. Teach your team to fish :fishing_pole_and_fish: for links and they’ll...I have no idea what I’m talking about."),
+      DescriptionElements("Happy Hump :camel: Day! Just wanted to give you a little update on how you’re doing!"),
+      DescriptionElements("Your Kifi game is on fire :fire:! Look at all the links you cooked up!"),
+      DescriptionElements("Your team is making it rain :umbrella:! Check out all these links!"),
+      DescriptionElements("Christmas :santa:  is coming early for you! Your stocking is stuffed with links!"),
+      DescriptionElements("I see a ton of links in your future :crystal_ball:!"),
+      DescriptionElements("Happy Casual :jeans: Friday! Look at what your team casually crushed this week!"),
+      DescriptionElements("Today’s your lucky :four_leaf_clover: day! Look at all these links!"),
+      DescriptionElements("Since you stashed so many links, I think you should watch cat :cat: videos the rest of the day. Go ahead, you earned it."),
+      DescriptionElements("Since you stashed so many links, I think you should Netflix :tv: and chill the rest of the day. Go ahead, you earned it."),
+      DescriptionElements("All hail, the King of Kifi :crown:! What glorious links you’ve captured, your highness!"),
+      DescriptionElements("All hail, the Queen of Kifi :crown:! What glorious links you’ve captured, your highness!"),
+      DescriptionElements("At this point, I’d say that you’ve stashed away enough links for the long winter :squirrel:!"),
+      DescriptionElements("Your team must’ve found some kind of Kifi cheat code :video_game: Look at all these links!"),
+      DescriptionElements("Your team must love The Legend of Zelda :princess: because this link obsession is obvi."),
+      DescriptionElements("You are clearly not the weak :muscle: link on your team when it comes to stashing links!"),
+      DescriptionElements("Can I take a selfie :iphone: with you? You’re a Kifi celebrity!"),
+      DescriptionElements("Your team might wanna cool it on the caffeine :coffee:! I mean, this is a lot of hyperlinks."),
+      DescriptionElements("Your team is turning link capturing into a science :microscope:!"),
+      DescriptionElements("Your team must run :fuelpump: on links because they can’t get enough of ‘em!"),
+      DescriptionElements("Your team is practically swimming :swimmer: in links! Looks!"),
+      DescriptionElements("If you had a nickel :moneybag: for every link you captured, you’d have {x} nickels. That’s simple math, my friend."),
+      DescriptionElements("Your team racked up a baker’s dozen :doughnut: links this week. Reward them with donuts."),
+      DescriptionElements("Your team captured links this week like it was taking candy :candy: from a baby :baby:. And I’d bet they’d be good at that, too."),
+      DescriptionElements("Your team is turning into a link finding factory :factory:!"),
+      DescriptionElements("Surprise! I brought you a gift :gift:! It’s all the links your team found this week. I’m bad at keeping secrets"),
+      DescriptionElements("Give a man a fish and he’ll eat for a day. Teach your team to fish :fishing_pole_and_fish: for links and they’ll...I have no idea what I’m talking about. .")
+    )
+  }
+
   private val kifiSlackTipAttachments: IndexedSeq[SlackAttachment] = {
     import DescriptionElements._
     IndexedSeq(
@@ -133,9 +174,9 @@ class SlackDigestNotifierImpl @Inject() (
     import DescriptionElements._
     val topLibraries = digest.numIngestedKeepsByLibrary.toList.sortBy { case (lib, numKeeps) => numKeeps }(Ord.descending).take(3).collect { case (lib, numKeeps) if numKeeps > 0 => lib }
     val text = DescriptionElements.unlines(List(
-      DescriptionElements("Your team has been busy!", SlackEmoji.bee),
+      RandomChoice.choice(kifiHellos),
       DescriptionElements("We have collected", s"${digest.numIngestedKeeps} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getHours, "hours", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getMinutes, "minutes", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
@@ -195,8 +236,8 @@ class SlackDigestNotifierImpl @Inject() (
   private def describeChannelDigest(digest: SlackChannelDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-      DescriptionElements("We have captured", digest.numIngestedKeeps, "links from",
-        digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getHours, "hours"),
+      DescriptionElements("We have collected", digest.numIngestedKeeps, "links from",
+        digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getMinutes, "minutes"),
       DescriptionElements("You can browse through them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
     )))).quiet
