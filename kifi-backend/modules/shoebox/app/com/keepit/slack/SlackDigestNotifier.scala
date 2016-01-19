@@ -38,7 +38,6 @@ class SlackDigestNotifierImpl @Inject() (
   db: Database,
   slackTeamRepo: SlackTeamRepo,
   slackChannelRepo: SlackChannelRepo,
-  slackTeamMembershipRepo: SlackTeamMembershipRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClientWrapper,
@@ -89,7 +88,7 @@ class SlackDigestNotifierImpl @Inject() (
     for {
       org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
       librariesByChannel = {
-        val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId)
+        val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
         val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
         val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
         teamIntegrations.groupBy(_.slackChannelId).collect {
@@ -220,7 +219,7 @@ class SlackDigestNotifierImpl @Inject() (
   }
 
   private def createChannelDigest(slackChannel: SlackChannel)(implicit session: RSession): Option[SlackChannelDigest] = {
-    val ingestions = channelToLibRepo.getBySlackTeamAndChannel(slackChannel.slackTeamId, slackChannel.slackChannelId)
+    val ingestions = channelToLibRepo.getBySlackTeamAndChannel(slackChannel.slackTeamId, slackChannel.slackChannelId).filter(_.isWorking)
     val librariesIngestedInto = libRepo.getActiveByIds(ingestions.map(_.libraryId).toSet)
     val ingestedLinks = {
       val newKeepIds = ktlRepo.getByLibrariesAddedSince(librariesIngestedInto.keySet, slackChannel.lastNotificationAt).map(_.keepId).toSet
