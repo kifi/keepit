@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.mail.EmailAddress._
+import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json._
@@ -46,10 +47,13 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
+    orgAnalytics: OrganizationAnalytics,
+    userRepo: UserRepo,
     userValueRepo: UserValueRepo,
     airbrake: AirbrakeNotifier,
     postOffice: LocalPostOffice,
     fortytwoConfig: FortyTwoConfig,
+    heimdalContextBuilder: HeimdalContextBuilder,
     clock: Clock,
     implicit val executionContext: ScalaExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationDomainOwnershipCommander with Logging {
@@ -194,6 +198,9 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
               val emailWithCode = userEmailAddressRepo.save(userEmail.withVerificationCode(clock.now()))
               val siteUrl = fortytwoConfig.applicationBaseUrl
               val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(emailWithCode.verificationCode.get, Some(Organization.publicId(org.id.get)))}"
+
+              implicit val heimdalContext = new HeimdalContextBuilder().build
+              orgAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
               Right(postOffice.sendMail(ElectronicMail(
                 from = SystemEmailAddress.NOTIFICATIONS,
