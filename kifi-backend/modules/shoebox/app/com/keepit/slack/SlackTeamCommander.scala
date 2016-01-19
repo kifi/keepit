@@ -50,8 +50,9 @@ class SlackTeamCommanderImpl @Inject() (
   organizationInfoCommander: OrganizationInfoCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
-  inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander {
+  val inhouseSlackClient: InhouseSlackClient)
+    extends SlackTeamCommander with SlackLogging {
+  val loggingDestination = InhouseSlackChannel.ENG_SLACK
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, userHasNoOrg) = db.readWrite { implicit session =>
@@ -199,6 +200,8 @@ class SlackTeamCommanderImpl @Inject() (
                   slackTeamRepo.save(team.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)))
                 }
               }
+            } else {
+              slackLog.warn("Failed to create some libraries while integrating Slack team", teamId.value, ". The errors are:", newLibraries.collect { case (ch, Left(fail)) => (ch, fail) }.toString)
             }
           }
         }
