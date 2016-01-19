@@ -91,8 +91,12 @@ class FakeTwitterSocialGraph @Inject() (
 
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = Future.successful {
-    Seq.empty
+  def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = Future.successful {
+    Right(Seq.empty)
+  }
+
+  def fetchHandleFavourites(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = Future.successful {
+    Right(Seq.empty)
   }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = twtrGraph.extractEmails(parentJson)
