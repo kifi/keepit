@@ -154,7 +154,7 @@ class AuthController @Inject() (
             log.info(s"[logInWithUserPass] Attempting to link $link to newly logged in user ${sess.getUserId}")
             val linkAttempt = for {
               identityId <- request.identityId
-              identity <- UserService.find(identityId)
+              identity <- authCommander.getUserIdentity(identityId)
               userId <- sess.getUserId
             } yield {
               log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
@@ -262,7 +262,7 @@ class AuthController @Inject() (
         val hasher = Registry.hashers.currentHasher
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
-        UserService.find(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
+        authCommander.getUserIdentity(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
           case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
             val matches = hasher.matches(identity.passwordInfo.get, info.password)
             if (!matches) {
@@ -313,7 +313,7 @@ class AuthController @Inject() (
           }
         }
       case nonUserRequest: NonUserRequest[_] => {
-        nonUserRequest.identityId.flatMap(UserService.find) match {
+        nonUserRequest.identityId.flatMap(authCommander.getUserIdentity) match {
 
           case Some(identity) => {
             // User tried to log in (not sign up) with social network.
@@ -390,7 +390,7 @@ class AuthController @Inject() (
 
   def popupAfterLinkSocial(provider: String) = UserAction { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
-    val identity = request.identityId.flatMap(UserService.find).get
+    val identity = request.identityId.flatMap(authCommander.getUserIdentity).get
     Ok(Html(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>"))
       .withSession(request.session - PopupKey)
   }
@@ -486,7 +486,7 @@ class AuthController @Inject() (
 
             redirect.discardingCookies(discardedCookies: _*)
 
-          } else if (ur.identityId.exists(UserService.find(_).isDefined)) {
+          } else if (ur.identityId.exists(authCommander.getUserIdentity(_).isDefined)) {
             log.info(s"[doSignupPage] ${ur.identityId.get} has incomplete signup state")
             // User exists, is incomplete
             // Supporting top-level intents from here. These are non-privileged, and just determine where someone goes. (No ids, tokens, etc)
@@ -503,7 +503,7 @@ class AuthController @Inject() (
             Redirect("/logout")
           }
         case requestNonUser: NonUserRequest[_] =>
-          val identityOpt = requestNonUser.identityId.flatMap(UserService.find(_))
+          val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity(_))
           if (identityOpt.isDefined) {
             val identity = identityOpt.get
             if (identity.identityId.userId.trim.isEmpty) {
