@@ -12,7 +12,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[TwitterSyncStateRepoImpl])
 trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState]
-  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState]
+  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library], target: SyncTarget)(implicit session: RSession): Option[TwitterSyncState]
   def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle]
   def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
   def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState]
@@ -61,19 +61,20 @@ class TwitterSyncStateRepoImpl @Inject() (
       .sortBy(_.lastFetchedAt.asc).list
   }
 
-  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState] = {
-    (for { row <- rows if row.libraryId === libId && row.twitterHandle === handle } yield row).firstOption
+  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library], target: SyncTarget)(implicit session: RSession): Option[TwitterSyncState] = {
+    (for { row <- rows if row.libraryId === libId && row.twitterHandle === handle && row.syncTarget === target } yield row).firstOption
   }
 
   def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle] = {
     twitterHandleCache.getOrElseOpt(TwitterHandleLibraryIdKey(libId)) {
-      (for { row <- rows if row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE } yield row.twitterHandle).firstOption
+      val all = (for { row <- rows if row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE } yield (row.id, row.syncTarget, row.twitterHandle)).list
+      all.sortBy(_._1.id).find(_._2 == SyncTarget.Tweets).orElse(all.headOption).map(_._3)
     }
   }
 
   def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
     val all = (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).list
-    all.find(_.state == TwitterSyncStateStates.ACTIVE).orElse(all.headOption)
+    all.sortBy(_.id.get.id).find(r => r.target == SyncTarget.Tweets && r.state == TwitterSyncStateStates.ACTIVE).orElse(all.headOption)
   }
 
   def getAllByHandle(handle: TwitterHandle)(implicit session: RSession): Seq[TwitterSyncState] = {
