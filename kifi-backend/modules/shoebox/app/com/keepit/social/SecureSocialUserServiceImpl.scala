@@ -57,21 +57,6 @@ class UserIdentityHelper @Inject() (
     }
   }
 
-  def getUserIdentityByUserId(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
-    Try(emailRepo.getByUser(userId)) match {
-      case Success(email) =>
-        val user = userRepo.get(userId)
-        val userCred = userCredRepo.findByUserIdOpt(userId)
-        Some(UserIdentity(user, email, userCred))
-      case _ =>
-        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).flatMap { info =>
-          info.credentials.map(UserIdentity(info.userId, _))
-        }.headOption orElse {
-          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map(SlackTeamMembership.toIdentity)
-        }
-    }
-  }
-
   def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
     val networkType = parseNetworkType(identityId)
     networkType match {

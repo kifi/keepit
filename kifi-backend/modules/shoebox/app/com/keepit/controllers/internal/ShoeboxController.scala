@@ -96,17 +96,6 @@ class ShoeboxController @Inject() (
 
   val MaxContentLength = 6000
 
-  def getUserIdentity(providerId: String, id: String) = Action { request =>
-    val identityId = IdentityId(providerId = providerId, userId = id)
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentity(identityId) }
-    Ok(Json.toJson(identity))
-  }
-
-  def getUserIdentityByUserId(userId: Id[User]) = Action { request =>
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentityByUserId(userId) }
-    Ok(Json.toJson(identity))
-  }
-
   def getUserIdByIdentityId(providerId: String, id: String) = Action { request =>
     val identityId = IdentityId(providerId = providerId, userId = id)
     val ownerId = db.readOnlyMaster { implicit session => userIdentityHelper.getOwnerId(identityId) }
