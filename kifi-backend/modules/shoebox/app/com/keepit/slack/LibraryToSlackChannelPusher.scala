@@ -80,9 +80,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       results.collect {
         // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
         // and that swallows the stack trace. This hack will manually expose the stack trace
-        case (lib, Left(boxFail: java.util.concurrent.ExecutionException)) =>
+        case (lib, Failure(boxFail: java.util.concurrent.ExecutionException)) =>
           airbrake.notify(boxFail.getCause.getStackTrace.toList.mkString("\n"))
-        case (lib, Left(fail)) =>
+        case (lib, Failure(fail)) =>
           airbrake.notify(s"Pushing slack updates to library $lib failed because of $fail")
       }
       Unit
