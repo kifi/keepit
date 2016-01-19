@@ -28,8 +28,8 @@ trait SlackDigestNotifier {
 object SlackDigestNotifier {
   val minPeriodBetweenTeamDigests = Period.seconds(10)
   val minPeriodBetweenChannelDigests = Period.seconds(10)
-  val minIngestedKeepsForChannelDigest = 2
-  val minIngestedKeepsForTeamDigest = 2
+  val minIngestedLinksForChannelDigest = 2
+  val minIngestedLinksForTeamDigest = 2
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
 
@@ -88,29 +88,37 @@ class SlackDigestNotifierImpl @Inject() (
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
     for {
       org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
-      numIngestedKeepsByLibrary = {
+      librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId)
         val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
-        val librariesIngestedInto = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet).filter {
-          case (_, lib) =>
-            Set[LibraryVisibility](LibraryVisibility.ORGANIZATION, LibraryVisibility.PUBLISHED).contains(lib.visibility)
+        val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
+        teamIntegrations.groupBy(_.slackChannelId).collect {
+          case (Some(channelId), integrations) =>
+            channelId -> integrations.flatMap(sctl => librariesById.get(sctl.libraryId)).filter { lib =>
+              (lib.visibility, lib.organizationId) match {
+                case (LibraryVisibility.PUBLISHED, _) => true
+                case (LibraryVisibility.ORGANIZATION, Some(orgId)) if slackTeam.organizationId.contains(orgId) => true
+                case _ => false
+              }
+            }.toSet
         }
-        librariesIngestedInto.map {
-          case (libId, lib) =>
-            val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
-            val newSlackKeeps = keepRepo.getByIds(newKeepIds).values.filter(_.source == KeepSource.slack).map(_.id.get).toSet
-            val numIngestedKeeps = attributionRepo.getByKeepIds(newSlackKeeps).values.collect {
-              case SlackAttribution(msg) if teamChannelIds.contains(msg.channel.id) => 1
-            }.sum
-            lib -> numIngestedKeeps
-        }
+      }
+      ingestedLinksByChannel = librariesByChannel.map {
+        case (channelId, libs) =>
+          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get).toSet, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
+          val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
+          val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
+            case (kId, SlackAttribution(msg)) if msg.channel.id == channelId => newSlackKeepsById.get(kId).map(_.url)
+          }.flatten.toSet
+          channelId -> ingestedLinks
       }
       digest <- Some(SlackTeamDigest(
         slackTeam = slackTeam,
         timeSinceLastDigest = new Period(slackTeam.lastDigestNotificationAt, clock.now),
         org = org,
-        numIngestedKeepsByLibrary = numIngestedKeepsByLibrary
-      )).filter(_.numIngestedKeeps >= SlackDigestNotifier.minIngestedKeepsForTeamDigest)
+        ingestedLinksByChannel = ingestedLinksByChannel,
+        librariesByChannel = librariesByChannel
+      )).filter(_.numIngestedLinks >= SlackDigestNotifier.minIngestedLinksForTeamDigest)
     } yield digest
   }
 
@@ -170,11 +178,11 @@ class SlackDigestNotifierImpl @Inject() (
 
   private def describeTeamDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
-    val topLibraries = digest.numIngestedKeepsByLibrary.toList.sortBy { case (lib, numKeeps) => numKeeps }(Ord.descending).take(3).collect { case (lib, numKeeps) if numKeeps > 0 => lib }
+    val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
-      prng.choice(kifiHellos(digest.numIngestedKeeps)),
-      DescriptionElements("We have collected", s"${digest.numIngestedKeeps} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getMinutes, "minutes", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+      prng.choice(kifiHellos(digest.numIngestedLinks)),
+      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
+        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.getSeconds, "minutes", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
@@ -214,27 +222,27 @@ class SlackDigestNotifierImpl @Inject() (
   private def createChannelDigest(slackChannel: SlackChannel)(implicit session: RSession): Option[SlackChannelDigest] = {
     val ingestions = channelToLibRepo.getBySlackTeamAndChannel(slackChannel.slackTeamId, slackChannel.slackChannelId)
     val librariesIngestedInto = libRepo.getActiveByIds(ingestions.map(_.libraryId).toSet)
-    val numIngestedKeeps = librariesIngestedInto.keySet.headOption.map { libId =>
-      val newKeepIds = ktlRepo.getByLibraryAddedSince(libId, slackChannel.lastNotificationAt).map(_.keepId).toSet
-      val newSlackKeeps = keepRepo.getByIds(newKeepIds).values.filter(_.source == KeepSource.slack).map(_.id.get).toSet
-      attributionRepo.getByKeepIds(newSlackKeeps).values.count {
-        case SlackAttribution(msg) => msg.channel.id == slackChannel.slackChannelId
-        case _ => false
-      }
-    }.getOrElse(0)
+    val ingestedLinks = {
+      val newKeepIds = ktlRepo.getByLibrariesAddedSince(librariesIngestedInto.keySet, slackChannel.lastNotificationAt).map(_.keepId).toSet
+      val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
+      attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
+        case (kId, SlackAttribution(msg)) if msg.channel.id == slackChannel.slackChannelId =>
+          newSlackKeepsById.get(kId).map(_.url)
+      }.flatten.toSet
+    }
 
     Some(SlackChannelDigest(
       slackChannel = slackChannel,
       timeSinceLastDigest = new Period(slackChannel.lastNotificationAt, clock.now),
-      numIngestedKeeps = numIngestedKeeps,
+      ingestedLinks = ingestedLinks,
       libraries = librariesIngestedInto.values.toList
-    )).filter(_.numIngestedKeeps >= SlackDigestNotifier.minIngestedKeepsForChannelDigest)
+    )).filter(_.numIngestedLinks >= SlackDigestNotifier.minIngestedLinksForChannelDigest)
   }
 
   private def describeChannelDigest(digest: SlackChannelDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-      DescriptionElements("We have collected", digest.numIngestedKeeps, "links from",
+      DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
         digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.getMinutes, "minutes"),
       DescriptionElements("You can browse through them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
