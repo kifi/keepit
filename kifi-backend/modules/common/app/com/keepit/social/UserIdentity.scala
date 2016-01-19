@@ -49,12 +49,6 @@ object UserIdentity {
     val passwordInfo = cred.map(actualCred => PasswordInfo(hasher = "bcrypt", password = actualCred.credentials))
     UserIdentity(Some(user.id.get), EmailPasswordIdentity(user.firstName, user.lastName, emailAddress, passwordInfo))
   }
-
-  import com.keepit.serializer.SocialUserSerializer._
-  implicit val format = (
-    (__ \ 'userId).formatNullable(Id.format[User]) and
-    (__ \ 'socialUser).format[SocialUser]
-  )(UserIdentity.apply, unlift(UserIdentity.unapply))
 }
 
 class NewUserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends MaybeUserIdentity(userId, socialUser)
