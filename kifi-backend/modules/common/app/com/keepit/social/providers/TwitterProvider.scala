@@ -7,7 +7,7 @@ import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.TwitterOAuthProvider
 import com.keepit.common.oauth.adaptor.{ SecureSocialAdaptor }
-import com.keepit.social.UserIdentity
+import com.keepit.social.{ UserIdentityProvider, UserIdentity }
 import play.api.Application
 import play.api.Play.current
 import play.api.cache.Cache
@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with Logging {
+class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with UserIdentityProvider with Logging {
 
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val provider = global.injector.instance[TwitterOAuthProvider]
@@ -32,19 +32,6 @@ class TwitterProvider(app: Application) extends securesocial.core.providers.Twit
       SecureSocialAdaptor.toSocialUser(info, user.authMethod).copy(oAuth1Info = user.oAuth1Info)
     }
     Await.result(socialUserF, 5 minutes)
-  }
-
-  override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
-    log.info(s"UserIdentityProvider got request: $request")
-    log.info(s"session data: ${request.session.data}")
-    val userIdOpt = request.session.getUserId
-    doAuth()(request) match {
-      case Right(socialUser) =>
-        val filledSocialUser = fillProfile(socialUser)
-        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser))
-        Right(saved)
-      case left => left
-    }
   }
 
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
