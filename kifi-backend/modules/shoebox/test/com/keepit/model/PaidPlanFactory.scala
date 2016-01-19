@@ -22,7 +22,8 @@ object PaidPlanFactory {
     Feature.EditOrganization -> FeatureSetting.ADMINS,
     Feature.ExportKeeps -> FeatureSetting.ADMINS,
     Feature.ViewSettings -> FeatureSetting.MEMBERS,
-    Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS
+    Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS,
+    Feature.SlackIngestionReaction -> FeatureSetting.DISABLED
   ))
 
   def paidPlan(): PartialPaidPlan = {
