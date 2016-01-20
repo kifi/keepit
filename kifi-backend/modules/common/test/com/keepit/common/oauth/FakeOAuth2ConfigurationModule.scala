@@ -1,50 +1,45 @@
 package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Provides }
-import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.social.RichSocialUser
 import com.keepit.social.twitter.TwitterHandle
-import play.api.libs.json.JsValue
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
+import securesocial.core.IdentityId
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 
-trait FakeOAuthProvider extends OAuthProvider {
+trait FakeOAuthProvider[T, I <: RichIdentity] { self: OAuthProvider[T, I] =>
 
-  var profileInfo = UserProfileInfo(providerId, ProviderUserId("asdf"), "Foo Bar", Some(EmailAddress("bar@foo.com")), Some("Foo"), Some("Bar"), None, Some(new java.net.URL("http://www.picture.com/foobar")), Some(new java.net.URL("http://www.profile.com/foobar")))
-  def setProfileInfo(info: UserProfileInfo) { profileInfo = info }
-
-  var profileInfoF = () => Future.successful(profileInfo)
-  def setProfileInfoF(f: () => Future[UserProfileInfo]) { profileInfoF = f }
-
+  private var identity: Future[I] = Future.failed(new IllegalStateException("No fake identity has been set."))
+  def setIdentity(newIdentity: Future[I]) = { identity = newIdentity }
+  def getRichIdentity(accessToken: T): Future[I] = identity
+  def getIdentityId(accessToken: T): Future[IdentityId] = getRichIdentity(accessToken).imap(RichSocialUser(_).identityId)
 }
 
-trait FakeOAuth2Provider extends FakeOAuthProvider with OAuth2ProviderHelper {
+trait FakeOAuth2Provider[I <: RichIdentity] extends FakeOAuthProvider[OAuth2TokenInfo, I] with OAuth2ProviderHelper { self: OAuth2Support[I] =>
 
   def oauth2Config: OAuth2Configuration = ???
 
   var oauth2Token = () => OAuth2TokenInfo(OAuth2AccessToken("fake-token"))
-  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = oauth2Token.apply()
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = oauth2Token.apply()
 
   var longTermTokenOpt: Option[OAuth2TokenInfo] = None
   def setLongTermToken(f: => OAuth2TokenInfo) { longTermTokenOpt = Some(f) }
   def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful { longTermTokenOpt getOrElse tokenInfo }
 
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = profileInfoF.apply()
-
 }
 
-trait FakeOAuth1Provider extends FakeOAuthProvider with OAuth1Support {
-  def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = profileInfoF.apply()
-}
+trait FakeOAuth1Provider[I <: RichIdentity] extends FakeOAuthProvider[OAuth1TokenInfo, I] { self: OAuth1Support[I] => }
 
 @Singleton
-class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuth2Provider
+class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuth2Provider[FacebookIdentity]
 @Singleton
-class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Provider
+class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Provider[LinkedInIdentity]
 @Singleton
-class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider {
+class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider[TwitterIdentity] {
   def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
 }
 

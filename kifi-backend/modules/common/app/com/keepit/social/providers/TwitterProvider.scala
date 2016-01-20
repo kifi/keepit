@@ -3,11 +3,9 @@ package com.keepit.social.providers
 import java.util.UUID
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.TwitterOAuthProvider
-import com.keepit.common.oauth.adaptor.{ SecureSocialAdaptor }
-import com.keepit.social.{ UserIdentityProvider, UserIdentity }
+import com.keepit.social.{ RichSocialUser, UserIdentityProvider }
 import play.api.Application
 import play.api.Play.current
 import play.api.cache.Cache
@@ -17,24 +15,28 @@ import play.api.mvc.{ Request, Result }
 import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
 import net.codingwell.scalaguice.InjectorExtensions._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import scala.concurrent.Await
+import com.keepit.common.core._
 import scala.concurrent.duration._
+
+import scala.concurrent.{ Future, Await }
 
 class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with UserIdentityProvider with Logging {
 
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val provider = global.injector.instance[TwitterOAuthProvider]
 
-  override def fillProfile(user: SocialUser): SocialUser = {
-    val socialUserF = provider.getUserProfileInfo(user.oAuth1Info.get) map { info =>
-      SecureSocialAdaptor.toSocialUser(info, user.authMethod).copy(oAuth1Info = user.oAuth1Info)
+  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+    val call = {
+      doOAuth() match {
+        case Left(res) => Future.successful(Left(res))
+        case Right(token) => provider.getRichIdentity(token).imap(identity => Right(RichSocialUser(identity)))
+      }
     }
-    Await.result(socialUserF, 5 minutes)
+    Await.result(call, 5 minutes)
   }
 
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+  // todo(Léo): maybe move this to something like OAuth1ProviderHelper
+  private def doOAuth[A]()(implicit request: Request[A]): Either[Result, OAuth1Info] = {
     if (request.queryString.get("denied").isDefined) {
       // the user did not grant access to the account
       throw new AccessDeniedException()
@@ -54,12 +56,7 @@ class TwitterProvider(app: Application) extends securesocial.core.providers.Twit
             log.info(s"[doAuth($id).2] accessToken=$accessToken") // why is it typed RequestToken?
             // the Cache api does not have a remove method.  Just set the cache key and expire it after 1 second for now
             Cache.set(cacheKey, "", 1)
-            Right(
-              SocialUser(
-                IdentityId("", id), "", "", "", None, None, authMethod,
-                oAuth1Info = Some(OAuth1Info(accessToken.token, accessToken.secret))
-              )
-            )
+            Right(OAuth1Info(accessToken.token, accessToken.secret))
           case Left(oauthException) =>
             log.error(s"[doAuth($id).2] error retrieving access token. Error: $oauthException")
             throw new AuthenticationException()

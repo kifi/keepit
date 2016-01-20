@@ -14,7 +14,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
+import com.keepit.common.oauth._
 import com.keepit.common.core._
 import com.keepit.common.time.Clock
 import com.keepit.eliza.{ UserPushNotificationCategory, LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
@@ -105,11 +105,6 @@ class TwitterSocialGraphImpl @Inject() (
     new TwitterFactory(twitterConfig(socialUserInfo)).getInstance()
   }
 
-  private def twitterImageUploadClient(socialUserInfo: SocialUserInfo): ImageUpload = {
-    val conf = twitterConfig(socialUserInfo)
-    new ImageUploadFactory(conf).getInstance(MediaProvider.TWITTER)
-  }
-
   private def twitterConfig(socialUserInfo: SocialUserInfo) = {
     val accessToken = getOAuth1Info(socialUserInfo)
     val consumerKey = providerConfig.key
@@ -131,13 +126,14 @@ class TwitterSocialGraphImpl @Inject() (
 
   // make this async
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
-    val suiF = twtrOAuthProvider.getUserProfileInfo(getOAuth1Info(sui)) map { info =>
-      log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
-      sui.copy(
-        pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
-        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl,
-        username = info.profileUrl.map(_.toString).map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
-      )
+    val suiF = twtrOAuthProvider.getRichIdentity(getOAuth1Info(sui)) map {
+      case TwitterIdentity(_, info) =>
+        log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
+        sui.copy(
+          pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
+          profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl,
+          username = info.profileUrl.map(_.toString).map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
+        )
     }
     Await.result(suiF, 5 minutes)
   }
@@ -145,11 +141,7 @@ class TwitterSocialGraphImpl @Inject() (
   // make this async
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = {
     val token = json.as[OAuth1TokenInfo]
-    val idF = twtrOAuthProvider.getUserProfileInfo(token) map { resp =>
-      Success(IdentityId(resp.userId.id, resp.providerId.id))
-    } recover {
-      case t: Throwable => Failure(t)
-    }
+    val idF = twtrOAuthProvider.getIdentityId(token).imap(Success(_)).recover { case e: Exception => Failure(e) }
     Await.result(idF, 5 minutes)
   }
 
