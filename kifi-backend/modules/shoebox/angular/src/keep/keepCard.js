@@ -259,7 +259,6 @@ angular.module('kifi')
           scope.globalGalleryView = scope.galleryView;
 
           var permissions = keep.permissions || [];
-          var keepUserId = keep.user && keep.user.id;
           scope.canEditKeep = permissions.indexOf('edit_keep') !== -1;
           scope.canDeleteKeep = permissions.indexOf('delete_keep') !== -1;
 
