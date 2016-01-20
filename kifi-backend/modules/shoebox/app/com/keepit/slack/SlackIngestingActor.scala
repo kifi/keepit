@@ -47,6 +47,7 @@ class SlackIngestingActor @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
+    slackOnboarder: SlackOnboarder,
     orgConfigRepo: OrganizationConfigurationRepo,
     implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
@@ -73,14 +74,14 @@ class SlackIngestingActor @Inject() (
           integrationId -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
             permissionCommander.getLibraryPermissions(integration.libraryId, stm.userId).contains(LibraryPermission.ADD_KEEPS)
           }
-      }.toMap
+      }
 
       val getTokenWithScopes = {
         val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrationsByIds.values.map(_.slackUserId).toSet)
         integrationsByIds.map {
           case (integrationId, integration) =>
             integrationId -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
-        }.toMap
+        }
       }
 
       (integrationsByIds, isAllowed, getTokenWithScopes)
@@ -107,7 +108,13 @@ class SlackIngestingActor @Inject() (
       case result =>
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
-          case Success(Some(_)) => (Some(now plus nextIngestionDelayAfterNewMessages), None)
+          case Success(Some(_)) =>
+            if (integration.lastIngestedAt.isEmpty) {
+              // this is the first time we've tried ingesting for this integration
+              // and we were successful! we got a bunch of links
+              slackOnboarder.talkAboutIntegration(integration)
+            }
+            (Some(now plus nextIngestionDelayAfterNewMessages), None)
           case Success(None) => (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)

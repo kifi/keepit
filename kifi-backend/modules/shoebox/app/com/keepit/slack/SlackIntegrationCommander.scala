@@ -42,7 +42,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClientWrapper,
-  libToSlackPusher: LibraryToSlackChannelPusher,
+  slackOnboarder: SlackOnboarder,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
@@ -68,7 +68,7 @@ class SlackIntegrationCommanderImpl @Inject() (
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
-        slackChannelId = None,
+        slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.On
       ))
@@ -78,28 +78,16 @@ class SlackIntegrationCommanderImpl @Inject() (
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
-        slackChannelId = None,
+        slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.Off
       ))
       ltsc
     }
 
-    SafeFuture {
-      val welcomeMsg = db.readOnlyMaster { implicit s =>
-        import DescriptionElements._
-        val lib = libRepo.get(libId)
-        DescriptionElements(
-          "A new Kifi integration was just set up.",
-          "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
-        )
-      }
-      slackClient.sendToSlack(identity.userId, identity.teamId, webhook.channelName, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-        .foreach { _ =>
-          libToSlackPusher.pushUpdatesForIntegrationIfPossible(ltscToPushImmediately)
-            .foreach { _ => fetchMissingChannelIds() }
-        }
+    slackOnboarder.talkAboutIntegration(ltscToPushImmediately)
 
+    SafeFuture.swallow {
       val inhouseMsg = db.readOnlyReplica { implicit s =>
         import DescriptionElements._
         val lib = libRepo.get(libId)

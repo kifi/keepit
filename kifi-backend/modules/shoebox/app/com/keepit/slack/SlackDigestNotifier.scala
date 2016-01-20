@@ -104,7 +104,7 @@ class SlackDigestNotifierImpl @Inject() (
       }
       ingestedLinksByChannel = librariesByChannel.map {
         case (channelId, libs) =>
-          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get).toSet, slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
+          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
           val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
           val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
             case (kId, SlackAttribution(msg)) if msg.channel.id == channelId => newSlackKeepsById.get(kId).map(_.url)
