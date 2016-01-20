@@ -8,6 +8,7 @@ angular.module('kifi')
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
+    $scope.slackIntegrationReactionModel = {enabled: $scope.profile.config.settings.slack_ingestion_reaction.setting === 'enabled'};
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
         .then(function(res) {
           res.libraries.forEach(function(lib) {
@@ -28,6 +29,12 @@ angular.module('kifi')
           });
         });
 
+
+    $scope.onSlackIntegrationReactionChanged = function() {
+        $scope.profile.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
+        orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_reaction: $scope.profile.config.settings.slack_ingestion_reaction.setting });
+
+    };
 
     $scope.onKifiToSlackChanged = function(integration) {
         integration.integration.toSlack.status = integration.kifiToSlack ? 'on' : 'off';
