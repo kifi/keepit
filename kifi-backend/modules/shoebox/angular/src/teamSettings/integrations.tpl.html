@@ -14,7 +14,14 @@
                     ng-click="onClickedSyncAllSlackChannels()"
                     ng-bind="'Sync all Slack Channels'"></button>
 
+            <span class="kf-ts-integrations-marketing-text">To integrate 1 library or channel at a time, visit a library and click on the "Add to Slack" button</span>
+            <div ng-if="canEditIntegrations" class="kf-ts-integrations-checkrow">
+                <input ng-model="slackIntegrationReactionModel.enabled" ng-change="onSlackIntegrationReactionChanged()"  type="checkbox" />
+                <span>Show the emoji reaction <strong>:heavy checkmark:</strong> on slack messages after it's been successfully saved into Kifi</span>
+            </div>
+
             <span class="kf-ts-integrations-marketing-text">To integrate one library or channel at a time, visit <a ui-sref="orgProfile.libraries">any library</a> and click the <img class="kf-lib-slack-btn-sm" src="/img/add-to-slack.png" title="Add to Slack"> button.</span>
+
 
             <div ng-if="integrations.length" class="kf-container" style="margin-top: 20px">
                 <div class="kf-container-header"><span>Integrations</span></div>
