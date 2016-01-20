@@ -93,9 +93,9 @@ var api = api || (function () {
       }
     },
     'api:onConnect': function (data, respond, page) {
-      l`${CGREEN}['api:onConnect'] %s${page.id} %s${page.ulr} %O${data}`;
+      l`${CGREEN}[api:onConnect] %s${page.id} %s${page.url} %O${data}`;
     },
-    'api:DOMContentLoaded': function (data, _, tab) {
+    'api:DOMContentLoaded': function (data, respond, tab) {
       var page = pages[tab.id];
       var {injected} = data;
       if (page) {
@@ -105,6 +105,8 @@ var api = api || (function () {
           log(CRED, '[api:onDOMContentLoaded] %s url mismatch:\n%s\n%s', tab.id, tab.url, page.url);
         }
         injectContentScripts(page, injected);
+        respond();
+        api.tabs.on.loading.dispatch(pages[tab.id]);
       } else {
         log(CRED, '[api:onDOMContentLoaded] no page for', tab.id, tab.url);
       }
@@ -124,6 +126,8 @@ var api = api || (function () {
 
   function injectWithDeps(page, paths, injected, callback) {
     var {scripts, styles} = deps(paths, injected);
+    l`[injectWithDeps] %s${page.id} %s${page.url}, scripts: %O${scripts} styles: %O${styles}`;
+
     injectContent(page, scripts, styles, callback);
   }
 
@@ -259,7 +263,11 @@ var api = api || (function () {
         }
       },
       disconnect: function () {
-        tab.page.dispatchMessage('api:disconnect');
+        if (tab && tab.page && tab.page.dispatchMessage) {
+          tab.page.dispatchMessage('api:disconnect');
+        } else {
+          l`${CRED}[tab.disconnect] couldn't call disconnect on tab with undefined page`
+        }
       }
     };
     return port;
@@ -297,10 +305,10 @@ var api = api || (function () {
       var url = e.url;
       var match = googleSearchRe.exec(url);
 
-      if (page.url !== url) {
+      //if (page.url !== url) {
         removeTab(id);
         page = pages[id] = createPage(id, url, createPort(tab));
-      }
+      //}
 
       l`${CGREEN}[onBeforeNavigate] %s${tab.id} %s${url} %s${match}`;
 
@@ -318,8 +326,8 @@ var api = api || (function () {
     });
 
     tab.addEventListener('navigate', function (e) {
+      // Tends to happen before DOMContentLoaded.
       log(CGRAY, '[tabs.navigate] %s %s', tab.id, tab.url);
-      api.tabs.on.loading.dispatch(pages[tab.id]);
     });
 
     tab.addEventListener('close', function (e) {

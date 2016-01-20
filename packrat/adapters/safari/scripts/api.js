@@ -21,7 +21,7 @@ var api = api || (function () {
         var id = msg[1], cb = callbacks[id];
         log('[api:respond]', cb && cb[0] || '', msg[2] != null ? msg[2] : '');
         if (cb) {
-          delete callbacks[id];
+          //delete callbacks[id];
           cb[1](msg[2]);
         }
         break;
@@ -73,12 +73,12 @@ var api = api || (function () {
 
   function onDisconnect() {
     log('[onDisconnect]');
-    safari.self.removeEventListener('message');
-    api.port.on = api.port.emit = api.noop;
-    api.onEnd.forEach(function (onEnd) {
-      onEnd();
-    });
-    api.onEnd.length = msgHandlers.length = 0;
+    // safari.self.removeEventListener('message');
+    // api.port.on = api.port.emit = api.noop;
+    // api.onEnd.forEach(function (onEnd) {
+    //   onEnd();
+    // });
+    // api.onEnd.length = msgHandlers.length = 0;
   }
 
   function injectContentScript(injected, callbackId) {
@@ -86,9 +86,7 @@ var api = api || (function () {
     var {scripts, styles} = injected;
     var loadsLeft = styles.length;
 
-    scripts.forEach(function (js) {
-      lazyLoad(js);
-    });
+    lazyLoad(scripts.join('\n;\n'));
 
     if (loadsLeft === 0) {
       invokeCallback();
@@ -135,7 +133,7 @@ var api = api || (function () {
 
   return {
     identify: noop,
-    injected: {'scripts/does-not-exist.js': 1},//{'scripts/api.js': 1},
+    injected: {'scripts/api.js': 1},//{'scripts/api.js': 1},
     mutationsFirePromptly: true,
     noop: noop,
     onEnd: [],
@@ -225,7 +223,9 @@ function onDOMContentLoaded(actual) {
   var url = window.location.href;
   var data = { injected, actual, url };
   log('[api:DOMContentLoaded] actual: %s, url: %s, injected: %O', data.actual, data.url, data.injected);
-  api.port.emit('api:DOMContentLoaded', data);
+  api.port.emit('api:DOMContentLoaded', data, function () {
+    api.injected['scripts/api.js'] = 1;
+  });
 }
 
 function onVisibilityChange(e) {

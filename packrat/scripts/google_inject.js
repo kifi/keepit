@@ -42,7 +42,7 @@ $.fn.layout = function () {
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function () {
   log('[google_inject]');
-
+  
   var origin = location.origin;
   var $res = $(k.render('html/search/google'));   // a reference to our search results (kept so that we can reinsert when removed)
   var $bar = $res.find('.kifi-res-bar');
@@ -320,7 +320,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   function attachKifiRes() {
     var ires = document.getElementById('ires');
     if (ires) {
-      if ($res[0].nextElementSibling !== ires) {
+      if (!document.contains($res[0])) {
         $res.insertBefore(ires);
         if (!$res[0].firstElementChild.classList.contains('kifi-collapsed')) {
           $res.find('.kifi-res-why:not(.kifi-fitted)').each(makeWhyFit);
