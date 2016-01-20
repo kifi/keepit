@@ -28,18 +28,21 @@ case class SlackChannelToLibrary(
   nextIngestionAt: Option[DateTime] = None,
   lastIngestingAt: Option[DateTime] = None,
   lastIngestedAt: Option[DateTime] = None,
-  lastMessageTimestamp: Option[SlackTimestamp] = None)
+  lastMessageTimestamp: Option[SlackTimestamp] = None,
+  muteDigestNotifications: Boolean = false)
     extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with ModelWithMaybeCopy[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackChannelToLibraryStates.ACTIVE
   def isWorking: Boolean = isActive && status == SlackIntegrationStatus.On
   def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (newStatus == SlackIntegrationStatus.On) Some(currentDateTime) else None)
+  def withMuteDigestNotifications(muted: Boolean) = this.copy(muteDigestNotifications = muted)
 
   def withModifications(mods: SlackIntegrationModification) = {
     this
       .maybeCopy(_.status, mods.status, _.withStatus)
       .maybeCopy(_.space, mods.space, _.withSpace)
+      .maybeCopy(_.muteDigestNotifications, mods.muted, _.withMuteDigestNotifications)
   }
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
   def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
@@ -105,7 +108,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     nextIngestionAt: Option[DateTime],
     lastIngestingAt: Option[DateTime],
     lastIngestedAt: Option[DateTime],
-    lastMessageTimestamp: Option[SlackTimestamp]) = {
+    lastMessageTimestamp: Option[SlackTimestamp],
+    muteDigestNotifications: Boolean) = {
     SlackChannelToLibrary(
       id,
       createdAt,
@@ -121,7 +125,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       nextIngestionAt,
       lastIngestingAt,
       lastIngestedAt,
-      lastMessageTimestamp
+      lastMessageTimestamp,
+      muteDigestNotifications
     )
   }
 
@@ -141,7 +146,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.nextIngestionAt,
     stl.lastIngestingAt,
     stl.lastIngestedAt,
-    stl.lastMessageTimestamp
+    stl.lastMessageTimestamp,
+    stl.muteDigestNotifications
   ))
 
   type RepoImpl = SlackChannelToLibraryTable
@@ -159,7 +165,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def lastIngestingAt = column[Option[DateTime]]("last_ingesting_at", O.Nullable)
     def lastIngestedAt = column[Option[DateTime]]("last_ingested_at", O.Nullable)
     def lastMessageTimestamp = column[Option[SlackTimestamp]]("last_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, userId, organizationId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
+    def muteDigestNotifications = column[Boolean]("mute_digest_notifications", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, userId, organizationId, slackUserId, slackTeamId, slackChannelId,
+      slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp, muteDigestNotifications) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)

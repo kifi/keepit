@@ -30,7 +30,8 @@ case class SlackTeam(
   organizationId: Option[Id[Organization]],
   lastChannelCreatedAt: Option[SlackTimestamp] = None,
   generalChannelId: Option[SlackChannelId],
-  lastDigestNotificationAt: DateTime = currentDateTime)
+  lastDigestNotificationAt: DateTime = currentDateTime,
+  muteDigestNotifications: Boolean = false)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -38,6 +39,7 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = time)
+  def withMuteDigestNotifications(muted: Boolean) = this.copy(muteDigestNotifications = muted)
 
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
 }
@@ -53,7 +55,8 @@ object SlackTeam {
     (__ \ 'organizationId).formatNullable[Id[Organization]] and
     (__ \ 'lastChannelCreatedAt).formatNullable[SlackTimestamp] and
     (__ \ 'generalChannelId).formatNullable[SlackChannelId] and
-    (__ \ 'lastDigestNotificationAt).format[DateTime]
+    (__ \ 'lastDigestNotificationAt).format[DateTime] and
+    (__ \ 'muteDigestNotifications).format[Boolean]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -90,7 +93,8 @@ class SlackTeamRepoImpl @Inject() (
     organizationId: Option[Id[Organization]],
     lastChannelCreatedAt: Option[SlackTimestamp],
     generalChannelId: Option[SlackChannelId],
-    lastDigestNotificationAt: DateTime) = {
+    lastDigestNotificationAt: DateTime,
+    muteDigestNotifications: Boolean) = {
     SlackTeam(
       id,
       createdAt,
@@ -101,7 +105,8 @@ class SlackTeamRepoImpl @Inject() (
       organizationId,
       lastChannelCreatedAt,
       generalChannelId,
-      lastDigestNotificationAt
+      lastDigestNotificationAt,
+      muteDigestNotifications
     )
   }
 
@@ -115,7 +120,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.organizationId,
     slackTeam.lastChannelCreatedAt,
     slackTeam.generalChannelId,
-    slackTeam.lastDigestNotificationAt
+    slackTeam.lastDigestNotificationAt,
+    slackTeam.muteDigestNotifications
   ))
 
   type RepoImpl = SlackTeamTable
@@ -127,7 +133,9 @@ class SlackTeamRepoImpl @Inject() (
     def lastChannelCreatedAt = column[Option[SlackTimestamp]]("last_channel_created_at", O.Nullable)
     def generalChannelId = column[Option[SlackChannelId]]("general_channel_id", O.Nullable)
     def lastDigestNotificationAt = column[DateTime]("last_digest_notification_at", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def muteDigestNotifications = column[Boolean]("mute_digest_notifications", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt,
+      generalChannelId, lastDigestNotificationAt, muteDigestNotifications) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
@@ -161,7 +169,7 @@ class SlackTeamRepoImpl @Inject() (
     }
   }
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam] = {
-    activeRows.filter(row => row.lastDigestNotificationAt < lastPushOlderThan).list
+    activeRows.filter(row => !row.muteDigestNotifications && row.lastDigestNotificationAt < lastPushOlderThan).list
   }
 
 }
