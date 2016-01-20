@@ -47,6 +47,7 @@ class SlackIngestingActor @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
+    orgConfigRepo: OrganizationConfigurationRepo,
     implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
   import SlackIngestionConfig._
@@ -131,11 +132,20 @@ class SlackIngestingActor @Inject() (
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
           FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
-            /*
-            slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
-              case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
+            val shouldAddReaction = db.readOnlyReplica { implicit s =>
+              integration.space match {
+                case LibrarySpace.OrganizationSpace(orgId) =>
+                  val config = orgConfigRepo.getByOrgId(orgId)
+                  config.settings.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED)
+                case _ => false
+              }
             }
-            */
+            if (shouldAddReaction) {
+              slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
+                case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
+              }
+            }
+
             Future.successful(Unit)
           } imap { _ =>
             (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
