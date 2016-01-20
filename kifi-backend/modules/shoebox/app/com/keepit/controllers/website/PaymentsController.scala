@@ -206,7 +206,7 @@ class PaymentsController @Inject() (
     Ok(Json.toJson(orgInfoCommander.getExternalOrgConfiguration(request.orgId)))
   }
 
-  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
+  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS)(parse.tolerantJson) { request =>
     request.body.validate[OrganizationSettings](OrganizationSettings.siteFormat) match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
