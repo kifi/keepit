@@ -136,17 +136,7 @@ class SlackClientWrapperImpl @Inject() (
       workingToken match {
         case None => Future.failed(SlackAPIFailure.NoValidToken)
         case Some(token) =>
-          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen {
-            case Success(_: Unit) => // If we ever kept track of successes for tokens, here is where we would note the success
-            case Failure(fail: SlackAPIFailure) => db.readWrite { implicit s =>
-              slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-                slackTeamMembershipRepo.save(stm.revoked)
-              }
-            }
-            case Failure(other) =>
-              airbrake.notify("Got an unparseable error while pushing to Slack.", other)
-          }
-
+          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token))
           pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
       }
     }
