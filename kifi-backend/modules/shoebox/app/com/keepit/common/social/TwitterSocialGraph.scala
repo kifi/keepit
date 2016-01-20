@@ -390,24 +390,6 @@ class TwitterSocialGraphImpl @Inject() (
         Left(UnknownError(query.toString, t.getMessage))
     }
   }
-
-  private def handleSyncFetchFailure(error: TwitterSyncError) = {
-    error match {
-      case TokenExpired(Some(sui)) =>
-        db.readWrite { implicit s =>
-          socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
-        }
-      case HandleDoesntExist(handle) =>
-        db.readWrite { implicit s =>
-          twitterSyncStateRepo.getAllByHandle(handle).map { twitterSync =>
-            twitterSyncStateRepo.save(twitterSync.copy(state = TwitterSyncStateStates.INACTIVE))
-          }
-        }
-      case other =>
-        log.warn(s"[twfetch-err] Fetching error $other")
-    }
-  }
-
 }
 
 sealed trait TwitterSyncError
