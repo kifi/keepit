@@ -12,6 +12,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.core._
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamInfo, SlackTeamId }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.heimdal.{ HeimdalContext, UserEvent }
@@ -80,10 +81,10 @@ object UserIdAugmentor extends EventAugmentor[UserEvent] {
 }
 
 class UserOrgValuesAugmentor(eventContextHelper: EventContextHelper) extends EventAugmentor[UserEvent] {
-  def isDefinedAt(userEvent: UserEvent) = true
+  def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String]("orgId").isEmpty
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     eventContextHelper.getPrimaryOrg(userEvent.userId).flatMap {
-      case Some(orgId) => eventContextHelper.getOrgUserValues(orgId)
+      case Some(orgId) => eventContextHelper.getOrgSpecificValues(orgId)
       case None => Future.successful(Seq.empty[(String, ContextData)])
     }
   }
@@ -101,7 +102,7 @@ class UserKeepViewedAugmentor(eventContextHelper: EventContextHelper)(implicit v
     )
 
     val orgPropsFut = orgIdOpt match {
-      case Some(orgId) => eventContextHelper.getOrgEventValues(orgId, userId).recover { case _ => Seq.empty[(String, ContextData)] }
+      case Some(orgId) => eventContextHelper.getOrgUserValues(orgId, userId).recover { case _ => Seq.empty[(String, ContextData)] }
       case None => Future.successful(Seq.empty[(String, ContextData)])
     }
     val libPropsFut = libIdOpt match {
@@ -122,8 +123,41 @@ class UserDiscussionViewedAugmentor(eventContextHelper: EventContextHelper)(impl
 
     orgIdOptFut.flatMap {
       case None => Future.successful(Seq.empty[(String, ContextData)])
-      case Some(orgId) => eventContextHelper.getOrgEventValues(orgId, userEvent.userId)
+      case Some(orgId) => eventContextHelper.getOrgUserValues(orgId, userEvent.userId)
     }
+  }
+}
+
+class SlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: ShoeboxServiceClient) extends EventAugmentor[HeimdalEvent] {
+  def isDefinedAt(event: HeimdalEvent) = SlackEventTypes.contains(event.eventType)
+
+  def apply(event: HeimdalEvent): Future[Seq[(String, ContextData)]] = {
+    val emptyResponse = Future.successful(Seq.empty[(String, ContextData)])
+
+    event.context.get[String]("slackTeamId").map { id =>
+      shoebox.getSlackTeamInfo(SlackTeamId(id)).flatMap { teamInfoOpt =>
+        teamInfoOpt.map {
+          case InternalSlackTeamInfo(orgIdOpt, teamName) =>
+            val userIdOpt = Some(event).collect { case ue: UserEvent => ue.userId }
+            val orgUserValuesFut = {
+              for {
+                userId <- userIdOpt
+                orgId <- orgIdOpt
+              } yield eventContextHelper.getOrgUserValues(orgId, userId)
+            } getOrElse emptyResponse
+
+            val orgSpecificValuesFut = orgIdOpt.map(eventContextHelper.getOrgSpecificValues) getOrElse emptyResponse
+            for {
+              orgUserValues <- orgUserValuesFut
+              orgSpecificValues <- orgSpecificValuesFut
+            } yield {
+              val slackContext = Seq(("slackTeamName", ContextStringData(teamName.value)))
+              val additionalContext = orgUserValues ++ orgSpecificValues ++ slackContext
+              additionalContext
+            }
+        } getOrElse emptyResponse
+      }
+    } getOrElse emptyResponse
   }
 }
 

@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('FeedCtrl', [
-  '$window', '$rootScope', '$scope', '$q', '$timeout', '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService', 'profileService',
-  function($window, $rootScope, $scope, $q, $timeout, $analytics, feedService, Paginator, routeService, modalService, profileService) {
+  '$window', '$rootScope', '$scope', '$stateParams', '$location', '$q', '$timeout',
+  '$analytics', 'feedService', 'Paginator', 'routeService', 'modalService', 'profileService',
+  function($window, $rootScope, $scope, $stateParams, $location, $q, $timeout,
+   $analytics, feedService, Paginator, routeService, modalService, profileService) {
     function feedSource(pageNumber, pageSize) {
       var lastKeep = $scope.feed[$scope.feed.length - 1];
 
@@ -39,17 +41,19 @@ angular.module('kifi')
 
     $scope.feedFilter = {};
     var orgFilterOptions = orgs.map(function(org) {
-      return { value: 'org', id: org.id, text: org.name };
+      return { value: 'org', id: org.id, text: org.name, handle: org.handle };
     });
     $scope.feedFilter.options = [
       { value: '', text: 'Your Stream' },
-      { value: 'own', text: 'Your Keeps' },
-      { value: 'unread', text: 'Unread'},
-      { value: 'sent', text: 'Sent'}
+      { value: 'own', text: 'Your Keeps' }
     ].concat(orgFilterOptions);
 
-    // assumes this is the default setting's index ('All Keeps' 1/4/16, could be stored in prefs later on)
-    $scope.feedFilter.selected = $scope.feedFilter.options[0];
+    function getFilterFromUrl() {
+      return $scope.feedFilter.options.find(function (filter) {
+        return filter.value === $stateParams.filter || ($stateParams.filter === 'team' && $stateParams.handle === filter.handle);
+      });
+    }
+    $scope.feedFilter.selected = getFilterFromUrl() || $scope.feedFilter.options[0]; // assumes 'Your Stream' is first
 
     $scope.scrollDistance = '0';
     $scope.hasMoreKeeps = function () {
@@ -88,6 +92,13 @@ angular.module('kifi')
       $scope.feed = [];
       feedLazyLoader.reset();
       $scope.fetchKeeps();
+      if ($scope.feedFilter.selected.value !== 'org') {
+        $location.search('filter', $scope.feedFilter.selected.value || null); // sets query param or removes if falsy
+        $location.search('handle', null);
+      } else {
+        $location.search('filter', 'team');
+        $location.search('handle', $scope.feedFilter.selected.handle);
+      }
     };
 
     $scope.$on('keepRemoved', function (e, keepData) {

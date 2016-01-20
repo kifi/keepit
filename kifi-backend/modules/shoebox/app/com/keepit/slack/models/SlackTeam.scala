@@ -1,12 +1,18 @@
 package com.keepit.slack.models
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.model.{ User, Organization }
 import org.joda.time.DateTime
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
+import scala.concurrent.duration.Duration
 
 case class InvalidSlackSetupException(userId: Id[User], team: Option[SlackTeam], membership: Option[SlackTeamMembership])
   extends Exception(s"Invalid Slack setup for user $userId in team $team with membership $membership")
@@ -32,6 +38,23 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = time)
+
+  def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
+}
+
+object SlackTeam {
+  val cacheFormat: Format[SlackTeam] = (
+    (__ \ 'id).formatNullable[Id[SlackTeam]] and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format[State[SlackTeam]] and
+    (__ \ 'slackTeamId).format[SlackTeamId] and
+    (__ \ 'slackTeamName).format[SlackTeamName] and
+    (__ \ 'organizationId).formatNullable[Id[Organization]] and
+    (__ \ 'lastChannelCreatedAt).formatNullable[SlackTimestamp] and
+    (__ \ 'generalChannelId).formatNullable[SlackChannelId] and
+    (__ \ 'lastDigestNotificationAt).format[DateTime]
+  )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
 object SlackTeamStates extends States[SlackTeam]
@@ -46,6 +69,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 
 @Singleton
 class SlackTeamRepoImpl @Inject() (
+    slackTeamIdCache: SlackTeamIdCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
 
@@ -109,15 +133,21 @@ class SlackTeamRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamTable(tag)
   initTable()
-  override def deleteCache(membership: SlackTeam)(implicit session: RSession): Unit = {}
-  override def invalidateCache(membership: SlackTeam)(implicit session: RSession): Unit = {}
+  override def deleteCache(membership: SlackTeam)(implicit session: RSession): Unit = {
+    slackTeamIdCache.remove(SlackTeamIdKey(membership.slackTeamId))
+  }
+  override def invalidateCache(membership: SlackTeam)(implicit session: RSession): Unit = {
+    slackTeamIdCache.set(SlackTeamIdKey(membership.slackTeamId), membership)
+  }
 
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
     activeRows.filter(row => row.organizationId === orgId).list.toSet
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
-    rows.filter(row => row.slackTeamId === slackTeamId && row.state =!= excludeState.orNull).firstOption
+    slackTeamIdCache.getOrElseOpt(SlackTeamIdKey(slackTeamId)) {
+      rows.filter(row => row.slackTeamId === slackTeamId && row.state =!= excludeState.orNull).firstOption
+    }
   }
 
   def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam = {
@@ -135,4 +165,12 @@ class SlackTeamRepoImpl @Inject() (
   }
 
 }
+
+case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
+  override val version = 1
+  val namespace = "slack_team_by_slack_team_id"
+  def toKey(): String = id.value
+}
+class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
 

@@ -1,6 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -11,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
 import com.keepit.common.net.URI
@@ -26,8 +27,8 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
 import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -36,6 +37,7 @@ import play.api.mvc.Action
 import securesocial.core.IdentityId
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 class ShoeboxController @Inject() (
@@ -90,6 +92,8 @@ class ShoeboxController @Inject() (
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackInfoCommander: SlackInfoCommander,
+  slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
@@ -603,6 +607,15 @@ class ShoeboxController @Inject() (
     }
     implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
+  }
+
+  def getSlackTeamInfo(id: String) = Action { request =>
+    val slackTeamId = SlackTeamId(id)
+    db.readOnlyMaster { implicit s =>
+      slackTeamRepo.getBySlackTeamId(slackTeamId).map { slackTeam =>
+        Ok(Json.obj("teamInfo" -> Json.toJson(slackTeam.toInternalSlackTeamInfo)))
+      }.getOrElse(Ok)
+    }
   }
 
   def internKeep() = Action(parse.tolerantJson) { request =>

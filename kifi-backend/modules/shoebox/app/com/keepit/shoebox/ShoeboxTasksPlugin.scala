@@ -40,7 +40,7 @@ class ShoeboxTasksPlugin @Inject() (
     }
 
     scheduleTaskOnOneMachine(system, 1 minute, 20 seconds, "slack pushing") {
-      libToSlackPusher.findAndPushUpdatesForRipestLibraries()
+      libToSlackPusher.findAndPushUpdatesForRipestIntegrations()
     }
 
     // TODO(ryan): make these way slower, no need to run this that often

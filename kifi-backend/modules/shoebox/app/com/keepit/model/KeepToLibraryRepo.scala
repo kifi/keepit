@@ -29,7 +29,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
   def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
-  def getByLibraryAddedSince(libraryId: Id[Library], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibrariesAddedSince(libraryIds: Set[Id[Library]], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
@@ -174,8 +174,8 @@ class KeepToLibraryRepoImpl @Inject() (
     filtered.sortBy(r => (r.addedAt asc, r.id asc)).list
   }
 
-  def getByLibraryAddedSince(libraryId: Id[Library], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary] = {
-    activeRows.filter(r => r.libraryId === libraryId && r.addedAt >= time).sortBy(r => (r.addedAt asc, r.id asc)).list
+  def getByLibrariesAddedSince(libraryIds: Set[Id[Library]], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary] = {
+    activeRows.filter(r => r.libraryId.inSet(libraryIds) && r.addedAt >= time).sortBy(r => (r.addedAt asc, r.id asc)).list
   }
 
   def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {

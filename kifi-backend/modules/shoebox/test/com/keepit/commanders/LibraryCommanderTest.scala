@@ -216,13 +216,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryRepo.count === 0
           }
 
-          val lib1Request = LibraryInitialValues(name = "Avengers Missions", slug = "avengers", visibility = LibraryVisibility.SECRET)
+          val lib1Request = LibraryInitialValues(name = "Avengers Missions", slug = Some("avengers"), visibility = LibraryVisibility.SECRET)
 
-          val lib2Request = LibraryInitialValues(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
+          val lib2Request = LibraryInitialValues(name = "MURICA", slug = Some("murica"), visibility = LibraryVisibility.PUBLISHED)
 
-          val lib3Request = LibraryInitialValues(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
+          val lib3Request = LibraryInitialValues(name = "Science and Stuff", slug = Some("science"), visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER))
 
-          val lib4Request = LibraryInitialValues(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+          val lib4Request = LibraryInitialValues(name = "Invalid Param", slug = Some(""), visibility = LibraryVisibility.SECRET)
 
           val libraryCommander = inject[LibraryCommander]
           val add1 = libraryCommander.createLibrary(lib1Request, userAgent.id.get)
@@ -234,7 +234,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val add3 = libraryCommander.createLibrary(lib3Request, userIron.id.get)
           add3 must beRight
           add3.right.get.name === "Science and Stuff"
-          libraryCommander.createLibrary(lib4Request, userIron.id.get).isRight === false
+          libraryCommander.createLibrary(lib4Request, userIron.id.get) must beLeft
 
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
@@ -273,7 +273,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, space = Some(org.id.get))
           val addResponse = libraryCommander.createLibrary(addRequest, owner.id.get)
           addResponse must beRight
         }
@@ -288,7 +288,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
           val libraryCommander = inject[LibraryCommander]
 
-          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(org.id.get))
+          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, space = Some(org.id.get))
           val addResponse = libraryCommander.createLibrary(addRequest, rando.id.get)
           addResponse must beLeft
         }
@@ -298,7 +298,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val user = db.readWrite { implicit session =>
             UserFactory.user().saved
           }
-          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(user.id.get))
+          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, space = Some(user.id.get))
           val addResponse = libraryCommander.createLibrary(addRequest, user.id.get)
           addResponse must beLeft
         }

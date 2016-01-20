@@ -1,9 +1,11 @@
 package com.keepit.common.util
 
-import scala.util.Random
+import org.apache.commons.math3.random.MersenneTwister
 
 object RandomChoice {
-  def choice[T](xs: IndexedSeq[T]): Option[T] = {
-    if (xs.isEmpty) None else Some(xs(Random.nextInt(xs.length)))
+  implicit class RandomChoice(prng: MersenneTwister) {
+    def choice[T](xs: IndexedSeq[T]): Option[T] = {
+      if (xs.isEmpty) None else Some(xs(prng.nextInt(xs.length)))
+    }
   }
 }

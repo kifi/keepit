@@ -75,6 +75,7 @@ object FeatureSetting {
   case object MEMBERS extends FeatureSetting("members")
   case object ADMINS extends FeatureSetting("admins")
   case object ANYONE extends FeatureSetting("anyone")
+  case object ENABLED extends FeatureSetting("enabled")
 }
 
 object Feature extends Enumerator[Feature] {
@@ -166,5 +167,10 @@ object Feature extends Enumerator[Feature] {
     val value = OrganizationPermission.JOIN_BY_VERIFYING.value
     val permission = OrganizationPermission.JOIN_BY_VERIFYING
     val settings: Set[FeatureSetting] = Set(DISABLED, NONMEMBERS)
+  }
+
+  case object SlackIngestionReaction extends Feature {
+    val value = "slack_ingestion_reaction"
+    val settings: Set[FeatureSetting] = Set(DISABLED, ENABLED)
   }
 }

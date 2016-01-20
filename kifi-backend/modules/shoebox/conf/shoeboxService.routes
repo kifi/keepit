@@ -108,6 +108,8 @@ DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthControlle
 
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
+POST    /ext/keeps/new              @com.keepit.controllers.ext.ExtKeepController.createKeep()
+
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
@@ -382,17 +384,17 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
-POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
-POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
-GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], authToken: Option[String] ?= None)
-
+GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
+POST    /site/keeps/personalExport            @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
+POST    /site/keeps/organizationExport        @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 POST    /site/keeps/markAsRead                @com.keepit.controllers.website.DiscussionController.markKeepsAsRead()
+
 POST    /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.sendMessageOnKeep(keepId: PublicId[Keep])
 GET     /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.getMessagesOnKeep(keepId: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
 POST    /site/keeps/:keepId/messages/edit     @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])
+GET     /site/keeps/:id                       @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], authToken: Option[String] ?= None)
 
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
@@ -962,7 +964,7 @@ GET     /internal/shoebox/database/getIngestableOrganizations              @com.
 GET     /internal/shoebox/database/getIngestableOrganizationMemberships                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableOrganizationMembershipCandidates        @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMembershipCandidates(seqNum: SequenceNumber[OrganizationMembershipCandidate], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
-POST     /internal/shoebox/database/internDomainsByDomainNames            @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
+POST    /internal/shoebox/database/internDomainsByDomainNames            @com.keepit.controllers.internal.ShoeboxDataPipeController.internDomainsByDomainNames()
 GET     /internal/shoebox/database/getIngestableOrganizationDomainOwnerships            @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
@@ -1020,6 +1022,7 @@ GET      /internal/shoebox/database/getLibrariesWithWriteAccess    @com.keepit.c
 GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
+GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: String)
 
 POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
 POST     /internal/shoebox/database/addUsersToKeep   @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])

@@ -9,8 +9,6 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
-import com.keepit.common.net.URI
-import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
@@ -19,13 +17,12 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.DiscussionKeep
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.notify.info._
 import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models._
-import com.keepit.social.{ UserIdentity, BasicUser, SocialId, SocialNetworkType }
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
 import securesocial.core.IdentityId
@@ -34,8 +31,6 @@ import scala.collection.mutable
 import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Future
 import com.keepit.common.crypto.PublicIdConfiguration
-
-import scala.util.Random
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
@@ -696,7 +691,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
-
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = Future.successful(None)
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(
       id = nextBookmarkId(),

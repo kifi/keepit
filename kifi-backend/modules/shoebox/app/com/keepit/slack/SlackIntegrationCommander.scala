@@ -56,13 +56,13 @@ class SlackIntegrationCommanderImpl @Inject() (
     extends SlackIntegrationCommander with Logging {
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
-    db.readWrite { implicit s =>
+    val ltscToPushImmediately = db.readWrite { implicit s =>
       val defaultSpace = libRepo.get(libId).organizationId match {
         case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
           LibrarySpace.fromOrganizationId(orgId)
         case _ => LibrarySpace.fromUserId(userId)
       }
-      libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
+      val ltsc = libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
@@ -72,7 +72,7 @@ class SlackIntegrationCommanderImpl @Inject() (
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.On
       ))
-      channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
+      val sctl = channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
@@ -82,6 +82,7 @@ class SlackIntegrationCommanderImpl @Inject() (
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.Off
       ))
+      ltsc
     }
 
     SafeFuture {
@@ -95,7 +96,7 @@ class SlackIntegrationCommanderImpl @Inject() (
       }
       slackClient.sendToSlack(identity.userId, identity.teamId, webhook.channelName, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
         .foreach { _ =>
-          libToSlackPusher.pushUpdatesToSlack(libId)
+          libToSlackPusher.pushUpdatesForIntegrationIfPossible(ltscToPushImmediately)
             .foreach { _ => fetchMissingChannelIds() }
         }
 

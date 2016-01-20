@@ -64,7 +64,10 @@ class OrganizationCommanderImpl @Inject() (
 
       case OrganizationSettingsRequest(orgId, requesterId, settings) =>
         val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(requesterId))
-        if (!permissions.contains(MANAGE_PLAN)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val canEditSlackFeatures = permissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) && settings.features == Set(Feature.SlackIngestionReaction)
+
+        if (!canEditSlackFeatures && !permissions.contains(OrganizationPermission.MANAGE_PLAN)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else validateOrganizationSettings(orgId, settings)
 
       case OrganizationDeleteRequest(requesterId, orgId) =>
@@ -87,7 +90,7 @@ class OrganizationCommanderImpl @Inject() (
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
     (badName, badSiteUrl) match {
       case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
+      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
       case _ => None
     }
   }
@@ -171,7 +174,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
     val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+    val newConfig = orgConfigRepo.save(currentConfig.updateSettings(settings))
 
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     if (currentConfig.settings != settings) {

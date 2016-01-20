@@ -33,6 +33,7 @@ case class SlackChannelToLibrary(
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackChannelToLibraryStates.ACTIVE
+  def isWorking: Boolean = isActive && status == SlackIntegrationStatus.On
   def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (newStatus == SlackIntegrationStatus.On) Some(currentDateTime) else None)
 
   def withModifications(mods: SlackIntegrationModification) = {
