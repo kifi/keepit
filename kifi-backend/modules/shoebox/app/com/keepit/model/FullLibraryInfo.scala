@@ -52,7 +52,7 @@ case class ExternalLibraryInitialValues(
 case class LibraryInitialValues(
     name: String,
     visibility: LibraryVisibility,
-    slug: String,
+    slug: Option[String] = None,
     kind: Option[LibraryKind] = None,
     description: Option[String] = None,
     color: Option[LibraryColor] = None,
@@ -63,7 +63,7 @@ case class LibraryInitialValues(
   def asLibraryModifications: LibraryModifications = LibraryModifications(
     name = Some(name),
     visibility = Some(visibility),
-    slug = Some(slug),
+    slug = slug,
     description = description,
     color = color,
     listed = listed,
@@ -95,7 +95,7 @@ object LibraryInitialValues {
       name = "General",
       description = Some("This library is for keeps the entire team should know about.  All team members are in this library."),
       visibility = LibraryVisibility.ORGANIZATION,
-      slug = "general",
+      slug = Some("general"),
       kind = Some(LibraryKind.SYSTEM_ORG_GENERAL),
       space = Some(LibrarySpace.fromOrganizationId(org.id.get)),
       orgMemberAccess = Some(LibraryAccess.READ_WRITE)

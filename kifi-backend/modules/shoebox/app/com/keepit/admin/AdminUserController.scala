@@ -473,9 +473,9 @@ class AdminUserController @Inject() (
     val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
     val slugOpt = request.body.get("slug").flatMap(_.headOption)
 
-    (nameOpt, visibilityOpt, slugOpt) match {
-      case (Some(name), Some(visibility), Some(slug)) => {
-        val libraryAddRequest = LibraryInitialValues(name, visibility, slug)
+    (nameOpt, visibilityOpt) match {
+      case (Some(name), Some(visibility)) =>
+        val libraryAddRequest = LibraryInitialValues(name, visibility, slugOpt)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val result: Either[LibraryFail, Library] = libraryCommander.createLibrary(libraryAddRequest, userId)
@@ -483,7 +483,6 @@ class AdminUserController @Inject() (
           case Left(fail) => BadRequest(fail.message)
           case Right(_) => Ok
         }
-      }
       case _ => BadRequest("All Fields are required.")
     }
   }
