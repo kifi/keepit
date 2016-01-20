@@ -93,6 +93,12 @@ angular.module('kifi')
       });
     }
 
+    function editKeepTitle(keepPubId, newTitle) {
+      return net.modifyKeep(keepPubId, { title: newTitle }).then(function () {
+        return newTitle;
+      });
+    }
+
     // When a url is added as a keep, the returned keep does not have the full
     // keep information we need to display it. This function fetches that
     // information.
@@ -129,6 +135,7 @@ angular.module('kifi')
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
+      editKeepTitle: editKeepTitle,
       fetchFullKeepInfo: fetchFullKeepInfo,
       getFullKeepInfo: getFullKeepInfo,
       unkeepFromLibrary: unkeepFromLibrary,

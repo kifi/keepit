@@ -1,0 +1,22 @@
+<div class="dialog-content">
+  <a class="dialog-x" ng-click="resetAndHide()"></a>
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header">Edit Title</h1>
+
+    <div class="dialog-body dialog-centered">
+      <div class="kf-edit-keep-title-body">
+        <input class="kf-edit-keep-title-input"
+               placeholder="Add a custom title ..."
+               ng-keydown="onKeyDown($event)"
+               ng-model="keepTitle"></input>
+      </div>
+    </div>
+  </div>
+  <div class="dialog-buttons">
+    <button class="kf-button kf-button-large kf-action-button kf-ak-button"
+            tabindex="0"
+            ng-click="saveTitle()">
+      <span>Save</span>
+    </button>
+  </div>
+</div>
