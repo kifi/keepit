@@ -31,9 +31,10 @@ angular.module('kifi')
         'abstract': true
       })
       .state('home.feed', {
-        url: '',
+        url: '?filter&handle',
         controller: 'FeedCtrl',
-        templateUrl: 'feed/feed.tpl.html'
+        templateUrl: 'feed/feed.tpl.html',
+        reloadOnSearch: false
       })
       .state('getStarted', {
           url: '/getstarted',
