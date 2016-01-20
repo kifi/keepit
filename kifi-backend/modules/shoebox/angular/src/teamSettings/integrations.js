@@ -15,6 +15,7 @@ angular.module('kifi')
             if (lib.slack.integrations.length > 0) {
               var integrations = lib.slack.integrations;
               integrations.forEach(function(integration) {
+                lib.library.sortName = lib.library.name.replace(/[^\w\s]|_/g, '').toLowerCase();
                 $scope.integrations.push({
                   library: lib.library,
                   integration: integration,
@@ -25,7 +26,7 @@ angular.module('kifi')
             }
           });
           $scope.integrations.sort(function (a, b) {
-            return a.library.name.toLowerCase().localeCompare(b.library.name.toLowerCase());
+            return a.library.sortName.localeCompare(b.library.sortName);
           });
         });
 
