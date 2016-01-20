@@ -119,14 +119,12 @@ class LibraryCommanderImpl @Inject() (
       case name if !Library.isValidName(name) => Some(LibraryFail(BAD_REQUEST, "invalid_name"))
       case _ => None
     }
-    def invalidSlug = libCreateReq.slug match {
-      case Some(slug) if !LibrarySlug.isValidSlug(slug) || LibrarySlug.isReservedSlug(slug) => Some(LibraryFail(BAD_REQUEST, "invalid_slug"))
-      case None => None
+    def invalidSlug = libCreateReq.slug.collect {
+      case slug if !LibrarySlug.isValidSlug(slug) || LibrarySlug.isReservedSlug(slug) => LibraryFail(BAD_REQUEST, "invalid_slug")
     }
-    def slugCollision = libCreateReq.slug match {
-      case Some(slug) if libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(slug)).isDefined =>
-        Some(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-      case None => None
+    def slugCollision = libCreateReq.slug.collect {
+      case slug if libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(slug)).isDefined =>
+        LibraryFail(BAD_REQUEST, "library_slug_exists")
     }
     def invalidSpace = {
       val canCreateLibraryInSpace = targetSpace match {
