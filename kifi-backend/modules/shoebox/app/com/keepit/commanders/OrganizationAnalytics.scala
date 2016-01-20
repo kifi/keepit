@@ -87,6 +87,7 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
         case req: OrganizationDomainAddRequest => "domain_added"
         case req: OrganizationDomainRemoveRequest => "domain_removed"
         case req: OrganizationDomainPendingAddRequest => "pending_domain_added"
+        case req: OrganizationDomainSendMemberConfirmationRequest => "send_member_confirmation"
       }
       builder += ("action", action)
       builder += ("name", organization.name)

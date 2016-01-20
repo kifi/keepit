@@ -1022,7 +1022,6 @@ GET      /internal/shoebox/database/getLibrariesWithWriteAccess    @com.keepit.c
 GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
-GET      /internal/shoebox/database/getUserIdFromSlackTeamAndUserIds       @com.keepit.controllers.internal.ShoeboxController.getUserIdFromSlackTeamAndUserIds(teamId: String, slackUserId: String)
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: String)
 
 POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
