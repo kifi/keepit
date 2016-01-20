@@ -56,7 +56,7 @@ class SlackCommanderImpl @Inject() (
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
-          slackChannelId = None,
+          slackChannelId = webhook.channelId,
           webhook = webhook,
           lastPostedAt = None
         ))
