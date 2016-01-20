@@ -67,7 +67,7 @@ class OrganizationCommanderImpl @Inject() (
 
         val canEditSlackFeatures = permissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) && settings.features == Set(Feature.SlackIngestionReaction)
 
-        if (!canEditSlackFeatures && !permissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        if (!canEditSlackFeatures && !permissions.contains(OrganizationPermission.MANAGE_PLAN)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else validateOrganizationSettings(orgId, settings)
 
       case OrganizationDeleteRequest(requesterId, orgId) =>
