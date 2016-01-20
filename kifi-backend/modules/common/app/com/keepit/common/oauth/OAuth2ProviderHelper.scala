@@ -22,27 +22,19 @@ import scala.util.Try
  * Adapted from UserIdentityProvider -- less coupled with SS, async vs sync, etc.
  * No functional changes.
  */
-trait OAuth2ProviderHelper extends OAuth2Support with Logging {
+trait OAuth2ProviderHelper extends Logging { self: OAuth2Support[_] =>
 
   def oauth2Config: OAuth2Configuration
+
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo
 
   def providerConfig: OAuth2ProviderConfiguration = oauth2Config.getProviderConfig(providerId.id) match {
     case None => throw new IllegalArgumentException(s"config not found for $providerId")
     case Some(cfg) => cfg
   }
 
-  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
-    log.info(s"[buildTokenInfo(${providerConfig.name})] response.body=${response.body}")
-    try {
-      response.json.as[OAuth2TokenInfo]
-    } catch {
-      case t: Throwable =>
-        throw new AuthException(s"[buildTokenInfo] failed to retrieve token; response.status=${response.status}; body=${response.body}", response)
-    }
-  }
-
   // Next: factor out Result
-  def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
+  def doOAuth[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] = {
     val userIdOpt = request.session.getUserId()
     log.info(s"[OAuth doOAuth2] [userIdOpt=$userIdOpt] request=$request; headers=${request.headers}; session=${request.session.data}")
     request.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map(error => {

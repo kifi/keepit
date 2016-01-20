@@ -1,20 +1,24 @@
 package com.keepit.common.oauth
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
+import com.keepit.social.RichSocialUser
 import play.api.http.Status
 import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
 import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import play.api.Play.current
 
-trait FacebookOAuthProvider extends OAuth2Support {
+case class FacebookAPIError(error: String, message: String) extends Exception(s"Error $error while calling Facebook: $message")
+
+trait FacebookOAuthProvider extends OAuth2Support[FacebookIdentity] {
 
   val MeApi = "https://graph.facebook.com/v2.0/me?fields=name,first_name,last_name,picture.type(large),email&return_ssl_resources=1&access_token="
   val Error = "error"
@@ -39,10 +43,20 @@ class FacebookOAuthProviderImpl @Inject() (
   airbrake: AirbrakeNotifier,
   val oauth2Config: OAuth2Configuration)
     extends FacebookOAuthProvider
-    with FacebookOAuth2ProviderHelper
+    with OAuth2ProviderHelper
     with Logging {
 
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
+  def getIdentityId(token: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(token).map(RichSocialUser(_).identityId)
+
+  def getRichIdentity(token: OAuth2TokenInfo): Future[FacebookIdentity] = {
+    exchangeLongTermToken(token.accessToken).flatMap { oauthInfo =>
+      getUserProfileInfo(oauthInfo.accessToken).map { profileInfo =>
+        FacebookIdentity(oauthInfo, profileInfo)
+      }
+    }
+  }
+
+  private def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
     WS.url(MeApi + accessToken.token).get() map { response =>
       log.info(s"[getUserProfileInfo] response=${response.body} status=${response.statusText}")
       val me = response.json
@@ -76,12 +90,12 @@ class FacebookOAuthProviderImpl @Inject() (
     }
   }
 
-  def exchangeLongTermToken(oauth2Info: OAuth2TokenInfo): Future[OAuth2TokenInfo] = {
+  private def exchangeLongTermToken(accessToken: OAuth2AccessToken): Future[OAuth2TokenInfo] = {
     val resF = WS.url(providerConfig.exchangeTokenUrl.get.toString).withQueryString(
       "grant_type" -> "fb_exchange_token",
       "client_id" -> providerConfig.clientId,
       "client_secret" -> providerConfig.clientSecret,
-      "fb_exchange_token" -> oauth2Info.accessToken.token
+      "fb_exchange_token" -> accessToken.token
     ).get
     resF map { res =>
       log.info(s"[exchangeToken] response=${res.body}")
@@ -90,23 +104,12 @@ class FacebookOAuthProviderImpl @Inject() (
           val nv = token.split('=')
           nv(0) -> nv(1)
         }.toMap
-        oauth2Info.copy(accessToken = OAuth2AccessToken(params("access_token")), expiresIn = params.get("expires").map(_.toInt))
-      } else {
-        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$providerConfig")
-        oauth2Info
-      }
-    } recover {
-      case t: Throwable =>
-        airbrake.notify(s"[exchangeToken] Caught exception $t during exchange attempt. Cause=${t.getCause}. Fallback to $oauth2Info", t)
-        oauth2Info
+        OAuth2TokenInfo(accessToken = OAuth2AccessToken(params("access_token")), expiresIn = params.get("expires").map(_.toInt))
+      } else throw new FacebookAPIError(res.status.toString, res.statusText)
     }
   }
-}
 
-trait FacebookOAuth2ProviderHelper extends OAuth2ProviderHelper {
-
-  // adapted from SecureSocial
-  override def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
     try {
       log.info(s"[buildTokenInfo(${providerConfig.name})] response.body=${response.body}")
       val parsed = response.body.split("&").map { kv =>

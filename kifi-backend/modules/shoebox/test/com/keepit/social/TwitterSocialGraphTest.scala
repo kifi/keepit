@@ -35,8 +35,9 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val libraryMembershipRepo = inject[LibraryMembershipRepo]
     val libPathCommander = inject[PathCommander]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
-      override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
-        TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
+      override def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = Future.successful {
+        val info = TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
+        TwitterIdentity(accessToken, info)
       }
     }
     val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], libPathCommander, inject[PublicIdConfiguration], inject[WatchableExecutionContext], inject[UserRepo]) {

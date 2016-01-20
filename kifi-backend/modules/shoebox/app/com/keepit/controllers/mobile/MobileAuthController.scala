@@ -197,36 +197,4 @@ class MobileAuthController @Inject() (
   def forgotPassword() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     authHelper.doForgotPassword
   }
-
-  def linkSocialNetwork(providerName: String) = UserAction(parse.tolerantJson) { implicit request =>
-    log.info(s"[linkSocialNetwork($providerName)] curr user: ${request.user} token: ${request.body}")
-    val resOpt = for {
-      provider <- Registry.providers.get(providerName)
-      oauth2Info <- request.body.asOpt[OAuth2Info]
-    } yield {
-      val suiOpt = db.readOnlyMaster(attempts = 2) { implicit s =>
-        socialUserInfoRepo.getByUser(request.userId)
-      } find (_.networkType == SocialNetworkType(providerName)) headOption
-
-      val result = suiOpt match {
-        case Some(sui) if sui.state != SocialUserInfoStates.INACTIVE =>
-          log.info(s"[accessTokenSignup($providerName)] user(${request.user}) already associated with social user: ${sui}")
-          Ok(Json.obj("code" -> "link_already_exists")) // err on safe side
-        case _ =>
-          Try {
-            val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
-            val filledSocialUser = provider.fillProfile(socialUser)
-            filledSocialUser
-          } match {
-            case Failure(err) => BadRequest(Json.obj("error" -> "invalid token"))
-            case Success(filledUser) =>
-              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser))
-              log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
-              Ok(Json.obj("code" -> "link_created"))
-          }
-      }
-      result
-    }
-    resOpt getOrElse BadRequest(Json.obj("error" -> "invalid_arguments"))
-  }
 }

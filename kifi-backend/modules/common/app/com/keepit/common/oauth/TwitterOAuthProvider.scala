@@ -5,14 +5,15 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.OAuth1TokenInfo
+import com.keepit.social.RichSocialUser
 import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsObject
 import play.api.libs.oauth._
 import play.api.libs.ws.WS
+import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 
@@ -22,7 +23,7 @@ import scala.concurrent.Future
   description: Option[String],
   friends_count: Option[Int])
 
-trait TwitterOAuthProvider extends OAuthProvider with OAuth1Support {
+trait TwitterOAuthProvider extends OAuth1Support[TwitterIdentity] {
   val providerId = ProviderIds.Twitter
 
   def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow]
@@ -31,13 +32,21 @@ trait TwitterOAuthProvider extends OAuthProvider with OAuth1Support {
 @Singleton
 class TwitterOAuthProviderImpl @Inject() (
     airbrake: AirbrakeNotifier,
-    oauth1Config: OAuth1Configuration) extends TwitterOAuthProvider with OAuth1Support with Logging {
+    oauth1Config: OAuth1Configuration) extends TwitterOAuthProvider with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(providerId.id).get
 
   private val verifyCredsEndpoint = "https://api.twitter.com/1.1/account/verify_credentials.json"
 
-  def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = {
+  def getIdentityId(accessToken: OAuth1TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichSocialUser(_).identityId)
+
+  def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = {
+    getUserProfileInfo(accessToken) map { info =>
+      TwitterIdentity(accessToken, info)
+    }
+  }
+
+  private def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = {
     val call = WS.url(verifyCredsEndpoint)
       .sign(OAuthCalculator(providerConfig.key, accessToken))
       .withQueryString("include_entities" -> false.toString, "skip_status" -> true.toString)

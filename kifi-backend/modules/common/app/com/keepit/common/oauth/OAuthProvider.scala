@@ -1,15 +1,12 @@
 package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ SocialUserInfo, OAuth1TokenInfo, OAuth2TokenInfo }
-import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
-import play.api.libs.ws.{ WS, WSResponse }
+import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.mvc.{ Result, Request }
-import securesocial.core.IdentityProvider
+import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 
@@ -53,54 +50,30 @@ case class UserProfileInfo(
     lastNameOpt: Option[String],
     handle: Option[UserHandle],
     pictureUrl: Option[java.net.URL],
-    profileUrl: Option[java.net.URL]) {
-  lazy val socialId: SocialId = {
-    val id = userId.id.trim
-    if (id.isEmpty) throw new Exception(s"empty social id for $toString")
-    SocialId(id)
-  }
-  lazy val socialNetwork: SocialNetworkType = SocialNetworks.ALL.collectFirst { case n if n.name == providerId.id => n } get
-}
+    profileUrl: Option[java.net.URL])
 
-object UserProfileInfo {
-  implicit def toUserProfileInfo(identity: securesocial.core.Identity) = UserProfileInfo(
-    ProviderIds.toProviderId(identity.identityId.providerId),
-    ProviderUserId(identity.identityId.userId),
-    identity.fullName,
-    identity.email.map(EmailAddress(_)),
-    Some(identity.firstName),
-    Some(identity.lastName),
-    None,
-    identity.avatarUrl.map(new java.net.URL(_)),
-    None
-  )
-}
-
-trait OAuthProvider {
+sealed trait OAuthProvider[T, I <: RichIdentity] {
   def providerId: ProviderId
+  def getIdentityId(token: T): Future[IdentityId]
+  def getRichIdentity(token: T): Future[I]
 }
 
-trait OAuth1Support extends OAuthProvider {
-  def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo]
-}
+trait OAuth1Support[I <: RichIdentity] extends OAuthProvider[OAuth1TokenInfo, I]
 
-trait OAuth2Support extends OAuthProvider {
+trait OAuth2Support[I <: RichIdentity] extends OAuthProvider[OAuth2TokenInfo, I] {
   def providerConfig: OAuth2ProviderConfiguration
-  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo]
-  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo]
-  def doOAuth2[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]]
+  def doOAuth[A]()(implicit request: Request[A]): Future[Either[Result, OAuth2TokenInfo]] // if not for weird TwitterProvider, we could move this to OAuthProvider hmmm
 }
 
 trait OAuth1ProviderRegistry {
-  def get(providerId: ProviderId): Option[OAuth1Support]
+  def get(providerId: ProviderId): Option[OAuth1Support[_ <: RichIdentity]]
 }
 
 @Singleton
 class OAuth1ProviderRegistryImpl @Inject() (
     airbrake: AirbrakeNotifier,
     twtrProvider: TwitterOAuthProvider) extends OAuth1ProviderRegistry with Logging {
-  def get(providerId: ProviderId): Option[OAuth1Support] = {
+  def get(providerId: ProviderId): Option[OAuth1Support[_ <: RichIdentity]] = {
     providerId match {
       case ProviderIds.Twitter => Some(twtrProvider)
       case _ => None
@@ -109,7 +82,7 @@ class OAuth1ProviderRegistryImpl @Inject() (
 }
 
 trait OAuth2ProviderRegistry {
-  def get(providerId: ProviderId): Option[OAuth2Support]
+  def get(providerId: ProviderId): Option[OAuth2Support[_ <: RichIdentity]]
 }
 
 @Singleton
@@ -118,7 +91,7 @@ class OAuth2ProviderRegistryImpl @Inject() (
     fbProvider: FacebookOAuthProvider,
     lnkdProvider: LinkedInOAuthProvider) extends OAuth2ProviderRegistry with Logging {
 
-  def get(providerId: ProviderId): Option[OAuth2Support] = {
+  def get(providerId: ProviderId): Option[OAuth2Support[_ <: RichIdentity]] = {
     providerId match {
       case ProviderIds.Facebook => Some(fbProvider)
       case ProviderIds.LinkedIn => Some(lnkdProvider)
