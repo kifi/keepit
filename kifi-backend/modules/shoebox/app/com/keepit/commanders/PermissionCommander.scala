@@ -294,13 +294,19 @@ class PermissionCommanderImpl @Inject() (
           }
           deprecatedPermissions || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
         }
+        val canEditKeep = {
+          userIdOpt.contains(k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)
+        }
+        val canDeleteKeep = userIdOpt.contains(k.userId)
 
         kId -> List(
           canAddParticipants -> KeepPermission.ADD_PARTICIPANTS,
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
           canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
-          canViewKeep -> KeepPermission.VIEW_KEEP
+          canViewKeep -> KeepPermission.VIEW_KEEP,
+          canEditKeep -> KeepPermission.EDIT_KEEP,
+          canDeleteKeep -> KeepPermission.DELETE_KEEP
         ).collect { case (true, p) => p }.toSet[KeepPermission]
     }
   }

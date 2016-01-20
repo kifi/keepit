@@ -17,7 +17,6 @@ import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.KeepPermission._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
@@ -984,7 +983,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (user1, library1, keep1, keep2)
         }
 
-        val keepPermissions = Seq(ADD_PARTICIPANTS, DELETE_OTHER_MESSAGES, ADD_MESSAGE, VIEW_KEEP, DELETE_OWN_MESSAGES)
+        val keepPermissions = KeepPermission.all
 
         inject[FakeSearchServiceClient].setKeepers((Seq(keep1.userId), 1), (Seq(keep2.userId), 1))
 
