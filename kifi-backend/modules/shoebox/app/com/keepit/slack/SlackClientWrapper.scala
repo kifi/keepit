@@ -177,7 +177,7 @@ class SlackClientWrapperImpl @Inject() (
     }
     FutureHelpers.foldLeftUntil(tokens)(Option.empty[SlackChannelId]) {
       case (_, token) => getChannels(token).map { channels =>
-        val generalChannelOpt = channels.find(_.channelName == SlackChannelName("#general")).map(_.channelId)
+        val generalChannelOpt = channels.find(_.isGeneral).map(_.channelId)
         (generalChannelOpt, generalChannelOpt.isDefined)
       }.recover { case x => (None, false) }
     }
