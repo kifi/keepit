@@ -60,9 +60,10 @@ object SlackIncomingWebhookFactory {
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
-      slackChannelId = None,
+      slackChannelId = Some(SlackChannelId(ra(8))),
       webhook = SlackIncomingWebhook(
         channelName = SlackChannelName(ra(10)),
+        channelId = Some(SlackChannelId(ra(10))),
         url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
         configUrl = s"https://${ra(5)}.slack.com/services/$botStr"
       ),
