@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -30,14 +31,19 @@ class SlackOnboarderImpl @Inject() (
   keepRepo: KeepRepo,
   attributionRepo: KeepSourceAttributionRepo,
   implicit val executionContext: ExecutionContext)
-    extends SlackOnboarder {
+    extends SlackOnboarder with Logging {
 
   def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
+    log.info(s"[SLACK-ONBOARD] Trying to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
     db.readOnlyMaster { implicit s =>
       generateOnboardingMessageForIntegration(integ)
     }.map { welcomeMsg =>
+      log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
       slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
-    }.getOrElse(Future.successful(Unit))
+    }.getOrElse {
+      log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
+      Future.successful(Unit)
+    }
   }
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
@@ -50,6 +56,7 @@ class SlackOnboarderImpl @Inject() (
           "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
         ))
       case sctl: SlackChannelToLibrary =>
+        log.info(s"[SLACK-ONBOARD] Trying to generate a message for ingestion from ${sctl.slackChannelName} in ${sctl.slackTeamId} to ${sctl.libraryId}")
         val lib = libRepo.get(sctl.libraryId)
         val keepsFromSlack = keepRepo.getByIds(ktlRepo.getAllByLibraryId(sctl.libraryId).map(_.keepId).toSet).filter {
           case (keepId, keep) => keep.source == KeepSource.slack
@@ -61,7 +68,7 @@ class SlackOnboarderImpl @Inject() (
         Some(DescriptionElements(
           "We just collected", linksFromTargetChannel.size, "links from this channel.",
           "You can browse them on Kifi in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute)
-        )).filter(_ => integ.slackTeamId == SlackDigestNotifier.KifiSlackTeamId)
+        )).filter(_ => sctl.slackTeamId == SlackDigestNotifier.KifiSlackTeamId)
     }
     textOpt.map(text => SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text)).quiet)
   }
