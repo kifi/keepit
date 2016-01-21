@@ -60,21 +60,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, initOrgSettings)) must beRight
 
         // owner can create public libraries
-        val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
+        val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
         val ownerLibResponse = libraryCommander.createLibrary(ownerCreateRequest, owner.id.get)
         ownerLibResponse must beRight
 
         // admin can create public libraries
-        val adminCreateRequest = LibraryInitialValues(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
+        val adminCreateRequest = LibraryInitialValues(name = "Alphabetter Soup", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
         val adminLibResponse = libraryCommander.createLibrary(adminCreateRequest, admin.id.get)
         adminLibResponse must beRight
 
         // member cannot create public libraries
-        val memberCreateRequest1 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest1 = LibraryInitialValues(name = "Alphabest Soup", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse1 = libraryCommander.createLibrary(memberCreateRequest1, member.id.get)
         memberLibResponse1 must beLeft
 
-        val memberCreateRequest2 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest2 = LibraryInitialValues(name = "Alphabest Soup", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse2 = libraryCommander.createLibrary(memberCreateRequest2, member.id.get)
         memberLibResponse2 must beRight
         val library = memberLibResponse2.right.get

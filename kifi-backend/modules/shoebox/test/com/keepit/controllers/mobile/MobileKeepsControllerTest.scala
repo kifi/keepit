@@ -71,8 +71,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
     }
   }
-  import KeepPermission._
-  val keepPermissions = Seq(ADD_PARTICIPANTS, DELETE_OTHER_MESSAGES, ADD_MESSAGE, VIEW_KEEP, DELETE_OWN_MESSAGES)
+  val keepPermissions = KeepPermission.all
 
   "allKeeps" in {
     withDb(controllerTestModules: _*) { implicit injector =>

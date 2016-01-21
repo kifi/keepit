@@ -9,11 +9,14 @@ import com.keepit.model.OAuth2TokenInfo
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
-import play.api.libs.ws.WS
+import play.api.libs.ws.{ WSResponse, WS }
+import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 
-trait LinkedInOAuthProvider extends OAuthProvider with OAuth2Support {
+case class LinkedInAPIError(error: String, message: String) extends Exception(s"Error $error while calling Facebook: $message")
+
+trait LinkedInOAuthProvider extends OAuth2Support[LinkedInIdentity] {
   val providerId = ProviderIds.LinkedIn
 }
 
@@ -38,12 +41,20 @@ class LinkedInOAuthProviderImpl @Inject() (
   airbrake: AirbrakeNotifier,
   val oauth2Config: OAuth2Configuration)
     extends LinkedInOAuthProvider
-    with OAuth2Support
     with OAuth2ProviderHelper
     with Logging {
 
   import LinkedInOAuthProvider._
-  def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
+
+  def getIdentityId(accessToken: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichIdentity.toIdentityId)
+
+  def getRichIdentity(accessToken: OAuth2TokenInfo): Future[LinkedInIdentity] = {
+    getUserProfileInfo(accessToken.accessToken).map { info =>
+      LinkedInIdentity(accessToken, info)
+    }
+  }
+
+  private def getUserProfileInfo(accessToken: OAuth2AccessToken): Future[UserProfileInfo] = {
     WS.url(api(accessToken)).withRequestTimeout(120000).get() map { response =>
       val me = response.json
       log.info(s"[getUserProfileInfo] response.json=$me")
@@ -72,15 +83,21 @@ class LinkedInOAuthProviderImpl @Inject() (
             firstNameOpt = firstName,
             lastNameOpt = lastName,
             handle = None,
-            pictureUrl = avatarUrl.map(new java.net.URL(_)),
-            profileUrl = publicProfileUrl.map(new java.net.URL(_))
+            pictureUrl = avatarUrl,
+            profileUrl = publicProfileUrl
           )
         }
       }
     }
   }
 
-  // not supported -- LinkedIn OAuth limitations
-  def exchangeLongTermToken(tokenInfo: OAuth2TokenInfo): Future[OAuth2TokenInfo] = Future.successful(tokenInfo)
-
+  def buildTokenInfo(response: WSResponse): OAuth2TokenInfo = {
+    log.info(s"[buildTokenInfo(${providerConfig.name})] response.body=${response.body}")
+    try {
+      response.json.as[OAuth2TokenInfo]
+    } catch {
+      case t: Throwable =>
+        throw new AuthException(s"[buildTokenInfo] failed to retrieve token; response.status=${response.status}; body=${response.body}", response)
+    }
+  }
 }

@@ -12,14 +12,12 @@ import com.keepit.controllers.core.{AuthController, AuthHelper}
 import com.keepit.heimdal.{ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes}
 import com.keepit.model._
 import com.keepit.social.providers.ProviderController
-import com.keepit.social.{SocialNetworkType, UserIdentity}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsNumber, JsValue, Json}
 import play.api.mvc.{Cookie, Result, Session}
-import securesocial.core.{IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService}
+import securesocial.core.{OAuth2Info, SecureSocial}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 class MobileAuthController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -196,37 +194,5 @@ class MobileAuthController @Inject() (
   // this one sends an email with a link to a page -- more work for mobile likely needed
   def forgotPassword() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
     authHelper.doForgotPassword
-  }
-
-  def linkSocialNetwork(providerName: String) = UserAction(parse.tolerantJson) { implicit request =>
-    log.info(s"[linkSocialNetwork($providerName)] curr user: ${request.user} token: ${request.body}")
-    val resOpt = for {
-      provider <- Registry.providers.get(providerName)
-      oauth2Info <- request.body.asOpt[OAuth2Info]
-    } yield {
-      val suiOpt = db.readOnlyMaster(attempts = 2) { implicit s =>
-        socialUserInfoRepo.getByUser(request.userId)
-      } find (_.networkType == SocialNetworkType(providerName)) headOption
-
-      val result = suiOpt match {
-        case Some(sui) if sui.state != SocialUserInfoStates.INACTIVE =>
-          log.info(s"[accessTokenSignup($providerName)] user(${request.user}) already associated with social user: ${sui}")
-          Ok(Json.obj("code" -> "link_already_exists")) // err on safe side
-        case _ =>
-          Try {
-            val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
-            val filledSocialUser = provider.fillProfile(socialUser)
-            filledSocialUser
-          } match {
-            case Failure(err) => BadRequest(Json.obj("error" -> "invalid token"))
-            case Success(filledUser) =>
-              val saved = UserService.save(UserIdentity(Some(request.userId), filledUser))
-              log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
-              Ok(Json.obj("code" -> "link_created"))
-          }
-      }
-      result
-    }
-    resOpt getOrElse BadRequest(Json.obj("error" -> "invalid_arguments"))
   }
 }

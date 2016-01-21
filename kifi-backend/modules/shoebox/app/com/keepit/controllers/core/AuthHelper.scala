@@ -3,13 +3,12 @@ package com.keepit.controllers.core
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
-import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator, PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
-import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.oauth.{ OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
-import com.keepit.payments.{ CreditRewardCommander, CreditCode }
+import com.keepit.payments.CreditCode
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -22,7 +21,6 @@ import com.keepit.social._
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail._
 import com.keepit.common.time._
 import play.api.data._
 import play.api.data.Forms._
@@ -100,7 +98,7 @@ class AuthHelper @Inject() (
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
     authCommander.getUserIdentity(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
-      case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+      case Some(identity @ UserIdentity(_, Some(userId))) => {
         // User exists with these credentials
         val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
         if (matchesOpt.exists(p => p)) {
@@ -590,19 +588,13 @@ class AuthHelper @Inject() (
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(OAuth2AccessToken(oauth2InfoOrig.accessToken)) flatMap { profileInfo =>
-          val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
-          val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
-            case t: Throwable =>
-              airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
-              OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
-          }
-          longTermTokenInfoF map { oauth2InfoNew =>
-            authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
-          }
+        provider.getRichIdentity(oauth2InfoOrig) map { identity =>
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+            log.error(message)
+            airbrake.notify(message)
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -614,12 +606,13 @@ class AuthHelper @Inject() (
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(oauth1Info) map { info =>
-          val filledUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
+        provider.getRichIdentity(oauth1Info) map { identity =>
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+            log.error(message)
+            airbrake.notify(message)
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -630,9 +623,8 @@ class AuthHelper @Inject() (
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(OAuth2AccessToken(oAuth2Info.accessToken)) map { info =>
-          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth2)
-          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        provider.getIdentityId(oAuth2Info) map { identityId =>
+          authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
             log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oAuth2Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
@@ -646,9 +638,8 @@ class AuthHelper @Inject() (
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(oauth1Info) map { info =>
-          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        provider.getIdentityId(oauth1Info) map { identityId =>
+          authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
             log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")

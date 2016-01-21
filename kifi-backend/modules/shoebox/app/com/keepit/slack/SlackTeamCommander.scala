@@ -140,7 +140,6 @@ class SlackTeamCommanderImpl @Inject() (
         case UserSpace(_) => LibraryVisibility.SECRET
         case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
       },
-      slug = LibrarySlug.generateFromName(libraryName),
       kind = Some(LibraryKind.SLACK_CHANNEL),
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
       space = Some(librarySpace)

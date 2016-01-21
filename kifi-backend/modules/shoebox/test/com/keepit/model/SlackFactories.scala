@@ -60,9 +60,10 @@ object SlackIncomingWebhookFactory {
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
-      slackChannelId = None,
+      slackChannelId = Some(SlackChannelId(ra(8))),
       webhook = SlackIncomingWebhook(
         channelName = SlackChannelName(ra(10)),
+        channelId = Some(SlackChannelId(ra(10))),
         url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
         configUrl = s"https://${ra(5)}.slack.com/services/$botStr"
       ),
@@ -96,6 +97,7 @@ object SlackChannelToLibraryFactory {
     def withChannel(cn: String) = this.copy(stl = stl.copy(slackChannelName = SlackChannelName(cn)))
     def withNextIngestionAt(time: DateTime) = this.copy(stl = stl.copy(nextIngestionAt = Some(time)))
     def on() = this.copy(stl = stl.withStatus(SlackIntegrationStatus.On))
+    def withSpace(space: LibrarySpace) = this.copy(stl = stl.withSpace(space))
   }
 
   def stls(count: Int) = List.fill(count)(stl())
@@ -123,6 +125,7 @@ object LibraryToSlackChannelFactory {
     def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))
     def on() = this.copy(lts = lts.withStatus(SlackIntegrationStatus.On))
     def withStatus(newStatus: SlackIntegrationStatus) = this.copy(lts = lts.copy(status = newStatus))
+    def withSpace(space: LibrarySpace) = this.copy(lts = lts.withSpace(space))
   }
 
   def ltss(count: Int) = List.fill(count)(lts())

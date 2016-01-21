@@ -124,6 +124,20 @@ class KeepsController @Inject() (
     Ok(Json.obj("tags" -> tags))
   }
 
+  def updateKeepTitle(pubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    val keepTry: Try[Keep] = for {
+      keepId <- Keep.decodePublicId(pubId).map(Success(_)).getOrElse(Failure(KeepFail.INVALID_ID))
+      title = (request.body \ "title").as[String]
+      keep <- db.readWrite(implicit s => keepsCommander.updateKeepTitle(keepId, request.userId, title))
+    } yield keep
+
+    keepTry match {
+      case Failure(fail: KeepFail) => fail.asErrorResponse
+      case Failure(unhandled) => throw unhandled
+      case Success(keep) => Ok
+    }
+  }
+
   def deleteCollection(id: ExternalId[Collection]) = UserAction { request =>
     db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build

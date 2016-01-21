@@ -139,13 +139,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         }
 
         // duplicate name
-        status(createLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret"))) === BAD_REQUEST
+        status(createLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret"))) === OK
 
         // invalid name
         status(createLibrary(user1, Json.obj("name" -> "Lib/\" 3", "visibility" -> "secret"))) === BAD_REQUEST
 
         db.readOnlyMaster { implicit s =>
-          libraryRepo.count === 1
+          libraryRepo.count === 2
         }
       }
     }

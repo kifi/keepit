@@ -6,11 +6,13 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class SlackIncomingWebhook(
+  channelId: Option[SlackChannelId],
   channelName: SlackChannelName,
   url: String,
   configUrl: String)
 object SlackIncomingWebhook {
   implicit val reads: Reads[SlackIncomingWebhook] = (
+    (__ \ 'channel_id).readNullable[SlackChannelId] and
     (__ \ 'channel).read[SlackChannelName] and
     (__ \ 'url).read[String] and
     (__ \ 'configuration_url).read[String]

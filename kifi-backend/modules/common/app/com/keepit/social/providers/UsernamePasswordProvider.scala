@@ -3,9 +3,9 @@ package com.keepit.social.providers
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.oauth.OAuth2ProviderConfiguration
+import com.keepit.common.oauth.{ EmailPasswordIdentity, OAuth2ProviderConfiguration }
 import com.keepit.model.User
-import com.keepit.social.{ UserIdentity, UserIdentityProvider }
+import com.keepit.social.{ UserIdentity$, UserIdentity, UserIdentityProvider }
 
 import play.api.Application
 import play.api.data.Forms._

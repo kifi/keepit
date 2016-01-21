@@ -1,10 +1,13 @@
 package com.keepit.slack
 
+import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.LibraryToSlackChannelFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
@@ -13,9 +16,11 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.Json
 
 class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeSocialGraphModule()
@@ -68,6 +73,53 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           // Uncomment to visually inspect the slack info
           // println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
           slackInfo.get(lib.id.get).map(_.integrations.length) must beSome(2)
+        }
+      }
+    }
+    "serve up org integrations" in {
+      "pick out the correct libraries" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, member, org, libs) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+
+            val slackTeam = SlackTeamFactory.team().copy(teamName = SlackTeamName("slack"))
+            val stmOwner = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
+            val stmMember = SlackTeamMembershipFactory.membership().withUser(member).withTeam(slackTeam).saved
+
+            val personalSpace = LibrarySpace.fromUserId(member.id.get)
+            LibraryFactory.libraries(5).map(_.withOwner(member).withVisibility(LibraryVisibility.SECRET)).saved.foreach { lib =>
+              LibraryToSlackChannelFactory.lts().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel("#eng").saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel("#eng").saved
+            }
+
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            val orgSpace = LibrarySpace.fromOrganizationId(org.id.get)
+
+            val personalLibs = List(
+              LibraryFactory.library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).saved,
+              LibraryFactory.library().withOwner(owner).withVisibility(LibraryVisibility.SECRET).saved
+            )
+            val orgLibs = List(
+              LibraryFactory.library().withOwner(owner).withOrganization(org).saved,
+              LibraryFactory.library().withOwner(member).withOrganization(org).saved
+            )
+            for (lib <- personalLibs ++ orgLibs) yield {
+              LibraryToSlackChannelFactory.lts().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel("#eng").saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel("#eng").saved
+            }
+            (owner, member, org, orgLibs ++ personalLibs)
+          }
+
+          val slackInfo = db.readOnlyMaster { implicit s =>
+            slackInfoCommander.getOrganizationSlackInfo(org.id.get, member.id.get)
+          }
+          // Uncomment to visually inspect the slack info
+          // println(Json.prettyPrint(Json.toJson(slackInfo)))
+
+          val expected = libs.map(_.id.get).toSet
+          val actual = slackInfo.libraries.map(_._1.id).map(pubId => Library.decodePublicId(pubId).get).toSet
+          actual === expected
         }
       }
     }
