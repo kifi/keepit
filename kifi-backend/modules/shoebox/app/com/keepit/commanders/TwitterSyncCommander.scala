@@ -1,23 +1,24 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.core
+import java.util.UUID
 
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.slick.Database
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.TwitterSyncError.{ HandleDoesntExist, TokenExpired }
+import com.keepit.common.social.{ TwitterSocialGraph, TwitterSyncError }
 import com.keepit.common.time._
-import com.keepit.common.social.{ TwitterSyncError, TwitterSocialGraph }
-import com.keepit.model.SyncTarget.{ Tweets, Favorites }
-import com.keepit.social.SocialNetworks
+import com.keepit.controllers.website.{ TwitterArchiveParser, Bookmark, BookmarkImporter }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.model.SyncTarget.{ Favorites, Tweets }
 import com.keepit.model._
-import com.keepit.common.concurrent.ReactiveLock
-import com.keepit.controllers.website.BookmarkImporter
+import com.keepit.social.SocialNetworks
 import com.keepit.social.twitter.TwitterHandle
+import play.api.libs.json.{ JsArray, JsObject, Json }
 
-import play.api.libs.json.JsObject
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class TwitterStatusesAPIResponse(handle: String, tweets: Seq[JsObject], maxTweetId: Long)
@@ -31,14 +32,13 @@ class TwitterSyncCommander @Inject() (
     importer: BookmarkImporter,
     libraryRepo: LibraryRepo,
     clock: Clock,
+    rawKeepInterner: RawKeepInterner,
+    twitterArchiveParser: TwitterArchiveParser,
+    heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   private val throttle = new ReactiveLock(1)
-
-  private def storeTweets(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
-    importer.processDirectTwitterData(userId, libraryId, tweets)
-  }
 
   def internTwitterSync(userTokenToUse: Option[Id[User]], libraryId: Id[Library], handle: TwitterHandle, target: SyncTarget): TwitterSyncState = {
     db.readWrite { implicit session =>
@@ -127,7 +127,7 @@ class TwitterSyncCommander @Inject() (
     log.debug(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
     if (tweets.nonEmpty) {
 
-      importer.processDirectTwitterData(libraryOwner, syncState.libraryId, tweets)
+      processDirectTwitterData(libraryOwner, syncState.libraryId, tweets)
 
       val tweetIds = tweets.map(tweet => (tweet \ "id").as[Long])
       val batchMinTweetId = tweetIds.min
@@ -146,6 +146,15 @@ class TwitterSyncCommander @Inject() (
       }
       (newState, None, None)
     }
+  }
+
+  private def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
+    implicit val context = heimdalContextBuilderFactoryBean().build
+    val (sourceOpt, parsed) = twitterArchiveParser.parseTwitterJson(tweets)
+
+    val (importId, rawKeeps) = rawKeepInterner.generateRawKeeps(userId, sourceOpt, parsed, libraryId)
+
+    rawKeepInterner.persistRawKeeps(rawKeeps, Some(importId))
   }
 
   private val safeBacklogBuffer = 10

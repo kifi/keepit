@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import java.util.UUID
 import java.util.concurrent.{ Callable, TimeUnit }
 
 import com.google.common.cache.{ Cache, CacheBuilder }
@@ -7,9 +8,10 @@ import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
+import com.keepit.controllers.website.Bookmark
 import com.keepit.model._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.core._
 
 import com.keepit.common.time._
@@ -20,14 +22,14 @@ import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
-import play.api.Plugin
+import play.api.{ db, Plugin }
 import akka.actor.ActorSystem
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import scala.concurrent.duration._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsArray, Json }
 import scala.collection.mutable
 
 private case object ProcessKeeps
@@ -166,5 +168,78 @@ class RawKeepImporterPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnOneMachine(system, 127 seconds, 11 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
     super.onStart()
+  }
+}
+
+class RawKeepInterner @Inject() (
+    libraryAnalytics: LibraryAnalytics,
+    keepsAbuseMonitor: KeepsAbuseMonitor,
+    db: Database,
+    rawKeepRepo: RawKeepRepo,
+    airbrake: AirbrakeNotifier,
+    clock: Clock,
+    rawKeepImporterPlugin: RawKeepImporterPlugin) extends Logging {
+
+  // Does not persist!
+  def generateRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[Bookmark], libraryId: Id[Library]) = {
+    val importId = UUID.randomUUID.toString
+    val rawKeeps = bookmarks.map {
+      case Bookmark(title, href, hashtags, createdDate, originalJson) =>
+        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty) && title.exists(_ != href)) Some(title.get) else None
+        val hashtagsArray = if (hashtags.nonEmpty) {
+          Some(JsArray(hashtags.map(Json.toJson(_))))
+        } else {
+          None
+        }
+
+        RawKeep(userId = userId,
+          title = titleOpt,
+          url = href,
+          importId = Some(importId),
+          source = source.getOrElse(KeepSource.bookmarkFileImport),
+          originalJson = originalJson,
+          installationId = None,
+          keepTags = hashtagsArray,
+          libraryId = Some(libraryId),
+          createdDate = createdDate)
+    }
+    (importId, rawKeeps)
+  }
+
+  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit = {
+    log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
+    val newImportId = importId.getOrElse(UUID.randomUUID.toString)
+
+    val deduped = rawKeeps.distinctBy(_.url) map (_.copy(importId = Some(newImportId)))
+
+    if (deduped.nonEmpty) {
+      val userId = deduped.head.userId
+      val total = deduped.size
+
+      keepsAbuseMonitor.inspect(userId, total)
+      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
+
+      deduped.grouped(500).foreach { rawKeepGroup =>
+        // insertAll fails if any of the inserts failed
+        log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
+        val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
+          rawKeepRepo.insertAll(rawKeepGroup)
+        }
+        if (bulkAttempt.isFailure) { // fyi, this doesn't really happen in prod often
+          log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
+          val singleAttempt = db.readWrite { implicit session =>
+            rawKeepGroup.toList.map { rawKeep =>
+              rawKeep -> rawKeepRepo.insertOne(rawKeep)
+            }
+          }
+          val (_, failuresWithRaws) = singleAttempt.partition(_._2.isSuccess)
+          val failedUrls = failuresWithRaws.map(_._1.url)
+          if (failedUrls.nonEmpty) {
+            airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}"), userId = Some(userId)))
+          }
+        }
+      }
+      rawKeepImporterPlugin.processKeeps(broadcastToOthers = true)
+    }
   }
 }

@@ -62,7 +62,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           (u, l)
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-        val bookmarkInterner = inject[KeepInterner]
+        val bookmarkInterner = inject[RawKeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = lib.id))
 
@@ -91,7 +91,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           (user, lib)
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-        val bookmarkInterner = inject[KeepInterner]
+        val bookmarkInterner = inject[RawKeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = Some(lib.id.get)))
 
