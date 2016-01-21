@@ -51,16 +51,49 @@
 
     // -- above is unedited -- //
 
-    function getTransitionDuration(element) {
+    function getTransitionDuration(element, tries) {
+      tries = (typeof tries === 'undefined' ? 0 : tries);
+
       var style = getComputedStyle(element);
-      var stringSeconds = style.transitionDuration.slice(0, -1);
-      var timeoutDuration = parseFloat(stringSeconds) * 1000;
-      return timeoutDuration;
+      if (style) {
+        var stringSeconds = style.transitionDuration.slice(0, -1);
+        var timeoutDuration = parseFloat(stringSeconds) * 1000;
+        return timeoutDuration;
+      } else if (tries < 5) {
+        return getTransitionDuration(element, tries + 1);
+      } else {
+        return 100; // because why not
+      }
     }
 
-    function getTransitionProperty(element) {
-      var style = getComputedStyle(element);
-      return style.transitionProperty;
+    function unique(array) {
+      var seen = {};
+      return array.filter(function(item) {
+        return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+      });
+    }
+
+    function getSingleTransitionProperties(element, pseudo, tries) {
+      tries = (typeof tries === 'undefined' ? 0 : tries);
+
+      var commaSeparatedRe = /[, ]+/g;
+      var style = getComputedStyle(element, pseudo);
+      if (style) {
+        return style.transitionProperty.split(commaSeparatedRe);
+      } else if (tries < 5) {
+        return getSingleTransitionProperties(element, pseudo, tries + 1);
+      } else {
+        return [];
+      }
+    }
+
+    function getTransitionProperties(element) {
+      var elementTransitionProperties = getSingleTransitionProperties(element);
+      var beforeTransitionProperties = getSingleTransitionProperties(element, ':before');
+      var afterTransitionProperties = getSingleTransitionProperties(element, ':after');
+      var allProperties = elementTransitionProperties.concat(beforeTransitionProperties).concat(afterTransitionProperties);
+
+      return unique(allProperties);
     }
 
     function getTransitionEvent(element, property, duration) {
@@ -80,7 +113,7 @@
       };
 
       setTimeout(function () {
-        var properties = getTransitionProperty(element).split(/[, ]+/g);
+        var properties = getTransitionProperties(element);
         properties.forEach(function (property) {
           transitionEndEvent.originalEvent = getTransitionEvent(element, property, duration);
           fn.call(element, transitionEndEvent);
