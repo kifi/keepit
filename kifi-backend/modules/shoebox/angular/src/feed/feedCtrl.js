@@ -49,9 +49,9 @@ angular.module('kifi')
     ].concat(orgFilterOptions);
 
     function getFilterFromUrl() {
-      return $scope.feedFilter.options.find(function (filter) {
+      return $scope.feedFilter.options.filter(function (filter) {
         return filter.value === $stateParams.filter || ($stateParams.filter === 'team' && $stateParams.handle === filter.handle);
-      });
+      })[0];
     }
     $scope.feedFilter.selected = getFilterFromUrl() || $scope.feedFilter.options[0]; // assumes 'Your Stream' is first
 
