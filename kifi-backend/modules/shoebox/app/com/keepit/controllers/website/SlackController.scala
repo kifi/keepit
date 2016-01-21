@@ -2,14 +2,14 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.controller.{ MaybeUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller._
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
 import com.keepit.controllers.core.AuthHelper
-import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -59,7 +59,7 @@ class SlackController @Inject() (
     Redirect(redirectUrl, SEE_OTHER)
   }
 
-  def registerSlackAuthorization(codeOpt: Option[String], state: String) = MaybeUserAction.async { implicit request =>
+  def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
@@ -71,7 +71,7 @@ class SlackController @Inject() (
         for {
           stateValue <- SlackState.toJson(SlackState(state)).toOption
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
-          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userIdOpt, slackAuth, slackIdentity, _, _)))
+          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
         } yield result
       } getOrElse Future.successful(BadRequest("invalid_state"))
     } yield result
@@ -81,30 +81,29 @@ class SlackController @Inject() (
     }
   }
 
-  private def processAuthorizedAction[T](authUserId: Option[Id[User]], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit request: MaybeUserRequest[_]): Future[Result] = {
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+  private def processAuthorizedAction[T](userId: Id[User], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T)(implicit context: HeimdalContext): Future[Result] = {
     import SlackAuthenticatedAction._
     action match {
-      case SetupLibraryIntegrations => (authUserId, Library.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Some(userId), Success(libId), Some(webhook)) =>
+      case SetupLibraryIntegrations => (Library.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Success(libId), Some(webhook)) =>
           slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
-        case (Success(integrationId), Some(webhook)) if authUserId.isDefined =>
+        case (Success(integrationId), Some(webhook)) =>
           val libraryId = slackIntegrationCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_integration"))
       }
       case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
-        case Success(integrationId) if authUserId.isDefined =>
+        case Success(integrationId) =>
           val libraryId = slackIntegrationCommander.turnOnChannelIngestion(integrationId, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("invalid_integration"))
       }
-      case SetupSlackTeam => (authUserId, (data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None)) match {
-        case (Some(userId), Success(orgIdOpt)) =>
+      case SetupSlackTeam => (data: Option[PublicId[Organization]]).map(Organization.decodePublicId(_).map(Some(_))) getOrElse Success(None) match {
+        case Success(orgIdOpt) =>
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
               case Some(orgId) => redirectToOrg(orgId)
@@ -112,26 +111,6 @@ class SlackController @Inject() (
             }
           }
         case _ => Future.successful(BadRequest("invalid_integration"))
-      }
-
-      case Login => Future.successful(authCommander.loginWithTrustedSocialIdentity(IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId)))
-
-      case Signup => slackClient.getUserInfo(slackAuth.accessToken, slackIdentity.userId).map { userInfo =>
-        val socialUser = SocialUser(
-          identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
-          firstName = userInfo.profile.firstName.getOrElse(""),
-          lastName = userInfo.profile.lastName.getOrElse(""),
-          fullName = userInfo.profile.fullName.getOrElse(""),
-          email = Some(userInfo.profile.emailAddress.address),
-          avatarUrl = userInfo.profile.icon.maxByOpt(_._1).map(_._2),
-          authMethod = AuthenticationMethod.OAuth2,
-          oAuth2Info = Some(OAuth2Info(slackAuth.accessToken.token, None, None, None))
-        )
-
-        val socialFinalizeInfo = SocialFinalizeInfo(userInfo.profile.emailAddress, userInfo.profile.firstName.getOrElse(""), userInfo.profile.lastName.getOrElse(""), None, None, None, None, None, None, None)
-        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-        val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(socialFinalizeInfo, socialUser, inviteExtIdOpt)
-        authHelper.finishSignup(user, userInfo.profile.emailAddress, emailPassIdentity, emailConfirmedAlready = true, None, None, isFinalizedImmediately = true)
       }
     }
   }
