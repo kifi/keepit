@@ -290,14 +290,20 @@ class ExtLibraryController @Inject() (
 
   // Maintainers: Let's keep this endpoint simple, quick and reliable. Complex updates deserve their own endpoints.
   def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    decode(libraryPubId) { libraryId =>
-      val body = request.body.as[JsObject]
-      val title = (body \ "title").asOpt[String]
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      keepsCommander.updateKeepTitle(keepExtId, libraryId, request.userId, title) match {
-        case Left((status, code)) => Status(status)(Json.obj("error" -> code))
-        case Right(keep) => NoContent
-      }
+    (request.body \ "title").validate[Option[String]] match {
+      case JsError(errs) => throw new Exception(s"invalid request: ${request.body.toString} for updateKeep, expected 'title'")
+      case JsSuccess(titleOpt, _) =>
+        titleOpt.map { title =>
+          db.readWrite { implicit s =>
+            Try(keepRepo.convertExternalId(keepExtId)).map { keepId =>
+              keepsCommander.updateKeepTitle(keepId, request.userId, title) match {
+                case Failure(fail: KeepFail) => fail.asErrorResponse
+                case Failure(unhandled) => throw unhandled
+                case Success(keep) => NoContent
+              }
+            }.getOrElse(KeepFail.KEEP_NOT_FOUND.asErrorResponse)
+          }
+        }.getOrElse(NoContent)
     }
   }
 
