@@ -43,17 +43,14 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
-@json
 case class OrganizationSlackInfo(
   link: String,
-  slackTeams: Set[SlackTeamId])
+  slackTeams: Set[SlackTeamId],
+  libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
-case class OrganizationSlackIntegrationsInfo(
-  libraries: Seq[(BasicLibrary, LibrarySlackInfo)],
-  numLibraries: Int)
-object OrganizationSlackIntegrationsInfo {
+object OrganizationSlackInfo {
   private implicit val helperWrites = KeyFormat.key2Writes[BasicLibrary, LibrarySlackInfo]("library", "slack")
-  implicit val writes: Writes[OrganizationSlackIntegrationsInfo] = Json.writes[OrganizationSlackIntegrationsInfo]
+  implicit val writes: Writes[OrganizationSlackInfo] = Json.writes[OrganizationSlackInfo]
 }
 
 object SlackInfoCommander {
@@ -64,7 +61,6 @@ object SlackInfoCommander {
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
-  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo
 }
@@ -164,26 +160,6 @@ class SlackInfoCommanderImpl @Inject() (
     }
   }
 
-  def getSlackIntegrationsForOrg(userId: Id[User], orgId: Id[Organization]): OrganizationSlackIntegrationsInfo = {
-    val (libIds, basicLibsById) = db.readOnlyReplica { implicit s =>
-      val libs = libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(userId), Offset(0), Limit(Int.MaxValue))
-      assert(libs.forall(_.organizationId.contains(orgId)))
-      val owners = libs.map(_.ownerId).toSet
-      val basicUserById = basicUserRepo.loadAll(owners)
-      val basicOrg = orgInfoCommander.getBasicOrganizationHelper(orgId).get
-      val basicLibsById = libs.map { lib =>
-        lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), Some(basicOrg.handle))
-      }.toMap
-      (libs.map(_.id.get).toSet, basicLibsById)
-    }
-    val integrationInfoByLib = getSlackIntegrationsForLibraries(userId, libIds)
-
-    OrganizationSlackIntegrationsInfo(
-      libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), integrationInfoByLib(libId)) },
-      numLibraries = libIds.size
-    )
-  }
-
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations = {
     db.readOnlyMaster { implicit session =>
       val channelToLibIntegrations = channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId)
@@ -201,8 +177,25 @@ class SlackInfoCommanderImpl @Inject() (
   }
 
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo = {
+    val (libIds, basicLibsById) = db.readOnlyReplica { implicit s =>
+      val libs = libInfoCommander.getLibrariesVisibleToUserHelper(orgId, Some(viewerId), Offset(0), Limit(Int.MaxValue))
+      assert(libs.forall(_.organizationId.contains(orgId)))
+      val owners = libs.map(_.ownerId).toSet
+      val basicUserById = basicUserRepo.loadAll(owners)
+      val basicOrg = orgInfoCommander.getBasicOrganizationHelper(orgId).get
+      val basicLibsById = libs.map { lib =>
+        lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), Some(basicOrg.handle))
+      }.toMap
+      (libs.map(_.id.get).toSet, basicLibsById)
+    }
+    val integrationInfoByLib = getSlackIntegrationsForLibraries(viewerId, libIds)
+
     val slackTeams = db.readOnlyMaster { implicit session => slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId) }
     val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None).url
-    OrganizationSlackInfo(link, slackTeams)
+    OrganizationSlackInfo(
+      link,
+      slackTeams,
+      libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), integrationInfoByLib(libId)) }
+    )
   }
 }
