@@ -62,8 +62,12 @@ object SlackInfoCommander {
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+
+  // Called by ShoeboxServiceController
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
-  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo
+
+  // For generating OrganizationInfo
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo
 }
 
 @Singleton
@@ -190,8 +194,8 @@ class SlackInfoCommanderImpl @Inject() (
     }
   }
 
-  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User]): OrganizationSlackInfo = {
-    val (libIds, basicLibsById, integrationInfosByLib, slackTeams) = db.readOnlyReplica { implicit s =>
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo = {
+    val (libIds, basicLibsById, integrationInfosByLib, slackTeams) = {
       val slackToLibs = channelToLibRepo.getIntegrationsByOrg(orgId)
       val libToSlacks = libToChannelRepo.getIntegrationsByOrg(orgId)
       val libIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).toSet

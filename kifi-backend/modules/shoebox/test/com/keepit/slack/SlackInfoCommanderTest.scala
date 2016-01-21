@@ -111,7 +111,9 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
             (owner, member, org, orgLibs ++ personalLibs)
           }
 
-          val slackInfo = slackInfoCommander.getOrganizationSlackInfo(org.id.get, member.id.get)
+          val slackInfo = db.readOnlyMaster { implicit s =>
+            slackInfoCommander.getOrganizationSlackInfo(org.id.get, member.id.get)
+          }
           // Uncomment to visually inspect the slack info
           // println(Json.prettyPrint(Json.toJson(slackInfo)))
 
