@@ -101,6 +101,16 @@ angular.module('kifi')
             'private' : 'public' : null;
         }
 
+        function unkeepFromLibrary(event, keep) {
+          if (keep.libraryId && keep.id) {
+            keep.unkept = true;
+            keepActionService.unkeepFromLibrary(keep.libraryId, keep.id)['catch'](function (err) {
+              keep.unkept = false;
+              modalService.openGenericErrorModal(err);
+            });
+          }
+        }
+
         //
         // Scope methods.
         //
@@ -342,10 +352,8 @@ angular.module('kifi')
               }
             }
             if (scope.canRemoveKeepFromLibrary) {
-              var deleteCallback = scope.deleteCallback();
-              if (deleteCallback) {
-                scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
-              }
+              var deleteCallback = scope.deleteCallback() || unkeepFromLibrary;
+              scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
             }
           };
           updateMenuItems();
