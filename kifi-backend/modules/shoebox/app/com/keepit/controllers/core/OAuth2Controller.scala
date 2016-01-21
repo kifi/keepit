@@ -188,7 +188,8 @@ class OAuth2Controller @Inject() (
               None
           }
           case "facebook" => {
-            if (Play.maybeApplication.isDefined && !Play.isProd) { // not supported in prod
+            if (Play.maybeApplication.isDefined && !Play.isProd) {
+              // not supported in prod
               val splitted = resp.body.split("=")
               log.infoP(s"splitted=${splitted.mkString}")
               if (splitted.length > 1)
@@ -239,17 +240,6 @@ class OAuth2Controller @Inject() (
         }
       }
     }
-  }
-
-  def accessTokenCallback(provider: String) = Action(parse.tolerantJson) { implicit request =>
-    log.info(s"[oauth2.accessTokenCallback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
-    val providerConfig = oauth2Config.getProviderConfig(provider) getOrElse {
-      throw new IllegalArgumentException(s"[OAuth2Controller.accessTokenCallback] provider=$provider not supported")
-    }
-    val json = request.body
-    log.info(s"[oauth2.accessTokenCallback] provider=$provider json=$json")
-    // TODO: persist
-    Ok(json)
   }
 
   def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = UserAction.async { implicit request =>
