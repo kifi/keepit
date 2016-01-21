@@ -63,23 +63,29 @@
       return style.transitionProperty;
     }
 
-    function getTransitionEndFn(element, fn) {
-      var self = element;
-      var transitionDuration = getTransitionDuration(element);
+    function getTransitionEvent(element, property, duration) {
+      return new TransitionEvent('transitionend', {
+        target: element,
+        propertyName: property,
+        elapsedTime: duration
+      });
+    }
 
+    function getTransitionEndFn(element, fn) {
+      var duration = getTransitionDuration(element);
       var transitionEndEvent = {
         target: element,
         type: 'transitionend',
-        originalEvent: new TransitionEvent('transitionend', {
-          target: element,
-          propertyName: getTransitionProperty(element),
-          elapsedTime: transitionDuration
-        })
+        originalEvent: null
       };
 
       setTimeout(function () {
-        fn.call(self, transitionEndEvent);
-      }, transitionDuration + 50);
+        var properties = getTransitionProperty(element).split(/[, ]+/g);
+        properties.forEach(function (property) {
+          transitionEndEvent.originalEvent = getTransitionEvent(element, property, duration);
+          fn.call(element, transitionEndEvent);
+        });
+      }, duration);
 
       return function () {
         // Even when Safari says it triggered transitionend, it doesn't : /
