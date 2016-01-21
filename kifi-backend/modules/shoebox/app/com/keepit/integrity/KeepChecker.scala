@@ -29,7 +29,7 @@ class KeepChecker @Inject() (
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
     collectionRepo: CollectionRepo,
-    implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
+    implicit val executionContext: ExecutionContext) extends Logging with Debouncing.Drop {
 
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)

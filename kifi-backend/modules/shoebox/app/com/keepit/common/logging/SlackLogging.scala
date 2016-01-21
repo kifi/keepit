@@ -6,7 +6,7 @@ import com.keepit.slack.models.{ SlackAttachment, SlackMessageRequest }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import org.joda.time.Period
 
-trait SlackLogging extends Debouncing {
+trait SlackLogging extends Debouncing.Drop {
   val inhouseSlackClient: InhouseSlackClient
   val loggingDestination: InhouseSlackChannel
   object slackLog {

@@ -82,7 +82,7 @@ class KeepInternerImpl @Inject() (
   searchClient: SearchServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
-    extends KeepInterner with Logging with Debouncing {
+    extends KeepInterner with Logging {
 
   implicit private val fj = ExecutionContext.fj
 
