@@ -6,7 +6,7 @@ import com.keepit.slack.models.{ SlackAttachment, SlackMessageRequest }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import org.joda.time.Period
 
-trait SlackLogging extends Debouncing.Drop {
+trait SlackLogging extends Debouncing.Buffer {
   val inhouseSlackClient: InhouseSlackClient
   val loggingDestination: InhouseSlackChannel
   object slackLog {
@@ -15,13 +15,15 @@ trait SlackLogging extends Debouncing.Drop {
     def error(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "danger")
 
     private def sendLog(fromLine: Location, text: DescriptionElements, color: String): Unit = {
-      debounce(fromLine.location, Period.seconds(5)) {
-        val msg = SlackMessageRequest.inhouse(
-          DescriptionElements.fromLocation(fromLine),
-          attachments = Seq(SlackAttachment(color = Some(color), text = Some(DescriptionElements.formatForSlack(text))))
-        )
-        inhouseSlackClient.sendToSlack(loggingDestination, msg)
-      }
+      debounce(fromLine.location, Period.seconds(5))(
+        item = SlackAttachment(color = Some(color), text = Some(DescriptionElements.formatForSlack(text)))
+      ) { attachments =>
+          val msg = SlackMessageRequest.inhouse(
+            DescriptionElements.fromLocation(fromLine),
+            attachments = attachments.reverse.take(20)
+          )
+          inhouseSlackClient.sendToSlack(loggingDestination, msg)
+        }
     }
   }
 }
