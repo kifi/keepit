@@ -151,12 +151,12 @@ class SlackController @Inject() (
         }
 
         val libToSlackMods = mods.collect {
-          case ExternalSlackIntegrationModification(Left(ltsId), extSpace, status) =>
+          case ExternalSlackIntegrationModification(Left(ltsId), extSpace, status, _) =>
             LibraryToSlackChannel.decodePublicId(ltsId).get -> SlackIntegrationModification(extSpace.map(x => externalToInternalSpace(x)), status)
         }.toMap
         val slackToLibMods = mods.collect {
-          case ExternalSlackIntegrationModification(Right(stlId), extSpace, status) =>
-            SlackChannelToLibrary.decodePublicId(stlId).get -> SlackIntegrationModification(extSpace.map(externalToInternalSpace(_)), status)
+          case ExternalSlackIntegrationModification(Right(stlId), extSpace, status, muted) =>
+            SlackChannelToLibrary.decodePublicId(stlId).get -> SlackIntegrationModification(extSpace.map(externalToInternalSpace(_)), status, muted)
         }.toMap
 
         val libsUserNeedsToWriteTo = db.readOnlyMaster { implicit s =>

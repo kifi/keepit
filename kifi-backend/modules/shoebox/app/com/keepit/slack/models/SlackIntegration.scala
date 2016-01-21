@@ -58,18 +58,21 @@ case class SlackIntegrationCreateRequest(
 
 case class SlackIntegrationModification(
   space: Option[LibrarySpace] = None,
-  status: Option[SlackIntegrationStatus] = None)
+  status: Option[SlackIntegrationStatus] = None,
+  muted: Option[Boolean] = None)
 
 case class ExternalSlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
   space: Option[ExternalLibrarySpace],
-  status: Option[SlackIntegrationStatus])
+  status: Option[SlackIntegrationStatus],
+  muted: Option[Boolean])
 object ExternalSlackIntegrationModification {
   private implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
   implicit val format: Format[ExternalSlackIntegrationModification] = (
     (__ \ 'id).format[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]] and
     (__ \ 'space).formatNullable[ExternalLibrarySpace] and
-    (__ \ 'status).formatNullable[SlackIntegrationStatus]
+    (__ \ 'status).formatNullable[SlackIntegrationStatus] and
+    (__ \ 'muted).formatNullable[Boolean]
   )(ExternalSlackIntegrationModification.apply, unlift(ExternalSlackIntegrationModification.unapply))
 }
 
