@@ -133,7 +133,7 @@ var api = api || (function () {
 
   return {
     identify: noop,
-    injected: {'scripts/api.js': 1},//{'scripts/api.js': 1},
+    injected: {'scripts/api.js': 1},
     mutationsFirePromptly: true,
     noop: noop,
     onEnd: [],
