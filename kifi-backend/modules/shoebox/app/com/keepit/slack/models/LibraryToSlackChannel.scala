@@ -71,6 +71,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): LibraryToSlackChannel
 
+  def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[LibraryToSlackChannel]
+
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 
   def getIntegrationsRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[LibraryToSlackChannel]
@@ -194,6 +196,9 @@ class LibraryToSlackChannelRepoImpl @Inject() (
 
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelName === slackChannelName && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
+  }
+  def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[LibraryToSlackChannel] = {
+    activeRows.filter(row => row.organizationId === orgId).list
   }
 
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): LibraryToSlackChannel = {
