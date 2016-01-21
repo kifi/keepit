@@ -176,6 +176,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.EDIT_OTHER_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
       LibraryPermission.ADD_COMMENTS
     )
@@ -185,6 +186,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.EDIT_OTHER_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
       LibraryPermission.REMOVE_OTHER_KEEPS,
       LibraryPermission.ADD_COMMENTS
@@ -198,6 +200,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_MEMBERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.EDIT_OTHER_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
       LibraryPermission.REMOVE_OTHER_KEEPS,
       LibraryPermission.INVITE_FOLLOWERS,

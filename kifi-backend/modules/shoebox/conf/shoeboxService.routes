@@ -394,6 +394,7 @@ GET     /site/keeps/:keepId/messages          @com.keepit.controllers.website.Di
 POST    /site/keeps/:keepId/messages/edit     @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])
+POST    /site/keeps/:keepId/title             @com.keepit.controllers.website.KeepsController.updateKeepTitle(keepId: PublicId[Keep])
 GET     /site/keeps/:id                       @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], authToken: Option[String] ?= None)
 
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)

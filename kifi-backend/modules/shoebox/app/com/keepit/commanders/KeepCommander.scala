@@ -77,7 +77,7 @@ trait KeepCommander {
   def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
-  def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
@@ -444,29 +444,12 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep] = {
-    db.readOnlyMaster { implicit session =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
-    } match {
-      case Some(mem) if mem.canWrite =>
-        val normTitle = title.map(_.trim).filter(_.nonEmpty)
-        db.readWrite { implicit s =>
-          keepRepo.getByExtIdandLibraryId(keepId, libId) match {
-            case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
-              val keep2 = keepRepo.save(keep.withTitle(normTitle))
-              s.onTransactionSuccess {
-                searchClient.updateKeepIndex()
-              }
-              Right(keep2)
-            case Some(keep) =>
-              Right(keep)
-            case None =>
-              Left((NOT_FOUND, "keep_not_found"))
-          }
-        }
-      case _ =>
-        Left((FORBIDDEN, "permission_denied"))
-    }
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep] = {
+    def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
+    for {
+      oldKeep <- keepRepo.getOption(keepId).map(Success(_)).getOrElse(Failure(KeepFail.KEEP_NOT_FOUND))
+      _ <- if (canEdit(oldKeep.id.get)) Success(()) else Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
+    } yield keepRepo.save(oldKeep.withTitle(Some(title.trim)))
   }
 
   // Updates note on keep, making sure tags are in sync.
