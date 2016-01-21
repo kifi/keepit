@@ -48,7 +48,7 @@ class FakeTwitterSocialGraph @Inject() (
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
     override def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = Future.successful {
-      val info = TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
+      val info = tweetfortytwoInfo.copy(screenName = "tweet42")
       TwitterIdentity(accessToken, info)
     }
   }

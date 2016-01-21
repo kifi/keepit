@@ -146,10 +146,10 @@ class AuthCommander @Inject() (
       identity = EmailPasswordIdentity(fName, lName, email, Some(passwordInfo))
     )
 
-    val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
+    val savedIdentity = saveUserIdentity(newIdentity) // Kifi User is created here if it doesn't exist
 
     savedIdentity match {
-      case userIdentity @ UserIdentity(Some(userId), _) => {
+      case userIdentity @ UserIdentity(_, Some(userId)) => {
         db.readWrite { implicit rw =>
           if (!isComplete) {
             // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
@@ -180,7 +180,7 @@ class AuthCommander @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: Identity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
+  def finalizeSocialAccount(sfi: SocialFinalizeInfo, socialIdentity: UserIdentity, inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit existingContext: HeimdalContext) =
     timing(s"[finalizeSocialAccount(${socialIdentity.identityId.providerId + "#" + socialIdentity.identityId.userId})]") {
       log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
       val currentHasher = Registry.hashers.currentHasher
@@ -196,7 +196,7 @@ class AuthCommander @Inject() (
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, email = email, passwordInfoOpt = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
-      UserService.save(UserIdentity(Some(userId), SocialUser(socialIdentity))) // SocialUserInfo is claimed here
+      saveUserIdentity(socialIdentity.withUserId(userId)) // SocialUserInfo is claimed here
 
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)
@@ -304,7 +304,7 @@ class AuthCommander @Inject() (
     case unexpectedIdentity => throw new IllegalStateException(s"Unexpected identity: $unexpectedIdentity")
   }
 
-  def saveUserIdentity(identity: Identity): UserIdentity = UserService.save(identity) match {
+  def saveUserIdentity(identity: MaybeUserIdentity): UserIdentity = UserService.save(identity) match {
     case userIdentity: UserIdentity => userIdentity
     case unexpectedIdentity => throw new IllegalStateException(s"Unexpected identity: $unexpectedIdentity")
   }
@@ -313,7 +313,7 @@ class AuthCommander @Inject() (
     getUserIdentity(IdentityHelpers.toIdentityId(address)).exists(_.userId.isDefined)
   }
 
-  def signupWithTrustedSocialUser(socialUser: SocialUser, signUpUrl: String)(implicit request: Request[_]): Result = {
+  def signupWithTrustedSocialUser(socialUser: UserIdentity, signUpUrl: String)(implicit request: Request[_]): Result = {
     val userIdentity = saveUserIdentity(socialUser)
     val (payload, newSession) = userIdentity.userId match {
       case Some(userId) => (

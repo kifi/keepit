@@ -36,7 +36,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val libPathCommander = inject[PathCommander]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = Future.successful {
-        val info = TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
+        val info = tweetfortytwoInfo.copy(screenName = "tweet42")
         TwitterIdentity(accessToken, info)
       }
     }
@@ -102,14 +102,6 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
       kifirayInfo.pictureUrl.isDefined === true
       kifirayInfo.pictureUrl.exists(!_.toString.contains("_normal")) === true
       kifirayInfo.pictureUrl.map(_.toString).get === "https://pbs.twimg.com/profile_images/535882931399450624/p7jzsrJH.jpeg"
-    }
-    "convert to UserProfileInfo" in {
-      val upi: UserProfileInfo = TwitterUserInfo.toUserProfileInfo(kifirayInfo)
-      upi.userId.id === kifirayInfo.id.toString
-      upi.name === kifirayInfo.name
-      upi.handle.map(_.underlying).get === kifirayInfo.screenName
-      upi.pictureUrl === kifirayInfo.pictureUrl
-      upi.profileUrl.get === kifirayInfo.profileUrl
     }
   }
   "TwitterSocialGraph" should {

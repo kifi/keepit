@@ -30,18 +30,18 @@ object SlackTokenWithScopes {
 }
 
 object SlackTeamMembership {
-  def toIdentity(membership: SlackTeamMembership): UserIdentity = {
+  def toUserIdentity(membership: SlackTeamMembership): UserIdentity = {
     UserIdentity(
-      membership.userId,
       SlackIdentity(
         membership.slackTeamId,
         membership.slackTeamName,
-        membership.slackUserId,
-        membership.slackUsername,
         membership.token,
         membership.scopes,
+        membership.slackUserId,
+        membership.slackUsername,
         membership.slackUser
-      )
+      ),
+      membership.userId
     )
   }
 }

@@ -19,7 +19,7 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.social.{ IdentityHelpers, RichSocialUser, SocialNetworks, SocialId }
+import com.keepit.social._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
@@ -35,25 +35,24 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
+  val oauth1Info = OAuth1Info("twitter-oauth1-token", "foobar")
   val twitterIdentity = {
     val identityId = IdentityId("2906435114", "twitter")
-    val oauth1Info = OAuth1Info("twitter-oauth1-token", "foobar")
-    val profileInfo = UserProfileInfo(
-      ProviderIds.toProviderId(identityId.providerId),
-      ProviderUserId(identityId.userId),
-      "woof",
-      None,
-      Some("woof"),
-      None,
-      None,
-      None,
-      Some(new java.net.URL("http://www.woof.com"))
+    val profileInfo = TwitterUserInfo(
+      id = identityId.userId.toLong,
+      screenName = "woof",
+      name = "woof",
+      defaultProfile = false,
+      defaultProfileImage = false,
+      profileImageUrl = "http://www.woof.com/woof.jpg",
+      followersCount = 42,
+      friendsCount = 42
     )
     TwitterIdentity(oauth1Info, profileInfo)
   }
 
   def setup()(implicit injector: Injector) = {
-    val socialUser = RichSocialUser(twitterIdentity)
+    val socialUser = UserIdentity(twitterIdentity)
     db.readWrite { implicit s =>
       val user = UserFactory.user().withName("", "").withUsername("woof").saved
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Woof", state = SocialUserInfoStates.CREATED, socialId = SocialId(socialUser.identityId.userId), networkType = SocialNetworks.TWITTER, credentials = Some(socialUser)))
@@ -62,7 +61,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
   }
 
   def getSocialUserInfo(identity: RichIdentity)(implicit injector: Injector): Option[SocialUserInfo] = {
-    val identityId = RichSocialUser(identity).identityId
+    val identityId = RichIdentity.toIdentityId(identity)
     val socialId = IdentityHelpers.parseSocialId(identityId)
     val networkType = IdentityHelpers.parseNetworkType(identityId)
     db.readOnlyMaster { implicit session =>
@@ -93,7 +92,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     "(signup) handle successful token signup" in {
       running(new ShoeboxApplication(modules: _*)) {
         inject[FakeTwitterOAuthProvider].setIdentity(Future.successful(twitterIdentity))
-        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(twitterIdentity.auth)
+        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(oauth1Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.oauth1TokenSignup("twitter").toString()
         path === "/auth/oauth1-signup/twitter"
@@ -124,7 +123,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
         val fakeProvider = inject[FakeTwitterOAuthProvider]
         fakeProvider.setIdentity(Future.failed(new AuthException("invalid token"))) // twitter reports errors
 
-        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(twitterIdentity.auth)
+        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(oauth1Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.oauth1TokenSignup("twitter").toString()
         path === "/auth/oauth1-signup/twitter"
@@ -151,7 +150,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
         val fakeProvider = inject[FakeTwitterOAuthProvider]
         fakeProvider.setIdentity(Future.successful(twitterIdentity))
 
-        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(twitterIdentity.auth)
+        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(oauth1Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.oauth1TokenLogin("twitter").toString()
         path === "/auth/oauth1-login/twitter"
@@ -184,7 +183,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
       running(new ShoeboxApplication(modules: _*)) {
         // no need for setup
         inject[FakeTwitterOAuthProvider].setIdentity(Future.successful(twitterIdentity))
-        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(twitterIdentity.auth)
+        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(oauth1Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.oauth1TokenLogin("twitter").toString()
         path === "/auth/oauth1-login/twitter"
@@ -209,7 +208,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
         val fakeProvider = inject[FakeTwitterOAuthProvider]
         fakeProvider.setIdentity(Future.failed(new AuthException("invalid token"))) // twitter reports errors
 
-        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(twitterIdentity.auth)
+        val oauth1TokenInfo = OAuth1TokenInfo.fromOAuth1Info(oauth1Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.oauth1TokenLogin("twitter").toString()
         path === "/auth/oauth1-login/twitter"

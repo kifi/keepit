@@ -2,7 +2,7 @@ package com.keepit.common.oauth.adaptor
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth._
-import com.keepit.social.RichSocialUser
+import com.keepit.social.UserIdentity
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import securesocial.core.{ SocialUser, OAuth2Provider }
@@ -20,11 +20,11 @@ trait SecureSocialOAuth2Adaptor extends OAuth2Provider with Logging {
 
   override def fillProfile(socialUser: SocialUser): SocialUser = socialUser
 
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+  override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     val call = provider.doOAuth() flatMap { resOrToken =>
       resOrToken match {
         case Left(res) => Future.successful(Left(res))
-        case Right(token) => provider.getRichIdentity(token).imap(identity => Right(RichSocialUser(identity)))
+        case Right(token) => provider.getRichIdentity(token).imap(identity => Right(UserIdentity(identity)))
       }
     }
     Await.result(call, 5 minutes)

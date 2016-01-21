@@ -6,12 +6,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
-import com.keepit.social.RichSocialUser
+import com.keepit.social.UserIdentity$
 import play.api.http.Status
 import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
 import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.IdentityId
+import securesocial.core.{ AuthenticationMethod, SocialUser, IdentityId }
 
 import scala.concurrent.Future
 import play.api.Play.current
@@ -46,12 +46,12 @@ class FacebookOAuthProviderImpl @Inject() (
     with OAuth2ProviderHelper
     with Logging {
 
-  def getIdentityId(token: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(token).map(RichSocialUser(_).identityId)
+  def getIdentityId(token: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(token).map(RichIdentity.toIdentityId)
 
   def getRichIdentity(token: OAuth2TokenInfo): Future[FacebookIdentity] = {
     exchangeLongTermToken(token.accessToken).flatMap { oauthInfo =>
-      getUserProfileInfo(oauthInfo.accessToken).map { profileInfo =>
-        FacebookIdentity(oauthInfo, profileInfo)
+      getUserProfileInfo(oauthInfo.accessToken).map { info =>
+        FacebookIdentity(token, info)
       }
     }
   }
@@ -83,8 +83,8 @@ class FacebookOAuthProviderImpl @Inject() (
             firstNameOpt = firstName,
             lastNameOpt = lastName,
             handle = None,
-            pictureUrl = avatarUrl.map(new java.net.URL(_)),
-            profileUrl = Some(new java.net.URL(s"http://facebook.com/$userId"))
+            pictureUrl = avatarUrl,
+            profileUrl = Some(s"http://facebook.com/$userId")
           )
       }
     }

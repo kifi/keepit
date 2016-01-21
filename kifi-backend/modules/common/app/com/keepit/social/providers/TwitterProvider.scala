@@ -5,7 +5,7 @@ import java.util.UUID
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.TwitterOAuthProvider
-import com.keepit.social.{ RichSocialUser, UserIdentityProvider }
+import com.keepit.social.{ UserIdentity, UserIdentity$, UserIdentityProvider }
 import play.api.Application
 import play.api.Play.current
 import play.api.cache.Cache
@@ -25,11 +25,11 @@ class TwitterProvider(app: Application) extends securesocial.core.providers.Twit
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val provider = global.injector.instance[TwitterOAuthProvider]
 
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+  override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     val call = {
       doOAuth() match {
         case Left(res) => Future.successful(Left(res))
-        case Right(token) => provider.getRichIdentity(token).imap(identity => Right(RichSocialUser(identity)))
+        case Right(token) => provider.getRichIdentity(token).imap(identity => Right(UserIdentity(identity)))
       }
     }
     Await.result(call, 5 minutes)

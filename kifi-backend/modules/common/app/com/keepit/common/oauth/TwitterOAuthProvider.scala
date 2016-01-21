@@ -5,7 +5,6 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.OAuth1TokenInfo
-import com.keepit.social.RichSocialUser
 import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
@@ -38,7 +37,7 @@ class TwitterOAuthProviderImpl @Inject() (
 
   private val verifyCredsEndpoint = "https://api.twitter.com/1.1/account/verify_credentials.json"
 
-  def getIdentityId(accessToken: OAuth1TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichSocialUser(_).identityId)
+  def getIdentityId(accessToken: OAuth1TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichIdentity.toIdentityId)
 
   def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = {
     getUserProfileInfo(accessToken) map { info =>
@@ -46,7 +45,7 @@ class TwitterOAuthProviderImpl @Inject() (
     }
   }
 
-  private def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = {
+  private def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[TwitterUserInfo] = {
     val call = WS.url(verifyCredsEndpoint)
       .sign(OAuthCalculator(providerConfig.key, accessToken))
       .withQueryString("include_entities" -> false.toString, "skip_status" -> true.toString)
@@ -58,8 +57,7 @@ class TwitterOAuthProviderImpl @Inject() (
         resp.json.asOpt[TwitterUserInfo] match {
           case None =>
             throw new AuthException(s"[fillProfile] Failed to parse response.body=${resp.body}", resp)
-          case Some(tui) =>
-            TwitterUserInfo.toUserProfileInfo(tui)
+          case Some(tui) => tui
         }
       }
     }

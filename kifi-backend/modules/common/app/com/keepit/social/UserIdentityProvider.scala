@@ -15,9 +15,10 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
     val userIdOpt = request.session.getUserId
     log.info(s"[authenticate] userIdOpt=$userIdOpt session.data=${request.session.data} request=$request")
     doAuth()(request) match {
-      case Right(socialUser) =>
-        val saved = UserService.save(UserIdentity(userIdOpt, socialUser))
+      case Right(UserIdentity(identity, existingUserIdOpt)) =>
+        val saved = UserService.save(UserIdentity(identity, userIdOpt orElse existingUserIdOpt))
         Right(saved)
+      case Right(socialUser) => throw new IllegalStateException(s"Unexpected SocialUser: $socialUser")
       case left => left
     }
   }

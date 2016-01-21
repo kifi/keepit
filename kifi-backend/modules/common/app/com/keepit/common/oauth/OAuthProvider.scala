@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.mvc.{ Result, Request }
-import securesocial.core.IdentityId
+import securesocial.core._
 
 import scala.concurrent.Future
 
@@ -49,8 +49,8 @@ case class UserProfileInfo(
     firstNameOpt: Option[String],
     lastNameOpt: Option[String],
     handle: Option[UserHandle],
-    pictureUrl: Option[java.net.URL],
-    profileUrl: Option[java.net.URL])
+    pictureUrl: Option[String],
+    profileUrl: Option[String])
 
 sealed trait OAuthProvider[T, I <: RichIdentity] {
   def providerId: ProviderId
