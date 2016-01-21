@@ -40,9 +40,6 @@ trait LibraryToSlackChannelPusher {
   // Method called by scheduled plugin
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 
-  // Called when an integration is set up
-  def pushUpdatesForIntegrationIfPossible(ltsc: LibraryToSlackChannel): Future[Unit]
-
   // Method to be called if something happens in a library
   def schedule(libId: Id[Library]): Unit
 }
@@ -78,11 +75,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       markLegalIntegrationsForProcessing(integrations)
     }
     processIntegrations(integrationsToProcess)
-  }
-
-  def pushUpdatesForIntegrationIfPossible(ltsc: LibraryToSlackChannel): Future[Unit] = {
-    val integrationsToProcess = db.readWrite { implicit s => markLegalIntegrationsForProcessing(Seq(ltsc)) }
-    processIntegrations(integrationsToProcess).imap(_ => Unit)
   }
 
   def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
