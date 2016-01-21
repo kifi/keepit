@@ -96,6 +96,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.REMOVE_OWN_KEEPS,
                 LibraryPermission.ADD_COMMENTS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION
@@ -116,6 +117,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS,
                 LibraryPermission.ADD_COMMENTS
@@ -124,6 +126,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.EDIT_OTHER_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS,
                 LibraryPermission.ADD_COMMENTS
