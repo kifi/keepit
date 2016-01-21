@@ -18,17 +18,16 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
-import com.keepit.social.{ SocialId, SocialNetworks }
+import com.keepit.social._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, SocialUser }
+import securesocial.core.{ IdentityId, OAuth2Info }
 import KifiSession._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory
-import com.keepit.common.time._
 
 import scala.concurrent.Future
 
@@ -36,20 +35,58 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
+  val email = EmailAddress("bar@foo.com")
+
   val oauth2Info = OAuth2Info("asdf-token", None, None, None)
+  val facebookIdentity = {
+    val facebookIdentityId = IdentityId("100004067535411", "facebook")
+    val profileInfo = UserProfileInfo(
+      ProviderIds.toProviderId(facebookIdentityId.providerId),
+      ProviderUserId(facebookIdentityId.userId),
+      "Foo Bar",
+      Some(email),
+      Some("Foo"),
+      Some("Bar"),
+      None,
+      None,
+      Some("http://www.foo.com/bar")
+    )
+    FacebookIdentity(oauth2Info, profileInfo)
+  }
+
+  val linkedinIdentity = {
+    val linkedinIdentityId = IdentityId("1001", "linkedin")
+    val oauth2Info = OAuth2Info("asdf-token", None, None, None)
+    val profileInfo = UserProfileInfo(
+      ProviderIds.toProviderId(linkedinIdentityId.providerId),
+      ProviderUserId(linkedinIdentityId.userId),
+      "Foo Bar",
+      Some(email),
+      Some("Foo"),
+      Some("Bar"),
+      None,
+      None,
+      Some("http://www.foo.com/bar")
+    )
+    LinkedInIdentity(oauth2Info, profileInfo)
+  }
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
-      val identityId = IdentityId("100004067535411", "facebook")
-      val email = "bar@foo.com"
-      val socialUser = SocialUser(identityId, "Foo", "Bar", "Foo Bar",
-        Some(email), Some("http://www.foo.com/bar"), AuthenticationMethod.OAuth2, None,
-        Some(oauth2Info), None)
-
       val user = UserFactory.user().withName("Foo", "Bar").withUsername("foo-bar").saved
-      userEmailAddressCommander.intern(userId = user.id.get, address = EmailAddress(email), verified = true).get
-      val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Foo Bar", state = SocialUserInfoStates.CREATED, socialId = SocialId(identityId.userId), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
-      (socialUser, user, sui)
+      userEmailAddressCommander.intern(userId = user.id.get, address = email, verified = true).get
+      val socialUser = UserIdentity(facebookIdentity)
+      val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Foo Bar", state = SocialUserInfoStates.CREATED, socialId = SocialId(socialUser.identityId.userId), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
+      (user, sui)
+    }
+  }
+
+  def getSocialUserInfo(identity: RichIdentity)(implicit injector: Injector): Option[SocialUserInfo] = getSocialUserInfo(UserIdentity(identity).identityId)
+  def getSocialUserInfo(identityId: IdentityId)(implicit injector: Injector): Option[SocialUserInfo] = {
+    val socialId = IdentityHelpers.parseSocialId(identityId)
+    val networkType = IdentityHelpers.parseNetworkType(identityId)
+    db.readOnlyMaster { implicit session =>
+      socialUserInfoRepo.getOpt(socialId, networkType)
     }
   }
 
@@ -76,12 +113,13 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
   "AuthController" should {
     "(signup) handle successful token signup" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
+        inject[FakeFacebookOAuthProvider].setIdentity(Future.successful(facebookIdentity))
+
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("facebook").toString()
         path === "/auth/token-signup/facebook"
 
-        val payload = Json.toJson(oauth2TokenInfo)
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenSignup("facebook")(request)
         status(result) === OK
@@ -94,8 +132,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val sessionId = (json \ "sessionId").as[String] // sessionId should be set
         ExternalId.UUIDPattern.pattern.matcher(sessionId).matches() === true
 
-        val profile = inject[FakeFacebookOAuthProvider].profileInfo
-        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.FACEBOOK) }
+        val suiOpt = getSocialUserInfo(facebookIdentity)
         suiOpt.isDefined === true
         suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
         suiOpt.get.credentials.isDefined === true
@@ -106,14 +143,13 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     "(signup) report invalid token when fb reports error" in {
       running(new ShoeboxApplication(modules: _*)) {
         val fakeProvider = inject[FakeFacebookOAuthProvider]
-        fakeProvider.setProfileInfoF(() => Future.failed(new AuthException("invalid token"))) // facebook reports errors
+        fakeProvider.setIdentity(Future.failed(new AuthException("invalid token"))) // facebook reports errors
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("facebook").toString()
         path === "/auth/token-signup/facebook"
 
-        val payload = Json.toJson(oauth2TokenInfo)
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenSignup("facebook")(request)
         status(result) === BAD_REQUEST
@@ -125,26 +161,22 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         (json \ "error").as[String] === "invalid_token" // success!
         (json \ "sessionId").asOpt[String].isDefined === false // sessionId shouldn't be set
 
-        val profile = inject[FakeFacebookOAuthProvider].profileInfo
-        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(profile.userId.id), SocialNetworks.FACEBOOK) }
+        val suiOpt = getSocialUserInfo(facebookIdentity)
         suiOpt.isDefined === false
       }
     }
     "(signup) present connect option when user tries to sign-up with social when email already registered" in {
       running(new ShoeboxApplication(modules: _*)) {
         setup()
-        val fakeProvider = inject[FakeFacebookOAuthProvider]
-        val lnkdInfo = fakeProvider.profileInfo.copy(providerId = ProviderIds.LinkedIn, userId = ProviderUserId("1001"))
-        fakeProvider.setProfileInfo(lnkdInfo)
+        inject[FakeLinkedInOAuthProvider].setIdentity(Future.successful(linkedinIdentity))
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("linkedin").toString()
         path === "/auth/token-signup/linkedin"
 
-        val payload = Json.toJson(oauth2TokenInfo)
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
-        val result = authController.accessTokenSignup("facebook")(request)
+        val result = authController.accessTokenSignup("linkedin")(request)
         status(result) === OK
 
         val sess = session(result)
@@ -154,20 +186,17 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         (json \ "code").as[String] === "connect_option" // success!
         (json \ "sessionId").asOpt[String].isDefined === true // sessionId is set
 
-        val suiOpt = db.readOnlyMaster { implicit ro =>
-          socialUserInfoRepo.getOpt(SocialId(lnkdInfo.userId.id), SocialNetworks.LINKEDIN)
-        }
+        val suiOpt = getSocialUserInfo(linkedinIdentity)
         suiOpt.isDefined === true
         suiOpt.exists { sui => sui.userId.isEmpty } === true // userId must not be set in this case
       }
     }
     "(login) handle successful token login" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (socialUser, user, sui) = setup()
-        val fakeProvider = inject[FakeFacebookOAuthProvider]
-        fakeProvider.setProfileInfoF(() => Future.successful(socialUser))
+        setup()
+        inject[FakeFacebookOAuthProvider].setIdentity(Future.successful(facebookIdentity))
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(socialUser.oAuth2Info.get)
+        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"
@@ -185,7 +214,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val sessionId = (json \ "sessionId").as[String] // sessionId should be set
         ExternalId.UUIDPattern.pattern.matcher(sessionId).matches() === true
 
-        val suiOpt = db.readOnlyMaster { implicit ro => socialUserInfoRepo.getOpt(SocialId(socialUser.identityId.userId), SocialNetworks.FACEBOOK) }
+        val suiOpt = getSocialUserInfo(facebookIdentity)
         suiOpt.isDefined === true
         val userIdOpt = for {
           sui <- suiOpt
@@ -199,13 +228,13 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     "(login) report user not found when not registered" in {
       running(new ShoeboxApplication(modules: _*)) {
         // no need for setup
+        inject[FakeFacebookOAuthProvider].setIdentity(Future.successful(facebookIdentity))
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"
 
-        val payload = Json.toJson(oauth2TokenInfo)
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenLogin("facebook")(request)
         status(result) === NOT_FOUND
@@ -220,11 +249,11 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     }
     "(login) report invalid token when fb reports error" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (socialUser, _, _) = setup()
+        setup()
         val fakeProvider = inject[FakeFacebookOAuthProvider]
-        fakeProvider.setProfileInfoF(() => Future.failed(new AuthException("invalid token"))) // facebook reports errors
+        fakeProvider.setIdentity(Future.failed(new AuthException("invalid token"))) // facebook reports errors
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(socialUser.oAuth2Info.get)
+        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"

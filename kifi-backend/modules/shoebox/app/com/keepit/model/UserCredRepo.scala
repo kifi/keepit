@@ -7,7 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
+import com.keepit.social.{ IdentityUserIdKey, IdentityUserIdCache }
 import securesocial.core.{ Registry, PasswordInfo }
 
 @ImplementedBy(classOf[UserCredRepoImpl])
@@ -18,7 +18,7 @@ trait UserCredRepo extends Repo[UserCred] with RepoWithDelete[UserCred] {
 }
 
 @Singleton
-class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, emailRepo: UserEmailAddressRepo, userIdentityCache: UserIdentityCache) extends DbRepo[UserCred] with DbRepoWithDelete[UserCred] with UserCredRepo with Logging {
+class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, emailRepo: UserEmailAddressRepo, userIdentityCache: IdentityUserIdCache) extends DbRepo[UserCred] with DbRepoWithDelete[UserCred] with UserCredRepo with Logging {
 
   import db.Driver.simple._
 
@@ -34,7 +34,7 @@ class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, e
 
   override def deleteCache(model: UserCred)(implicit session: RSession): Unit = {
     emailRepo.getAllByUser(model.userId).foreach { email =>
-      userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
+      userIdentityCache.remove(IdentityUserIdKey(email.address))
     }
   }
 

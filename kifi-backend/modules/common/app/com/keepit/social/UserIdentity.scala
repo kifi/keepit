@@ -29,55 +29,26 @@ sealed abstract class SocialUserHolder(socialUser: SocialUser) extends SocialUse
   socialUser.passwordInfo
 )
 
-class RichSocialUser(val identity: RichIdentity) extends SocialUserHolder(RichIdentity.toSocialUser(identity))
-object RichSocialUser {
-  def apply(identity: RichIdentity): RichSocialUser = new RichSocialUser(identity)
-  def unapply(socialUser: RichSocialUser): Option[RichIdentity] = Some(socialUser.identity)
+sealed abstract class MaybeUserIdentity(val identity: RichIdentity, val userId: Option[Id[User]]) extends SocialUserHolder(RichIdentity.toSocialUser(identity))
+
+class UserIdentity(identity: RichIdentity, userId: Option[Id[User]]) extends MaybeUserIdentity(identity, userId) {
+  def withUserId(newUserId: Id[User]): UserIdentity = UserIdentity(identity, Some(newUserId))
 }
-
-sealed abstract class MaybeUserIdentity(val userId: Option[Id[User]], val socialUser: SocialUser) extends SocialUserHolder(socialUser)
-
-class UserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends MaybeUserIdentity(userId, socialUser)
 
 object UserIdentity {
-  def apply(userId: Option[Id[User]], socialUser: SocialUser): UserIdentity = new UserIdentity(userId, socialUser)
-  def unapply(u: UserIdentity): Option[(Option[Id[User]], SocialUser)] = Some(u.userId, u.socialUser)
-
-  def apply(userId: Option[Id[User]], identity: RichIdentity): UserIdentity = UserIdentity(userId, RichSocialUser(identity))
-
+  def unapply(u: UserIdentity): Option[(RichIdentity, Option[Id[User]])] = Some(u.identity, u.userId)
+  def apply(identity: RichIdentity, userId: Option[Id[User]] = None): UserIdentity = new UserIdentity(identity, userId)
   def apply(user: User, emailAddress: EmailAddress, cred: Option[UserCred]): UserIdentity = {
     val passwordInfo = cred.map(actualCred => PasswordInfo(hasher = "bcrypt", password = actualCred.credentials))
-    UserIdentity(Some(user.id.get), EmailPasswordIdentity(user.firstName, user.lastName, emailAddress, passwordInfo))
+    UserIdentity(EmailPasswordIdentity(user.firstName, user.lastName, emailAddress, passwordInfo), Some(user.id.get))
   }
-
-  import com.keepit.serializer.SocialUserSerializer._
-  implicit val format = (
-    (__ \ 'userId).formatNullable(Id.format[User]) and
-    (__ \ 'socialUser).format[SocialUser]
-  )(UserIdentity.apply, unlift(UserIdentity.unapply))
 }
 
-case class UserIdentityIdentityIdKey(id: IdentityId) extends Key[UserIdentity] {
-  override val version = 2
-  val namespace = "user_identity_by_identity_id"
-  def toKey(): String = id.providerId + "_" + id.userId
-}
-
-object UserIdentityIdentityIdKey {
-  def apply(networkType: SocialNetworkType, socialId: SocialId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
-  def apply(emailAddress: EmailAddress): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(emailAddress))
-  def apply(teamId: SlackTeamId, userId: SlackUserId): UserIdentityIdentityIdKey = UserIdentityIdentityIdKey(IdentityHelpers.toIdentityId(teamId, userId))
-}
-
-class UserIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserIdentityIdentityIdKey, UserIdentity](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-class NewUserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends MaybeUserIdentity(userId, socialUser)
+class NewUserIdentity(identity: RichIdentity, userId: Option[Id[User]]) extends MaybeUserIdentity(identity, userId)
 
 object NewUserIdentity {
-  def apply(userId: Option[Id[User]], socialUser: SocialUser): NewUserIdentity = new NewUserIdentity(userId, socialUser)
-  def unapply(u: NewUserIdentity): Option[(Option[Id[User]], SocialUser)] = Some(u.userId, u.socialUser)
-  def apply(userId: Option[Id[User]], identity: RichIdentity): NewUserIdentity = NewUserIdentity(userId, RichSocialUser(identity))
+  def unapply(u: NewUserIdentity): Option[(RichIdentity, Option[Id[User]])] = Some(u.identity, u.userId)
+  def apply(identity: RichIdentity, userId: Option[Id[User]]): NewUserIdentity = new NewUserIdentity(identity, userId)
 }
 
 object IdentityHelpers {
@@ -105,3 +76,18 @@ object IdentityHelpers {
 
   def getIdentityId(session: UserSessionView): IdentityId = IdentityId(session.socialId.id, session.provider.name)
 }
+
+case class IdentityUserIdKey(id: IdentityId) extends Key[Id[User]] {
+  override val version = 1
+  val namespace = "user_id_by_identity_id"
+  def toKey(): String = id.providerId + "_" + id.userId
+}
+
+object IdentityUserIdKey {
+  def apply(networkType: SocialNetworkType, socialId: SocialId): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(networkType, socialId))
+  def apply(emailAddress: EmailAddress): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(emailAddress))
+  def apply(teamId: SlackTeamId, userId: SlackUserId): IdentityUserIdKey = IdentityUserIdKey(IdentityHelpers.toIdentityId(teamId, userId))
+}
+
+class IdentityUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[IdentityUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

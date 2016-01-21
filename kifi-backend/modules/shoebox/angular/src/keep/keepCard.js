@@ -258,12 +258,9 @@ angular.module('kifi')
           scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
           scope.globalGalleryView = scope.galleryView;
 
-          var permissions = (keep.library && keep.library.permissions) || [];
-          var keepUserId = keep.user && keep.user.id;
-          scope.canEditKeep = (
-            (keepUserId === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) ||
-            permissions.indexOf('remove_other_keeps') !== -1
-          );
+          var permissions = keep.permissions || [];
+          scope.canEditKeep = permissions.indexOf('edit_keep') !== -1;
+          scope.canDeleteKeep = permissions.indexOf('delete_keep') !== -1;
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);

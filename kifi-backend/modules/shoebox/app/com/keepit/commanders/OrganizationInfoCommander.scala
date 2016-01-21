@@ -15,6 +15,7 @@ import com.keepit.social.BasicUser
 import com.keepit.payments._
 
 import scala.concurrent.{ ExecutionContext }
+import scala.util.Try
 
 @ImplementedBy(classOf[OrganizationInfoCommanderImpl])
 trait OrganizationInfoCommander {
@@ -169,7 +170,11 @@ class OrganizationInfoCommanderImpl @Inject() (
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-    val slackInfo = viewerIdOpt.map(slackInfoCommander.getOrganizationSlackInfo(orgId, _))
+    val slackInfo = Try(viewerIdOpt.map(slackInfoCommander.getOrganizationSlackInfo(orgId, _))).recover {
+      case fail =>
+        airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
+        None
+    }.get
 
     OrganizationInfo(
       orgId = Organization.publicId(orgId),

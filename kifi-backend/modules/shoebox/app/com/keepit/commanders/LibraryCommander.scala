@@ -19,6 +19,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
 import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.http.Status._
 
@@ -114,21 +115,16 @@ class LibraryCommanderImpl @Inject() (
   def validateCreateRequest(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RSession): Option[LibraryFail] = {
     val targetSpace = libCreateReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
 
-    def invalidName = {
-      if (!Library.isValidName(libCreateReq.name)) {
-        Some(LibraryFail(BAD_REQUEST, "invalid_name"))
-      } else None
+    def invalidName = libCreateReq.name match {
+      case name if !Library.isValidName(name) => Some(LibraryFail(BAD_REQUEST, "invalid_name"))
+      case _ => None
     }
-    def invalidSlug = {
-      if (!LibrarySlug.isValidSlug(libCreateReq.slug) || LibrarySlug.isReservedSlug(libCreateReq.slug)) {
-        Some(LibraryFail(BAD_REQUEST, "invalid_slug"))
-      } else None
+    def invalidSlug = libCreateReq.slug.collect {
+      case slug if !LibrarySlug.isValidSlug(slug) || LibrarySlug.isReservedSlug(slug) => LibraryFail(BAD_REQUEST, "invalid_slug")
     }
-    def slugCollision = {
-      libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(libCreateReq.slug)) match {
-        case Some(existingLibrary) => Some(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-        case None => None
-      }
+    def slugCollision = libCreateReq.slug.collect {
+      case slug if libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(slug)).isDefined =>
+        LibraryFail(BAD_REQUEST, "library_slug_exists")
     }
     def invalidSpace = {
       val canCreateLibraryInSpace = targetSpace match {
@@ -165,7 +161,15 @@ class LibraryCommanderImpl @Inject() (
       case UserSpace(_) => None
       case OrganizationSpace(orgId) => Some(orgId)
     }
-    val newSlug = LibrarySlug(libCreateReq.slug)
+    val newSlug = libCreateReq.slug match {
+      case Some(slug) => LibrarySlug(slug)
+      case None =>
+        val suffixes = "" +: Stream.continually("-" + RandomStringUtils.randomNumeric(2)).take(9)
+        val baseSlug = LibrarySlug.generateFromName(libCreateReq.name)
+        suffixes.map(suff => LibrarySlug(baseSlug + suff)).filter { slug =>
+          libraryRepo.getBySpaceAndSlug(targetSpace, slug).isEmpty
+        }.head
+    }
     val newColor = libCreateReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor()))
     val newListed = libCreateReq.listed.getOrElse(true)
     val newKind = libCreateReq.kind.getOrElse(LibraryKind.USER_CREATED)

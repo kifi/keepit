@@ -42,7 +42,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClientWrapper,
-  libToSlackPusher: LibraryToSlackChannelPusher,
+  slackOnboarder: SlackOnboarder,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
@@ -56,49 +56,38 @@ class SlackIntegrationCommanderImpl @Inject() (
     extends SlackIntegrationCommander with Logging {
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
-    db.readWrite { implicit s =>
+    val ltscToPushImmediately = db.readWrite { implicit s =>
       val defaultSpace = libRepo.get(libId).organizationId match {
         case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
           LibrarySpace.fromOrganizationId(orgId)
         case _ => LibrarySpace.fromUserId(userId)
       }
-      libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
+      val ltsc = libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
-        slackChannelId = None,
+        slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.On
       ))
-      channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
+      val sctl = channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
-        slackChannelId = None,
+        slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.Off
       ))
+      ltsc
     }
 
-    SafeFuture {
-      val welcomeMsg = db.readOnlyMaster { implicit s =>
-        import DescriptionElements._
-        val lib = libRepo.get(libId)
-        DescriptionElements(
-          "A new Kifi integration was just set up.",
-          "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
-        )
-      }
-      slackClient.sendToSlack(identity.userId, identity.teamId, webhook.channelName, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-        .foreach { _ =>
-          libToSlackPusher.pushUpdatesToSlack(libId)
-            .foreach { _ => fetchMissingChannelIds() }
-        }
+    slackOnboarder.talkAboutIntegration(ltscToPushImmediately)
 
+    SafeFuture.swallow {
       val inhouseMsg = db.readOnlyReplica { implicit s =>
         import DescriptionElements._
         val lib = libRepo.get(libId)

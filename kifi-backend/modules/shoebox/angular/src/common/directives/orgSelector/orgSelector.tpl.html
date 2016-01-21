@@ -1,4 +1,10 @@
-<div class="org-selector" >
+<div
+  class="org-selector"
+  ng-class="{
+    'org-selector-shadow': orgs().length > 3
+  }"
+  kf-wheel-allow
+>
   <div
     class="org-selector-org"
     ng-class="{
@@ -13,6 +19,7 @@
     <span
       ng-if="spaceIsOrg(space.destination) && !((space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1)"
       kf-upsell
+      position="right"
       on-click="onClickUpsellRelocate()"
       on-hover="onHoverUpsellRelocate()"
     >

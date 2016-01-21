@@ -7,8 +7,10 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.social.TwitterSyncError.{ HandleDoesntExist, TokenExpired }
 import com.keepit.common.time._
-import com.keepit.common.social.TwitterSocialGraph
+import com.keepit.common.social.{ TwitterSyncError, TwitterSocialGraph }
+import com.keepit.model.SyncTarget.{ Tweets, Favorites }
 import com.keepit.social.SocialNetworks
 import com.keepit.model._
 import com.keepit.common.concurrent.ReactiveLock
@@ -38,15 +40,15 @@ class TwitterSyncCommander @Inject() (
     importer.processDirectTwitterData(userId, libraryId, tweets)
   }
 
-  def internTwitterSync(userTokenToUse: Option[Id[User]], libraryId: Id[Library], handle: TwitterHandle): TwitterSyncState = {
+  def internTwitterSync(userTokenToUse: Option[Id[User]], libraryId: Id[Library], handle: TwitterHandle, target: SyncTarget): TwitterSyncState = {
     db.readWrite { implicit session =>
-      syncStateRepo.getByHandleAndLibraryId(handle, libraryId) match {
+      syncStateRepo.getByHandleAndLibraryId(handle, libraryId, target) match {
         case Some(existing) if existing.state == TwitterSyncStateStates.ACTIVE =>
           existing
         case Some(notActive) =>
           syncStateRepo.save(notActive.copy(state = TwitterSyncStateStates.ACTIVE))
         case None => //create one!
-          val sync = TwitterSyncState(userId = userTokenToUse, twitterHandle = handle, state = TwitterSyncStateStates.ACTIVE, libraryId = libraryId, lastFetchedAt = None, minTweetIdSeen = None, maxTweetIdSeen = None)
+          val sync = TwitterSyncState(userId = userTokenToUse, twitterHandle = handle, state = TwitterSyncStateStates.ACTIVE, libraryId = libraryId, lastFetchedAt = None, minTweetIdSeen = None, maxTweetIdSeen = None, target = target)
           syncStateRepo.save(sync)
       }
     }
@@ -54,12 +56,26 @@ class TwitterSyncCommander @Inject() (
 
   def syncOne(socialUserInfo: Option[SocialUserInfo], state: TwitterSyncState, libraryOwner: Id[User]): Unit = throttle.withLockFuture {
 
+    val fetcher = {
+      state.target match {
+        case Favorites => twitter.fetchHandleFavourites _
+        case Tweets => twitter.fetchHandleTweets _
+      }
+    }
+
+    def errorHandler(r: Either[TwitterSyncError, Seq[JsObject]]) = {
+      r match {
+        case Right(xs) => xs
+        case Left(err) => handleSyncFetchFailure(err); Seq.empty
+      }
+    }
+
     def fetchAllNewerThanState(syncState: TwitterSyncState, upperBound: Option[Long]): Future[TwitterSyncState] = {
       (syncState.maxTweetIdSeen, upperBound) match {
         case (Some(max), Some(batchUb)) if batchUb <= max => // Batch upper bound less than existing max id
           Future.successful(syncState)
         case _ =>
-          twitter.fetchTweets(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound).map(persistTweets(syncState, libraryOwner, _)).flatMap {
+          fetcher(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound).map(errorHandler).map(persistTweets(syncState, libraryOwner, _)).flatMap {
             case (newSyncState, Some(batchMin), _) =>
               fetchAllNewerThanState(newSyncState, Some(batchMin))
             case (newSyncState, _, _) =>
@@ -73,7 +89,7 @@ class TwitterSyncCommander @Inject() (
         case (Some(min), Some(batchUb)) if batchUb > min => // Batch upper bound greater than existing min id
           Future.successful(syncState)
         case _ =>
-          twitter.fetchTweets(socialUserInfo, syncState.twitterHandle, None, upperBound).map(persistTweets(syncState, libraryOwner, _)).flatMap {
+          fetcher(socialUserInfo, syncState.twitterHandle, None, upperBound).map(errorHandler).map(persistTweets(syncState, libraryOwner, _)).flatMap {
             case (newSyncState, Some(batchMin), _) =>
               fetchAllOlderThanState(newSyncState, Some(batchMin))
             case (newSyncState, _, _) =>
@@ -84,6 +100,23 @@ class TwitterSyncCommander @Inject() (
 
     fetchAllNewerThanState(state, None).flatMap { newState =>
       fetchAllOlderThanState(newState, newState.minTweetIdSeen)
+    }
+  }
+
+  private def handleSyncFetchFailure(error: TwitterSyncError): Unit = {
+    error match {
+      case TokenExpired(Some(sui)) =>
+        db.readWrite { implicit s =>
+          socialRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
+        }
+      case HandleDoesntExist(handle) =>
+        db.readWrite { implicit s =>
+          syncStateRepo.getAllByHandle(handle).map { twitterSync =>
+            syncStateRepo.save(twitterSync.copy(state = TwitterSyncStateStates.INACTIVE))
+          }
+        }
+      case other =>
+        log.warn(s"[twfetch-err] Fetching error $other")
     }
   }
 

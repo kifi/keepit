@@ -1,6 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -11,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
 import com.keepit.common.net.URI
@@ -26,7 +27,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackUserId, SlackTeamRepo, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
 import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
 import com.keepit.social._
 import org.joda.time.DateTime
@@ -36,6 +37,7 @@ import play.api.mvc.Action
 import securesocial.core.IdentityId
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 class ShoeboxController @Inject() (
@@ -98,15 +100,10 @@ class ShoeboxController @Inject() (
 
   val MaxContentLength = 6000
 
-  def getUserIdentity(providerId: String, id: String) = Action { request =>
+  def getUserIdByIdentityId(providerId: String, id: String) = Action { request =>
     val identityId = IdentityId(providerId = providerId, userId = id)
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentity(identityId) }
-    Ok(Json.toJson(identity))
-  }
-
-  def getUserIdentityByUserId(userId: Id[User]) = Action { request =>
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentityByUserId(userId) }
-    Ok(Json.toJson(identity))
+    val ownerId = db.readOnlyMaster { implicit session => userIdentityHelper.getOwnerId(identityId) }
+    Ok(Json.toJson(ownerId))
   }
 
   def getUserOpt(id: ExternalId[User]) = Action { request =>
@@ -612,21 +609,11 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(attributions))
   }
 
-  def getUserIdFromSlackUserId(id: String) = Action { request =>
-    val slackUserId = SlackUserId(id)
-    val userIdOpt = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackUserIds(Set(slackUserId)).values.headOption.map(_.userId)
-    }
-    Ok(Json.obj("userIdOpt" -> userIdOpt))
-  }
-
   def getSlackTeamInfo(id: String) = Action { request =>
     val slackTeamId = SlackTeamId(id)
     db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).map { slackTeam =>
-        val orgId = slackTeam.organizationId
-        val teamName = slackTeam.slackTeamName
-        Ok(Json.obj("orgId" -> orgId, "teamName" -> teamName.value))
+        Ok(Json.obj("teamInfo" -> Json.toJson(slackTeam.toInternalSlackTeamInfo)))
       }.getOrElse(Ok)
     }
   }

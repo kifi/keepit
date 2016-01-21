@@ -31,20 +31,17 @@ object LibraryToSlackChannelPusher {
   val maxDelayFromKeptAt = Period.minutes(5)
   val delayFromUpdatedAt = Period.seconds(15)
   val MAX_KEEPS_TO_SEND = 7
-  val LIBRARY_BATCH_SIZE = 20
+  val INTEGRATIONS_BATCH_SIZE = 40
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
 }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
   // Method called by scheduled plugin
-  def findAndPushUpdatesForRipestLibraries(): Future[Unit]
+  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 
   // Method to be called if something happens in a library
   def schedule(libId: Id[Library]): Unit
-
-  // Only call there are scheduled pushes that you want to process immediately
-  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 }
 
 @Singleton
@@ -72,26 +69,43 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestLibraries(): Future[Unit] = {
-    val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
-      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
+  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
+    val integrationsToProcess = db.readWrite { implicit s =>
+      val integrations = libToChannelRepo.getIntegrationsRipeForProcessing(Limit(INTEGRATIONS_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
+      markLegalIntegrationsForProcessing(integrations)
     }
-    FutureHelpers.accumulateRobustly(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).imap { results =>
-      results.collect {
-        // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
-        // and that swallows the stack trace. This hack will manually expose the stack trace
-        case (lib, Left(boxFail: java.util.concurrent.ExecutionException)) =>
-          airbrake.notify(boxFail.getCause.getStackTrace.toList.mkString("\n"))
-        case (lib, Left(fail)) =>
-          airbrake.notify(s"Pushing slack updates to library $lib failed because of $fail")
-      }
-      Unit
-    }
+    processIntegrations(integrationsToProcess)
   }
 
   def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
     val nextPushAt = clock.now plus delayFromPushRequest
     pushLibraryAtLatest(libId, nextPushAt)
+  }
+
+  private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
+    FutureHelpers.accumulateRobustly(integrationsToProcess)(pushUpdatesForIntegration).imap { results =>
+      results.collect {
+        // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
+        // and that swallows the stack trace. This hack will manually expose the stack trace
+        case (lib, Failure(boxFail: java.util.concurrent.ExecutionException)) =>
+          airbrake.notify(boxFail.getCause.getStackTrace.toList.mkString("\n"))
+        case (lib, Failure(fail)) =>
+          airbrake.notify(s"Pushing slack updates to library $lib failed because of $fail")
+      }
+      results.collect { case (k, Success(v)) => k.id.get -> v }
+    }
+  }
+
+  private def markLegalIntegrationsForProcessing(integrations: Seq[LibraryToSlackChannel])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+    def isLegal(lts: LibraryToSlackChannel) = {
+      slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
+        permissionCommander.getLibraryPermissions(lts.libraryId, stm.userId).contains(LibraryPermission.VIEW_LIBRARY)
+      }
+    }
+    val (legal, illegal) = integrations.partition(isLegal)
+    illegal.foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
+
+    legal.flatMap(lts => libToChannelRepo.markAsProcessing(lts.id.get))
   }
 
   def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
@@ -147,26 +161,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case object NoKeeps extends KeepsToPush
   case class SomeKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
-
-  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    log.info(s"[LTSCP] Processing $libId")
-    val integrationsToProcess = db.readWrite { implicit s =>
-      val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
-
-      def isIllegal(lts: LibraryToSlackChannel) = {
-        slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
-          !permissionCommander.getLibraryPermissions(libId, stm.userId).contains(LibraryPermission.VIEW_LIBRARY)
-        }
-      }
-      val (illegal, legal) = integrations.map(libToChannelRepo.get).partition(isIllegal)
-      illegal.foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
-
-      legal.flatMap(lts => libToChannelRepo.markAsProcessing(lts.id.get))
-    }
-    FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet)(pushUpdatesForIntegration).imap { result =>
-      result.map { case (lts, b) => lts.id.get -> b }
-    }
-  }
 
   private def pushUpdatesForIntegration(lts: LibraryToSlackChannel): Future[Boolean] = {
     val (keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }

@@ -37,7 +37,7 @@ class SocialUserInfoRepoImpl @Inject() (
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
   val basicInfoCache: SocialUserBasicInfoCache,
-  userIdentityCache: UserIdentityCache)
+  userIdentityCache: IdentityUserIdCache)
     extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SeqNumberDbFunction[SocialUserInfo] with SocialUserInfoRepo {
 
   import db.Driver.simple._
@@ -96,7 +96,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
-    userIdentityCache.remove(UserIdentityIdentityIdKey(socialUser.networkType, socialUser.socialId))
+    userIdentityCache.remove(IdentityUserIdKey(socialUser.networkType, socialUser.socialId))
     socialUser.id map { id =>
       basicInfoCache.remove(SocialUserBasicInfoKey(id))
     }

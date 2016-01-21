@@ -123,25 +123,42 @@ object SlackTeamInfo {
   )(SlackTeamInfo.apply _)
 }
 
-case class SlackUserInfo(
-  id: SlackUserId,
-  name: SlackUsername,
+case class SlackUserProfile(
   firstName: Option[String],
   lastName: Option[String],
   fullName: Option[String],
   emailAddress: EmailAddress,
-  icon: Map[Int, String])
+  icon: Map[Int, String],
+  originalJson: JsValue)
+
+object SlackUserProfile {
+  implicit val reads: Reads[SlackUserProfile] = (
+    (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
+    (__ \ 'email).read[EmailAddress] and
+    SlackIconReads and
+    Reads(JsSuccess(_))
+  )(SlackUserProfile.apply _)
+}
+
+case class SlackUserInfo(
+  id: SlackUserId,
+  name: SlackUsername,
+  profile: SlackUserProfile,
+  originalJson: JsValue)
 
 object SlackUserInfo {
-  implicit val slackReads: Reads[SlackUserInfo] = (
+  private val reads: Reads[SlackUserInfo] = (
     (__ \ 'id).read[SlackUserId] and
     (__ \ 'name).read[SlackUsername] and
-    (__ \ 'profile \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'profile \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'profile \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'profile \ 'email).read[EmailAddress] and
-    (__ \ 'profile).read(SlackIconReads)
+    (__ \ 'profile).read[SlackUserProfile] and
+    Reads(JsSuccess(_))
   )(SlackUserInfo.apply _)
+
+  private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
+
+  implicit val format: Format[SlackUserInfo] = Format(reads, writes)
 }
 
 object SlackIconReads extends Reads[Map[Int, String]] {

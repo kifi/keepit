@@ -113,7 +113,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         val addRequest = LibraryInitialValues(
           name = s"@$handle’s Twitter Links",
           visibility = LibraryVisibility.PUBLISHED,
-          slug = s"$handle-twitter-links",
+          slug = Some(s"$handle-twitter-links"),
           kind = Some(LibraryKind.USER_CREATED), // bad!
           description = Some(s"Interesting pages, articles, and links I've shared on Twitter: https://twitter.com/$handle"),
           color = Some(LibraryColor.pickRandomLibraryColor()),
@@ -126,7 +126,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           db.readWrite { implicit session =>
             twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED))
           }
-          val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle)
+          val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle, SyncTarget.Tweets)
 
           updateUserShow(sui, handle).andThen {
             case Success(Some(show)) =>

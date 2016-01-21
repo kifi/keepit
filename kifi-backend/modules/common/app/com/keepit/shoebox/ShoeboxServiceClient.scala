@@ -42,8 +42,7 @@ import scala.util.Try
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]]
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]]
+  def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]]
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
@@ -135,8 +134,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-  def getUserIdFromSlackUserId(slackUserId: SlackUserId): Future[Option[Id[User]]]
-  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[(Id[Organization], SlackTeamName)]]
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
@@ -153,7 +151,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
-  userIdentityCache: UserIdentityCache,
+  identityUserIdCache: IdentityUserIdCache,
   userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
@@ -196,17 +194,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = {
-    cacheProvider.userIdentityCache.getOrElseFutureOpt(UserIdentityIdentityIdKey(identityId)) {
-      call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
-        r.json.asOpt[UserIdentity]
+  def getUserIdByIdentityId(identityId: IdentityId): Future[Option[Id[User]]] = {
+    cacheProvider.identityUserIdCache.getOrElseFutureOpt(IdentityUserIdKey(identityId)) {
+      call(Shoebox.internal.getUserIdByIdentityId(providerId = identityId.providerId, id = identityId.userId)).map { r =>
+        r.json.asOpt[Id[User]]
       }
-    }
-  }
-
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = {
-    call(Shoebox.internal.getUserIdentityByUserId(userId)).map { r =>
-      r.json.asOpt[UserIdentity]
     }
   }
 
@@ -863,18 +855,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
 
-  def getUserIdFromSlackUserId(slackUserId: SlackUserId): Future[Option[Id[User]]] = {
-    import GetUserIdFromSlackUserId._
-    call(Shoebox.internal.getUserIdFromSlackUserId(slackUserId)).map {
-      _.json.as[Response].userIdOpt
-    }
-  }
-
-  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[(Id[Organization], SlackTeamName)]] = {
+  def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = {
     import GetSlackTeamInfo._
     call(Shoebox.internal.getSlackTeamInfo(slackTeamId)).map {
       _.json.asOpt[Response].map {
-        case Response(orgId: Id[Organization], teamName: SlackTeamName) => (orgId, teamName)
+        case Response(teamInfo) => teamInfo
       }
     }
   }
@@ -903,7 +888,7 @@ object ShoeboxServiceClient {
   }
 
   object GetSlackTeamInfo {
-    case class Response(orgId: Id[Organization], teamName: SlackTeamName)
+    case class Response(teamInfo: InternalSlackTeamInfo)
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

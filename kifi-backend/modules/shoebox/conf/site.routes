@@ -43,6 +43,7 @@ GET     /:handle/settings/contacts @com.keepit.controllers.routing.KifiSiteRoute
 GET     /:handle/settings/export   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/activity @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/credits  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/integrations  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)

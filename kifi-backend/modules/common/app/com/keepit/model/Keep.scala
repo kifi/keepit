@@ -318,6 +318,7 @@ object KeepPermission extends Enumerator[KeepPermission] {
   case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
   case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
   case object VIEW_KEEP extends KeepPermission("view_keep")
+  case object EDIT_KEEP extends KeepPermission("edit_keep")
 
   def all: Set[KeepPermission] = _all.toSet
 

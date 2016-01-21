@@ -18,6 +18,7 @@ case class SlackChannelInfo(
   creator: SlackUserId,
   createdAt: SlackTimestamp,
   isArchived: Boolean,
+  isGeneral: Boolean,
   numMembers: Int,
   topic: Option[SlackChannelTopic],
   purpose: Option[SlackChannelPurpose])
@@ -28,6 +29,7 @@ object SlackChannelInfo {
     (__ \ 'creator).read[SlackUserId] and
     (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
     (__ \ 'is_archived).read[Boolean] and
+    (__ \ 'is_general).read[Boolean] and
     (__ \ 'num_members).read[Int] and
     (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
     (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))

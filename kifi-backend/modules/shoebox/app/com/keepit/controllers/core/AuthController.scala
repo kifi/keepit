@@ -121,7 +121,7 @@ class AuthController @Inject() (
     config: FortyTwoConfig,
     userIdentityHelper: UserIdentityHelper,
     implicit val secureSocialClientIds: SecureSocialClientIds,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
   // path is an Angular route
   val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations") // todo: Is this needed?
@@ -153,16 +153,17 @@ class AuthController @Inject() (
             // Manually link accounts. Annoying...
             log.info(s"[logInWithUserPass] Attempting to link $link to newly logged in user ${sess.getUserId}")
             val linkAttempt = for {
-              identity <- request.identityOpt
+              identityId <- request.identityId
+              identity <- authCommander.getUserIdentity(identityId)
               userId <- sess.getUserId
             } yield {
               log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
-              val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity))
-              UserService.save(userIdentity)
-              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $userIdentity")
+              val linkedIdentity = identity.withUserId(userId)
+              authCommander.saveUserIdentity(linkedIdentity)
+              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $linkedIdentity")
             }
             if (linkAttempt.isEmpty) {
-              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityOpt}, userId ${sess.getUserId}")
+              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityId}, userId ${sess.getUserId}")
             }
           }
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
@@ -261,8 +262,8 @@ class AuthController @Inject() (
         val hasher = Registry.hashers.currentHasher
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
-        UserService.find(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
-          case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+        authCommander.getUserIdentity(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
+          case Some(identity @ UserIdentity(_, Some(userId))) => {
             val matches = hasher.matches(identity.passwordInfo.get, info.password)
             if (!matches) {
               Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
@@ -312,7 +313,7 @@ class AuthController @Inject() (
           }
         }
       case nonUserRequest: NonUserRequest[_] => {
-        nonUserRequest.identityOpt match {
+        nonUserRequest.identityId.flatMap(authCommander.getUserIdentity) match {
 
           case Some(identity) => {
             // User tried to log in (not sign up) with social network.
@@ -323,7 +324,7 @@ class AuthController @Inject() (
             } match {
               case Some(addr) =>
                 // A user with this email address exists in the system, but it is not yet linked to this social identity.
-                Ok(views.html.authMinimal.linkSocial(nonUserRequest.identityOpt.get.identityId.providerId, nonUserRequest.identityOpt.get.email.get))
+                Ok(views.html.authMinimal.linkSocial(identity.identityId.providerId, identity.email.get))
               case None =>
                 // No email for this user exists in the system.
                 Redirect("/signup").flashing("signin_error" -> "no_account")
@@ -389,7 +390,7 @@ class AuthController @Inject() (
 
   def popupAfterLinkSocial(provider: String) = UserAction { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
-    val identity = request.identityOpt.get
+    val identity = request.identityId.flatMap(authCommander.getUserIdentity).get
     Ok(Html(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>"))
       .withSession(request.session - PopupKey)
   }
@@ -485,8 +486,8 @@ class AuthController @Inject() (
 
             redirect.discardingCookies(discardedCookies: _*)
 
-          } else if (ur.identityOpt.isDefined) {
-            log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")
+          } else if (ur.identityId.exists(authCommander.getUserIdentity(_).isDefined)) {
+            log.info(s"[doSignupPage] ${ur.identityId.get} has incomplete signup state")
             // User exists, is incomplete
             // Supporting top-level intents from here. These are non-privileged, and just determine where someone goes. (No ids, tokens, etc)
             request.getQueryString("intent") match {
@@ -502,8 +503,9 @@ class AuthController @Inject() (
             Redirect("/logout")
           }
         case requestNonUser: NonUserRequest[_] =>
-          if (requestNonUser.identityOpt.isDefined) {
-            val identity = requestNonUser.identityOpt.get
+          val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity(_))
+          if (identityOpt.isDefined) {
+            val identity = identityOpt.get
             if (identity.identityId.userId.trim.isEmpty) {
               throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
             }
@@ -526,7 +528,7 @@ class AuthController @Inject() (
               // No user exists, has social network identity, must finalize
 
               // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
-              if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
+              if (requestNonUser.identityId.get.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
                 val purposeDrivenInstall = cookieIntent.isDefined && cookieIntent.get.value == "waitlist"
                 Ok(views.html.authMinimal.signupGetEmail(

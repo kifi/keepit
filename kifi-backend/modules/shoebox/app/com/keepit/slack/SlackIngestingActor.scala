@@ -47,6 +47,8 @@ class SlackIngestingActor @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
+    slackOnboarder: SlackOnboarder,
+    orgConfigRepo: OrganizationConfigurationRepo,
     implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
   import SlackIngestionConfig._
@@ -72,14 +74,14 @@ class SlackIngestingActor @Inject() (
           integrationId -> slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).exists { stm =>
             permissionCommander.getLibraryPermissions(integration.libraryId, stm.userId).contains(LibraryPermission.ADD_KEEPS)
           }
-      }.toMap
+      }
 
       val getTokenWithScopes = {
         val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrationsByIds.values.map(_.slackUserId).toSet)
         integrationsByIds.map {
           case (integrationId, integration) =>
             integrationId -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
-        }.toMap
+        }
       }
 
       (integrationsByIds, isAllowed, getTokenWithScopes)
@@ -106,7 +108,13 @@ class SlackIngestingActor @Inject() (
       case result =>
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
-          case Success(Some(_)) => (Some(now plus nextIngestionDelayAfterNewMessages), None)
+          case Success(Some(_)) =>
+            if (integration.lastIngestedAt.isEmpty) {
+              // this is the first time we've tried ingesting for this integration
+              // and we were successful! we got a bunch of links
+              slackOnboarder.talkAboutIntegration(integration)
+            }
+            (Some(now plus nextIngestionDelayAfterNewMessages), None)
           case Success(None) => (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
@@ -131,11 +139,20 @@ class SlackIngestingActor @Inject() (
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
           FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
-            /*
-            slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
-              case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
+            val shouldAddReaction = db.readOnlyReplica { implicit s =>
+              integration.space match {
+                case LibrarySpace.OrganizationSpace(orgId) =>
+                  val config = orgConfigRepo.getByOrgId(orgId)
+                  config.settings.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED)
+                case _ => false
+              }
             }
-            */
+            if (shouldAddReaction) {
+              slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
+                case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
+              }
+            }
+
             Future.successful(Unit)
           } imap { _ =>
             (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)

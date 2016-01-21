@@ -84,10 +84,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         // add library with same title
         val jsBody2 = Json.obj("name" -> "Drones stuff", "visibility" -> "secret")
         val result2 = createLibrary(user, jsBody2)
-        status(result2) must equalTo(BAD_REQUEST)
+        status(result2) must equalTo(OK)
 
         db.readOnlyMaster { implicit s =>
-          libraryRepo.getAllByOwner(user.id.get).length === 1
+          libraryRepo.getAllByOwner(user.id.get).length === 2
         }
       }
     }

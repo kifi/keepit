@@ -1,6 +1,6 @@
 package com.keepit.social
 
-import com.keepit.common.oauth.{ SlackIdentity, EmailPasswordIdentity }
+import com.keepit.common.oauth._
 import com.keepit.common.performance._
 
 import com.google.inject.{ Inject, Singleton }
@@ -36,11 +36,11 @@ class UserIdentityHelper @Inject() (
     emailRepo: UserEmailAddressRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userIdentityCache: UserIdentityCache,
+    identityUserIdCache: IdentityUserIdCache,
     slackMembershipRepo: SlackTeamMembershipRepo) {
   import IdentityHelpers._
 
-  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = {
+  def getOwnerId(identityId: IdentityId)(implicit session: RSession): Option[Id[User]] = identityUserIdCache.getOrElseOpt(IdentityUserIdKey(identityId)) {
     import SocialNetworks._
     val networkType = parseNetworkType(identityId)
     networkType match {
@@ -54,26 +54,11 @@ class UserIdentityHelper @Inject() (
       case socialNetwork if social.contains(socialNetwork) =>
         val socialId = parseSocialId(identityId)
         socialUserInfoRepo.getOpt(socialId, networkType).flatMap(_.userId)
-      case unsupportedNetwork => throw new Exception(s"Unsupported authentication network: $unsupportedNetwork")
+      case unsupportedNetwork => throw new IllegalStateException(s"Unsupported authentication network: $unsupportedNetwork")
     }
   }
 
-  def getUserIdentityByUserId(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
-    Try(emailRepo.getByUser(userId)) match {
-      case Success(email) =>
-        val user = userRepo.get(userId)
-        val userCred = userCredRepo.findByUserIdOpt(userId)
-        Some(UserIdentity(user, email, userCred))
-      case _ =>
-        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).flatMap { info =>
-          info.credentials.map(UserIdentity(info.userId, _))
-        }.headOption orElse {
-          slackMembershipRepo.getByUserId(userId).find(_.token.isDefined).map(SlackTeamMembership.toIdentity)
-        }
-    }
-  }
-
-  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = userIdentityCache.getOrElseOpt(UserIdentityIdentityIdKey(identityId)) {
+  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
     val networkType = parseNetworkType(identityId)
     networkType match {
       case EMAIL | FORTYTWO | FORTYTWO_NF => {
@@ -88,14 +73,22 @@ class UserIdentityHelper @Inject() (
       }
       case SLACK =>
         Try(parseSlackId(identityId)).toOption.flatMap {
-          case (slackTeamId, slackUserId) => slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map(SlackTeamMembership.toIdentity)
+          case (slackTeamId, slackUserId) => slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map(SlackTeamMembership.toUserIdentity)
         }
       case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
         val socialId = parseSocialId(identityId)
         socialUserInfoRepo.getOpt(socialId, networkType).flatMap { info =>
-          info.credentials.map(UserIdentity(info.userId, _))
+          info.credentials.map { socialUser =>
+            val richIdentity = socialNetwork match {
+              case FACEBOOK => FacebookIdentity(socialUser)
+              case LINKEDIN => LinkedInIdentity(socialUser)
+              case TWITTER => TwitterIdentity(socialUser, info.pictureUrl, info.profileUrl)
+            }
+            UserIdentity(richIdentity, info.userId)
+          }
         }
       }
+      case unsupportedNetwork => throw new IllegalStateException(s"Unsupported authentication network: $unsupportedNetwork")
     }
   }
 }
@@ -134,39 +127,46 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def save(identity: Identity): UserIdentity = reportExceptions {
-    val (userIdOpt, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
-    log.info(s"[save] Interning SocialUser $socialUser. [userId=$userIdOpt, allowSignup=$allowSignup]")
-    val savedUserIdOpt = getOrCreateUser(userIdOpt, socialUser, allowSignup) match {
-      case None => {
+    val maybeUserIdentity = identity match {
+      case valid: MaybeUserIdentity => valid
+      case _ => throw new IllegalStateException(s"Asked to save unexpected identity: $identity")
+    }
+    log.info(s"[save] Interning identity $maybeUserIdentity")
+    val savedUserIdOpt = getOrCreateUser(maybeUserIdentity) match {
+      case None =>
         // This is required on the first step of a social signup, in order to persist credentials before a User is actually created
-        if (SocialNetworks.social.contains(parseNetworkType(socialUser))) {
-          db.readWrite { implicit session =>
-            internSocialUserInfo(None, socialUser)
+        db.readWrite { implicit session =>
+          maybeUserIdentity.identity match {
+            case slackIdentity: SlackIdentity => internSlackIdentity(None, slackIdentity)
+            case socialIdentity if SocialNetworks.social.contains(parseNetworkType(maybeUserIdentity)) => internSocialUserInfo(None, maybeUserIdentity)
+            case _ => // ignore
           }
         }
         None
-      }
       case Some(user) => {
         val userId = user.id.get
-        val networkType = parseNetworkType(socialUser)
+        val networkType = parseNetworkType(maybeUserIdentity)
         val (isNewIdentity, socialUserInfoOpt) = db.readWrite { implicit session =>
-          val isNewEmailAddressMaybe = internEmailAddress(userId, socialUser).map(_._2)
-          networkType match {
-            case EMAIL | FORTYTWO | FORTYTWO_NF => {
+          val isNewEmailAddressMaybe = internEmailAddress(userId, maybeUserIdentity).map(_._2)
+          maybeUserIdentity.identity match {
+            case emailIdentity: EmailPasswordIdentity =>
               val isNewEmailAddress = isNewEmailAddressMaybe.get
-              userCredRepo.internUserPassword(userId, socialUser.passwordInfo.get.password)
+              userCredRepo.internUserPassword(userId, maybeUserIdentity.passwordInfo.get.password)
               (isNewEmailAddress, None)
-            }
-            case SLACK => (connectSlackMembership(userId, socialUser), None)
-            case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
-              val (socialUserInfo, isNewSocialUserInfo) = internSocialUserInfo(Some(userId), socialUser)
+            case slackIdentity: SlackIdentity => (internSlackIdentity(Some(userId), slackIdentity), None)
+            case socialIdentity if SocialNetworks.social.contains(networkType) =>
+              val (socialUserInfo, isNewSocialUserInfo) = internSocialUserInfo(Some(userId), maybeUserIdentity)
               (isNewSocialUserInfo, Some(socialUserInfo))
-            }
+            case unexpectedRichIdentity =>
+              val message = s"Got unexpected RichIdentity $unexpectedRichIdentity"
+              log.error(message)
+              airbrake.notify(new IllegalStateException(message))
+              (false, None)
           }
         }
 
         if (isNewIdentity) {
-          uploadProfileImage(user, socialUser)
+          uploadProfileImage(user, maybeUserIdentity)
         }
         if (SocialNetworks.REFRESHING.contains(networkType)) {
           socialUserInfoOpt.foreach(socialGraphPlugin.asyncFetch(_))
@@ -175,7 +175,7 @@ class SecureSocialUserPluginImpl @Inject() (
         Some(userId)
       }
     }
-    UserIdentity(savedUserIdOpt, socialUser)
+    UserIdentity(maybeUserIdentity.identity, savedUserIdOpt)
   }
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = try {
@@ -197,32 +197,29 @@ class SecureSocialUserPluginImpl @Inject() (
     case e: Exception => airbrake.notify(s"error updating experiment if test user for user $userId")
   }
 
-  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser, Boolean) = {
-    identity match {
-      case UserIdentity(userId, socialUser) => (userId, socialUser, false)
-      case NewUserIdentity(userId, socialUser) => (userId, socialUser, true)
-      case ident =>
-        airbrake.notify(s"using an identity $ident should not be possible at this point!")
-        (None, SocialUser(ident), false)
-    }
-  }
-
-  private def createUser(socialUser: SocialUser): User = timing(s"create user ${socialUser.identityId}") {
+  private def createUser(identity: MaybeUserIdentity): User = timing(s"create user ${identity.identityId}") {
+    require(identity.isInstanceOf[NewUserIdentity], s"Unexpected identity at user creation: $identity")
     val u = userCreationCommander.createUser(
-      socialUser.firstName,
-      socialUser.lastName,
+      identity.firstName,
+      identity.lastName,
       state = UserStates.ACTIVE
     )
     log.info(s"[createUser] new user: name=${u.firstName + " " + u.lastName} state=${u.state}")
     u
   }
 
-  private def getExistingUserOrAllowSignup(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean)(implicit session: RSession): Either[User, Boolean] = {
-    val socialUserOwnerId = userIdentityHelper.getOwnerId(socialUser.identityId)
-    (userId orElse socialUserOwnerId) match {
-      case None => Right(allowSignup) // todo(Léo): check for existing email address here rather than in AuthCommander?
-      case Some(existingUserId) if socialUserOwnerId.exists(_ != existingUserId) => {
-        val message = s"User $existingUserId passed a SocialUser owned by user ${socialUserOwnerId.get}: $socialUser"
+  private def getExistingUserOrAllowSignup(identity: MaybeUserIdentity)(implicit session: RSession): Either[User, Boolean] = {
+    val identityOwnerId = userIdentityHelper.getOwnerId(RichIdentity.toIdentityId(identity.identity))
+    (identity.userId orElse identityOwnerId) match {
+      case None => Right {
+        // todo(Léo): check for existing email address here rather than in AuthCommander?
+        identity match {
+          case _: NewUserIdentity => true
+          case _ => false
+        }
+      }
+      case Some(existingUserId) if identityOwnerId.exists(_ != existingUserId) => {
+        val message = s"User $existingUserId passed an identity owned by user ${identityOwnerId.get}: $identity"
         log.warn(message)
         airbrake.notify(new IllegalStateException(message))
         Right(false)
@@ -238,38 +235,38 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  private def getOrCreateUser(userId: Option[Id[User]], socialUser: SocialUser, allowSignup: Boolean): Option[User] = {
+  private def getOrCreateUser(identity: MaybeUserIdentity): Option[User] = {
     db.readOnlyMaster { implicit session =>
-      getExistingUserOrAllowSignup(userId, socialUser, allowSignup)
+      getExistingUserOrAllowSignup(identity)
     } match {
       case Left(existingUser) if existingUser.state == UserStates.INCOMPLETE_SIGNUP => Some {
         db.readWrite { implicit session =>
-          userRepo.save(existingUser.withName(socialUser.firstName, socialUser.lastName).withState(UserStates.ACTIVE))
+          userRepo.save(existingUser.withName(identity.firstName, identity.lastName).withState(UserStates.ACTIVE))
         }
       }
       case Left(existingUser) => Some(existingUser)
-      case Right(true) => Some(createUser(socialUser))
+      case Right(true) => Some(createUser(identity))
       case Right(false) => None
     }
   }
 
-  private def internEmailAddress(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {
-    parseEmailAddress(socialUser).flatMap { emailAddress =>
-      val networkType = parseNetworkType(socialUser)
+  private def internEmailAddress(userId: Id[User], identity: MaybeUserIdentity)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {
+    parseEmailAddress(identity).flatMap { emailAddress =>
+      val networkType = parseNetworkType(identity)
       val verified = verifiedEmailProviders.contains(networkType)
       userEmailAddressCommander.intern(userId, emailAddress, verified)
     }
   }
 
-  private def internSocialUserInfo(userIdOpt: Option[Id[User]], socialUser: SocialUser)(implicit session: RWSession): (SocialUserInfo, Boolean) = {
-    val networkType = parseNetworkType(socialUser)
-    require(SocialNetworks.social.contains(networkType), s"SocialUser from $networkType should not intern a SocialUserInfo: $socialUser")
+  private def internSocialUserInfo(userIdOpt: Option[Id[User]], identity: MaybeUserIdentity)(implicit session: RWSession): (SocialUserInfo, Boolean) = {
 
-    val socialId = parseSocialId(socialUser)
+    val networkType = parseNetworkType(identity)
+    require(SocialNetworks.social.contains(networkType), s"Identity from $networkType should not intern a SocialUserInfo: $identity")
+    val socialId = parseSocialId(identity)
     userIdOpt.foreach { userId =>
       val existingSocialIdForNetwork = socialUserInfoRepo.getByUser(userId).collectFirst { case info if info.networkType == networkType => info.socialId }
       if (existingSocialIdForNetwork.exists(_ != socialId)) {
-        val message = s"Can't intern SocialUserInfo $socialUser for user $userId who has already connected a $networkType account with SocialId $existingSocialIdForNetwork"
+        val message = s"Can't intern SocialUserInfo $identity for user $userId who has already connected a $networkType account with SocialId $existingSocialIdForNetwork"
         throw new IllegalStateException(message)
       }
     }
@@ -278,31 +275,30 @@ class SecureSocialUserPluginImpl @Inject() (
       case Some(existingInfo) if existingInfo.state != SocialUserInfoStates.INACTIVE => {
         //todo(eishay): send a direct fetch request, social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         val updatedState = if (existingInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED) SocialUserInfoStates.CREATED else existingInfo.state
-        val updatedInfo = existingInfo.withCredentials(socialUser).withState(updatedState).copy(userId = userIdOpt orElse existingInfo.userId)
+        val updatedInfo = existingInfo.withCredentials(identity).withState(updatedState).copy(userId = userIdOpt orElse existingInfo.userId)
         val savedInfo = if (updatedInfo != existingInfo) socialUserInfoRepo.save(updatedInfo) else existingInfo
         val isNewIdentity = savedInfo.userId != existingInfo.userId
         (savedInfo, isNewIdentity)
       }
       case inactiveExistingInfoOpt => {
         val newInfo = SocialUserInfo(id = inactiveExistingInfoOpt.flatMap(_.id), userId = userIdOpt,
-          socialId = socialId, networkType = networkType, pictureUrl = socialUser.avatarUrl,
-          fullName = socialUser.fullName, credentials = Some(socialUser)
+          socialId = socialId, networkType = networkType, pictureUrl = identity.avatarUrl,
+          fullName = identity.fullName, credentials = Some(identity)
         )
         (socialUserInfoRepo.save(newInfo), true)
       }
     }
   }
 
-  private def connectSlackMembership(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Boolean = {
-    val (slackTeamId, slackUserId) = parseSlackId(socialUser.identityId)
-    slackCommander.unsafeConnectSlackMembership(slackTeamId, slackUserId, userId)
+  private def internSlackIdentity(userId: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
+    slackCommander.internSlackIdentity(userId, identity)
   }
 
-  private def uploadProfileImage(user: User, socialUser: SocialUser): Future[Unit] = {
-    val networkType = parseNetworkType(socialUser)
-    val socialId = parseSocialId(socialUser)
+  private def uploadProfileImage(user: User, identity: MaybeUserIdentity): Future[Unit] = {
+    val networkType = parseNetworkType(identity)
+    val socialId = parseSocialId(identity)
     imageStore.uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(networkType), None, setDefault = false) { preferredSize =>
-      SocialNetworks.getPictureUrl(networkType, socialId)(preferredSize) orElse socialUser.avatarUrl
+      SocialNetworks.getPictureUrl(networkType, socialId)(preferredSize) orElse identity.avatarUrl
     } imap (_ => ())
   }
 

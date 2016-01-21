@@ -26,7 +26,7 @@ import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
 import com.keepit.common.core._
 import com.keepit.common.time._
-import com.keepit.social.NonUserKinds
+import com.keepit.social.{ IdentityHelpers, NonUserKinds }
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -207,7 +207,14 @@ class SlackSearchController @Inject() (
           contextBuilder += ("slackChannelId", command.channelId.value)
           val heimdalContext = contextBuilder.build
           val endedWith = "unload"
-          searchAnalytics.searched(request.userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
+
+          request.userIdOpt
+            .map(userId => Future.successful(Some(userId)))
+            .getOrElse(shoeboxClient.getUserIdByIdentityId(IdentityHelpers.toIdentityId(command.teamId, command.userId)))
+            .recover { case _ => None }
+            .foreach { userIdOpt =>
+              searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
+            }
         }
 
         val text = {

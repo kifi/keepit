@@ -3,13 +3,12 @@ package com.keepit.controllers.core
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
-import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator, PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
-import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.oauth.{ OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
-import com.keepit.payments.{ CreditRewardCommander, CreditCode }
+import com.keepit.payments.CreditCode
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -22,7 +21,6 @@ import com.keepit.social._
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail._
 import com.keepit.common.time._
 import play.api.data._
 import play.api.data.Forms._
@@ -99,8 +97,8 @@ class AuthHelper @Inject() (
     val hasher = Registry.hashers.currentHasher
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
-    UserService.find(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
-      case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+    authCommander.getUserIdentity(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
+      case Some(identity @ UserIdentity(_, Some(userId))) => {
         // User exists with these credentials
         val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
         if (matchesOpt.exists(p => p)) {
@@ -373,11 +371,12 @@ class AuthHelper @Inject() (
     modelPublicId: Option[String],
     authToken: Option[String],
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
-    require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+    val identityOpt = request.identityId.flatMap(authCommander.getUserIdentity)
+    require(identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     log.info(s"Handling SocialFinalizeInfo: $sfi")
 
-    val identity = request.identityOpt.get
+    val identity = identityOpt.get
     if (identity.identityId.userId.trim.isEmpty) {
       throw new Exception(s"empty social id for $identity joining model id $modelPublicId with $sfi")
     }
@@ -414,7 +413,7 @@ class AuthHelper @Inject() (
   def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, modelPublicId: Option[String], authToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityId, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
         val libraryPubId = modelPublicId.filter(_.startsWith("l")).map(pubId => PublicId[Library](pubId))
         val verifiedEmail = verifySignupEmail(request.userId, email, libraryPubId, authToken)
@@ -550,13 +549,13 @@ class AuthHelper @Inject() (
   }
 
   def doUploadBinaryPicture(implicit request: MaybeUserRequest[play.api.libs.Files.TemporaryFile]): Result = {
-    request.userOpt.orElse(request.identityOpt) match {
+    request.userOpt.orElse(request.identityId) match {
       case Some(userInfo) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {
           case Success((token, pictureUrl)) =>
             Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
-            airbrake.notify("Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
+            airbrake.notify(s"Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
             BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
@@ -564,7 +563,7 @@ class AuthHelper @Inject() (
   }
 
   def doUploadFormEncodedPicture(implicit request: MaybeUserRequest[MultipartFormData[play.api.libs.Files.TemporaryFile]]) = {
-    request.userOpt.orElse(request.identityOpt) match {
+    request.userOpt.orElse(request.identityId) match {
       case Some(_) =>
         request.body.file("picture").map { picture =>
           s3ImageStore.uploadTemporaryPicture(picture.ref.file) match {
@@ -589,19 +588,13 @@ class AuthHelper @Inject() (
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(OAuth2AccessToken(oauth2InfoOrig.accessToken)) flatMap { profileInfo =>
-          val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
-          val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
-            case t: Throwable =>
-              airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
-              OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
-          }
-          longTermTokenInfoF map { oauth2InfoNew =>
-            authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), signUpUrl)
-          }
+        provider.getRichIdentity(oauth2InfoOrig) map { identity =>
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+            log.error(message)
+            airbrake.notify(message)
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -613,12 +606,13 @@ class AuthHelper @Inject() (
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(oauth1Info) map { info =>
-          val filledUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.signupWithTrustedSocialUser(filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
+        provider.getRichIdentity(oauth1Info) map { identity =>
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+            log.error(message)
+            airbrake.notify(message)
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -629,9 +623,8 @@ class AuthHelper @Inject() (
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(OAuth2AccessToken(oAuth2Info.accessToken)) map { info =>
-          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth2)
-          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        provider.getIdentityId(oAuth2Info) map { identityId =>
+          authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
             log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oAuth2Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
@@ -645,9 +638,8 @@ class AuthHelper @Inject() (
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
-        provider.getUserProfileInfo(oauth1Info) map { info =>
-          val socialUser = SecureSocialAdaptor.toSocialUser(info, AuthenticationMethod.OAuth1)
-          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        provider.getIdentityId(oauth1Info) map { identityId =>
+          authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
             log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")

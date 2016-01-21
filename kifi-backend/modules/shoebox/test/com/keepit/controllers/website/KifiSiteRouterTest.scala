@@ -182,7 +182,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Libraries
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
-          val libraryRequest = LibraryInitialValues(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
+          val libraryRequest = LibraryInitialValues(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED)
           libraryCommander.createLibrary(libraryRequest, user1.id.get)
         }
         actionsHelper.unsetUser

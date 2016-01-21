@@ -47,8 +47,9 @@ class FakeTwitterSocialGraph @Inject() (
     userRepo: UserRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
-    override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
-      TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
+    override def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = Future.successful {
+      val info = tweetfortytwoInfo.copy(screenName = "tweet42")
+      TwitterIdentity(accessToken, info)
     }
   }
 
@@ -91,8 +92,12 @@ class FakeTwitterSocialGraph @Inject() (
 
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = Future.successful {
-    Seq.empty
+  def fetchHandleTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = Future.successful {
+    Right(Seq.empty)
+  }
+
+  def fetchHandleFavourites(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Either[TwitterSyncError, Seq[JsObject]]] = Future.successful {
+    Right(Seq.empty)
   }
 
   def extractEmails(parentJson: JsValue): Seq[EmailAddress] = twtrGraph.extractEmails(parentJson)

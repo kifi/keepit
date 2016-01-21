@@ -12,6 +12,7 @@ import securesocial.core._
 import com.keepit.common.logging.Logging
 import securesocial.core.IdentityId
 import securesocial.core.providers.Token
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.controllers.{ TemplatesPlugin, DefaultTemplatesPlugin }
@@ -63,17 +64,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait) extends UserService with SecureSocialUserPlugin with Logging {
 
-  private def reportExceptions[T](f: => T): T =
-    try f catch {
-      case ex: Throwable =>
-        airbrake.notify(ex)
-        throw ex
-    }
-
-  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
-    val resFuture = shoeboxClient.getUserIdentity(id)
-    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on ${id.providerId}")
-  }
+  def find(id: IdentityId): Option[UserIdentity] = throw new IllegalStateException(s"Attempt to call RemoteSecureSocialUserPlugin.find with identityId $id")
 
   def save(identity: Identity): UserIdentity = throw new IllegalStateException(s"Attempt to call RemoteSecureSocialUserPlugin.save with identity $identity")
 

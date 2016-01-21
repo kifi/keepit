@@ -78,7 +78,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       slackUserId,
       slackTeamId,
       slackChannelId,
-      SlackIncomingWebhook(channelName = slackChannelName, url = url, configUrl = configUrl),
+      SlackIncomingWebhook(channelName = slackChannelName, channelId = slackChannelId, url = url, configUrl = configUrl),
       lastPostedAt,
       lastFailedAt,
       lastFailure.map(_.as[SlackAPIFailure])

@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, UserExperimentType, SocialUserInfo }
 import com.keepit.social.{ UserIdentityHelper, SocialNetworkType, SocialId }
 import play.api.mvc.{ WrappedRequest, Request, Controller }
-import securesocial.core.{ UserService, SecureSocial, Identity }
+import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
 
 import scala.concurrent.Future
 
@@ -23,8 +23,6 @@ class ShoeboxUserActionsHelper @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with SecureSocialHelper with Logging {
-
-  override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, () => getSecureSocialUserFromRequest)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
     userExperimentCommander.userHasExperiment(userId, UserExperimentType.ADMIN)
@@ -42,14 +40,8 @@ class ShoeboxUserActionsHelper @Inject() (
     db.readOnlyMaster { implicit s => Some(userRepo.get(extId)) }
   }
 
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful {
-    db.readOnlyMaster { implicit s => identityHelper.getUserIdentityByUserId(userId) }
-  }
-
-  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
-
-  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = Future.successful {
-    db.readOnlyMaster { implicit s => identityHelper.getOwnerId(identity.identityId) }
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful {
+    db.readOnlyMaster { implicit s => identityHelper.getOwnerId(identityId) }
   }
 
 }

@@ -31,9 +31,10 @@ angular.module('kifi')
         'abstract': true
       })
       .state('home.feed', {
-        url: '',
+        url: '?filter&handle',
         controller: 'FeedCtrl',
-        templateUrl: 'feed/feed.tpl.html'
+        templateUrl: 'feed/feed.tpl.html',
+        reloadOnSearch: false
       })
       .state('getStarted', {
           url: '/getstarted',
@@ -204,6 +205,13 @@ angular.module('kifi')
         templateUrl: 'teamSettings/earnCredits.tpl.html',
         activetab: 'settings',
         activenav: 'earn-credits'
+      })
+      .state('orgProfile.settings.integrations', {
+        url: '/integrations',
+        controller: 'IntegrationsCtrl',
+        templateUrl: 'teamSettings/integrations.tpl.html',
+        activetab: 'settings',
+        activenav: 'integrations'
       })
       .state('teams', {
         url: '/teams',

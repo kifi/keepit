@@ -11,14 +11,14 @@ import securesocial.core.{ Identity, IdentityProvider, UserService }
  */
 trait UserIdentityProvider extends IdentityProvider with Logging {
 
-  abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
+  override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
     val userIdOpt = request.session.getUserId
     log.info(s"[authenticate] userIdOpt=$userIdOpt session.data=${request.session.data} request=$request")
     doAuth()(request) match {
-      case Right(socialUser) =>
-        val filledSocialUser = fillProfile(socialUser)
-        val saved = UserService.save(UserIdentity(userIdOpt, filledSocialUser))
+      case Right(UserIdentity(identity, existingUserIdOpt)) =>
+        val saved = UserService.save(UserIdentity(identity, userIdOpt orElse existingUserIdOpt))
         Right(saved)
+      case Right(socialUser) => throw new IllegalStateException(s"Unexpected SocialUser: $socialUser")
       case left => left
     }
   }

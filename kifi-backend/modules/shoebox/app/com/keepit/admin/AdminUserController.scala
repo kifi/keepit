@@ -473,9 +473,9 @@ class AdminUserController @Inject() (
     val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
     val slugOpt = request.body.get("slug").flatMap(_.headOption)
 
-    (nameOpt, visibilityOpt, slugOpt) match {
-      case (Some(name), Some(visibility), Some(slug)) => {
-        val libraryAddRequest = LibraryInitialValues(name, visibility, slug)
+    (nameOpt, visibilityOpt) match {
+      case (Some(name), Some(visibility)) =>
+        val libraryAddRequest = LibraryInitialValues(name, visibility, slugOpt)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val result: Either[LibraryFail, Library] = libraryCommander.createLibrary(libraryAddRequest, userId)
@@ -483,7 +483,6 @@ class AdminUserController @Inject() (
           case Left(fail) => BadRequest(fail.message)
           case Right(_) => Ok
         }
-      }
       case _ => BadRequest("All Fields are required.")
     }
   }
@@ -895,7 +894,7 @@ class AdminUserController @Inject() (
     socialUserInfoRepo.getByUser(userId).foreach { sui =>
       socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
       invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
-      socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
+      socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, username = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
       socialUserInfoRepo.deleteCache(sui)
     }
 

@@ -35,6 +35,7 @@ trait SlackClientWrapper {
   def sendToSlackTeam(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
   def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit]
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit]
+
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
@@ -136,17 +137,7 @@ class SlackClientWrapperImpl @Inject() (
       workingToken match {
         case None => Future.failed(SlackAPIFailure.NoValidToken)
         case Some(token) =>
-          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen {
-            case Success(_: Unit) => // If we ever kept track of successes for tokens, here is where we would note the success
-            case Failure(fail: SlackAPIFailure) => db.readWrite { implicit s =>
-              slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-                slackTeamMembershipRepo.save(stm.revoked)
-              }
-            }
-            case Failure(other) =>
-              airbrake.notify("Got an unparseable error while pushing to Slack.", other)
-          }
-
+          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token))
           pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
       }
     }
@@ -177,7 +168,7 @@ class SlackClientWrapperImpl @Inject() (
     }
     FutureHelpers.foldLeftUntil(tokens)(Option.empty[SlackChannelId]) {
       case (_, token) => getChannels(token).map { channels =>
-        val generalChannelOpt = channels.find(_.channelName == SlackChannelName("#general")).map(_.channelId)
+        val generalChannelOpt = channels.find(_.isGeneral).map(_.channelId)
         (generalChannelOpt, generalChannelOpt.isDefined)
       }.recover { case x => (None, false) }
     }

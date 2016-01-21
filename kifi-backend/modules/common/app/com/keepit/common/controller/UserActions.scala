@@ -12,7 +12,7 @@ import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ UserService, SecureSocial, Identity }
+import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
 import scala.util.{ Failure, Success, Try }
@@ -27,17 +27,14 @@ sealed trait MaybeUserRequest[T] extends Request[T] {
     case ur: UserRequest[T] => Some(ur.user)
     case _ => None
   }
-  def identityOpt: Option[Identity] = this match {
-    case ur: UserRequest[T] => ur.identityOpt
-    case nr: NonUserRequest[_] => nr.identityOpt
-  }
+  def identityId: Option[IdentityId]
 }
 
-case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  override def identityOpt: Option[Identity] = identityF.apply()
+case class NonUserRequest[T](request: Request[T], private val getIdentityId: () => Option[IdentityId]) extends WrappedRequest[T](request) with MaybeUserRequest[T] {
+  def identityId: Option[IdentityId] = getIdentityId()
 }
 
-case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
+case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with MaybeCostlyUserAttributes[T] {
   implicit val req = request
 
   private class Lazily[A](f: => Future[A]) {
@@ -55,9 +52,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   def experimentsF = experiments0.get
   def experiments = experiments0.awaitGet
 
-  private val identityOpt0: Lazily[Option[Identity]] = new Lazily(helper.getSecureSocialIdentityOpt(userId))
-  def identityOptF = identityOpt0.get
-  override def identityOpt = identityOpt0.awaitGet
+  def identityId = helper.getIdentityIdFromRequest(request)
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
 }
@@ -69,16 +64,11 @@ trait MaybeCostlyUserAttributes[T] { self: UserRequest[T] =>
   def kifiInstallationId: Option[ExternalId[KifiInstallation]]
 }
 
-// for backward-compatibility
-trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
-  def identityOpt: Option[Identity]
-}
-
 trait UserActionsRequirements {
 
   def airbrake: AirbrakeNotifier
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request)
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request, () => getIdentityIdFromRequest(request))
 
   def kifiInstallationCookie: KifiInstallationCookie
 
@@ -92,24 +82,23 @@ trait UserActionsRequirements {
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]]
 
-  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]]
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId]
 
-  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]]
-
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]]
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]]
 
 }
 
 trait SecureSocialHelper extends Logging {
-  def getSecureSocialUserFromRequest(implicit request: Request[_]): Option[Identity] = {
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId] = {
     try {
       val maybeAuthenticator = SecureSocial.authenticatorFromRequest
-      maybeAuthenticator flatMap { authenticator =>
-        UserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
+      maybeAuthenticator map { authenticator =>
+        log.info(s"[getIdentityIdFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId}")
+        authenticator.identityId
       }
     } catch {
       case t: Throwable =>
-        log.error(s"[getSecureSocialUserFromRequest] Caught exception $t; cause=${t.getCause}", t)
+        log.error(s"[getIdentityIdFromRequest] Caught exception $t; cause=${t.getCause}", t)
         None
     }
   }
@@ -134,13 +123,10 @@ trait UserActionsHelper extends UserActionsRequirements with Logging {
     kifiIdOpt match {
       case Some(userId) =>
         Future.successful(Some(userId))
-      case None =>
-        getSecureSocialIdentityFromRequest.flatMap { identityOpt =>
-          identityOpt match {
-            case None => Future.successful(None)
-            case Some(identity) => getUserIdOptFromSecureSocialIdentity(identity)
-          }
-        }
+      case None => getIdentityIdFromRequest match {
+        case None => Future.successful(None)
+        case Some(identityId) => getUserIdOptFromSecureSocialIdentity(identityId)
+      }
     }
   }
 

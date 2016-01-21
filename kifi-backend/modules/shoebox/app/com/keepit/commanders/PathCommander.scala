@@ -78,4 +78,5 @@ class PathCommander @Inject() (
 object PathCommander {
   def tagSearchPath(tag: String) = Path("find?q=" + URLEncoder.encode(s"""tag:"$tag"""", "ascii"))
   val browserExtension = Path("install")
+  val settingsPage = Path("settings")
 }

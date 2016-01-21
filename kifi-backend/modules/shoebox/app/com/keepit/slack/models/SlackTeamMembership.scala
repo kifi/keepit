@@ -7,11 +7,9 @@ import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.social.{ UserIdentity, UserIdentityIdentityIdKey, UserIdentityCache }
+import com.keepit.social.{ UserIdentity, IdentityUserIdKey, IdentityUserIdCache }
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, JsValue }
-
-import scala.util.{ Success, Failure, Try }
 
 case class SlackTeamMembershipInternRequest(
   userId: Option[Id[User]],
@@ -19,8 +17,9 @@ case class SlackTeamMembershipInternRequest(
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
-  token: SlackAccessToken,
-  scopes: Set[SlackAuthScope])
+  token: Option[SlackAccessToken],
+  scopes: Set[SlackAuthScope],
+  slackUser: Option[SlackUserInfo])
 
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
@@ -31,18 +30,18 @@ object SlackTokenWithScopes {
 }
 
 object SlackTeamMembership {
-  def toIdentity(membership: SlackTeamMembership): UserIdentity = {
+  def toUserIdentity(membership: SlackTeamMembership): UserIdentity = {
     UserIdentity(
-      membership.userId,
       SlackIdentity(
         membership.slackTeamId,
         membership.slackTeamName,
-        membership.slackUserId,
-        membership.slackUsername,
         membership.token,
         membership.scopes,
-        None // todo(Léo): add SlackUserInfo to membership
-      )
+        membership.slackUserId,
+        membership.slackUsername,
+        membership.slackUser
+      ),
+      membership.userId
     )
   }
 }
@@ -58,7 +57,8 @@ case class SlackTeamMembership(
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
-    scopes: Set[SlackAuthScope]) extends ModelWithState[SlackTeamMembership] {
+    scopes: Set[SlackAuthScope],
+    slackUser: Option[SlackUserInfo]) extends ModelWithState[SlackTeamMembership] {
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
@@ -75,7 +75,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
-  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): SlackTeamMembership
+  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
@@ -87,7 +87,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
 class SlackTeamMembershipRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    userIdentityCache: UserIdentityCache) extends DbRepo[SlackTeamMembership] with SlackTeamMembershipRepo {
+    userIdentityCache: IdentityUserIdCache) extends DbRepo[SlackTeamMembership] with SlackTeamMembershipRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -110,7 +110,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
-    scopes: JsValue) = {
+    scopes: JsValue,
+    slackUser: Option[JsValue]) = {
     SlackTeamMembership(
       id,
       createdAt,
@@ -122,7 +123,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
       slackTeamId,
       slackTeamName,
       token,
-      scopes.as[Set[SlackAuthScope]]
+      scopes.as[Set[SlackAuthScope]],
+      slackUser.map(_.as[SlackUserInfo])
     )
   }
 
@@ -137,7 +139,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.slackTeamId,
     membership.slackTeamName,
     membership.token,
-    Json.toJson(membership.scopes)
+    Json.toJson(membership.scopes),
+    membership.slackUser.map(Json.toJson(_))
   ))
 
   type RepoImpl = SlackTeamMembershipTable
@@ -150,14 +153,15 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
     def token = column[Option[SlackAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamMembershipStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamMembershipTable(tag)
   initTable()
   override def deleteCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {
-    userIdentityCache.remove(UserIdentityIdentityIdKey(membership.slackTeamId, membership.slackUserId))
+    userIdentityCache.remove(IdentityUserIdKey(membership.slackTeamId, membership.slackUserId))
   }
 
   override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = deleteCache(membership)
@@ -168,17 +172,18 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackUserId === slackUserId && row.state =!= excludeState.orNull).firstOption
   }
-  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): SlackTeamMembership = {
+  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean) = {
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
         val updated = membership.copy(
           userId = request.userId orElse membership.userId, // let a Kifi user steal a slack membership
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
-          token = Some(request.token),
-          scopes = request.scopes
+          token = request.token orElse membership.token,
+          scopes = request.scopes,
+          slackUser = request.slackUser orElse membership.slackUser
         )
-        if (updated == membership) membership else save(updated)
+        if (updated == membership) (membership, false) else (save(updated), (updated.userId != membership.userId))
       case inactiveMembershipOpt =>
         val newMembership = SlackTeamMembership(
           id = inactiveMembershipOpt.map(_.id.get),
@@ -187,10 +192,11 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = request.slackUsername,
           slackTeamId = request.slackTeamId,
           slackTeamName = request.slackTeamName,
-          token = Some(request.token),
-          scopes = request.scopes
+          token = request.token,
+          scopes = request.scopes,
+          slackUser = request.slackUser
         )
-        save(newMembership)
+        (save(newMembership), true)
     }
   }
 

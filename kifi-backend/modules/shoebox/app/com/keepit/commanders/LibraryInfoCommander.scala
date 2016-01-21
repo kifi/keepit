@@ -327,9 +327,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
     db.readOnlyReplica { implicit s =>
-      twitterSyncRepo.getFirstHandleByLibraryId(libId).map {
-        TwitterLibrarySourceAttribution(_)
-      }
+      twitterSyncRepo.getFirstHandleByLibraryId(libId).map(TwitterLibrarySourceAttribution.apply)
     }
   }
 

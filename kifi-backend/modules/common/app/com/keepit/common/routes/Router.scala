@@ -81,8 +81,7 @@ case object PUT extends Method("PUT")
 
 object Shoebox extends Service {
   object internal {
-    def getUserIdentity(providerId: String, id: String) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentity", Param("providerId", providerId), Param("id", id))
-    def getUserIdentityByUserId(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentityByUserId", Param("userId", userId))
+    def getUserIdByIdentityId(providerId: String, id: String) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdByIdentityId", Param("providerId", providerId), Param("id", id))
     def getNormalizedURI(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
     def getNormalizedUriByUrlOrPrenormalize() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize")
@@ -180,7 +179,6 @@ object Shoebox extends Service {
     def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
-    def getUserIdFromSlackUserId(slackUserId: SlackUserId) = ServiceRoute(GET, "/internal/shoebox/database/getUserIdFromSlackUserId", Param("slackUserId", slackUserId.value))
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
     def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
