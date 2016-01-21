@@ -88,6 +88,12 @@ object OAuth2AccessTokenResponse {
 
 }
 
+object OAuth2Controller {
+  implicit class RequestWithQueryVal[T](val underlying: Request[T]) extends AnyVal { // todo(ray): move to common
+    def queryVal(key: String) = underlying.queryString.get(key).flatMap(_.headOption)
+  }
+}
+
 class OAuth2Controller @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
@@ -127,7 +133,7 @@ class OAuth2Controller @Inject() (
   }
 
   // redirect/GET
-  def callback(provider: String, codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
+  def callback(provider: String) = UserAction.async { implicit request =>
     implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
     log.infoP(s"headers=${request.headers} session=${request.session.data}")
     val redirectHome = Redirect(com.keepit.controllers.website.routes.HomeController.home)
@@ -136,20 +142,22 @@ class OAuth2Controller @Inject() (
     val providerConfig = oauth2Config.getProviderConfig(provider) getOrElse {
       throw new IllegalArgumentException(s"[OAuth2Controller.callback] provider=$provider not supported")
     }
+    val stateOpt = request.queryString.get("state").flatMap(_.headOption)
+    val codeOpt = request.queryString.get("code").flatMap(_.headOption)
 
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     val cachedTokenOpt = stateTokenCache.get(StateTokenKey(request.userId))
-    log.infoP(s"code=$codeOpt state=$state cached=$cachedTokenOpt state==cached is ${state.exists(_ == cachedTokenOpt.get.token)}")
+    log.infoP(s"code=$codeOpt state=$stateOpt cached=$cachedTokenOpt state==cached is ${stateOpt.exists(_ == cachedTokenOpt.get.token)}")
 
-    if (cachedTokenOpt.isEmpty) {
-      log.warnP(s"invalid state token: callback-state=$state cached=$cachedTokenOpt")
+    if (stateOpt.isEmpty || cachedTokenOpt.isEmpty) {
+      log.warnP(s"invalid state token: callback-state=$stateOpt cached=$cachedTokenOpt")
       resolve(redirectInvite)
     } else if (codeOpt.isEmpty) {
       log.warnP(s"code is empty; consent might not have been granted") // for server app
       resolve(redirectInvite)
     } else {
-      if (state != cachedTokenOpt.get.token) { // todo: make this a real guard
-        airbrake.notify(s"state token mismatch state=$state cached=$cachedTokenOpt")
+      if (stateOpt.get != cachedTokenOpt.get.token) { // todo: make this a real guard
+        airbrake.notify(s"state token mismatch state=$stateOpt cached=$cachedTokenOpt")
       }
       val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
       val params = Map(
@@ -179,6 +187,17 @@ class OAuth2Controller @Inject() (
               airbrake.notify(s"$prefix $provider reported failure: status=${resp.status} body=${resp.body}")
               None
           }
+          case "facebook" => {
+            if (Play.maybeApplication.isDefined && !Play.isProd) {
+              // not supported in prod
+              val splitted = resp.body.split("=")
+              log.infoP(s"splitted=${splitted.mkString}")
+              if (splitted.length > 1)
+                Some(OAuth2AccessTokenResponse(splitted(1)))
+              else
+                None
+            } else None
+          }
         }
       }
 
@@ -202,6 +221,17 @@ class OAuth2Controller @Inject() (
                       Redirect(route)
                   }
                 }
+              }
+              case "facebook" => {
+                if (Play.maybeApplication.isDefined && !Play.isProd) {
+                  val friendsUrl = "https://graph.facebook.com/v2.0/me/friends"
+                  val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken), ("fields", "id,name,first_name,last_name,username,picture,email")).get
+                  friendsF.map { friendsResp =>
+                    val friends = friendsResp.json
+                    log.infoP("friends:\n${Json.prettyPrint(friends)}")
+                    Ok(friends)
+                  }
+                } else redirectHomeF
               }
               case _ => redirectHomeF
             }

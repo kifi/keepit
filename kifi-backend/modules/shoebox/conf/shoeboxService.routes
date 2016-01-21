@@ -12,7 +12,7 @@ GET     /contacts/import/success    @com.keepit.controllers.website.ContactsImpo
 GET     /contacts/import/failure    @com.keepit.controllers.website.ContactsImportController.importContactsFailure(redirectUrl: Option[String])
 GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:ExternalId[ABookInfo], provider:Option[String])
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
-GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String, code: Option[String] ?= None, state: String)
+GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
