@@ -1,5 +1,6 @@
 // @require styles/keeper/pane.css
 // @require scripts/lib/q.min.js
+// @require scripts/lib/jquery.js
 // @require scripts/repair_transitionend.js
 // @require scripts/keeper.js
 // @require scripts/listen.js
