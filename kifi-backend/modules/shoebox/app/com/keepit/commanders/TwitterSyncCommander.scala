@@ -75,12 +75,15 @@ class TwitterSyncCommander @Inject() (
         case (Some(max), Some(batchUb)) if batchUb <= max => // Batch upper bound less than existing max id
           Future.successful(syncState)
         case _ =>
-          fetcher(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound).map(errorHandler).map(persistTweets(syncState, libraryOwner, _)).flatMap {
-            case (newSyncState, Some(batchMin), _) =>
-              fetchAllNewerThanState(newSyncState, Some(batchMin))
-            case (newSyncState, _, _) =>
-              Future.successful(newSyncState)
-          }
+          fetcher(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound)
+            .map(errorHandler)
+            .map(persistTweets(syncState, libraryOwner, _))
+            .flatMap {
+              case (newSyncState, Some(batchMin), _) =>
+                fetchAllNewerThanState(newSyncState, Some(batchMin))
+              case (newSyncState, _, _) =>
+                Future.successful(newSyncState)
+            }
       }
     }
 
