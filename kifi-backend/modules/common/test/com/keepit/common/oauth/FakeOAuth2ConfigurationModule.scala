@@ -2,7 +2,6 @@ package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
-import com.keepit.social.RichSocialUser
 import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
@@ -16,7 +15,7 @@ trait FakeOAuthProvider[T, I <: RichIdentity] { self: OAuthProvider[T, I] =>
   private var identity: Future[I] = Future.failed(new IllegalStateException("No fake identity has been set."))
   def setIdentity(newIdentity: Future[I]) = { identity = newIdentity }
   def getRichIdentity(accessToken: T): Future[I] = identity
-  def getIdentityId(accessToken: T): Future[IdentityId] = getRichIdentity(accessToken).imap(RichSocialUser(_).identityId)
+  def getIdentityId(accessToken: T): Future[IdentityId] = getRichIdentity(accessToken).imap(RichIdentity.toIdentityId)
 }
 
 trait FakeOAuth2Provider[I <: RichIdentity] extends FakeOAuthProvider[OAuth2TokenInfo, I] with OAuth2ProviderHelper { self: OAuth2Support[I] =>

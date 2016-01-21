@@ -18,17 +18,16 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
-import com.keepit.social.{ IdentityHelpers, RichSocialUser, SocialId, SocialNetworks }
+import com.keepit.social._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import play.api.test._
-import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, SocialUser }
+import securesocial.core.{ IdentityId, OAuth2Info }
 import KifiSession._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory
-import com.keepit.common.time._
 
 import scala.concurrent.Future
 
@@ -38,9 +37,9 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
 
   val email = EmailAddress("bar@foo.com")
 
+  val oauth2Info = OAuth2Info("asdf-token", None, None, None)
   val facebookIdentity = {
     val facebookIdentityId = IdentityId("100004067535411", "facebook")
-    val oauth2Info = OAuth2Info("asdf-token", None, None, None)
     val profileInfo = UserProfileInfo(
       ProviderIds.toProviderId(facebookIdentityId.providerId),
       ProviderUserId(facebookIdentityId.userId),
@@ -50,7 +49,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
       Some("Bar"),
       None,
       None,
-      Some(new java.net.URL("http://www.foo.com/bar"))
+      Some("http://www.foo.com/bar")
     )
     FacebookIdentity(oauth2Info, profileInfo)
   }
@@ -67,7 +66,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
       Some("Bar"),
       None,
       None,
-      Some(new java.net.URL("http://www.foo.com/bar"))
+      Some("http://www.foo.com/bar")
     )
     LinkedInIdentity(oauth2Info, profileInfo)
   }
@@ -76,13 +75,13 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     db.readWrite { implicit s =>
       val user = UserFactory.user().withName("Foo", "Bar").withUsername("foo-bar").saved
       userEmailAddressCommander.intern(userId = user.id.get, address = email, verified = true).get
-      val socialUser = RichSocialUser(facebookIdentity)
+      val socialUser = UserIdentity(facebookIdentity)
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Foo Bar", state = SocialUserInfoStates.CREATED, socialId = SocialId(socialUser.identityId.userId), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
       (user, sui)
     }
   }
 
-  def getSocialUserInfo(identity: RichIdentity)(implicit injector: Injector): Option[SocialUserInfo] = getSocialUserInfo(RichSocialUser(identity).identityId)
+  def getSocialUserInfo(identity: RichIdentity)(implicit injector: Injector): Option[SocialUserInfo] = getSocialUserInfo(UserIdentity(identity).identityId)
   def getSocialUserInfo(identityId: IdentityId)(implicit injector: Injector): Option[SocialUserInfo] = {
     val socialId = IdentityHelpers.parseSocialId(identityId)
     val networkType = IdentityHelpers.parseNetworkType(identityId)
@@ -120,7 +119,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("facebook").toString()
         path === "/auth/token-signup/facebook"
 
-        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(facebookIdentity.auth))
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenSignup("facebook")(request)
         status(result) === OK
@@ -150,7 +149,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("facebook").toString()
         path === "/auth/token-signup/facebook"
 
-        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(facebookIdentity.auth))
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenSignup("facebook")(request)
         status(result) === BAD_REQUEST
@@ -175,7 +174,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenSignup("linkedin").toString()
         path === "/auth/token-signup/linkedin"
 
-        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(linkedinIdentity.auth))
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenSignup("linkedin")(request)
         status(result) === OK
@@ -197,7 +196,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         setup()
         inject[FakeFacebookOAuthProvider].setIdentity(Future.successful(facebookIdentity))
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(facebookIdentity.auth)
+        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"
@@ -235,7 +234,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"
 
-        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(facebookIdentity.auth))
+        val payload = Json.toJson(OAuth2TokenInfo.fromOAuth2Info(oauth2Info))
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.accessTokenLogin("facebook")(request)
         status(result) === NOT_FOUND
@@ -254,7 +253,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         val fakeProvider = inject[FakeFacebookOAuthProvider]
         fakeProvider.setIdentity(Future.failed(new AuthException("invalid token"))) // facebook reports errors
 
-        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(facebookIdentity.auth)
+        val oauth2TokenInfo = OAuth2TokenInfo.fromOAuth2Info(oauth2Info)
         val authController = inject[AuthController]
         val path = com.keepit.controllers.core.routes.AuthController.accessTokenLogin("facebook").toString()
         path === "/auth/token-login/facebook"

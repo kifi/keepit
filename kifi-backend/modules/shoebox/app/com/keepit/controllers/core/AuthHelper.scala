@@ -98,7 +98,7 @@ class AuthHelper @Inject() (
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
     authCommander.getUserIdentity(IdentityId(emailAddress.address, SocialNetworks.EMAIL.authProvider)) match {
-      case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+      case Some(identity @ UserIdentity(_, Some(userId))) => {
         // User exists with these credentials
         val matchesOpt = passwordOpt.map(p => hasher.matches(identity.passwordInfo.get, p))
         if (matchesOpt.exists(p => p)) {
@@ -589,7 +589,7 @@ class AuthHelper @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
         provider.getRichIdentity(oauth2InfoOrig) map { identity =>
-          authCommander.signupWithTrustedSocialUser(RichSocialUser(identity), signUpUrl)
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
             val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
@@ -607,7 +607,7 @@ class AuthHelper @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
       case Some(provider) =>
         provider.getRichIdentity(oauth1Info) map { identity =>
-          authCommander.signupWithTrustedSocialUser(RichSocialUser(identity), signUpUrl)
+          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
         } recover {
           case t: Throwable =>
             val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"

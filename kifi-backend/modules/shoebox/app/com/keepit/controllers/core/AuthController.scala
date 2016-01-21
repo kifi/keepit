@@ -158,9 +158,9 @@ class AuthController @Inject() (
               userId <- sess.getUserId
             } yield {
               log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
-              val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity))
-              UserService.save(userIdentity)
-              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $userIdentity")
+              val linkedIdentity = identity.withUserId(userId)
+              authCommander.saveUserIdentity(linkedIdentity)
+              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $linkedIdentity")
             }
             if (linkAttempt.isEmpty) {
               log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityId}, userId ${sess.getUserId}")
@@ -263,7 +263,7 @@ class AuthController @Inject() (
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
         authCommander.getUserIdentity(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
-          case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
+          case Some(identity @ UserIdentity(_, Some(userId))) => {
             val matches = hasher.matches(identity.passwordInfo.get, info.password)
             if (!matches) {
               Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))

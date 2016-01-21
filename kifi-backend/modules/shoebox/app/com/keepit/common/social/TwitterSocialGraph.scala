@@ -121,12 +121,12 @@ class TwitterSocialGraphImpl @Inject() (
   // make this async
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
     val suiF = twtrOAuthProvider.getRichIdentity(getOAuth1Info(sui)) map {
-      case TwitterIdentity(_, info) =>
-        log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
+      case twitterIdentity =>
+        log.info(s"[updateSocialUserInfo] Identity: $twitterIdentity")
         sui.copy(
-          pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
-          profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl,
-          username = info.profileUrl.map(_.toString).map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
+          pictureUrl = twitterIdentity.pictureUrl orElse sui.pictureUrl,
+          profileUrl = twitterIdentity.profileUrl orElse sui.profileUrl,
+          username = twitterIdentity.profileUrl.map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
         )
     }
     Await.result(suiF, 5 minutes)

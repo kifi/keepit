@@ -8,17 +8,81 @@ import securesocial.core._
 import com.keepit.common.core._
 
 sealed trait RichIdentity
-case class FacebookIdentity(auth: OAuth2Info, profile: UserProfileInfo) extends RichIdentity
-case class LinkedInIdentity(auth: OAuth2Info, profile: UserProfileInfo) extends RichIdentity
-case class TwitterIdentity(auth: OAuth1Info, profile: UserProfileInfo) extends RichIdentity
+
+case class FacebookIdentity(socialUser: SocialUser) extends RichIdentity
+object FacebookIdentity {
+  def apply(auth: OAuth2Info, info: UserProfileInfo): FacebookIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.userId.id, ProviderIds.Facebook.id),
+      firstName = info.firstNameOpt getOrElse "",
+      lastName = info.lastNameOpt getOrElse "",
+      fullName = info.name,
+      avatarUrl = info.pictureUrl.map(_.toString),
+      email = info.emailOpt.map(_.address),
+      authMethod = AuthenticationMethod.OAuth2,
+      oAuth2Info = Some(auth)
+    )
+    FacebookIdentity(socialUser)
+  }
+}
+
+case class LinkedInIdentity(socialUser: SocialUser) extends RichIdentity
+object LinkedInIdentity {
+  def apply(auth: OAuth2Info, info: UserProfileInfo): LinkedInIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.userId.id, ProviderIds.LinkedIn.id),
+      firstName = info.firstNameOpt getOrElse "",
+      lastName = info.lastNameOpt getOrElse "",
+      fullName = info.name,
+      avatarUrl = info.pictureUrl.map(_.toString),
+      email = info.emailOpt.map(_.address),
+      authMethod = AuthenticationMethod.OAuth2,
+      oAuth2Info = Some(auth)
+    )
+    LinkedInIdentity(socialUser)
+  }
+}
+
+case class TwitterIdentity(socialUser: SocialUser, pictureUrl: Option[String], profileUrl: Option[String]) extends RichIdentity
+object TwitterIdentity {
+  def apply(auth: OAuth1Info, info: TwitterUserInfo): TwitterIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.id.toString, ProviderIds.Twitter.id),
+      firstName = info.firstName,
+      lastName = info.lastName,
+      fullName = info.name,
+      avatarUrl = info.pictureUrl,
+      email = None,
+      authMethod = AuthenticationMethod.OAuth1,
+      oAuth1Info = Some(auth)
+    )
+    TwitterIdentity(socialUser, info.pictureUrl, Some(info.profileUrl))
+  }
+}
+
 case class EmailPasswordIdentity(firstName: String, lastName: String, email: EmailAddress, password: Option[PasswordInfo]) extends RichIdentity
-case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, userId: SlackUserId, username: SlackUsername, token: Option[SlackAccessToken], scopes: Set[SlackAuthScope], user: Option[SlackUserInfo]) extends RichIdentity
+
+case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, token: Option[SlackAccessToken], scopes: Set[SlackAuthScope], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
+object SlackIdentity {
+  def apply(auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse, user: Option[SlackUserInfo]): SlackIdentity = {
+    require(auth.teamId == identity.teamId && auth.teamName == identity.teamName && !user.exists(_.id != identity.userId))
+    SlackIdentity(
+      auth.teamId,
+      auth.teamName,
+      Some(auth.accessToken),
+      auth.scopes,
+      identity.userId,
+      identity.userName,
+      user
+    )
+  }
+}
 
 object RichIdentity {
   def toSocialUser(richIdentity: RichIdentity): SocialUser = richIdentity match {
-    case FacebookIdentity(auth, profile) => makeSocialUser(auth, profile)
-    case LinkedInIdentity(auth, profile) => makeSocialUser(auth, profile)
-    case TwitterIdentity(auth, profile) => makeSocialUser(auth, profile)
+    case FacebookIdentity(socialUser) => socialUser
+    case LinkedInIdentity(socialUser) => socialUser
+    case TwitterIdentity(socialUser, _, _) => socialUser
     case slackIdentity: SlackIdentity => SocialUser(
       identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
       firstName = slackIdentity.user.flatMap(_.profile.firstName).getOrElse(""),
@@ -42,29 +106,6 @@ object RichIdentity {
       )
   }
 
-  private def makeSocialUser(auth: OAuth2Info, info: UserProfileInfo) = {
-    SocialUser(
-      identityId = IdentityId(info.userId.id, info.providerId.id),
-      firstName = info.firstNameOpt getOrElse "",
-      lastName = info.lastNameOpt getOrElse "",
-      fullName = info.name,
-      avatarUrl = info.pictureUrl.map(_.toString),
-      email = info.emailOpt.map(_.address),
-      authMethod = AuthenticationMethod.OAuth2,
-      oAuth2Info = Some(auth)
-    )
-  }
-
-  private def makeSocialUser(auth: OAuth1Info, info: UserProfileInfo) = {
-    SocialUser(
-      identityId = IdentityId(info.userId.id, info.providerId.id),
-      firstName = info.firstNameOpt getOrElse "",
-      lastName = info.lastNameOpt getOrElse "",
-      fullName = info.name,
-      avatarUrl = info.pictureUrl.map(_.toString),
-      email = info.emailOpt.map(_.address),
-      authMethod = AuthenticationMethod.OAuth1,
-      oAuth1Info = Some(auth)
-    )
-  }
+  // todo(Léo): this is kind of backward, perhaps IdentityId should be required on RichIdentity
+  def toIdentityId(richIdentity: RichIdentity): IdentityId = toSocialUser(richIdentity).identityId
 }

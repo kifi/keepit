@@ -6,7 +6,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
-import com.keepit.social.RichSocialUser
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
@@ -47,11 +46,11 @@ class LinkedInOAuthProviderImpl @Inject() (
 
   import LinkedInOAuthProvider._
 
-  def getIdentityId(accessToken: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichSocialUser(_).identityId)
+  def getIdentityId(accessToken: OAuth2TokenInfo): Future[IdentityId] = getRichIdentity(accessToken).map(RichIdentity.toIdentityId)
 
   def getRichIdentity(accessToken: OAuth2TokenInfo): Future[LinkedInIdentity] = {
-    getUserProfileInfo(accessToken.accessToken).map { profileInfo =>
-      LinkedInIdentity(accessToken, profileInfo)
+    getUserProfileInfo(accessToken.accessToken).map { info =>
+      LinkedInIdentity(accessToken, info)
     }
   }
 
@@ -84,8 +83,8 @@ class LinkedInOAuthProviderImpl @Inject() (
             firstNameOpt = firstName,
             lastNameOpt = lastName,
             handle = None,
-            pictureUrl = avatarUrl.map(new java.net.URL(_)),
-            profileUrl = publicProfileUrl.map(new java.net.URL(_))
+            pictureUrl = avatarUrl,
+            profileUrl = publicProfileUrl
           )
         }
       }

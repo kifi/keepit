@@ -12,14 +12,12 @@ import com.keepit.controllers.core.{AuthController, AuthHelper}
 import com.keepit.heimdal.{ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes}
 import com.keepit.model._
 import com.keepit.social.providers.ProviderController
-import com.keepit.social.{SocialNetworkType, UserIdentity}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsNumber, JsValue, Json}
 import play.api.mvc.{Cookie, Result, Session}
-import securesocial.core.{IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService}
+import securesocial.core.{OAuth2Info, SecureSocial}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 class MobileAuthController @Inject() (
     val userActionsHelper: UserActionsHelper,
