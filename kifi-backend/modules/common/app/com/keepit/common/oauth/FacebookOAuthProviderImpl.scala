@@ -6,12 +6,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OAuth2TokenInfo
-import com.keepit.social.UserIdentity$
 import play.api.http.Status
 import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
 import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ AuthenticationMethod, SocialUser, IdentityId }
+import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import play.api.Play.current
