@@ -52,10 +52,8 @@ class SlackController @Inject() (
     Redirect(redirectUrl, SEE_OTHER)
   }
 
-  private def redirectToOrg(orgId: Id[Organization]): Result = {
-    val orgUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(orgId))).get.url
-    val redirectUrl = orgUrl
-    Redirect(redirectUrl, SEE_OTHER)
+  private def getOrgUrl(orgId: Id[Organization]): String = {
+    deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(orgId))).get.url
   }
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
@@ -105,7 +103,7 @@ class SlackController @Inject() (
         case Success(orgIdOpt) =>
           slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
             slackTeam.organizationId match {
-              case Some(orgId) => redirectToOrg(orgId)
+              case Some(orgId) => Redirect(getOrgUrl(orgId), SEE_OTHER)
               case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
             }
           }
@@ -179,7 +177,7 @@ class SlackController @Inject() (
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
-      redirectToOrg(slackTeam.organizationId.get)
+      Ok(Json.obj("redirectUrl" -> getOrgUrl(slackTeam.organizationId.get)))
     }
   }
 
@@ -191,7 +189,7 @@ class SlackController @Inject() (
   def connectOrganizationToSlackTeam(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId).map { slackTeam =>
-      if (slackTeam.organizationId.contains(request.orgId)) redirectToOrg(slackTeam.organizationId.get)
+      if (slackTeam.organizationId.contains(request.orgId)) Ok(Json.obj("redirectUrl" -> getOrgUrl(request.orgId)))
       else throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
     }
   }
