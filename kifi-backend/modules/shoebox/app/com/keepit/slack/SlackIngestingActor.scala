@@ -7,6 +7,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
@@ -36,21 +37,24 @@ object SlackIngestionConfig {
 }
 
 class SlackIngestingActor @Inject() (
-    db: Database,
-    integrationRepo: SlackChannelToLibraryRepo,
-    slackChannelRepo: SlackChannelRepo,
-    slackTeamMembershipRepo: SlackTeamMembershipRepo,
-    permissionCommander: PermissionCommander,
-    libraryRepo: LibraryRepo,
-    slackClient: SlackClientWrapper,
-    urlClassifier: UrlClassifier,
-    keepInterner: KeepInterner,
-    clock: Clock,
-    airbrake: AirbrakeNotifier,
-    slackOnboarder: SlackOnboarder,
-    orgConfigRepo: OrganizationConfigurationRepo,
-    implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
+  db: Database,
+  integrationRepo: SlackChannelToLibraryRepo,
+  slackChannelRepo: SlackChannelRepo,
+  slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  permissionCommander: PermissionCommander,
+  libraryRepo: LibraryRepo,
+  slackClient: SlackClientWrapper,
+  urlClassifier: UrlClassifier,
+  keepInterner: KeepInterner,
+  clock: Clock,
+  airbrake: AirbrakeNotifier,
+  slackOnboarder: SlackOnboarder,
+  orgConfigRepo: OrganizationConfigurationRepo,
+  implicit val ec: ExecutionContext,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackIngestionConfig._
 
   protected val minConcurrentTasks = channelIngestionConcurrency
@@ -118,10 +122,10 @@ class SlackIngestingActor @Inject() (
           case Success(None) =>
             (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
+            slackLog.warn(s"Turning off forbidden Slack integration ${integration.id.get}.")
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            airbrake.notify(s"Marking Slack integration ${integration.id.get} as broken.", broken)
+            slackLog.warn(s"Marking Slack integration ${integration.id.get} as broken.")
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
             //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
