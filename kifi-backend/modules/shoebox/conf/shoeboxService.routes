@@ -19,18 +19,18 @@ GET     /signup                     @com.keepit.controllers.core.AuthController.
 
 # End new signup pages
 
-POST    /auth/sign-up               @com.keepit.controllers.core.AuthController.userPasswordSignup()
-POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
-POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
-POST    /auth/token-login/:provider  @com.keepit.controllers.core.AuthController.accessTokenLogin(provider: String)
-POST    /auth/token-signup/:provider @com.keepit.controllers.core.AuthController.accessTokenSignup(provider: String)
+POST    /auth/sign-up                 @com.keepit.controllers.core.AuthController.userPasswordSignup()
+POST    /auth/email-finalize          @com.keepit.controllers.core.AuthController.userPassFinalizeAccountAction()
+POST    /auth/social-finalize         @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
+POST    /auth/token-login/:provider   @com.keepit.controllers.core.AuthController.accessTokenLogin(provider: String)
+POST    /auth/token-signup/:provider  @com.keepit.controllers.core.AuthController.accessTokenSignup(provider: String)
 POST    /auth/oauth1-login/:provider  @com.keepit.controllers.core.AuthController.oauth1TokenLogin(provider: String)
 POST    /auth/oauth1-signup/:provider @com.keepit.controllers.core.AuthController.oauth1TokenSignup(provider: String)
-POST    /auth/token-finalize         @com.keepit.controllers.core.AuthController.tokenFinalizeAccountAction()
-POST    /auth/email-signup           @com.keepit.controllers.core.AuthController.emailSignup()
-POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
-POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
-POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
+POST    /auth/token-finalize          @com.keepit.controllers.core.AuthController.tokenFinalizeAccountAction()
+POST    /auth/email-signup            @com.keepit.controllers.core.AuthController.emailSignup()
+POST    /auth/upload-binary-image     @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
+POST    /auth/upload-multipart-image  @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
+POST    /auth/cancel                  @com.keepit.controllers.core.AuthController.cancelAuth()
 
 # See common.routes for our better ProviderController routes.
 

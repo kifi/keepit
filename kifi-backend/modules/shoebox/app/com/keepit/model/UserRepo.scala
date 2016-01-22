@@ -32,7 +32,6 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def countIncludingWithExp(includeStates: State[User]*)(includeExp: UserExperimentType*)(implicit session: RSession): Int
   def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: UserExperimentType*)(implicit session: RSession): Int
   def countNewUsers(implicit session: RSession): Int
-  def getNoCache(id: Id[User])(implicit session: RSession): User
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
