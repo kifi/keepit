@@ -51,18 +51,27 @@
 
     // -- above is unedited -- //
 
-    function getTransitionDuration(element, tries) {
-      tries = (typeof tries === 'undefined' ? 0 : tries);
+    function computedStyle(element, pseudo) {
+      if (element === document) {
+        element = document.documentElement;
+      }
 
-      var style = getComputedStyle(element);
+      var savedDisplay = element.style.display;
+      var cs;
+
+      element.style.display = 'block';
+      cs = getComputedStyle(element, pseudo);
+      element.style.display = savedDisplay;
+
+      return cs;
+    }
+
+    function getTransitionDuration(element) {
+      var style = computedStyle(element);
       if (style) {
         var stringSeconds = style.transitionDuration.slice(0, -1);
         var timeoutDuration = parseFloat(stringSeconds) * 1000;
         return timeoutDuration;
-      } else if (tries < 5) {
-        return getTransitionDuration(element, tries + 1);
-      } else {
-        return 100; // because why not
       }
     }
 
@@ -73,18 +82,11 @@
       });
     }
 
-    function getSingleTransitionProperties(element, pseudo, tries) {
-      tries = (typeof tries === 'undefined' ? 0 : tries);
-
+    function getSingleTransitionProperties(element, pseudo) {
       var commaSeparatedRe = /[, ]+/g;
-      var style = getComputedStyle(element, pseudo);
-      if (style) {
-        return style.transitionProperty.split(commaSeparatedRe);
-      } else if (tries < 5) {
-        return getSingleTransitionProperties(element, pseudo, tries + 1);
-      } else {
-        return [];
-      }
+      var style = computedStyle(element, pseudo);
+
+      return style.transitionProperty.split(commaSeparatedRe);
     }
 
     function getTransitionProperties(element) {
@@ -105,20 +107,21 @@
     }
 
     function getTransitionEndFn(element, fn) {
-      var duration = getTransitionDuration(element);
+      var selectedElement = (selector ? element.querySelector(selector) || element : element);
+      var duration = getTransitionDuration(selectedElement);
       var transitionEndEvent = {
-        target: element,
+        target: selectedElement,
         type: 'transitionend',
         originalEvent: null
       };
 
       setTimeout(function () {
-        var properties = getTransitionProperties(element);
+        var properties = getTransitionProperties(selectedElement);
         properties.forEach(function (property) {
-          transitionEndEvent.originalEvent = getTransitionEvent(element, property, duration);
-          fn.call(element, transitionEndEvent);
+          transitionEndEvent.originalEvent = getTransitionEvent(selectedElement, property, duration);
+          fn.call(selectedElement, transitionEndEvent);
         });
-      }, duration);
+      }, duration + 20);
 
       return function () {
         // Even when Safari says it triggered transitionend, it doesn't : /

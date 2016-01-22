@@ -206,7 +206,7 @@ gulp.task('copy', function () {
   var chromeIcons = gulp.src('icons/kifi.{48,128,256}.png')
     .pipe(gulp.dest(outDir + '/chrome/icons'));
 
-  var safariIcons = gulp.src('icons/kifi.{48,128,256}.png')
+  var safariIcons = gulp.src('icons/kifi.{128,256,monochrome*}.png')
     .pipe(gulp.dest(outDir + '/kifi.safariextension/icons'));
 
   var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')

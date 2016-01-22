@@ -73,12 +73,12 @@ var api = api || (function () {
 
   function onDisconnect() {
     log('[onDisconnect]');
-    // safari.self.removeEventListener('message');
-    // api.port.on = api.port.emit = api.noop;
-    // api.onEnd.forEach(function (onEnd) {
-    //   onEnd();
-    // });
-    // api.onEnd.length = msgHandlers.length = 0;
+    safari.self.removeEventListener('message');
+    api.port.on = api.port.emit = api.noop;
+    api.onEnd.forEach(function (onEnd) {
+      onEnd();
+    });
+    api.onEnd.length = msgHandlers.length = 0;
   }
 
   function injectContentScript(injected, callbackId) {
@@ -86,7 +86,7 @@ var api = api || (function () {
     var {scripts, styles} = injected;
     var loadsLeft = styles.length;
 
-    lazyLoad(scripts.join('\n;\n'));
+    scripts.forEach(lazyLoad);
 
     if (loadsLeft === 0) {
       invokeCallback();

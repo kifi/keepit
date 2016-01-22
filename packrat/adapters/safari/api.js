@@ -209,6 +209,25 @@ var api = api || (function () {
     }
   }
 
+  // Icon handling
+  safari.application.addEventListener('command', function (e) {
+    if (e.command === 'kifi-icon') {
+      var tab = e.target.browserWindow.activeTab;
+      var {url, id} = tab;
+      if (url) {
+        api.icon.on.click.dispatch(pages[id]);
+      }
+    }
+  });
+  safari.application.addEventListener('validate', function (e) {
+    if (e.command === 'kifi-icon') {
+      var tab = e.target.browserWindow.activeTab;
+      var {url, id} = tab;
+      // Disable the button if there is no URL loaded in the tab.
+      e.target.disabled = !url;
+    }
+  });
+
   safari.application.addEventListener('open', function (e) {
     // is it a tab or a window?
     var target = e.target;
@@ -305,10 +324,8 @@ var api = api || (function () {
       var url = e.url;
       var match = googleSearchRe.exec(url);
 
-      //if (page.url !== url) {
-        removeTab(id);
-        page = pages[id] = createPage(id, url, createPort(tab));
-      //}
+      removeTab(id);
+      page = pages[id] = createPage(id, url, createPort(tab));
 
       l`${CGREEN}[onBeforeNavigate] %s${tab.id} %s${url} %s${match}`;
 
@@ -332,6 +349,8 @@ var api = api || (function () {
 
     tab.addEventListener('close', function (e) {
       log(CGRAY, '[tabs.close] %s %s', tab.id, tab.url);
+      var page = pages[tab.id];
+      page._port.disconnect();
       removeTab(tab.id);
     });
 
@@ -345,7 +364,6 @@ var api = api || (function () {
       api.tabs.on.unload.dispatch(page);
     }
 
-    page._port.disconnect();
     delete pages[tabId];
   }
 
@@ -377,13 +395,19 @@ var api = api || (function () {
     icon: {
       on: {click: new Listeners},
       set: function(tab, path) {
-        // TODO(carlos): not sure about this one yet
-        // if (tab === pages[tab.id]) {
-        //   tab.icon = path;
-        //   if (normalTab[tab.id]) {
-        //     setPageAction(tab.id, path);
-        //   }
-        // }
+        var iconUri;
+        var kept = false;
+        var ii = false;
+        if (tab === pages[tab.id]) {
+          ii = ~path.indexOf('II');
+          kept = !(~path.indexOf('gray') || ~path.indexOf('dark'));
+
+          path = `icons/kifi.monochrome${ii ? '_II' : ''}${kept ? '.invert' : ''}.png`;
+
+          tab.icon = path;
+          iconUri = safari.extension.baseURI + path;
+          safari.extension.toolbarItems[0].image = iconUri;
+        }
       }
     },
     inspect: {

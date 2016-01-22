@@ -4,10 +4,21 @@
   "CFBundleDisplayName": "kifi",
   "CFBundleIdentifier": "com.fortytwo.kifi",
   "CFBundleInfoDictionaryVersion": "6.0",
-  "CFBundleShortVersionString": "1.0",
-  "CFBundleVersion": "1",
+  "CFBundleShortVersionString": "",
+  "CFBundleVersion": "",
   "Chrome": {
-    "Global Page": "global.html"
+    "Global Page": "global.html",
+    "Toolbar Items": [
+      {
+        "Command": "kifi-icon",
+        "Identifier": "kifi",
+        "Image": "icons/kifi.monochrome.png",
+        "Include By Default": true,
+        "Label": "Kifi",
+        "Palette Label": "Kifi",
+        "Tool Tip": "Kifi"
+      }
+    ]
   },
   "Content": {
     "Scripts": {
