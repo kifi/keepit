@@ -36,6 +36,7 @@ class SlackTeamCommanderImpl @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
+  channelRepo: SlackChannelRepo,
   slackClient: SlackClientWrapper,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
@@ -136,6 +137,7 @@ class SlackTeamCommanderImpl @Inject() (
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
+          channelRepo.getOrCreate(team.slackTeamId, channel.channelId, channel.channelName)
           libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
             space = librarySpace,
