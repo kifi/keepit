@@ -36,8 +36,6 @@ case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], fai
 
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
-  private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
-  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
 
@@ -68,10 +66,7 @@ class KeepInternerImpl @Inject() (
   collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
   libraryAnalytics: LibraryAnalytics,
-  keepsAbuseMonitor: KeepsAbuseMonitor,
   userValueRepo: UserValueRepo,
-  rawKeepRepo: RawKeepRepo,
-  rawKeepImporterPlugin: RawKeepImporterPlugin,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
   libraryNewFollowersCommander: LibraryNewKeepsCommander,
@@ -85,47 +80,6 @@ class KeepInternerImpl @Inject() (
     extends KeepInterner with Logging {
 
   implicit private val fj = ExecutionContext.fj
-
-  private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation] =
-    rawBookmarks.map(b => (b.url, b)).toMap.values.toList
-
-  // Persists keeps to RawKeep, which will be batch processed. Very minimal pre-processing.
-  def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit = {
-    log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
-    val newImportId = importId.getOrElse(UUID.randomUUID.toString)
-
-    val deduped = rawKeeps.distinctBy(_.url) map (_.copy(importId = Some(newImportId)))
-
-    if (deduped.nonEmpty) {
-      val userId = deduped.head.userId
-      val total = deduped.size
-
-      keepsAbuseMonitor.inspect(userId, total)
-      libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
-
-      deduped.grouped(500).foreach { rawKeepGroup =>
-        // insertAll fails if any of the inserts failed
-        log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
-        val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
-          rawKeepRepo.insertAll(rawKeepGroup)
-        }
-        if (bulkAttempt.isFailure) { // fyi, this doesn't really happen in prod often
-          log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
-          val singleAttempt = db.readWrite { implicit session =>
-            rawKeepGroup.toList.map { rawKeep =>
-              rawKeep -> rawKeepRepo.insertOne(rawKeep)
-            }
-          }
-          val (_, failuresWithRaws) = singleAttempt.partition(_._2.isSuccess)
-          val failedUrls = failuresWithRaws.map(_._1.url)
-          if (failedUrls.nonEmpty) {
-            airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failedUrls.size} raw keeps: ${failedUrls mkString ","}"), userId = Some(userId)))
-          }
-        }
-      }
-      rawKeepImporterPlugin.processKeeps(broadcastToOthers = true)
-    }
-  }
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerId, libraryOpt, source)

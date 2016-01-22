@@ -647,7 +647,7 @@ class UserCommanderImpl @Inject() (
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
     val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
     val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntitiesForUser(userId)
-    futureRecommendedUsers.flatMap {
+    val recos = futureRecommendedUsers.flatMap {
       case None => Future.successful(None)
       case Some(recommendedUsers) =>
 
@@ -678,6 +678,11 @@ class UserCommanderImpl @Inject() (
 
           Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
         }
+    }
+    recos.recover {
+      case e: Throwable =>
+        log.warn(s"[getFriendRecommendations] Failed getting recos", e)
+        None
     }
   }
 
