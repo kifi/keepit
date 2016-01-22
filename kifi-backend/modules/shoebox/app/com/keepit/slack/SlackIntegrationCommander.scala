@@ -41,6 +41,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
+  channelRepo: SlackChannelRepo,
   slackClient: SlackClientWrapper,
   slackOnboarder: SlackOnboarder,
   basicUserRepo: BasicUserRepo,
@@ -56,7 +57,7 @@ class SlackIntegrationCommanderImpl @Inject() (
     extends SlackIntegrationCommander with Logging {
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
-    val ltscToPushImmediately = db.readWrite { implicit s =>
+    val pushIntegration = db.readWrite { implicit s =>
       val defaultSpace = libRepo.get(libId).organizationId match {
         case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
           LibrarySpace.fromOrganizationId(orgId)
@@ -82,10 +83,11 @@ class SlackIntegrationCommanderImpl @Inject() (
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.Off
       ))
+      val channelOpt = webhook.channelId.map { channelId => channelRepo.getOrCreate(identity.teamId, channelId, webhook.channelName) }
       ltsc
     }
 
-    slackOnboarder.talkAboutIntegration(ltscToPushImmediately)
+    slackOnboarder.talkAboutIntegration(pushIntegration)
 
     SafeFuture.swallow {
       val inhouseMsg = db.readOnlyReplica { implicit s =>
