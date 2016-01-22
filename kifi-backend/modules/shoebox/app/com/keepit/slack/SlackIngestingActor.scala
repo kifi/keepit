@@ -109,13 +109,13 @@ class SlackIngestingActor @Inject() (
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
           case Success(Some(_)) => // TODO(ryan): talk to Léo, this branch is probably never executed
-            (Some(now plus nextIngestionDelayAfterNewMessages), None)
-          case Success(None) =>
             if (integration.lastIngestedAt.isEmpty) {
               // this is the first time we've tried ingesting for this integration
               // and we were successful! we got a bunch of links
               slackOnboarder.talkAboutIntegration(integration)
             }
+            (Some(now plus nextIngestionDelayAfterNewMessages), None)
+          case Success(None) =>
             (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
@@ -156,7 +156,7 @@ class SlackIngestingActor @Inject() (
 
             Future.successful(Unit)
           } imap { _ =>
-            (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
+            (newLastMessageTimestamp orElse lastMessageTimestamp, newLastMessageTimestamp.isEmpty)
           }
         } recoverWith {
           case failure @ SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => Future.failed(BrokenSlackIntegration(integration, Some(tokenWithScopes.token), Some(failure)))
