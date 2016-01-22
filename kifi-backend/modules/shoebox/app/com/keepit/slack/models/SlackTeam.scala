@@ -62,6 +62,7 @@ object SlackTeamStates extends States[SlackTeam]
 @ImplementedBy(classOf[SlackTeamRepoImpl])
 trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam]
@@ -141,7 +142,12 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
-    activeRows.filter(row => row.organizationId === orgId).list.toSet
+    getByOrganizationIds(Set(orgId)).apply(orgId)
+  }
+
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]] = {
+    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list.toSet[SlackTeam].groupBy(_.organizationId.get)
+    orgIds.map(orgId => orgId -> existing.getOrElse(orgId, Set.empty)).toMap
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {

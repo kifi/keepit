@@ -171,6 +171,11 @@ class SlackController @Inject() (
     }
   }
 
+  def addSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
+    Redirect(link, SEE_OTHER)
+  }
+
   def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
@@ -178,17 +183,17 @@ class SlackController @Inject() (
     }
   }
 
-  def connectSlackTeamToOrganization(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  def getOrganizationsToConnectToSlackTeam() = UserAction { implicit request =>
+    val orgs = slackTeamCommander.getOrganizationsToConnectToSlackTeam(request.userId).toSeq.sortBy(_.name)
+    Ok(Json.obj("orgs" -> orgs))
+  }
+
+  def connectOrganizationToSlackTeam(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId).map { slackTeam =>
       if (slackTeam.organizationId.contains(request.orgId)) redirectToOrg(slackTeam.organizationId.get)
       else throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
     }
-  }
-
-  def connectSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
-    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
-    Redirect(link, SEE_OTHER)
   }
 
   def getOrgIntegrations(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>

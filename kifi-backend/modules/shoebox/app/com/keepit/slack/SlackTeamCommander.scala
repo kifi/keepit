@@ -27,6 +27,7 @@ trait SlackTeamCommander {
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Future[SlackTeam]
+  def getOrganizationsToConnectToSlackTeam(userId: Id[User]): Set[BasicOrganization]
 }
 
 @Singleton
@@ -195,6 +196,15 @@ class SlackTeamCommanderImpl @Inject() (
           }
         }
       case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
+    }
+  }
+
+  def getOrganizationsToConnectToSlackTeam(userId: Id[User]): Set[BasicOrganization] = {
+    db.readOnlyMaster { implicit session =>
+      val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
+      val existingSlackTeams = slackTeamRepo.getByOrganizationIds(allOrgIds)
+      val validOrgIds = allOrgIds.filter(existingSlackTeams(_).isEmpty)
+      organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
     }
   }
 }
