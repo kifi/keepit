@@ -199,7 +199,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")
 
-          slackClient.sayInChannel(stm, ch)("I love sharing links like <http://www.google.com>")
+          slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, ch)("I love sharing links like <http://www.google.com>")
           ingestFromSlackSurely()
 
           pushUpdatesToSlackSurely(lib.id.get)

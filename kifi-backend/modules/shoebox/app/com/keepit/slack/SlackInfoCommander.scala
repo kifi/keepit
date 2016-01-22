@@ -10,6 +10,7 @@ import com.keepit.common.json.{ KeyFormat, TraversableFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.website.SlackController
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -99,7 +100,7 @@ class SlackInfoCommanderImpl @Inject() (
   private def assembleLibrarySlackInfos(libraryIds: Set[Id[Library]], integrationInfosByLib: Map[Id[Library], Seq[LibrarySlackIntegrationInfo]]): Map[Id[Library], LibrarySlackInfo] = {
     libraryIds.map { libId =>
       libId -> LibrarySlackInfo(
-        link = SlackAPI.OAuthAuthorize(SlackAuthScope.push, SetupLibraryIntegrations -> Library.publicId(libId), None).url,
+        link = SlackAPI.OAuthAuthorize(SlackAuthScope.push, SetupLibraryIntegrations -> Library.publicId(libId), None, SlackController.REDIRECT_URI).url,
         integrations = integrationInfosByLib.getOrElse(libId, Seq.empty)
       )
     }.toMap
@@ -147,7 +148,7 @@ class SlackInfoCommanderImpl @Inject() (
             val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
             val requiredScopes = SlackAuthScope.ingest
             if (requiredScopes subsetOf existingScopes) None
-            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnChannelIngestion -> fsId, Some(fs.slackTeamId)).url)
+            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnChannelIngestion -> fsId, Some(fs.slackTeamId), SlackController.REDIRECT_URI).url)
           }
           key -> SlackToLibraryIntegrationInfo(fsId, fs.status, authLink)
       }
@@ -159,7 +160,7 @@ class SlackInfoCommanderImpl @Inject() (
             lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
             val requiredScopes = SlackAuthScope.push
             if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
-            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnLibraryPush -> tsId, Some(ts.slackTeamId)).url)
+            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnLibraryPush -> tsId, Some(ts.slackTeamId), SlackController.REDIRECT_URI).url)
           }
           key -> LibraryToSlackIntegrationInfo(tsId, ts.status, authLink)
       }
@@ -217,7 +218,7 @@ class SlackInfoCommanderImpl @Inject() (
 
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
-    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None).url
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
       slackTeams,

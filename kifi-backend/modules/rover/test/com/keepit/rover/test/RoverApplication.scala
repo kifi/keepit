@@ -7,6 +7,7 @@ import java.io.File
 import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
 import com.keepit.rover.store.RoverFakeStoreModule
+import com.keepit.slack.FakeSlackClientModule
 import com.keepit.test.{ TestInjectorProvider, DbInjectionHelper, TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
@@ -34,7 +35,8 @@ class RoverApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeHealthcheckModule(),
     FakeFortyTwoModule(),
     FakeDiscoveryModule(),
-    RoverCacheModule(HashMapMemoryCacheModule())
+    RoverCacheModule(HashMapMemoryCacheModule()),
+    FakeSlackClientModule()
   ))
 
 trait RoverApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with RoverInjectionHelpers

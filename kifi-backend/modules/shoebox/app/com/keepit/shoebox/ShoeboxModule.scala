@@ -74,7 +74,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
   val stripeClientModule = ProdStripeClientModule()
-  val slackClientModule = ProdSlackClientModule()
 
   val dbSequencingModule = ShoeboxDbSequencingModule()
 

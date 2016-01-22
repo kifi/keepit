@@ -43,8 +43,7 @@ class OAuth2Test extends Specification with ShoeboxApplicationInjector {
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
     KeepImportsModule(),
-    FakeOAuth1ConfigurationModule(),
-    FakeOAuth2ConfigurationModule()
+    FakeOAuthConfigurationModule()
   )
 
   // only checks the initial redirect flow for now; more work required

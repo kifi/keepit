@@ -18,8 +18,6 @@ trait SecureSocialOAuth2Adaptor extends OAuth2Provider with Logging {
 
   def provider: OAuth2Support[_ <: RichIdentity]
 
-  override def fillProfile(socialUser: SocialUser): SocialUser = socialUser
-
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     val call = provider.doOAuth() flatMap { resOrToken =>
       resOrToken match {

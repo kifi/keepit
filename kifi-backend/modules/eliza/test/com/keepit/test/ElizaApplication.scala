@@ -14,6 +14,7 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.slack.FakeSlackClientModule
 
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends DbTestApplication(path, overridingModules, Seq(
@@ -28,7 +29,8 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeFortyTwoModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeDiscoveryModule(),
-    ElizaCacheModule(HashMapMemoryCacheModule())
+    ElizaCacheModule(HashMapMemoryCacheModule()),
+    FakeSlackClientModule()
   ))
 
 trait ElizaApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ElizaInjectionHelpers

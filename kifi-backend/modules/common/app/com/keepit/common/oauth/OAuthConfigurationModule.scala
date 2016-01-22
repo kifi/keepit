@@ -2,10 +2,24 @@ package com.keepit.common.oauth
 
 import java.net.URL
 
-import com.google.inject.{ Provides, Singleton }
+import com.google.inject.{ Singleton, Provides }
+import com.keepit.common.oauth.OAuth2Providers._
 import net.codingwell.scalaguice.ScalaModule
+import play.api.libs.oauth.ConsumerKey
 
-trait OAuth2ConfigurationModule extends ScalaModule
+trait OAuthConfigurationModule extends ScalaModule
+
+object OAuth1Providers {
+
+  val TWTR = "twitter"
+
+  val twtrConfigBuilder = OAuth1ProviderConfiguration.build(
+    name = TWTR,
+    requestTokenUrl = new URL("https://twitter.com/oauth/request_token"),
+    accessTokenUrl = new URL("https://twitter.com/oauth/access_token"),
+    authorizationUrl = new URL("https://twitter.com/oauth/authenticate")
+  )
+}
 
 object OAuth2Providers {
   val FB = "facebook"
@@ -32,17 +46,27 @@ object OAuth2Providers {
     accessTokenUrl = new URL("https://accounts.google.com/o/oauth2/token"),
     scope = "email https://www.googleapis.com/auth/contacts.readonly"
   )
-
-  val SUPPORTED = Seq(FB, LNKD, GOOG)
 }
 
-import com.keepit.common.oauth.OAuth2Providers._
+import OAuth1Providers._
 
-case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
+case class DevOAuthConfigurationModule() extends OAuthConfigurationModule {
   def configure(): Unit = {
+    bind[OAuth1ProviderRegistry].to[OAuth1ProviderRegistryImpl]
+    bind[TwitterOAuthProvider].to[TwitterOAuthProviderImpl]
+
     bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
     bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
     bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
+
+    bind[SlackOAuthProvider].to[SlackOAuthProviderImpl]
+  }
+
+  @Provides
+  @Singleton
+  def getOAuth1Configuration(): OAuth1Configuration = {
+    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("cwXfTNd8iiKbWtXtszz9ADNmQ", "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1"), ConsumerKey("17148682-0x4Qq6BU5GcX8NNmdDgpEPgbUORz0aRIwqPnynlTA", "8C3NU8zmy0FgHy9Ga7X8Xay2Yp1uB1EhQnpGsZ9ODa8vq")))
+    OAuth1Configuration(providerMap)
   }
 
   @Provides
@@ -55,19 +79,27 @@ case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
     )
     OAuth2Configuration(providerMap)
   }
-
 }
 
-case class ProdOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
+case class ProdOAuthConfigurationModule() extends OAuthConfigurationModule {
   def configure(): Unit = {
+    bind[OAuth1ProviderRegistry].to[OAuth1ProviderRegistryImpl]
+    bind[TwitterOAuthProvider].to[TwitterOAuthProviderImpl]
+
     bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
     bind[FacebookOAuthProvider].to[FacebookOAuthProviderImpl]
     bind[LinkedInOAuthProvider].to[LinkedInOAuthProviderImpl]
-    bind[TwitterOAuthProvider].to[TwitterOAuthProviderImpl]
+
+    bind[SlackOAuthProvider].to[SlackOAuthProviderImpl]
   }
 
-  @Provides
-  @Singleton
+  @Provides @Singleton
+  def getOAuth1Configuration(): OAuth1Configuration = {
+    val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("9H4GYkjvd2nOsw2MqE8soWlQa", "cJN6wXEp7DAsTJXyS3LaWQcWOKLNlNIhFK2ajMcke7OOGe9njR"), ConsumerKey("17148682-kfWlx2yOgfFyQW0dvClWeNjdq806aJOW3cDH5FGyz", "tDPV7HnprgtZpQM8NnA2zTMrIJuJ6dJhwniY4XJetGp2X")))
+    OAuth1Configuration(providerMap)
+  }
+
+  @Provides @Singleton
   def getOAuth2Configuration(): OAuth2Configuration = {
     val providerMap = Map(
       FB -> fbConfigBuilder("104629159695560", "352415703e40e9bb1b0329273fdb76a9"),
@@ -76,5 +108,4 @@ case class ProdOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
     )
     OAuth2Configuration(providerMap)
   }
-
 }
