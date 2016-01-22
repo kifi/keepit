@@ -12,6 +12,7 @@ import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
+import com.keepit.slack.models.SlackTeamId
 import com.keepit.social.BasicUser
 
 @Singleton
@@ -40,6 +41,9 @@ class PathCommander @Inject() (
   def orgPage(org: Organization): Path = orgPageByHandle(org.primaryHandle.get.normalized)
   def orgPage(org: BasicOrganization): Path = orgPageByHandle(org.handle)
   def orgPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgRepo.get(orgId))
+  def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/o/${Organization.publicId(org.id.get).id}")
+  }
 
   def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.primaryHandle.get.normalized)
   def orgMembersPage(org: BasicOrganization): Path = orgMembersPageByHandle(org.handle)
@@ -66,6 +70,9 @@ class PathCommander @Inject() (
       case OrganizationSpace(orgId) => orgRepo.get(orgId).primaryHandle.get.normalized
     }
     libPageByHandleAndSlug(handle, lib.slug)
+  }
+  def libraryPageViaSlack(lib: Library, slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/l/${Library.publicId(lib.id.get).id}")
   }
 
   /**
