@@ -9,9 +9,9 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 object Debouncing {
-  trait Drop {
-    protected val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
-    protected def debounce(key: String, cooldown: Period)(action: => Unit): Unit = {
+  class Dropper {
+    private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
+    def debounce(key: String, cooldown: Period)(action: => Unit): Unit = {
       val now = currentDateTime
       onCooldownUntil.get(key) match {
         case Some(threshold) if now.isBefore(threshold) =>
@@ -22,17 +22,17 @@ object Debouncing {
     }
   }
 
-  trait Buffer {
-    protected val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
-    protected val bufferMap: mutable.Map[String, ListBuffer[Any]] = mutable.Map.empty
+  class Buffer[T] {
+    private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
+    private val bufferMap: mutable.Map[String, ListBuffer[T]] = mutable.Map.empty
     private val lock = new Object
 
-    protected def debounce[T](key: String, cooldown: Period)(item: T)(action: List[T] => Unit): Unit = lock.synchronized {
+    def debounce(key: String, cooldown: Period)(item: T)(action: List[T] => Unit): Unit = lock.synchronized {
       Try {
         val now = currentDateTime
         if (!bufferMap.isDefinedAt(key)) bufferMap.put(key, ListBuffer.empty)
 
-        val buffer = bufferMap(key).asInstanceOf[ListBuffer[T]]
+        val buffer = bufferMap(key)
         buffer.prepend(item)
         onCooldownUntil.get(key) match {
           case Some(threshold) if now isBefore threshold =>

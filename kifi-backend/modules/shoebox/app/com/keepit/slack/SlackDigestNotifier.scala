@@ -7,7 +7,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.SlackLogging
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
 import com.keepit.common.util.RandomChoice._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
@@ -51,9 +51,9 @@ class SlackDigestNotifierImpl @Inject() (
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
-  val inhouseSlackClient: InhouseSlackClient)
-    extends SlackDigestNotifier with SlackLogging {
-  val loggingDestination = InhouseSlackChannel.TEST_RYAN
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends SlackDigestNotifier {
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   val prng = new MersenneTwister(clock.now.getMillis)
 

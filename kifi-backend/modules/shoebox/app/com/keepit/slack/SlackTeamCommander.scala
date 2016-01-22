@@ -10,7 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.SlackLogging
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
 import com.keepit.heimdal.HeimdalContext
@@ -47,9 +47,9 @@ class SlackTeamCommanderImpl @Inject() (
   organizationInfoCommander: OrganizationInfoCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
-  val inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander with SlackLogging {
-  val loggingDestination = InhouseSlackChannel.ENG_SLACK
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends SlackTeamCommander {
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, userHasNoOrg) = db.readWrite { implicit session =>

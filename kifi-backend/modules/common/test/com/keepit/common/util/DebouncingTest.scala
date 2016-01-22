@@ -15,18 +15,20 @@ class DebouncingTest extends Specification {
       count += 1
     }
   }
-  private class QuietYapper extends Debouncing.Drop {
+  private class QuietYapper {
     var count = 0
     var value = 0
-    def trigger() = debounce("trigger", Period.millis(1)) {
+    val debouncer = new Debouncing.Dropper
+    def trigger() = debouncer.debounce("trigger", Period.millis(1)) {
       value += 1
       count += 1
     }
   }
-  private class BufferedYapper extends Debouncing.Buffer {
+  private class BufferedYapper {
     var count = 0
     var value = 0
-    def trigger() = debounce("trigger", Period.millis(1))(1) { buf =>
+    val debouncer = new Debouncing.Buffer[Int]
+    def trigger() = debouncer.debounce("trigger", Period.millis(1))(1) { buf =>
       value += buf.sum
       count += 1
     }
@@ -39,7 +41,6 @@ class DebouncingTest extends Specification {
         loud.trigger(); quiet.trigger(); buffered.trigger()
       }
 
-      println(s"loud = ${(loud.count, loud.value)}, quiet = ${(quiet.count, quiet.value)}, buffered = ${(buffered.count, buffered.value)}")
       loud.count === 1000
       loud.value === 1000
 
@@ -61,7 +62,6 @@ class DebouncingTest extends Specification {
         Future { loud.trigger(); quiet.trigger(); buffered.trigger() }
       }), Duration.Inf)
 
-      println(s"loud = ${(loud.count, loud.value)}, quiet = ${(quiet.count, quiet.value)}, buffered = ${(buffered.count, buffered.value)}")
       loud.count must beCloseTo(n, n / 5)
       loud.value must beCloseTo(n, n / 5)
 
