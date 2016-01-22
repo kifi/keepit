@@ -69,7 +69,7 @@ class SlackOnboarderImpl @Inject() (
             keepsFromSlack.get(kId).map(_.url)
         }.flatten.toSet
         Some(DescriptionElements(
-          "We just collected", linksFromTargetChannel.size, "links from this channel.",
+          "We just collected a bunch of links from this channel (all", linksFromTargetChannel.size, "of them) and we'll keep collecting new ones as you post them :tornado:.",
           "You can browse them on Kifi in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute)
         )).filter(_ => sctl.slackTeamId == SlackDigestNotifier.KifiSlackTeamId) tap { _.foreach(text => slackLog.info(s"Sending an ingestion to ${sctl.slackTeamId}.", text)) }
     }
