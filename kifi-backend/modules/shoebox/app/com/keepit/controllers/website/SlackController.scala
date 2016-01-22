@@ -3,10 +3,9 @@ package com.keepit.controllers.website
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
-import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.json.EitherFormat
 import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
@@ -17,13 +16,15 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.slack.SlackAuthenticatedAction.SetupSlackTeam
 import com.keepit.slack._
 import com.keepit.slack.models._
-import com.keepit.social.IdentityHelpers
 import play.api.libs.json._
 import play.api.mvc.Result
-import securesocial.core.{ AuthenticationMethod, OAuth2Info, SocialUser }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Success
+
+object SlackController {
+  val REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
+}
 
 @Singleton
 class SlackController @Inject() (
@@ -45,8 +46,6 @@ class SlackController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
-
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): Result = {
     val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
     val redirectUrl = if (showSlackDialog) libraryUrl + "?showSlackDialog" else libraryUrl
@@ -64,7 +63,7 @@ class SlackController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
       code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.NoAuthCode))
-      slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
+      slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), SlackController.REDIRECT_URI)
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
         slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
@@ -188,7 +187,7 @@ class SlackController @Inject() (
   }
 
   def connectSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
-    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_))).url
+    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> None, slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
     Redirect(link, SEE_OTHER)
   }
 

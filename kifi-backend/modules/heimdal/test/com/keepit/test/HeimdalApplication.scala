@@ -19,6 +19,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.HeimdalServiceTypeModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
+import com.keepit.slack.FakeSlackClientModule
 
 class HeimdalApplication(overridingModules: Module*)(implicit path: File = new File("./modules/heimdal/"))
   extends DbTestApplication(path, overridingModules, Seq(
@@ -37,7 +38,8 @@ class HeimdalApplication(overridingModules: Module*)(implicit path: File = new F
     FakeUserActionsModule(),
     FakeSchedulerModule(),
     AwsModule(),
-    FakeCryptoModule()
+    FakeCryptoModule(),
+    FakeSlackClientModule()
   ))
 
 trait HeimdalApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with HeimdalInjectionHelpers

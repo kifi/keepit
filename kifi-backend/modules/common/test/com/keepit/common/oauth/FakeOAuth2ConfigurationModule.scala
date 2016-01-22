@@ -2,6 +2,7 @@ package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.slack.models.SlackAuthorizationResponse
 import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
@@ -38,34 +39,33 @@ class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuth2Pro
 @Singleton
 class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Provider[LinkedInIdentity]
 @Singleton
+class FakeSlackOAuthProvider extends SlackOAuthProvider with FakeOAuthProvider[SlackAuthorizationResponse, SlackIdentity]
+@Singleton
 class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider[TwitterIdentity] {
   def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
 }
 
-case class FakeOAuth1ConfigurationModule() extends OAuth1ConfigurationModule {
+
+case class FakeOAuthConfigurationModule() extends OAuthConfigurationModule {
   override def configure(): Unit = {
     bind[OAuth1ProviderRegistry].to[OAuth1ProviderRegistryImpl]
     bind[TwitterOAuthProvider].to[FakeTwitterOAuthProvider]
+
+    bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
+    bind[FacebookOAuthProvider].to[FakeFacebookOAuthProvider]
+    bind[LinkedInOAuthProvider].to[FakeLinkedInOAuthProvider]
+
+    bind[SlackOAuthProvider].to[FakeSlackOAuthProvider]
   }
 
-  @Provides
-  @Singleton
+  @Provides @Singleton
   def getOAuth1Configuration(): OAuth1Configuration = {
     import OAuth1Providers._
     val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("cwXfTNd8iiKbWtXtszz9ADNmQ", "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1"), ConsumerKey("17148682-0x4Qq6BU5GcX8NNmdDgpEPgbUORz0aRIwqPnynlTA", "8C3NU8zmy0FgHy9Ga7X8Xay2Yp1uB1EhQnpGsZ9ODa8vq")))
     OAuth1Configuration(providerMap)
   }
-}
 
-case class FakeOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
-  def configure(): Unit = {
-    bind[OAuth2ProviderRegistry].to[OAuth2ProviderRegistryImpl]
-    bind[FacebookOAuthProvider].to[FakeFacebookOAuthProvider]
-    bind[LinkedInOAuthProvider].to[FakeLinkedInOAuthProvider]
-  }
-
-  @Provides
-  @Singleton
+  @Provides @Singleton
   def getOAuth2Configuration(): OAuth2Configuration = {
     import OAuth2Providers._
     val providerMap = Map(
@@ -75,5 +75,4 @@ case class FakeOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
     )
     OAuth2Configuration(providerMap)
   }
-
 }
