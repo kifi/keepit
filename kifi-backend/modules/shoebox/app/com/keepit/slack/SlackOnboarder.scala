@@ -2,10 +2,11 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -30,8 +31,11 @@ class SlackOnboarderImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
   attributionRepo: KeepSourceAttributionRepo,
-  implicit val executionContext: ExecutionContext)
+  implicit val executionContext: ExecutionContext,
+  implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackOnboarder with Logging {
+
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
     log.info(s"[SLACK-ONBOARD] Trying to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
@@ -56,7 +60,6 @@ class SlackOnboarderImpl @Inject() (
           "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
         ))
       case sctl: SlackChannelToLibrary =>
-        log.info(s"[SLACK-ONBOARD] Trying to generate a message for ingestion from ${sctl.slackChannelName} in ${sctl.slackTeamId} to ${sctl.libraryId}")
         val lib = libRepo.get(sctl.libraryId)
         val keepsFromSlack = keepRepo.getByIds(ktlRepo.getAllByLibraryId(sctl.libraryId).map(_.keepId).toSet).filter {
           case (keepId, keep) => keep.source == KeepSource.slack
@@ -68,7 +71,7 @@ class SlackOnboarderImpl @Inject() (
         Some(DescriptionElements(
           "We just collected", linksFromTargetChannel.size, "links from this channel.",
           "You can browse them on Kifi in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute)
-        )).filter(_ => sctl.slackTeamId == SlackDigestNotifier.KifiSlackTeamId)
+        )).filter(_ => sctl.slackTeamId == SlackDigestNotifier.KifiSlackTeamId) tap { _.foreach(text => slackLog.info(s"Sending an ingestion to ${sctl.slackTeamId}.", text)) }
     }
     textOpt.map(text => SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text)).quiet)
   }
