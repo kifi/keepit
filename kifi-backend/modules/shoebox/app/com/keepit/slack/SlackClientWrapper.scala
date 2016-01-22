@@ -51,6 +51,7 @@ class SlackClientWrapperImpl @Inject() (
   db: Database,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
+  slackChannelRepo: SlackChannelRepo,
   slackClient: SlackClient,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -109,6 +110,11 @@ class SlackClientWrapperImpl @Inject() (
           val now = clock.now
           val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
+              for {
+                channelId <- webhookInfo.webhook.channelId
+                channel <- slackChannelRepo.getById(webhookInfo.slackTeamId, channelId)
+              } slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+
               slackIncomingWebhookInfoRepo.save(
                 slackIncomingWebhookInfoRepo.get(webhookInfo.id.get).withCleanSlate.withLastPostedAt(now)
               )
@@ -137,7 +143,15 @@ class SlackClientWrapperImpl @Inject() (
       workingToken match {
         case None => Future.failed(SlackAPIFailure.NoValidToken)
         case Some(token) =>
-          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token))
+          val now = clock.now
+          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
+            case Success(_: Unit) =>
+              db.readWrite { implicit s =>
+                slackChannelRepo.getById(slackTeamId, slackChannelId).foreach { channel =>
+                  slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+                }
+              }
+          }
           pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
       }
     }

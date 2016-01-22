@@ -256,7 +256,7 @@ class SlackDigestNotifierImpl @Inject() (
       slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).andThen {
         case Success(_: Unit) =>
           db.readWrite { implicit s =>
-            slackChannelRepo.save(slackChannelRepo.get(channel.id.get).withLastNotificationAt(now))
+            slackChannelRepo.save(slackChannelRepo.get(channel.id.get).withLastNotificationAtLeast(now))
           }
           slackLog.info("Pushed a digest to", channel.slackChannelName.value, "in team", channel.slackTeamId.value)
         case Failure(fail) =>
