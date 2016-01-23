@@ -76,7 +76,7 @@ class SlackAuthRouter @Inject() (
   }
 
   private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String)(implicit request: MaybeUserRequest[_]): Result = {
-    val slackAuthPage = pathCommander.orgPage(org) + s"?signupWithSlack&teamId=${slackTeamId.value}"
+    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack&teamId=${slackTeamId.value}"
     Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 
