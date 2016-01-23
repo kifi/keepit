@@ -398,15 +398,18 @@ var api = api || (function () {
         var iconUri;
         var kept = false;
         var ii = false;
+        var icon = safari.extension.toolbarItems[0];
+
         if (tab === pages[tab.id]) {
           ii = ~path.indexOf('II');
           kept = !(~path.indexOf('gray') || ~path.indexOf('dark'));
+          iconUri = `${safari.extension.baseURI}icons/kifi.monochrome${ii ? '_II' : ''}${kept ? '.invert' : ''}.png`;
 
-          path = `icons/kifi.monochrome${ii ? '_II' : ''}${kept ? '.invert' : ''}.png`;
+          l`${CGREEN} [icon.set] %s${tab.id} %s${tab.url} kept: %s${kept}, silenced: %s${ii}, path: %s${path}, iconUri: %s${iconUri}`;
 
           tab.icon = path;
-          iconUri = safari.extension.baseURI + path;
-          safari.extension.toolbarItems[0].image = iconUri;
+          icon.image = iconUri;
+          icon.toolTip = (kept ? 'Kept with Kifi' : 'Kifi');
         }
       }
     },
