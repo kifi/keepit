@@ -23,8 +23,10 @@ angular.module('kifi')
       $analytics.pageTrack(url, attributes);
     }
 
+    $scope.slackTeamId = $stateParams.teamId;
+
     $scope.linkSlack = function (e) {
-      e.target.href = 'https://www.kifi.com/link/slack?teamId=' + $stateParams.teamId;
+      e.target.href = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;
     };
 
     //
