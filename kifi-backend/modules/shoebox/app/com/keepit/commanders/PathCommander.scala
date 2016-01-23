@@ -7,9 +7,12 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.oauth.UserHandle
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 
 @Singleton
 class PathCommander @Inject() (
@@ -18,18 +21,17 @@ class PathCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) {
 
-  // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing
-  // code directly calls getPathForLibrary, which calls LibraryPathHelper, and that class
-  // does The Wrong Thing (it explicitly puts the "/" at the beginning of the link), while
-  // a `Path` assumes that there is no leading slash.
-  def pathForLibrary(lib: Library): Path = Path(getPathForLibrary(lib).tail)
+  /**
+   * USER
+   */
+  private def profilePageByHandle(handle: Username) = Path(handle.value)
 
-  def pathForUser(user: User): Path = Path(user.username.value)
+  def profilePage(user: User): Path = profilePageByHandle(user.primaryUsername.get.normalized)
+  def profilePage(user: BasicUser): Path = profilePageByHandle(user.username)
 
-  def pathForKeep(keep: Keep): Path = keep.path
-
-  def pathForOrganization(org: Organization): Path = Path(org.handle.value)
-
+  /**
+   * ORGANIZATION
+   */
   private def orgPageByHandle(handle: OrganizationHandle): Path = Path(handle.value)
   private def orgMembersPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/members"
   private def orgLibrariesPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle)
@@ -52,6 +54,31 @@ class PathCommander @Inject() (
   def orgPlanPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPlanPage(orgRepo.get(orgId))
 
   def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
+
+  /**
+   * LIBRARY
+   */
+  private def libPageByHandleAndSlug(handle: Handle, slug: LibrarySlug): Path = Path(s"${handle.value}/${slug.value}")
+
+  def libraryPage(lib: Library)(implicit session: RSession): Path = {
+    val handle: Handle = lib.space match {
+      case UserSpace(userId) => basicUserRepo.load(userId).username
+      case OrganizationSpace(orgId) => orgRepo.get(orgId).primaryHandle.get.normalized
+    }
+    libPageByHandleAndSlug(handle, lib.slug)
+  }
+
+  /**
+   * I'd prefer if you just didn't use these routes
+   */
+  // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing
+  // code directly calls getPathForLibrary, which calls LibraryPathHelper, and that class
+  // does The Wrong Thing (it explicitly puts the "/" at the beginning of the link), while
+  // a `Path` assumes that there is no leading slash.
+  def pathForLibrary(lib: Library): Path = Path(getPathForLibrary(lib).tail)
+  def pathForUser(user: User): Path = Path(user.username.value)
+  def pathForKeep(keep: Keep): Path = keep.path
+  def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 
   // todo: remove these and replace with Path-returning versions
   def getPathForLibrary(lib: Library): String = {
