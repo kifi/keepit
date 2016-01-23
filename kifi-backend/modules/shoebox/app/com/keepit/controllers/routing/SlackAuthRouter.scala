@@ -47,7 +47,7 @@ class SlackAuthRouter @Inject() (
         val target = pathCommander.orgPage(org).absolute
         (for {
           userId <- request.userIdOpt
-          _ <- if (canJoinBySlack(userId, org, teamId)) Some(true) else None
+          _ <- if (weWantThisUserToAuthWithSlack(userId, org, teamId)) Some(true) else None
         } yield redirectThroughSlackAuth(org, teamId, target)) getOrElse Redirect(target)
       }
     }
@@ -60,18 +60,19 @@ class SlackAuthRouter @Inject() (
         (for {
           userId <- request.userIdOpt
           org <- lib.organizationId.map(orgRepo.get).filter(_.isActive)
-          _ <- if (canJoinBySlack(userId, org, teamId)) Some(true) else None
+          _ <- if (weWantThisUserToAuthWithSlack(userId, org, teamId)) Some(true) else None
         } yield redirectThroughSlackAuth(org, teamId, target)) getOrElse Redirect(target)
       }
     }
     redir.getOrElse(notFound(request))
   }
 
-  private def canJoinBySlack(userId: Id[User], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
+  private def weWantThisUserToAuthWithSlack(userId: Id[User], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
     slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
       val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
-      val userIsAlreadyAMemberOfThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isDefined
-      orgIsConnectedToThisSlackTeam && !userIsAlreadyAMemberOfThisOrg
+      val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isDefined
+      val userHasNotGivenUsTheirSlackInfo = slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
+      orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg || userHasNotGivenUsTheirSlackInfo)
     }
   }
 
