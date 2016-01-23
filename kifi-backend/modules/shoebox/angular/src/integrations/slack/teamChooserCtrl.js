@@ -3,17 +3,20 @@
 angular.module('kifi')
 
 .controller('SlackIntegrationTeamChooserCtrl', [
-  '$scope', '$state', 'slackService', 'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($scope, $state, slackService, profileService, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  '$window', '$scope', '$state', 'slackService', 'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function ($window, $scope, $state, slackService, profileService, ORG_PERMISSION, ORG_SETTING_VALUE) {
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
     $scope.me = profileService.me;
     $scope.params = $state.params;
 
     $scope.selectedOrg = null;
-    $scope.orgs = function () {
-      return $scope.me.orgs;
-    };
+    $scope.orgs = [];
+
+
+    slackService.getKifiOrgsForSlackIntegration().then(function(data) {
+      $scope.orgs = data.orgs;
+    });
 
     $scope.onClickedOrg = function(org) {
       // do something
@@ -21,16 +24,20 @@ angular.module('kifi')
     };
 
     $scope.onClickedDone = function() {
-      slackService.createOrganizationForSlackTeam($scope.params.slackTeamId)
-          .then(function() {
-
+      slackService.connectSlackTeamToOrganization($scope.selectedOrg.id, $scope.params.slackTeamId)
+          .then(function(data) {
+            if (data && data.redirectUrl) {
+              $window.location = data.redirectUrl;
+            }
           });
     };
 
     $scope.onClickedCreateTeam = function() {
-      slackService.connectSlackTeamToOrganization($scope.selectedOrg.id, $scope.params.slackTeamId)
-          .then(function() {
-
+      slackService.createOrganizationForSlackTeam($scope.params.slackTeamId)
+          .then(function(data) {
+            if (data && data.redirectUrl) {
+              $window.location = data.redirectUrl;
+            }
           });
     };
 
