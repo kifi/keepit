@@ -81,13 +81,16 @@ class SlackClientImpl(
         log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
         Future.failed(SlackAPIFailure.WebhookRevoked)
     }.andThen {
-      case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
+      case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
     }
   }
 
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit)
+    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit).andThen {
+      case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to $channelId via token $token")
+      case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to $channelId via token $token because of ${f.getMessage}")
+    }
   }
 
   private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
@@ -95,10 +98,8 @@ class SlackClientImpl(
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
-            case JsSuccess(res, _) =>
-              Future.successful(res)
-            case errs: JsError =>
-              Future.failed(SlackAPIFailure.ParseError(payload))
+            case JsSuccess(res, _) => Future.successful(res)
+            case errs: JsError => Future.failed(SlackAPIFailure.ParseError(payload))
           }
         case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, payload))
       }
