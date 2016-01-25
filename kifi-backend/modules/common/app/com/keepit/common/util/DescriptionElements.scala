@@ -68,9 +68,14 @@ object DescriptionElements {
   implicit def fromLocation(location: Location): BasicElement = s"${location.context}: ${location.line}"
   implicit def fromSlackEmoji(emoji: SlackEmoji): BasicElement = emoji.value
 
-  private val prettyTime = new PrettyTime()
-  implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
-  implicit def fromPeriod(p: Period): BasicElement = prettyTime.formatApproximateDuration((currentDateTime minus p).toDate)
+  implicit def fromDateTime(time: DateTime): BasicElement = new PrettyTime().format(time.toDate)
+  def withinTheLast(p: Period): BasicElement = {
+    val prettyTime = new PrettyTime(new java.util.Date(0))
+    prettyTime.formatDuration(new java.util.Date(-p.toStandardDuration.getMillis)) match {
+      case "" => "just now"
+      case d => s"within the last ${d.stripPrefix("1 ")}"
+    }
+  }
 
   def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {
