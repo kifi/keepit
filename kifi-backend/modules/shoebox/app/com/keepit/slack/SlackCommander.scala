@@ -20,7 +20,7 @@ import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 object SlackCommander {
-  val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
+  val slackSetupPermission = OrganizationPermission.CREATE_SLACK_INTEGRATION
 }
 
 @ImplementedBy(classOf[SlackCommanderImpl])
