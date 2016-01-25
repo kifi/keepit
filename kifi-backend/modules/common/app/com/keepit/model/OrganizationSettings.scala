@@ -49,7 +49,6 @@ object OrganizationSettingsWithEditability {
 sealed trait Feature {
   val value: String
   def settings: Set[FeatureSetting]
-  val editableWith: OrganizationPermission
 
   private def toSetting(x: String): FeatureSetting = settings.find(_.value == x).getOrElse(throw new InvalidSettingForFeatureException(this, x))
   def settingReads: Reads[FeatureSetting] = Reads { j => j.validate[String].map(toSetting) }
@@ -102,95 +101,76 @@ object Feature extends Enumerator[Feature] {
     val value = OrganizationPermission.PUBLISH_LIBRARIES.value
     val permission = OrganizationPermission.PUBLISH_LIBRARIES
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object InviteMembers extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.INVITE_MEMBERS.value
     val permission = OrganizationPermission.INVITE_MEMBERS
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object GroupMessaging extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.GROUP_MESSAGING.value
     val permission = OrganizationPermission.GROUP_MESSAGING
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object ForceEditLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.FORCE_EDIT_LIBRARIES.value
     val permission = OrganizationPermission.FORCE_EDIT_LIBRARIES
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object ViewOrganization extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.VIEW_ORGANIZATION.value
     val permission = OrganizationPermission.VIEW_ORGANIZATION
     val settings: Set[FeatureSetting] = Set(MEMBERS, ANYONE)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object ViewMembers extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.VIEW_MEMBERS.value
     val permission = OrganizationPermission.VIEW_MEMBERS
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS, ANYONE)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object RemoveLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.REMOVE_LIBRARIES.value
     val permission = OrganizationPermission.REMOVE_LIBRARIES
     val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object CreateSlackIntegration extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.CREATE_SLACK_INTEGRATION.value
     val permission = OrganizationPermission.CREATE_SLACK_INTEGRATION
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
+    val settings: Set[FeatureSetting] = Set(DISABLED, ANYONE, ADMINS, MEMBERS)
   }
 
   case object EditOrganization extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.EDIT_ORGANIZATION.value
     val permission = OrganizationPermission.EDIT_ORGANIZATION
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object ExportKeeps extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.EXPORT_KEEPS.value
     val permission = OrganizationPermission.EXPORT_KEEPS
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object ViewSettings extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.VIEW_SETTINGS.value
     val permission = OrganizationPermission.VIEW_SETTINGS
     val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object JoinByVerifying extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.JOIN_BY_VERIFYING.value
     val permission = OrganizationPermission.JOIN_BY_VERIFYING
     val settings: Set[FeatureSetting] = Set(DISABLED, NONMEMBERS)
-    val editableWith = OrganizationPermission.MANAGE_PLAN
   }
 
   case object SlackIngestionReaction extends Feature {
     val value = "slack_ingestion_reaction"
     val settings: Set[FeatureSetting] = Set(DISABLED, ENABLED)
-    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
-  }
-
-  case object SlackDigestNotification extends Feature {
-    val value = "slack_digest_notif"
-    val settings: Set[FeatureSetting] = Set(DISABLED, ENABLED)
-    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
   }
 }
