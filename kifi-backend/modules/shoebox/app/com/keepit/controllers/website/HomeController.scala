@@ -1,34 +1,30 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.controller.KifiSession._
 import com.keepit.common.controller._
 import com.keepit.common.core._
 import com.keepit.common.db.slick._
 import com.keepit.common.http._
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.UserAgent
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.net.{RichRequestHeader, UserAgent}
+import com.keepit.common.time._
 import com.keepit.controllers.routing.KifiSiteRouter
 import com.keepit.heimdal._
-import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.SocialGraphPlugin
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.twirl.api.Html
-import securesocial.core.{ Authenticator, SecureSocial }
-import play.api.libs.json.Json
-import com.keepit.common.time._
-import com.keepit.common.net.RichRequestHeader
+import securesocial.core.{Authenticator, SecureSocial}
 
-import KifiSession._
+import scala.concurrent.{ExecutionContext, Future}
 
-import scala.concurrent.{ ExecutionContext, Future }
-
+@Singleton
 class HomeController @Inject() (
   db: Database,
   userRepo: UserRepo,
@@ -224,4 +220,10 @@ class HomeController @Inject() (
     }
   }
 
+}
+
+object HomeControllerRoutes {
+  def home() = "/"
+  def install() = "/install"
+  def unsupported() = "/unsupported"
 }
