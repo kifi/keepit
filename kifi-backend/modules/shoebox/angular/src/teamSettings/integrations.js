@@ -6,7 +6,7 @@ angular.module('kifi')
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
   function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION) {
 
-    $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1);
+    $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
     $scope.slackIntegrationReactionModel = {enabled: $scope.profile.config && $scope.profile.config.settings.slack_ingestion_reaction.setting === 'enabled'};
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
