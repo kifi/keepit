@@ -1,19 +1,18 @@
 package com.keepit.common.util
 
-import java.net.URLEncoder
-
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
+import com.keepit.common.strings.StringWithReplacements
+import com.keepit.common.time._
 import com.keepit.macros.Location
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
 import com.keepit.slack.models.SlackEmoji
 import com.keepit.social.BasicUser
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, Period }
+import org.ocpsoft.prettytime._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
-import com.keepit.common.strings.StringWithReplacements
-import org.ocpsoft.prettytime._
 
 sealed trait DescriptionElements {
   def flatten: Seq[BasicElement]
@@ -71,6 +70,7 @@ object DescriptionElements {
 
   private val prettyTime = new PrettyTime()
   implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
+  implicit def fromPeriod(p: Period): BasicElement = prettyTime.formatApproximateDuration((currentDateTime minus p).toDate)
 
   def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {
