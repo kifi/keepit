@@ -309,7 +309,7 @@ angular.module('kifi')
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:handle/:librarySlug?authToken',
+        url: '/:handle/:librarySlug?authToken&signUpWithSlack',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         params: {
