@@ -30,7 +30,7 @@ object SlackIngestionConfig {
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val channelIngestionConcurrency = 5
+  val channelIngestionConcurrency = 10
   val messageBatchSize = 25
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
