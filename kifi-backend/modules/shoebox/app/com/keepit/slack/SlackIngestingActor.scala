@@ -30,7 +30,7 @@ object SlackIngestionConfig {
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val channelIngestionConcurrency = 5
+  val channelIngestionConcurrency = 10
   val messageBatchSize = 25
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
@@ -92,11 +92,11 @@ class SlackIngestingActor @Inject() (
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ())
+        integrationId -> ingestMaybe(integration, isAllowed, getTokenWithScopes)
     }
   }
 
-  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes]): Future[Option[SlackTimestamp]] = {
+  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes]): Future[Unit] = {
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
         getTokenWithScopes(integration.id.get) match {
@@ -108,19 +108,16 @@ class SlackIngestingActor @Inject() (
       }
     }
 
-    futureIngestionMaybe andThen {
+    futureIngestionMaybe.andThen {
       case result =>
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
-          case Success(Some(_)) => // TODO(ryan): talk to Léo, this branch is probably never executed
+          case Success(delayUntilNextIngestion) => // TODO(ryan): talk to Léo, this branch is probably never executed
             if (integration.lastIngestedAt.isEmpty) {
               // this is the first time we've tried ingesting for this integration
-              // and we were successful! we got a bunch of links
               slackOnboarder.talkAboutIntegration(integration)
             }
-            (Some(now plus nextIngestionDelayAfterNewMessages), None)
-          case Success(None) =>
-            (Some(now plus nextIngestionDelayWithoutNewMessages), None)
+            (Some(now plus delayUntilNextIngestion), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             slackLog.warn(s"Turning off forbidden Slack integration ${integration.id.get}.")
             (None, Some(SlackIntegrationStatus.Off))
@@ -135,10 +132,11 @@ class SlackIngestingActor @Inject() (
         db.readWrite { implicit session =>
           integrationRepo.updateAfterIngestion(integration.id.get, nextIngestionAt, updatedStatus getOrElse integration.status)
         }
-    }
+    }.imap(_ => ())
   }
 
-  private def doIngest(tokenWithScopes: SlackTokenWithScopes, integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
+  // returns a Period representing how long to wait until the next ingestion
+  private def doIngest(tokenWithScopes: SlackTokenWithScopes, integration: SlackChannelToLibrary): Future[Period] = {
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
@@ -165,6 +163,9 @@ class SlackIngestingActor @Inject() (
         } recoverWith {
           case failure @ SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => Future.failed(BrokenSlackIntegration(integration, Some(tokenWithScopes.token), Some(failure)))
         }
+    }.imap {
+      case Some(lastTimestamp) if !integration.lastMessageTimestamp.contains(lastTimestamp) => nextIngestionDelayAfterNewMessages
+      case _ => nextIngestionDelayWithoutNewMessages
     }
   }
 
