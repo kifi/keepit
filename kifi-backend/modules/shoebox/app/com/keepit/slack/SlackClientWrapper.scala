@@ -100,7 +100,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntilAttempts {
+    FutureHelpers.doUntil {
       val firstWorkingWebhook = db.readOnlyMaster { implicit s =>
         slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName).headOption
       }
@@ -134,7 +134,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntilAttempts {
+    FutureHelpers.doUntil {
       val workingToken = db.readOnlyMaster { implicit s =>
         slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
           case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token

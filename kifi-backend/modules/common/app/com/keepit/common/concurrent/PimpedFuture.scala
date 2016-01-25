@@ -133,12 +133,6 @@ object FutureHelpers {
     foldLeftUntil(Stream.continually(()))(()) { case _ => body.imap(done => ((), done)) }
   }
 
-  def doUntilAttempts(body: => Future[Boolean], maxAttempts: Int = 5)(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    foldLeftUntil(Stream.continually(()))(1) {
-      case (attemptsSoFar, _) => body.imap(success => (attemptsSoFar + 1, success || attemptsSoFar > maxAttempts))
-    }.imap{ _ => () }
-  }
-
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
     f.onComplete {
       case Success(true) => {
