@@ -83,6 +83,7 @@ class UserIdentityHelper @Inject() (
               case FACEBOOK => FacebookIdentity(socialUser)
               case LINKEDIN => LinkedInIdentity(socialUser)
               case TWITTER => TwitterIdentity(socialUser, info.pictureUrl, info.profileUrl)
+              case _ => throw new IllegalStateException(s"Unexpected SocialUserInfo: $info")
             }
             UserIdentity(richIdentity, info.userId)
           }
