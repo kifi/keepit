@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.KifiSession._
@@ -9,7 +9,7 @@ import com.keepit.common.core._
 import com.keepit.common.db.slick._
 import com.keepit.common.http._
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{RichRequestHeader, UserAgent}
+import com.keepit.common.net.{ RichRequestHeader, UserAgent }
 import com.keepit.common.time._
 import com.keepit.controllers.routing.KifiSiteRouter
 import com.keepit.heimdal._
@@ -20,9 +20,9 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.twirl.api.Html
-import securesocial.core.{Authenticator, SecureSocial}
+import securesocial.core.{ Authenticator, SecureSocial }
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class HomeController @Inject() (
