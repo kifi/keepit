@@ -23,6 +23,13 @@ angular.module('kifi')
             .then(function() {
               return null;
             });
+      },
+      getKifiOrgsForSlackIntegration: function() {
+          return net.getKifiOrgsForSlackIntegration()
+              .then(function(response) {
+                  // maybe transform
+                  return response.data;
+              });
       }
 
     };

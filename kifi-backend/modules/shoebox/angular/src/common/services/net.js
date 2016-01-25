@@ -97,12 +97,12 @@ angular.module('kifi')
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
 
       // slack
-      createOrganizationForSlackTeam: post(shoebox, '/site/organizations/create/slack?slackTeamId=:slackTeamId'),
-      connectSlackTeamToOrganization: post(shoebox, '/site/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
+      createOrganizationForSlackTeam: post(shoebox, '/organizations/create/slack?slackTeamId=:slackTeamId'),
+      connectSlackTeamToOrganization: post(shoebox, '/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
       getSlackIntegrationsForOrg: get(shoebox, '/organizations/:id/slack/list'),
+      getKifiOrgsForSlackIntegration: get(shoebox, '/slack/add/organizations'),
 
-
-      // eliza
+    // eliza
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
       getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),

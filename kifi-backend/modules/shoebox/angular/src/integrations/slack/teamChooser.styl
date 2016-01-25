@@ -22,10 +22,21 @@
     text-align: center
 
   .si-org-selector-inner-container
+    display: flex
+    flex-direction: column
     margin-top: 20px
     margin-left: 50px
     margin-right: 50px
 
+  .si-org-selector-spinner-wrapper
+    width: 100%
+    display: flex
+    flex-direction: row
+    justify-content: center
+
+  .si-org-selector-spinner
+    width: 100px
+    height: 100px
 
 .si-org-selector-org-row
   display: flex
@@ -50,6 +61,17 @@
     text-align: center
     margin-left: 5px
     font-weight: bold
+    color: #333
+
+  .si-org-selector-svg-wrapper
+      display: flex
+      justify-content: center
+      align-items: center
+      margin: 8px
+      width: 48px
+      height: 48px
+      border-radius: 10%
+      box-shadow: 0px 1px 1px 1px #00000022
 
 .si-org-selector-org-row-selected
   background-color: #EEEEEE !important

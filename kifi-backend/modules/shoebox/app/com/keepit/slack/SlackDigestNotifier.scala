@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
 import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.util.{ BasicElement, DescriptionElements, LinkElement, Ord }
 import com.keepit.model._
 import com.keepit.slack.models._
 import org.apache.commons.math3.random.MersenneTwister
@@ -181,7 +181,7 @@ class SlackDigestNotifierImpl @Inject() (
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
       DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, "in the last", digest.timeSinceLastDigest.toStandardMinutes.getMinutes, "minutes", SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+        "from", digest.slackTeam.slackTeamName.value, withinTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
@@ -242,7 +242,7 @@ class SlackDigestNotifierImpl @Inject() (
     import DescriptionElements._
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
       DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
-        digest.slackChannel.slackChannelName.value, "in the last", digest.timeSinceLastDigest.toStandardMinutes.getMinutes, "minutes"),
+        digest.slackChannel.slackChannelName.value, withinTheLast(digest.timeSinceLastDigest)),
       DescriptionElements("You can browse through them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
     )))).quiet

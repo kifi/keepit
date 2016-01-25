@@ -23,7 +23,7 @@ object SlackAPI {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
     implicit def fromCode(code: SlackAuthorizationCode): Param = Param("code", code.code)
-    implicit def formState(state: SlackState): Param = Param("state", state.state)
+    implicit def formState(state: SlackAuthState): Param = Param("state", state.state)
     implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
     implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
     implicit def fromChannelId(channelId: SlackChannelId): Param = Param("channel", channelId.value)
@@ -33,7 +33,7 @@ object SlackAPI {
 
   import com.keepit.slack.SlackAPI.SlackParams._
 
-  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId], redirectUri: String) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, scopes, state, "redirect_uri" -> redirectUri, "team" -> teamId.map(_.value))
+  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackAuthState, teamId: Option[SlackTeamId], redirectUri: String) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, scopes, state, "redirect_uri" -> redirectUri, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode, redirectUri: String) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, code, "redirect_uri" -> redirectUri)
   def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
   def SearchMessages(token: SlackAccessToken, request: SlackSearchRequest) = {
@@ -81,13 +81,16 @@ class SlackClientImpl(
         log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
         Future.failed(SlackAPIFailure.WebhookRevoked)
     }.andThen {
-      case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
+      case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
     }
   }
 
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit)
+    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit).andThen {
+      case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to $channelId via token $token")
+      case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to $channelId via token $token because of ${f.getMessage}")
+    }
   }
 
   private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
@@ -95,10 +98,8 @@ class SlackClientImpl(
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
-            case JsSuccess(res, _) =>
-              Future.successful(res)
-            case errs: JsError =>
-              Future.failed(SlackAPIFailure.ParseError(payload))
+            case JsSuccess(res, _) => Future.successful(res)
+            case errs: JsError => Future.failed(SlackAPIFailure.ParseError(payload))
           }
         case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, payload))
       }

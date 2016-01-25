@@ -1,13 +1,11 @@
 package com.keepit.slack.models
 
-import com.keepit.common.crypto.CryptoSupport
+import java.util.UUID
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import scala.util.{ Failure, Try }
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
@@ -62,10 +60,9 @@ object SlackAuthScope {
 
 @json case class SlackAuthorizationCode(code: String)
 
-case class SlackState(state: String)
-object SlackState {
-  def apply(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
-  def toJson(state: SlackState): Try[JsValue] = Try(Json.parse(CryptoSupport.decodeBase64(state.state))).orElse(Failure(SlackAPIFailure.StateError(state)))
+case class SlackAuthState(state: String)
+object SlackAuthState {
+  def apply(): SlackAuthState = SlackAuthState(UUID.randomUUID().toString)
 }
 
 case class SlackAuthorizationRequest(
