@@ -840,7 +840,7 @@ class KeepCommanderImpl @Inject() (
           db.readOnlyReplica { implicit session =>
             // Grab 2x the required number because we're going to be dropping some
             val hasNoLibExperiment = userExperimentRepo.hasExperiment(userId, UserExperimentType.KEEP_NOLIB)
-            keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId, shoeboxFilterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
+            keepRepo.getRecentKeeps(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
           }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
         }
     }
