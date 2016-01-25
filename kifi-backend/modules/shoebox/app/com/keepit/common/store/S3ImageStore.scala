@@ -177,13 +177,13 @@ class S3ImageStoreImpl @Inject() (
     val jsonCropAttributes = cropAttributes.map { c =>
       Json.obj("w" -> c.w, "h" -> c.h, "x" -> c.x, "y" -> c.y, "s" -> c.s)
     }
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val user = userRepo.get(userId)
       if (user.userPictureId.isEmpty) {
         // User has no picture set
         val userPicture = userPictureRepo.save(UserPicture(userId = userId, name = pictureName, origin = source, attributes = jsonCropAttributes))
         Some(userRepo.save(user.copy(pictureName = Some(pictureName), userPictureId = userPicture.id)))
-      } else if (user.pictureName == Some(pictureName)) {
+      } else if (user.pictureName.contains(pictureName)) {
         val prevPic = userPictureRepo.get(user.userPictureId.get)
         userPictureRepo.save(prevPic) // touch updatedAt
         None
