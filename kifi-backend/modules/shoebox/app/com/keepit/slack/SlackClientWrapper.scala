@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.Ord
 import com.keepit.slack.models._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -52,6 +53,8 @@ class SlackClientWrapperImpl @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   slackChannelRepo: SlackChannelRepo,
+  channelToLibraryRepo: SlackChannelToLibraryRepo,
+  libraryToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -74,7 +77,9 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit] = {
     val slackTeamMembers = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+      val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+      val membersWithIntegrations = channelToLibraryRepo.getBySlackTeamAndChannel(slackTeamId, slackChannel._1).map(_.slackUserId)
+      allMembers.toList.sortBy(membersWithIntegrations.contains(_))(Ord.descending)
     }
     FutureHelpers.exists(slackTeamMembers) { slackUserId =>
       pushToSlackViaWebhook(slackUserId, slackTeamId, slackChannel._2, msg).recoverWith {
