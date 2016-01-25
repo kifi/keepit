@@ -11,6 +11,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.Feature.{ SlackDigestNotification, SlackIngestionReaction }
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
@@ -64,10 +65,8 @@ class OrganizationCommanderImpl @Inject() (
 
       case OrganizationSettingsRequest(orgId, requesterId, settings) =>
         val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(requesterId))
-
-        val canEditSlackFeatures = permissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) && settings.features == Set(Feature.SlackIngestionReaction)
-
-        if (!canEditSlackFeatures && !permissions.contains(OrganizationPermission.MANAGE_PLAN)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        val canEditSettings = settings.features.forall(feature => permissions.contains(feature.editableWith))
+        if (!canEditSettings) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else validateOrganizationSettings(orgId, settings)
 
       case OrganizationDeleteRequest(requesterId, orgId) =>
