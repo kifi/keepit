@@ -9,7 +9,6 @@ import com.keepit.payments._
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
-  // tests will fail when adding new Features, update 398.sql with new features and their default settings
   val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
     Feature.PublishLibraries -> FeatureSetting.MEMBERS,
@@ -19,13 +18,12 @@ object PaidPlanFactory {
     Feature.ViewOrganization -> FeatureSetting.ANYONE,
     Feature.ViewMembers -> FeatureSetting.ANYONE,
     Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
-    Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS,
+    Feature.CreateSlackIntegration -> FeatureSetting.ANYONE,
     Feature.EditOrganization -> FeatureSetting.ADMINS,
     Feature.ExportKeeps -> FeatureSetting.ADMINS,
     Feature.ViewSettings -> FeatureSetting.MEMBERS,
     Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS,
-    Feature.SlackIngestionReaction -> FeatureSetting.DISABLED,
-    Feature.SlackDigestNotification -> FeatureSetting.ENABLED
+    Feature.SlackIngestionReaction -> FeatureSetting.DISABLED
   ))
 
   def paidPlan(): PartialPaidPlan = {
