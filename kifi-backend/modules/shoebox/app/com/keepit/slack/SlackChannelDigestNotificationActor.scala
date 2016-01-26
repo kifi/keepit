@@ -22,9 +22,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackChannelDigestConfig {
-  val minPeriodBetweenChannelDigests = Period.seconds(10)
-  val minIngestedLinksForChannelDigest = 2
+  val minPeriodBetweenChannelDigests = Period.days(3)
+  val minIngestedLinksForChannelDigest = 5
 
+  // TODO(ryan): to release to the public, change canPushToChannel to `true`
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
   def canPushToChannel(channel: SlackChannel): Boolean = channel.slackTeamId == KifiSlackTeamId || channel.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
