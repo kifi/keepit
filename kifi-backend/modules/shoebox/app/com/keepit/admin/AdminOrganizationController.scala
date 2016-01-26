@@ -430,15 +430,20 @@ class AdminOrganizationController @Inject() (
 
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
+    val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
     val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
     val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
       db.readWrite { implicit s =>
         val account = paidAccountRepo.getByOrgId(orgId)
         val plan = paidPlanRepo.get(account.planId)
         val config = orgConfigRepo.getByOrgId(orgId)
-        if (config.settings.features != plan.defaultSettings.features) {
+        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.kvs.nonEmpty) {
           val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
-            case (f, default) => f -> config.settings.settingFor(f).getOrElse(default)
+            case (f, default) =>
+              val updatedSetting =
+                if (config.settings.settingFor(f).isEmpty || deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default
+                else config.settings.settingFor(f).get
+              f -> updatedSetting
           })
           orgConfigRepo.save(config.withSettings(newSettings))
         }
