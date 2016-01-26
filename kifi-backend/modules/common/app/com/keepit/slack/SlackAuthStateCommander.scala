@@ -61,11 +61,35 @@ object TurnOnChannelIngestion extends SlackAuthenticatedActionHelper[TurnOnChann
   def helper = TurnOnChannelIngestion
 }
 
-
+// Deprecated
 object SetupSlackTeam extends SlackAuthenticatedActionHelper[SetupSlackTeam]("setup_slack_team")
 @json case class SetupSlackTeam(organizationId: Option[Id[Organization]]) extends SlackAuthenticatedAction {
   type A = SetupSlackTeam
   def helper = SetupSlackTeam
+}
+
+object AddSlackTeam extends SlackAuthenticatedActionHelper[AddSlackTeam]("add_slack_team")
+case class AddSlackTeam() extends SlackAuthenticatedAction {
+  type A = AddSlackTeam
+  def helper = AddSlackTeam
+}
+
+object ConnectSlackTeam extends SlackAuthenticatedActionHelper[ConnectSlackTeam]("connect_slack_team")
+@json case class ConnectSlackTeam(organizationId: Id[Organization]) extends SlackAuthenticatedAction {
+  type A = ConnectSlackTeam
+  def helper = ConnectSlackTeam
+}
+
+object CreateSlackTeam extends SlackAuthenticatedActionHelper[CreateSlackTeam]("create_slack_team")
+case class CreateSlackTeam() extends SlackAuthenticatedAction {
+  type A = CreateSlackTeam
+  def helper = CreateSlackTeam
+}
+
+object SyncPublicChannels extends SlackAuthenticatedActionHelper[SyncPublicChannels]("sync_public_channels")
+case class SyncPublicChannels() extends SlackAuthenticatedAction {
+  type A = SyncPublicChannels
+  def helper = SyncPublicChannels
 }
 
 object Authenticate extends SlackAuthenticatedActionHelper[Authenticate]("authenticate")
@@ -89,22 +113,35 @@ object SlackAuthenticatedActionHelper {
     TurnOnLibraryPush,
     TurnOnChannelIngestion,
     SetupSlackTeam,
+    AddSlackTeam,
+    ConnectSlackTeam,
+    CreateSlackTeam,
+    SyncPublicChannels,
     Authenticate
   )
 
+  private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
   def getInstanceFormat[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Format[A] = actionHelper match {
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
     case TurnOnLibraryPush => implicitly[Format[TurnOnLibraryPush]]
     case TurnOnChannelIngestion => implicitly[Format[TurnOnChannelIngestion]]
     case SetupSlackTeam => implicitly[Format[SetupSlackTeam]]
-    case Authenticate => Format(Reads.pure(Authenticate()), Writes[Authenticate](_ => Json.obj()))
+    case AddSlackTeam => formatPure(AddSlackTeam())
+    case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
+    case CreateSlackTeam => formatPure(CreateSlackTeam())
+    case SyncPublicChannels => formatPure(SyncPublicChannels())
+    case Authenticate => formatPure(Authenticate())
   }
 
   def getRequiredScopes[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Set[SlackAuthScope] = actionHelper match {
     case SetupLibraryIntegrations => SlackAuthScope.push
     case TurnOnLibraryPush => SlackAuthScope.push
     case TurnOnChannelIngestion => SlackAuthScope.ingest
-    case SetupSlackTeam => SlackAuthScope.teamSetup
+    case SetupSlackTeam => SlackAuthScope.syncPublicChannels
+    case AddSlackTeam => SlackAuthScope.teamSetup
+    case ConnectSlackTeam => SlackAuthScope.teamSetup
+    case CreateSlackTeam => SlackAuthScope.teamSetup
+    case SyncPublicChannels => SlackAuthScope.syncPublicChannels
     case Authenticate => SlackAuthScope.userSignup
   }
 }
