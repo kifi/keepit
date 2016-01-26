@@ -39,6 +39,7 @@ class SlackTeamCommanderImpl @Inject() (
   libToChannelRepo: LibraryToSlackChannelRepo,
   channelRepo: SlackChannelRepo,
   slackClient: SlackClientWrapper,
+  slackOnboarder: SlackOnboarder,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
@@ -183,6 +184,7 @@ class SlackTeamCommanderImpl @Inject() (
     }
     (teamOpt, membershipOpt) match {
       case (Some(team), Some(membership)) if membership.token.isDefined && team.organizationId.isDefined =>
+        slackOnboarder.talkAboutTeam(team, membership)
         slackClient.getChannels(membership.token.get, excludeArchived = true).map { channels =>
           def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || integratedChannelIds.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
           val newLibraries = channels.sortBy(_.createdAt).collect {
