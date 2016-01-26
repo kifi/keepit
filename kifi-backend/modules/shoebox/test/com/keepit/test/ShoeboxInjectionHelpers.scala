@@ -2,6 +2,7 @@ package com.keepit.test
 
 import com.google.inject.Injector
 import com.keepit.commanders._
+import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.FakeSlickSessionProvider
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
@@ -78,6 +79,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def paidPlanRepo(implicit injector: Injector) = inject[PaidPlanRepo]
   def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
   def deepLinkRouter(implicit injector: Injector) = inject[DeepLinkRouter].asInstanceOf[DeepLinkRouterImpl]
+  def kifiUrlRedirectHelper(implicit injector: Injector) = inject[KifiUrlRedirectHelper]
   def paidAccountRepo(implicit injector: Injector) = inject[PaidAccountRepo]
   def accountEventRepo(implicit injector: Injector) = inject[AccountEventRepo]
   def creditCodeInfoRepo(implicit injector: Injector) = inject[CreditCodeInfoRepo]

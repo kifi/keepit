@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -13,20 +13,21 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time.Clock
 import com.keepit.common.util.LinkElement
-import com.keepit.heimdal.{ NonUserEventTypes, UserEventTypes, NonUserEvent, UserEvent, HeimdalServiceClient, HeimdalContextBuilderFactory }
+import com.keepit.heimdal.{ SlackEventTypes, HeimdalServiceClient, HeimdalContextBuilderFactory }
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
-import com.keepit.search.tracking.{ BasicSearchContext, SearchEventCommander, SearchAnalytics }
+import com.keepit.search.tracking.{ BasicSearchContext, SearchAnalytics }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
 import com.keepit.common.core._
 import com.keepit.common.time._
-import com.keepit.social.{ IdentityHelpers, NonUserKinds }
+import com.keepit.social.IdentityHelpers
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -54,9 +55,11 @@ class SlackSearchController @Inject() (
     searchAnalytics: SearchAnalytics,
     heimdal: HeimdalServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    kifiUrlRedirectHelper: KifiUrlRedirectHelper,
     clock: Clock,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val appConfig: FortyTwoConfig,
     implicit val ec: ExecutionContext) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   import SlackSearchController._
@@ -126,6 +129,16 @@ class SlackSearchController @Inject() (
     futureElements.imap { elements =>
       SlackCommandResponse(ResponseType.Ephemeral, Elements.formatForSlack(elements), Seq.empty)
     }
+  }
+
+  private def convertUrlToKifiRedirect(url: String, command: SlackCommandRequest, action: String): String = {
+    val trackingParams = RedirectTrackingParameters(
+      eventType = SlackEventTypes.CLICKED_SEARCH_RESULT,
+      action = action,
+      slackUserId = command.userId,
+      slackTeamId = command.teamId
+    )
+    kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
   }
 
   private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, command: SlackCommandRequest): Future[SlackCommandResponse] = {

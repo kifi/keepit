@@ -6,15 +6,17 @@ import com.keepit.commanders.{PathCommander, LibraryCommander, UserCommander}
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{PublicIdConfiguration, FakeCryptoModule}
+import com.keepit.common.crypto.{RedirectTrackingParameters, PublicIdConfiguration, FakeCryptoModule}
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{UserEventTypes, HeimdalContext}
+import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.slack.models.{SlackTeamId, SlackUserId}
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
@@ -45,7 +47,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
-    FakeCryptoModule()
+    FakeCryptoModule(),
+    FakeFortyTwoModule()
   )
 
 
@@ -54,6 +57,71 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     implicit val context = HeimdalContext.empty
 
     implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+
+    // Custom matchers, TODO: find better home
+    case class beRedirect(expectedStatus: Int, expectedUrl: String) extends Matcher[Option[Future[Result]]] {
+      def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
+        x.value map { resultF =>
+          val resStatus = status(resultF)
+          if (resStatus != expectedStatus) {
+            result(false, "", s"expected status $expectedStatus but was $resStatus", x)
+          }
+          redirectLocation(resultF) map { resUrl =>
+            result(resUrl == expectedUrl, "", s"expected redirect to $expectedUrl but was $resUrl", x)
+          } getOrElse result(false, "", "expected redirect to $expectedUrl but was None", x)
+        } getOrElse result(false, "", "request did not match any routes", x)
+      }
+    }
+    case class beLoginRedirect(expectedUrl: String) extends Matcher[Option[Future[Result]]] {
+      def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
+        x.value map { resultF =>
+          val expectedStatus = SEE_OTHER
+          val resStatus = status(resultF)
+          if (resStatus != expectedStatus) {
+            result(false, "", s"expected status $expectedStatus but was $resStatus", x)
+          }
+          val loginUrl = "/login"
+          redirectLocation(resultF) map { resUrl =>
+            if (resUrl != loginUrl) {
+              result(false, "", s"expected redirect to $loginUrl but was $resUrl", x)
+            } else {
+              val destUrl = session(resultF).get(SecureSocial.OriginalUrlKey)
+              result(destUrl == Some(expectedUrl), "", s"expected destination $expectedUrl in session cookie but was $destUrl", x)
+            }
+          } getOrElse result(false, "", "expected redirect to $expectedUrl but was None", x)
+        } getOrElse result(false, "", "request did not match any routes", x)
+      }
+    }
+    object beWebApp extends Matcher[Option[Future[Result]]] {
+      def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
+        x.value map { resultF =>
+          val expectedStatus = 200
+          val resStatus = status(resultF)
+          if (resStatus != expectedStatus) {
+            result(false, "", s"expected status $expectedStatus but was $resStatus", x)
+          }
+          val expectedContentType = Some("text/html")
+          var resContentType = contentType(resultF)
+          if (resContentType != expectedContentType) {
+            result(false, "", s"expected content type $expectedContentType but was $resContentType", x)
+          } else {
+            val expectedContent = "angular.bootstrap(document, ['kifi'])"
+            val resContent = contentAsString(resultF)
+            result(resContent.contains(expectedContent), "", s"""expected content to contain "$expectedContent" but was:\n$resContent""", x)
+          }
+        } getOrElse result(false, "", "request did not match any routes", x)
+      }
+    }
+    object be404 extends Matcher[Option[Future[Result]]] {
+      def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
+        x.value map { resultF =>
+          val expectedStatus = 404
+          val resStatus = status(resultF)
+          result(resStatus == expectedStatus, "", s"expected status $expectedStatus but was $resStatus", x)
+        } getOrElse result(true, "", "", x)
+      }
+    }
+
 
     "route correctly" in {
       running(new ShoeboxApplication(modules: _*)) {
@@ -70,70 +138,6 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         userCommander.setUsername(user2.id.get, Username("léo1221"))
 
         val actionsHelper = inject[FakeUserActionsHelper]
-
-        // Custom matchers, TODO: find better home
-        case class beRedirect(expectedStatus: Int, expectedUrl: String) extends Matcher[Option[Future[Result]]] {
-          def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
-            x.value map { resultF =>
-              val resStatus = status(resultF)
-              if (resStatus != expectedStatus) {
-                result(false, "", s"expected status $expectedStatus but was $resStatus", x)
-              }
-              redirectLocation(resultF) map { resUrl =>
-                result(resUrl == expectedUrl, "", s"expected redirect to $expectedUrl but was $resUrl", x)
-              } getOrElse result(false, "", "expected redirect to $expectedUrl but was None", x)
-            } getOrElse result(false, "", "request did not match any routes", x)
-          }
-        }
-        case class beLoginRedirect(expectedUrl: String) extends Matcher[Option[Future[Result]]] {
-          def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
-            x.value map { resultF =>
-              val expectedStatus = SEE_OTHER
-              val resStatus = status(resultF)
-              if (resStatus != expectedStatus) {
-                result(false, "", s"expected status $expectedStatus but was $resStatus", x)
-              }
-              val loginUrl = "/login"
-              redirectLocation(resultF) map { resUrl =>
-                if (resUrl != loginUrl) {
-                  result(false, "", s"expected redirect to $loginUrl but was $resUrl", x)
-                } else {
-                  val destUrl = session(resultF).get(SecureSocial.OriginalUrlKey)
-                  result(destUrl == Some(expectedUrl), "", s"expected destination $expectedUrl in session cookie but was $destUrl", x)
-                }
-              } getOrElse result(false, "", "expected redirect to $expectedUrl but was None", x)
-            } getOrElse result(false, "", "request did not match any routes", x)
-          }
-        }
-        object beWebApp extends Matcher[Option[Future[Result]]] {
-          def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
-            x.value map { resultF =>
-              val expectedStatus = 200
-              val resStatus = status(resultF)
-              if (resStatus != expectedStatus) {
-                result(false, "", s"expected status $expectedStatus but was $resStatus", x)
-              }
-              val expectedContentType = Some("text/html")
-              var resContentType = contentType(resultF)
-              if (resContentType != expectedContentType) {
-                result(false, "", s"expected content type $expectedContentType but was $resContentType", x)
-              } else {
-                val expectedContent = "angular.bootstrap(document, ['kifi'])"
-                val resContent = contentAsString(resultF)
-                result(resContent.contains(expectedContent), "", s"""expected content to contain "$expectedContent" but was:\n$resContent""", x)
-              }
-            } getOrElse result(false, "", "request did not match any routes", x)
-          }
-        }
-        object be404 extends Matcher[Option[Future[Result]]] {
-          def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
-            x.value map { resultF =>
-              val expectedStatus = 404
-              val resStatus = status(resultF)
-              result(resStatus == expectedStatus, "", s"expected status $expectedStatus but was $resStatus", x)
-            } getOrElse result(true, "", "", x)
-          }
-        }
 
         // Site root
         actionsHelper.unsetUser
@@ -346,8 +350,46 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         val kid = Keep.publicId(deepLinkKeep.id.get)
         val uriExtId = db.readOnlyMaster(implicit s => uriRepo.get(keep.uriId).externalId)
         actionsHelper.setUser(user1)
-        val request = FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22m%22%2C%22uri%22%3A%22${uriExtId}%22%2C%22id%22%3A%22${kid.id}%22%7D")
+        val request = FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22m%22%2C%22uri%22%3A%22$uriExtId%22%2C%22id%22%3A%22${kid.id}%22%7D")
         contentAsString(route(request).get) must contain(keep.path.relative)
+      }
+    }
+
+    "encrypt and decrypt urls using KifiUrlRedirectHelper" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        withInjector(modules: _*) { implicit injector =>
+          implicit val testConfig = FakeFortyTwoModule().fortytwoConfig
+
+          // encrypt/decrypt extra params correctly
+          val trackingParams = RedirectTrackingParameters(
+            eventType = UserEventTypes.CLICKED_SEARCH_RESULT,
+            action = "clickedSomething",
+            slackUserId = SlackUserId("slacker"),
+            slackTeamId = SlackTeamId("slackers")
+          )
+
+          // route correctly
+          val url = "www.google.com"
+          val wrappedUrl = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
+            .drop(testConfig.applicationBaseUrl.length) // omit host to route properly from test
+          route(FakeRequest("GET", wrappedUrl)) must beRedirect(SEE_OTHER, url)
+
+          // route incorrectly on bad urls
+          val maliciousUrl = "/url?s=7ffe96665c78152208bf6c026027d50c5ace165b-1453416519729-www.googol.com"
+          route(FakeRequest("GET", maliciousUrl)) must beRedirect(SEE_OTHER, "/")
+
+          // encrypt/decrypt extra params correctly
+          val wrappedUrl2 = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
+          val request = FakeRequest("GET", wrappedUrl2)
+          val signedUrl = request.queryString("s").head
+          val signedContext = request.queryString("t").head
+          kifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, Some(signedContext)).map {
+            case (confirmedUrl, trackingParamsOpt) =>
+              confirmedUrl must beEqualTo(url)
+              trackingParamsOpt must beSome(trackingParams)
+          }
+          1===1
+        }
       }
     }
   }

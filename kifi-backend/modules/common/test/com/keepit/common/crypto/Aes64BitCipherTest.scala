@@ -9,11 +9,17 @@ class Aes64BitCipherTest extends Specification {
   val cipher = Aes64BitCipher("L0i5 L4n3", new IvParameterSpec("Jared = Superman".getBytes(ISO_8859_1)))
 
   "Aes64BitCipher" should {
-    "encrypt and decrypt" in {
+    "encrypt and decrypt longs" in {
       val plaintext = new java.util.Random().nextLong()
       val encrypted = cipher.encrypt(plaintext)
       encrypted !== plaintext
       cipher.decrypt(encrypted) === plaintext
+    }
+    "encrypt and decrypt strings" in {
+      val plainText = scala.util.Random.nextString(10)
+      val encrypted = cipher.encrypt(plainText)
+      encrypted !== plainText
+      cipher.decrypt(encrypted) === plainText
     }
     "permute bits well in consecutive long values" in {
       cipher.encrypt(Long.MinValue + 0) === -3204341755763582410L
