@@ -24,7 +24,7 @@ const l = function logTaggedTemplateString(strings, values) {
 };
 
 var api = api || (function () {
-  var isPackaged = false;//!!chrome.runtime.getManifest().update_url;
+  var isPackaged = ~safari.extension.displayVersion.indexOf('dev');
   var doLogging = !isPackaged;
 
   var urlWithoutPathRe = /^https?:\/\/[^\/]+/;
@@ -80,7 +80,7 @@ var api = api || (function () {
           var kind = m[0];
           var toEmitData = m[1];
           if (page._handling[m[0]]) {
-            log(CGREEN, '[api:handling:emit] %s %s %o', page.id, kind, toEmitData != null ? toEmitData : '');
+            l`${CGREEN} [api:handling:emit] %s${page.id} %s${kind} %o${toEmitData != null ? toEmitData : ''}`;
             page._port.postMessage(kind, toEmitData);
             toEmit.splice(i, 1);
           } else {
@@ -100,15 +100,18 @@ var api = api || (function () {
       var {injected} = data;
       if (page) {
         if (page.url === tab.url) {
-          log('[api:onDOMContentLoaded] %s %s', tab.id, tab.url);
+          l`[api:onDOMContentLoaded] %s${tab.id} %s${tab.url}`;
         } else {
-          log(CRED, '[api:onDOMContentLoaded] %s url mismatch:\n%s\n%s', tab.id, tab.url, page.url);
+          l`${CRED}[api:onDOMContentLoaded] %s${tab.id} url mismatch:\n%s${tab.url}\n%s${page.url}`;
         }
         injectContentScripts(page, injected);
         respond();
         api.tabs.on.loading.dispatch(pages[tab.id]);
+        if (doLogging) {
+          page._port.postMessage('api:log', true);
+        }
       } else {
-        log(CRED, '[api:onDOMContentLoaded] no page for', tab.id, tab.url);
+        l`${CRED}[api:onDOMContentLoaded] no page for %s${tab.id} %s${tab.url}`; //', tab.id, tab.url);
       }
     },
     'api:require': function (data, respond, page) {
@@ -134,7 +137,7 @@ var api = api || (function () {
   };
 
   function onPageShow(tabId, url) {
-    log('#666', '[onCommitted]', tabId, url);
+    l`${CGRAY}[onCommitted] %s${tabId} %s${url}`;
     if (pages[tabId]) {
       removeTab(tabId);
     }
@@ -216,10 +219,10 @@ var api = api || (function () {
     var kind = e.name, data = e.message.data, callbackId = e.message.callbackId;
     var handler = portHandlers[kind];
     if (handler) {
-      log(CGREEN, '[onMessage] %s %s', page.id, kind, data != null ? (data.join ? data.join(' ') : data) : '');
+      l`${CGREEN}[onMessage] %s %s', page.id, kind, data != null ? (data.join ? data.join(' ') : data) : '')`;
       handler(data, respondToTab.bind(null, page, callbackId), page);
     } else {
-      log(CRED, '[onMessage] %s %s %s %O %s', page.id, kind, 'ignored, page:', page, 'handler:', !!handler);
+      l`${CRED}[onMessage] %s${page.id} %s${kind} ignored, page: %O${page} handler: %s${!!handler}`;
     }
   }
 
@@ -253,10 +256,10 @@ var api = api || (function () {
     var target = e.target;
     var isWindow = !!target.tabs;
     if (isWindow) {
-      log('[window.open]');
+      l`[window.open]`;
       initWindow(target);
     } else {
-      log('[tab.open]');
+      l`[tab.open]`;
       initTab(target);
     }
   }, true);
@@ -281,14 +284,14 @@ var api = api || (function () {
   function onWindowActivate(e) {
     var win = e.target;
     var tab = win.activeTab;
-    log(CGRAY, '[tabs.windowActivate] %s %s', tab.id, tab.url);
+    l`${CGRAY}[tabs.windowActivate] %s${tab.id} %s${tab.url}`;
     api.tabs.on.focus.dispatch(pages[tab.id]);
   }
 
   function onWindowDeactivate(e) {
     var win = e.target;
     var tab = win.activeTab;
-    log(CGRAY, '[tabs.windowDeactivate] %s %s', tab.id, tab.url);
+    l`${CGRAY}[tabs.windowDeactivate] %s${tab.id} %s${tab.url}`;
     api.tabs.on.blur.dispatch(pages[tab.id]);
   }
 
@@ -298,7 +301,7 @@ var api = api || (function () {
         if (httpRe.test(tab.url)) {
           tab.page.dispatchMessage(kind, data);
         } else {
-          log(CRED, '[page.postMessage] unable to send event %s %O to %s', kind, data, tab.url);
+          l`${CRED}[page.postMessage] unable to send event %s${kind} %O${data} to %s${tab.url}`;
         }
       },
       disconnect: function () {
@@ -329,12 +332,12 @@ var api = api || (function () {
     var page = pages[tab.id] || createPage(tab.id, tab.url, port);
 
     tab.addEventListener('activate', function (e) {
-      log(CGRAY, '[tabs.activate] %s %s', tab.id, tab.url);
+      l`${CGRAY}[tabs.activate] %s${tab.id} %s${tab.url}`;
       api.tabs.on.focus.dispatch(pages[tab.id]);
     });
 
     tab.addEventListener('deactivate', function (e) {
-      log(CGRAY, '[tabs.deactivate] %s %s', tab.id, tab.url);
+      l`${CGRAY}[tabs.deactivate] %s${tab.id} %s${tab.url}`;
       api.tabs.on.blur.dispatch(pages[tab.id]);
     });
 
@@ -354,7 +357,7 @@ var api = api || (function () {
         try {
           query = decodeURIComponent(match[1].replace(plusRe, ' ')).trim();
         } catch (e) {
-          log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
+          l`[onBeforeNavigate] non-UTF-8 search query: %s${match[1]} %O${e}`; // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
         }
         if (query) {
           api.on.search.dispatch(query, ~url.indexOf('sourceid=chrome') ? 'o' : 'n');
@@ -364,11 +367,11 @@ var api = api || (function () {
 
     tab.addEventListener('navigate', function (e) {
       // Tends to happen before DOMContentLoaded.
-      log(CGRAY, '[tabs.navigate] %s %s', tab.id, tab.url);
+      l`${CGRAY}[tabs.navigate] %s${tab.id} %s${tab.url}`;
     });
 
     tab.addEventListener('close', function (e) {
-      log(CGRAY, '[tabs.close] %s %s', tab.id, tab.url);
+      l`${CGRAY}[tabs.close] %s${tab.id} %s${tab.url}`;
       var page = pages[tab.id];
       page._port.disconnect();
       removeTab(tab.id);
@@ -493,7 +496,7 @@ var api = api || (function () {
     },
     socket: {
       open: function (url, handlers, onConnect, onDisconnect) {
-        log('[api.socket.open]', url);
+        l`[api.socket.open] %s${url}`;
         var sc, rws = new ReconnectingWebSocket(url, {
           onConnect: errors.wrap(function () {
             sc.onConnect();
@@ -574,7 +577,7 @@ var api = api || (function () {
         var page = pages[tab.id];
         if (page && (page === tab || page.url.match(hostRe)[0] === tab.url.match(hostRe)[0])) {
           if ((page._handling || {})[type]) {
-            log(CGREEN, '[api.tabs.emit] %s %s %O', tab.id, type, data);
+            l`CGREEN, '[api.tabs.emit] %s${tab.id} %s${type} %O${data}`;
             page._port.postMessage(type, data);
           } else if (opts && opts.queue) {
             var toEmit = page.toEmit;
@@ -594,7 +597,7 @@ var api = api || (function () {
             }
           }
         } else {
-          log(CRED, '[api.tabs.emit] suppressed %s %s navigated: %s -> %s', tab.id, type, tab.url, page && page.url);
+          l`${CRED}[api.tabs.emit] suppressed %s${tab.id} %s${type} navigated: %s${tab.url} -> %s${page && page.url}`;
         }
       },
       get: function (tabId) {

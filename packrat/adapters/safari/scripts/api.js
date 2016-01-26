@@ -1,3 +1,26 @@
+var log = log || function () {
+  'use strict';
+  function log() {
+    var buf = log.buffer;
+    if (buf) {
+      var i = 0, d = Date.now();
+      while (i < buf.length && d - buf[i].d > 5000) {
+        i++;
+      }
+      if (i) {
+        log.buffer = buf.slice(i);
+      }
+      log.buffer.push({d: d, args: Array.prototype.slice.call(arguments)});
+    } else {
+      var ms = (this || Date.now()) % 1000;
+      arguments[0] = (ms < 100 ? ms < 10 ? '00' + ms : '0' + ms : ms) + ' ' + arguments[0];
+      console.log.apply(console, arguments);
+    }
+  }
+  log.buffer = [];
+  return log;
+}();
+
 // Safari Content API
 var api = api || (function () {
   var msgHandlers = [];
@@ -259,37 +282,4 @@ function onPageShow(e) {
 
 if (window.top === window) {
   onApiConnect();
-}
-
-// var log = log || function () {
-//   'use strict';
-//   function log() {
-//     var buf = log.buffer;
-//     if (buf) {
-//       var i = 0, d = Date.now();
-//       while (i < buf.length && d - buf[i].d > 5000) {
-//         i++;
-//       }
-//       if (i) {
-//         log.buffer = buf.slice(i);
-//       }
-//       log.buffer.push({d: d, args: Array.prototype.slice.call(arguments)});
-//     } else {
-//       var ms = (this || Date.now()) % 1000;
-//       arguments[0] = (ms < 100 ? ms < 10 ? '00' + ms : '0' + ms : ms) + ' ' + arguments[0];
-//       console.log.apply(console, arguments);
-//     }
-//   }
-//   log.buffer = [];
-//   return log;
-// }();
-function log(a0) {
-  'use strict';
-  var hexRe = /^#[0-9a-f]{3}$/i;
-  var args = arguments;
-  if (hexRe.test(a0)) {
-    args[0] = '%c' + args[1];
-    args[1] = 'color:' + a0;
-  }
-  console.log.apply(console, args);
 }

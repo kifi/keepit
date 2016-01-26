@@ -31,7 +31,7 @@ var outDir = 'out';
 
 var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'];
 var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
-var safariAdapterFiles = ['adapters/safari/**', '!adapters/safari/Info.plist.json'];
+var safariAdapterFiles = ['adapters/safari/**', '!adapters/safari/*.plist.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
 var firefoxScriptModuleFiles = ['**/scripts/**/*.js', '!scripts/lib/jquery.js', '!scripts/lib/mustache.js', '!scripts/lib/underscore.js'];
@@ -507,7 +507,8 @@ gulp.task('config', ['copy'], function () {
   var safariConfig = gulp.src('adapters/safari/Info.plist.json')
     .pipe(rename('safari/kifi.safariextension/Info.plist'))
     .pipe(jeditor(function(json) {
-      json.CFBundleShortVersionString = json.CFBundleVersion = version;
+      json.CFBundleVersion = version;
+      json.CFBundleShortVersionString = version + (target === 'local' ? '-dev' : '');
       return json;
     }))
     .pipe(map(function (jsonBuffer) {
