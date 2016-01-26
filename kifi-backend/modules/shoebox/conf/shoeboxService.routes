@@ -49,6 +49,8 @@ GET     /connect/:provider          @com.keepit.controllers.core.AuthController.
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
+GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
+
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, intent: Option[String] ?= None, modelPubId: Option[String] ?= None, authToken: Option[String] ?= None)
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)

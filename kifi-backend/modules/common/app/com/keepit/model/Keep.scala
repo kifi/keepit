@@ -201,14 +201,14 @@ object KeepSource {
   val slack = KeepSource("slack")
   val discussion = KeepSource("discussion")
 
-  val imports = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport)
+  val imports = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport, slack)
 
   // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
   // These may be old links
   val bulk = imports ++ Set(userCopied, unknown, discussion)
 
   // One-at-a-time keeps
-  val discrete = Set(keeper, site, mobile, email, twitterSync, slack)
+  val discrete = Set(keeper, site, mobile, email, twitterSync)
 
   val manual = Set(keeper, site, mobile, email)
 
