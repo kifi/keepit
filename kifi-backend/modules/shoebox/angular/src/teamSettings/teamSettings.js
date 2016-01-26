@@ -127,14 +127,14 @@ angular.module('kifi')
         heading: 'Integrations',
         fields: [
           {
-            title: 'Who can create a Slack integration with Kifi?',
+            title: 'Who can create and edit Slack integrations with Kifi?',
             description: (
-              'Select who is able to create a Slack integration with Kifi.' +
+              'Select who is able to create and edit Slack integrations with Kifi.' +
               ' Integrating with Slack will automatically send all keeps from' +
               ' a particular library to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ANYONE),
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
             trackingValue: 'slack_integration_dropdown'
           },
           {

@@ -505,4 +505,31 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       }
     }
   }
+
+  "slack settings" should {
+    "be configurable with CREATE_SLACK_INTEGRATION permission" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org, owner, admin, member, _) = setup()
+
+        val orgPubId = Organization.publicId(org.id.get)
+
+        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.CreateSlackIntegration -> FeatureSetting.DISABLED) }
+        val alteredSlackSettings = OrganizationSettings(Map(Feature.SlackIngestionReaction -> FeatureSetting.ENABLED, Feature.SlackDigestNotification -> FeatureSetting.DISABLED))
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, initOrgSettings)) must beRight
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, alteredSlackSettings)) must beLeft(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, OrganizationSettings(Map(Feature.CreateSlackIntegration -> FeatureSetting.ADMINS)))) must beRight
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, alteredSlackSettings)) must beRight
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, member.id.get, alteredSlackSettings)) must beLeft(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, OrganizationSettings(Map(Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS)))) must beRight
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, member.id.get, alteredSlackSettings)) must beRight
+      }
+    }
+  }
 }
