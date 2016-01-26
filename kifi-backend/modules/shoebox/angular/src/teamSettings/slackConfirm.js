@@ -11,7 +11,7 @@ angular.module('kifi')
       $scope.hasInstalled = false;
       $scope.canInstall = installService.canInstall;
     }
-
+    $scope.platform = installService.getPlatformName();
     $scope.teamLink = 'https://www.kifi.com/kyfy/asf';
 
     $scope.showCopied =  function () {
