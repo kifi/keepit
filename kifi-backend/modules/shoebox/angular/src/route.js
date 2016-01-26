@@ -227,19 +227,11 @@ angular.module('kifi')
         activenav: 'integrations'
       })
       .state('orgProfile.settings.integrationsSlackConfirm', {
-        url: '/integrations/slack-confirm',
+        url: '/integrations/slack-confirm?&:slackTeamId',
         controller: 'SlackConfirmCtrl',
         templateUrl: 'teamSettings/slackConfirm.tpl.html',
         activetab: 'settings',
         activenav: 'integrations',
-        resolve: {
-          profile: [
-            'profile',
-            function (profile) {
-              return profile;
-            }
-          ]
-        }
       })
       .state('teams', {
         url: '/teams',
