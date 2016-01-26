@@ -138,6 +138,7 @@ class UserThreadRepoImpl @Inject() (
       case None => unmutedRows
     }
     val filteredRows = filter match {
+      case FeedFilter.All => rowsBeforeId
       case FeedFilter.Unread => rowsBeforeId.filter(_.unread)
       case FeedFilter.Sent => rowsBeforeId.filter(_.startedBy === userId)
       case unknown => throw new Exception(s"invalid ElizaFeedFilter $unknown")
