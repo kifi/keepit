@@ -231,7 +231,7 @@ angular.module('kifi')
         controller: 'SlackConfirmCtrl',
         templateUrl: 'teamSettings/slackConfirm.tpl.html',
         activetab: 'settings',
-        activenav: 'integrations',
+        activenav: 'integrations'
       })
       .state('teams', {
         url: '/teams',
