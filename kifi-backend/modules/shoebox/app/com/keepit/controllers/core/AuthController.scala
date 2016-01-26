@@ -633,4 +633,8 @@ class AuthController @Inject() (
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
   }
+
+  def connectWithSlack = MaybeUserAction { implicit request =>
+    Ok(views.html.authMinimal.connectWithSlack()).withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
+  }
 }
