@@ -65,7 +65,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
-  def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam
+  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
 }
@@ -162,13 +162,13 @@ class SlackTeamRepoImpl @Inject() (
     }
   }
 
-  def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam = {
-    getBySlackTeamId(identity.teamId, excludeState = None) match {
+  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam = {
+    getBySlackTeamId(teamId, excludeState = None) match {
       case Some(team) if team.isActive =>
-        val updatedTeam = team.withName(identity.teamName)
+        val updatedTeam = team.withName(teamName)
         if (team == updatedTeam) team else save(updatedTeam)
       case inactiveTeamOpt =>
-        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = identity.teamId, slackTeamName = identity.teamName, organizationId = None, generalChannelId = None)
+        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = teamId, slackTeamName = teamName, organizationId = None, generalChannelId = None)
         save(newTeam)
     }
   }

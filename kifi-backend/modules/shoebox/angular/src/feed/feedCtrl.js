@@ -45,6 +45,7 @@ angular.module('kifi')
     });
 
     var messageFilters = [
+      { value: 'all', text: 'All Discussions'},
       { value: 'unread', text: 'Unread' },
       { value: 'sent', text: 'Sent' }
     ];

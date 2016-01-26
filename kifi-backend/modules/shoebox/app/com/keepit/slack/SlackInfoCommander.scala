@@ -10,6 +10,7 @@ import com.keepit.common.json.{ KeyFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.website.SlackController
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -81,6 +82,7 @@ class SlackInfoCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   libRepo: LibraryRepo,
   orgInfoCommander: OrganizationInfoCommander,
+  slackStateCommander: SlackAuthStateCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -218,7 +220,7 @@ class SlackInfoCommanderImpl @Inject() (
 
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
-    val link = com.keepit.controllers.website.routes.SlackController.connectSlackTeam(Organization.publicId(orgId)).url
+    val link = slackStateCommander.getAuthLink(SetupSlackTeam(Some(orgId)), None, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
       slackTeams,

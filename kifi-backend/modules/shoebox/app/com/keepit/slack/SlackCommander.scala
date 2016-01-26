@@ -68,6 +68,7 @@ class SlackCommanderImpl @Inject() (
       scopes = identity.scopes,
       slackUser = identity.user
     ))
+    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName)
     autojoinOrganization(membership)
     isNewIdentityOwner
   }
