@@ -112,7 +112,7 @@ class SlackChannelDigestNotificationActor @Inject() (
     import DescriptionElements._
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
       DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
-        digest.slackChannel.slackChannelName.value, withinTheLast(digest.timeSinceLastDigest)),
+        digest.slackChannel.slackChannelName.value, inTheLast(digest.timeSinceLastDigest)),
       DescriptionElements("You can browse through them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
     )))).quiet

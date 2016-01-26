@@ -180,7 +180,7 @@ class SlackTeamDigestNotificationActor @Inject() (
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
       DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, withinTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
