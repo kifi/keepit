@@ -287,7 +287,7 @@ class MessagingCommander @Inject() (
         source = source,
         sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(thread.url)),
         sentOnUriId = Some(thread.uriId)
-      ))
+      )) tap { msg => userThreadRepo.registerMessage(msg) }
     }
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
