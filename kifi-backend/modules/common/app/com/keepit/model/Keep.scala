@@ -353,6 +353,7 @@ object FeedFilter {
   case class OrganizationKeeps(orgId: Id[Organization]) extends ShoeboxFeedFilter("org")
   case object Unread extends ElizaFeedFilter("unread")
   case object Sent extends ElizaFeedFilter("sent")
+  case object All extends ElizaFeedFilter("all")
 
   def apply(kind: String, id: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Option[FeedFilter] = kind match {
     case OwnKeeps.kind => Some(OwnKeeps)
@@ -365,6 +366,7 @@ object FeedFilter {
   def toElizaFilter(kind: String): Option[ElizaFeedFilter] = kind match {
     case Unread.kind => Some(Unread)
     case Sent.kind => Some(Sent)
+    case All.kind => Some(All)
     case _ => None
   }
 
