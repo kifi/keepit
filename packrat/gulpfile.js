@@ -162,7 +162,7 @@ gulp.task('copy', function () {
         // This is necessary, otherwise an empty 'adapters/chrome' folder is created
         path.dirname = '.';
       }
-      path.dirname = path.dirname.replace(/^adapters\/safari\/?/, 'kifi.safariextension/');
+      path.dirname = path.dirname.replace(/^adapters\/safari\/?/, 'safari/kifi.safariextension/');
     }))
     .pipe(map(removeMostJsComments))
     .pipe(webkitInjectionFooter())
@@ -180,7 +180,7 @@ gulp.task('copy', function () {
     .pipe(cache('shared-adapters'))
     .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
   var resources = gulp.src(resourceFiles, { base: './' })
@@ -201,13 +201,13 @@ gulp.task('copy', function () {
   var safariResources = resources.pipe(clone())
     .pipe(rename(function () {}))
     .pipe(webkitInjectionFooter())
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   var chromeIcons = gulp.src('icons/kifi.{48,128,256}.png')
     .pipe(gulp.dest(outDir + '/chrome/icons'));
 
   var safariIcons = gulp.src('icons/kifi.{128,256,monochrome*}.png')
-    .pipe(gulp.dest(outDir + '/kifi.safariextension/icons'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension/icons'));
 
   var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')
     .pipe(gulp.dest(outDir + '/firefox/data/icons'));
@@ -215,7 +215,7 @@ gulp.task('copy', function () {
   var rwsocket = gulp.src(rwsocketScript)
     .pipe(cache('rwsocket'))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
   var scripts = backgroundScripts.concat(target === 'local' ? localBackgroundScripts : []);
@@ -224,7 +224,7 @@ gulp.task('copy', function () {
     .pipe(cache('background'))
     .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/lib'))
     .pipe(filenames('firefox-deps'));
 
@@ -266,7 +266,7 @@ gulp.task('html2js', function () {
 
   var safari = common.pipe(clone())
     .pipe(webkitInjectionFooter())
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
 
   return es.merge(firefox, chrome, safari);
@@ -334,7 +334,7 @@ gulp.task('styles', function () {
   stylePipe
     .pipe(clone())
     .pipe(mainStylesOnly(safarify))
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   return stylePipe;
 });
@@ -456,7 +456,7 @@ gulp.task('meta', function () {
         "};\nif (/^Mac/.test(navigator.platform)) {\n  meta.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/kifi.safariextension'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   var firefoxMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
@@ -493,14 +493,6 @@ gulp.task('config', ['copy'], function () {
     .pipe(jeditor(function(json) {
       json.version = version;
       json.updateLink = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi';
-      return json;
-    }))
-    .pipe(gulp.dest(outDir));
-
-  var safariConfig = gulp.src('adapters/safari/Info.plist.json')
-    .pipe(rename('kifi.safariextension/Info.plist'))
-    .pipe(jeditor(function(json) {
-      json.CFBundleShortVersionString = json.CFBundleVersion = version;
 
       if (!listed) {
         // updateURL is invalid for listed addons
@@ -510,13 +502,34 @@ gulp.task('config', ['copy'], function () {
 
       return json;
     }))
+    .pipe(gulp.dest(outDir));
+
+  var safariConfig = gulp.src('adapters/safari/Info.plist.json')
+    .pipe(rename('safari/kifi.safariextension/Info.plist'))
+    .pipe(jeditor(function(json) {
+      json.CFBundleShortVersionString = json.CFBundleVersion = version;
+      return json;
+    }))
     .pipe(map(function (jsonBuffer) {
       var json = JSON.parse(jsonBuffer.toString());
       return plist.build(json);
     }))
     .pipe(gulp.dest(outDir));
 
-  return es.merge(chromeConfig, safariConfig, firefoxConfig);
+  var safariUpdates = gulp.src('adapters/safari/KifiUpdates.plist.json')
+    .pipe(rename('safari/KifiUpdates.plist'))
+    .pipe(jeditor(function(json) {
+      var updateObj = json['Extension Updates'][0];
+      updateObj.CFBundleShortVersionString = updateObj.CFBundleVersion = version;
+      return json;
+    }))
+    .pipe(map(function (jsonBuffer) {
+      var json = JSON.parse(jsonBuffer.toString());
+      return plist.build(json);
+    }))
+    .pipe(gulp.dest(outDir));
+
+  return es.merge(chromeConfig, safariConfig, safariUpdates, firefoxConfig);
 });
 
 gulp.task('build', ['scripts', 'styles', 'meta', 'config']);

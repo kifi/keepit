@@ -15,12 +15,27 @@ elif [[ ! -f amo_secret.key ]]; then
   echo $'\n(it\'s just a plaintext file with the secret key from addons.mozilla.com)'
   exit 1
 
+elif [[ ! -f certs/privatekey.pem ]]; then
+
+  echo $'\nERROR: need certs/*.pem for signing Safari extensions (ask Carlos or Andrew).'
+  echo $'\n(Good instructions are here: https://github.com/robertknight/xar-js/blob/master/README.md#building-a-safari-extension)'
+  exit 1
+
 elif ! which -s xpisign; then
 
   echo $'\nERROR: need to install xpisign'
   which -s swig || echo '  brew install swig'
   which -s pip || echo '  sudo easy_install pip'
   echo '  sudo pip install https://github.com/nmaier/xpisign.py/zipball/master'
+  exit 1
+
+elif ! which -s xarjs; then
+
+  # TODO(carlos): update instructions when new version of package >0.1.2
+  # is released on npm.
+  echo $'\nERROR: need to install xarjs for signing Safari extension'
+  echo 'npm install https://github.com/robertknight/xar-js/tarball/master &&'
+  echo 'cd node_modules/xar-js && npm install && make && npm link'
   exit 1
 
 elif ! which -s aws; then
@@ -32,8 +47,8 @@ elif ! which -s aws; then
 
 elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
-  echo $'\nDeploying REAL Firefox extension to kifi.com'
-  read -p 'Press Enter or Ctrl-C '
+  echo $'\nDeploying REAL extensions to kifi.com'
+  read -p 'Press Enter or Ctrl-C'
 
   REVIEW_STATUS_CODE=0
   bin/review.sh || REVIEW_STATUS_CODE=$?
@@ -47,7 +62,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
   if [[ -f out/kifi-signed.xpi ]]; then
 
-    echo 'Uploading to S3...'
+    echo 'Uploading Firefox to S3...'
 
     aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.xpi \
       --content-type 'application/x-xpinstall' --body out/kifi-signed.xpi \
@@ -59,6 +74,34 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   else
 
     echo 'Not uploading to S3: listed addons are hosted by Mozilla'
+
+  fi
+
+  echo $'\nSigning Safari extension...'
+  ( \
+    cd out/safari &&
+    exec ../../node_modules/xar-js/xarjs create ../kifi.safariextz \
+      --cert ../../certs/cert.pem \
+      --cert ../../certs/apple-intermediate.pem \
+      --cert ../../certs/apple-root.pem \
+      --private-key ../../certs/privatekey.pem \
+      kifi.safariextension \
+  )
+
+  if [[ -f out/kifi.safariextz ]]; then
+
+    echo 'Uploading Safari to S3...'
+
+    aws s3api put-object --bucket kifi-bin --key ext/safari/kifi.safariextz \
+      --content-type 'application/octet-stream' --body out/kifi.safariextz \
+      --cache-control 'no-cache, no-store'
+    aws s3api put-object --bucket kifi-bin --key ext/safari/KifiUpdates.plist \
+      --content-type 'text/xml' --body out/safari/KifiUpdates.plist \
+      --cache-control 'no-cache, no-store'
+
+  else
+
+    echo 'Failed. Safari extension is not present?'
 
   fi
 

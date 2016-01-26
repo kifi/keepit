@@ -121,8 +121,28 @@ var api = api || (function () {
     },
     'api:unload': function (data, respond, page) {
       l`[api:unload] %s${page.id} %s${page.url}`;
+    },
+    'api:pagehide': function (data, respond, page) {
+      l`[api:pagehide] %s${page.id} %s${page.url}`;
+      //api.tabs.on.loading.dispatch();
+    },
+    'api:pageshow': function (data, respond, page) {
+      l`[api:pageshow] %s${page.id} %s${page.url}`;
+      api.tabs.on.loading.dispatch(page);
+      // onPageShow(page.id, data.url);
     }
   };
+
+  function onPageShow(tabId, url) {
+    log('#666', '[onCommitted]', tabId, url);
+    if (pages[tabId]) {
+      removeTab(tabId);
+    }
+    var page = createPage(tabId, url);
+    if (httpRe.test(page.url)) {
+      api.tabs.on.loading.dispatch(page);
+    }
+  }
 
   function injectWithDeps(page, paths, injected, callback) {
     var {scripts, styles} = deps(paths, injected);

@@ -215,6 +215,8 @@ function onApiConnect() {
 
   window.addEventListener('beforeunload', onBeforeUnload);
   window.addEventListener('unload', onUnload);
+  window.addEventListener('pagehide', onPageHide);
+  window.addEventListener('pageshow', onPageShow);
 }
 
 
@@ -243,6 +245,16 @@ function onBeforeUnload(e) {
 function onUnload() {
   log('[onUnload] %O', e);
   api.port.emit('api:unload', { url: window.location.href });
+}
+
+function onPageHide(e) {
+  log('[onPageHide] %O', e);
+  api.port.emit('api:pagehide', { url: window.location.href });
+}
+
+function onPageShow(e) {
+  log('[onPageShow] %O', e);
+  api.port.emit('api:pageshow', { url: window.location.href });
 }
 
 if (window.top === window) {
