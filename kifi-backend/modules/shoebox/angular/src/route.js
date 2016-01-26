@@ -227,7 +227,7 @@ angular.module('kifi')
         activenav: 'integrations'
       })
       .state('orgProfile.settings.integrationsSlackConfirm', {
-        url: '/integrations/slack-confirm?&:slackTeamId',
+        url: '/integrations/slack-confirm?:slackTeamId',
         controller: 'SlackConfirmCtrl',
         templateUrl: 'teamSettings/slackConfirm.tpl.html',
         activetab: 'settings',
