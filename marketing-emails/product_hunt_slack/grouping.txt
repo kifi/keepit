@@ -1,0 +1,5 @@
+group 1: people who signed up via product hunt (excluding the above)
+group 2: people who signed up with slack team integration
+group 3: people who signed up with slack simple integration (excluding the above)
+group 4: techies and team members (excluding the above)
+group 5: the rest
