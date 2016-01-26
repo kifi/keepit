@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.Ord
 import com.keepit.slack.models._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -51,6 +52,9 @@ class SlackClientWrapperImpl @Inject() (
   db: Database,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
+  slackChannelRepo: SlackChannelRepo,
+  channelToLibraryRepo: SlackChannelToLibraryRepo,
+  libraryToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
   clock: Clock,
   airbrake: AirbrakeNotifier,
@@ -73,7 +77,9 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit] = {
     val slackTeamMembers = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+      val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+      val membersWithIntegrations = channelToLibraryRepo.getBySlackTeamAndChannel(slackTeamId, slackChannel._1).map(_.slackUserId)
+      allMembers.toList.sortBy(membersWithIntegrations.contains(_))(Ord.descending)
     }
     FutureHelpers.exists(slackTeamMembers) { slackUserId =>
       pushToSlackViaWebhook(slackUserId, slackTeamId, slackChannel._2, msg).recoverWith {
@@ -99,7 +105,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntilAttempts {
+    FutureHelpers.doUntil {
       val firstWorkingWebhook = db.readOnlyMaster { implicit s =>
         slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName).headOption
       }
@@ -109,6 +115,11 @@ class SlackClientWrapperImpl @Inject() (
           val now = clock.now
           val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
+              for {
+                channelId <- webhookInfo.webhook.channelId
+                channel <- slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, channelId)
+              } slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+
               slackIncomingWebhookInfoRepo.save(
                 slackIncomingWebhookInfoRepo.get(webhookInfo.id.get).withCleanSlate.withLastPostedAt(now)
               )
@@ -128,7 +139,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntilAttempts {
+    FutureHelpers.doUntil {
       val workingToken = db.readOnlyMaster { implicit s =>
         slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
           case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
@@ -137,7 +148,15 @@ class SlackClientWrapperImpl @Inject() (
       workingToken match {
         case None => Future.failed(SlackAPIFailure.NoValidToken)
         case Some(token) =>
-          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token))
+          val now = clock.now
+          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
+            case Success(_: Unit) =>
+              db.readWrite { implicit s =>
+                slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
+                  slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+                }
+              }
+          }
           pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
       }
     }

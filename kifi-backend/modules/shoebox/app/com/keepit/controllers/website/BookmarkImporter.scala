@@ -8,7 +8,7 @@ import org.joda.time.format.{ DateTimeFormat, DateTimeParser, ISODateTimeFormat,
 
 import scala.collection.JavaConversions._
 
-import com.keepit.commanders.{ KeepCommander, KeepInterner }
+import com.keepit.commanders.{ RawKeepInterner, KeepCommander, KeepInterner }
 import com.keepit.common.akka.{ TimeoutFuture, SafeFuture }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -41,7 +41,7 @@ import scala.concurrent.duration.Duration
 class BookmarkImporter @Inject() (
     db: Database,
     val userActionsHelper: UserActionsHelper,
-    keepInterner: KeepInterner,
+    rawKeepInterner: RawKeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepCommander,
     twitterArchiveParser: TwitterArchiveParser,
@@ -100,16 +100,6 @@ class BookmarkImporter @Inject() (
     }
   }
 
-  // remove this, should not be in here
-  def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
-    implicit val context = heimdalContextBuilderFactoryBean().build
-    val (sourceOpt, parsed) = twitterArchiveParser.parseTwitterJson(tweets)
-
-    val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, parsed, libraryId)
-
-    keepInterner.persistRawKeeps(rawKeeps, Some(importId))
-  }
-
   case class LoggingFields(startMillis: Long, id: String, request: UserRequest[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]])
 
   private def processBookmarkExtraction(sourceOpt: Option[KeepSource], parsed: Seq[Bookmark], pubId: PublicId[Library], lf: LoggingFields): Future[Option[(Int, Int)]] = {
@@ -117,40 +107,15 @@ class BookmarkImporter @Inject() (
     SafeFuture("processBookmarkExtraction") {
       log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
 
-      val (importId, rawKeeps) = createRawKeeps(lf.request.userId, sourceOpt, parsed, Library.decodePublicId(pubId).get)
+      val (importId, rawKeeps) = rawKeepInterner.generateRawKeeps(lf.request.userId, sourceOpt, parsed, Library.decodePublicId(pubId).get)
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
-      keepInterner.persistRawKeeps(rawKeeps, Some(importId))
+      rawKeepInterner.persistRawKeeps(rawKeeps, Some(importId))
       log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. ${rawKeeps.length} keeps processed.")
 
       val tagSize = parsed.flatMap(_.tags).toSet.size
       Some((rawKeeps.length, tagSize))
     }
-  }
-
-  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[Bookmark], libraryId: Id[Library]) = {
-    val importId = UUID.randomUUID.toString
-    val rawKeeps = bookmarks.map {
-      case Bookmark(title, href, hashtags, createdDate, originalJson) =>
-        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty) && title.exists(_ != href)) Some(title.get) else None
-        val hashtagsArray = if (hashtags.nonEmpty) {
-          Some(JsArray(hashtags.map(Json.toJson(_))))
-        } else {
-          None
-        }
-
-        RawKeep(userId = userId,
-          title = titleOpt,
-          url = href,
-          importId = Some(importId),
-          source = source.getOrElse(KeepSource.bookmarkFileImport),
-          originalJson = originalJson,
-          installationId = None,
-          keepTags = hashtagsArray,
-          libraryId = Some(libraryId),
-          createdDate = createdDate)
-    }
-    (importId, rawKeeps)
   }
 }
 
@@ -382,4 +347,11 @@ class TwitterArchiveParserImpl @Inject() (urlClassifier: UrlClassifier) extends 
       case Failure(ex) => Seq()
     }
   }
+}
+
+object TwitterArchiveParser {
+  sealed trait ParsedLinks
+  case object DirectLinks extends ParsedLinks
+  case object Media extends ParsedLinks
+  case object TweetItself extends ParsedLinks
 }

@@ -20,7 +20,7 @@ case class SlackChannel(
 
   def withId(newId: Id[SlackChannel]) = this.copy(id = Some(newId))
   def withUpdateTime(time: DateTime) = this.copy(updatedAt = time)
-  def withLastNotificationAt(time: DateTime) = this.copy(lastNotificationAt = time)
+  def withLastNotificationAtLeast(time: DateTime) = if (time isAfter lastNotificationAt) this.copy(lastNotificationAt = time) else this
 
   def idAndName: (SlackChannelId, SlackChannelName) = (slackChannelId, slackChannelName)
   def isActive: Boolean = state == SlackChannelStates.ACTIVE
@@ -30,8 +30,10 @@ object SlackChannelStates extends States[SlackChannel]
 
 @ImplementedBy(classOf[SlackChannelRepoImpl])
 trait SlackChannelRepo extends Repo[SlackChannel] {
+  def getByIds(ids: Set[Id[SlackChannel]])(implicit session: RSession): Map[Id[SlackChannel], SlackChannel]
+  def getByChannelId(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)(implicit session: RWSession): Option[SlackChannel]
   def getOrCreate(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName)(implicit session: RWSession): SlackChannel
-  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackChannel]
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]]
 }
 
 @Singleton
@@ -95,6 +97,14 @@ class SlackChannelRepoImpl @Inject() (
   override def deleteCache(model: SlackChannel)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: SlackChannel)(implicit session: RSession): Unit = {}
 
+  def getByIds(ids: Set[Id[SlackChannel]])(implicit session: RSession): Map[Id[SlackChannel], SlackChannel] = {
+    activeRows.filter(_.id.inSet(ids)).list.map { model => model.id.get -> model }.toMap
+  }
+
+  def getByChannelId(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)(implicit session: RWSession): Option[SlackChannel] = {
+    activeRows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelId === slackChannelId).firstOption
+  }
+
   def getOrCreate(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName)(implicit session: RWSession): SlackChannel = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelId === slackChannelId).firstOption match {
       case Some(existing) if existing.isActive =>
@@ -109,8 +119,8 @@ class SlackChannelRepoImpl @Inject() (
         ))
     }
   }
-  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackChannel] = {
-    activeRows.filter(row => row.lastNotificationAt < lastPushOlderThan).list
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]] = {
+    activeRows.filter(row => row.lastNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
 }

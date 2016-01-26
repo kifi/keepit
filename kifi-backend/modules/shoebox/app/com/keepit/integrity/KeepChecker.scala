@@ -29,8 +29,9 @@ class KeepChecker @Inject() (
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
     collectionRepo: CollectionRepo,
-    implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
+    implicit val executionContext: ExecutionContext) extends Logging {
 
+  private val debouncer = new Debouncing.Dropper
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)
 
@@ -80,13 +81,13 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        debounce(ktu.userId.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
+        debouncer.debounce(ktu.userId.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        debounce(ktl.libraryId.toString, Period.minutes(1)) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
+        debouncer.debounce(ktl.libraryId.toString, Period.minutes(1)) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
         ktlCommander.deactivate(ktl)
       }
     }

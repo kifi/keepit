@@ -61,10 +61,13 @@ object SlackTeamStates extends States[SlackTeam]
 
 @ImplementedBy(classOf[SlackTeamRepoImpl])
 trait SlackTeamRepo extends Repo[SlackTeam] {
+  def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam]
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(identity: SlackIdentifyResponse)(implicit session: RWSession): SlackTeam
-  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam]
+
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
 }
 
 @Singleton
@@ -140,8 +143,17 @@ class SlackTeamRepoImpl @Inject() (
     slackTeamIdCache.set(SlackTeamIdKey(membership.slackTeamId), membership)
   }
 
+  def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam] = {
+    activeRows.filter(_.id.inSet(ids)).list.map { model => model.id.get -> model }.toMap
+  }
+
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
-    activeRows.filter(row => row.organizationId === orgId).list.toSet
+    getByOrganizationIds(Set(orgId)).apply(orgId)
+  }
+
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]] = {
+    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list.toSet[SlackTeam].groupBy(_.organizationId.get)
+    orgIds.map(orgId => orgId -> existing.getOrElse(orgId, Set.empty)).toMap
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
@@ -160,8 +172,8 @@ class SlackTeamRepoImpl @Inject() (
         save(newTeam)
     }
   }
-  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[SlackTeam] = {
-    activeRows.filter(row => row.lastDigestNotificationAt < lastPushOlderThan).list
+  def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]] = {
+    activeRows.filter(row => row.lastDigestNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
 }

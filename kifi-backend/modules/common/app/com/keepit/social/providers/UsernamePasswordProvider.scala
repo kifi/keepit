@@ -3,27 +3,20 @@ package com.keepit.social.providers
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.oauth.{ EmailPasswordIdentity, OAuth2ProviderConfiguration }
 import com.keepit.model.User
-import com.keepit.social.{ UserIdentity$, UserIdentity, UserIdentityProvider }
+import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 
 import play.api.Application
 import play.api.data.Forms._
-import play.api.data.{ Form, FormUtils }
-import play.api.libs.iteratee.{ Enumerator, Iteratee }
-import play.api.libs.json.{ JsValue, Json }
+import play.api.data.Form
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.mvc.Results.{ Forbidden, BadRequest }
 
 import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
 import securesocial.core._
-import play.api.libs.ws.WSResponse
 import securesocial.core.IdentityId
 import net.codingwell.scalaguice.InjectorExtensions._
-import play.api.libs.json._
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.util.{ Success, Failure }
 
 class UsernamePasswordProvider(app: Application)
@@ -32,7 +25,6 @@ class UsernamePasswordProvider(app: Application)
   // see SecureSocialAuthenticatorStore
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
   lazy val passwordAuth = global.injector.instance[PasswordAuthentication]
-  lazy val providerConfig: OAuth2ProviderConfiguration = throw new UnsupportedOperationException(s"OAuth2 is not supported by provider $id")
 
   val loginForm = Form(
     tuple(

@@ -16,7 +16,7 @@ import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.oauth.{ FakeOAuth1ConfigurationModule, FakeOAuth2ConfigurationModule }
+import com.keepit.common.oauth.FakeOAuthConfigurationModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
@@ -36,8 +36,7 @@ import com.keepit.slack.FakeSlackClientModule
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends DbTestApplication(path, overridingModules, Seq(
     ShoeboxServiceTypeModule(),
-    FakeOAuth1ConfigurationModule(),
-    FakeOAuth2ConfigurationModule(),
+    FakeOAuthConfigurationModule(),
     FakeABookServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
@@ -72,8 +71,7 @@ trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationIn
 trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val module = Modules.combine(
     ShoeboxServiceTypeModule(),
-    FakeOAuth1ConfigurationModule(),
-    FakeOAuth2ConfigurationModule(),
+    FakeOAuthConfigurationModule(),
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeRoverServiceClientModule(),

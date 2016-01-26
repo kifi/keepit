@@ -1,22 +1,21 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ OrganizationInfoCommander, LibraryInfoCommander }
+import com.keepit.commanders.{ OrganizationInfoCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.json.{ KeyFormat, TraversableFormat }
+import com.keepit.common.json.{ KeyFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.slack.SlackAuthenticatedAction.{ SetupSlackTeam, SetupLibraryIntegrations, TurnOnChannelIngestion, TurnOnLibraryPush }
 import com.keepit.slack.models._
 import com.kifi.macros.json
-import play.api.libs.json.{ Writes, Json, Format }
+import play.api.libs.json.{ Writes, Json }
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -98,8 +97,9 @@ class SlackInfoCommanderImpl @Inject() (
 
   private def assembleLibrarySlackInfos(libraryIds: Set[Id[Library]], integrationInfosByLib: Map[Id[Library], Seq[LibrarySlackIntegrationInfo]]): Map[Id[Library], LibrarySlackInfo] = {
     libraryIds.map { libId =>
+      val pubLibId = Library.publicId(libId)
       libId -> LibrarySlackInfo(
-        link = SlackAPI.OAuthAuthorize(SlackAuthScope.push, SetupLibraryIntegrations -> Library.publicId(libId), None).url,
+        link = com.keepit.controllers.website.routes.SlackController.setupLibraryIntegrations(pubLibId).url,
         integrations = integrationInfosByLib.getOrElse(libId, Seq.empty)
       )
     }.toMap
@@ -137,31 +137,32 @@ class SlackInfoCommanderImpl @Inject() (
       }
     }
     libraryIds.map { libId =>
+      val publicLibId = Library.publicId(libId)
       val fromSlacksThisLib = slackToLibs.filter(_.libraryId == libId)
       val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
 
       val fromSlackGroupedInfos = fromSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromSTL).map {
         case (key, Seq(fs)) =>
-          val fsId = SlackChannelToLibrary.publicId(fs.id.get)
+          val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
           val authLink = {
             val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthScope.ingest
+            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnChannelIngestion)
             if (requiredScopes subsetOf existingScopes) None
-            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnChannelIngestion -> fsId, Some(fs.slackTeamId)).url)
+            else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
           }
-          key -> SlackToLibraryIntegrationInfo(fsId, fs.status, authLink)
+          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink)
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
         case (key, Seq(ts)) =>
-          val tsId = LibraryToSlackChannel.publicId(ts.id.get)
+          val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           val authLink = {
             val hasValidWebhook = slackIncomingWebhookInfoRepo.getForChannelByName(ts.slackUserId, ts.slackTeamId, ts.slackChannelName).nonEmpty
             lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthScope.push
+            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnLibraryPush)
             if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
-            else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnLibraryPush -> tsId, Some(ts.slackTeamId)).url)
+            else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
           }
-          key -> LibraryToSlackIntegrationInfo(tsId, ts.status, authLink)
+          key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink)
       }
       val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
         LibrarySlackIntegrationInfo(
@@ -217,7 +218,7 @@ class SlackInfoCommanderImpl @Inject() (
 
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
-    val link = SlackAPI.OAuthAuthorize(SlackAuthScope.teamSetup, SetupSlackTeam -> Some(Organization.publicId(orgId)), None).url
+    val link = com.keepit.controllers.website.routes.SlackController.connectSlackTeam(Organization.publicId(orgId)).url
     OrganizationSlackInfo(
       link,
       slackTeams,

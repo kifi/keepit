@@ -17,10 +17,12 @@ object ProviderIds {
   object Facebook extends ProviderId("facebook")
   object LinkedIn extends ProviderId("linkedin")
   object Twitter extends ProviderId("twitter")
+  object Slack extends ProviderId("slack")
   def toProviderId(id: String) = id match {
     case Facebook.id => Facebook
     case LinkedIn.id => LinkedIn
     case Twitter.id => Twitter
+    case Slack.id => Slack
     case _ => throw new IllegalArgumentException(s"[toProviderId] id=$id not supported")
   }
 }
@@ -52,7 +54,7 @@ case class UserProfileInfo(
     pictureUrl: Option[String],
     profileUrl: Option[String])
 
-sealed trait OAuthProvider[T, I <: RichIdentity] {
+trait OAuthProvider[T, I <: RichIdentity] {
   def providerId: ProviderId
   def getIdentityId(token: T): Future[IdentityId]
   def getRichIdentity(token: T): Future[I]

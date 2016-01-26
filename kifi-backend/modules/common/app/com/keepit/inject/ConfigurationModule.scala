@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.{ PlayDefaultExecutionContextModule, FakeExe
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
-import com.keepit.common.oauth.{ DevOAuth1ConfigurationModule, ProdOAuth1ConfigurationModule, DevOAuth2ConfigurationModule, ProdOAuth2ConfigurationModule }
+import com.keepit.common.oauth.{ OAuthConfigurationModule, DevOAuthConfigurationModule, ProdOAuthConfigurationModule }
 import com.keepit.common.zookeeper.{ ProdDiscoveryModule, ServiceTypeModule }
 import com.keepit.common.util.PlayAppConfigurationModule
 import com.keepit.common.zookeeper.{ DiscoveryModule, DevDiscoveryModule }
@@ -13,6 +13,7 @@ import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.common.healthcheck.{ ProdAirbrakeModule, DevAirbrakeModule, ProdMemoryUsageModule, DevMemoryUsageModule }
 import com.keepit.common.aws.AwsModule
+import com.keepit.slack.ProdSlackClientModule
 
 abstract class AbstractModuleAccessor extends ScalaModule {
   protected def install0(module: ScalaModule) = install(module)
@@ -45,8 +46,9 @@ trait CommonServiceModule {
   val actorSystemModule: ActorSystemModule
   val serviceTypeModule: ServiceTypeModule
   val discoveryModule: DiscoveryModule
+  val oauthModule: OAuthConfigurationModule
 
-  val executionContextModule: ExecutionContextModule = PlayDefaultExecutionContextModule()
+  val executionContextModule: ExecutionContextModule
   val cryptoModule = ShoeboxCryptoModule()
   val healthCheckModule = ProdHealthCheckModule()
   val httpClientModule = ProdHttpClientModule()
@@ -64,8 +66,10 @@ trait CommonProdModule extends CommonServiceModule {
   val airbrakeModule = ProdAirbrakeModule()
   val memoryUsageModule = ProdMemoryUsageModule()
 
-  val oauth1ConfigModule = ProdOAuth1ConfigurationModule()
-  val oauth2ConfigModule = ProdOAuth2ConfigurationModule()
+  val oauthModule = ProdOAuthConfigurationModule()
+  val slackClientModule = ProdSlackClientModule()
+
+  val executionContextModule: ExecutionContextModule = PlayDefaultExecutionContextModule()
 }
 
 trait CommonDevModule extends CommonServiceModule {
@@ -77,7 +81,8 @@ trait CommonDevModule extends CommonServiceModule {
   val airbrakeModule = DevAirbrakeModule()
   val memoryUsageModule = DevMemoryUsageModule()
 
-  val oauth1ConfigModule = DevOAuth1ConfigurationModule()
-  val oauth2ConfigModule = DevOAuth2ConfigurationModule()
-  override val executionContextModule = FakeExecutionContextModule()
+  val oauthModule = DevOAuthConfigurationModule()
+  val slackClientModule = ProdSlackClientModule()
+
+  val executionContextModule = FakeExecutionContextModule()
 }

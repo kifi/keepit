@@ -1,34 +1,30 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.controller.KifiSession._
 import com.keepit.common.controller._
 import com.keepit.common.core._
 import com.keepit.common.db.slick._
 import com.keepit.common.http._
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.UserAgent
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.net.{ RichRequestHeader, UserAgent }
+import com.keepit.common.time._
 import com.keepit.controllers.routing.KifiSiteRouter
 import com.keepit.heimdal._
-import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.SocialGraphPlugin
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
-import play.api.libs.json.Json
-import com.keepit.common.time._
-import com.keepit.common.net.RichRequestHeader
-
-import KifiSession._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+@Singleton
 class HomeController @Inject() (
   db: Database,
   userRepo: UserRepo,
@@ -44,23 +40,26 @@ class HomeController @Inject() (
     extends UserActions with ShoeboxServiceController with Logging {
 
   def home = MaybeUserAction.async { implicit request =>
-    val special = specialHandler(request)
+    val special = promoCodeHandler(request)
     request match {
       case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite() |> special)
       case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request).map(special)
     }
   }
 
-  def teams = MaybeUserAction { implicit request =>
-    val special = specialHandler(request)
+  def slackIntegration = MaybeUserAction { implicit request =>
+    val special = promoCodeHandler(request)
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
-      special(Redirect("/?ref=producthunt"))
+      request match {
+        case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite("integrations/slackv2") |> special
+        case _: UserRequest[_] => Redirect("/integrations/slack/start") |> special
+      }
     } else {
-      Redirect("/")
+      MarketingSiteRouter.marketingSite("integrations/slackv2")
     }
   }
 
-  private def specialHandler(request: MaybeUserRequest[_]): Result => Result = {
+  private def promoCodeHandler(request: MaybeUserRequest[_]): Result => Result = {
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
       request match {
         case ur: UserRequest[_] =>
@@ -69,9 +68,6 @@ class HomeController @Inject() (
           }
           res => res
           case nur: NonUserRequest[_] =>
-          // todo: special kcid?
-          // we technically could cookie them here for the intent, but may be kind of weird experience:
-          // res => res.withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
           res => res
       }
     } else {
@@ -224,4 +220,10 @@ class HomeController @Inject() (
     }
   }
 
+}
+
+object HomeControllerRoutes {
+  def home() = "/"
+  def install() = "/install"
+  def unsupported() = "/unsupported"
 }

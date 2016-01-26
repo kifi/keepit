@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileCtrl', [
-  '$window', '$rootScope', '$scope', '$analytics', '$state', '$location', 'profile',
-  'orgProfileService', 'originTrackingService',
-  function ($window, $rootScope, $scope, $analytics, $state, $location, profile,
-            orgProfileService, originTrackingService) {
+  '$window', '$rootScope', '$scope', '$analytics', '$state', '$stateParams',
+  '$location', 'profile', 'orgProfileService', 'originTrackingService',
+  function ($window, $rootScope, $scope, $analytics, $state, $stateParams,
+            $location, profile, orgProfileService, originTrackingService) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.profile = _.cloneDeep(profile.organization);
     $scope.viewer = profile.viewer;
@@ -35,6 +35,10 @@ angular.module('kifi')
       $scope.$broadcast('childOpenInviteModal');
     }
   });
+
+  if ($stateParams.signUpWithSlack) {
+    $state.go('orgProfile.slack', $stateParams);
+  }
 
   [
     $rootScope.$on('trackOrgProfileEvent', function (e, eventType, attributes) {

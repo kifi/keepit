@@ -18,7 +18,6 @@ import scala.util.{ Failure, Success, Try }
 object KifiSlackApp {
   val SLACK_CLIENT_ID = "2348051170.15031499078"
   val SLACK_CLIENT_SECRET = "ad688ad730192eabe0bdc6675975f3fc"
-  val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
 }
 
@@ -143,8 +142,11 @@ object SlackReaction {
 case class SlackEmoji(value: String)
 object SlackEmoji {
   val bee = SlackEmoji(":bee:")
+  val constructionWorker = SlackEmoji(":construction_worker:")
+  val fireworks = SlackEmoji(":fireworks:")
   val gear = SlackEmoji(":gear:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
+  val star = SlackEmoji(":star:")
 }
 
 sealed abstract class SlackCommand(val value: String)

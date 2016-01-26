@@ -383,7 +383,7 @@ class TwitterSocialGraphImpl @Inject() (
           Left(UnknownError(query.toString, response.json.toString))
         }
       } else {
-        Left(UnknownError(query.toString, response.json.toString))
+        Left(UnknownError(query.toString, response.status.toString + ": " + response.json.toString))
       }
     }.recover {
       case t: Throwable =>

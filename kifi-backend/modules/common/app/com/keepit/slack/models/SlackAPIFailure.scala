@@ -20,13 +20,15 @@ object SlackAPIFailure {
     val accountInactive = "account_inactive"
     val alreadyReacted = "already_reacted"
     val noAuthCode = "no_auth_code"
+    val invalidAuthState = "invalid_auth_state"
   }
   def ApiError(status: Int, payload: JsValue) = SlackAPIFailure(status, (payload \ "error").asOpt[String] getOrElse "api_error", payload)
   def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
-  def StateError(state: SlackState) = SlackAPIFailure(OK, Error.state, JsString(state.state))
+  def StateError(state: SlackAuthState) = SlackAPIFailure(OK, Error.state, JsString(state.state))
   val TokenRevoked = SlackAPIFailure(Status.NOT_FOUND, SlackAPIFailure.Error.tokenRevoked, JsNull)
   val WebhookRevoked = SlackAPIFailure(Status.NOT_FOUND, SlackAPIFailure.Error.webhookRevoked, JsNull)
   val NoAuthCode = SlackAPIFailure(Status.BAD_REQUEST, SlackAPIFailure.Error.noAuthCode, JsNull)
+  val InvalidAuthState = SlackAPIFailure(Status.BAD_REQUEST, SlackAPIFailure.Error.invalidAuthState, JsNull)
   val NoValidWebhooks = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_webhooks", JsNull)
   val NoValidToken = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_token", JsNull)
 }

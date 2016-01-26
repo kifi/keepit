@@ -18,6 +18,7 @@ import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.{ Keep, MessageThreadFactory, User, SocialUserInfo }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
+import com.keepit.slack.FakeSlackClientModule
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions

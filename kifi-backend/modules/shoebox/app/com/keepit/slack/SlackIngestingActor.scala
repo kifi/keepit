@@ -7,6 +7,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
@@ -36,21 +37,24 @@ object SlackIngestionConfig {
 }
 
 class SlackIngestingActor @Inject() (
-    db: Database,
-    integrationRepo: SlackChannelToLibraryRepo,
-    slackChannelRepo: SlackChannelRepo,
-    slackTeamMembershipRepo: SlackTeamMembershipRepo,
-    permissionCommander: PermissionCommander,
-    libraryRepo: LibraryRepo,
-    slackClient: SlackClientWrapper,
-    urlClassifier: UrlClassifier,
-    keepInterner: KeepInterner,
-    clock: Clock,
-    airbrake: AirbrakeNotifier,
-    slackOnboarder: SlackOnboarder,
-    orgConfigRepo: OrganizationConfigurationRepo,
-    implicit val ec: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
+  db: Database,
+  integrationRepo: SlackChannelToLibraryRepo,
+  slackChannelRepo: SlackChannelRepo,
+  slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  permissionCommander: PermissionCommander,
+  libraryRepo: LibraryRepo,
+  slackClient: SlackClientWrapper,
+  urlClassifier: UrlClassifier,
+  keepInterner: KeepInterner,
+  clock: Clock,
+  airbrake: AirbrakeNotifier,
+  slackOnboarder: SlackOnboarder,
+  orgConfigRepo: OrganizationConfigurationRepo,
+  implicit val ec: ExecutionContext,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackIngestionConfig._
 
   protected val minConcurrentTasks = channelIngestionConcurrency
@@ -108,23 +112,24 @@ class SlackIngestingActor @Inject() (
       case result =>
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
-          case Success(Some(_)) =>
+          case Success(Some(_)) => // TODO(ryan): talk to Léo, this branch is probably never executed
             if (integration.lastIngestedAt.isEmpty) {
               // this is the first time we've tried ingesting for this integration
               // and we were successful! we got a bunch of links
               slackOnboarder.talkAboutIntegration(integration)
             }
             (Some(now plus nextIngestionDelayAfterNewMessages), None)
-          case Success(None) => (Some(now plus nextIngestionDelayWithoutNewMessages), None)
+          case Success(None) =>
+            (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
+            slackLog.warn(forbidden.toString)
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            airbrake.notify(s"Marking Slack integration ${integration.id.get} as broken.", broken)
+            slackLog.warn(broken.toString)
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
             //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
-            log.warn(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
+            log.warn(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>
@@ -155,7 +160,7 @@ class SlackIngestingActor @Inject() (
 
             Future.successful(Unit)
           } imap { _ =>
-            (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
+            (newLastMessageTimestamp orElse lastMessageTimestamp, newLastMessageTimestamp.isEmpty)
           }
         } recoverWith {
           case failure @ SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => Future.failed(BrokenSlackIntegration(integration, Some(tokenWithScopes.token), Some(failure)))

@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepCommander, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -45,7 +45,7 @@ class ExtLibraryController @Inject() (
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
-  keepInterner: KeepInterner,
+  rawKeepInterner: RawKeepInterner,
   rawKeepFactory: RawKeepFactory,
   rover: RoverServiceClient,
   implicit val imageConfig: S3ImageConfig,
@@ -344,7 +344,7 @@ class ExtLibraryController @Inject() (
 
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.bookmarkImport).build
       val libraryId = Library.decodePublicId(id).get
-      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
+      rawKeepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
     }
     Status(ACCEPTED)(JsNumber(0))
   }

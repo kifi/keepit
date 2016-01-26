@@ -16,7 +16,7 @@ object UserThreadFactory {
       uriId = Some(Id[NormalizedURI](idx.incrementAndGet())),
       lastSeen = None,
       unread = true,
-      lastMsgFromOther = None,
+      latestMessageId = None,
       startedBy = Id[User](idx.incrementAndGet())
     ))
   }

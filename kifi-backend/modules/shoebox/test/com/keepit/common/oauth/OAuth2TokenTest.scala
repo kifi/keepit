@@ -106,8 +106,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
     KeepImportsModule(),
-    FakeOAuth1ConfigurationModule(),
-    FakeOAuth2ConfigurationModule()
+    FakeOAuthConfigurationModule()
   )
 
   "AuthController" should {

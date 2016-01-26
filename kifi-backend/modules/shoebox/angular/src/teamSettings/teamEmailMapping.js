@@ -16,7 +16,8 @@ angular.module('kifi')
       },
       templateUrl: 'teamSettings/teamEmailMapping.tpl.html',
       link: function ($scope) {
-        $scope.visible = $scope.getViewer().permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1;
+        var isTeamAdmin = $scope.getViewer().permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1;
+        $scope.visible = isTeamAdmin;
         $scope.enabled = $scope.visible && $scope.getOrg().config.settings.join_by_verifying.setting !== ORG_SETTING_VALUE.DISABLED;
         $scope.open = $scope.enabled && !!$stateParams.openDomains; // initial
         $scope.me = profileService.me;
@@ -137,15 +138,18 @@ angular.module('kifi')
             $scope.verificationMessage = message || 'Something went wrong. Try again?';
           });
         };
-
-        orgProfileService
-        .getOrgDomains($scope.getOrg().id)
-        .then(function (emailDomainData) {
-          $scope.emailDomains = emailDomainData;
-        })
-        ['catch'](function () {
+        if (isTeamAdmin) {
+          orgProfileService
+          .getOrgDomains($scope.getOrg().id)
+          .then(function (emailDomainData) {
+            $scope.emailDomains = emailDomainData;
+          })
+          ['catch'](function () {
+            $scope.emailDomains = null;
+          });
+        } else {
           $scope.emailDomains = null;
-        });
+        }
       }
     };
   }

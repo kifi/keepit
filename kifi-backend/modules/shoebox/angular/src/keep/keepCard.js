@@ -101,6 +101,16 @@ angular.module('kifi')
             'private' : 'public' : null;
         }
 
+        function unkeepFromLibrary(event, keep) {
+          if (keep.libraryId && keep.id) {
+            keep.unkept = true;
+            keepActionService.unkeepFromLibrary(keep.libraryId, keep.id)['catch'](function (err) {
+              keep.unkept = false;
+              modalService.openGenericErrorModal(err);
+            });
+          }
+        }
+
         //
         // Scope methods.
         //
@@ -119,13 +129,24 @@ angular.module('kifi')
           if (!editor.length) {
             var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
-            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keepLibraryId; })[0];
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, distinctKeep.id, function update(noteText) {
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, keep.pubId, function update(noteText) {
               keep.note = noteText;
             });
           } else {
             editor.focus();
           }
+        };
+
+        scope.editKeepTitle = function (event, keep) {
+          if (keep.id !== scope.keep.id || !scope.canEditKeep) {
+            return;
+          }
+          modalService.open({
+            template: 'keep/editKeepTitleModal.tpl.html',
+            modalData: {
+              keep: scope.keep
+            }
+          });
         };
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
@@ -248,7 +269,11 @@ angular.module('kifi')
         (function (keep) {
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
-          scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
+          var updateTitle = function () {
+              scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
+          };
+          updateTitle();
+          scope.$watch('keep.title', updateTitle);
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
           scope.showActivityAttribution = $state.is('home.feed') && profileService.hasExperiment('keep_nolib');
@@ -258,9 +283,14 @@ angular.module('kifi')
           scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
           scope.globalGalleryView = scope.galleryView;
 
-          var permissions = keep.permissions || [];
-          scope.canEditKeep = permissions.indexOf('edit_keep') !== -1;
-          scope.canDeleteKeep = permissions.indexOf('delete_keep') !== -1;
+          var libraryPermissions = (keep.library && keep.library.permissions) || [];
+          var keepPermissions = keep.permissions || [];
+          var keepUserId = keep.user && keep.user.id;
+          scope.canRemoveKeepFromLibrary = (
+            (keepUserId === scope.me.id && libraryPermissions.indexOf('remove_own_keeps') !== -1) ||
+            libraryPermissions.indexOf('remove_other_keeps') !== -1
+          );
+          scope.canEditKeep = keepPermissions.indexOf('edit_keep') !== -1;
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
@@ -305,18 +335,24 @@ angular.module('kifi')
           var updateMenuItems = function () {
             scope.menuItems = [];
             if (scope.canEditKeep) {
+              if (profileService.isAdmin()) {
+                scope.menuItems.push({
+                  title: 'Edit Title',
+                  action: scope.editKeepTitle.bind(scope)
+                });
+              }
               scope.menuItems.push({
                 title: keep.note ? 'Edit Note' : 'Add Note',
                 action: scope.editKeepNote.bind(scope)
               });
-              var deleteCallback = scope.deleteCallback();
-              if (deleteCallback) {
-                scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
-              }
               var removeImageCallback = scope.removeImageCallback();
               if (keep.summary && keep.summary.imageUrl && removeImageCallback) {
                 scope.menuItems.push({title: 'Remove Image', action: removeImageCallback});
               }
+            }
+            if (scope.canRemoveKeepFromLibrary) {
+              var deleteCallback = scope.deleteCallback() || unkeepFromLibrary;
+              scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
             }
           };
           updateMenuItems();

@@ -43,15 +43,21 @@ angular.module('kifi')
     var orgFilterOptions = orgs.map(function(org) {
       return { value: 'org', id: org.id, text: org.name, handle: org.handle };
     });
+
+    var messageFilters = [
+      { value: 'unread', text: 'Unread' },
+      { value: 'sent', text: 'Sent' }
+    ];
+
     $scope.feedFilter.options = [
       { value: '', text: 'Your Stream' },
       { value: 'own', text: 'Your Keeps' }
-    ].concat(orgFilterOptions);
+    ].concat($scope.isAdmin ? messageFilters : []).concat(orgFilterOptions);
 
     function getFilterFromUrl() {
-      return $scope.feedFilter.options.find(function (filter) {
+      return $scope.feedFilter.options.filter(function (filter) {
         return filter.value === $stateParams.filter || ($stateParams.filter === 'team' && $stateParams.handle === filter.handle);
-      });
+      })[0];
     }
     $scope.feedFilter.selected = getFilterFromUrl() || $scope.feedFilter.options[0]; // assumes 'Your Stream' is first
 

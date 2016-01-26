@@ -10,7 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.SlackLogging
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
 import com.keepit.heimdal.HeimdalContext
@@ -27,6 +27,7 @@ trait SlackTeamCommander {
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Future[SlackTeam]
+  def getOrganizationsToConnectToSlackTeam(userId: Id[User]): Set[BasicOrganization]
 }
 
 @Singleton
@@ -36,6 +37,7 @@ class SlackTeamCommanderImpl @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
+  channelRepo: SlackChannelRepo,
   slackClient: SlackClientWrapper,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
@@ -47,9 +49,9 @@ class SlackTeamCommanderImpl @Inject() (
   organizationInfoCommander: OrganizationInfoCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
-  val inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander with SlackLogging {
-  val loggingDestination = InhouseSlackChannel.ENG_SLACK
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends SlackTeamCommander {
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   def setupSlackTeam(userId: Id[User], identity: SlackIdentifyResponse, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, userHasNoOrg) = db.readWrite { implicit session =>
@@ -136,6 +138,7 @@ class SlackTeamCommanderImpl @Inject() (
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
+          channelRepo.getOrCreate(team.slackTeamId, channel.channelId, channel.channelName)
           libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
             space = librarySpace,
@@ -193,6 +196,15 @@ class SlackTeamCommanderImpl @Inject() (
           }
         }
       case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
+    }
+  }
+
+  def getOrganizationsToConnectToSlackTeam(userId: Id[User]): Set[BasicOrganization] = {
+    db.readOnlyMaster { implicit session =>
+      val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
+      val existingSlackTeams = slackTeamRepo.getByOrganizationIds(allOrgIds)
+      val validOrgIds = allOrgIds.filter(existingSlackTeams(_).isEmpty)
+      organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
     }
   }
 }

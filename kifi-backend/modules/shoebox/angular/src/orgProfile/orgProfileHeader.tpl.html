@@ -30,7 +30,7 @@
             readonly="readonly"
             ng-if="!(readonly && !profile.description.length)"
           ></div>
-          <span class="kf-oph-url kf-oph-input" kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
+          <div ng-if="!(readonly && !profile.site.length)" class="kf-oph-url kf-oph-input" kf-click-to-edit on-save="save" readonly="readonly" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></div>
           <div class="kf-oph-upper-right" ng-if="canInvite || (viewer.membership && plan.showUpsells && billingState !== null)">
             <button ng-if="canInvite" class="kf-link kf-oph-invite-button" ng-click="goToMemberInvite()">
               <svg
@@ -69,7 +69,13 @@
             </div>
           </div>
         </div>
-        <nav class="kf-oph-stats">
+        <nav
+          class="kf-oph-stats"
+          ng-style="{
+            'visibility': state.current.activetab === null ? 'hidden' : null,
+            'height': state.current.activetab === null ? '0px' : null
+          }"
+        >
           <a
             class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.libraries"

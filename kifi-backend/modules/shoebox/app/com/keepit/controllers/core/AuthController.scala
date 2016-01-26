@@ -261,7 +261,7 @@ class AuthController @Inject() (
       case Some(info) =>
         val hasher = Registry.hashers.currentHasher
         val session = request.session
-        val home = com.keepit.controllers.website.routes.HomeController.home()
+        val home = com.keepit.controllers.website.HomeControllerRoutes.home()
         authCommander.getUserIdentity(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
           case Some(identity @ UserIdentity(_, Some(userId))) => {
             val matches = hasher.matches(identity.passwordInfo.get, info.password)
@@ -274,7 +274,7 @@ class AuthController @Inject() (
                   error => Future.successful(Status(INTERNAL_SERVER_ERROR)("0")),
                   authenticator =>
                     Future.successful(
-                      Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
+                      Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home).asInstanceOf[String]))
                         .withSession((session - SecureSocial.OriginalUrlKey).setUserId(userId))
                         .withCookies(authenticator.toCookie)
                     )
@@ -304,7 +304,7 @@ class AuthController @Inject() (
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
         } else if (userRequest.kifiInstallationId.isEmpty && !hasSeenInstall(userRequest)) {
           inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-          Redirect(com.keepit.controllers.website.routes.HomeController.install())
+          Redirect(com.keepit.controllers.website.HomeControllerRoutes.install())
         } else {
           userRequest.session.get(SecureSocial.OriginalUrlKey) map { url =>
             Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
@@ -408,13 +408,13 @@ class AuthController @Inject() (
       case ur: UserRequest[_] =>
         Redirect("/")
       case request: NonUserRequest[_] =>
-        request.request.headers.get(USER_AGENT).map { agentString =>
+        request.request.headers.get(USER_AGENT).flatMap { agentString =>
           val agent = UserAgent(agentString)
           log.info(s"trying to log in via $agent. orig string: $agentString")
           if (agent.isOldIE) {
-            Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+            Some(Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported()))
           } else None
-        }.flatten.getOrElse(Ok(views.html.authMinimal.loginToKifi()))
+        }.getOrElse(Ok(views.html.authMinimal.loginToKifi()))
     }
   }
 
@@ -439,7 +439,7 @@ class AuthController @Inject() (
       UserAgent(agent)
     }
     if (agentOpt.exists(_.isOldIE)) {
-      Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
+      Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported())
     } else {
       val cookieIntent = request.cookies.get("intent") // make sure everywhere handles this right
       val cookieModelPubId = request.cookies.get("modelPubId")
@@ -459,7 +459,7 @@ class AuthController @Inject() (
             // Complete user, they don't need to be here!
             log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
 
-            val homeUrl = s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0"
+            val homeUrl = s"${com.keepit.controllers.website.HomeControllerRoutes.home}?m=0"
 
             val redirect = cookieIntent.map(_.value).map {
               case "follow" =>
@@ -632,5 +632,9 @@ class AuthController @Inject() (
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
+  }
+
+  def connectWithSlack = MaybeUserAction { implicit request =>
+    Ok(views.html.authMinimal.connectWithSlack()).withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
   }
 }
