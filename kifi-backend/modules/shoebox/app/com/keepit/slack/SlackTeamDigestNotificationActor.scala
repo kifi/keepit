@@ -23,9 +23,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackTeamDigestConfig {
-  val minPeriodBetweenTeamDigests = Period.seconds(10)
-  val minIngestedLinksForTeamDigest = 2
+  val minPeriodBetweenTeamDigests = Period.days(7)
+  val minIngestedLinksForTeamDigest = 10
 
+  // TODO(ryan): to release to the public, change canPushToTeam to `true`
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
   def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId || slackTeam.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`

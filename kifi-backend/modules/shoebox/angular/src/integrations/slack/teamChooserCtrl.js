@@ -23,22 +23,15 @@ angular.module('kifi')
       $scope.selectedOrg = org;
     };
 
+      //createOrganizationForSlackTeam: post(shoebox, '/organizations/create/slack?slackTeamId=:slackTeamId'),
+      //    connectSlackTeamToOrganization: post(shoebox, '/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
     $scope.onClickedDone = function() {
-      slackService.connectSlackTeamToOrganization($scope.selectedOrg.id, $scope.params.slackTeamId)
-          .then(function(data) {
-            if (data && data.redirectUrl) {
-              $window.location = data.redirectUrl;
-            }
-          });
+      $window.location = 'https://kifi.com/site/organizations/' + $scope.selectedOrg.id
+                            + '/slack/connect?slackTeamId=' + $scope.params.slackTeamId;
     };
 
     $scope.onClickedCreateTeam = function() {
-      slackService.createOrganizationForSlackTeam($scope.params.slackTeamId)
-          .then(function(data) {
-            if (data && data.redirectUrl) {
-              $window.location = data.redirectUrl;
-            }
-          });
+      $window.location = 'https://kifi.com/site/organizations/create/slack?slackTeamId=' + $scope.params.slackTeamId;
     };
 
   }

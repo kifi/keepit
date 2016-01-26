@@ -1,7 +1,9 @@
 package com.keepit.slack.models
 import com.kifi.macros.json
 
-@json case class SlackUserId(value: String)
+@json case class SlackUserId(value: String) {
+  def asChannel: SlackChannelId = SlackChannelId(value)
+}
 @json case class SlackUsername(value: String)
 
 object SlackUsername {
