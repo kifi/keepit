@@ -25,7 +25,8 @@ object SlackChannelDigestConfig {
   val minIngestedLinksForChannelDigest = 2
 
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  def canPushToChannel(channel: SlackChannel): Boolean = channel.slackTeamId == KifiSlackTeamId // TODO(ryan): change this to `true`
+  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
+  def canPushToChannel(channel: SlackChannel): Boolean = channel.slackTeamId == KifiSlackTeamId || channel.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
 }
 
 class SlackChannelDigestNotificationActor @Inject() (

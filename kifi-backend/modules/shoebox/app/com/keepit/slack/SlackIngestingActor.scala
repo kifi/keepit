@@ -122,14 +122,14 @@ class SlackIngestingActor @Inject() (
           case Success(None) =>
             (Some(now plus nextIngestionDelayWithoutNewMessages), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            slackLog.warn(s"Turning off forbidden Slack integration ${integration.id.get}.")
+            slackLog.warn(forbidden.toString)
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            slackLog.warn(s"Marking Slack integration ${integration.id.get} as broken.")
+            slackLog.warn(broken.toString)
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
             //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
-            log.warn(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
+            log.warn(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>

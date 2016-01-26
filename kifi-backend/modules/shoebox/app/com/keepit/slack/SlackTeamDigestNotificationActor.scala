@@ -27,7 +27,8 @@ object SlackTeamDigestConfig {
   val minIngestedLinksForTeamDigest = 2
 
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId // TODO(ryan): change this to `true`
+  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
+  def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId || slackTeam.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
 }
 
 class SlackTeamDigestNotificationActor @Inject() (
