@@ -1,92 +1,91 @@
 package com.keepit.slack
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders._
+import com.google.inject.Inject
+import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
+import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time._
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ BasicElement, DescriptionElements, LinkElement, Ord }
+import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.kifi.juggle._
 import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
-@ImplementedBy(classOf[SlackDigestNotifierImpl])
-trait SlackDigestNotifier {
-  def pushDigestNotificationsForRipeTeams(): Future[Unit]
-  def pushDigestNotificationsForRipeChannels(): Future[Unit]
-}
-
-object SlackDigestNotifier {
+object SlackTeamDigestConfig {
   val minPeriodBetweenTeamDigests = Period.seconds(10)
-  val minPeriodBetweenChannelDigests = Period.seconds(10)
-  val minIngestedLinksForChannelDigest = 2
   val minIngestedLinksForTeamDigest = 2
-  val KifiSlackTeamId = SlackTeamId("T02A81H50")
+
+  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
+  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
+  def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId || slackTeam.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
 }
 
-@Singleton
-class SlackDigestNotifierImpl @Inject() (
+class SlackTeamDigestNotificationActor @Inject() (
   db: Database,
-  slackTeamRepo: SlackTeamRepo,
-  slackChannelRepo: SlackChannelRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
-  libToChannelRepo: LibraryToSlackChannelRepo,
-  slackClient: SlackClientWrapper,
-  pathCommander: PathCommander,
+  slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
+  attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
-  attributionRepo: KeepSourceAttributionRepo,
-  organizationInfoCommander: OrganizationInfoCommander,
+  pathCommander: PathCommander,
+  slackClient: SlackClientWrapper,
   clock: Clock,
   airbrake: AirbrakeNotifier,
-  implicit val executionContext: ExecutionContext,
-  implicit val publicIdConfig: PublicIdConfiguration,
+  orgInfoCommander: OrganizationInfoCommander,
+  implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
-    extends SlackDigestNotifier {
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+    extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Set[Id[SlackTeam]]] {
+
+  protected val minConcurrentTasks = 0
+  protected val maxConcurrentTasks = 1
+
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
+  import SlackTeamDigestConfig._
 
   val prng = new MersenneTwister(clock.now.getMillis)
 
-  def pushDigestNotificationsForRipeChannels(): Future[Unit] = {
-    val ripeChannelsFut = db.readOnlyReplicaAsync { implicit s =>
-      // TODO(ryan): right now this only sends digests to channels in the Kifi slack team, once it works change that
-      slackChannelRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenChannelDigests).filter { ch =>
-        val isKifi = ch.slackTeamId == SlackDigestNotifier.KifiSlackTeamId
-        val teamHasIntegration = slackTeamRepo.getBySlackTeamId(ch.slackTeamId).isDefined
-        isKifi // && !teamHasIntegration // TODO(ryan): switch `isKifi` for `!teamHasIntegration
-      }
-    }
-    for {
-      ripeChannels <- ripeChannelsFut
-      pushes <- FutureHelpers.accumulateRobustly(ripeChannels)(pushDigestNotificationForChannel)
-    } yield Unit
+  type Task = Set[Id[SlackTeam]]
+  protected def pullTasks(limit: Int): Future[Seq[Task]] = {
+    if (limit == 1) pullTask().map(Seq(_))
+    else Future.successful(Seq.empty)
   }
 
-  def pushDigestNotificationsForRipeTeams(): Future[Unit] = {
-    val ripeTeamsFut = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamRepo.getRipeForPushingDigestNotification(lastPushOlderThan = clock.now minus SlackDigestNotifier.minPeriodBetweenTeamDigests).filter {
-        _.slackTeamId == SlackDigestNotifier.KifiSlackTeamId
-      }
+  protected def processTasks(tasks: Seq[Task]): Map[Task, Future[Unit]] = {
+    tasks.map { task => task -> processTask(task).imap(_ => ()) }.toMap
+  }
+
+  private def pullTask(): Future[Set[Id[SlackTeam]]] = {
+    val now = clock.now
+    db.readOnlyReplicaAsync { implicit session =>
+      val ids = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests)
+      slackTeamRepo.getByIds(ids.toSet).filter {
+        case (_, slackTeam) => canPushToTeam(slackTeam)
+      }.keySet
     }
+  }
+
+  private def processTask(ids: Set[Id[SlackTeam]]): Future[Map[SlackTeam, Try[Unit]]] = {
     for {
-      ripeTeams <- ripeTeamsFut
-      pushes <- FutureHelpers.accumulateRobustly(ripeTeams)(pushDigestNotificationForTeam)
-    } yield Unit
+      teams <- db.readOnlyReplicaAsync { implicit s => slackTeamRepo.getByIds(ids.toSet).values }
+      pushes <- FutureHelpers.accumulateRobustly(teams)(pushDigestNotificationForTeam)
+    } yield pushes
   }
 
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
     for {
-      org <- slackTeam.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+      org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
       librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
         val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
@@ -117,7 +116,7 @@ class SlackDigestNotifierImpl @Inject() (
         org = org,
         ingestedLinksByChannel = ingestedLinksByChannel,
         librariesByChannel = librariesByChannel
-      )).filter(_.numIngestedLinks >= SlackDigestNotifier.minIngestedLinksForTeamDigest)
+      )).filter(_.numIngestedLinks >= minIngestedLinksForTeamDigest)
     } yield digest
   }
 
@@ -181,7 +180,7 @@ class SlackDigestNotifierImpl @Inject() (
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
       DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, withinTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
@@ -216,53 +215,5 @@ class SlackDigestNotifierImpl @Inject() (
       }
       pushOpt.getOrElse(Future.successful(Unit))
     }
-  }
-
-  private def createChannelDigest(slackChannel: SlackChannel)(implicit session: RSession): Option[SlackChannelDigest] = {
-    val ingestions = channelToLibRepo.getBySlackTeamAndChannel(slackChannel.slackTeamId, slackChannel.slackChannelId).filter(_.isWorking)
-    val librariesIngestedInto = libRepo.getActiveByIds(ingestions.map(_.libraryId).toSet)
-    val ingestedLinks = {
-      val newKeepIds = ktlRepo.getByLibrariesAddedSince(librariesIngestedInto.keySet, slackChannel.lastNotificationAt).map(_.keepId).toSet
-      val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
-      attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
-        case (kId, SlackAttribution(msg)) if msg.channel.id == slackChannel.slackChannelId =>
-          newSlackKeepsById.get(kId).map(_.url)
-      }.flatten.toSet
-    }
-
-    Some(SlackChannelDigest(
-      slackChannel = slackChannel,
-      timeSinceLastDigest = new Period(slackChannel.lastNotificationAt, clock.now),
-      ingestedLinks = ingestedLinks,
-      libraries = librariesIngestedInto.values.toList
-    )).filter(_.numIngestedLinks >= SlackDigestNotifier.minIngestedLinksForChannelDigest)
-  }
-
-  private def describeChannelDigest(digest: SlackChannelDigest)(implicit session: RSession): SlackMessageRequest = {
-    import DescriptionElements._
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-      DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
-        digest.slackChannel.slackChannelName.value, withinTheLast(digest.timeSinceLastDigest)),
-      DescriptionElements("You can browse through them in",
-        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
-    )))).quiet
-  }
-  private def pushDigestNotificationForChannel(channel: SlackChannel): Future[Unit] = {
-    val now = clock.now
-    val msgOpt = db.readOnlyMaster { implicit s => createChannelDigest(channel).map(describeChannelDigest) }
-    val pushOpt = for {
-      msg <- msgOpt
-    } yield {
-      slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).andThen {
-        case Success(_: Unit) =>
-          db.readWrite { implicit s =>
-            slackChannelRepo.save(slackChannelRepo.get(channel.id.get).withLastNotificationAtLeast(now))
-          }
-          slackLog.info("Pushed a digest to", channel.slackChannelName.value, "in team", channel.slackTeamId.value)
-        case Failure(fail) =>
-          slackLog.warn("Failed to push a digest to", channel.slackChannelName.value, "in team", channel.slackTeamId.value)
-      }
-    }
-    pushOpt.getOrElse(Future.successful(Unit))
   }
 }

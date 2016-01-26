@@ -285,15 +285,18 @@ angular.module('kifi')
         }
       });
     };
-
-    orgProfileService
-    .getOrgDomains(organization.id)
-    .then(function (emailDomainData) {
-      $scope.emailDomains = emailDomainData;
-    })
-    ['catch'](function () {
+    if ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+      orgProfileService
+      .getOrgDomains(organization.id)
+      .then(function (emailDomainData) {
+        $scope.emailDomains = emailDomainData;
+      })
+      ['catch'](function () {
+        $scope.emailDomains = null;
+      });
+    } else {
       $scope.emailDomains = null;
-    });
+    }
 
     if ($stateParams.openInviteModal) {
       $scope.openInviteModal();

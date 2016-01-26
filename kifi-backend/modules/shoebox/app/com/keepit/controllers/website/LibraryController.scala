@@ -555,22 +555,6 @@ class LibraryController @Inject() (
     }
   }
 
-  def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getOpt(keepExtId)
-    } match {
-      case None =>
-        NotFound(Json.obj("error" -> "keep_id_not_found"))
-      case Some(keep) =>
-        val body = request.body.as[JsObject]
-        val newNote = (body \ "note").as[String]
-        db.readWrite { implicit session =>
-          keepsCommander.updateKeepNote(request.userId, keep, newNote)
-        }
-        NoContent
-    }
-  }
-
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]

@@ -601,7 +601,7 @@ angular.module('kifi')
         var $progress = $form.find('.kf-knf-progress');
         var data = $note.data();
         var text = noteHtmlToText($note.html());
-        fakeProgress($http.post(routeService.saveKeepNote(data.libraryId, data.keepId), {note: text}))
+        fakeProgress($http.post(routeService.saveKeepNote(data.keepId), {note: text}))
         .then(function done() {
           $progress.addClass('kf-done').css('transform', 'none');
           data.update(text);

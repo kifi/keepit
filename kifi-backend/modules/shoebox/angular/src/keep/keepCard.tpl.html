@@ -37,7 +37,7 @@
         <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
              ng-if="::keep.note || canEditKeep"></div>
         <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
-                ng-if="galleryView && !keep.note && keep.user.id === me.id">Add a note
+                ng-if="canEditKeep && galleryView && !keep.note && keep.user.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>

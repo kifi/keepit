@@ -148,7 +148,7 @@ class ElizaUserEmailNotifierActor @Inject() (
     log.info(s"processed user thread $userThread")
     // todo(martin) replace with onSuccess when we have better error handling
     result.onComplete { _ =>
-      db.readWrite { implicit session => userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.lastMsgFromOther) }
+      db.readWrite { implicit session => userThreadRepo.setNotificationEmailed(userThread.id.get, userThread.latestMessageId) }
     }
     result
   }

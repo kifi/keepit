@@ -40,23 +40,26 @@ class HomeController @Inject() (
     extends UserActions with ShoeboxServiceController with Logging {
 
   def home = MaybeUserAction.async { implicit request =>
-    val special = specialHandler(request)
+    val special = promoCodeHandler(request)
     request match {
       case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite() |> special)
       case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request).map(special)
     }
   }
 
-  def teams = MaybeUserAction { implicit request =>
-    val special = specialHandler(request)
+  def slackIntegration = MaybeUserAction { implicit request =>
+    val special = promoCodeHandler(request)
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
-      special(Redirect("/?ref=producthunt"))
+      request match {
+        case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite("integrations/slackv2") |> special
+        case _: UserRequest[_] => Redirect("/integrations/slack/start") |> special
+      }
     } else {
-      Redirect("/")
+      MarketingSiteRouter.marketingSite("integrations/slackv2")
     }
   }
 
-  private def specialHandler(request: MaybeUserRequest[_]): Result => Result = {
+  private def promoCodeHandler(request: MaybeUserRequest[_]): Result => Result = {
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
       request match {
         case ur: UserRequest[_] =>
@@ -65,9 +68,6 @@ class HomeController @Inject() (
           }
           res => res
           case nur: NonUserRequest[_] =>
-          // todo: special kcid?
-          // we technically could cookie them here for the intent, but may be kind of weird experience:
-          // res => res.withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
           res => res
       }
     } else {

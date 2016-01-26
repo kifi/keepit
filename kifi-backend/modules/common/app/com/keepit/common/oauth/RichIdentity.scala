@@ -85,9 +85,9 @@ object RichIdentity {
     case TwitterIdentity(socialUser, _, _) => socialUser
     case slackIdentity: SlackIdentity => SocialUser(
       identityId = IdentityHelpers.toIdentityId(slackIdentity.teamId, slackIdentity.userId),
-      firstName = slackIdentity.user.flatMap(_.profile.firstName).getOrElse(""),
+      firstName = slackIdentity.user.flatMap(_.profile.firstName).getOrElse(slackIdentity.username.value),
       lastName = slackIdentity.user.flatMap(_.profile.lastName).getOrElse(""),
-      fullName = slackIdentity.user.flatMap(_.profile.fullName).getOrElse(""),
+      fullName = slackIdentity.user.flatMap(_.profile.fullName).orElse(slackIdentity.user.flatMap(_.profile.firstName)).getOrElse(slackIdentity.username.value),
       email = slackIdentity.user.map(_.profile.emailAddress.address),
       avatarUrl = slackIdentity.user.flatMap(_.profile.icon.maxByOpt(_._1).map(_._2)),
       authMethod = AuthenticationMethod.OAuth2,
