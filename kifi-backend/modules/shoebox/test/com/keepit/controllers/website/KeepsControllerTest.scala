@@ -28,9 +28,11 @@ import org.specs2.mutable.Specification
 import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test._
+import com.keepit.model.UserFactory
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.UserFactory
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
 
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
@@ -139,6 +141,51 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
       }
+    }
+
+    "update keep note" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, keep1, lib1) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withUsername("spiderman").saved
+          val lib = library().withOwner(user).saved
+          val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
+          (user, keep, lib)
+        }
+        implicit val publicIdConfig = inject[PublicIdConfiguration]
+        val keepsController = inject[KeepsController]
+        val pubId1 = Keep.publicId(keep1.id.get)
+        val testPath = com.keepit.controllers.website.routes.KeepsController.editKeepNote(pubId1).url
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        // test adding a note (without hashtags)
+        val result1 = keepsController.editKeepNote(pubId1)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "thwip!")))
+        status(result1) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip!")
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // test removing a note
+        val result2 = keepsController.editKeepNote(pubId1)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "")))
+        status(result2) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === None
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // test adding a note (with hashtags)
+        val result3 = keepsController.editKeepNote(pubId1)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "thwip! #spiders [#avengers] [#tonysucks] blah")))
+        status(result3) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip! #spiders [#avengers] [#tonysucks] blah")
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tonysucks", "avengers")
+        }
+
+      }
+
     }
   }
 }

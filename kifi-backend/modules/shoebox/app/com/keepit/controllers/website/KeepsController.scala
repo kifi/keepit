@@ -138,6 +138,27 @@ class KeepsController @Inject() (
     }
   }
 
+  def editKeepNote(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    Keep.decodePublicId(keepPubId) match {
+      case Failure(_) => KeepFail.INVALID_ID.asErrorResponse
+      case Success(keepId) =>
+        db.readOnlyMaster { implicit s =>
+          if (permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.EDIT_KEEP))
+            keepRepo.getOption(keepId)
+          else None
+        } match {
+          case None =>
+            KeepFail.KEEP_NOT_FOUND.asErrorResponse
+          case Some(keep) =>
+            val newNote = (request.body \ "note").as[String]
+            db.readWrite { implicit session =>
+              keepsCommander.updateKeepNote(request.userId, keep, newNote)
+            }
+            NoContent
+        }
+    }
+  }
+
   def deleteCollection(id: ExternalId[Collection]) = UserAction { request =>
     db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
