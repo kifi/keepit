@@ -3,6 +3,7 @@ package com.keepit.slack
 import java.util.concurrent.ExecutionException
 
 import com.google.inject.Injector
+import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
 import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FutureHelpers, FakeExecutionContextModule }
@@ -201,6 +202,9 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
 
           slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, ch)("I love sharing links like <http://www.google.com>")
           ingestFromSlackSurely()
+
+          // Manually trigger a push by adding a new keep
+          inject[KeepInterner].internRawBookmark(RawBookmarkRepresentation(url = "http://www.trigger.io"), user.id.get, lib, KeepSource.keeper)
 
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)

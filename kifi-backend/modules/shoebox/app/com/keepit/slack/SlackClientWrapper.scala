@@ -37,6 +37,10 @@ trait SlackClientWrapper {
   def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit]
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit]
 
+  // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
+  def validateToken(token: SlackAccessToken): Future[Boolean]
+
+  // These will potentially yield failed futures if the request cannot be completed
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
@@ -117,7 +121,7 @@ class SlackClientWrapperImpl @Inject() (
             case Success(_: Unit) => db.readWrite { implicit s =>
               for {
                 channelId <- webhookInfo.webhook.channelId
-                channel <- slackChannelRepo.getById(webhookInfo.slackTeamId, channelId)
+                channel <- slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, channelId)
               } slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
 
               slackIncomingWebhookInfoRepo.save(
@@ -152,7 +156,7 @@ class SlackClientWrapperImpl @Inject() (
           val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
             case Success(_: Unit) =>
               db.readWrite { implicit s =>
-                slackChannelRepo.getById(slackTeamId, slackChannelId).foreach { channel =>
+                slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
                   slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
                 }
               }
@@ -162,6 +166,9 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
+  def validateToken(token: SlackAccessToken): Future[Boolean] = {
+    slackClient.validateToken(token)
+  }
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }

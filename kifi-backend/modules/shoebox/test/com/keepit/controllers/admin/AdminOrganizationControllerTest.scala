@@ -132,6 +132,34 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
         }
       }
+
+      "reset deprecated settings" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+
+          val oldConfig = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
+
+          db.readWrite { implicit session =>
+            val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
+            paidPlanRepo.save(oldPlan.copy(defaultSettings = oldPlan.defaultSettings.withFeatureSetTo((Feature.ViewMembers, FeatureSetting.DISABLED)))) // mock db migration, remove features
+          }
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ADMIN))
+          val payload = Json.obj("confirmation" -> "really do it", "deprecatedSettings" -> Json.obj("view_members" -> "anyone")) // see PaidPlanFactory.testPlanSettings, should be equal to one of the kv pairs
+          val request = route.applyDefaultSettingsToOrgConfigs().withBody(payload)
+          val response = controller.applyDefaultSettingsToOrgConfigs()(request)
+
+          status(response) === OK
+          chunkedResultAsJson(response).value.map { jsv => (jsv \ "orgId").as[Id[Organization]] }.toSet === Set(org.id.get)
+
+          val newConfig = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
+          newConfig.settings must equalTo(oldConfig.settings.withFeatureSetTo((Feature.ViewMembers, FeatureSetting.DISABLED)))
+        }
+      }
     }
   }
 }

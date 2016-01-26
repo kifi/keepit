@@ -142,8 +142,11 @@ object SlackReaction {
 case class SlackEmoji(value: String)
 object SlackEmoji {
   val bee = SlackEmoji(":bee:")
+  val constructionWorker = SlackEmoji(":construction_worker:")
+  val fireworks = SlackEmoji(":fireworks:")
   val gear = SlackEmoji(":gear:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
+  val star = SlackEmoji(":star:")
 }
 
 sealed abstract class SlackCommand(val value: String)

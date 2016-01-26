@@ -69,11 +69,11 @@ object DescriptionElements {
   implicit def fromSlackEmoji(emoji: SlackEmoji): BasicElement = emoji.value
 
   implicit def fromDateTime(time: DateTime): BasicElement = new PrettyTime().format(time.toDate)
-  def withinTheLast(p: Period): BasicElement = {
+  def inTheLast(p: Period): BasicElement = {
     val prettyTime = new PrettyTime(new java.util.Date(0))
     prettyTime.formatDuration(new java.util.Date(-p.toStandardDuration.getMillis)) match {
       case "" => "just now"
-      case d => s"within the last ${d.stripPrefix("1 ")}"
+      case d => s"in the last ${d.stripPrefix("1 ")}"
     }
   }
 

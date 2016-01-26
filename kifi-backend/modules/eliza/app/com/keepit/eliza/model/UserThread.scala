@@ -26,7 +26,7 @@ case class UserThread(
   lastSeen: Option[DateTime],
   unread: Boolean = false,
   muted: Boolean = false,
-  lastMsgFromOther: Option[Id[ElizaMessage]],
+  latestMessageId: Option[Id[ElizaMessage]],
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationEmailed: Boolean = false,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
@@ -52,7 +52,7 @@ object UserThread {
     uriId = Some(mt.uriId),
     lastSeen = None,
     unread = true,
-    lastMsgFromOther = None,
+    latestMessageId = None,
     startedBy = mt.startedBy
   )
   def fromNonUserThread(nut: NonUserThread, user: Id[User]) = UserThread(
@@ -62,7 +62,7 @@ object UserThread {
     lastSeen = Some(currentDateTime),
     unread = false,
     muted = nut.muted,
-    lastMsgFromOther = None,
+    latestMessageId = None,
     startedBy = nut.createdBy
   )
   def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {

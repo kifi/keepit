@@ -95,8 +95,8 @@ angular.module('kifi')
       basicUserInfo: function (id, friendCount) {
         return route('/user/' + id, {friendCount: friendCount ? 1 : []});
       },
-      saveKeepNote: function (libraryId, keepId) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/note');
+      saveKeepNote: function (keepId) {
+        return route('/keeps/' + keepId + '/note');
       },
 
       ////////////////////////////

@@ -59,6 +59,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   // Mutating threads in-place
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
+  def registerMessage(msg: ElizaMessage)(implicit session: RWSession): Unit
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
   def deactivate(model: UserThread)(implicit session: RWSession): Unit
 }
@@ -82,13 +83,13 @@ class UserThreadRepoImpl @Inject() (
     def lastSeen = column[Option[DateTime]]("last_seen", O.Nullable)
     def unread = column[Boolean]("notification_pending", O.NotNull)
     def muted = column[Boolean]("muted", O.NotNull)
-    def lastMsgFromOther = column[Option[Id[ElizaMessage]]]("last_msg_from_other", O.Nullable)
+    def latestMessageId = column[Option[Id[ElizaMessage]]]("last_msg_from_other", O.Nullable)
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, keepId, uriId, lastSeen, unread, muted, lastMsgFromOther, notificationUpdatedAt, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, user, keepId, uriId, lastSeen, unread, muted, latestMessageId, notificationUpdatedAt, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)
@@ -173,7 +174,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification] = {
-    activeRows.filter(row => row.user === userId && row.unread).map(row => (row.keepId, row.lastMsgFromOther)).list.map {
+    activeRows.filter(row => row.user === userId && row.unread).map(row => (row.keepId, row.latestMessageId)).list.map {
       case (keep, message) => UserThreadNotification(keep, message.get)
     }
   }
@@ -224,8 +225,8 @@ class UserThreadRepoImpl @Inject() (
     // Note that this method works properly even if the message is from this user. TODO: Rename lastMsgFromOther => lastMsgId ?
     val now = clock.now
     activeRows
-      .filter(row => (row.user === userId && row.keepId === message.keepId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther <= message.id.get))
-      .map(row => (row.lastMsgFromOther, row.unread, row.notificationUpdatedAt, row.updatedAt))
+      .filter(row => (row.user === userId && row.keepId === message.keepId) && (row.latestMessageId.isEmpty || row.latestMessageId <= message.id.get))
+      .map(row => (row.latestMessageId, row.unread, row.notificationUpdatedAt, row.updatedAt))
       .update((Some(message.id.get), false, message.createdAt, now))
   }
 
@@ -236,7 +237,7 @@ class UserThreadRepoImpl @Inject() (
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit = {
     val now = clock.now
     relevantMessageOpt match {
-      case Some(relevantMessage) => activeRows.filter(row => row.id === id && row.lastMsgFromOther === relevantMessage).map(_.notificationEmailed).update(true)
+      case Some(relevantMessage) => activeRows.filter(row => row.id === id && row.latestMessageId === relevantMessage).map(_.notificationEmailed).update(true)
       case None => activeRows.filter(row => row.id === id).map(row => (row.notificationEmailed, row.updatedAt)).update((true, now))
     }
   }
@@ -250,6 +251,14 @@ class UserThreadRepoImpl @Inject() (
   def markUnread(userId: Id[User], keepId: Id[Keep])(implicit session: RWSession): Boolean = {
     val now = clock.now
     activeRows.filter(row => row.user === userId && row.keepId === keepId && !row.unread).map(row => (row.unread, row.updatedAt)).update((true, now)) > 0
+  }
+
+  def registerMessage(msg: ElizaMessage)(implicit session: RWSession): Unit = {
+    val now = clock.now
+    activeRows
+      .filter(row => row.keepId === msg.keepId)
+      .map(row => (row.updatedAt, row.latestMessageId, row.notificationUpdatedAt))
+      .update((now, Some(msg.id.get), msg.createdAt))
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
