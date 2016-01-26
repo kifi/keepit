@@ -129,8 +129,7 @@ angular.module('kifi')
           if (!editor.length) {
             var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
-            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keepLibraryId; })[0];
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, distinctKeep.id, function update(noteText) {
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, keep.pubId, function update(noteText) {
               keep.note = noteText;
             });
           } else {

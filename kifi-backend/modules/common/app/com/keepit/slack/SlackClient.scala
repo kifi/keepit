@@ -33,6 +33,7 @@ object SlackAPI {
 
   import com.keepit.slack.SlackAPI.SlackParams._
 
+  def Test(token: SlackAccessToken) = Route(GET, "https://slack.com/api/api.test", token)
   def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackAuthState, teamId: Option[SlackTeamId], redirectUri: String) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, scopes, state, "redirect_uri" -> redirectUri, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode, redirectUri: String) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, code, "redirect_uri" -> redirectUri)
   def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
@@ -53,6 +54,7 @@ trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
+  def validateToken(token: SlackAccessToken): Future[Boolean]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
@@ -107,6 +109,9 @@ class SlackClientImpl(
   }
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
+  }
+  def validateToken(token: SlackAccessToken): Future[Boolean] = {
+    slackCall[Unit](SlackAPI.Test(token))(readUnit).map(_ => true).recover { case f => false }
   }
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {

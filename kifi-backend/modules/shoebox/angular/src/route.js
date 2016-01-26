@@ -71,7 +71,7 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken&openCreateLibrary',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&teamId',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -89,8 +89,11 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken&openCreateLibrary',
-        params: { organization: null },
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&teamId',
+        params: {
+          organization: null,
+          teamId: null
+        },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
         resolve: {
@@ -118,6 +121,16 @@ angular.module('kifi')
           ]
         },
         'abstract': true
+      })
+      .state('orgProfile.slack', {
+        url: '',
+        controller: 'OrgProfileSlackCtrl',
+        templateUrl: 'orgProfile/orgProfileSlack.tpl.html',
+        params: {
+          teamId: null,
+          signUpWithSlack: true
+        },
+        activetab: null
       })
       .state('orgProfile.members', {
         url: '/members?openInviteModal&addMany',
@@ -311,7 +324,7 @@ angular.module('kifi')
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
-        url: '/:handle/:librarySlug?authToken',
+        url: '/:handle/:librarySlug?authToken&signUpWithSlack',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
         params: {

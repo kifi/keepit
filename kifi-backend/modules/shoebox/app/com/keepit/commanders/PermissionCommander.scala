@@ -320,7 +320,7 @@ class PermissionCommanderImpl @Inject() (
 }
 
 case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[Int] {
-  override val version = 4
+  override val version = 5
   val namespace = "org_permissions_namespace"
   def toKey(): String = orgId.id.toString
 }
