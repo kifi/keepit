@@ -113,4 +113,6 @@ object PathCommander {
   def tagSearchPath(tag: String) = Path("find?q=" + URLEncoder.encode(s"""tag:"$tag"""", "ascii"))
   val browserExtension = Path("install")
   val settingsPage = Path("settings")
+  val iOS = "https://itunes.apple.com/us/app/kifi-knowledge-management/id740232575?mt=8"
+  val android = "https://play.google.com/store/apps/details?id=com.kifi&hl=en"
 }
