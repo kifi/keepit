@@ -431,7 +431,7 @@ class AdminOrganizationController @Inject() (
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
-    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
+    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.all().map(_.id.get) }
     val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
       db.readWrite { implicit s =>
         val account = paidAccountRepo.getByOrgId(orgId)
