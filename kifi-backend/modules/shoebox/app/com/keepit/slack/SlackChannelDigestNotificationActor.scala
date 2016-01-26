@@ -12,6 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
@@ -36,6 +37,7 @@ class SlackChannelDigestNotificationActor @Inject() (
   attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  orgConfigRepo: OrganizationConfigurationRepo,
   slackClient: SlackClientWrapper,
   pathCommander: PathCommander,
   clock: Clock,
@@ -65,7 +67,15 @@ class SlackChannelDigestNotificationActor @Inject() (
     db.readOnlyReplicaAsync { implicit session =>
       val ids = slackChannelRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenChannelDigests)
       slackChannelRepo.getByIds(ids.toSet).filter {
-        case (_, slackChannel) => canPushToChannel(slackChannel)
+        case (_, slackChannel) => {
+          val areNotifsEnabled = channelToLibRepo.getBySlackTeamAndChannel(slackChannel.slackTeamId, slackChannel.slackChannelId).exists { ctl =>
+            ctl.space match {
+              case OrganizationSpace(orgId) => orgConfigRepo.getByOrgId(orgId).settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
+              case _ => true
+            }
+          }
+          areNotifsEnabled && canPushToChannel(slackChannel)
+        }
       }.keySet
     }
   }
