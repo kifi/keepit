@@ -1,21 +1,19 @@
 package com.keepit.slack
 
-import com.google.inject.{ Inject, ImplementedBy, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core.anyExtensionOps
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
+import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -26,6 +24,7 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
+  val minDelayForExplicitMsg = Period.days(2)
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
 
@@ -51,6 +50,7 @@ class SlackOnboarderImpl @Inject() (
   db: Database,
   slackClient: SlackClientWrapper,
   pathCommander: PathCommander,
+  slackChannelRepo: SlackChannelRepo,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   basicUserRepo: BasicUserRepo,
@@ -58,6 +58,7 @@ class SlackOnboarderImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
   attributionRepo: KeepSourceAttributionRepo,
+  clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackOnboarder with Logging {
@@ -85,17 +86,25 @@ class SlackOnboarderImpl @Inject() (
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
+    val channel = integ.slackChannelId.flatMap(channelId => slackChannelRepo.getByChannelId(integ.slackTeamId, channelId))
     val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId hasTheSameValueAs lib.organizationId)
+    val explicitMsgCutoff = clock.now minus minDelayForExplicitMsg
 
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
       msg <- (integ, slackTeamForLibrary) match {
-        case (ltsc: LibraryToSlackChannel, _) if !getsNewFTUI(integ.slackTeamId) => oldSchoolPushMessage(ltsc, owner, lib)
-        case _ if !getsNewFTUI(integ.slackTeamId) => None
-        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) => explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) => explicitIngestionMessage(sctl, owner, lib, slackTeam)
-        case (ltsc: LibraryToSlackChannel, None) => conservativePushMessage(ltsc, owner, lib)
-        case (sctl: SlackChannelToLibrary, None) => conservativeIngestionMessage(sctl, owner, lib)
+        case (ltsc: LibraryToSlackChannel, _) if !getsNewFTUI(integ.slackTeamId) =>
+          oldSchoolPushMessage(ltsc, owner, lib)
+        case _ if !getsNewFTUI(integ.slackTeamId) =>
+          None
+        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+          explicitPushMessage(ltsc, owner, lib, slackTeam)
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+          explicitIngestionMessage(sctl, owner, lib, slackTeam)
+        case (ltsc: LibraryToSlackChannel, _) =>
+          conservativePushMessage(ltsc, owner, lib)
+        case (sctl: SlackChannelToLibrary, _) =>
+          conservativeIngestionMessage(sctl, owner, lib)
       }
     } yield msg
   }
