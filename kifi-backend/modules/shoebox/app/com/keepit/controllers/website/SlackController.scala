@@ -100,7 +100,9 @@ class SlackController @Inject() (
       case SetupSlackTeam(orgIdOpt) => {
         slackTeamCommander.setupSlackTeam(userId, slackIdentity.teamId, orgIdOpt).map { slackTeam =>
           slackTeam.organizationId match {
-            case Some(orgId) => Redirect(getOrgUrl(orgId), SEE_OTHER)
+            case Some(orgId) =>
+              slackTeamCommander.syncPublicChannels(userId, slackTeam.slackTeamId)
+              Redirect(getOrgUrl(orgId), SEE_OTHER)
             case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
           }
         }
