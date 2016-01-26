@@ -84,24 +84,54 @@ class SlackController @Inject() (
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("missing_webhook"))
       }
+
       case TurnOnLibraryPush(integrationId) => slackAuth.incomingWebhook match {
         case Some(webhook) =>
           val libraryId = slackIntegrationCommander.turnOnLibraryPush(Id(integrationId), webhook, slackIdentity)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.successful(BadRequest("missing_webhook"))
       }
+
       case TurnOnChannelIngestion(integrationId) => {
         val libraryId = slackIntegrationCommander.turnOnChannelIngestion(Id(integrationId), slackIdentity)
         Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
       }
+
       case SetupSlackTeam(orgIdOpt) => {
-        slackTeamCommander.setupSlackTeam(userId, slackIdentity, orgIdOpt).map { slackTeam =>
+        slackTeamCommander.setupSlackTeam(userId, slackIdentity.teamId, orgIdOpt).map { slackTeam =>
           slackTeam.organizationId match {
             case Some(orgId) => Redirect(getOrgUrl(orgId), SEE_OTHER)
             case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
           }
         }
       }
+
+      case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackIdentity.teamId).map { slackTeam =>
+        slackTeam.organizationId match {
+          case Some(orgId) => Redirect(getOrgUrl(orgId), SEE_OTHER)
+          case None => Redirect(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}", SEE_OTHER)
+        }
+      }
+
+      case ConnectSlackTeam(orgId) => slackTeamCommander.connectSlackTeamToOrganization(userId, slackIdentity.teamId, orgId) match {
+        case Success(team) if team.organizationId.contains(orgId) => Future.successful(Redirect(getOrgUrl(orgId), SEE_OTHER))
+        case teamMaybe =>
+          val error = teamMaybe.map(team => new Exception(s"Something weird happen while connecting org $orgId with $team")).recover { case error => error }
+          throw error.get
+      }
+
+      case CreateSlackTeam() => slackTeamCommander.createOrganizationForSlackTeam(userId, slackIdentity.teamId).map { team =>
+        team.organizationId match {
+          case Some(orgId) => Redirect(getOrgUrl(orgId), SEE_OTHER)
+          case None => throw new Exception(s"Something weird happen while creating org for $team")
+        }
+      }
+
+      case SyncPublicChannels() =>
+        slackTeamCommander.syncPublicChannels(userId, slackIdentity.teamId).map {
+          case (orgId, _) =>
+            Redirect(getOrgUrl(orgId), SEE_OTHER)
+        }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
@@ -165,32 +195,56 @@ class SlackController @Inject() (
   }
 
   def addSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
-    val link = slackStateCommander.getAuthLink(SetupSlackTeam(None), slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
+    val link = slackStateCommander.getAuthLink(AddSlackTeam(), slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
     Redirect(link, SEE_OTHER)
   }
 
-  def connectSlackTeam(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission) { implicit request =>
-    val link = slackStateCommander.getAuthLink(SetupSlackTeam(Some(request.orgId)), None, SlackController.REDIRECT_URI).url
+  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[String]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission) { implicit request =>
+    val link = slackStateCommander.getAuthLink(ConnectSlackTeam(request.orgId), slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
     Redirect(link, SEE_OTHER)
   }
 
-  def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
-      Ok(Json.obj("redirectUrl" -> getOrgUrl(slackTeam.organizationId.get)))
+  def createSlackTeam(slackTeamId: Option[String]) = UserAction { implicit request =>
+    val link = slackStateCommander.getAuthLink(CreateSlackTeam(), slackTeamId.map(SlackTeamId(_)), SlackController.REDIRECT_URI).url
+    Redirect(link, SEE_OTHER)
+  }
+
+  def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission) { implicit request =>
+    val Seq(slackTeamId) = db.readOnlyReplica { implicit session =>
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.toSeq
     }
+    val link = slackStateCommander.getAuthLink(SyncPublicChannels(), Some(slackTeamId), SlackController.REDIRECT_URI).url
+    Redirect(link, SEE_OTHER)
   }
 
   def getOrganizationsToConnectToSlackTeam() = UserAction { implicit request =>
-    val orgs = slackTeamCommander.getOrganizationsToConnectToSlackTeam(request.userId).toSeq.sortBy(_.name)
+    val orgs = db.readOnlyMaster { implicit session =>
+      slackTeamCommander.getOrganizationsToConnectToSlackTeam(request.userId).toSeq.sortBy(_.name)
+    }
     Ok(Json.obj("orgs" -> orgs))
   }
 
-  def connectOrganizationToSlackTeam(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  // deprecated
+  def createOrganizationForSlackTeam(slackTeamId: String) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId).map { slackTeam =>
-      if (slackTeam.organizationId.contains(request.orgId)) Ok(Json.obj("redirectUrl" -> getOrgUrl(request.orgId)))
-      else throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeam")
+    slackTeamCommander.createOrganizationForSlackTeam(request.userId, SlackTeamId(slackTeamId)).map { slackTeam =>
+      slackTeam.organizationId match {
+        case Some(orgId) =>
+          slackTeamCommander.syncPublicChannels(request.userId, SlackTeamId(slackTeamId))
+          Ok(Json.obj("redirectUrl" -> getOrgUrl(orgId)))
+        case _ => throw new Exception(s"Something weird happen while creating org for $slackTeam")
+      }
+    }
+  }
+
+  // deprecated
+  def connectOrganizationToSlackTeam(newOrganizationId: PublicId[Organization], slackTeamId: String) = OrganizationUserAction(newOrganizationId, SlackCommander.slackSetupPermission) { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    slackTeamCommander.connectSlackTeamToOrganization(request.request.userId, SlackTeamId(slackTeamId), request.orgId) match {
+      case Success(slackTeam) if slackTeam.organizationId.contains(request.orgId) =>
+        slackTeamCommander.syncPublicChannels(request.request.userId, SlackTeamId(slackTeamId))
+        Ok(Json.obj("redirectUrl" -> getOrgUrl(request.orgId)))
+      case slackTeamMaybe => throw new Exception(s"Something weird happen while connecting org ${request.orgId} with $slackTeamMaybe")
     }
   }
 
