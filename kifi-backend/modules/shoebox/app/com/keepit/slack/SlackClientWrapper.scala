@@ -117,7 +117,7 @@ class SlackClientWrapperImpl @Inject() (
             case Success(_: Unit) => db.readWrite { implicit s =>
               for {
                 channelId <- webhookInfo.webhook.channelId
-                channel <- slackChannelRepo.getById(webhookInfo.slackTeamId, channelId)
+                channel <- slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, channelId)
               } slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
 
               slackIncomingWebhookInfoRepo.save(
@@ -152,7 +152,7 @@ class SlackClientWrapperImpl @Inject() (
           val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
             case Success(_: Unit) =>
               db.readWrite { implicit s =>
-                slackChannelRepo.getById(slackTeamId, slackChannelId).foreach { channel =>
+                slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
                   slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
                 }
               }

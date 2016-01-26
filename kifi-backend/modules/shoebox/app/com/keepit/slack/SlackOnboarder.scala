@@ -2,11 +2,11 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.{ SlackLog, Logging }
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -20,6 +20,11 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
+  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
+  def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
+    case push: LibraryToSlackChannel => true
+    case ingestion: SlackChannelToLibrary => ingestion.slackTeamId == KifiSlackTeamId
+  }
 }
 
 @Singleton
@@ -38,14 +43,19 @@ class SlackOnboarderImpl @Inject() (
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
-    log.info(s"[SLACK-ONBOARD] Trying to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
-    db.readOnlyMaster { implicit s =>
-      generateOnboardingMessageForIntegration(integ)
-    }.map { welcomeMsg =>
-      log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-      slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
-    }.getOrElse {
-      log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
+    log.info(s"[SLACK-ONBOARD] Maybe going to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
+    if (SlackOnboarder.canSendMessageAboutIntegration(integ)) {
+      db.readOnlyMaster { implicit s =>
+        generateOnboardingMessageForIntegration(integ)
+      }.map { welcomeMsg =>
+        log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
+        slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
+      }.getOrElse {
+        log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
+        Future.successful(Unit)
+      }
+    } else {
+      log.info("[SLACK-ONBOARD] Decided not to even try sending a message")
       Future.successful(Unit)
     }
   }
@@ -71,7 +81,7 @@ class SlackOnboarderImpl @Inject() (
         Some(DescriptionElements(
           "We just collected a bunch of links from this channel (all", linksFromTargetChannel.size, "of them) and we'll keep collecting new ones as you post them :tornado:.",
           "You can browse them on Kifi in", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute)
-        )).filter(_ => sctl.slackTeamId == SlackDigestNotifier.KifiSlackTeamId) tap { _.foreach(text => slackLog.info(s"Sending an ingestion to ${sctl.slackTeamId}.", text)) }
+        )) tap { _.foreach(text => slackLog.info(s"Sending an ingestion to ${sctl.slackTeamId}.", text)) }
     }
     textOpt.map(text => SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text)).quiet)
   }
