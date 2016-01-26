@@ -213,6 +213,13 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'integrations'
       })
+      .state('orgProfile.settings.integrationsSlackConfirm', {
+        url: '/integrations/slack-confirm',
+        controller: 'SlackConfirmCtrl',
+        templateUrl: 'teamSettings/slackConfirm.tpl.html',
+        activetab: 'settings',
+        activenav: 'integrations'
+      })
       .state('teams', {
         url: '/teams',
         'abstract': true,
@@ -284,13 +291,13 @@ angular.module('kifi')
         templateUrl: 'keep/keepPage.tpl.html',
         controller: 'KeepPageCtrl'
       })
-      .state('slackIntegrationTeamChooser', {
+      .state('integrations.slack.teams', {
         url : '/integrations/slack/teams?:slackTeamId',
         templateUrl: 'integrations/slack/teamChooser.tpl.html',
         controller: 'SlackIntegrationTeamChooserCtrl'
       })
-      .state('slackIntegrationFullSync', {
-        url: '/intregrations/slack/fullsync',
+      .state('integrations.slack.fullSync', {
+        url: '/integrations/slack/fullsync',
         templateUrl: 'integrations/slack/fullSync.tpl.html',
         controller: 'SlackIntegrationFullSyncCtrl'
       })

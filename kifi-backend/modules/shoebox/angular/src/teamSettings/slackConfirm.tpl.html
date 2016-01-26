@@ -1,0 +1,46 @@
+<div>
+
+<!--
+
+Section 1
+Visible to everyone
+"We're ingesting all of your teams links ..... blah blah this may take a few minutes
+
+Section 2
+If the user is currently in Chrome or FFX with an installed extension >  hide this section
+If the user is in Chrome or FFX and no installed extension >  Buttons to install  (I don't care if they ever installed in the past, only if they are currently on a browser with it)
+If the user is in IE, Safari, etc then buttons to download Chrome or FFX mentioning our awesome extension (same buttons we have on the /install page when you hit it on IE)
+
+Section 3
+Visible to everyone
+Button to visit newly sync'd team (ideally less obvious than the install CTA).
+
+-->
+
+<h2>😻 Congrats, we’re syncing your channels now</h2>
+
+<p>This may take a bit, and we’ll update you in Slack when we finish. Once it’s done, you will be able to see all of your new Kifi libraries on your <a href="">Kyfy team page</a>. Full search abilities may take up to an hour if you have a big team, because we’re crawling every page.</p>
+
+<div ng-if="hasInstalled">
+  <p>Since you already have our browser extensions (high five!), encourage your team to get it as well so they can benefit from the links kept here. Send them to this link to sign up with Slack and automatically join this Kifi team:</p>
+  <input type="text" ng-model="teamLink" class="kf-textbox" clipboard readonly text="teamLink" ng-click="showCopied()">
+  <div ng-if="showCopiedConfirm">Copied!</div>
+</div>
+
+<div ng-if="!hasInstalled">
+  <p>Kifi is a great way to manage content with your team. Our most popular feature is our browser extension, which has full Google integration, let you easily keep pages, and allow you to discuss content <i>on pages</i> with your team.</p>
+
+  <p ng-if="!canInstall">We currently support Chrome and Firefox, and will support Safari soon. Hang tight!</p>
+
+  <p ng-if="canInstall">
+    <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue">Install the extension</button>
+  </p>
+
+  <p>After you explore around, you can quickly get your team on Kifi by sending them this link:</p>
+  <input type="text" ng-model="teamLink" class="kf-textbox" clipboard readonly text="teamLink" ng-click="showCopied()">
+  <div ng-if="showCopiedConfirm">Copied!</div>
+</div>
+
+
+
+</div>
