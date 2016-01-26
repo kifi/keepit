@@ -31,6 +31,7 @@ GET     /organizations             @com.keepit.controllers.routing.KifiSiteRoute
 GET     /recommendations           @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /redir                     @com.keepit.controllers.routing.KifiSiteRouter.generalRedirect(data: String)
+GET     /url                       @com.keepit.controllers.routing.KifiSiteRouter.urlRedirect(s: String, t: Option[String] ?= None)
 
 GET     /k/:title/:id              @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfKeepFound(title: String, id: PublicId[Keep], authToken: Option[String] ?= None)
 

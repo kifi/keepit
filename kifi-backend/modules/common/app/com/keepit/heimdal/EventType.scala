@@ -74,6 +74,7 @@ object NonUserEventTypes {
   val MESSAGED = EventType("messaged")
   val WAS_NOTIFIED = EventType("was_notified")
   val SEARCHED = EventType("searched")
+  val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
 }
 
 object VisitorEventTypes {
