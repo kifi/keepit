@@ -291,13 +291,13 @@ angular.module('kifi')
         templateUrl: 'keep/keepPage.tpl.html',
         controller: 'KeepPageCtrl'
       })
-      .state('integrations.slack.teams', {
+      .state('slackIntegrationTeamChooser', {
         url : '/integrations/slack/teams?:slackTeamId',
         templateUrl: 'integrations/slack/teamChooser.tpl.html',
         controller: 'SlackIntegrationTeamChooserCtrl'
       })
-      .state('integrations.slack.fullSync', {
-        url: '/integrations/slack/fullsync',
+      .state('slackIntegrationFullSync', {
+        url: '/intregrations/slack/fullsync',
         templateUrl: 'integrations/slack/fullSync.tpl.html',
         controller: 'SlackIntegrationFullSyncCtrl'
       })
