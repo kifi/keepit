@@ -12,7 +12,7 @@ function log(a0) {
     args[1] = 'color:' + a0;
   }
   console.log.apply(console, args);
-};
+}
 const l = function logTaggedTemplateString(strings, values) {
   'use strict';
   values = Array.prototype.slice.call(arguments, 1);
@@ -126,8 +126,9 @@ var api = api || (function () {
       l`[api:unload] %s${page.id} %s${page.url}`;
     },
     'api:pagehide': function (data, respond, page) {
+      // pagehide/pageshow are for the "Page Cache"/"bfcache" back/forward events
       l`[api:pagehide] %s${page.id} %s${page.url}`;
-      //api.tabs.on.loading.dispatch();
+      // api.tabs.on.unload.dispatch(page);
     },
     'api:pageshow': function (data, respond, page) {
       l`[api:pageshow] %s${page.id} %s${page.url}`;
@@ -170,7 +171,7 @@ var api = api || (function () {
       loadContent(p, function (text) {
         scripts.push(text);
         done();
-      })
+      });
     });
 
     stylePaths.forEach(function (p) {
@@ -233,7 +234,7 @@ var api = api || (function () {
   }
 
   // Icon handling
-  safari.application.addEventListener('command', function (e) {
+  safari.application.addEventListener('command', errors.wrap(function (e) {
     if (e.command === 'kifi-icon') {
       var tab = e.target.browserWindow.activeTab;
       var {url, id} = tab;
@@ -241,17 +242,17 @@ var api = api || (function () {
         api.icon.on.click.dispatch(pages[id]);
       }
     }
-  });
-  safari.application.addEventListener('validate', function (e) {
+  }));
+  safari.application.addEventListener('validate', errors.wrap(function (e) {
     if (e.command === 'kifi-icon') {
       var tab = e.target.browserWindow.activeTab;
       var {url, id} = tab;
       // Disable the button if there is no URL loaded in the tab.
       e.target.disabled = !url;
     }
-  });
+  }));
 
-  safari.application.addEventListener('open', function (e) {
+  safari.application.addEventListener('open', errors.wrap(function (e) {
     // is it a tab or a window?
     var target = e.target;
     var isWindow = !!target.tabs;
@@ -262,24 +263,24 @@ var api = api || (function () {
       l`[tab.open]`;
       initTab(target);
     }
-  }, true);
+  }), true);
 
-  safari.application.addEventListener('navigate', function (e) {
+  safari.application.addEventListener('navigate', errors.wrap(function (e) {
     var target = e.target;
     l`${CRED}[application.navigate] %s${target.id} %s${target.url} %O${e}`;
-  }, true);
+  }), true);
 
-  safari.application.addEventListener('activate', function (e) {
+  safari.application.addEventListener('activate', errors.wrap(function (e) {
     if (e.target instanceof SafariBrowserWindow) {
       onWindowActivate.apply(this, arguments);
     }
-  }, true);
+  }), true);
 
-  safari.application.addEventListener('deactivate', function (e) {
+  safari.application.addEventListener('deactivate', errors.wrap(function (e) {
     if (e.target instanceof SafariBrowserWindow) {
       onWindowDeactivate.apply(this, arguments);
     }
-  }, true);
+  }), true);
 
   function onWindowActivate(e) {
     var win = e.target;
@@ -331,17 +332,17 @@ var api = api || (function () {
     var port = createPort(tab);
     var page = pages[tab.id] || createPage(tab.id, tab.url, port);
 
-    tab.addEventListener('activate', function (e) {
+    tab.addEventListener('activate', errors.wrap(function (e) {
       l`${CGRAY}[tabs.activate] %s${tab.id} %s${tab.url}`;
       api.tabs.on.focus.dispatch(pages[tab.id]);
-    });
+    }));
 
-    tab.addEventListener('deactivate', function (e) {
+    tab.addEventListener('deactivate', errors.wrap(function (e) {
       l`${CGRAY}[tabs.deactivate] %s${tab.id} %s${tab.url}`;
       api.tabs.on.blur.dispatch(pages[tab.id]);
-    });
+    }));
 
-    tab.addEventListener('beforeNavigate', function (e) {
+    tab.addEventListener('beforeNavigate', errors.wrap(function (e) {
       var id = tab.id;
       var page = pages[tab.id];
       var url = e.url;
@@ -363,21 +364,21 @@ var api = api || (function () {
           api.on.search.dispatch(query, ~url.indexOf('sourceid=chrome') ? 'o' : 'n');
         }
       }
-    });
+    }));
 
-    tab.addEventListener('navigate', function (e) {
+    tab.addEventListener('navigate', errors.wrap(function (e) {
       // Tends to happen before DOMContentLoaded.
       l`${CGRAY}[tabs.navigate] %s${tab.id} %s${tab.url}`;
-    });
+    }));
 
-    tab.addEventListener('close', function (e) {
+    tab.addEventListener('close', errors.wrap(function (e) {
       l`${CGRAY}[tabs.close] %s${tab.id} %s${tab.url}`;
       var page = pages[tab.id];
       page._port.disconnect();
       removeTab(tab.id);
-    });
+    }));
 
-    tab.addEventListener('message', onTabMessage.bind(null, tab));
+    tab.addEventListener('message', errors.wrap(onTabMessage.bind(null, tab)));
   }
 
   function removeTab(tabId) {

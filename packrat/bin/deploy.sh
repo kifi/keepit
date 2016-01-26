@@ -18,7 +18,8 @@ elif [[ ! -f amo_secret.key ]]; then
 elif [[ ! -f certs/privatekey.pem ]]; then
 
   echo $'\nERROR: need certs/*.pem for signing Safari extensions (ask Carlos or Andrew).'
-  echo $'\n(Good instructions are here: https://github.com/robertknight/xar-js/blob/master/README.md#building-a-safari-extension)'
+  echo '  Good instructions are here:'
+  echo '  https://github.com/robertknight/xar-js#building-a-safari-extension'
   exit 1
 
 elif ! which -s xpisign; then
@@ -29,13 +30,10 @@ elif ! which -s xpisign; then
   echo '  sudo pip install https://github.com/nmaier/xpisign.py/zipball/master'
   exit 1
 
-elif ! which -s xarjs; then
+elif [[ ! -f node_modules/xar-js/xarjs ]]; then
 
-  # TODO(carlos): update instructions when new version of package >0.1.2
-  # is released on npm.
   echo $'\nERROR: need to install xarjs for signing Safari extension'
-  echo 'npm install https://github.com/robertknight/xar-js/tarball/master &&'
-  echo 'cd node_modules/xar-js && npm install && make && npm link'
+  echo '  npm install'
   exit 1
 
 elif ! which -s aws; then
