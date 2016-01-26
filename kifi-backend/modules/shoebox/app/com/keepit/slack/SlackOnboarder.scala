@@ -35,6 +35,15 @@ object SlackOnboarder {
     case push: LibraryToSlackChannel => true
     case ingestion: SlackChannelToLibrary => ingestion.slackTeamId == KifiSlackTeamId || ingestion.slackTeamId == BrewstercorpSlackTeamId
   }
+
+  val installationDescription = {
+    import DescriptionElements._
+    DescriptionElements(
+      "Use the `/kifi <search words>` command. We'll even search the full content of the page.",
+      "Install" --> LinkElement(PathCommander.browserExtension.absolute), "our Chrome and Firefox extensions for easy keeping and full Google integration.",
+      "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android" --> LinkElement(PathCommander.android), "apps."
+    )
+  }
 }
 
 @Singleton
@@ -109,11 +118,7 @@ class SlackOnboarderImpl @Inject() (
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.magnifyingGlass, "*Searching Links*"),
-        DescriptionElements(
-          "Use the `kifi <search words>` command. We'll even search the full content of the page.",
-          "Install our Chrome and Firefox extension for easy keeping and full Google integration.",
-          "You'll also love our award winning (thanks Mom!) iOS and Android apps."
-        )
+        installationDescription
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.constructionWorker, "*Managing Links*"),
@@ -149,11 +154,7 @@ class SlackOnboarderImpl @Inject() (
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.magnifyingGlass, "*Searching Links*"),
-        DescriptionElements(
-          "Use the `kifi <search words>` command. We'll even search the full content of the page.",
-          "Install our Chrome and Firefox extension for easy keeping and full Google integration.",
-          "You'll also love our award winning (thanks Mom!) iOS and Android apps."
-        )
+        installationDescription
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.constructionWorker, "*Managing Links*"),

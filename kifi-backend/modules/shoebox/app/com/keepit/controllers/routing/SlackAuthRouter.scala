@@ -70,9 +70,9 @@ class SlackAuthRouter @Inject() (
   private def weWantThisUserToAuthWithSlack(userId: Id[User], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
     slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
       val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
-      val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isDefined
-      val userHasNotGivenUsTheirSlackInfo = slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
-      orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg || userHasNotGivenUsTheirSlackInfo)
+      val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
+      val userHasNotGivenUsTheirSlackInfo = !slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
+      orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)
     }
   }
 
