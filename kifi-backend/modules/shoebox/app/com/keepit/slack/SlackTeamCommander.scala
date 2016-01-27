@@ -44,6 +44,7 @@ class SlackTeamCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
   orgAvatarCommander: OrganizationAvatarCommander,
+  libraryRepo: LibraryRepo,
   libraryCommander: LibraryCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -134,17 +135,29 @@ class SlackTeamCommanderImpl @Inject() (
     val libraryName = channel.channelName.value
     val librarySpace = LibrarySpace(userId, team.organizationId)
 
-    val initialValues = LibraryInitialValues(
-      name = libraryName,
-      visibility = librarySpace match {
-        case UserSpace(_) => LibraryVisibility.SECRET
-        case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
-      },
-      kind = Some(LibraryKind.SLACK_CHANNEL),
-      description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
-      space = Some(librarySpace)
-    )
-    libraryCommander.createLibrary(initialValues, userId) tap {
+    // If this channel is the slack team's general channel, try to sync it with the org's general library
+    // if not, just create a library as normal
+    def createLibrary() = {
+      val maybeOrgGeneralLibrary = if (channel.isGeneral) {
+        db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
+      } else None
+
+      maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
+        val initialValues = LibraryInitialValues(
+          name = libraryName,
+          visibility = librarySpace match {
+            case UserSpace(_) => LibraryVisibility.SECRET
+            case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
+          },
+          kind = Some(LibraryKind.SLACK_CHANNEL),
+          description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
+          space = Some(librarySpace)
+        )
+        libraryCommander.createLibrary(initialValues, userId)
+      }
+    }
+
+    createLibrary() tap {
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
