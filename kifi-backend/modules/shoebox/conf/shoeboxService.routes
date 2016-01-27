@@ -45,9 +45,7 @@ GET     /login/close                @com.keepit.controllers.core.AuthController.
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider, close: Boolean ?= false)
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
-GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
-GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
-GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
+GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String)
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
 
