@@ -13,13 +13,6 @@ object ran { def apply(n: Int) = RandomStringUtils.randomAlphanumeric(n) }
 // Random Alphabetic
 object ra { def apply(n: Int) = RandomStringUtils.randomAlphabetic(n) }
 
-case class TestingSlackTeam(
-  teamId: SlackTeamId,
-  teamName: SlackTeamName)
-object SlackTeamFactory {
-  def team() = TestingSlackTeam(SlackTeamId(ran(10)), SlackTeamName(ra(10)))
-}
-
 case class TestingSlackUser(
   userId: SlackUserId,
   username: SlackUsername)
@@ -45,11 +38,28 @@ object SlackTeamMembershipFactory {
 
   case class PartialSlackTeamMembership(stm: SlackTeamMembership) {
     def withUser(user: User) = this.copy(stm = stm.copy(userId = Some(user.id.get)))
-    def withTeam(team: TestingSlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.teamId, slackTeamName = team.teamName))
+    def withTeam(team: SlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.slackTeamId, slackTeamName = team.slackTeamName))
     def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
   }
 
   def memberships(count: Int) = List.fill(count)(membership())
+}
+
+object SlackTeamFactory {
+  private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
+  def team(): PartialSlackTeam = {
+    PartialSlackTeam(SlackTeam(
+      slackTeamId = SlackTeamId(ran(10)),
+      slackTeamName = SlackTeamName(ran(10)),
+      organizationId = None,
+      generalChannelId = None
+    ))
+  }
+
+  case class PartialSlackTeam(team: SlackTeam) {
+    def withName(newName: String) = this.copy(team = team.copy(slackTeamName = SlackTeamName(newName)))
+    def withOrg(org: Organization) = this.copy(team = team.copy(organizationId = Some(org.id.get)))
+  }
 }
 
 object SlackIncomingWebhookFactory {

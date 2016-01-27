@@ -5,6 +5,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
+import com.keepit.model.SlackTeamFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryInviteFactoryHelper._
@@ -52,7 +53,7 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(UserFactory.user().saved).saved
 
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
 
@@ -101,7 +102,7 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
             val org = OrganizationFactory.organization().withOwner(owner).saved
             val lib = LibraryFactory.library().withOwner(owner).withOrganization(org).saved
 
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
 

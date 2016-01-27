@@ -90,6 +90,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
   def slackCommander(implicit injector: Injector) = inject[SlackCommander].asInstanceOf[SlackCommanderImpl]
   def slackIntegrationCommander(implicit injector: Injector) = inject[SlackIntegrationCommander].asInstanceOf[SlackIntegrationCommanderImpl]
+  def slackTeamCommander(implicit injector: Injector) = inject[SlackTeamCommander].asInstanceOf[SlackTeamCommanderImpl]
   def slackInfoCommander(implicit injector: Injector) = inject[SlackInfoCommander].asInstanceOf[SlackInfoCommanderImpl]
   def libToSlackPusher(implicit injector: Injector) = inject[LibraryToSlackChannelPusher].asInstanceOf[LibraryToSlackChannelPusherImpl]
   def slackClient(implicit injector: Injector) = inject[SlackClient].asInstanceOf[FakeSlackClientImpl]

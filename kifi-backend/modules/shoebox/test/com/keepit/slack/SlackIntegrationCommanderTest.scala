@@ -10,6 +10,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
+import com.keepit.model.SlackTeamFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -31,7 +32,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
 
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val Seq(siw1, siw2) = SlackIncomingWebhookFactory.webhooks(2).map(_.withMembership(stm).saved)
             (user, lib, stm, siw1, siw2)
@@ -59,7 +60,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
           val (user, lib, libToSlack, slackToLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
@@ -98,7 +99,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
             val org = OrganizationFactory.organization().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
@@ -137,7 +138,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
           val (user, lib, libToSlack, slackToLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
@@ -165,7 +166,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val member = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
             val lib = LibraryFactory.library().withOwner(owner).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved

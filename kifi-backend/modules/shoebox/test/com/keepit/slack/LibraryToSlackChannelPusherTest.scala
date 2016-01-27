@@ -17,6 +17,7 @@ import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
+import com.keepit.model.SlackTeamFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.common.time._
@@ -54,7 +55,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val (user, lib, integration) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
@@ -75,7 +76,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val owner = UserFactory.user().saved
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(owner).published().saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextPushAt(fakeClock.now).saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
@@ -101,7 +102,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lib = LibraryFactory.library().withOwner(user).published().saved
             KeepFactory.keep().withUser(user).withLibrary(lib).saved
 
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
@@ -142,7 +143,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val (user, lib, integration, webhook) = db.readWrite { implicit session =>
             val user = UserFactory.user().withName("Ryan", "Brewster").withUsername("ryanpbrewster").saved
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
@@ -186,7 +187,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val (user, lib, stm, libToSlack, slackToLib, webhook) = db.readWrite { implicit session =>
             val user = UserFactory.user().withUsername("ryan-kifi").saved
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
@@ -219,7 +220,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val (user, lib, integration, webhook) = db.readWrite { implicit session =>
             val user = UserFactory.user().withName("Ryan", "Brewster").withUsername("ryanpbrewster").saved
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved

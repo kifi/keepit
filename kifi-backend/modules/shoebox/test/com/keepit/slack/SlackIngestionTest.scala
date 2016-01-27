@@ -9,6 +9,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
+import com.keepit.model.SlackTeamFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
@@ -39,7 +40,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextIngestionAt(now).on().saved
             (user, lib, stm, stl)
@@ -71,7 +72,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextIngestionAt(now).on().saved
             (user, lib, stm, stl)
