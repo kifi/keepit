@@ -9,15 +9,15 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
 object Debouncing {
-  class Dropper {
+  class Dropper[T] {
     private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
-    def debounce(key: String, cooldown: Period)(action: => Unit): Unit = {
+    def debounce(key: String, cooldown: Period)(fn: => T): Option[T] = {
       val now = currentDateTime
       onCooldownUntil.get(key) match {
-        case Some(threshold) if now.isBefore(threshold) =>
+        case Some(threshold) if now.isBefore(threshold) => None
         case _ =>
-          action
           onCooldownUntil.put(key, now.plus(cooldown))
+          Some(fn)
       }
     }
   }
