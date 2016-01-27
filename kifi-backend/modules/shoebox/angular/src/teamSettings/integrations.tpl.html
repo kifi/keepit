@@ -19,7 +19,7 @@
           ng-click="onClickedSyncAllSlackChannels()">Connect <span ng-bind="profile.name"></span> with Slack</button></div>
       </div>
 
-      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && !slackTeam.publicChannelsLastSyncedAt">
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && !slackTeam.publicChannelsLastSyncedAt">
         <div class="kf-container-header"><span>Sync channels to Kifi</span></div>
         <span class="kf-ts-integrations-marketing-text">Automatically keep links messaged in your channels. Kifi will create a library for each public (not private or direct message) Slack Channel. <a href="http://support.kifi.com/hc/en-us/articles/206873486-Getting-started-with-the-Kifi-Slack-Integeration" target="_blank">Learn more.</a></span>
         <div class="kf-ts-integrations-marketing-text">
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam.publicChannelsLastSyncedAt">
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && slackTeam.publicChannelsLastSyncedAt">
         <div class="kf-container-header"><span>Fetch channels to sync</span></div>
         <span class="kf-ts-integrations-marketing-text">
           Refetch your Slack channels to automatically create Kifi libraries.
