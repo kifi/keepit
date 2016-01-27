@@ -133,7 +133,7 @@ object SlackAuthenticatedActionHelper {
   }
 
   def getRequiredScopes[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Set[SlackAuthScope] = actionHelper match {
-    case SetupLibraryIntegrations => SlackAuthScope.push
+    case SetupLibraryIntegrations => SlackAuthScope.integrationSetup
     case TurnOnLibraryPush => SlackAuthScope.push
     case TurnOnChannelIngestion => SlackAuthScope.ingest
     case SetupSlackTeam => SlackAuthScope.syncPublicChannels
