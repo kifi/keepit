@@ -44,10 +44,14 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
+@json
+case class SlackTeamIdAndName(id: SlackTeamId, name: SlackTeamName) // todo(Léo): find a better name
+
 case class OrganizationSlackInfo(
   link: String,
-  slackTeamId: Option[SlackTeamId],
-  slackTeams: Set[SlackTeamId],
+  slackTeamId: Option[SlackTeamId], // deprecated
+  slackTeam: Option[SlackTeamIdAndName],
+  slackTeams: Set[SlackTeamId], // deprecated
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
 object OrganizationSlackInfo {
@@ -214,21 +218,22 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId)
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => SlackTeamIdAndName(team.slackTeamId, team.slackTeamName))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
 
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
-    val slackTeamId = slackTeams.headOption
+    val slackTeam = slackTeams.headOption
     val action = SetupSlackTeam(Some(orgId))
     val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
-    val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, SlackController.REDIRECT_URI).url
+    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), requiredScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
-      slackTeamId,
-      slackTeams,
+      slackTeam.map(_.id),
+      slackTeam,
+      slackTeams.map(_.id),
       libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), librarySlackInfosByLib(libId)) }
     )
   }
