@@ -28,7 +28,6 @@ trait SlackCommander {
   def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean
   def getIdentityAndMissingScopes[A <: SlackAuthenticatedAction](userId: Id[User], slackTeamIdOpt: Option[SlackTeamId])(implicit helper: SlackAuthenticatedActionHelper[A]): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
-  def getSlackTeamAndMemberships(userId: Id[User]): Set[(SlackTeamMembership, SlackTeam)]
 }
 
 @Singleton
@@ -107,14 +106,6 @@ class SlackCommanderImpl @Inject() (
 
     futureValidIdentityAndExistingScopes.imap {
       case (identityOpt, existingScopes) => (identityOpt, helper.getMissingScopes(existingScopes))
-    }
-  }
-
-  def getSlackTeamAndMemberships(userId: Id[User]): Set[(SlackTeamMembership, SlackTeam)] = {
-    db.readOnlyMaster { implicit session =>
-      val memberships = slackTeamMembershipRepo.getByUserId(userId).toSet
-      val teamsBySlackTeamId = slackTeamRepo.getBySlackTeamIds(memberships.map(_.slackTeamId))
-      memberships.map(membership => (membership, teamsBySlackTeamId(membership.slackTeamId)))
     }
   }
 }
