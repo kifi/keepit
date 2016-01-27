@@ -11,6 +11,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.LibraryToSlackChannelFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
+import com.keepit.model.SlackTeamFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -33,7 +34,7 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           val (user, lib1, lib2) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val Seq(lib1, lib2) = LibraryFactory.libraries(2).map(_.withOwner(user)).saved
-            val slackTeam = SlackTeamFactory.team()
+            val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
 
             LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib1).withChannel("#eng").saved
@@ -58,8 +59,8 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           val (user, lib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam1 = SlackTeamFactory.team().copy(teamName = SlackTeamName("kifi"))
-            val slackTeam2 = SlackTeamFactory.team().copy(teamName = SlackTeamName("kifi"))
+            val slackTeam1 = SlackTeamFactory.team().withName("kifi").saved
+            val slackTeam2 = SlackTeamFactory.team().withName("kifi").saved
 
             val stm1 = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam1).saved
             val stm2 = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam2).saved
@@ -83,7 +84,7 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
             val owner = UserFactory.user().saved
             val member = UserFactory.user().saved
 
-            val slackTeam = SlackTeamFactory.team().copy(teamName = SlackTeamName("slack"))
+            val slackTeam = SlackTeamFactory.team().withName("slack").saved
             val stmOwner = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
             val stmMember = SlackTeamMembershipFactory.membership().withUser(member).withTeam(slackTeam).saved
 
