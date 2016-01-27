@@ -141,35 +141,8 @@ class SlackController @Inject() (
     }
   }
 
-  private def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {
-    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
-    val missingScopes = requiredScopes -- existingScopes
-    val requiresNewIncomingWebhook = requiredScopes.contains(SlackAuthScope.IncomingWebhook)
-    if (requiresNewIncomingWebhook) missingScopes + SlackAuthScope.IncomingWebhook else missingScopes
-  }
-
   private def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit request: RequestHeader): Future[Result] = {
-    val savedIdentityAndExistingScopesOpt = for {
-      slackTeamId <- slackTeamIdOpt
-      slackTeamMembership <- db.readOnlyMaster { implicit session =>
-        slackMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId)
-      }
-      tokenWithScopes <- slackTeamMembership.tokenWithScopes
-    } yield (slackTeamId, slackTeamMembership.slackUserId, tokenWithScopes)
-
-    val futureValidIdentityAndExistingScopes = savedIdentityAndExistingScopesOpt match {
-      case Some((slackTeamId, slackUserId, SlackTokenWithScopes(token, existingScopes))) => slackClient.validateToken(token).imap {
-        case true => (Some((slackTeamId, slackUserId)), existingScopes)
-        case false => (None, Set.empty[SlackAuthScope])
-      }
-      case None => Future.successful((None, Set.empty[SlackAuthScope]))
-    }
-
-    val futureValidIdentityAndMissingScopes = futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, getMissingScopes(action, existingScopes))
-    }
-
-    futureValidIdentityAndMissingScopes.flatMap {
+    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt)(action.helper).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
@@ -300,6 +273,7 @@ class SlackController @Inject() (
   def turnOnLibraryPush(libraryId: PublicId[Library], integrationId: String) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
     LibraryToSlackChannel.decodePublicIdStr(integrationId) match {
       case Success(libToSlackId) =>
+        // todo(Léo): deal with broken webhook / missing write permissions ???
         val slackTeamId = db.readOnlyMaster { implicit session => libToSlackRepo.get(libToSlackId).slackTeamId }
         processActionOrElseAuthenticate(request.userId, Some(slackTeamId), TurnOnLibraryPush(libToSlackId.id))
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))

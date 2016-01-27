@@ -97,7 +97,10 @@ case class Authenticate() extends SlackAuthenticatedAction {
   def helper = Authenticate
 }
 
-sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String)
+sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String) {
+  implicit def helper: SlackAuthenticatedActionHelper[A] = this
+  def getMissingScopes(existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = SlackAuthenticatedActionHelper.getMissingScopes(this, existingScopes)
+}
 object SlackAuthenticatedActionHelper {
 
   private val all: Set[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Set(
@@ -132,7 +135,7 @@ object SlackAuthenticatedActionHelper {
     case Authenticate => formatPure(Authenticate())
   }
 
-  def getRequiredScopes[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Set[SlackAuthScope] = actionHelper match {
+  private def getRequiredScopes[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Set[SlackAuthScope] = actionHelper match {
     case SetupLibraryIntegrations => SlackAuthScope.integrationSetup
     case TurnOnLibraryPush => SlackAuthScope.push
     case TurnOnChannelIngestion => SlackAuthScope.ingest
@@ -142,6 +145,13 @@ object SlackAuthenticatedActionHelper {
     case CreateSlackTeam => SlackAuthScope.teamSetup
     case SyncPublicChannels => SlackAuthScope.syncPublicChannels
     case Authenticate => SlackAuthScope.userSignup
+  }
+
+  private def getMissingScopes[A <: SlackAuthenticatedAction](action: SlackAuthenticatedActionHelper[A], existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {
+    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action)
+    val missingScopes = requiredScopes -- existingScopes
+    val requiresNewIncomingWebhook = requiredScopes.contains(SlackAuthScope.IncomingWebhook)
+    if (requiresNewIncomingWebhook) missingScopes + SlackAuthScope.IncomingWebhook else missingScopes
   }
 }
 
