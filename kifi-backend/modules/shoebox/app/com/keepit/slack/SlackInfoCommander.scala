@@ -222,7 +222,9 @@ class SlackInfoCommanderImpl @Inject() (
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
     val slackTeamId = slackTeams.headOption
-    val link = slackStateCommander.getAuthLink(SetupSlackTeam(Some(orgId)), slackTeamId, SlackController.REDIRECT_URI).url
+    val action = SetupSlackTeam(Some(orgId))
+    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
+    val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
       slackTeamId,
