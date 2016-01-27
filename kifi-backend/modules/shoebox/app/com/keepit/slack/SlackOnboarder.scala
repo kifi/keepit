@@ -21,7 +21,7 @@ import scala.util.{ Success, Failure }
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
   def talkAboutIntegration(integ: SlackIntegration): Future[Unit]
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership): Future[Unit]
+  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit]
 }
 
 object SlackOnboarder {
@@ -206,14 +206,14 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership): Future[Unit] = SafeFuture.swallow {
+  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
     require(team.slackTeamId == member.slackTeamId)
 
     (for {
       msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         "Creating an integration between your Slack channels and Kifi.", SlackEmoji.rocket,
         "We're grabbing all the links now, which might take a bit. We'll let you know when we're done."
-      )))).filter(_ => canSendMessageAboutTeam(team))
+      )))).filter(_ => forceOverride || canSendMessageAboutTeam(team))
     } yield {
       slackClient.sendToSlack(member.slackUserId, member.slackTeamId, member.slackUserId.asChannel, msg).andThen {
         case Success(_: Unit) => slackLog.info("Pushed a team FTUI to", member.slackUsername.value, "in", team.slackTeamName.value)
