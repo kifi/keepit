@@ -25,9 +25,9 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[SlackIntegrationCommanderImpl])
 trait SlackIntegrationCommander {
   // Open their own DB sessions, intended to be called directly from controllers
-  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
-  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Id[Library]
-  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], identity: SlackIdentifyResponse): Id[Library]
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Unit
+  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Id[Library]
+  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], slackTeamId: SlackTeamId, slackUserId: SlackUserId): Id[Library]
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
   def fetchMissingChannelIds(): Future[Unit]
@@ -56,7 +56,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   inhouseSlackClient: InhouseSlackClient)
     extends SlackIntegrationCommander with Logging {
 
-  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Unit = {
     val pushIntegration = db.readWrite { implicit s =>
       val defaultSpace = libRepo.get(libId).organizationId match {
         case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
@@ -67,8 +67,8 @@ class SlackIntegrationCommanderImpl @Inject() (
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
-        slackUserId = identity.userId,
-        slackTeamId = identity.teamId,
+        slackUserId = slackUserId,
+        slackTeamId = slackTeamId,
         slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.On
@@ -77,13 +77,13 @@ class SlackIntegrationCommanderImpl @Inject() (
         requesterId = userId,
         space = defaultSpace,
         libraryId = libId,
-        slackUserId = identity.userId,
-        slackTeamId = identity.teamId,
+        slackUserId = slackUserId,
+        slackTeamId = slackTeamId,
         slackChannelId = webhook.channelId,
         slackChannelName = webhook.channelName,
         status = SlackIntegrationStatus.Off
       ))
-      val channelOpt = webhook.channelId.map { channelId => channelRepo.getOrCreate(identity.teamId, channelId, webhook.channelName) }
+      val channelOpt = webhook.channelId.map { channelId => channelRepo.getOrCreate(slackTeamId, channelId, webhook.channelName) }
       ltsc
     }
 
@@ -150,12 +150,13 @@ class SlackIntegrationCommanderImpl @Inject() (
     }
   }
 
-  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Id[Library] = {
+  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Id[Library] = {
     db.readWrite { implicit session =>
       val integration = libToChannelRepo.get(integrationId)
-      if (integration.isActive && integration.slackTeamId == identity.teamId && integration.slackChannelName == webhook.channelName) {
+      val channelMatches = integration.slackChannelId.exists(channelId => webhook.channelId.contains(channelId)) || integration.slackChannelName == webhook.channelName
+      if (integration.isActive && integration.slackTeamId == slackTeamId && channelMatches) {
         val updatedIntegration = {
-          if (integration.slackUserId == identity.userId) integration else integration.copy(slackUserId = identity.userId, slackChannelId = None) // resetting channelId with userId to be safe
+          if (integration.slackUserId == slackUserId) integration else integration.copy(slackUserId = slackUserId, slackChannelId = webhook.channelId) // resetting channelId with userId to be safe
         }.withStatus(SlackIntegrationStatus.On)
         libToChannelRepo.save(updatedIntegration)
       }
@@ -163,12 +164,12 @@ class SlackIntegrationCommanderImpl @Inject() (
     }
   }
 
-  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], identity: SlackIdentifyResponse): Id[Library] = {
+  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], slackTeamId: SlackTeamId, slackUserId: SlackUserId): Id[Library] = {
     db.readWrite { implicit session =>
       val integration = channelToLibRepo.get(integrationId)
-      if (integration.isActive && integration.slackTeamId == identity.teamId) {
+      if (integration.isActive && integration.slackTeamId == slackTeamId) {
         val updatedIntegration = {
-          if (integration.slackUserId == identity.userId) integration else integration.copy(slackUserId = identity.userId, slackChannelId = None) // resetting channelId with userId to be safe
+          if (integration.slackUserId == slackUserId) integration else integration.copy(slackUserId = slackUserId)
         }.withStatus(SlackIntegrationStatus.On)
         channelToLibRepo.save(updatedIntegration)
       }

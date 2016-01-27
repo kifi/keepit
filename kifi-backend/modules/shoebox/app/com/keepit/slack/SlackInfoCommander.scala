@@ -46,6 +46,7 @@ case class LibrarySlackInfo(
 
 case class OrganizationSlackInfo(
   link: String,
+  slackTeamId: Option[SlackTeamId],
   slackTeams: Set[SlackTeamId],
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
@@ -220,9 +221,13 @@ class SlackInfoCommanderImpl @Inject() (
 
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
 
-    val link = slackStateCommander.getAuthLink(SetupSlackTeam(Some(orgId)), None, SlackController.REDIRECT_URI).url
+    val slackTeamId = slackTeams.headOption
+    val action = SetupSlackTeam(Some(orgId))
+    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
+    val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
+      slackTeamId,
       slackTeams,
       libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), librarySlackInfosByLib(libId)) }
     )

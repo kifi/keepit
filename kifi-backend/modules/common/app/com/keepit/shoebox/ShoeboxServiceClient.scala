@@ -875,7 +875,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = {
     call(Shoebox.internal.addUsersToKeep(adderId, keepId), body = Json.obj("users" -> newUsers)).map(_ => ())
   }
-
 }
 
 object ShoeboxServiceClient {

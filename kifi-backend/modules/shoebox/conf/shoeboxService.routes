@@ -45,11 +45,10 @@ GET     /login/close                @com.keepit.controllers.core.AuthController.
 GET     /login/:provider            @com.keepit.controllers.core.AuthController.loginSocial(provider, close: Boolean ?= false)
 POST    /auth/log-in                @com.keepit.controllers.core.AuthController.logInWithUserPass(link: String ?= "")
 
-GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
-GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
-GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
+GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String)
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
+GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, intent: Option[String] ?= None, modelPubId: Option[String] ?= None, authToken: Option[String] ?= None)
 # do we still use this endpoint?
@@ -613,6 +612,8 @@ GET     /test/me                    @com.keepit.controllers.testing.ForTestingOn
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
+
+POST    /admin/trigger              @com.keepit.controllers.admin.AdminEventTriggerController.parseAndTriggerEvent()
 
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)

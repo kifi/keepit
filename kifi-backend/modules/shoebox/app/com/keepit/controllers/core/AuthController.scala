@@ -1,42 +1,36 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
-import com.keepit.common.crypto.{ PublicIdGenerator, PublicIdConfiguration, PublicId }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.controller.KifiSession._
+import com.keepit.common.controller.{ MaybeUserRequest, NonUserRequest, ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
+import com.keepit.common.net.UserAgent
+import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.time._
-import com.keepit.controllers.website.MarketingSiteRouter
+import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social._
+import com.keepit.social.providers.ProviderController
 import com.kifi.macros.json
-import com.keepit.common.controller.KifiSession._
-import com.keepit.common.core._
-
+import play.api.Play
 import play.api.Play._
 import play.api.i18n.Messages
-import play.api.libs.json.{ JsValue, JsNumber, Json }
-import play.api.mvc._
-import play.twirl.api.Html
-import securesocial.core._
-import play.api.libs.iteratee.Enumerator
-import play.api.Play
-import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders._
-import com.keepit.common.net.UserAgent
-import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
-import com.keepit.social.providers.ProviderController
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{ JsNumber, JsValue, Json }
+import play.api.mvc._
+import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
 
-import scala.concurrent.{ Promise, Future }
-import scala.util.{ Try, Random }
+import scala.concurrent.Future
+import scala.util.Try
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -122,11 +116,6 @@ class AuthController @Inject() (
     userIdentityHelper: UserIdentityHelper,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
-
-  // path is an Angular route
-  val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations") // todo: Is this needed?
-
-  private val PopupKey = "popup"
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
@@ -368,31 +357,18 @@ class AuthController @Inject() (
     }
   }
 
-  def link(provider: String, redirect: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
+  def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate(provider)(request) map { res: Result =>
       val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
       val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-      if (redirect.isDefined && LinkRedirects.isDefinedAt(redirect.get)) {
-        res.withSession(resSession + (SecureSocial.OriginalUrlKey -> LinkRedirects(redirect.get)))
-      } else if (resSession.get(PopupKey).isDefined) {
-        res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
+      if (request.session.get(SecureSocial.OriginalUrlKey).isDefined) {
+        res.withSession(resSession + (SecureSocial.OriginalUrlKey -> request.session.get(SecureSocial.OriginalUrlKey).get))
       } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
         request.headers.get(REFERER).map { url =>
           res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
         } getOrElse res
       } else res
     }
-  }
-
-  def popupBeforeLinkSocial(provider: String) = UserAction { implicit request =>
-    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(request.session + (PopupKey -> "1"))
-  }
-
-  def popupAfterLinkSocial(provider: String) = UserAction { implicit request =>
-    def esc(s: String) = s.replaceAll("'", """\\'""")
-    val identity = request.identityId.flatMap(authCommander.getUserIdentity).get
-    Ok(Html(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>"))
-      .withSession(request.session - PopupKey)
   }
 
   // --
@@ -635,6 +611,10 @@ class AuthController @Inject() (
   }
 
   def connectWithSlack = MaybeUserAction { implicit request =>
-    Ok(views.html.authMinimal.connectWithSlack()).withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
+    Ok(views.html.authMinimal.connectWithSlack())
+  }
+
+  def connectWithSlackGo = MaybeUserAction { implicit request =>
+    Redirect("/link/slack").withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
   }
 }

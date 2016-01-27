@@ -16,7 +16,7 @@ import com.keepit.common.core._
 
 @ImplementedBy(classOf[SlackAuthStateCommanderImpl])
 trait SlackAuthStateCommander {
-  def getAuthLink(actionWithData: SlackAuthenticatedAction, teamId: Option[SlackTeamId], redirectUri: String): SlackAPI.Route
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
   def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
 }
 
@@ -26,8 +26,7 @@ class SlackAuthStateCommanderImpl @Inject() (stateCache: SlackAuthStateCache) ex
     SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), actionWithData) }
   }
 
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], redirectUri: String): SlackAPI.Route = {
-    val scopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
     val state = getNewSlackState(action)
     SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
   }
@@ -101,13 +100,6 @@ case class Authenticate() extends SlackAuthenticatedAction {
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String)
 object SlackAuthenticatedActionHelper {
 
-  implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
-    Reads(value => value.validate[String].flatMap[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]](action =>
-      all.find(_.action == action).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthenticatedAction: $action"))
-    ),
-    Writes(helper => JsString(helper.action))
-  )
-
   private val all: Set[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Set(
     SetupLibraryIntegrations,
     TurnOnLibraryPush,
@@ -118,6 +110,13 @@ object SlackAuthenticatedActionHelper {
     CreateSlackTeam,
     SyncPublicChannels,
     Authenticate
+  )
+
+  implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
+    Reads(value => value.validate[String].flatMap[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]](action =>
+      all.find(_.action == action).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthenticatedAction: $action"))
+    ),
+    Writes(helper => JsString(helper.action))
   )
 
   private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
@@ -134,7 +133,7 @@ object SlackAuthenticatedActionHelper {
   }
 
   def getRequiredScopes[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Set[SlackAuthScope] = actionHelper match {
-    case SetupLibraryIntegrations => SlackAuthScope.push
+    case SetupLibraryIntegrations => SlackAuthScope.integrationSetup
     case TurnOnLibraryPush => SlackAuthScope.push
     case TurnOnChannelIngestion => SlackAuthScope.ingest
     case SetupSlackTeam => SlackAuthScope.syncPublicChannels

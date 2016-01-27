@@ -9,18 +9,19 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ Debouncing, DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Success, Failure }
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit]
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership): Future[Unit]
+  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit]
+  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit]
 }
 
 object SlackOnboarder {
@@ -34,6 +35,8 @@ object SlackOnboarder {
     case push: LibraryToSlackChannel => true
     case ingestion: SlackChannelToLibrary => ingestion.slackTeamId == KifiSlackTeamId || ingestion.slackTeamId == BrewstercorpSlackTeamId
   }
+
+  def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId
 
   val installationDescription = {
     import DescriptionElements._
@@ -63,17 +66,20 @@ class SlackOnboarderImpl @Inject() (
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackOnboarder with Logging {
 
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  private val debouncer = new Debouncing.Dropper[Future[Unit]]
+  private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackOnboarder._
 
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
+  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
     log.info(s"[SLACK-ONBOARD] Maybe going to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
-    if (canSendMessageAboutIntegration(integ)) {
+    if (forceOverride || canSendMessageAboutIntegration(integ)) {
       db.readOnlyMaster { implicit s =>
         generateOnboardingMessageForIntegration(integ)
-      }.map { welcomeMsg =>
+      }.flatMap { welcomeMsg =>
         log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-        slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
+        debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+          slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
+        }
       }.getOrElse {
         log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
         Future.successful(Unit)
@@ -97,9 +103,9 @@ class SlackOnboarderImpl @Inject() (
           oldSchoolPushMessage(ltsc, owner, lib)
         case _ if !getsNewFTUI(integ.slackTeamId) =>
           None
-        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId hasTheSameValueAs slackTeam.generalChannelId) =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
         case (ltsc: LibraryToSlackChannel, _) =>
           conservativePushMessage(ltsc, owner, lib)
@@ -203,13 +209,22 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership): Future[Unit] = SafeFuture.swallow {
+  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
     require(team.slackTeamId == member.slackTeamId)
 
-    val directMsg = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-      "Creating an integration between your Slack channels and Kifi.", SlackEmoji.rocket,
-      "We're grabbing all the links now, which might take a bit. We'll let you know when we're done."
-    )))
-    slackClient.sendToSlack(member.slackUserId, member.slackTeamId, member.slackUserId.asChannel, directMsg)
+    (for {
+      msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+        "Creating an integration between your Slack channels and Kifi.", SlackEmoji.rocket,
+        "We're grabbing all the links now, which might take a bit. We'll let you know when we're done."
+      )))).filter(_ => forceOverride || canSendMessageAboutTeam(team))
+    } yield {
+      slackClient.sendToSlack(member.slackUserId, member.slackTeamId, member.slackUserId.asChannel, msg).andThen {
+        case Success(_: Unit) => slackLog.info("Pushed a team FTUI to", member.slackUsername.value, "in", team.slackTeamName.value)
+        case Failure(fail) => slackLog.warn("Failed to push team FTUI to", member.slackUsername.value, "in", team.slackTeamName.value, "because:", fail.getMessage)
+      }
+    }) getOrElse {
+      slackLog.info(s"Decided not to send a FTUI to team ${team.slackTeamName.value}")
+      Future.successful(Unit)
+    }
   }
 }

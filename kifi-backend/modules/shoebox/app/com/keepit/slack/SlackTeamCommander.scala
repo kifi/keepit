@@ -3,7 +3,7 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -44,6 +44,7 @@ class SlackTeamCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
   orgAvatarCommander: OrganizationAvatarCommander,
+  libraryRepo: LibraryRepo,
   libraryCommander: LibraryCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -134,17 +135,33 @@ class SlackTeamCommanderImpl @Inject() (
     val libraryName = channel.channelName.value
     val librarySpace = LibrarySpace(userId, team.organizationId)
 
-    val initialValues = LibraryInitialValues(
-      name = libraryName,
-      visibility = librarySpace match {
-        case UserSpace(_) => LibraryVisibility.SECRET
-        case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
-      },
-      kind = Some(LibraryKind.SLACK_CHANNEL),
-      description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
-      space = Some(librarySpace)
-    )
-    libraryCommander.createLibrary(initialValues, userId) tap {
+    // If this channel is the slack team's general channel, try to sync it with the org's general library
+    // if not, just create a library as normal
+    def createLibrary() = {
+      val maybeOrgGeneralLibrary = if (channel.isGeneral) {
+        db.readWrite { implicit s =>
+          libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption.map { orgGeneral =>
+            libraryRepo.save(orgGeneral.withName(channel.channelName.value))
+          }
+        }
+      } else None
+
+      maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
+        val initialValues = LibraryInitialValues(
+          name = libraryName,
+          visibility = librarySpace match {
+            case UserSpace(_) => LibraryVisibility.SECRET
+            case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
+          },
+          kind = Some(LibraryKind.SLACK_CHANNEL),
+          description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
+          space = Some(librarySpace)
+        )
+        libraryCommander.createLibrary(initialValues, userId)
+      }
+    }
+
+    createLibrary() tap {
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
@@ -197,10 +214,13 @@ class SlackTeamCommanderImpl @Inject() (
               "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
               team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
             ))))
-            channels.map(_.createdAt).maxOpt.foreach { lastChannelCreatedAt =>
-              db.readWrite { implicit sessio =>
-                slackTeamRepo.save(team.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)))
-              }
+            val updatedTeam = team |> { t =>
+              channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
+            } |> { t =>
+              channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t
+            }
+            if (updatedTeam != team) {
+              db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
             }
           } else {
             slackLog.warn("Failed to create some libraries while integrating Slack team", teamId.value, ". The errors are:", newLibraries.collect { case (ch, Left(fail)) => (ch, fail) }.toString)
