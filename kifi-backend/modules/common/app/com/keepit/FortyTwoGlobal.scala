@@ -155,8 +155,16 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   }
 
   override def onRouteRequest(request: RequestHeader) = super.onRouteRequest(request).orElse {
-    // todo: Check if there is a handler before 301ing.
-    Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
+    // Unfortunately, Play successfully routes 404s (super.onRouteRequest(r): Some[Handler]) -- how? seriously no clue,
+    // you'll notice it was a None just now, I'm dumbfounded -- so we can't tell if the redirect will make things
+    // better. We can either *call it* (risking side effecting), or just send the client there. Opting for the
+    // latter, so if it does side effect, the client will get the result.
+    Some(request.method).filter(_ == "GET").map(_ => request.path).filter(_.endsWith("/")).map {
+      case p if request.rawQueryString.nonEmpty => p.dropRight(1) + "?" + request.rawQueryString
+      case p => p.dropRight(1)
+    }.map { redirect =>
+      Action(Results.SeeOther(redirect))
+    }
   }
 
   override def onHandlerNotFound(request: RequestHeader): Future[Result] = Future.successful {
