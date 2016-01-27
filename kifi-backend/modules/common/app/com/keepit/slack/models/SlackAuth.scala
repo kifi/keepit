@@ -41,8 +41,9 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
-  val push: Set[SlackAuthScope] = Set(IncomingWebhook, Commands)
+  val push: Set[SlackAuthScope] = Set(Commands)
   val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
+  val integrationSetup = Set(IncomingWebhook) ++ push
 
   val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
   val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
