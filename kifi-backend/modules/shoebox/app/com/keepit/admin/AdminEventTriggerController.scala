@@ -91,7 +91,7 @@ class AdminEventTriggerController @Inject() (
       val membershipOpt = slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user)
       for { team <- teamOpt; membership <- membershipOpt } yield (team, membership)
     }.map {
-      case (team, membership) => slackOnboarder.talkAboutTeam(team, membership).map { _ => Json.obj("ok" -> true) }
+      case (team, membership) => slackOnboarder.talkAboutTeam(team, membership, forceOverride = true).map { _ => Json.obj("ok" -> true) }
     }.getOrElse {
       Future.successful(Json.obj("ok" -> false, "err" -> "could not find team and membership"))
     }
