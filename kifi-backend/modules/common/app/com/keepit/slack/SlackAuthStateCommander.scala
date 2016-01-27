@@ -16,7 +16,7 @@ import com.keepit.common.core._
 
 @ImplementedBy(classOf[SlackAuthStateCommanderImpl])
 trait SlackAuthStateCommander {
-  def getAuthLink(actionWithData: SlackAuthenticatedAction, teamId: Option[SlackTeamId], redirectUri: String): SlackAPI.Route
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
   def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
 }
 
@@ -26,8 +26,7 @@ class SlackAuthStateCommanderImpl @Inject() (stateCache: SlackAuthStateCache) ex
     SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), actionWithData) }
   }
 
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], redirectUri: String): SlackAPI.Route = {
-    val scopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
     val state = getNewSlackState(action)
     SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
   }
