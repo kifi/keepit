@@ -16,6 +16,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
 @json
@@ -46,10 +47,14 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
+@json
+case class OrganizationSlackTeamInfo(id: SlackTeamId, name: SlackTeamName, publicChannelsLastSyncedAt: Option[DateTime])
+
 case class OrganizationSlackInfo(
   link: String,
-  slackTeamId: Option[SlackTeamId],
-  slackTeams: Set[SlackTeamId],
+  slackTeamId: Option[SlackTeamId], // deprecated
+  slackTeam: Option[OrganizationSlackTeamInfo],
+  slackTeams: Set[SlackTeamId], // deprecated
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
 object OrganizationSlackInfo {
@@ -220,7 +225,7 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId)
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.lastChannelCreatedAt.map(_.toDateTime)))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
@@ -228,15 +233,16 @@ class SlackInfoCommanderImpl @Inject() (
     val permissionsByLib = permissionCommander.getLibrariesPermissions(libIds, Some(viewerId))
     def canViewLib(libId: Id[Library]): Boolean = permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
 
+    val slackTeam = slackTeams.headOption
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
-    val slackTeamId = slackTeams.headOption
     val action = SetupSlackTeam(Some(orgId))
     val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
-    val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, SlackController.REDIRECT_URI).url
+    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), requiredScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
-      slackTeamId,
-      slackTeams,
+      slackTeam.map(_.id),
+      slackTeam,
+      slackTeams.map(_.id),
       libraries = libIds.toList.sorted.collect {
         case libId if canViewLib(libId) => (basicLibsById(libId), librarySlackInfosByLib(libId))
       }
