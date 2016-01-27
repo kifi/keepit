@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
 import com.keepit.model._
+import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ JsNumber, JsObject, Json, JsValue }
 import play.api.mvc.{ Result, QueryStringBindable }
@@ -35,6 +36,7 @@ class MobileUserProfileController @Inject() (
   userProfileCommander: UserProfileCommander,
   collectionCommander: CollectionCommander,
   friendStatusCommander: FriendStatusCommander,
+  slackInfoCommander: SlackInfoCommander,
   implicit val executionContext: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
 
@@ -55,7 +57,7 @@ class MobileUserProfileController @Inject() (
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewerOpt.map(_.id.get))
-        val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
+        val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs, slackInfo) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val numFollowers = userProfileCommander.countFollowers(profile.userId, viewerOpt.map(_.id.get))
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -69,7 +71,8 @@ class MobileUserProfileController @Inject() (
               (orgs, pendingOrgs)
             }.getOrElse(Seq.empty, Set.empty)
           }
-          (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
+          val slackInfo = slackInfoCommander.getUserSlackInfo(profile.userId, viewerOpt.map(_.id.get))
+          (numConnections, numFollowers, userBio, orgInfos, pendingOrgs, slackInfo)
         }
 
         val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -84,6 +87,7 @@ class MobileUserProfileController @Inject() (
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography,
           orgs = orgInfos,
+          slackInfo = slackInfo,
           pendingOrgs = pendingOrgs.toSet
         )).as[JsObject]
 

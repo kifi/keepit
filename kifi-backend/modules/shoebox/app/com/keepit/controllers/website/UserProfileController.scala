@@ -12,6 +12,8 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
 import com.keepit.model._
+import com.keepit.slack.SlackInfoCommander
+import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -34,6 +36,7 @@ class UserProfileController @Inject() (
     userMutualConnectionsCommander: UserMutualConnectionsCommander,
     collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
+    slackInfoCommander: SlackInfoCommander,
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
@@ -57,7 +60,7 @@ class UserProfileController @Inject() (
   def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
     userCommander.profile(username, viewer) map { profile =>
       val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-      val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
+      val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs, slackInfo) = db.readOnlyMaster { implicit s =>
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
         val numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get))
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -71,7 +74,8 @@ class UserProfileController @Inject() (
             (orgs, pendingOrgs)
           }.getOrElse(Seq.empty, Set.empty)
         }
-        (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
+        val slackInfo = slackInfoCommander.getUserSlackInfo(profile.userId, viewer.map(_.id.get))
+        (numConnections, numFollowers, userBio, orgInfos, pendingOrgs, slackInfo)
       }
 
       val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -86,6 +90,7 @@ class UserProfileController @Inject() (
         numInvitedLibraries = numInvitedLibs,
         biography = userBiography,
         orgs = orgInfos,
+        slackInfo = slackInfo,
         pendingOrgs = pendingOrgs.toSet
       )).as[JsObject]
       jsonFriendInfo ++ jsonProfileInfo
