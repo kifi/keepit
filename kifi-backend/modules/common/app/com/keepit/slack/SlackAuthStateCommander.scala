@@ -100,13 +100,6 @@ case class Authenticate() extends SlackAuthenticatedAction {
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String)
 object SlackAuthenticatedActionHelper {
 
-  implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
-    Reads(value => value.validate[String].flatMap[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]](action =>
-      all.find(_.action == action).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthenticatedAction: $action"))
-    ),
-    Writes(helper => JsString(helper.action))
-  )
-
   private val all: Set[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Set(
     SetupLibraryIntegrations,
     TurnOnLibraryPush,
@@ -117,6 +110,13 @@ object SlackAuthenticatedActionHelper {
     CreateSlackTeam,
     SyncPublicChannels,
     Authenticate
+  )
+
+  implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
+    Reads(value => value.validate[String].flatMap[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]](action =>
+      all.find(_.action == action).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthenticatedAction: $action"))
+    ),
+    Writes(helper => JsString(helper.action))
   )
 
   private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
