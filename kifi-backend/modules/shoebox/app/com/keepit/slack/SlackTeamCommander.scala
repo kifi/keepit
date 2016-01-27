@@ -3,7 +3,7 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -197,10 +197,13 @@ class SlackTeamCommanderImpl @Inject() (
               "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
               team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
             ))))
-            channels.map(_.createdAt).maxOpt.foreach { lastChannelCreatedAt =>
-              db.readWrite { implicit sessio =>
-                slackTeamRepo.save(team.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)))
-              }
+            val updatedTeam = team |> { t =>
+              channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
+            } |> { t =>
+              channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t
+            }
+            if (updatedTeam != team) {
+              db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
             }
           } else {
             slackLog.warn("Failed to create some libraries while integrating Slack team", teamId.value, ". The errors are:", newLibraries.collect { case (ch, Left(fail)) => (ch, fail) }.toString)

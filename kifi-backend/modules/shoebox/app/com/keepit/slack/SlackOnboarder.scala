@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ Debouncing, DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
@@ -66,7 +66,8 @@ class SlackOnboarderImpl @Inject() (
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackOnboarder with Logging {
 
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  private val debouncer = new Debouncing.Dropper[Future[Unit]]
+  private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackOnboarder._
 
   def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
@@ -74,9 +75,11 @@ class SlackOnboarderImpl @Inject() (
     if (forceOverride || canSendMessageAboutIntegration(integ)) {
       db.readOnlyMaster { implicit s =>
         generateOnboardingMessageForIntegration(integ)
-      }.map { welcomeMsg =>
+      }.flatMap { welcomeMsg =>
         log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-        slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
+        debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+          slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, integ.slackChannelName, welcomeMsg)
+        }
       }.getOrElse {
         log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
         Future.successful(Unit)
@@ -100,9 +103,9 @@ class SlackOnboarderImpl @Inject() (
           oldSchoolPushMessage(ltsc, owner, lib)
         case _ if !getsNewFTUI(integ.slackTeamId) =>
           None
-        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if !channel.exists(_.lastNotificationAt isAfter explicitMsgCutoff) =>
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId hasTheSameValueAs slackTeam.generalChannelId) =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
         case (ltsc: LibraryToSlackChannel, _) =>
           conservativePushMessage(ltsc, owner, lib)
