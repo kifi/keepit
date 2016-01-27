@@ -52,8 +52,7 @@ class KeepToLibraryCommanderImpl @Inject() (
 
   def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStateOpt = None) match {
-      case Some(existingKtl) if existingKtl.isActive =>
-        ktlRepo.save(existingKtl.withAddedAt(clock.now))
+      case Some(existingKtl) if existingKtl.isActive => existingKtl
       case inactiveKtlOpt =>
         val newKtlTemplate = KeepToLibrary(
           keepId = keep.id.get,
