@@ -37,9 +37,16 @@ class SlackTeamCommanderTest extends TestKitSupport with SpecificationLike with 
           val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
           (user, org, slackTeam)
         }
-        println("syncing!")
-        val x = Await.result(slackTeamCommander.syncPublicChannels(user.id.get, slackTeam.slackTeamId), Duration.Inf)
-        println("done syncing")
+        val (_, libByChannel) = Await.result(slackTeamCommander.syncPublicChannels(user.id.get, slackTeam.slackTeamId), Duration.Inf)
+
+        libByChannel.foreach { case (ch, lib) => lib must beRight }
+        libByChannel.values.map(_.right.get).filter(_.kind == LibraryKind.SYSTEM_ORG_GENERAL) must haveSize(1)
+
+        db.readOnlyMaster { implicit s =>
+          libraryRepo.getBySpace(org.id.get) must haveSize(libByChannel.size) // we created one library per channel
+          val List(orgGeneral) = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).toList
+          orgGeneral.name === "#general"
+        }
         1 === 1
       }
     }
