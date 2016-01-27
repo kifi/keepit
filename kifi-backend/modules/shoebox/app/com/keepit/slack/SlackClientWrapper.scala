@@ -174,7 +174,15 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]] = {
-    slackClient.getChannels(token, excludeArchived).andThen(onRevokedToken(token))
+    slackClient.getChannels(token, excludeArchived).andThen(onRevokedToken(token)).andThen {
+      case Success(chs) => db.readWrite { implicit s =>
+        slackTeamMembershipRepo.getByToken(token).map(_.slackTeamId).foreach { teamId =>
+          chs.foreach { ch =>
+            slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
+          }
+        }
+      }
+    }
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
     slackClient.getChannelInfo(token, channelId).andThen(onRevokedToken(token))

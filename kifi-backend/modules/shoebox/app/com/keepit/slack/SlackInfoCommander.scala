@@ -227,7 +227,7 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.lastChannelCreatedAt.map(_.toDateTime)))
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }

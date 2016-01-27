@@ -49,6 +49,7 @@ class SlackTeamCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
+  clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -214,7 +215,7 @@ class SlackTeamCommanderImpl @Inject() (
               "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
               team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
             ))))
-            val updatedTeam = team |> { t =>
+            val updatedTeam = team.withPublicChannelsSyncedAt(clock.now) |> { t =>
               channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
             } |> { t =>
               channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t

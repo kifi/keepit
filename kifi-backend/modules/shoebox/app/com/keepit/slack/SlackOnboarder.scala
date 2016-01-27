@@ -25,7 +25,6 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
-  val minDelayForExplicitMsg = Period.days(2)
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
 
@@ -92,9 +91,7 @@ class SlackOnboarderImpl @Inject() (
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
-    val channel = integ.slackChannelId.flatMap(channelId => slackChannelRepo.getByChannelId(integ.slackTeamId, channelId))
     val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId hasTheSameValueAs lib.organizationId)
-    val explicitMsgCutoff = clock.now minus minDelayForExplicitMsg
 
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
