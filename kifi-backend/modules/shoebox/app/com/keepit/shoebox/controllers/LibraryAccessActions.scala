@@ -1,7 +1,5 @@
 package com.keepit.shoebox.controllers
 
-import java.util.concurrent.TimeUnit
-
 import com.keepit.commanders.{ LibraryAccessCommander }
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
@@ -19,8 +17,13 @@ trait LibraryAccessActions {
   implicit private val implicitPublicId = publicIdConfig
   val libraryAccessCommander: LibraryAccessCommander
 
+  // todo(Léo): find someone smart enough to make LibraryViewAction preserve subtype and remove LibraryViewUserAction
   def LibraryViewAction(id: PublicId[Library]) = new ActionFilter[MaybeUserRequest] {
     def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewAccess(id, input))
+  }
+
+  def LibraryViewUserAction(id: PublicId[Library]) = new ActionFilter[UserRequest] {
+    def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewAccess(id, input))
   }
 
   def LibraryWriteAction(id: PublicId[Library]): ActionFilter[UserRequest] = new ActionFilter[UserRequest] {
