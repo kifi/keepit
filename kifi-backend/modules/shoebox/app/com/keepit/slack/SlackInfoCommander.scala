@@ -92,6 +92,7 @@ class SlackInfoCommanderImpl @Inject() (
   orgInfoCommander: OrganizationInfoCommander,
   slackStateCommander: SlackAuthStateCommander,
   permissionCommander: PermissionCommander,
+  slackCommander: SlackCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -158,9 +159,10 @@ class SlackInfoCommanderImpl @Inject() (
         case (key, Seq(fs)) =>
           val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
           val authLink = {
-            val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnChannelIngestion)
-            if (requiredScopes subsetOf existingScopes) None
+            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
+            val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
+            val missingScopes = TurnOnChannelIngestion.getMissingScopes(existingScopes)
+            if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
           }
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
@@ -169,10 +171,10 @@ class SlackInfoCommanderImpl @Inject() (
         case (key, Seq(ts)) =>
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           val authLink = {
-            val hasValidWebhook = slackIncomingWebhookInfoRepo.getForChannelByName(ts.slackUserId, ts.slackTeamId, ts.slackChannelName).nonEmpty
-            lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnLibraryPush)
-            if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
+            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
+            lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
+            val missingScopes = TurnOnLibraryPush.getMissingScopes(existingScopes)
+            if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
           }
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
@@ -236,8 +238,8 @@ class SlackInfoCommanderImpl @Inject() (
     val slackTeam = slackTeams.headOption
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
     val action = SetupSlackTeam(Some(orgId))
-    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
-    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), requiredScopes, SlackController.REDIRECT_URI).url
+    val missingScopes = action.helper.getMissingScopes(Set.empty)
+    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), missingScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
       slackTeam.map(_.id),
