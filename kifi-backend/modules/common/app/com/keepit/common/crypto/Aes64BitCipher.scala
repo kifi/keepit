@@ -2,6 +2,7 @@ package com.keepit.common.crypto
 
 import java.lang.Long.reverseBytes
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import javax.crypto.{ Cipher, SecretKey, SecretKeyFactory }
 import javax.crypto.spec.{ IvParameterSpec, PBEKeySpec, SecretKeySpec }
 
@@ -17,6 +18,16 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
 
   def encrypt(value: Long): Long = crypt(value, ecipher)
   def decrypt(value: Long): Long = crypt(value, dcipher)
+  def encrypt(value: String): String = {
+    val in = value.getBytes(Charset.forName("UTF-8"))
+    val arr = crypt(in, ecipher)
+    CryptoSupport.toBase64(arr).replaceAllLiterally("\n", "")
+  }
+  def decrypt(value: String): String = {
+    val in = CryptoSupport.fromBase64(value)
+    val out = crypt(in, dcipher)
+    new String(out)
+  }
 
   private def crypt(value: Long, cipher: Cipher): Long = {
     val buffer = ByteBuffer.allocate(8)
@@ -28,6 +39,18 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
     buffer.put(bytes)
     buffer.rewind
     reverseBytes(buffer.getLong)
+  }
+
+  private def crypt(value: Array[Byte], cipher: Cipher): Array[Byte] = {
+    val buffer = ByteBuffer.allocate(value.length)
+    buffer.put(value)
+    val bytes: Array[Byte] = synchronized {
+      cipher.doFinal(buffer.array)
+    }
+    buffer.rewind
+    buffer.put(bytes)
+    buffer.rewind
+    buffer.array()
   }
 
 }

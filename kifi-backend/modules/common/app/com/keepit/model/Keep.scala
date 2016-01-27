@@ -359,6 +359,7 @@ object FeedFilter {
     case OwnKeeps.kind => Some(OwnKeeps)
     case Unread.kind => Some(Unread)
     case Sent.kind => Some(Sent)
+    case All.kind => Some(All)
     case "org" => id.flatMap(Organization.decodePublicIdStr(_).toOption).map(OrganizationKeeps)
     case _ => None
   }
