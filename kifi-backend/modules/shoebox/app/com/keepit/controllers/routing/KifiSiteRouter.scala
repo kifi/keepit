@@ -104,6 +104,7 @@ class KifiSiteRouter @Inject() (
     contextBuilder += ("action", action)
     contextBuilder += ("slackUserId", slackUserId.value)
     contextBuilder += ("slackTeamId", slackTeamId.value)
+    contextBuilder += ("source", "slack")
     val context = contextBuilder.build
 
     val event = request.userIdOpt match {
