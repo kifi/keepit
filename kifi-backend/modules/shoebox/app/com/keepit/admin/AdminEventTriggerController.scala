@@ -1,7 +1,9 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller._
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
@@ -20,6 +22,7 @@ object AdminEventTriggerController {
     case object SlackTeamDigest extends EventKind("slack_team_digest") { def reads = EventTrigger.SlackTeamDigest.reads }
     case object SlackChannelDigest extends EventKind("slack_channel_digest") { def reads = EventTrigger.SlackChannelDigest.reads }
     case object SlackTeamFTUI extends EventKind("slack_team_ftui") { def reads = EventTrigger.SlackTeamFTUI.reads }
+    case object SlackIntegrationsFTUIs extends EventKind("slack_integrations_ftuis") { def reads = EventTrigger.SlackIntegrationsFTUIs.reads }
 
     private val all = _all.toSet
     private def get(str: String): Option[EventKind] = all.find(_.key == str)
@@ -36,6 +39,9 @@ object AdminEventTriggerController {
 
     case class SlackTeamFTUI(team: SlackTeamId, user: SlackUserId) extends EventTrigger
     object SlackTeamFTUI { val reads = Json.reads[SlackTeamFTUI] }
+
+    case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
+    object SlackIntegrationsFTUIs { val reads = Json.reads[SlackIntegrationsFTUIs] }
 
     implicit val reads: Reads[EventTrigger] = Reads { j =>
       for {
@@ -55,6 +61,8 @@ class AdminEventTriggerController @Inject() (
   slackTeamRepo: SlackTeamRepo,
   slackChannelRepo: SlackChannelRepo,
   slackMembershipRepo: SlackTeamMembershipRepo,
+  libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
+  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   implicit val executionContext: ExecutionContext)
     extends AdminUserActions {
   import AdminEventTriggerController._
@@ -65,6 +73,7 @@ class AdminEventTriggerController @Inject() (
       case x: SlackTeamDigest => forceSlackTeamDigest(x)
       case x: SlackChannelDigest => ???
       case x: SlackTeamFTUI => forceSlackTeamFTUI(x)
+      case x: SlackIntegrationsFTUIs => forceSlackIntegrationsFTUIs(x)
     }
     result.map(Ok(_))
   }
@@ -94,6 +103,23 @@ class AdminEventTriggerController @Inject() (
       case (team, membership) => slackOnboarder.talkAboutTeam(team, membership, forceOverride = true).map { _ => Json.obj("ok" -> true) }
     }.getOrElse {
       Future.successful(Json.obj("ok" -> false, "err" -> "could not find team and membership"))
+    }
+  }
+
+  private def forceSlackIntegrationsFTUIs(trigger: EventTrigger.SlackIntegrationsFTUIs): Future[JsValue] = {
+    db.readOnlyReplicaAsync { implicit s =>
+      val pushes = libraryToSlackChannelRepo.getActiveByIds(trigger.pushes)
+      val ingestions = slackChannelToLibraryRepo.getActiveByIds(trigger.ingestions)
+      (pushes, ingestions)
+    }.flatMap {
+      case (pushes, ingestions) => for {
+        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc, forceOverride = true))
+        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl, forceOverride = true))
+      } yield ()
+    }.map { _: Unit =>
+      Json.obj("ok" -> true)
+    }.recover {
+      case fail => Json.obj("ok" -> false, "err" -> fail.getMessage)
     }
   }
 }

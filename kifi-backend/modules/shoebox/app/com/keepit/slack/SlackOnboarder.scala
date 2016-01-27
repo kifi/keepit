@@ -20,7 +20,7 @@ import scala.util.{ Success, Failure }
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit]
+  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit]
   def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit]
 }
 
@@ -69,9 +69,9 @@ class SlackOnboarderImpl @Inject() (
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import SlackOnboarder._
 
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
+  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
     log.info(s"[SLACK-ONBOARD] Maybe going to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
-    if (canSendMessageAboutIntegration(integ)) {
+    if (forceOverride || canSendMessageAboutIntegration(integ)) {
       db.readOnlyMaster { implicit s =>
         generateOnboardingMessageForIntegration(integ)
       }.map { welcomeMsg =>
