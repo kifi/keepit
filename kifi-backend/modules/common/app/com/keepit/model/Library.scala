@@ -58,6 +58,7 @@ case class Library(
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
+  def withName(newName: String) = this.copy(name = newName)
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   def withOpenCollab(access: Option[LibraryAccess]) = this.copy(organizationMemberAccess = access)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
