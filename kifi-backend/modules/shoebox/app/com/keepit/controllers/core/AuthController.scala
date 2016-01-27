@@ -611,6 +611,10 @@ class AuthController @Inject() (
   }
 
   def connectWithSlack = MaybeUserAction { implicit request =>
-    Ok(views.html.authMinimal.connectWithSlack()).withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
+    Ok(views.html.authMinimal.connectWithSlack())
+  }
+
+  def connectWithSlackGo = MaybeUserAction { implicit request =>
+    Redirect("/link/slack").withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
   }
 }

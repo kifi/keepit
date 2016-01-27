@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ OrganizationInfoCommander }
+import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -23,13 +23,15 @@ import play.api.libs.json.{ Writes, Json }
 case class LibraryToSlackIntegrationInfo(
   id: PublicId[LibraryToSlackChannel],
   status: SlackIntegrationStatus,
-  authLink: Option[String])
+  authLink: Option[String],
+  isMutable: Boolean)
 
 @json
 case class SlackToLibraryIntegrationInfo(
   id: PublicId[SlackChannelToLibrary],
   status: SlackIntegrationStatus,
-  authLink: Option[String])
+  authLink: Option[String],
+  isMutable: Boolean)
 
 @json
 case class LibrarySlackIntegrationInfo(
@@ -89,6 +91,7 @@ class SlackInfoCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   orgInfoCommander: OrganizationInfoCommander,
   slackStateCommander: SlackAuthStateCommander,
+  permissionCommander: PermissionCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -115,6 +118,7 @@ class SlackInfoCommanderImpl @Inject() (
 
   private def generateLibrarySlackIntegrationInfos(viewerId: Id[User], slackToLibs: Seq[SlackChannelToLibrary], libToSlacks: Seq[LibraryToSlackChannel])(implicit session: RSession): Map[Id[Library], Seq[LibrarySlackIntegrationInfo]] = {
     val libraryIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).toSet
+    val permissionsByLib = permissionCommander.getLibrariesPermissions(libraryIds, Some(viewerId))
     val teamMembershipMap = {
       val slackUserTeamPairs = slackToLibs.map(stl => (stl.slackUserId, stl.slackTeamId)).toSet ++ libToSlacks.map(lts => (lts.slackUserId, lts.slackTeamId)).toSet
       slackUserTeamPairs.flatMap {
@@ -145,6 +149,7 @@ class SlackInfoCommanderImpl @Inject() (
       }
     }
     libraryIds.map { libId =>
+      val permissions = permissionsByLib.getOrElse(libId, Set.empty)
       val publicLibId = Library.publicId(libId)
       val fromSlacksThisLib = slackToLibs.filter(_.libraryId == libId)
       val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
@@ -158,7 +163,7 @@ class SlackInfoCommanderImpl @Inject() (
             if (requiredScopes subsetOf existingScopes) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
           }
-          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink)
+          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
         case (key, Seq(ts)) =>
@@ -170,7 +175,7 @@ class SlackInfoCommanderImpl @Inject() (
             if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
           }
-          key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink)
+          key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }
       val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
         LibrarySlackIntegrationInfo(
@@ -213,9 +218,10 @@ class SlackInfoCommanderImpl @Inject() (
         val libs = libRepo.getActiveByIds(libIds).values.toList
         val owners = libs.map(_.ownerId).toSet
         val basicUserById = basicUserRepo.loadAll(owners)
-        val basicOrg = orgInfoCommander.getBasicOrganizationHelper(orgId).get
+        val orgIds = libs.flatMap(_.organizationId).toSet
+        val basicOrgs = orgIds.flatMap { orgId => orgInfoCommander.getBasicOrganizationHelper(orgId).map(orgId -> _) }.toMap
         libs.map { lib =>
-          lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), Some(basicOrg.handle))
+          lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), lib.organizationId.flatMap(basicOrgs.get).map(_.handle))
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
@@ -224,9 +230,11 @@ class SlackInfoCommanderImpl @Inject() (
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
 
-    val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
+    val permissionsByLib = permissionCommander.getLibrariesPermissions(libIds, Some(viewerId))
+    def canViewLib(libId: Id[Library]): Boolean = permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
 
     val slackTeam = slackTeams.headOption
+    val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
     val action = SetupSlackTeam(Some(orgId))
     val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
     val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), requiredScopes, SlackController.REDIRECT_URI).url
@@ -235,7 +243,9 @@ class SlackInfoCommanderImpl @Inject() (
       slackTeam.map(_.id),
       slackTeam,
       slackTeams.map(_.id),
-      libraries = libIds.toList.sorted.map { libId => (basicLibsById(libId), librarySlackInfosByLib(libId)) }
+      libraries = libIds.toList.sorted.collect {
+        case libId if canViewLib(libId) => (basicLibsById(libId), librarySlackInfosByLib(libId))
+      }
     )
   }
 }

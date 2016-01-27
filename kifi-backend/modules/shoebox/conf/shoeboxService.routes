@@ -48,6 +48,7 @@ POST    /auth/log-in                @com.keepit.controllers.core.AuthController.
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String)
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
+GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, intent: Option[String] ?= None, modelPubId: Option[String] ?= None, authToken: Option[String] ?= None)
 # do we still use this endpoint?
