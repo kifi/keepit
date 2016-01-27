@@ -58,6 +58,7 @@ object SlackTeamFactory {
 
   case class PartialSlackTeam(team: SlackTeam) {
     def withName(newName: String) = this.copy(team = team.copy(slackTeamName = SlackTeamName(newName)))
+    def withOrg(org: Organization) = this.copy(team = team.copy(organizationId = Some(org.id.get)))
   }
 }
 

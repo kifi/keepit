@@ -33,7 +33,7 @@ class SlackTeamCommanderTest extends TestKitSupport with SpecificationLike with 
         val (user, org, slackTeam) = db.readWrite { implicit s =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
-          val slackTeam = SlackTeamFactory.team().saved
+          val slackTeam = SlackTeamFactory.team().withOrg(org).saved
           val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
           (user, org, slackTeam)
         }
