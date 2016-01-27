@@ -18,7 +18,7 @@ class DebouncingTest extends Specification {
   private class QuietYapper {
     var count = 0
     var value = 0
-    val debouncer = new Debouncing.Dropper
+    val debouncer = new Debouncing.Dropper[Unit]
     def trigger() = debouncer.debounce("trigger", Period.millis(1)) {
       value += 1
       count += 1

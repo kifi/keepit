@@ -31,7 +31,7 @@ class KeepChecker @Inject() (
     collectionRepo: CollectionRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  private val debouncer = new Debouncing.Dropper
+  private val debouncer = new Debouncing.Dropper[Unit]
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)
 

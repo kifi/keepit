@@ -368,27 +368,33 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
             slackTeamId = SlackTeamId("slackers")
           )
 
-          // route correctly
-          val url = "www.google.com"
-          val wrappedUrl = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
-            .drop(testConfig.applicationBaseUrl.length) // omit host to route properly from test
-          route(FakeRequest("GET", wrappedUrl)) must beRedirect(SEE_OTHER, url)
+          Seq(
+            "http://venturebeat.com/2015/11/04/atlassian-launches-hipchat-connect-api-to-let-developers-build-deeper-integrations/",
+            "https://twitter.com/SlackAPI/status/689868008706088960",
+            "https://medium.com/slack-developer-blog/the-slack-app-directory-checklist-e3f3ba0ca7c5#.7du2ee65d",
+            "https://www.kifi.com/kifi/general",
+            "http://usepanda.com/"
+          ).foreach { url =>
+            val wrappedUrl = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
+              .drop(testConfig.applicationBaseUrl.length) // omit host to route properly from test
+
+            // route correctly
+            route(FakeRequest("GET", wrappedUrl)) must beRedirect(SEE_OTHER, url)
+
+            // parse tracking params correctly
+            val request = FakeRequest("GET", wrappedUrl)
+            val signedUrl = request.queryString("s").head
+            val signedParams = request.queryString("t").head
+            kifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, Some(signedParams)).map {
+              case (confirmedUrl, trackingParamsOpt) =>
+                confirmedUrl must beEqualTo(url)
+                trackingParamsOpt must beSome(trackingParams)
+            }
+          }
 
           // route incorrectly on bad urls
           val maliciousUrl = "/url?s=7ffe96665c78152208bf6c026027d50c5ace165b-1453416519729-www.googol.com"
           route(FakeRequest("GET", maliciousUrl)) must beRedirect(SEE_OTHER, "/")
-
-          // encrypt/decrypt extra params correctly
-          val wrappedUrl2 = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
-          val request = FakeRequest("GET", wrappedUrl2)
-          val signedUrl = request.queryString("s").head
-          val signedContext = request.queryString("t").head
-          kifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, Some(signedContext)).map {
-            case (confirmedUrl, trackingParamsOpt) =>
-              confirmedUrl must beEqualTo(url)
-              trackingParamsOpt must beSome(trackingParams)
-          }
-          1===1
         }
       }
     }
