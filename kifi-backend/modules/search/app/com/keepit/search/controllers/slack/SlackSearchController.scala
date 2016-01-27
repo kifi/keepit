@@ -166,7 +166,7 @@ class SlackSearchController @Inject() (
         libraries <- futureLibraries
       } yield {
         val attachments = relevantHits.map { hit =>
-          val url = convertUrlToKifiRedirect(hit.url, command, "clickedResultUrl")
+          val url = hit.url
           val uriId = Id[NormalizedURI](hit.id)
           val summary = summaries.get(uriId)
           val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
@@ -174,21 +174,18 @@ class SlackSearchController @Inject() (
           val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
           val pretext = {
             val attribution = keepId.flatMap(sourceAttributions.get).map {
-              case TwitterAttribution(tweet) =>
-                val tweetUrl = convertUrlToKifiRedirect(tweet.getUrl, command, "clickedTweetUrl")
-                Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweetUrl), "on Twitter")
+              case TwitterAttribution(tweet) => Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweet.getUrl), "on Twitter")
               case SlackAttribution(message) => Elements("via", "@" + message.username.value, "in", "#" + message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
             }
             val library = hit.libraryId.flatMap(id => libraries.get(Id(id)))
             val domain = DomainToNameMapper.getNameFromUrl(url)
-            Elements.formatForSlack(Elements(domain, library.map(lib => Elements("kept in", lib.name --> LinkElement(convertUrlToKifiRedirect(lib.url.absolute, command, "clickedLibraryUrl")))), attribution))
+            Elements.formatForSlack(Elements(domain, library.map(lib => Elements("kept in", lib.name --> LinkElement(lib.url))), attribution))
           }
-          val thumbUrl = imageOpt.map(image => convertUrlToKifiRedirect("https:" + image.path.getUrl, command, "clickedResultImage"))
           SlackAttachment(
             pretext = Some(pretext),
             title = Some(SlackAttachment.Title(title, Some(url))),
             text = summary.flatMap(_.article.description),
-            thumbUrl = thumbUrl,
+            thumbUrl = imageOpt.map("https:" + _.path.getUrl),
             color = Some("good")
           )
         }
