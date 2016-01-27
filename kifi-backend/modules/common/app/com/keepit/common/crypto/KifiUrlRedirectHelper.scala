@@ -1,6 +1,6 @@
 package com.keepit.common.crypto
 
-import java.net.URLEncoder
+import java.net.{ URLDecoder, URLEncoder }
 import javax.crypto.spec.IvParameterSpec
 
 import com.google.inject.{ Inject, Singleton }
@@ -28,27 +28,26 @@ class KifiUrlRedirectHelper @Inject() (app: Application) {
 
   // returns a "www.kifi.com/url?url=www.foo.com&s={{encryptedValue}}" url such that we can redirect home from third party clients (e.g. Slack search results)
   def generateKifiUrlRedirect(url: String, trackingParams: RedirectTrackingParameters)(implicit appConfig: FortyTwoConfig): String = {
-    val signedUrl = Crypto.signToken(url)
-    val signedParams = signTrackingParams(trackingParams)
+    val signedUrl = URLEncoder.encode(Crypto.signToken(url), "ascii")
+    val signedParams = URLEncoder.encode(signTrackingParams(trackingParams), "ascii")
     val completeUrl = appConfig.applicationBaseUrl + s"/url?s=$signedUrl&t=$signedParams"
     completeUrl
   }
 
   private def signTrackingParams(params: RedirectTrackingParameters): String = {
     val keyValueString = s"eventType=${params.eventType.name}&action=${params.action}&slackUserId=${params.slackUserId.value}&slackTeamId=${params.slackTeamId.value}"
-    val urlEncodedString = URLEncoder.encode(keyValueString, "ascii")
-    val signedTrackingParams = cipher.encrypt(urlEncodedString)
+    val signedTrackingParams = cipher.encrypt(keyValueString)
     signedTrackingParams
   }
 
   def parseKifiUrlRedirect(signedUrl: String, signedTrackingParams: Option[String]): Option[(String, Option[RedirectTrackingParameters])] = {
-    val urlOpt = Crypto.extractSignedToken(signedUrl)
-    val trackingParams = signedTrackingParams.flatMap(params => extractTrackingParams(params))
+    val urlOpt = Crypto.extractSignedToken(URLDecoder.decode(signedUrl, "ascii"))
+    val trackingParams = signedTrackingParams.flatMap(params => extractTrackingParams(URLDecoder.decode(params, "ascii")))
     urlOpt.map((_, trackingParams))
   }
 
   private def extractTrackingParams(signedTrackingParams: String): Option[RedirectTrackingParameters] = Try {
-    val paramString = UriEncoding.decodePathSegment(cipher.decrypt(signedTrackingParams), "ascii")
+    val paramString = cipher.decrypt(signedTrackingParams)
     val kvs = paramString.split("&").foldLeft(Map.empty[String, String]) {
       case (map, kv) =>
         val Array(key, value) = kv.split("=").take(2)
