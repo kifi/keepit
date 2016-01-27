@@ -16,6 +16,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
 @json
@@ -45,12 +46,12 @@ case class LibrarySlackInfo(
   integrations: Seq[LibrarySlackIntegrationInfo])
 
 @json
-case class SlackTeamIdAndName(id: SlackTeamId, name: SlackTeamName) // todo(Léo): find a better name
+case class OrganizationSlackTeamInfo(id: SlackTeamId, name: SlackTeamName, publicChannelsLastSyncedAt: Option[DateTime])
 
 case class OrganizationSlackInfo(
   link: String,
   slackTeamId: Option[SlackTeamId], // deprecated
-  slackTeam: Option[SlackTeamIdAndName],
+  slackTeam: Option[OrganizationSlackTeamInfo],
   slackTeams: Set[SlackTeamId], // deprecated
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
@@ -218,7 +219,7 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => SlackTeamIdAndName(team.slackTeamId, team.slackTeamName))
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.lastChannelCreatedAt.map(_.toDateTime)))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
