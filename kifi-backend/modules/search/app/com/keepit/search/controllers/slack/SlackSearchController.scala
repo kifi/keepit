@@ -166,7 +166,7 @@ class SlackSearchController @Inject() (
         libraries <- futureLibraries
       } yield {
         val attachments = relevantHits.map { hit =>
-          val url = convertUrlToKifiRedirect(hit.url, command, "clickedResultUrl")
+          val url = hit.url
           val uriId = Id[NormalizedURI](hit.id)
           val summary = summaries.get(uriId)
           val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
@@ -184,9 +184,10 @@ class SlackSearchController @Inject() (
             Elements.formatForSlack(Elements(domain, library.map(lib => Elements("kept in", lib.name --> LinkElement(convertUrlToKifiRedirect(lib.url.absolute, command, "clickedLibraryUrl")))), attribution))
           }
           val thumbUrl = imageOpt.map(image => convertUrlToKifiRedirect("https:" + image.path.getUrl, command, "clickedResultImage"))
+          val resultUrl = convertUrlToKifiRedirect(url, command, "clickedResultUrl")
           SlackAttachment(
             pretext = Some(pretext),
-            title = Some(SlackAttachment.Title(title, Some(url))),
+            title = Some(SlackAttachment.Title(title, Some(resultUrl))),
             text = summary.flatMap(_.article.description),
             thumbUrl = thumbUrl,
             color = Some("good")
