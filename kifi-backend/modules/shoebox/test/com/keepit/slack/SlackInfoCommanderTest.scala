@@ -117,7 +117,7 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           // Uncomment to visually inspect the slack info
           // println(Json.prettyPrint(Json.toJson(slackInfo)))
 
-          val expected = libs.map(_.id.get).toSet
+          val expected = libs.filter(_.visibility != LibraryVisibility.SECRET).map(_.id.get).toSet
           val actual = slackInfo.libraries.map(_._1.id).map(pubId => Library.decodePublicId(pubId).get).toSet
           actual === expected
         }
