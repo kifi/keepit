@@ -13,8 +13,10 @@ case class KeepToUser(
   userId: Id[User],
   addedAt: DateTime = currentDateTime,
   addedBy: Id[User],
-  // A denormalized field from Keep
-  uriId: Id[NormalizedURI])
+  // Denormalized fields from Keep
+  uriId: Id[NormalizedURI],
+  lastActivityAt: DateTime = currentDateTime)
+
     extends ModelWithState[KeepToUser] {
 
   def withId(id: Id[KeepToUser]): KeepToUser = this.copy(id = Some(id))
@@ -22,6 +24,9 @@ case class KeepToUser(
   def withState(newState: State[KeepToUser]): KeepToUser = this.copy(state = newState)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
   def withAddedAt(time: DateTime) = this.copy(addedAt = time)
+
+  // denormalized from Keep.lastActivityAt, use in KeepCommander.updateLastActivityAtIfLater
+  def withLastActivityAt(time: DateTime): KeepToUser = this.copy(lastActivityAt = time)
 
   def isActive = state == KeepToUserStates.ACTIVE
   def isInactive = state == KeepToUserStates.INACTIVE

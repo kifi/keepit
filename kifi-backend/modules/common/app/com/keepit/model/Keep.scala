@@ -38,7 +38,7 @@ case class Keep(
   originalKeeperId: Option[Id[User]] = None,
   source: KeepSource,
   keptAt: DateTime = currentDateTime,
-  lastActivityAt: DateTime = currentDateTime,
+  lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
   connections: KeepConnections,
   libraryId: Option[Id[Library]], // deprecated, prefer connections.libraries
@@ -74,7 +74,9 @@ case class Keep(
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
 
+  // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
   def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
+
   def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
 
   def isActive: Boolean = state == KeepStates.ACTIVE

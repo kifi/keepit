@@ -25,6 +25,7 @@ trait KeepToUserRepo extends Repo[KeepToUser] {
 
   def getByUserIdAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Set[KeepToUser]
 
+  def allActive(implicit session: RSession): Seq[KeepToUser]
   def deactivate(model: KeepToUser)(implicit session: RWSession): Unit
 }
 
@@ -46,24 +47,25 @@ class KeepToUserRepoImpl @Inject() (
     def addedAt = column[DateTime]("added_at", O.NotNull)
     def addedBy = column[Id[User]]("added_by", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def lastActivityAt = column[DateTime]("last_activity_at", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, userId, addedAt, addedBy, uriId) <> ((fromDbRow _).tupled, toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, userId, addedAt, addedBy, uriId, lastActivityAt) <> ((fromDbRow _).tupled, toDbRow)
   }
 
   def fromDbRow(id: Option[Id[KeepToUser]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToUser],
     keepId: Id[Keep], userId: Id[User], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI]): KeepToUser = {
+    uriId: Id[NormalizedURI], lastActivityAt: DateTime): KeepToUser = {
     KeepToUser(
       id, createdAt, updatedAt, state,
       keepId, userId, addedAt, addedBy,
-      uriId)
+      uriId, lastActivityAt)
   }
 
   def toDbRow(ktu: KeepToUser) = {
     Some(
       (ktu.id, ktu.createdAt, ktu.updatedAt, ktu.state,
         ktu.keepId, ktu.userId, ktu.addedAt, ktu.addedBy,
-        ktu.uriId)
+        ktu.uriId, ktu.lastActivityAt)
     )
   }
 
@@ -71,6 +73,7 @@ class KeepToUserRepoImpl @Inject() (
   initTable()
 
   private def activeRows = rows.filter(_.state === KeepToUserStates.ACTIVE)
+  def allActive(implicit session: RSession): Seq[KeepToUser] = activeRows.list
 
   private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
     for (row <- rows if row.keepId === keepId && row.state =!= excludeStateOpt.orNull) yield row

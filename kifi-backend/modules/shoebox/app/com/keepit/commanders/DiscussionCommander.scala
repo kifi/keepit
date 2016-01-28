@@ -101,7 +101,7 @@ class DiscussionCommanderImpl @Inject() (
       val keep = db.readWrite { implicit s =>
         val oldKeep = keepRepo.get(keepId)
         val allUsers = oldKeep.connections.users ++ newUsers + userId
-        keepCommander.persistKeep(oldKeep.withParticipants(allUsers))
+        keepCommander.addUsersToKeep(keepId, addedBy = userId, allUsers)
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers)
       elizaEdit.onSuccess {
