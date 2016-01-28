@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -203,42 +204,46 @@ class SlackTeamCommanderImpl @Inject() (
   }
 
   def syncPublicChannels(userId: Id[User], teamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Map[SlackChannelIdAndName, Either[LibraryFail, Library]])] = {
-    val (teamOpt, membershipOpt, integratedChannelIds) = db.readOnlyMaster { implicit session =>
+    val (teamOpt, membershipOpt, alreadyProcessedChannels) = db.readOnlyMaster { implicit session =>
       val teamOpt = slackTeamRepo.getBySlackTeamId(teamId)
       val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == teamId)
       val integratedChannelIds = teamOpt.flatMap(_.organizationId).map { orgId =>
         channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == teamId).flatMap(_.slackChannelId).toSet
       } getOrElse Set.empty
-      (teamOpt, membershipOpt, integratedChannelIds)
+      (teamOpt, membershipOpt, integratedChannelIds ++ teamOpt.map(_.channelsSynced).getOrElse(Set.empty))
     }
     (teamOpt, membershipOpt) match {
       case (Some(team), Some(membership)) if membership.token.isDefined && team.organizationId.isDefined =>
         slackOnboarder.talkAboutTeam(team, membership)
         slackClient.getChannels(membership.token.get, excludeArchived = true).map { channels =>
-          def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || integratedChannelIds.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
-          val newLibraries = channels.sortBy(_.createdAt).collect {
+          def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || alreadyProcessedChannels.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
+          val libCreationsByChannel = channels.sortBy(_.createdAt).collect {
             case channel if !shouldBeIgnored(channel) =>
               SlackChannelIdAndName(channel.channelId, channel.channelName) -> setupSlackChannel(team, membership, channel)
           }.toMap
+          val newLibraries = libCreationsByChannel.collect { case (ch, Right(lib)) => ch -> lib }
+          val failedChannels = libCreationsByChannel.collect { case (ch, Left(fail)) => ch -> fail }
 
-          if (newLibraries.values.forall(_.isRight)) {
-            SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-              "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
-              team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
-            ))))
-            val updatedTeam = team.withPublicChannelsSyncedAt(clock.now) |> { t =>
+          SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+            "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
+            team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+          ))))
+          val updatedTeam = team
+            .withPublicChannelsSyncedAt(clock.now)
+            .withSyncedChannels(alreadyProcessedChannels ++ newLibraries.keySet.map(_.id)) |> { t =>
               channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
             } |> { t =>
               channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t
             }
-            if (updatedTeam != team) {
-              db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
-            }
-          } else {
-            slackLog.warn("Failed to create some libraries while integrating Slack team", teamId.value, ". The errors are:", newLibraries.collect { case (ch, Left(fail)) => (ch, fail) }.toString)
+          if (updatedTeam != team) {
+            db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
           }
+          if (failedChannels.nonEmpty) slackLog.warn(
+            "Failed to create some libraries while integrating Slack team", teamId.value, ".",
+            "The errors are:", failedChannels.values.map(_.getMessage).mkString("[", ",", "]")
+          )
 
-          (team.organizationId.get, newLibraries)
+          (team.organizationId.get, libCreationsByChannel)
         }
       case _ => Future.failed(InvalidSlackSetupException(userId, teamOpt, membershipOpt))
     }
