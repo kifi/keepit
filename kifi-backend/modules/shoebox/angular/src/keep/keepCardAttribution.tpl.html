@@ -5,10 +5,11 @@
      ng-style="{ 'background-image' : 'url(' + (keep.sourceAttribution.kifi|pic:100) + ')' }"></a>
   <span class="svg-slack kf-keep-card-attribution-keeper-pic kf-keep-card-attribution-no-border" ng-if="::keep.sourceAttribution.slack && !keep.sourceAttribution.kifi"></span>
   <div class="kf-keep-card-attribution-message">
-    <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
-    <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
+    <!--Add an empty span here to make safari render the whitespace in the following spans correctly-->
+    <span></span>
+    <a ng-if="::keep.user && !keep.sourceAttribution.slack" class="kf-link"
        ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
-    </a></span>
+    </a>
     <span ng-if="::keep.sourceAttribution.slack && !showAsDiscussion">
       <a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-if="keep.sourceAttribution.kifi"
         ng-bind="keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName"></a>
