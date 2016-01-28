@@ -23,7 +23,6 @@ GET     /me/libraries/invited      @com.keepit.controllers.routing.KifiSiteRoute
 GET     /profile                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /integrations/slack/start  @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "?showSlackDialog", noTeam = "/teams/new", fallback = "/integrations/slack")
 GET     /integrations/slack/teams  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /pricing                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
 GET     /credits                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
@@ -35,9 +34,9 @@ GET     /url                       @com.keepit.controllers.routing.KifiSiteRoute
 
 GET     /k/:title/:id              @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfKeepFound(title: String, id: PublicId[Keep], authToken: Option[String] ?= None)
 
-GET     /s/:teamId/u/:userId       @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToUser(teamId: com.keepit.slack.models.SlackTeamId, userId: ExternalId[User])
-GET     /s/:teamId/o/:orgId        @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToOrg(teamId: com.keepit.slack.models.SlackTeamId, orgId: PublicId[Organization])
-GET     /s/:teamId/l/:libId        @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToLibrary(teamId: com.keepit.slack.models.SlackTeamId, libId: PublicId[Library])
+GET     /s/:teamId/u/:userId       @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToUser(teamId: SlackTeamId, userId: ExternalId[User])
+GET     /s/:teamId/o/:orgId        @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToOrg(teamId: SlackTeamId, orgId: PublicId[Organization])
+GET     /s/:teamId/l/:libId        @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToLibrary(teamId: SlackTeamId, libId: PublicId[Library])
 
 # Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
 GET     /:handle                   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)

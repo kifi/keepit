@@ -231,7 +231,7 @@ class SlackIntegrationCommanderImpl @Inject() (
                 channelToLibRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
                 slackIncomingWebhookInfoRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
               }
-            case None => airbrake.notify(s"ChannelId not found Slack for channel $channelName via user $userId in team $teamId.")
+            case None =>
           } recover {
             case error =>
               airbrake.notify(s"Unexpected error while fetching channelId for Slack channel $channelName via user $userId in team $teamId", error)

@@ -609,8 +609,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(attributions))
   }
 
-  def getSlackTeamInfo(id: String) = Action { request =>
-    val slackTeamId = SlackTeamId(id)
+  def getSlackTeamInfo(slackTeamId: SlackTeamId) = Action { request =>
     db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).map { slackTeam =>
         Ok(Json.obj("teamInfo" -> Json.toJson(slackTeam.toInternalSlackTeamInfo)))

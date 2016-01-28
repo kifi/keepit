@@ -15,7 +15,8 @@ import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model._
-import com.keepit.social.NonUserKinds
+import com.keepit.slack.models.SlackTeamId
+import com.keepit.social.{ IdentityHelpers, NonUserKinds }
 import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.{ ActionFilter, Result }
 import securesocial.core.SecureSocial

@@ -10,18 +10,20 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.time.Clock
+import com.keepit.common.util.{ DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
+  def getSlackTeams(userId: Id[User]): Set[SlackTeam]
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
@@ -55,6 +57,13 @@ class SlackTeamCommanderImpl @Inject() (
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackTeamCommander {
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
+
+  def getSlackTeams(userId: Id[User]): Set[SlackTeam] = {
+    db.readOnlyMaster { implicit session =>
+      val slackTeamIds = slackTeamMembershipRepo.getByUserId(userId).map(_.slackTeamId).toSet
+      slackTeamRepo.getBySlackTeamIds(slackTeamIds).values.toSet
+    }
+  }
 
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, connectableOrgs) = db.readWrite { implicit session =>
