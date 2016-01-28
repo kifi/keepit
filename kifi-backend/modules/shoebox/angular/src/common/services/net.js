@@ -100,7 +100,9 @@ angular.module('kifi')
 
       getSlackIntegrationsForOrg: get(shoebox, '/organizations/:id/slack/list'),
       getKifiOrgsForSlackIntegration: get(shoebox, '/slack/add/organizations'),
-      getAddIntegrationLink: post(shoebox, '/libraries/:libraryId/slack/add'),
+      getAddSlackIntegrationLink: post(shoebox, '/libraries/:libraryId/slack/add'),
+      publicSyncSlack: post(shoebox, '/organizations/:teamId/slack/sync/public'),
+      connectSlack: post(shoebox, '/organizations/:teamId/slack/connect'),
 
     // eliza
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),

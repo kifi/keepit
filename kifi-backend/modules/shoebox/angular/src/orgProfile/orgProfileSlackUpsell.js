@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window', '$rootScope', 'messageTicker', '$analytics',
-  function ($window, $rootScope, messageTicker, $analytics) {
+  '$window', '$rootScope', 'messageTicker', '$analytics', 'slackService',
+  function ($window, $rootScope, messageTicker, $analytics, slackService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -17,31 +17,28 @@ angular.module('kifi')
         $analytics.eventTrack('user_viewed_pane', { type: 'orgProfileSlackUpsell'});
         $scope.userLoggedIn = $rootScope.userLoggedIn;
 
-        function getSlackLink() {
-          var library = $scope.getLibrary();
-          return library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');
-        }
-
-        $scope.integrateWithSlack = function() {
-          var library = $scope.getLibrary();
-          if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
-            $window.location = getSlackLink();
-          }
-        };
-
         $scope.onClickedSynOnlyGeneral = function() {
           $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncGeneral' });
-          var library = $scope.getLibrary();
-          if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
-            $window.location = getSlackLink();
-          }
-          kfModalCtrl.close();
+          slackService.getAddIntegrationLink($scope.getLibrary().id).then(function (resp) {
+            if (resp.redirect) {
+              $window.location = resp.redirect;
+              kfModalCtrl.close();
+            } else {
+              messageTicker({ text: 'Oops, that didn’t work. Try again?', type: 'red' });
+            }
+          });
         };
 
         $scope.onClickedSyncAllSlackChannels = function() {
-          var org = $scope.getOrg();
           $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
-          $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
+          slackService.publicSync($scope.getOrg().id).then(function (resp) {
+            if (resp.redirect) {
+              $window.location = resp.redirect;
+              kfModalCtrl.close();
+            } else {
+              messageTicker({ text: 'Oops, that didn’t work. Try again?', type: 'red' });
+            }
+          });
           kfModalCtrl.close();
         };
 
