@@ -33,6 +33,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
+  def allActive(implicit session: RSession): Seq[KeepToLibrary]
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
 
   // For backwards compatibility with KeepRepo
@@ -69,18 +70,19 @@ class KeepToLibraryRepoImpl @Inject() (
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
+    def lastActivityAt = column[DateTime]("last_activity_at", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId) <> ((fromDbRow _).tupled, toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId, lastActivityAt) <> ((fromDbRow _).tupled, toDbRow)
   }
 
   def fromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
     keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
-    uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
-    libraryVisibility: LibraryVisibility, libraryOrganizationId: Option[Id[Organization]]): KeepToLibrary = {
+    uriId: Id[NormalizedURI], isPrimary: Option[Boolean], libraryVisibility: LibraryVisibility,
+    libraryOrganizationId: Option[Id[Organization]], lastActivityAt: DateTime): KeepToLibrary = {
     KeepToLibrary(
       id, createdAt, updatedAt, state,
       keepId, libraryId, addedAt, addedBy,
-      uriId, libraryVisibility, libraryOrganizationId)
+      uriId, libraryVisibility, libraryOrganizationId, lastActivityAt)
   }
 
   def toDbRow(ktl: KeepToLibrary) = {
@@ -88,7 +90,7 @@ class KeepToLibraryRepoImpl @Inject() (
       (ktl.id, ktl.createdAt, ktl.updatedAt, ktl.state,
         ktl.keepId, ktl.libraryId, ktl.addedAt, ktl.addedBy,
         ktl.uriId, if (ktl.isActive) Some(true) else None,
-        ktl.visibility, ktl.organizationId)
+        ktl.visibility, ktl.organizationId, ktl.lastActivityAt)
     )
   }
 
@@ -96,6 +98,7 @@ class KeepToLibraryRepoImpl @Inject() (
   initTable()
 
   private def activeRows = rows.filter(_.state === KeepToLibraryStates.ACTIVE)
+  def allActive(implicit session: RSession): Seq[KeepToLibrary] = activeRows.list
 
   private def getByKeepIdsHelper(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
     for (row <- rows if row.keepId.inSet(keepIds) && row.state =!= excludeStateOpt.orNull) yield row

@@ -342,18 +342,4 @@ class AdminLibraryController @Inject() (
     val response = libraryCommander.unsafeModifyLibrary(lib, mods)
     Ok(Json.obj("lib" -> response.modifiedLibrary))
   }
-
-  def changeWhoCanComment = AdminUserAction(parse.tolerantJson) { implicit request =>
-    val okay = (request.body \ "okay").as[Boolean]
-    assert(okay)
-
-    val libs = db.readOnlyMaster { implicit s => libraryRepo.allActive() }
-    FutureHelpers.sequentialExec(libs.grouped(50000).toSeq) { batch =>
-      db.readWriteAsync { implicit s =>
-        batch.map(lib => libraryRepo.save(lib.copy(whoCanComment = LibraryCommentPermissions.ANYONE)))
-      }
-    }
-    Ok
-  }
-
 }

@@ -33,9 +33,8 @@ angular.module('kifi')
         });
 
         scope.onClickedSyncAllSlackChannels = function() {
-          $window.location = '/site/slack/add';
           $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackSyncAllChannels' });
-          //  $window.location = '/integrations/slack/teams?slackTeamId=test
+          $window.location = '/site/slack/add';
         };
 
         scope.clickedLearnMore = function() {

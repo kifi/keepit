@@ -35,7 +35,7 @@ class SlackController @Inject() (
     slackTeamCommander: SlackTeamCommander,
     authCommander: AuthCommander,
     authHelper: AuthHelper,
-    deepLinkRouter: DeepLinkRouter,
+    pathCommander: PathCommander,
     slackToLibRepo: SlackChannelToLibraryRepo,
     libToSlackRepo: LibraryToSlackChannelRepo,
     userRepo: UserRepo,
@@ -50,13 +50,13 @@ class SlackController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with LibraryAccessActions with ShoeboxServiceController {
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
-    val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
+    val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
     val redirectUrl = if (showSlackDialog) libraryUrl + "?showSlackDialog" else libraryUrl
     SlackResponse.RedirectClient(redirectUrl)
   }
 
   private def getOrgUrl(organizationId: Id[Organization]): String = {
-    deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(organizationId))).get.url
+    db.readOnlyMaster { implicit s => pathCommander.orgPageById(organizationId) }.absolute
   }
 
   private def redirectToOrganization(organizationId: Id[Organization], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
@@ -153,7 +153,7 @@ class SlackController @Inject() (
 
       case SyncPublicChannels() =>
         slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
-          case (orgId, _) => redirectToOrganizationIntegrations(orgId)
+          case (orgId, _) => redirectToOrganizationIntegrations(orgId) // This is a success case (action is done). Should actually return: SlackResponse.ActionPerformed. Can't yet for backwards compatibility.
         }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
@@ -233,9 +233,14 @@ class SlackController @Inject() (
       .map(handleAsBrowserRequest)
   }
 
-  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  def connectSlackTeamOld(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
       .map(handleAsBrowserRequest)
+  }
+
+  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+    processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
+      .map(handleAsAPIRequest)
   }
 
   def createSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
@@ -243,12 +248,20 @@ class SlackController @Inject() (
       .map(handleAsBrowserRequest)
   }
 
-  def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
-    val Seq(slackTeamId) = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.toSeq
+  def syncPublicChannelsOld(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.headOption
     }
-    processActionOrElseAuthenticate(request.request.userId, Some(slackTeamId), SyncPublicChannels())
+    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
       .map(handleAsBrowserRequest)
+  }
+
+  def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.headOption
+    }
+    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
+      .map(handleAsAPIRequest)
   }
 
   def getOrganizationsToConnectToSlackTeam() = UserAction { implicit request =>
@@ -294,12 +307,6 @@ class SlackController @Inject() (
       .map(handleAsAPIRequest)
   }
 
-  // Treats request as a browser request, not an API request. Remove when frontend updates.
-  def setupLibraryIntegrationsOld(libraryId: PublicId[Library]) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
-    processActionOrElseAuthenticate(request.userId, None, SetupLibraryIntegrations(Library.decodePublicId(libraryId).get))
-      .map(handleAsBrowserRequest)
-  }
-
   def turnOnLibraryPush(libraryId: PublicId[Library], integrationId: String) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
     LibraryToSlackChannel.decodePublicIdStr(integrationId) match {
       case Success(libToSlackId) =>
@@ -325,8 +332,12 @@ class SlackController @Inject() (
   private def handleAsBrowserRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
     response match {
       case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
-      case SlackResponse.ActionPerformed => Redirect(request.headers.get(REFERER).getOrElse("/")) // Bad bad bad
-      case SlackResponse.Error(code) => Redirect("/") // Bad bad bad
+      case SlackResponse.ActionPerformed =>
+        val ref = request.headers.get(REFERER)
+        Redirect(ref.filter(_.startsWith("https://www.kifi.com")).getOrElse("/")) // Bad bad
+      case SlackResponse.Error(code) =>
+        log.warn(s"[SlackController#handleAsBrowserRequest] Error: $code")
+        Redirect("/") // Bad bad bad
     }
   }
 

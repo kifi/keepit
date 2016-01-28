@@ -4,7 +4,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
-import scala.collection.IterableLike
+import scala.collection.{ TraversableLike, IterableLike }
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
 
@@ -87,15 +87,20 @@ final class MapExtensionOps[A, B](xs: Map[A, B]) {
   def mapValuesStrict[C](fn: B => C): Map[A, C] = xs.map { case (k, v) => k -> fn(v) }
 }
 
-final class EitherExtensionOps[A, B](xs: Traversable[Either[A, B]]) {
-  def partitionEithers = xs.foldLeft(Seq.empty[A], Seq.empty[B]) {
-    case ((as, bs), Left(a)) => (a +: as, bs)
-    case ((as, bs), Right(b)) => (as, b +: bs)
+final class EitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]) {
+  def partitionEithers[AThat, BThat](implicit cbfA: CanBuildFrom[Repr, A, AThat], cbfB: CanBuildFrom[Repr, B, BThat]) = {
+    val as = cbfA()
+    val bs = cbfB()
+    xs.foreach {
+      case Left(a) => as += a
+      case Right(b) => bs += b
+    }
+    (as.result(), bs.result())
   }
 }
 
 final class OptionExtensionOpts[A](x: Option[A]) {
-  def hasTheSameValueAs(y: Option[A]) = (x, y) match {
+  def containsTheSameValueAs(y: Option[A]) = (x, y) match {
     case (Some(v1), Some(v2)) => v1 == v2
     case _ => false
   }
@@ -124,7 +129,7 @@ trait Implicits {
   implicit def traversableOnceExtensionOps[A](xs: TraversableOnce[A]): TraversableOnceExtensionOps[A] = new TraversableOnceExtensionOps(xs)
   implicit def traversableExtensionOps[A](xs: Traversable[A]): TraversableExtensionOps[A] = new TraversableExtensionOps(xs)
   implicit def mapExtensionOps[A, B](xs: Map[A, B]): MapExtensionOps[A, B] = new MapExtensionOps(xs)
-  implicit def eitherExtensionOps[A, B](xs: Traversable[Either[A, B]]): EitherExtensionOps[A, B] = new EitherExtensionOps(xs)
+  implicit def eitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]): EitherExtensionOps[A, B, Repr] = new EitherExtensionOps(xs)
   implicit def optionExtensionOps[A, B](x: Option[A]): OptionExtensionOpts[A] = new OptionExtensionOpts(x)
   implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
   implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)

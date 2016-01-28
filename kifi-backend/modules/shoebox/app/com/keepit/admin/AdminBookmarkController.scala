@@ -3,6 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
@@ -34,7 +35,8 @@ class AdminBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   libraryRepo: LibraryRepo,
-  keepToLibraryRepo: KeepToLibraryRepo,
+  ktlRepo: KeepToLibraryRepo,
+  ktuRepo: KeepToUserRepo,
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
@@ -315,7 +317,7 @@ class AdminBookmarksController @Inject() (
     val libraryId = (request.body \ "libraryId").as[Id[Library]]
 
     val keeps = db.readOnlyReplica { implicit session =>
-      keepToLibraryRepo.getAllByLibraryId(libraryId).map(_.keepId)
+      ktlRepo.getAllByLibraryId(libraryId).map(_.keepId)
     }
 
     db.readWrite(attempts = 5) { implicit session =>

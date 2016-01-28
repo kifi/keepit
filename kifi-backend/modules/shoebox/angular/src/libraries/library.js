@@ -6,12 +6,12 @@ angular.module('kifi')
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService',
-  'libraryImageLoaded',
+  'libraryImageLoaded', 'slackService',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, signupService,
-    libraryImageLoaded) {
+    libraryImageLoaded, slackService) {
 
     //
     // Internal functions
@@ -95,10 +95,12 @@ angular.module('kifi')
       }
 
       this.requiresPushAuth = function() {
+        // How can I construct this locally, without using authLink?
         return this.data.toSlack && this.data.toSlack.authLink;
       };
 
       this.requiresIngestAuth = function() {
+        // How can I construct this locally, without using authLink?
         return this.data.fromSlack && this.data.fromSlack.authLink;
       };
 
@@ -311,8 +313,12 @@ angular.module('kifi')
       return lastId !== currId;
     };
 
-    $scope.getSlackLink = function() {
-      return library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');
+    $scope.addChannel = function() {
+      slackService.getAddIntegrationLink(library.id).then(function (link) {
+        if (link) {
+          $window.location = link;
+        }
+      });
     };
 
     $scope.getNextKeeps = function (offset) {
@@ -450,7 +456,7 @@ angular.module('kifi')
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
-            $window.location = $scope.getSlackLink();
+            $scope.addChannel();
           }
         } else {
           // show ask for more info modal

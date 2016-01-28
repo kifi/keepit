@@ -33,7 +33,6 @@ angular.module('kifi')
           $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncGeneral' });
           var library = $scope.getLibrary();
           if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
-
             $window.location = getSlackLink();
           }
           kfModalCtrl.close();
@@ -42,14 +41,7 @@ angular.module('kifi')
         $scope.onClickedSyncAllSlackChannels = function() {
           var org = $scope.getOrg();
           $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
-          if (org && org.slack && org.slack.link) {
-            $window.location = org.slack.link;
-          } else {
-            messageTicker({
-              text: 'Unable to retrieve Team information, please refresh and try again.',
-              type: 'red'
-            });
-          }
+          $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
           kfModalCtrl.close();
         };
 

@@ -9,8 +9,11 @@ angular.module('kifi')
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    $scope.slackIntegrationReactionModel = {enabled: $scope.profile.config && $scope.profile.config.settings.slack_ingestion_reaction.setting === 'enabled'};
-    $scope.slackIntegrationDigestModel = {enabled: $scope.profile.config && $scope.profile.config.settings.slack_digest_notif.setting === 'enabled'};
+    var settings = $scope.profile && $scope.profile.config && $scope.profile.config.settings;
+    var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
+    var notifSetting = settings && settings.slack_digest_notif.setting;
+    $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
+    $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -68,18 +71,16 @@ angular.module('kifi')
       messageTicker({ text: 'Odd, that didn’t work. Try again?', type: 'red' });
     }
 
-
     $scope.onClickedSyncAllSlackChannels = function() {
       var org = $scope.profile;
-      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
-      if (org && org.slack && org.slack.link) {
-        $window.location = org.slack.link;
-      } else {
-        messageTicker({
-          text: 'Unable to retrieve team information, please refresh and try again.',
-          type: 'red'
-        });
-      }
+      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
+      $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
+    };
+
+    $scope.onClickedConnectSlack = function() {
+      var org = $scope.profile;
+      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
+      $window.location = '/site/organizations/' + org.id + '/slack/connect';
     };
   }
 ]);

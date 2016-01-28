@@ -146,6 +146,8 @@ class S3ImageStoreImpl @Inject() (
               }
               (actualPictureName, putObj)
             }
+            case notFound if notFound.status == 404 =>
+              None
             case nonOkResponse =>
               airbrake.notify(s"NonOkResponse when getting imageUrl=$originalImageUrl for userId=$userId: ${nonOkResponse.body}")
               None //ignore

@@ -276,7 +276,7 @@ angular.module('kifi')
           scope.$watch('keep.title', updateTitle);
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
-          scope.showActivityAttribution = $state.is('home.feed') && profileService.hasExperiment('keep_nolib');
+          scope.showActivityAttribution = $state.is('home.feed');
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
@@ -335,12 +335,10 @@ angular.module('kifi')
           var updateMenuItems = function () {
             scope.menuItems = [];
             if (scope.canEditKeep) {
-              if (profileService.isAdmin()) {
-                scope.menuItems.push({
-                  title: 'Edit Title',
-                  action: scope.editKeepTitle.bind(scope)
-                });
-              }
+              scope.menuItems.push({
+                title: 'Edit Title',
+                action: scope.editKeepTitle.bind(scope)
+              });
               scope.menuItems.push({
                 title: keep.note ? 'Edit Note' : 'Add Note',
                 action: scope.editKeepNote.bind(scope)

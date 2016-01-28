@@ -45,10 +45,10 @@ class SlackAuthRouter @Inject() (
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgPage(org).absolute
-        (for {
-          userId <- request.userIdOpt
-          _ <- if (weWantThisUserToAuthWithSlack(userId, org, slackTeamId)) Some(true) else None
-        } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case false => Redirect(target)
+        }
       }
     }
     redir.getOrElse(notFound(request))
@@ -58,21 +58,24 @@ class SlackAuthRouter @Inject() (
       Library.decodePublicId(pubId).toOption.flatMap(libId => Some(libraryRepo.get(libId)).filter(_.isActive)).map { lib =>
         val target = pathCommander.libraryPage(lib).absolute
         (for {
-          userId <- request.userIdOpt
           org <- lib.organizationId.map(orgRepo.get).filter(_.isActive)
-          _ <- if (weWantThisUserToAuthWithSlack(userId, org, slackTeamId)) Some(true) else None
+          _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
         } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
       }
     }
     redir.getOrElse(notFound(request))
   }
 
-  private def weWantThisUserToAuthWithSlack(userId: Id[User], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
-    slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
-      val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
-      val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
-      val userHasNotGivenUsTheirSlackInfo = !slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
-      orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)
+  private def weWantThisUserToAuthWithSlack(userIdOpt: Option[Id[User]], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
+    userIdOpt match {
+      case None => true // always hand non-users over to the frontend to ask them to log in or sign up
+      case Some(userId) => // if they're logged in AND they can't access the page in question AND signing up with slack would help
+        slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
+          val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
+          val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
+          val userHasNotGivenUsTheirSlackInfo = !slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
+          orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)
+        }
     }
   }
 

@@ -9,7 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -17,6 +17,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, FORCE_EDIT_LIBRARIES }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
@@ -64,29 +65,32 @@ trait LibraryCommander {
 
 @Singleton
 class LibraryCommanderImpl @Inject() (
-    db: Database,
-    libraryRepo: LibraryRepo,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    libraryAliasRepo: LibraryAliasRepo,
-    libraryInviteRepo: LibraryInviteRepo,
-    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
-    libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
-    permissionCommander: PermissionCommander,
-    libraryAccessCommander: LibraryAccessCommander,
-    userRepo: UserRepo,
-    keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    ktlRepo: KeepToLibraryRepo,
-    ktlCommander: KeepToLibraryCommander,
-    countByLibraryCache: CountByLibraryCache,
-    collectionRepo: CollectionRepo,
-    airbrake: AirbrakeNotifier,
-    searchClient: SearchServiceClient,
-    libraryAnalytics: LibraryAnalytics,
-    implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration,
-    clock: Clock) extends LibraryCommander with Logging {
+  db: Database,
+  libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
+  libraryAliasRepo: LibraryAliasRepo,
+  libraryInviteRepo: LibraryInviteRepo,
+  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+  libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
+  permissionCommander: PermissionCommander,
+  libraryAccessCommander: LibraryAccessCommander,
+  userRepo: UserRepo,
+  keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
+  keepToCollectionRepo: KeepToCollectionRepo,
+  ktlRepo: KeepToLibraryRepo,
+  ktlCommander: KeepToLibraryCommander,
+  countByLibraryCache: CountByLibraryCache,
+  collectionRepo: CollectionRepo,
+  airbrake: AirbrakeNotifier,
+  searchClient: SearchServiceClient,
+  libraryAnalytics: LibraryAnalytics,
+  implicit val defaultContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration,
+  implicit val inhouseSlackClient: InhouseSlackClient,
+  clock: Clock)
+    extends LibraryCommander with Logging {
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
     Future {
@@ -146,13 +150,18 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
-    Stream(
+    val error = Stream(
       invalidName,
       invalidSlug,
       slugCollision,
       invalidSpace,
       invalidVisibility
     ).flatten.headOption
+
+    error tap {
+      case Some(err) => slackLog.warn("Validation error!", err.message, "for request", libCreateReq.toString)
+      case _ =>
+    }
   }
 
   def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library = {
@@ -253,7 +262,10 @@ class LibraryCommanderImpl @Inject() (
       validateSlug(modifyReq.slug, newSpace),
       validateVisibility(modifyReq.visibility, newSpace)
     )
-    errorOpts.flatten.headOption
+    errorOpts.flatten.headOption tap {
+      case Some(err) => slackLog.warn("Validation error!", err.message, "for request", modifyReq.toString)
+      case _ =>
+    }
   }
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifications)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse] = {
     val library = db.readOnlyMaster { implicit s =>
