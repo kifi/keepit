@@ -458,7 +458,8 @@ class AuthController @Inject() (
               case "waitlist" =>
                 Redirect("/twitter/thanks")
               case "slack" =>
-                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None, useIdentity = true).url)
+                val slackTeamId = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url)
               case _ =>
                 Redirect(homeUrl)
             } getOrElse Redirect(homeUrl)
@@ -618,18 +619,13 @@ class AuthController @Inject() (
   }
 
   def connectWithSlackGo = MaybeUserAction { implicit request =>
-    val redirectUrl = com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None, useIdentity = true).url
-    Redirect("/link/slack").withSession(request.session + (SecureSocial.OriginalUrlKey -> redirectUrl))
+    Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None).url, SEE_OTHER)
   }
 
-  def startWithSlack(slackTeamId: Option[SlackTeamId], useIdentity: Boolean) = MaybeUserAction { implicit request =>
+  def startWithSlack(slackTeamId: Option[SlackTeamId]) = MaybeUserAction { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
-        val slackTeamIdToAdd = slackTeamId orElse {
-          if (useIdentity) request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-          else None
-        }
-        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdToAdd).url, SEE_OTHER)
+        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamId).url, SEE_OTHER)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
