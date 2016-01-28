@@ -30,7 +30,6 @@ angular.module('kifi')
         };
 
         $scope.onClickedSyncAllSlackChannels = function() {
-          var org = $scope.getOrg();
           $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
           slackService.publicSync($scope.getOrg().id).then(function (resp) {
             if (resp.redirect) {
