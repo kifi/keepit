@@ -28,8 +28,8 @@ angular.module('kifi')
         return net.publicSyncSlack(teamId).then(dataLens);
       },
       // Returns a link that we should send the client to if they want to connect Slack to a team
-      connectTeam: function (teamId) {
-        return net.connectSlack(teamId).then(dataLens);
+      connectTeam: function (teamId, optSlackTeamId) {
+        return net.connectSlack(teamId, optSlackTeamId).then(dataLens);
       }
     };
     return api;
