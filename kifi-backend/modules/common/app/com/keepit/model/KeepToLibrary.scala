@@ -17,7 +17,8 @@ case class KeepToLibrary(
   uriId: Id[NormalizedURI],
   // and from Library
   visibility: LibraryVisibility,
-  organizationId: Option[Id[Organization]])
+  organizationId: Option[Id[Organization]],
+  lastActivityAt: DateTime = currentDateTime)
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
@@ -28,6 +29,9 @@ case class KeepToLibrary(
   def withAddedAt(time: DateTime): KeepToLibrary = this.copy(addedAt = time)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
+
+  // denormalized from Keep.lastActivityAt, use in KeepCommander.updateLastActivityAtIfLater
+  def withLastActivityAt(time: DateTime): KeepToLibrary = this.copy(lastActivityAt = time)
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
