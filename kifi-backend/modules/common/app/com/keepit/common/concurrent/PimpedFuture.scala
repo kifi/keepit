@@ -75,6 +75,14 @@ object FutureHelpers {
     }
   }
 
+  // robustly is a guaranteed successful future (useful if you need to map on it)
+  def robustly[T](f: => Future[T])(implicit ec: ScalaExecutionContext): Future[Try[T]] = {
+    Try(f) match {
+      case Success(fut) => fut.map(Success(_)).recover { case th => Failure(th) }
+      case Failure(th) => Future.successful(Failure(th))
+    }
+  }
+
   private val noopChunkCB: Int => Unit = _ => Unit
 
   // sequential execute in chunks + callback (optional)

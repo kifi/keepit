@@ -224,7 +224,7 @@ class SlackOnboarderImpl @Inject() (
     new TeamOnboardingAgent(team, membership, forceOverride)(this)
   }
   object teamAgent {
-    def intro(agent: TeamOnboardingAgent)(): Future[Unit] = SafeFuture.swallow {
+    def intro(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
       (for {
         msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
           "We're talking to Slack to get your public channels now.", SlackEmoji.rocket,
@@ -239,7 +239,7 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Unit] = SafeFuture.swallow {
+    def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
       (for {
         msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
           "Slack told us you have",
@@ -254,7 +254,7 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def ingesting(agent: TeamOnboardingAgent)(): Future[Unit] = SafeFuture.swallow {
+    def ingesting(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
       import DescriptionElements._
       (for {
         org <- agent.team.organizationId.map(orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) })
