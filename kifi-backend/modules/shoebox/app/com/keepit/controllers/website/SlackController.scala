@@ -59,15 +59,15 @@ class SlackController @Inject() (
     db.readOnlyMaster { implicit s => pathCommander.orgPageById(organizationId) }.absolute
   }
 
-  private def redirectToOrganization(organizationId: Id[Organization], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
+  private def redirectToOrganization(organizationId: Id[Organization], showSlackDialog: Boolean): SlackResponse.ActionPerformed = {
     val organizationUrl = getOrgUrl(organizationId)
     val redirectUrl = if (showSlackDialog) organizationUrl + "?showSlackDialog" else organizationUrl
-    SlackResponse.RedirectClient(redirectUrl)
+    SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
-  private def redirectToOrganizationIntegrations(organizationId: Id[Organization]): SlackResponse.RedirectClient = {
+  private def redirectToOrganizationIntegrations(organizationId: Id[Organization]): SlackResponse.ActionPerformed = {
     val redirectUrl = getOrgUrl(organizationId) + "/settings/integrations"
-    SlackResponse.RedirectClient(redirectUrl)
+    SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
@@ -142,7 +142,7 @@ class SlackController @Inject() (
 
       case SyncPublicChannels() =>
         slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
-          case (orgId, _) => redirectToOrganizationIntegrations(orgId) // This is a success case (action is done). Should actually return: SlackResponse.ActionPerformed. Can't yet for backwards compatibility.
+          case (orgId, _) => redirectToOrganizationIntegrations(orgId)
         }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
@@ -222,11 +222,6 @@ class SlackController @Inject() (
       .map(handleAsBrowserRequest)
   }
 
-  def connectSlackTeamOld(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
-    processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
-      .map(handleAsBrowserRequest)
-  }
-
   def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
       .map(handleAsAPIRequest)
@@ -234,14 +229,6 @@ class SlackController @Inject() (
 
   def createSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
     processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
-      .map(handleAsBrowserRequest)
-  }
-
-  def syncPublicChannelsOld(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
-    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
-    }
-    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
       .map(handleAsBrowserRequest)
   }
 
@@ -297,9 +284,9 @@ class SlackController @Inject() (
   private def handleAsBrowserRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
     response match {
       case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
-      case SlackResponse.ActionPerformed =>
-        val ref = request.headers.get(REFERER)
-        Redirect(ref.filter(_.startsWith("https://www.kifi.com")).getOrElse("/")) // Bad bad
+      case SlackResponse.ActionPerformed(urlOpt) =>
+        val url = urlOpt.orElse(request.headers.get(REFERER).filter(_.startsWith("https://www.kifi.com"))).getOrElse("/")
+        Redirect(url)
       case SlackResponse.Error(code) =>
         log.warn(s"[SlackController#handleAsBrowserRequest] Error: $code")
         Redirect("/") // Bad bad bad
@@ -310,7 +297,7 @@ class SlackController @Inject() (
   private def handleAsAPIRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
     response match {
       case SlackResponse.RedirectClient(url) => Ok(Json.obj("redirect" -> url))
-      case SlackResponse.ActionPerformed => Ok(Json.obj("success" -> true))
+      case SlackResponse.ActionPerformed(urlOpt) => Ok(Json.obj("success" -> true, "url" -> urlOpt))
       case SlackResponse.Error(code) => BadRequest(Json.obj("error" -> code))
     }
   }
@@ -318,7 +305,10 @@ class SlackController @Inject() (
 
 private sealed trait SlackResponse
 private object SlackResponse {
+  // Error, usually can't be elegantly recovered by clients.
   final case class Error(code: String) extends SlackResponse
+  // Client should blindly go to `url`, typically because they need to go to 3rd party to auth
   final case class RedirectClient(url: String) extends SlackResponse
-  case object ActionPerformed extends SlackResponse
+  // Requested action performed. Url included is a suggestion about a good place to go next, but clients can be smarter.
+  final case class ActionPerformed(url: Option[String] = None) extends SlackResponse
 }
