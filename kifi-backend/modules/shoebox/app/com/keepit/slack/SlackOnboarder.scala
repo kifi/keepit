@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -11,17 +12,18 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ Debouncing, DescriptionElements, LinkElement }
 import com.keepit.model._
+import com.keepit.slack.SlackOnboarder.TeamOnboardingAgent
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.{ Try, Success, Failure }
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
   def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit]
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit]
+  def getTeamAgent(team: SlackTeam, membership: SlackTeamMembership, forceOverride: Boolean = false): TeamOnboardingAgent
 }
 
 object SlackOnboarder {
@@ -46,6 +48,16 @@ object SlackOnboarder {
       "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android" --> LinkElement(PathCommander.android), "apps."
     )
   }
+
+  class TeamOnboardingAgent(val team: SlackTeam, val membership: SlackTeamMembership, val forceOverride: Boolean)(implicit parent: SlackOnboarderImpl) {
+    private var working = forceOverride || canSendMessageAboutTeam(team)
+    def isWorking = working
+    def dieIf(b: Boolean) = if (b) working = false
+
+    def intro() = parent.teamAgent.intro(this)()
+    def channels(channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(channels)
+    def ingesting() = parent.teamAgent.ingesting(this)()
+  }
 }
 
 @Singleton
@@ -60,6 +72,7 @@ class SlackOnboarderImpl @Inject() (
   libRepo: LibraryRepo,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  orgRepo: OrganizationRepo,
   attributionRepo: KeepSourceAttributionRepo,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -207,22 +220,58 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
-  def talkAboutTeam(team: SlackTeam, member: SlackTeamMembership, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
-    require(team.slackTeamId == member.slackTeamId)
-
-    (for {
-      msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-        "Creating an integration between your Slack channels and Kifi.", SlackEmoji.rocket,
-        "We're grabbing all the links now, which might take a bit. We'll let you know when we're done."
-      )))).filter(_ => forceOverride || canSendMessageAboutTeam(team))
-    } yield {
-      slackClient.sendToSlack(member.slackUserId, member.slackTeamId, member.slackUserId.asChannel, msg).andThen {
-        case Success(_: Unit) => slackLog.info("Pushed a team FTUI to", member.slackUsername.value, "in", team.slackTeamName.value)
-        case Failure(fail) => slackLog.warn("Failed to push team FTUI to", member.slackUsername.value, "in", team.slackTeamName.value, "because:", fail.getMessage)
+  def getTeamAgent(team: SlackTeam, membership: SlackTeamMembership, forceOverride: Boolean = false): TeamOnboardingAgent = {
+    new TeamOnboardingAgent(team, membership, forceOverride)(this)
+  }
+  object teamAgent {
+    def intro(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
+      (for {
+        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+          "We're talking to Slack to get your public channels now.", SlackEmoji.rocket,
+          agent.team.publicChannelsLastSyncedAt.map(time => DescriptionElements("Last time we did this was", time)).getOrElse {
+            DescriptionElements("This might take a few moments, especially if you have a lot of channels.", SlackEmoji.hourglass)
+          }
+        )))).filter(_ => agent.isWorking)
+      } yield {
+        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+      }) getOrElse {
+        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+        Future.successful(Unit)
       }
-    }) getOrElse {
-      slackLog.info(s"Decided not to send a FTUI to team ${team.slackTeamName.value}")
-      Future.successful(Unit)
+    }
+    def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+      (for {
+        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+          "Slack told us you have",
+          if (channels.nonEmpty) DescriptionElements(channels.length, "new channels.", "We're creating Kifi libraries for them now.")
+          else DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
+        )))).filter(_ => agent.isWorking)
+      } yield {
+        agent.dieIf(channels.isEmpty)
+        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+      }) getOrElse {
+        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+        Future.successful(Unit)
+      }
+    }
+    def ingesting(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
+      import DescriptionElements._
+      (for {
+        org <- agent.team.organizationId.map(orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) })
+        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+          "We're done creating those new libraries.",
+          "You can browse through them at the", org.name --> LinkElement(pathCommander.orgLibrariesPage(org).absolute), "page on Kifi."
+        )))).filter(_ => agent.isWorking)
+      } yield {
+        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+      }) getOrElse {
+        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+        Future.successful(Unit)
+      }
+    }
+    private def logFTUI(agent: TeamOnboardingAgent, msg: SlackMessageRequest): PartialFunction[Try[Unit], Unit] = {
+      case Success(_: Unit) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
+      case Failure(fail) => slackLog.warn("Failed to push team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "because:", fail.getMessage)
     }
   }
 }
