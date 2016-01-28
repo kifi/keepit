@@ -70,8 +70,14 @@ angular.module('kifi')
 
     $scope.onClickedSyncAllSlackChannels = function() {
       var org = $scope.profile;
-      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
+      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
       $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
+    };
+
+    $scope.onClickedConnectSlack = function() {
+      var org = $scope.profile;
+      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
+      $window.location = '/site/organizations/' + org.id + '/slack/connect';
     };
   }
 ]);
