@@ -556,7 +556,7 @@ GET           /site/organizations/:id/referralCode              @com.keepit.cont
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
-# ↓ Take out of /site/
+# ↓ Take out of /site/ okay!?
 GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.addSlackTeam(slackTeamId: Option[String] ?= None)
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
 # ↓ Take out of /site/
