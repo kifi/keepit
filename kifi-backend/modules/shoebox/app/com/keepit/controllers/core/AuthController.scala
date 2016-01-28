@@ -457,6 +457,8 @@ class AuthController @Inject() (
                 Redirect(homeUrl)
               case "waitlist" =>
                 Redirect("/twitter/thanks")
+              case "slack" =>
+                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None, useIdentity = true).url)
               case _ =>
                 Redirect(homeUrl)
             } getOrElse Redirect(homeUrl)
@@ -629,9 +631,8 @@ class AuthController @Inject() (
         }
         Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdToAdd).url, SEE_OTHER)
       case nonUserRequest: NonUserRequest[_] =>
-        val signupUrl = s"/signup/slack${slackTeamId.map(id => s"?slackTeamId=${id.value}").getOrElse("")}"
-        val redirectUrl = nonUserRequest.uri + "?useIdentity=true"
-        Redirect(signupUrl, SEE_OTHER).withSession(request.session + (SecureSocial.OriginalUrlKey -> redirectUrl))
+        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
+        Redirect(signupUrl, SEE_OTHER).withSession(request.session)
     }
   }
 }
