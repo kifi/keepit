@@ -139,7 +139,7 @@ class SlackController @Inject() (
       case SyncPublicChannels() =>
         slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
           case (orgId, _) =>
-            SlackResponse.ActionPerformed(getOrgUrl(orgId)) // This is a success case (action is done). Should actually return: SlackResponse.ActionPerformed. Can't yet for backwards compatibility.
+            SlackResponse.ActionPerformed(Some(getOrgUrl(orgId)))
         }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
@@ -282,7 +282,7 @@ class SlackController @Inject() (
     response match {
       case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
       case SlackResponse.ActionPerformed(urlOpt) =>
-        val url = urlOpt.OrElse(request.headers.get(REFERER).filter(_.startsWith("https://www.kifi.com")).getOrElse("/"))
+        val url = urlOpt.orElse(request.headers.get(REFERER).filter(_.startsWith("https://www.kifi.com"))).getOrElse("/")
         Redirect(url)
       case SlackResponse.Error(code) =>
         log.warn(s"[SlackController#handleAsBrowserRequest] Error: $code")
