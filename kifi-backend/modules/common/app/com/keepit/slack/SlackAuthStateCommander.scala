@@ -60,13 +60,6 @@ object TurnOnChannelIngestion extends SlackAuthenticatedActionHelper[TurnOnChann
   def helper = TurnOnChannelIngestion
 }
 
-// Deprecated
-object SetupSlackTeam extends SlackAuthenticatedActionHelper[SetupSlackTeam]("setup_slack_team")
-@json case class SetupSlackTeam(organizationId: Option[Id[Organization]]) extends SlackAuthenticatedAction {
-  type A = SetupSlackTeam
-  def helper = SetupSlackTeam
-}
-
 object AddSlackTeam extends SlackAuthenticatedActionHelper[AddSlackTeam]("add_slack_team")
 case class AddSlackTeam() extends SlackAuthenticatedAction {
   type A = AddSlackTeam
@@ -107,7 +100,6 @@ object SlackAuthenticatedActionHelper {
     SetupLibraryIntegrations,
     TurnOnLibraryPush,
     TurnOnChannelIngestion,
-    SetupSlackTeam,
     AddSlackTeam,
     ConnectSlackTeam,
     CreateSlackTeam,
@@ -127,7 +119,6 @@ object SlackAuthenticatedActionHelper {
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
     case TurnOnLibraryPush => implicitly[Format[TurnOnLibraryPush]]
     case TurnOnChannelIngestion => implicitly[Format[TurnOnChannelIngestion]]
-    case SetupSlackTeam => implicitly[Format[SetupSlackTeam]]
     case AddSlackTeam => formatPure(AddSlackTeam())
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => formatPure(CreateSlackTeam())
@@ -139,7 +130,6 @@ object SlackAuthenticatedActionHelper {
     case SetupLibraryIntegrations => SlackAuthScope.integrationSetup
     case TurnOnLibraryPush => SlackAuthScope.push
     case TurnOnChannelIngestion => SlackAuthScope.ingest
-    case SetupSlackTeam => SlackAuthScope.syncPublicChannels
     case AddSlackTeam => SlackAuthScope.teamSetup
     case ConnectSlackTeam => SlackAuthScope.teamSetup
     case CreateSlackTeam => SlackAuthScope.teamSetup

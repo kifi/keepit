@@ -115,17 +115,6 @@ class SlackController @Inject() (
         Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
       }
 
-      case SetupSlackTeam(orgIdOpt) => {
-        slackTeamCommander.setupSlackTeam(userId, slackTeamId, orgIdOpt).map { slackTeam =>
-          slackTeam.organizationId match {
-            case Some(orgId) =>
-              slackTeamCommander.syncPublicChannels(userId, slackTeam.slackTeamId)
-              redirectToOrganization(orgId, showSlackDialog = false)
-            case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
-          }
-        }
-      }
-
       case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map {
         case (slackTeam, isNewOrg) =>
           slackTeam.organizationId match {
@@ -250,7 +239,7 @@ class SlackController @Inject() (
 
   def syncPublicChannelsOld(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.headOption
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
     }
     processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
       .map(handleAsBrowserRequest)
@@ -258,7 +247,7 @@ class SlackController @Inject() (
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.headOption
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
     }
     processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
       .map(handleAsAPIRequest)
