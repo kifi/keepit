@@ -1,6 +1,7 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.{ Inject }
+import com.keepit.commanders.KeepCommander
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.db.slick.Database
@@ -23,6 +24,7 @@ class ShoeboxMessageIngestionActor @Inject() (
     db: Database,
     systemValueRepo: SystemValueRepo,
     keepRepo: KeepRepo,
+    keepCommander: KeepCommander,
     eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
@@ -48,8 +50,11 @@ class ShoeboxMessageIngestionActor @Inject() (
       db.readWrite { implicit session =>
         keepRepo.getByIds(messagesByKeep.keySet).values.foreach { keep =>
           messagesByKeep.get(keep.id.get).foreach { msgs =>
-            val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max).withLastActivityAtIfLater(msgs.map(_.sentAt).maxBy(_.getMillis))
-            if (updatedKeep != keep) keepRepo.save(updatedKeep)
+            val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
+            if (updatedKeep.messageSeq != keep.messageSeq) keepRepo.save(updatedKeep)
+
+            val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
+            keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
           }
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)

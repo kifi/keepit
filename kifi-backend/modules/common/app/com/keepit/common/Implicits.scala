@@ -95,7 +95,7 @@ final class EitherExtensionOps[A, B](xs: Traversable[Either[A, B]]) {
 }
 
 final class OptionExtensionOpts[A](x: Option[A]) {
-  def hasTheSameValueAs(y: Option[A]) = (x, y) match {
+  def containsTheSameValueAs(y: Option[A]) = (x, y) match {
     case (Some(v1), Some(v2)) => v1 == v2
     case _ => false
   }

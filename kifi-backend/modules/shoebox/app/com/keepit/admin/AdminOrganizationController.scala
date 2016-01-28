@@ -5,25 +5,21 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.google.inject.Inject
 import com.keepit.classify.NormalizedHostname
 import com.keepit.common.concurrent.ChunkedResponseHelper
-import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.json.KeyFormat
-import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo, PaidPlanStates, PaidPlan }
-import play.api.libs.iteratee.{ Enumerator, Concurrent }
+import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import play.api.{ Mode, Play }
-import play.api.libs.json.{ JsValue, JsString, Json }
-import play.twirl.api.{ HtmlFormat, Html }
-import play.api.mvc.{ Action, AnyContent, Result }
+import play.api.libs.json.Json
+import play.twirl.api.HtmlFormat
+import play.api.mvc.{ Action, AnyContent }
 import views.html
 
-import scala.concurrent.{ Promise, ExecutionContext, Future }
-import com.keepit.common.time._
+import scala.concurrent.{ ExecutionContext, Future }
 
 import scala.util.Try
 

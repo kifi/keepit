@@ -92,9 +92,7 @@ class SlackOnboarderImpl @Inject() (
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
-    val channel = integ.slackChannelId.flatMap(channelId => slackChannelRepo.getByChannelId(integ.slackTeamId, channelId))
-    val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId hasTheSameValueAs lib.organizationId)
-    val explicitMsgCutoff = clock.now minus minDelayForExplicitMsg
+    val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId containsTheSameValueAs lib.organizationId)
 
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
@@ -105,7 +103,7 @@ class SlackOnboarderImpl @Inject() (
           None
         case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId hasTheSameValueAs slackTeam.generalChannelId) =>
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
         case (ltsc: LibraryToSlackChannel, _) =>
           conservativePushMessage(ltsc, owner, lib)
