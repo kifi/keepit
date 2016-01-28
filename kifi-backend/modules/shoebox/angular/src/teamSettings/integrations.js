@@ -68,18 +68,10 @@ angular.module('kifi')
       messageTicker({ text: 'Odd, that didn’t work. Try again?', type: 'red' });
     }
 
-
     $scope.onClickedSyncAllSlackChannels = function() {
       var org = $scope.profile;
       $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
-      if (org && org.slack && org.slack.link) {
-        $window.location = org.slack.link;
-      } else {
-        messageTicker({
-          text: 'Unable to retrieve team information, please refresh and try again.',
-          type: 'red'
-        });
-      }
+      $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
     };
   }
 ]);
