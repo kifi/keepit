@@ -9,8 +9,11 @@ angular.module('kifi')
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    $scope.slackIntegrationReactionModel = {enabled: $scope.profile.config && $scope.profile.config.settings.slack_ingestion_reaction.setting === 'enabled'};
-    $scope.slackIntegrationDigestModel = {enabled: $scope.profile.config && $scope.profile.config.settings.slack_digest_notif.setting === 'enabled'};
+    var settings = $scope.profile && $scope.profile.config && $scope.profile.config.settings;
+    var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
+    var notifSetting = settings && settings.slack_digest_notif.setting;
+    $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
+    $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
