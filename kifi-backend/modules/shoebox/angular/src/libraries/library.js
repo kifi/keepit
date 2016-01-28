@@ -95,10 +95,12 @@ angular.module('kifi')
       }
 
       this.requiresPushAuth = function() {
+        // How can I construct this locally, without using authLink?
         return this.data.toSlack && this.data.toSlack.authLink;
       };
 
       this.requiresIngestAuth = function() {
+        // How can I construct this locally, without using authLink?
         return this.data.fromSlack && this.data.fromSlack.authLink;
       };
 
@@ -315,8 +317,6 @@ angular.module('kifi')
       slackService.getAddIntegrationLink(library.id).then(function (link) {
         if (link) {
           $window.location = link;
-        } else {
-          messageTicker({ text: 'Oops, that didn’t work.', type: 'red' });
         }
       });
     };
