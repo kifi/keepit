@@ -62,12 +62,12 @@ class SlackController @Inject() (
   private def redirectToOrganization(organizationId: Id[Organization], showSlackDialog: Boolean): SlackResponse.ActionPerformed = {
     val organizationUrl = getOrgUrl(organizationId)
     val redirectUrl = if (showSlackDialog) organizationUrl + "?showSlackDialog" else organizationUrl
-    SlackResponse.ActionPerformed(redirectUrl)
+    SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
   private def redirectToOrganizationIntegrations(organizationId: Id[Organization]): SlackResponse.ActionPerformed = {
     val redirectUrl = getOrgUrl(organizationId) + "/settings/integrations"
-    SlackResponse.ActionPerformed(redirectUrl)
+    SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
