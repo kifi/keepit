@@ -17,7 +17,7 @@ angular.module('kifi')
         var keep = scope.keep;
         var discussion = keep && keep.discussion;
         scope.showKeepPageLink = scope.keep.path && !$state.is('keepPage');
-        scope.showAsDiscussion = scope.keep && !scope.keep.libraryId && $state.is('home.feed') && profileService.hasExperiment('keep_nolib');
+        scope.showAsDiscussion = scope.keep && !scope.keep.libraryId && $state.is('home.feed');
         scope.attributionTime = (scope.showAsDiscussion && discussion && discussion.startedAt) || (keep && keep.createdAt);
       }
     };
