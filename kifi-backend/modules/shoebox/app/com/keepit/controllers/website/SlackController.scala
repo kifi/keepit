@@ -55,8 +55,19 @@ class SlackController @Inject() (
     SlackResponse.RedirectClient(redirectUrl)
   }
 
-  private def getOrgUrl(orgId: Id[Organization]): String = {
-    deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(orgId))).get.url
+  private def getOrgUrl(organizationId: Id[Organization]): String = {
+    deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(organizationId))).get.url
+  }
+
+  private def redirectToOrganization(organizationId: Id[Organization], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
+    val organizationUrl = getOrgUrl(organizationId)
+    val redirectUrl = if (showSlackDialog) organizationUrl + "?showSlackDialog" else organizationUrl
+    SlackResponse.RedirectClient(redirectUrl)
+  }
+
+  private def redirectToOrganizationIntegrations(organizationId: Id[Organization]): SlackResponse.RedirectClient = {
+    val redirectUrl = getOrgUrl(organizationId) + "/settings/integrations"
+    SlackResponse.RedirectClient(redirectUrl)
   }
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
@@ -109,21 +120,25 @@ class SlackController @Inject() (
           slackTeam.organizationId match {
             case Some(orgId) =>
               slackTeamCommander.syncPublicChannels(userId, slackTeam.slackTeamId)
-              SlackResponse.RedirectClient(getOrgUrl(orgId))
+              redirectToOrganization(orgId, showSlackDialog = false)
             case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
           }
         }
       }
 
-      case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map { slackTeam =>
-        slackTeam.organizationId match {
-          case Some(orgId) => SlackResponse.RedirectClient(getOrgUrl(orgId))
-          case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
-        }
+      case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map {
+        case (slackTeam, isNewOrg) =>
+          slackTeam.organizationId match {
+            case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
+            case Some(orgId) =>
+              if (isNewOrg) redirectToOrganization(orgId, showSlackDialog = true)
+              else if (slackTeam.publicChannelsLastSyncedAt.isDefined) redirectToOrganization(orgId, showSlackDialog = false)
+              else redirectToOrganizationIntegrations(orgId)
+          }
       }
 
       case ConnectSlackTeam(orgId) => slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId) match {
-        case Success(team) if team.organizationId.contains(orgId) => Future.successful(SlackResponse.RedirectClient(getOrgUrl(orgId)))
+        case Success(team) if team.organizationId.contains(orgId) => Future.successful(redirectToOrganizationIntegrations(orgId))
         case teamMaybe =>
           val error = teamMaybe.map(team => new Exception(s"Something weird happen while connecting org $orgId with $team")).recover { case error => error }
           throw error.get
@@ -131,15 +146,14 @@ class SlackController @Inject() (
 
       case CreateSlackTeam() => slackTeamCommander.createOrganizationForSlackTeam(userId, slackTeamId).map { team =>
         team.organizationId match {
-          case Some(orgId) => SlackResponse.RedirectClient(getOrgUrl(orgId))
+          case Some(orgId) => redirectToOrganization(orgId, showSlackDialog = true)
           case None => throw new Exception(s"Something weird happen while creating org for $team")
         }
       }
 
       case SyncPublicChannels() =>
         slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
-          case (orgId, _) =>
-            SlackResponse.RedirectClient(getOrgUrl(orgId))
+          case (orgId, _) => redirectToOrganizationIntegrations(orgId)
         }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
