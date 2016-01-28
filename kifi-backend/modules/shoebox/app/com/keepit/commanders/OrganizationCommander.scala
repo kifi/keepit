@@ -81,17 +81,7 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
-    val badName = modifications.name.exists(_.isEmpty)
-    val normalizedSiteUrl = modifications.site.map { url =>
-      if (url.startsWith("http://") || url.startsWith("https://")) url
-      else "https://" + url
-    }
-    val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    (badName, badSiteUrl) match {
-      case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
-      case _ => None
-    }
+    Some(OrganizationFail.INVALID_MODIFY_NAME).filter(_ => modifications.name.exists(_.isEmpty))
   }
 
   private def validateOrganizationSettings(orgId: Id[Organization], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {
