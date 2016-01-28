@@ -468,7 +468,7 @@ GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserC
 GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
 
 GET   /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrationsOld(id: PublicId[Library])
-POST  /site/libraries/:id/slack/add        @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/push        @com.keepit.controllers.website.SlackController.turnOnLibraryPush(id: PublicId[Library], integrationId: String)
 POST  /site/libraries/:id/slack/ingest      @com.keepit.controllers.website.SlackController.turnOnChannelIngestion(id: PublicId[Library], integrationId: String)
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
@@ -557,7 +557,7 @@ GET           /site/organizations/:id/referralCode              @com.keepit.cont
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
-# ↓ Take out of /site/ okay!?
+# ↓ Take out of /site/
 GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
 # ↓ Take out of /site/
