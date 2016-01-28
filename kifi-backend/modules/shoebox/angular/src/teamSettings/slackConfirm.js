@@ -14,7 +14,7 @@ angular.module('kifi')
     $scope.platform = installService.getPlatformName();
     var teamIdParam = '';
     if ($stateParams.slackTeamId) {
-      teamIdParam = '&teamId=' + $stateParams.slackTeamId;
+      teamIdParam = '&slackTeamId=' + $stateParams.slackTeamId;
     }
     $scope.teamLink = 'https://www.kifi.com/' + profile.organization.handle + '?signUpWithSlack' + teamIdParam;
     $scope.profile = profile;
