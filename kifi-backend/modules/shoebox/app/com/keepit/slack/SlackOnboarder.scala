@@ -50,7 +50,7 @@ object SlackOnboarder {
   }
 
   class TeamOnboardingAgent(val team: SlackTeam, val membership: SlackTeamMembership, val forceOverride: Boolean)(implicit parent: SlackOnboarderImpl) {
-    lazy val working = forceOverride || canSendMessageAboutTeam(team)
+    var working = forceOverride || canSendMessageAboutTeam(team)
 
     def intro() = parent.teamAgent.intro(this)()
     def channels(channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(channels)
@@ -240,9 +240,12 @@ class SlackOnboarderImpl @Inject() (
     def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Unit] = SafeFuture.swallow {
       (for {
         msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-          "Slack told us you have", channels.length, "new channels.", "We're creating Kifi libraries for them now."
-        )))).filter(_ => agent.working && channels.nonEmpty)
+          "Slack told us you have",
+          if (channels.nonEmpty) DescriptionElements(channels.length, "new channels.", "We're creating Kifi libraries for them now.")
+          else DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
+        )))).filter(_ => agent.working)
       } yield {
+        if (channels.isEmpty) { agent.working = false }
         slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
       }) getOrElse {
         slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
