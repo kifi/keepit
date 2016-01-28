@@ -71,6 +71,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
@@ -167,9 +168,13 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
-    slackTeamIdCache.getOrElseOpt(SlackTeamIdKey(slackTeamId)) {
-      rows.filter(row => row.slackTeamId === slackTeamId && row.state =!= excludeState.orNull).firstOption
-    }
+    getBySlackTeamIds(Set(slackTeamId), excludeState).get(slackTeamId)
+  }
+
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam] = {
+    slackTeamIdCache.bulkGetOrElse(slackTeamIds.map(SlackTeamIdKey(_))) { missingKeys =>
+      rows.filter(row => row.slackTeamId.inSet(missingKeys.map(_.id)) && row.state =!= excludeState.orNull).list.map { team => SlackTeamIdKey(team.slackTeamId) -> team }.toMap
+    }.map { case (SlackTeamIdKey(slackTeamId), team) => slackTeamId -> team }
   }
 
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam = {

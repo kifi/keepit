@@ -25,6 +25,7 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
+  val minDelayForExplicitMsg = Period.days(2)
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
 
@@ -40,7 +41,7 @@ object SlackOnboarder {
   val installationDescription = {
     import DescriptionElements._
     DescriptionElements(
-      "Use the `/kifi <search words>` command. We'll even search the full content of the page.",
+      "Everyone can use the `/kifi <search words>` slash command to search through your links right from Slack. We'll even search the full content of the page.",
       "Install" --> LinkElement(PathCommander.browserExtension.absolute), "our Chrome and Firefox extensions for easy keeping and full Google integration.",
       "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android" --> LinkElement(PathCommander.android), "apps."
     )
@@ -91,7 +92,9 @@ class SlackOnboarderImpl @Inject() (
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
+    val channel = integ.slackChannelId.flatMap(channelId => slackChannelRepo.getByChannelId(integ.slackTeamId, channelId))
     val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId hasTheSameValueAs lib.organizationId)
+    val explicitMsgCutoff = clock.now minus minDelayForExplicitMsg
 
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
@@ -162,7 +165,7 @@ class SlackOnboarderImpl @Inject() (
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.star, s"*Saving links from ${sctl.slackChannelName.value}*"),
-        DescriptionElements("Every time someone posts a link here, it'll be automatically saved in this library.")
+        DescriptionElements("Any time someone includes a link in their message, we'll automatically save it and index the site so you can search for it easily.")
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.magnifyingGlass, "*Searching Links*"),
@@ -171,8 +174,8 @@ class SlackOnboarderImpl @Inject() (
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.constructionWorker, "*Managing Links*"),
         DescriptionElements(
-          "Here's the library:", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), ".",
-          "If you don't have a Kifi account, setup is just 20 seconds. From here, you can add/remove/move links."
+          "Go to", "Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), "to access all your links.",
+          "If you don't have a Kifi account, you can sign up with your Slack account in just 20 seconds."
         )
       ))))).withFullMarkdown
     )

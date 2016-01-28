@@ -71,7 +71,7 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&teamId',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -89,10 +89,10 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&teamId',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId',
         params: {
           organization: null,
-          teamId: null
+          slackTeamId: null
         },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -127,7 +127,7 @@ angular.module('kifi')
         controller: 'OrgProfileSlackCtrl',
         templateUrl: 'orgProfile/orgProfileSlack.tpl.html',
         params: {
-          teamId: null,
+          slackTeamId: null,
           signUpWithSlack: true
         },
         activetab: null

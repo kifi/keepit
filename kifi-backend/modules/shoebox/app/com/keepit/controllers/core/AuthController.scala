@@ -16,6 +16,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
 import com.kifi.macros.json
@@ -615,6 +616,22 @@ class AuthController @Inject() (
   }
 
   def connectWithSlackGo = MaybeUserAction { implicit request =>
-    Redirect("/link/slack").withSession(request.session + (SecureSocial.OriginalUrlKey -> "/integrations/slack/start"))
+    val redirectUrl = com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None, useIdentity = true).url
+    Redirect("/link/slack").withSession(request.session + (SecureSocial.OriginalUrlKey -> redirectUrl))
+  }
+
+  def startWithSlack(slackTeamId: Option[SlackTeamId], useIdentity: Boolean) = MaybeUserAction { implicit request =>
+    request match {
+      case userRequest: UserRequest[_] =>
+        val slackTeamIdToAdd = slackTeamId orElse {
+          if (useIdentity) request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+          else None
+        }
+        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdToAdd).url, SEE_OTHER)
+      case nonUserRequest: NonUserRequest[_] =>
+        val signupUrl = s"/signup/slack${slackTeamId.map(id => s"?slackTeamId=${id.value}").getOrElse("")}"
+        val redirectUrl = nonUserRequest.uri + "?useIdentity=true"
+        Redirect(signupUrl, SEE_OTHER).withSession(request.session + (SecureSocial.OriginalUrlKey -> redirectUrl))
+    }
   }
 }
