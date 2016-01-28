@@ -62,6 +62,15 @@ object OrganizationSlackInfo {
   implicit val writes: Writes[OrganizationSlackInfo] = Json.writes[OrganizationSlackInfo]
 }
 
+case class UserSlackInfo(
+  memberships: Seq[(SlackUsername, SlackTeamName)])
+
+object UserSlackInfo {
+  def empty = UserSlackInfo(memberships = Seq.empty)
+  private implicit val helperWrites = KeyFormat.key2Writes[SlackUsername, SlackTeamName]("username", "teamName")
+  implicit val writes: Writes[UserSlackInfo] = Json.writes[UserSlackInfo]
+}
+
 object SlackInfoCommander {
   val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
 }
@@ -76,6 +85,9 @@ trait SlackInfoCommander {
 
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo
+
+  // For generating UserProfileStats
+  def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo
 }
 
 @Singleton
@@ -227,7 +239,7 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.lastChannelCreatedAt.map(_.toDateTime)))
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
@@ -249,5 +261,13 @@ class SlackInfoCommanderImpl @Inject() (
         case libId if canViewLib(libId) => (basicLibsById(libId), librarySlackInfosByLib(libId))
       }
     )
+  }
+
+  def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo = {
+    if (!viewerId.contains(userId)) UserSlackInfo.empty
+    else {
+      val memberships = slackTeamMembershipRepo.getByUserId(userId)
+      UserSlackInfo(memberships = memberships.map(stm => (stm.slackUsername, stm.slackTeamName)))
+    }
   }
 }

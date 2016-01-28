@@ -30,7 +30,8 @@ case class SlackTeam(
   organizationId: Option[Id[Organization]],
   lastChannelCreatedAt: Option[SlackTimestamp] = None,
   generalChannelId: Option[SlackChannelId],
-  lastDigestNotificationAt: DateTime = currentDateTime)
+  lastDigestNotificationAt: DateTime = currentDateTime,
+  publicChannelsLastSyncedAt: Option[DateTime] = None)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -38,6 +39,10 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = time)
+  def withPublicChannelsSyncedAt(time: DateTime) = publicChannelsLastSyncedAt match {
+    case Some(lastSync) if lastSync isAfter time => this
+    case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
+  }
 
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
 }
@@ -53,7 +58,8 @@ object SlackTeam {
     (__ \ 'organizationId).formatNullable[Id[Organization]] and
     (__ \ 'lastChannelCreatedAt).formatNullable[SlackTimestamp] and
     (__ \ 'generalChannelId).formatNullable[SlackChannelId] and
-    (__ \ 'lastDigestNotificationAt).format[DateTime]
+    (__ \ 'lastDigestNotificationAt).format[DateTime] and
+    (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -94,7 +100,8 @@ class SlackTeamRepoImpl @Inject() (
     organizationId: Option[Id[Organization]],
     lastChannelCreatedAt: Option[SlackTimestamp],
     generalChannelId: Option[SlackChannelId],
-    lastDigestNotificationAt: DateTime) = {
+    lastDigestNotificationAt: DateTime,
+    publicChannelsLastSyncedAt: Option[DateTime]) = {
     SlackTeam(
       id,
       createdAt,
@@ -105,7 +112,8 @@ class SlackTeamRepoImpl @Inject() (
       organizationId,
       lastChannelCreatedAt,
       generalChannelId,
-      lastDigestNotificationAt
+      lastDigestNotificationAt,
+      publicChannelsLastSyncedAt
     )
   }
 
@@ -119,7 +127,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.organizationId,
     slackTeam.lastChannelCreatedAt,
     slackTeam.generalChannelId,
-    slackTeam.lastDigestNotificationAt
+    slackTeam.lastDigestNotificationAt,
+    slackTeam.publicChannelsLastSyncedAt
   ))
 
   type RepoImpl = SlackTeamTable
@@ -131,17 +140,18 @@ class SlackTeamRepoImpl @Inject() (
     def lastChannelCreatedAt = column[Option[SlackTimestamp]]("last_channel_created_at", O.Nullable)
     def generalChannelId = column[Option[SlackChannelId]]("general_channel_id", O.Nullable)
     def lastDigestNotificationAt = column[DateTime]("last_digest_notification_at", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def publicChannelsLastSyncedAt = column[Option[DateTime]]("public_channels_last_synced_at", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamTable(tag)
   initTable()
-  override def deleteCache(membership: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.remove(SlackTeamIdKey(membership.slackTeamId))
+  override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
+    slackTeamIdCache.remove(SlackTeamIdKey(model.slackTeamId))
   }
-  override def invalidateCache(membership: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.set(SlackTeamIdKey(membership.slackTeamId), membership)
+  override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
+    slackTeamIdCache.set(SlackTeamIdKey(model.slackTeamId), model)
   }
 
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam] = {
@@ -184,7 +194,7 @@ class SlackTeamRepoImpl @Inject() (
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 1
+  override val version = 2
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }

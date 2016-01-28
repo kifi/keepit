@@ -31,7 +31,7 @@ angular.module('kifi')
     };
 
     $scope.onClickedCreateTeam = function() {
-      $window.location = 'https://kifi.com/site/organizations/create/slack?slackTeamId=' + $scope.params.slackTeamId;
+      $window.location = 'https://www.kifi.com/site/organizations/create/slack?slackTeamId=' + $scope.params.slackTeamId;
     };
 
   }

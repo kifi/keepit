@@ -10,11 +10,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.time.Clock
 import com.keepit.common.util.{ DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -49,6 +51,7 @@ class SlackTeamCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
+  clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -221,7 +224,7 @@ class SlackTeamCommanderImpl @Inject() (
               "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
               team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
             ))))
-            val updatedTeam = team |> { t =>
+            val updatedTeam = team.withPublicChannelsSyncedAt(clock.now) |> { t =>
               channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
             } |> { t =>
               channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t

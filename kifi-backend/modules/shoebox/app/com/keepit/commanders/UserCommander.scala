@@ -28,7 +28,8 @@ import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.models.{ SlackChannelToLibraryRepo, SlackTeamMembershipRepo }
+import com.keepit.slack.UserSlackInfo
+import com.keepit.slack.models._
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
@@ -94,6 +95,7 @@ case class UserProfileStats(
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None,
   orgs: Seq[OrganizationInfo],
+  slackInfo: UserSlackInfo,
   pendingOrgs: Set[OrganizationInfo])
 object UserProfileStats {
   implicit val writes: Writes[UserProfileStats] = (
@@ -107,6 +109,7 @@ object UserProfileStats {
     (__ \ 'numInvitedLibraries).writeNullable[Int] and
     (__ \ 'biography).writeNullable[String] and
     (__ \ 'orgs).write[Seq[OrganizationInfo]] and
+    (__ \ 'slackInfo).write[UserSlackInfo] and
     (__ \ 'pendingOrgs).write[Set[OrganizationInfo]]
   )(unlift(UserProfileStats.unapply))
 }
