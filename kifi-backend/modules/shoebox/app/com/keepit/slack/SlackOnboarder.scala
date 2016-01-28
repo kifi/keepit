@@ -50,7 +50,9 @@ object SlackOnboarder {
   }
 
   class TeamOnboardingAgent(val team: SlackTeam, val membership: SlackTeamMembership, val forceOverride: Boolean)(implicit parent: SlackOnboarderImpl) {
-    var working = forceOverride || canSendMessageAboutTeam(team)
+    private var working = forceOverride || canSendMessageAboutTeam(team)
+    def isWorking = working
+    def dieIf(b: Boolean) = if (b) working = false
 
     def intro() = parent.teamAgent.intro(this)()
     def channels(channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(channels)
@@ -229,7 +231,7 @@ class SlackOnboarderImpl @Inject() (
           agent.team.publicChannelsLastSyncedAt.map(time => DescriptionElements("Last time we did this was", time)).getOrElse {
             DescriptionElements("This might take a few moments, especially if you have a lot of channels.", SlackEmoji.hourglass)
           }
-        )))).filter(_ => agent.working)
+        )))).filter(_ => agent.isWorking)
       } yield {
         slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
       }) getOrElse {
@@ -243,9 +245,9 @@ class SlackOnboarderImpl @Inject() (
           "Slack told us you have",
           if (channels.nonEmpty) DescriptionElements(channels.length, "new channels.", "We're creating Kifi libraries for them now.")
           else DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
-        )))).filter(_ => agent.working)
+        )))).filter(_ => agent.isWorking)
       } yield {
-        if (channels.isEmpty) { agent.working = false }
+        agent.dieIf(channels.isEmpty)
         slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
       }) getOrElse {
         slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
@@ -259,7 +261,7 @@ class SlackOnboarderImpl @Inject() (
         msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
           "We're done creating those new libraries.",
           "You can browse through them at the", org.name --> LinkElement(pathCommander.orgLibrariesPage(org).absolute), "page on Kifi."
-        )))).filter(_ => agent.working)
+        )))).filter(_ => agent.isWorking)
       } yield {
         slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
       }) getOrElse {
