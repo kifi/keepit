@@ -129,7 +129,8 @@ object PlayGlobal {
     "com.keepit.shoebox.model.ids._",
     "com.keepit.rover.model._",
     "com.keepit.rover.article._",
-    "com.keepit.common.store.ImageSize"
+    "com.keepit.common.store.ImageSize",
+    "com.keepit.slack.models.SlackTeamId"
   )
 
   val _templateImports = Seq(
