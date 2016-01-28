@@ -16,7 +16,7 @@ angular.module('kifi')
         scope.me = profileService.me;
         var isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
         scope.showFeatureUpsell =  isAdmin && (scope.me.orgs || []).filter(function(org) {
-            return org.slack && org.slack.slackTeams && org.slack.slackTeams.length > 0;
+            return org.slack && org.slack.slackTeam;
         }).length === 0;
         scope.userLoggedIn = $rootScope.userLoggedIn;
 

@@ -4,7 +4,8 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION) {
+  'slackService',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
@@ -72,15 +73,26 @@ angular.module('kifi')
     }
 
     $scope.onClickedSyncAllSlackChannels = function() {
-      var org = $scope.profile;
       $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
-      $window.location = '/site/organizations/' + org.id + '/slack/sync/public';
+      slackService.publicSync($scope.profile.id).then(function (resp) {
+        if (resp.redirect) {
+          $window.location = resp.redirect;
+        } else if (resp.success) {
+          messageTicker({ text: 'Syncing!', type: 'green' });
+        }
+      });
     };
 
     $scope.onClickedConnectSlack = function() {
-      var org = $scope.profile;
       $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
-      $window.location = '/site/organizations/' + org.id + '/slack/connect';
+      slackService.connectTeam($scope.profile.id).then(function (resp) {
+        if (resp.redirect) {
+          $window.location = resp.redirect;
+        } else if (resp.success) {
+          messageTicker({ text: 'Slack connected!', type: 'green' });
+        }
+      });
+
     };
   }
 ]);
