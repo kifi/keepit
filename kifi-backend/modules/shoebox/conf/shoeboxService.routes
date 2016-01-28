@@ -467,7 +467,6 @@ POST    /site/rpb/setArrangement           @com.keepit.controllers.website.UserC
 GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, limit: Int ?= 10)
 GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
 
-GET   /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrationsOld(id: PublicId[Library])
 POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/push        @com.keepit.controllers.website.SlackController.turnOnLibraryPush(id: PublicId[Library], integrationId: String)
 POST  /site/libraries/:id/slack/ingest      @com.keepit.controllers.website.SlackController.turnOnChannelIngestion(id: PublicId[Library], integrationId: String)
@@ -562,11 +561,16 @@ GET           /site/slack/add                                   @com.keepit.cont
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
 # ↓ Take out of /site/
 GET           /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
-# ↓ Take out of /site/
-GET           /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
-# ↓ Take out of /site/ OR change to be be JSON endpoint
-GET           /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
+
+# ↓ Treats requests as browser visits, remove when frontend updates ↓
+GET           /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannelsOld(id: PublicId[Organization])
+GET           /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeamOld(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
+# ↑ Treats requests as browser visits, remove when frontend updates ↑
+
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
+POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
+
 
 # Slack POST routes are deprecated
 POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createOrganizationForSlackTeam(slackTeamId: SlackTeamId)
