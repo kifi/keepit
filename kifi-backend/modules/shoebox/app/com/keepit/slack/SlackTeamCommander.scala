@@ -97,13 +97,16 @@ class SlackTeamCommanderImpl @Inject() (
     } match {
       case (Some(team), Some(token)) if team.organizationId.isEmpty =>
         slackClient.getTeamInfo(token).flatMap { teamInfo =>
-          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None, site = teamInfo.emailDomains.headOption.map(_.value))
+          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None)
           orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
             case Right(createdOrg) =>
               val orgId = createdOrg.newOrg.id.get
               val futureAvatar = teamInfo.icon.maxByOpt(_._1) match {
                 case None => Future.successful(())
                 case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
+              }
+              teamInfo.emailDomains.exists { domain =>
+                orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(site = Some(domain.value)))).isRight
               }
               val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
               futureAvatar.flatMap { _ => Future.fromTry(connectedTeamMaybe) }
