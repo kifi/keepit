@@ -3,10 +3,11 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.db.Id
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.ElizaServiceClient
@@ -15,6 +16,7 @@ import com.keepit.model.Feature.{ SlackDigestNotification, SlackIngestionReactio
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.Play
 import scala.concurrent.duration._
 
@@ -32,30 +34,33 @@ trait OrganizationCommander {
 }
 
 class OrganizationCommanderImpl @Inject() (
-    db: Database,
-    orgRepo: OrganizationRepo,
-    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
-    orgMembershipRepo: OrganizationMembershipRepo,
-    orgInviteRepo: OrganizationInviteRepo,
-    orgConfigRepo: OrganizationConfigurationRepo,
-    userRepo: UserRepo,
-    paidPlanRepo: PaidPlanRepo,
-    libraryRepo: LibraryRepo,
-    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
-    organizationInfoCommander: OrganizationInfoCommander,
-    planManagementCommander: PlanManagementCommander,
-    permissionCommander: PermissionCommander,
-    handleCommander: HandleCommander,
-    libraryCommander: LibraryCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
-    creditRewardCommander: CreditRewardCommander,
-    organizationAnalytics: OrganizationAnalytics,
-    eliza: ElizaServiceClient,
-    airbrake: AirbrakeNotifier,
-    implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
+  db: Database,
+  orgRepo: OrganizationRepo,
+  organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
+  orgInviteRepo: OrganizationInviteRepo,
+  orgConfigRepo: OrganizationConfigurationRepo,
+  userRepo: UserRepo,
+  paidPlanRepo: PaidPlanRepo,
+  libraryRepo: LibraryRepo,
+  orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+  organizationInfoCommander: OrganizationInfoCommander,
+  planManagementCommander: PlanManagementCommander,
+  permissionCommander: PermissionCommander,
+  handleCommander: HandleCommander,
+  libraryCommander: LibraryCommander,
+  orgMembershipCommander: OrganizationMembershipCommander,
+  creditRewardCommander: CreditRewardCommander,
+  organizationAnalytics: OrganizationAnalytics,
+  eliza: ElizaServiceClient,
+  airbrake: AirbrakeNotifier,
+  implicit val executionContext: ExecutionContext,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends OrganizationCommander with Logging {
+  private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   private def getValidationError(request: OrganizationRequest)(implicit session: RSession): Option[OrganizationFail] = {
-    request match {
+    val error = request match {
       case OrganizationCreateRequest(_, initialValues) => validateModifications(initialValues.asOrganizationModifications)
 
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
@@ -78,6 +83,11 @@ class OrganizationCommanderImpl @Inject() (
         else None
       case _ => None
     }
+
+    error tap {
+      case Some(err) => slackLog.warn("Validation error!", err.message, "for request", request.toString)
+      case _ =>
+    }
   }
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
@@ -87,11 +97,11 @@ class OrganizationCommanderImpl @Inject() (
       else "https://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    (badName, badSiteUrl) match {
-      case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
-      case _ => None
-    }
+
+    Stream(
+      badName -> OrganizationFail.INVALID_MODIFY_NAME,
+      badSiteUrl -> OrganizationFail.INVALID_MODIFY_SITEURL
+    ).collect { case (true, fail) => fail }.headOption
   }
 
   private def validateOrganizationSettings(orgId: Id[Organization], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {

@@ -3,20 +3,18 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core.anyExtensionOps
-import com.keepit.common.core._
+import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time.Clock
-import com.keepit.common.util.{ DescriptionElements }
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.util.DescriptionElements
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
-import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -108,9 +106,10 @@ class SlackTeamCommanderImpl @Inject() (
               teamInfo.emailDomains.exists { domain =>
                 orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(site = Some(domain.value)))).isRight
               }
-              val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
+              val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, orgId)
               futureAvatar.flatMap { _ => Future.fromTry(connectedTeamMaybe) }
-            case Left(error) => Future.failed(error)
+            case Left(error) =>
+              Future.failed(error)
           }
         }
       case (teamOpt, _) => Future.failed(UnauthorizedSlackTeamOrganizationModificationException(teamOpt, userId, None))
