@@ -16,6 +16,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
 @json
@@ -46,15 +47,28 @@ case class LibrarySlackInfo(
   link: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
+@json
+case class OrganizationSlackTeamInfo(id: SlackTeamId, name: SlackTeamName, publicChannelsLastSyncedAt: Option[DateTime])
+
 case class OrganizationSlackInfo(
   link: String,
-  slackTeamId: Option[SlackTeamId],
-  slackTeams: Set[SlackTeamId],
+  slackTeamId: Option[SlackTeamId], // deprecated
+  slackTeam: Option[OrganizationSlackTeamInfo],
+  slackTeams: Set[SlackTeamId], // deprecated
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
 object OrganizationSlackInfo {
   private implicit val helperWrites = KeyFormat.key2Writes[BasicLibrary, LibrarySlackInfo]("library", "slack")
   implicit val writes: Writes[OrganizationSlackInfo] = Json.writes[OrganizationSlackInfo]
+}
+
+case class UserSlackInfo(
+  memberships: Seq[(SlackUsername, SlackTeamName)])
+
+object UserSlackInfo {
+  def empty = UserSlackInfo(memberships = Seq.empty)
+  private implicit val helperWrites = KeyFormat.key2Writes[SlackUsername, SlackTeamName]("username", "teamName")
+  implicit val writes: Writes[UserSlackInfo] = Json.writes[UserSlackInfo]
 }
 
 object SlackInfoCommander {
@@ -71,6 +85,9 @@ trait SlackInfoCommander {
 
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo
+
+  // For generating UserProfileStats
+  def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo
 }
 
 @Singleton
@@ -87,6 +104,7 @@ class SlackInfoCommanderImpl @Inject() (
   orgInfoCommander: OrganizationInfoCommander,
   slackStateCommander: SlackAuthStateCommander,
   permissionCommander: PermissionCommander,
+  slackCommander: SlackCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -153,9 +171,10 @@ class SlackInfoCommanderImpl @Inject() (
         case (key, Seq(fs)) =>
           val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
           val authLink = {
-            val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnChannelIngestion)
-            if (requiredScopes subsetOf existingScopes) None
+            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
+            val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
+            val missingScopes = TurnOnChannelIngestion.getMissingScopes(existingScopes)
+            if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
           }
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
@@ -164,10 +183,10 @@ class SlackInfoCommanderImpl @Inject() (
         case (key, Seq(ts)) =>
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           val authLink = {
-            val hasValidWebhook = slackIncomingWebhookInfoRepo.getForChannelByName(ts.slackUserId, ts.slackTeamId, ts.slackChannelName).nonEmpty
-            lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
-            val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(TurnOnLibraryPush)
-            if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
+            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
+            lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
+            val missingScopes = TurnOnLibraryPush.getMissingScopes(existingScopes)
+            if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
           }
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
@@ -220,7 +239,7 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId)
+      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
 
       (libIds, basicLibsById, integrationInfosByLib, slackTeams)
     }
@@ -228,18 +247,27 @@ class SlackInfoCommanderImpl @Inject() (
     val permissionsByLib = permissionCommander.getLibrariesPermissions(libIds, Some(viewerId))
     def canViewLib(libId: Id[Library]): Boolean = permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
 
+    val slackTeam = slackTeams.headOption
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
-    val slackTeamId = slackTeams.headOption
     val action = SetupSlackTeam(Some(orgId))
-    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action.helper)
-    val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, SlackController.REDIRECT_URI).url
+    val missingScopes = action.helper.getMissingScopes(Set.empty)
+    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), missingScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
       link,
-      slackTeamId,
-      slackTeams,
+      slackTeam.map(_.id),
+      slackTeam,
+      slackTeams.map(_.id),
       libraries = libIds.toList.sorted.collect {
         case libId if canViewLib(libId) => (basicLibsById(libId), librarySlackInfosByLib(libId))
       }
     )
+  }
+
+  def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo = {
+    if (!viewerId.contains(userId)) UserSlackInfo.empty
+    else {
+      val memberships = slackTeamMembershipRepo.getByUserId(userId)
+      UserSlackInfo(memberships = memberships.map(stm => (stm.slackUsername, stm.slackTeamName)))
+    }
   }
 }

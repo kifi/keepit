@@ -1,50 +1,89 @@
 <div>
-    <div ng-if="!canEditIntegrations" style="text-align: center">
-        Sadly, you are not allowed to be on this page, ask a team admin / owner for more information!
-    </div>
-    <div ng-if="canEditIntegrations">
-        <h1 class="kf-heading kf-ts-integrations-header">Slack Integrations</h1>
-        <div class="kf-ts-integrations">
+  <div ng-if="!canEditIntegrations" style="text-align: center">
+    Sadly, you are not allowed to be on this page, ask a team admin / owner for more information!
+  </div>
+  <div ng-if="canEditIntegrations">
+    <h1 class="kf-heading kf-ts-integrations-header">Slack Integrations</h1>
+    <div class="kf-ts-integrations">
 
-            <span>
-                Connect with <a href="https://slack.com/" target="_blank">Slack</a> to automatically save links messages or send new keeps to your Slack team.
-            </span>
+      <span>
+        Connect with <a href="https://slack.com/" target="_blank">Slack</a> to automatically save links messages or send new keeps to your Slack team.
+      </span>
 
-            <div class="kf-container kf-container-toppad">
-                <div class="kf-container-header"><span>Sync channels to Kifi</span></div>
-                <span class="kf-ts-integrations-marketing-text">Automatically keep links messaged in your channels. Kifi will create a library for each public (not private or direct message) Slack Channel. <a href="http://support.kifi.com/hc/en-us/articles/206873486-Getting-started-with-the-Kifi-Slack-Integeration" target="_blank">Learn more.</a></span>
-                <div class="kf-ts-integrations-sync"><button
-                        class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
-                        tabindex="0"
-                        ng-click="onClickedSyncAllSlackChannels()"
-                        ng-bind="'Sync all Slack Channels'"></button></div>
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && !slackTeam">
+        <div class="kf-container-header"><span>Connect your team to Slack</span></div>
+        <span class="kf-ts-integrations-marketing-text">Team members will be able to join your team using Slack, share links more easily, and sync Kifi libraries and Slack channels.</span>
+        <div class="kf-ts-integrations-sync"><button
+          class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+          tabindex="0"
+          ng-click="onClickedConnectSlack()">Connect <span ng-bind="profile.name"></span> with Slack</button></div>
+      </div>
 
-            </div>
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && !slackTeam.publicChannelsLastSyncedAt">
+        <div class="kf-container-header"><span>Sync channels to Kifi</span></div>
+        <span class="kf-ts-integrations-marketing-text">Automatically keep links messaged in your channels. Kifi will create a library for each public (not private or direct message) Slack Channel. <a href="http://support.kifi.com/hc/en-us/articles/206873486-Getting-started-with-the-Kifi-Slack-Integeration" target="_blank">Learn more.</a></span>
+        <div class="kf-ts-integrations-marketing-text">
+          To integrate one library or channel at a time, visit <a ui-sref="orgProfile.libraries">any library</a> and click the
+        <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button.</div>
 
-            <div ng-if="integrations.length" class="kf-container kf-container-toppad">
-                <div class="kf-container-header"><span>Library Integrations</span></div>
-                <!--scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()"-->
-                <table class="kf-ts-integrations-table" smart-scroll scroll-distance="'100%'">
-                    <thead>
-                    <tr>
-                        <th style="text-align: left">Library &amp; Slack Channel</th>
-                        <th>Kifi → Slack</th>
-                        <th>Slack → Kifi</th>
-                    </tr>
-                    </thead>
-                    <tr ng-repeat="integration in integrations">
-                        <td style="text-align: left"><strong><a ng-href="{{integration.library.path}}">{{integration.library.name}}</a></strong> <span class="kf-ts-integrations-subtext">(Kifi)</span>  - <strong>{{integration.integration.channelName}}</strong> <span class="kf-ts-integrations-subtext">(Slack)</span></td>
-                        <td>
-                            <input ng-model="integration.kifiToSlack" ng-change="onKifiToSlackChanged(integration)"  type="checkbox" />
-                        </td>
-                        <td>
-                            <input ng-model="integration.slackToKifi" ng-change="onSlackToKifiChanged(integration)"  type="checkbox" />
-                        </td>
-                    </tr>
-                </table>
-
-            </div>
+        <div class="kf-ts-integrations-sync"><button
+          class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+          tabindex="0"
+          ng-click="onClickedSyncAllSlackChannels()">Sync all Slack Channels</button>
         </div>
+      </div>
 
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && slackTeam.publicChannelsLastSyncedAt">
+        <div class="kf-container-header"><span>Fetch channels to sync</span></div>
+        <span class="kf-ts-integrations-marketing-text">
+          Refetch your Slack channels to automatically create Kifi libraries.
+          You can always connect one channel at a time with the
+          <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button on your libraries.
+        </span>
+        <div class="kf-ts-integrations-sync">
+          <button
+            class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+            tabindex="0"
+            ng-click="onClickedSyncAllSlackChannels()">Sync new Slack channels</button>
+          <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackTeam.publicChannelsLastSyncedAt" ng-if="slackTeam.publicChannelsLastSyncedAt"></time><span ng-if="!slackTeam.publicChannelsLastSyncedAt">never</span></div>
+        </div>
+      </div>
+
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam">
+        <div class="kf-container-header"><span>Slack settings</span></div>
+        <div class="kf-ts-integrations-checkrow">
+          <input ng-model="slackIntegrationReactionModel.enabled" ng-change="onSlackIntegrationReactionChanged()"  type="checkbox" />
+          <span>Show the emoji <strong>✓</strong> on links after they have been successfully saved in Kifi.</span>
+        </div>
+        <div class="kf-ts-integrations-checkrow">
+          <input ng-model="slackIntegrationDigestModel.enabled" ng-change="onSlackIntegrationDigestChanged()"  type="checkbox" />
+          <span>Receive infrequent summary updates to channels.</span>
+        </div>
+      </div>
+
+      <div ng-if="integrations.length" class="kf-container kf-container-toppad">
+        <div class="kf-container-header"><span>Library Integrations</span></div>
+        <!--scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()"-->
+        <table class="kf-ts-integrations-table" smart-scroll scroll-distance="'100%'">
+          <thead>
+          <tr>
+            <th style="text-align: left">Library &amp; Slack Channel</th>
+            <th>Kifi → Slack</th>
+            <th>Slack → Kifi</th>
+          </tr>
+          </thead>
+          <tr ng-repeat="integration in integrations">
+            <td style="text-align: left"><strong><a ng-href="{{integration.library.path}}">{{integration.library.name}}</a></strong> <span class="kf-ts-integrations-subtext">(Kifi)</span>  - <strong>{{integration.integration.channelName}}</strong> <span class="kf-ts-integrations-subtext">(Slack)</span></td>
+            <td>
+              <input ng-model="integration.kifiToSlack" ng-change="onKifiToSlackChanged(integration)" type="checkbox" ng-disabled="!integration.kifiToSlackMutable" />
+            </td>
+            <td>
+              <input ng-model="integration.slackToKifi" ng-change="onSlackToKifiChanged(integration)" type="checkbox" ng-disabled="!integration.slackToKifiMutable" />
+            </td>
+          </tr>
+        </table>
+
+      </div>
     </div>
+  </div>
 </div>

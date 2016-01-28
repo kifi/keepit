@@ -48,7 +48,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
-          keepRepo.get(bookmarks.head.id.get).copy(updatedAt = bookmarks.head.updatedAt) === bookmarks.head
+          keepRepo.get(bookmarks.head.id.get).copy(
+            updatedAt = bookmarks.head.updatedAt
+          ) === bookmarks.head
           keepRepo.all.size === 1
         }
       }

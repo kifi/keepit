@@ -14,7 +14,7 @@ import play.api.libs.json._
 import securesocial.core._
 
 import scala.concurrent.duration.Duration
-import scala.util.{ Failure, Try }
+import scala.util.{ Success, Failure, Try }
 
 sealed abstract class SocialUserHolder(socialUser: SocialUser) extends SocialUser(
   socialUser.identityId,
@@ -69,9 +69,10 @@ object IdentityHelpers {
   }
 
   def toIdentityId(teamId: SlackTeamId, userId: SlackUserId): IdentityId = IdentityId(userId = s"${teamId.value}|${userId.value}", providerId = SocialNetworks.SLACK.authProvider)
-  def parseSlackId(identityId: IdentityId): (SlackTeamId, SlackUserId) = identityId.userId.trim.split('|').toSeq.filter(_.nonEmpty) match {
-    case Seq(teamIdStr, userIdStr) => (SlackTeamId(teamIdStr), SlackUserId(userIdStr))
-    case _ => throw new IllegalArgumentException(s"Invalid Slack credentials from IdentityId: $identityId")
+  def parseSlackId(identityId: IdentityId): (SlackTeamId, SlackUserId) = parseSlackIdMaybe(identityId).get
+  def parseSlackIdMaybe(identityId: IdentityId): Try[(SlackTeamId, SlackUserId)] = identityId.userId.trim.split('|').toSeq.filter(_.nonEmpty) match {
+    case Seq(teamIdStr, userIdStr) => Success((SlackTeamId(teamIdStr), SlackUserId(userIdStr)))
+    case _ => Failure(new IllegalArgumentException(s"Invalid Slack credentials from IdentityId: $identityId"))
   }
 
   def getIdentityId(session: UserSessionView): IdentityId = IdentityId(session.socialId.id, session.provider.name)

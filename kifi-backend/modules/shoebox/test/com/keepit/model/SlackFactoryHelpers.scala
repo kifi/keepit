@@ -6,6 +6,7 @@ import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, FakeClock }
 import com.keepit.model.LibraryToSlackChannelFactory.PartialLibraryToSlackChannel
 import com.keepit.model.SlackChannelToLibraryFactory.PartialSlackChannelToLibrary
 import com.keepit.model.SlackIncomingWebhookFactory.PartialSlackIncomingWebhook
+import com.keepit.model.SlackTeamFactory.PartialSlackTeam
 import com.keepit.model.SlackTeamMembershipFactory.PartialSlackTeamMembership
 import com.keepit.slack.models._
 
@@ -13,6 +14,14 @@ object SlackTeamMembershipFactoryHelper {
   implicit class SlackTeamMembershipPersister(partial: PartialSlackTeamMembership) {
     def saved(implicit injector: Injector, session: RWSession): SlackTeamMembership = {
       injector.getInstance(classOf[SlackTeamMembershipRepo]).save(partial.stm)
+    }
+  }
+}
+
+object SlackTeamFactoryHelper {
+  implicit class SlackTeamPersister(partial: PartialSlackTeam) {
+    def saved(implicit injector: Injector, session: RWSession): SlackTeam = {
+      injector.getInstance(classOf[SlackTeamRepo]).save(partial.team)
     }
   }
 }

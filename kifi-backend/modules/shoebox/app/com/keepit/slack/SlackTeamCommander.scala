@@ -3,15 +3,14 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core.anyExtensionOps
-import com.keepit.common.core._
+import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.util.DescriptionElements
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -22,6 +21,7 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
+  def getSlackTeams(userId: Id[User]): Set[SlackTeam]
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
@@ -49,11 +49,19 @@ class SlackTeamCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
+  clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackTeamCommander {
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
+
+  def getSlackTeams(userId: Id[User]): Set[SlackTeam] = {
+    db.readOnlyMaster { implicit session =>
+      val slackTeamIds = slackTeamMembershipRepo.getByUserId(userId).map(_.slackTeamId).toSet
+      slackTeamRepo.getBySlackTeamIds(slackTeamIds).values.toSet
+    }
+  }
 
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, connectableOrgs) = db.readWrite { implicit session =>
@@ -87,7 +95,7 @@ class SlackTeamCommanderImpl @Inject() (
     } match {
       case (Some(team), Some(token)) if team.organizationId.isEmpty =>
         slackClient.getTeamInfo(token).flatMap { teamInfo =>
-          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None, site = teamInfo.emailDomains.headOption.map(_.value))
+          val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None)
           orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
             case Right(createdOrg) =>
               val orgId = createdOrg.newOrg.id.get
@@ -95,9 +103,13 @@ class SlackTeamCommanderImpl @Inject() (
                 case None => Future.successful(())
                 case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
               }
-              val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, createdOrg.newOrg.id.get)
+              teamInfo.emailDomains.exists { domain =>
+                orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(site = Some(domain.value)))).isRight
+              }
+              val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, orgId)
               futureAvatar.flatMap { _ => Future.fromTry(connectedTeamMaybe) }
-            case Left(error) => Future.failed(error)
+            case Left(error) =>
+              Future.failed(error)
           }
         }
       case (teamOpt, _) => Future.failed(UnauthorizedSlackTeamOrganizationModificationException(teamOpt, userId, None))
@@ -214,7 +226,7 @@ class SlackTeamCommanderImpl @Inject() (
               "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
               team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
             ))))
-            val updatedTeam = team |> { t =>
+            val updatedTeam = team.withPublicChannelsSyncedAt(clock.now) |> { t =>
               channels.map(_.createdAt).maxOpt.map { lastChannelCreatedAt => t.copy(lastChannelCreatedAt = Some(lastChannelCreatedAt)) } getOrElse t
             } |> { t =>
               channels.find(_.isGeneral).map { generalChannel => t.withGeneralChannelId(generalChannel.channelId) } getOrElse t

@@ -23,7 +23,7 @@ angular.module('kifi')
       $analytics.pageTrack(url, attributes);
     }
 
-    $scope.slackTeamId = $stateParams.teamId;
+    $scope.slackTeamId = $stateParams.slackTeamId;
 
     $scope.linkSlack = function (e) {
       e.target.href = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;

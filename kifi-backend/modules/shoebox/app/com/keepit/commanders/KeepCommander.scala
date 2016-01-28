@@ -79,6 +79,7 @@ trait KeepCommander {
   // Updating / managing
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
+  def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
 
@@ -653,22 +654,36 @@ class KeepCommanderImpl @Inject() (
     require(k.connections.users.contains(k.userId), "keep owner is not one of the connected users")
     require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
-    val keep = keepRepo.save(k)
+    val oldKeepOpt = k.id.map(keepRepo.get)
+    val newKeep = keepRepo.save(k)
 
-    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, userId) }
+    if (oldKeepOpt.forall(_.connections.libraries != newKeep.connections.libraries)) {
+      val libraries = libraryRepo.getActiveByIds(newKeep.connections.libraries).values
+      libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
+    }
 
-    val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
-    libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
+    val updatedKeepOpt = if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
+      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newKeep.connections.users))
+    } else None
 
-    keep
+    updatedKeepOpt.getOrElse(newKeep)
   }
   def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
     val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
 
     newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
+    updateLastActivityAtIfLater(keepId, currentDateTime)
+  }
+  def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
+    val oldKeep = keepRepo.get(keepId)
+    val newKeep = oldKeep.withLastActivityAtIfLater(time)
 
-    newKeep
+    if (newKeep.lastActivityAt != oldKeep.lastActivityAt) {
+      ktuRepo.getAllByKeepId(keepId).foreach(ktu => ktuRepo.save(ktu.withLastActivityAt(time)))
+      ktlRepo.getAllByKeepId(keepId).foreach(ktl => ktlRepo.save(ktl.withLastActivityAt(time)))
+      keepRepo.save(newKeep)
+    } else oldKeep
   }
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
     val keep = keepRepo.getNoCache(keepId)
@@ -838,9 +853,18 @@ class KeepCommanderImpl @Inject() (
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
         Future.successful {
           db.readOnlyReplica { implicit session =>
-            // Grab 2x the required number because we're going to be dropping some
-            val hasNoLibExperiment = userExperimentRepo.hasExperiment(userId, UserExperimentType.KEEP_NOLIB)
-            keepRepo.getRecentKeeps(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt).filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
+            val (sortByLastActivity, hasNoLibExperiment) = {
+              val experiments = userExperimentRepo.getUserExperiments(userId)
+              (experiments.contains(UserExperimentType.FEED_LAST_ACTIVITY), experiments.contains(UserExperimentType.KEEP_NOLIB))
+            }
+
+            val keepsAndAddedAt = {
+              // Grab 3x the required number because we're going to be dropping some (downgrade to 2x if the filtering lessens e.g. library-less keeps are released)
+              if (sortByLastActivity) keepRepo.getRecentKeepsByActivity(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
+              else keepRepo.getRecentKeeps(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
+            }
+
+            keepsAndAddedAt.filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
           }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
         }
     }

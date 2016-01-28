@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
+import org.apache.commons.lang3.RandomStringUtils
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -80,7 +81,19 @@ class FakeSlackClientImpl extends SlackClient {
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = Future.successful(None)
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
-  def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]] = ???
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackChannelInfo]] = Future.successful(Seq.range(1, 10).map { x =>
+    SlackChannelInfo(
+      SlackChannelId("C" + RandomStringUtils.randomAlphanumeric(8)),
+      SlackChannelName(if (x == 1) "#general" else RandomStringUtils.randomAlphabetic(15)),
+      SlackUserId("U" + RandomStringUtils.randomAlphanumeric(8)),
+      SlackTimestamp(s"$x.00000"),
+      isArchived = false,
+      isGeneral = x == 1,
+      numMembers = 10,
+      topic = None,
+      purpose = None
+    )
+  })
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = ???
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
 }
