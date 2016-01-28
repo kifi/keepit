@@ -134,7 +134,7 @@ angular.module('kifi')
               ' a particular library to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
             trackingValue: 'slack_integration_dropdown'
           },
           {
@@ -150,11 +150,14 @@ angular.module('kifi')
       }
     ];
 
-    $scope.updateSettings = function () {
+    $scope.updateSettings = function (feature, setting) {
       $window.addEventListener('beforeunload', onBeforeUnload);
 
+      var settingsChange = {};
+      settingsChange[feature] = setting;
+
       orgProfileService
-      .setOrgSettings($scope.profile.id, nestedSettingToFlatSetting($scope.settings))
+      .setOrgSettings($scope.profile.id, settingsChange)
       .then(function(settingsData) {
         messageTicker({
           text: 'Settings have been saved',
@@ -217,18 +220,6 @@ angular.module('kifi')
     $scope.onClickTrack = function(trackingValue) {
       orgProfileService.trackEvent('user_clicked_page', $scope.profile, { type: 'org_settings', action: trackingValue });
     };
-
-    // Transform
-    //   nestedSettings = { 'example_setting_key': { setting: 'value', enabled: '' }, /* ... */ }
-    // into
-    //   flatSettings = { 'example_setting_key': 'value', /* ... */ }
-    function nestedSettingToFlatSetting(nestedSettings) {
-      var flatSettings = {};
-      angular.forEach(nestedSettings, function (nestedSetting, key) {
-        flatSettings[key] = nestedSetting.setting;
-      });
-      return flatSettings;
-    }
 
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
