@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfKeepCardAttribution', [ '$state', 'profileService',
-  function ($state, profileService) {
+.directive('kfKeepCardAttribution', [ '$state',
+  function ($state) {
     return {
       scope: {
         keep: '=keep',
