@@ -335,12 +335,10 @@ angular.module('kifi')
           var updateMenuItems = function () {
             scope.menuItems = [];
             if (scope.canEditKeep) {
-              if (profileService.isAdmin()) {
-                scope.menuItems.push({
-                  title: 'Edit Title',
-                  action: scope.editKeepTitle.bind(scope)
-                });
-              }
+              scope.menuItems.push({
+                title: 'Edit Title',
+                action: scope.editKeepTitle.bind(scope)
+              });
               scope.menuItems.push({
                 title: keep.note ? 'Edit Note' : 'Add Note',
                 action: scope.editKeepNote.bind(scope)
