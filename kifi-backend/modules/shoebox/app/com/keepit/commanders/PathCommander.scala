@@ -18,6 +18,7 @@ import com.keepit.social.BasicUser
 @Singleton
 class PathCommander @Inject() (
     db: Database,
+    libRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) {
@@ -71,6 +72,7 @@ class PathCommander @Inject() (
     }
     libPageByHandleAndSlug(handle, lib.slug)
   }
+  def libraryPageById(libId: Id[Library])(implicit session: RSession): Path = libraryPage(libRepo.get(libId))
   def libraryPageViaSlack(lib: Library, slackTeamId: SlackTeamId): Path = {
     Path(s"s/${slackTeamId.value}/l/${Library.publicId(lib.id.get).id}")
   }
