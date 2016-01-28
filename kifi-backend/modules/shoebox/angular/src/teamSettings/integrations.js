@@ -76,7 +76,7 @@ angular.module('kifi')
 
     $scope.onClickedConnectSlack = function() {
       var org = $scope.profile;
-      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
+      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
       $window.location = '/site/organizations/' + org.id + '/slack/connect';
     };
   }
