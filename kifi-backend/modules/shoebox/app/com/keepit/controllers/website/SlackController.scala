@@ -35,7 +35,7 @@ class SlackController @Inject() (
     slackTeamCommander: SlackTeamCommander,
     authCommander: AuthCommander,
     authHelper: AuthHelper,
-    deepLinkRouter: DeepLinkRouter,
+    pathCommander: PathCommander,
     slackToLibRepo: SlackChannelToLibraryRepo,
     libToSlackRepo: LibraryToSlackChannelRepo,
     userRepo: UserRepo,
@@ -50,13 +50,13 @@ class SlackController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with LibraryAccessActions with ShoeboxServiceController {
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
-    val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
+    val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
     val redirectUrl = if (showSlackDialog) libraryUrl + "?showSlackDialog" else libraryUrl
     SlackResponse.RedirectClient(redirectUrl)
   }
 
   private def getOrgUrl(orgId: Id[Organization]): String = {
-    deepLinkRouter.generateRedirect(DeepLinkRouter.organizationLink(Organization.publicId(orgId))).get.url
+    db.readOnlyMaster { implicit s => pathCommander.orgPageById(orgId) }.absolute
   }
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
