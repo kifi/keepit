@@ -52,7 +52,7 @@
               ng-model="settings[field.fieldKey].setting"
               ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
               ng-options="option.value as option.label for option in field.selectOptions"
-              ng-change="updateSettings()"
+              ng-change="updateSettings(field.fieldKey, settings[field.fieldKey].setting)"
               ng-click="onClickTrack(field.trackingValue)"
             ></select>
           </div>

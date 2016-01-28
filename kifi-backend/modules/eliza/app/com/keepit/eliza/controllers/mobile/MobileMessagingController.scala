@@ -2,24 +2,24 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.core.eitherExtensionOps
-import com.keepit.common.db.ExternalId
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.MessageSource
+import scala.collection._
 import com.keepit.heimdal._
 import com.keepit.model.{ Keep, Organization, User }
 import com.keepit.notify.model.Recipient
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUserLikeEntity._
-import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 //import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -340,7 +340,7 @@ class MobileMessagingController @Inject() (
         val (extUserIds, orgIds) = addReq.users.flatMap {
           case extIdStr if extIdStr.length == 36 => ExternalId.asOpt[User](extIdStr).map(Left(_))
           case orgIdStr if orgIdStr.startsWith("o") => Organization.decodePublicId(PublicId(orgIdStr)).toOption.map(Right(_))
-        }.partitionEithers
+        }.toSeq.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
           _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, addReq.emails, orgIds)(contextBuilder.build)

@@ -51,10 +51,7 @@ case class LibrarySlackInfo(
 case class OrganizationSlackTeamInfo(id: SlackTeamId, name: SlackTeamName, publicChannelsLastSyncedAt: Option[DateTime])
 
 case class OrganizationSlackInfo(
-  link: String,
-  slackTeamId: Option[SlackTeamId], // deprecated
   slackTeam: Option[OrganizationSlackTeamInfo],
-  slackTeams: Set[SlackTeamId], // deprecated
   libraries: Seq[(BasicLibrary, LibrarySlackInfo)])
 
 object OrganizationSlackInfo {
@@ -249,14 +246,8 @@ class SlackInfoCommanderImpl @Inject() (
 
     val slackTeam = slackTeams.headOption
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
-    val action = SetupSlackTeam(Some(orgId))
-    val missingScopes = action.helper.getMissingScopes(Set.empty)
-    val link = slackStateCommander.getAuthLink(action, slackTeam.map(_.id), missingScopes, SlackController.REDIRECT_URI).url
     OrganizationSlackInfo(
-      link,
-      slackTeam.map(_.id),
       slackTeam,
-      slackTeams.map(_.id),
       libraries = libIds.toList.sorted.collect {
         case libId if canViewLib(libId) => (basicLibsById(libId), librarySlackInfosByLib(libId))
       }

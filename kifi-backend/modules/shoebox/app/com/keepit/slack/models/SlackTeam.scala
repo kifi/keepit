@@ -31,7 +31,8 @@ case class SlackTeam(
   lastChannelCreatedAt: Option[SlackTimestamp] = None,
   generalChannelId: Option[SlackChannelId],
   lastDigestNotificationAt: DateTime = currentDateTime,
-  publicChannelsLastSyncedAt: Option[DateTime] = None)
+  publicChannelsLastSyncedAt: Option[DateTime] = None,
+  channelsSynced: Set[SlackChannelId] = Set.empty)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -43,6 +44,7 @@ case class SlackTeam(
     case Some(lastSync) if lastSync isAfter time => this
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
   }
+  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
 
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
 }
@@ -59,7 +61,8 @@ object SlackTeam {
     (__ \ 'lastChannelCreatedAt).formatNullable[SlackTimestamp] and
     (__ \ 'generalChannelId).formatNullable[SlackChannelId] and
     (__ \ 'lastDigestNotificationAt).format[DateTime] and
-    (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime]
+    (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime] and
+    (__ \ 'channelsSynced).format[Set[SlackChannelId]]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -90,6 +93,7 @@ class SlackTeamRepoImpl @Inject() (
   implicit val slackTeamNameColumnType = SlackDbColumnTypes.teamName(db)
   implicit val slackTimestampColumnType = SlackDbColumnTypes.timestamp(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
+  implicit val slackChannelIdSetColumnType = SlackDbColumnTypes.channelIdSet(db)
 
   private def teamFromDbRow(id: Option[Id[SlackTeam]] = None,
     createdAt: DateTime = currentDateTime,
@@ -101,7 +105,8 @@ class SlackTeamRepoImpl @Inject() (
     lastChannelCreatedAt: Option[SlackTimestamp],
     generalChannelId: Option[SlackChannelId],
     lastDigestNotificationAt: DateTime,
-    publicChannelsLastSyncedAt: Option[DateTime]) = {
+    publicChannelsLastSyncedAt: Option[DateTime],
+    channelsSynced: Set[SlackChannelId]) = {
     SlackTeam(
       id,
       createdAt,
@@ -113,7 +118,8 @@ class SlackTeamRepoImpl @Inject() (
       lastChannelCreatedAt,
       generalChannelId,
       lastDigestNotificationAt,
-      publicChannelsLastSyncedAt
+      publicChannelsLastSyncedAt,
+      channelsSynced
     )
   }
 
@@ -128,7 +134,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.lastChannelCreatedAt,
     slackTeam.generalChannelId,
     slackTeam.lastDigestNotificationAt,
-    slackTeam.publicChannelsLastSyncedAt
+    slackTeam.publicChannelsLastSyncedAt,
+    slackTeam.channelsSynced
   ))
 
   type RepoImpl = SlackTeamTable
@@ -141,7 +148,8 @@ class SlackTeamRepoImpl @Inject() (
     def generalChannelId = column[Option[SlackChannelId]]("general_channel_id", O.Nullable)
     def lastDigestNotificationAt = column[DateTime]("last_digest_notification_at", O.NotNull)
     def publicChannelsLastSyncedAt = column[Option[DateTime]]("public_channels_last_synced_at", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsSynced) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
@@ -194,7 +202,7 @@ class SlackTeamRepoImpl @Inject() (
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }
