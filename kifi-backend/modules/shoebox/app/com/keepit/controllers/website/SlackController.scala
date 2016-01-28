@@ -230,10 +230,10 @@ class SlackController @Inject() (
   }
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
-    val Seq(slackTeamId) = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.toSeq
+    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeams.headOption
     }
-    processActionOrElseAuthenticate(request.request.userId, Some(slackTeamId), SyncPublicChannels())
+    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
       .map(handleAsBrowserRequest)
   }
 
