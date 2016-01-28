@@ -23,7 +23,6 @@ GET     /me/libraries/invited      @com.keepit.controllers.routing.KifiSiteRoute
 GET     /profile                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /integrations/slack/start  @com.keepit.controllers.routing.KifiSiteRouter.slackStart(slackTeamId: Option[SlackTeamId] ?= None, useIdentity: Boolean ?= false)
 GET     /integrations/slack/teams  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
 GET     /pricing                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
 GET     /credits                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")

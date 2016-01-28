@@ -294,21 +294,6 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def slackStart(slackTeamId: Option[SlackTeamId], useIdentity: Boolean) = WebAppPage { implicit request =>
-    request match {
-      case userRequest: UserRequest[_] =>
-        val slackTeamIdToAdd = slackTeamId orElse {
-          if (useIdentity) request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-          else None
-        }
-        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdToAdd).url, SEE_OTHER)
-      case nonUserRequest: NonUserRequest[_] =>
-        val signupUrl = s"/signup/slack${slackTeamId.map(id => s"?slackTeamId=${id.value}").getOrElse("")}"
-        val redirectUrl = nonUserRequest.uri + "?useIdentity=true"
-        Redirect(signupUrl, SEE_OTHER).withSession(request.session + (SecureSocial.OriginalUrlKey -> redirectUrl))
-    }
-  }
-
   private def lookupUser(handle: Handle) = {
     lookupByHandle(handle) flatMap {
       case (Left(org), _) => None
