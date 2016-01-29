@@ -5,6 +5,7 @@ import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -59,6 +60,7 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   type Task = Set[Id[SlackTeam]]
   protected def pullTasks(limit: Int): Future[Seq[Task]] = {
+    log.info(s"[SLACK-TEAM-DIGEST] Pulling $limit tasks")
     if (limit == 1) pullTask().map(Seq(_))
     else Future.successful(Seq.empty)
   }
@@ -73,11 +75,12 @@ class SlackTeamDigestNotificationActor @Inject() (
       val ids = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests)
       slackTeamRepo.getByIds(ids.toSet).filter {
         case (_, slackTeam) => canPushToTeam(slackTeam)
-      }.keySet
+      }.keySet tap { ids => log.info(s"[SLACK-TEAM-DIGEST] pullTask() yielded $ids") }
     }
   }
 
   private def processTask(ids: Set[Id[SlackTeam]]): Future[Map[SlackTeam, Try[Unit]]] = {
+    log.info(s"[SLACK-TEAM-DIGEST] Processing slack teams: $ids")
     for {
       teams <- db.readOnlyReplicaAsync { implicit s => slackTeamRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(teams)(pushDigestNotificationForTeam)
@@ -214,7 +217,10 @@ class SlackTeamDigestNotificationActor @Inject() (
             slackLog.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
         }
       }
-      pushOpt.getOrElse(Future.successful(Unit))
+      pushOpt.getOrElse {
+        log.info(s"[SLACK-TEAM-DIGEST] Could not create a digest for slack team ${team.slackTeamId}")
+        Future.successful(Unit)
+      }
     }
   }
 }
