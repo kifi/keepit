@@ -31,7 +31,7 @@ object SlackOnboarder {
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
 
-  def getsNewFTUI(slackTeamId: SlackTeamId): Boolean = slackTeamId == KifiSlackTeamId || slackTeamId == BrewstercorpSlackTeamId
+  def getsNewFTUI(slackTeamId: SlackTeamId): Boolean = true
 
   def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
     case push: LibraryToSlackChannel => true
@@ -110,10 +110,6 @@ class SlackOnboarderImpl @Inject() (
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
       msg <- (integ, slackTeamForLibrary) match {
-        case (ltsc: LibraryToSlackChannel, _) if !getsNewFTUI(integ.slackTeamId) =>
-          oldSchoolPushMessage(ltsc, owner, lib)
-        case _ if !getsNewFTUI(integ.slackTeamId) =>
-          None
         case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
         case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
@@ -139,7 +135,7 @@ class SlackOnboarderImpl @Inject() (
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
       owner, "connected", ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
-      "Links added from to", lib.name, "will be posted here", SlackEmoji.fireworks
+      "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
@@ -149,8 +145,8 @@ class SlackOnboarderImpl @Inject() (
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.constructionWorker, "*Managing Links*"),
         DescriptionElements(
-          "Here's the library:", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), ".",
-          "If you don't have a Kifi account, setup is just 20 seconds. From here, you can add/remove/move links."
+          "Go to", "Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), "to access all your links.",
+          "If you don't have a Kifi account, you can sign up with your Slack account in just 20 seconds."
         )
       ))))).withFullMarkdown
     )
