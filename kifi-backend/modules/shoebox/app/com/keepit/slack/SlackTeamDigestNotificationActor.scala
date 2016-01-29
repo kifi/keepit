@@ -81,10 +81,17 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   private def processTask(ids: Set[Id[SlackTeam]]): Future[Map[SlackTeam, Try[Unit]]] = {
     log.info(s"[SLACK-TEAM-DIGEST] Processing slack teams: $ids")
-    for {
+    val result = for {
       teams <- db.readOnlyReplicaAsync { implicit s => slackTeamRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(teams)(pushDigestNotificationForTeam)
     } yield pushes
+
+    result.andThen {
+      case Success(pushesByTeam) => pushesByTeam.collect {
+        case (team, Failure(fail)) => slackLog.warn("Failed to push digest to", team.slackTeamId.value, "because", fail.getMessage)
+      }
+      case Failure(fail) => airbrake.notify("Somehow accumulateRobustly failed entirely?!?", fail)
+    }
   }
 
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
@@ -196,8 +203,10 @@ class SlackTeamDigestNotificationActor @Inject() (
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
+    log.info(s"[SLACK-TEAM-DIGEST] Trying to push a digest for team ${team.slackTeamId}")
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createTeamDigest(team).map(describeTeamDigest) }
+    log.info(s"[SLACK-TEAM-DIGEST] Generated message: ${msgOpt.map(_.text)}")
     val generalChannelFut = team.generalChannelId match {
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)

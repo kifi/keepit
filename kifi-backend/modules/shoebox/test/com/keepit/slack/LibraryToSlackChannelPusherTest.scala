@@ -1,33 +1,29 @@
 package com.keepit.slack
 
-import java.util.concurrent.ExecutionException
-
 import com.google.inject.Injector
-import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
+import com.keepit.commanders.{ KeepInterner, RawBookmarkRepresentation }
 import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FutureHelpers, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.time
+import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryToSlackChannelFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.SlackTeamFactoryHelper._
+import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.common.time._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
-import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -203,12 +199,14 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
 
           slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, ch)("I love sharing links like <http://www.google.com>")
           ingestFromSlackSurely()
+          inject[WatchableExecutionContext].drain()
 
+          val msgsInChannelBeforePush = slackClient.pushedMessagesByWebhook(webhook.url).size
           // Manually trigger a push by adding a new keep
           inject[KeepInterner].internRawBookmark(RawBookmarkRepresentation(url = "http://www.trigger.io"), user.id.get, lib, KeepSource.keeper)
 
           pushUpdatesToSlackSurely(lib.id.get)
-          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(msgsInChannelBeforePush + 1) // only one message, despite two new keeps
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("#eng")
 
           1 === 1
