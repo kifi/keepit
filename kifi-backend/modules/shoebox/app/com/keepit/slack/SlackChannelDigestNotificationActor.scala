@@ -103,7 +103,7 @@ class SlackChannelDigestNotificationActor @Inject() (
 
     Some(SlackChannelDigest(
       slackChannel = slackChannel,
-      timeSinceLastDigest = new Period(slackChannel.lastNotificationAt, clock.now),
+      digestPeriod = new Period(slackChannel.lastNotificationAt, clock.now),
       ingestedLinks = ingestedLinks,
       libraries = librariesIngestedInto.values.toList
     )).filter(_.numIngestedLinks >= minIngestedLinksForChannelDigest)
@@ -113,7 +113,7 @@ class SlackChannelDigestNotificationActor @Inject() (
     import DescriptionElements._
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
       DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
-        digest.slackChannel.slackChannelName.value, inTheLast(digest.timeSinceLastDigest)),
+        digest.slackChannel.slackChannelName.value, inTheLast(digest.digestPeriod)),
       DescriptionElements("You can browse through them in",
         DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
     )))).quiet
