@@ -70,17 +70,18 @@ object FutureHelpers {
   }
   def accumulateRobustly[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Map[I, Try[T]]] = {
     foldLeft(items)(Map.empty[I, Try[T]]) {
-      case (acc, nextItem) =>
-        f(nextItem).imap(Success(_)).recover { case fail => Failure(fail) }.imap { res => acc + (nextItem -> res) }
+      case (acc, nextItem) => robustly(f(nextItem)).imap { res => acc + (nextItem -> res) }
     }
+  }
+
+  // safely wraps the creation of a future and converts exceptions into failed futures
+  def safely[T](f: => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+    Try(f).recover { case fail => Future.failed(fail) }.get
   }
 
   // robustly is a guaranteed successful future (useful if you need to map on it)
   def robustly[T](f: => Future[T])(implicit ec: ScalaExecutionContext): Future[Try[T]] = {
-    Try(f) match {
-      case Success(fut) => fut.map(Success(_)).recover { case th => Failure(th) }
-      case Failure(th) => Future.successful(Failure(th))
-    }
+    safely(f).imap(Success(_)).recover { case th => Failure(th) }
   }
 
   private val noopChunkCB: Int => Unit = _ => Unit

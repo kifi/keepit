@@ -83,10 +83,13 @@ class SlackChannelDigestNotificationActor @Inject() (
   }
 
   private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[SlackChannel, Try[Unit]]] = {
-    for {
+    val result = for {
       channels <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(channels)(pushDigestNotificationForChannel)
     } yield pushes
+    result.andThen {
+      case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)
+    }
   }
 
   private def createChannelDigest(slackChannel: SlackChannel)(implicit session: RSession): Option[SlackChannelDigest] = {
