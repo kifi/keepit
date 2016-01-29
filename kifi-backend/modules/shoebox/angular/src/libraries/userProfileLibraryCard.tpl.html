@@ -27,7 +27,7 @@
   <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
     <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::(lib.kind === 'system_main' || lib.kind === 'system_secret')"></div>
     <div class="kf-upl-card-cover">
-      <div class="kf-upl-card-cover-image" style="{{::lib.image|bgImageAndPos}}" ng-if="::lib.image"></div>
+      <div class="kf-upl-card-cover-image" ng-style="::(lib.image|bgImageAndPos)" ng-if="::lib.image"></div>
     </div>
     <div class="kf-upl-card-name-align">
       <div class="kf-upl-card-name">
@@ -105,8 +105,10 @@
       {{lib.numCollaborators - maxNumCollaboratorsToShow|num}}
     </button>
   </div>
-  <div class="kf-upl-follow-wrap" ng-class="{'kf-following': lib.membership.access === 'read_only', 'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-attr-style="background-color:{{lib.color}}" ng-if="!canWrite && lib.invite.access !== 'read_write'">
-    <button class="kf-upl-follow-btn"
+  <div class="kf-upl-follow-wrap" ng-class="{'kf-following': lib.membership.access === 'read_only', 'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-style="{ 'background-color': lib.color }" ng-if="!canWrite && lib.invite.access !== 'read_write'">
+    <button
+      class="kf-upl-follow-btn"
+      ng-style="{ 'background-color': lib.color }"
       ng-click="followBtnJustClicked = !lib.membership || followBtnJustClicked; onFollowButtonClick($parent, lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"
       ng-mouseleave="followBtnJustClicked = false"></button>
     <button ng-attr-class="kf-upl-subs-btn {{lib.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}"

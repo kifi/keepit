@@ -55,3 +55,20 @@ rounded-module()
   border: defaultBorder
   padding: 10px 16px
   background: #fff
+
+// Use this as a block mixin, e.g.
+//
+// +hack-ie11()
+//   .my-element-classname
+//     margin-left: 0 // workaround for IE11
+//
+// or
+// .my-element-classname
+//   margin-left: 10px
+//
+//   +hack-ie11()
+//     margin-left: 0 // workaround for IE11
+//
+hack-ie11()
+  @media all and (-ms-high-contrast: none), (-ms-high-contrast: active)
+    block

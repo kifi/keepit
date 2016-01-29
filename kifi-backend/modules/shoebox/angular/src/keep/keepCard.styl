@@ -510,6 +510,10 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     flex-direction: row
     align-items: center
     margin-bottom: 0px
+
+    +hack-ie11()
+      height: 100%
+
     > * + *
       margin-left: 10px
 
