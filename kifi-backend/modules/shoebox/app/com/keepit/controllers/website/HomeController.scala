@@ -42,8 +42,8 @@ class HomeController @Inject() (
   def home = MaybeUserAction.async { implicit request =>
     val special = promoCodeHandler(request)
     request match {
-      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite() |> special)
-      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request).map(special)
+      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
+      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request)
     }
   }
 
@@ -64,7 +64,7 @@ class HomeController @Inject() (
       request match {
         case ur: UserRequest[_] =>
           db.readWrite(attempts = 3) { implicit session =>
-            userValueRepo.setValue(ur.userId, UserValueName.STORED_CREDIT_CODE, "PRODUCTHUNT")
+            userValueRepo.setValue(ur.userId, UserValueName.STORED_CREDIT_CODE, "KIFILOVESSLACK")
           }
           res => res
           case nur: NonUserRequest[_] =>
