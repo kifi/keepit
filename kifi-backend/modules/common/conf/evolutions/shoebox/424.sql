@@ -10,7 +10,7 @@ CREATE TABLE slack_channel (
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) NOT NULL,
   slack_channel_name VARCHAR(512) NOT NULL,
-  last_notification_at DATETIME NOT NULL,
+  last_notification_at DATETIME DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_channel_u_team_id_channel_id (slack_team_id, slack_channel_id)

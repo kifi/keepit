@@ -104,7 +104,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       }
       ingestedLinksByChannel = librariesByChannel.map {
         case (channelId, libs) =>
-          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.lastDigestNotificationAt).map(_.keepId).toSet
+          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.unnotifiedSince).map(_.keepId).toSet
           val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
           val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
             case (kId, SlackAttribution(msg)) if msg.channel.id == channelId => newSlackKeepsById.get(kId).map(_.url)
@@ -113,7 +113,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       }
       digest <- Some(SlackTeamDigest(
         slackTeam = slackTeam,
-        timeSinceLastDigest = new Period(slackTeam.lastDigestNotificationAt, clock.now),
+        digestPeriod = new Period(slackTeam.unnotifiedSince, clock.now),
         org = org,
         ingestedLinksByChannel = ingestedLinksByChannel,
         librariesByChannel = librariesByChannel
@@ -181,7 +181,7 @@ class SlackTeamDigestNotificationActor @Inject() (
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
       DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
-        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.timeSinceLastDigest), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(

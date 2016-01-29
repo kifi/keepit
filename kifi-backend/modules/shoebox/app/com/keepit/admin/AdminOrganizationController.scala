@@ -427,8 +427,7 @@ class AdminOrganizationController @Inject() (
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
-    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.all().map(_.id.get) }
-    log.info("[orgConfigMigration] started")
+    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
     val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
       Try(db.readWrite { implicit s =>
         val account = paidAccountRepo.getByOrgId(orgId)
@@ -447,11 +446,9 @@ class AdminOrganizationController @Inject() (
         Json.stringify(Json.obj("orgId" -> orgId))
       }).recover {
         case error: Throwable =>
-          log.error(s"[orgConfigMigration] can't udpate org configs, error $error")
-          Json.stringify(Json.obj("orgId" -> "orgId", "error" -> error.getMessage))
+          Json.stringify(Json.obj("orgId" -> orgId, "error" -> error.toString))
       }.get
     }
-    log.info("[orgConfigMigration] ended")
     Ok.chunked(response)
   }
 

@@ -5,7 +5,7 @@ import org.joda.time.Period
 
 case class SlackTeamDigest(
     slackTeam: SlackTeam,
-    timeSinceLastDigest: Period,
+    digestPeriod: Period,
     org: BasicOrganization,
     ingestedLinksByChannel: Map[SlackChannelId, Set[String]],
     librariesByChannel: Map[SlackChannelId, Set[Library]]) {
@@ -22,7 +22,7 @@ case class SlackTeamDigest(
 
 case class SlackChannelDigest(
     slackChannel: SlackChannel,
-    timeSinceLastDigest: Period,
+    digestPeriod: Period,
     ingestedLinks: Set[String],
     libraries: Seq[Library]) {
   lazy val numIngestedLinks = ingestedLinks.size

@@ -316,7 +316,7 @@ angular.module('kifi')
     $scope.addChannel = function() {
       slackService.getAddIntegrationLink(library.id).then(function (link) {
         if (link) {
-          $window.location = link;
+          $window.location = link.redirect;
         }
       });
     };

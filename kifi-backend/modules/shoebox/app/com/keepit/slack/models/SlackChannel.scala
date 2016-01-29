@@ -15,12 +15,14 @@ case class SlackChannel(
   slackTeamId: SlackTeamId,
   slackChannelId: SlackChannelId,
   slackChannelName: SlackChannelName,
-  lastNotificationAt: DateTime = currentDateTime)
+  lastNotificationAt: Option[DateTime] = None)
     extends Model[SlackChannel] with ModelWithState[SlackChannel] {
 
   def withId(newId: Id[SlackChannel]) = this.copy(id = Some(newId))
   def withUpdateTime(time: DateTime) = this.copy(updatedAt = time)
-  def withLastNotificationAtLeast(time: DateTime) = if (time isAfter lastNotificationAt) this.copy(lastNotificationAt = time) else this
+  def withLastNotificationAtLeast(time: DateTime) = if (lastNotificationAt.exists(_ isAfter time)) this else this.copy(lastNotificationAt = Some(time))
+
+  def unnotifiedSince: DateTime = lastNotificationAt getOrElse createdAt
 
   def idAndName: (SlackChannelId, SlackChannelName) = (slackChannelId, slackChannelName)
   def isActive: Boolean = state == SlackChannelStates.ACTIVE
@@ -56,7 +58,7 @@ class SlackChannelRepoImpl @Inject() (
     slackTeamId: SlackTeamId,
     slackChannelId: SlackChannelId,
     slackChannelName: SlackChannelName,
-    lastNotificationAt: DateTime) = {
+    lastNotificationAt: Option[DateTime]) = {
     SlackChannel(
       id,
       createdAt,
@@ -87,7 +89,7 @@ class SlackChannelRepoImpl @Inject() (
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
     def slackChannelName = column[SlackChannelName]("slack_channel_name", O.NotNull)
-    def lastNotificationAt = column[DateTime]("last_notification_at", O.NotNull)
+    def lastNotificationAt = column[Option[DateTime]]("last_notification_at", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackChannelId, slackChannelName, lastNotificationAt) <> ((fromDbRow _).tupled, toDbRow _)
   }
 
@@ -120,7 +122,6 @@ class SlackChannelRepoImpl @Inject() (
     }
   }
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]] = {
-    activeRows.filter(row => row.lastNotificationAt < lastPushOlderThan).map(_.id).list
+    activeRows.filter(row => (row.createdAt < lastPushOlderThan && row.lastNotificationAt.isEmpty) || (row.lastNotificationAt < lastPushOlderThan)).map(_.id).list
   }
-
 }

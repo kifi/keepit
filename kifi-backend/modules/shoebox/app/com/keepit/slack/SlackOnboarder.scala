@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.time.Clock
 import com.keepit.common.util.{ Debouncing, DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.SlackOnboarder.TeamOnboardingAgent
@@ -18,7 +18,7 @@ import com.keepit.social.BasicUser
 import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Try, Success, Failure }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
@@ -35,7 +35,7 @@ object SlackOnboarder {
 
   def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
     case push: LibraryToSlackChannel => true
-    case ingestion: SlackChannelToLibrary => ingestion.slackTeamId == KifiSlackTeamId || ingestion.slackTeamId == BrewstercorpSlackTeamId
+    case ingestion: SlackChannelToLibrary => true
   }
 
   def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId
