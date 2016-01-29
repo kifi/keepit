@@ -112,15 +112,15 @@ class SlackIngestingActor @Inject() (
       case result =>
         val now = clock.now()
         val (nextIngestionAt, updatedStatus) = result match {
-          case Success(Some(_)) => // TODO(ryan): talk to Léo, this branch is probably never executed
-            if (integration.lastIngestedAt.isEmpty) {
-              // this is the first time we've tried ingesting for this integration
-              // and we were successful! we got a bunch of links
+          case Success(lastMsgTimestamp) =>
+            if (integration.lastIngestedAt.isEmpty) { // this is the first time we've tried ingesting for this integration
               slackOnboarder.talkAboutIntegration(integration)
             }
-            (Some(now plus nextIngestionDelayAfterNewMessages), None)
-          case Success(None) =>
-            (Some(now plus nextIngestionDelayWithoutNewMessages), None)
+            val delay = lastMsgTimestamp match {
+              case Some(newTimestamp) if !integration.lastMessageTimestamp.contains(newTimestamp) => nextIngestionDelayAfterNewMessages
+              case _ => nextIngestionDelayWithoutNewMessages
+            }
+            (Some(now plus delay), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             slackLog.warn(forbidden.toString)
             (None, Some(SlackIntegrationStatus.Off))
