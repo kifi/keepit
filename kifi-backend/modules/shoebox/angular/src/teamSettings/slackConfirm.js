@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SlackConfirmCtrl', [
-  '$scope', 'installService', '$timeout', 'profile', '$stateParams',
-  function ($scope, installService, $timeout, profile, $stateParams) {
+  '$scope', 'installService', '$timeout', 'profile', '$stateParams', 'messageTicker',
+  function ($scope, installService, $timeout, profile, $stateParams, messageTicker) {
     if (installService.installedVersion) {
       $scope.hasInstalled = true;
     } else {
@@ -18,6 +18,10 @@ angular.module('kifi')
       $scope.teamLink = 'https://www.kifi.com/' + profile.organization.handle + '?signUpWithSlack';
     }
     $scope.profile = profile;
+
+    $scope.installExt = installService.triggerInstall.bind(null, function onError() {
+      messageTicker({ text: 'Oops, that didn’t work. Contact support if the problem persists.', type: 'red' });
+    });
 
     $scope.showCopied =  function () {
       $scope.showCopiedConfirm = true;

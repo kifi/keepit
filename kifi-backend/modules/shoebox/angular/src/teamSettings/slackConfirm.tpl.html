@@ -34,7 +34,7 @@
     <p ng-if="!canInstall">We currently support Chrome and Firefox, and will support Safari soon. Hang tight!</p>
 
     <p ng-if="canInstall">
-      <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-slack-confirm-ext-btn">Get the <span ng-bind="platform"></span> extension</button>
+      <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-slack-confirm-ext-btn" ng-click="installExt()">Get the <span ng-bind="platform"></span> extension</button>
     </p>
 
     <p>After you explore around, you can quickly get your team on Kifi by sending them this link:</p>
