@@ -80,7 +80,7 @@ case class CreateSlackTeam() extends SlackAuthenticatedAction {
 }
 
 object SyncPublicChannels extends SlackAuthenticatedActionHelper[SyncPublicChannels]("sync_public_channels")
-case class SyncPublicChannels() extends SlackAuthenticatedAction {
+@json case class SyncPublicChannels(orgId: Id[Organization]) extends SlackAuthenticatedAction {
   type A = SyncPublicChannels
   def helper = SyncPublicChannels
 }
@@ -122,7 +122,7 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam => formatPure(AddSlackTeam())
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => formatPure(CreateSlackTeam())
-    case SyncPublicChannels => formatPure(SyncPublicChannels())
+    case SyncPublicChannels => implicitly[Format[SyncPublicChannels]]
     case Authenticate => formatPure(Authenticate())
   }
 
@@ -133,7 +133,7 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam() => SlackAuthScope.teamSetup
     case ConnectSlackTeam(_) => SlackAuthScope.teamSetup
     case CreateSlackTeam() => SlackAuthScope.teamSetup
-    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
+    case SyncPublicChannels(_) => SlackAuthScope.syncPublicChannels
     case Authenticate() => SlackAuthScope.userSignup
   }
 
