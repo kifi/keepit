@@ -75,10 +75,10 @@ angular.module('kifi')
     $scope.onClickedSyncAllSlackChannels = function() {
       $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
       slackService.publicSync($scope.profile.id).then(function (resp) {
-        if (resp.redirect) {
-          $window.location = resp.redirect;
-        } else if (resp.success) {
+        if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
+        } else if (resp.redirect) {
+          $window.location = resp.redirect;
         }
       });
     };
@@ -86,10 +86,10 @@ angular.module('kifi')
     $scope.onClickedConnectSlack = function() {
       $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
       slackService.connectTeam($scope.profile.id).then(function (resp) {
-        if (resp.redirect) {
-          $window.location = resp.redirect;
-        } else if (resp.success) {
+        if (resp.success) {
           messageTicker({ text: 'Slack connected!', type: 'green' });
+        } else if (resp.redirect) {
+          $window.location = resp.redirect;
         }
       });
 
