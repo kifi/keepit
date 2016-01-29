@@ -90,7 +90,14 @@ angular.module('kifi')
   'env',
   function (env) {
     return function (image) {
-      return image ? ['background-image:url(', env.picBase, '/', image.path, ');background-position:', image.x, '% ', image.y, '%'].join('') : '';
+      if (image) {
+        return {
+          'background-image': 'url(' + env.picBase + '/' + image.path + ')',
+          'background-position': image.x + '% ' + image.y + '%'
+        };
+      } else {
+        return {};
+      }
     };
   }
 ])

@@ -9,9 +9,9 @@
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner|pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
-          <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
-          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
+          <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }">{{library.name}}</span>
+          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
         <span class="kf-lih-search-center">
           <input class="kf-lih-search-input" type="text" placeholder="Search" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
@@ -66,7 +66,7 @@
       </div>
       <a class="kf-lih-settings" ui-sref="settings"><span class="svg-settings-gear-filled-white"></span>Settings</a>
       <div class="kf-lih-dropdown-parent" kf-click-menu>
-        <button class="kf-lih-profile" style="background-image:url({{me|pic:100}})">Profile actions</button>
+        <button class="kf-lih-profile" ng-style="{ 'background-image': 'url(' + (me|pic:100) + ')' }">Profile actions</button>
         <menu class="kf-dropdown-menu" ng-class="me.orgs.length ? 'kf-dropdown-menu_split' : ''">
           <nav class="kf-dropdown-menu-nav kf-lih-profiles" ng-if="me.orgs.length">
             <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">
