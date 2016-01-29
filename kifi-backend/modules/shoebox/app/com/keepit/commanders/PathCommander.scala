@@ -3,7 +3,7 @@ package com.keepit.commanders
 import java.net.URLEncoder
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -41,9 +41,12 @@ class PathCommander @Inject() (
   def orgPage(org: Organization): Path = orgPageByHandle(org.primaryHandle.get.normalized)
   def orgPage(org: BasicOrganization): Path = orgPageByHandle(org.handle)
   def orgPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgRepo.get(orgId))
-  def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = {
-    Path(s"s/${slackTeamId.value}/o/${Organization.publicId(org.id.get).id}")
+
+  private def orgPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/o/${orgId.id}")
   }
+  def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
+  def orgPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(org.orgId, slackTeamId)
 
   def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.primaryHandle.get.normalized)
   def orgMembersPage(org: BasicOrganization): Path = orgMembersPageByHandle(org.handle)

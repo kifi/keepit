@@ -115,7 +115,9 @@ class SlackChannelDigestNotificationActor @Inject() (
       DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
         digest.slackChannel.slackChannelName.value, inTheLast(digest.digestPeriod)),
       DescriptionElements("You can browse through them in",
-        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
+        DescriptionElements.unwordsPretty {
+          digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackChannel.slackTeamId)))
+        })
     )))).quiet
   }
   private def pushDigestNotificationForChannel(channel: SlackChannel): Future[Unit] = {
