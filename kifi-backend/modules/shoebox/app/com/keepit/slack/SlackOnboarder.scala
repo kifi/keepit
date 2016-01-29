@@ -91,6 +91,7 @@ class SlackOnboarderImpl @Inject() (
       }.flatMap { welcomeMsg =>
         log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
         debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+          slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} in ${integ.slackTeamId}")
           slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
         }
       }.getOrElse {
