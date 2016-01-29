@@ -3,7 +3,6 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
