@@ -17,6 +17,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
+import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamMembership }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -33,6 +34,7 @@ case class UserStatistics(
   invitations: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
+  slackMemberships: Seq[SlackTeamMembership],
   keepVisibilityCount: KeepVisibilityCount,
   experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
@@ -133,6 +135,7 @@ class UserStatisticsCommander @Inject() (
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgExperimentsRepo: OrganizationExperimentRepo,
     orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
+    slackTeamMembershipRepo: SlackTeamMembershipRepo,
     userValueRepo: UserValueRepo,
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     abook: ABookServiceClient,
@@ -156,6 +159,7 @@ class UserStatisticsCommander @Inject() (
     val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+    val slackMemberships = slackTeamMembershipRepo.getByUserId(user.id.get)
 
     UserStatistics(
       user,
@@ -164,6 +168,7 @@ class UserStatisticsCommander @Inject() (
       invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
+      slackMemberships,
       keepVisibilityCount,
       userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations,
