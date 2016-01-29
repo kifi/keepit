@@ -41,8 +41,8 @@ object SlackMessageRequest {
     username = "Kifi",
     iconUrl = kifiIconUrl,
     attachments = attachments,
-    unfurlLinks = true,
-    unfurlMedia = true
+    unfurlLinks = false,
+    unfurlMedia = false
   )
 
   def inhouse(txt: DescriptionElements, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
