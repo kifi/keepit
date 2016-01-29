@@ -5,12 +5,10 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.controllers.website.SlackController
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackTeamRepo, SlackTeamMembershipRepo, SlackTeamId }
+import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
 import play.api.mvc.Result
 import securesocial.core.SecureSocial
 
@@ -21,10 +19,11 @@ class SlackAuthRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
   orgRepo: OrganizationRepo,
+  libraryRepo: LibraryRepo,
+  keepRepo: KeepRepo,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
-  libraryRepo: LibraryRepo,
   permissionCommander: PermissionCommander,
   pathCommander: PathCommander,
   val userActionsHelper: UserActionsHelper,
@@ -63,6 +62,20 @@ class SlackAuthRouter @Inject() (
         } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
       }
     }
+    redir.getOrElse(notFound(request))
+  }
+
+  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = MaybeUserAction { implicit request =>
+    val redir = db.readOnlyMaster { implicit s =>
+      Keep.decodePublicId(pubId).toOption.flatMap(keepId => Some(keepRepo.get(keepId)).filter(_.isActive)).map { keep =>
+        val target = pathCommander.pathForKeep(keep).absolute
+        (for {
+          org <- keep.organizationId.map(orgRepo.get).filter(_.isActive)
+          _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+        } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
+      }
+    }
+    // TODO(ryan): at some point, maybe we can do something with the url hash if we can't find the keep
     redir.getOrElse(notFound(request))
   }
 
