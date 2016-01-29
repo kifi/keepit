@@ -35,7 +35,7 @@ object SlackOnboarder {
 
   def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
     case push: LibraryToSlackChannel => true
-    case ingestion: SlackChannelToLibrary => ingestion.slackTeamId == KifiSlackTeamId || ingestion.slackTeamId == BrewstercorpSlackTeamId
+    case ingestion: SlackChannelToLibrary => true
   }
 
   def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId
