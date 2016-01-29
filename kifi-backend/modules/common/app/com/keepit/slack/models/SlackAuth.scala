@@ -113,12 +113,20 @@ case class SlackTeamInfo(
   icon: Map[Int, String])
 
 object SlackTeamInfo {
+  private val slackIconReads = new Reads[Map[Int, String]] {
+    private val sizePattern = """^image_(\d+)$""".r
+    def reads(value: JsValue) = value.validate[JsObject].map { obj =>
+      val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
+      if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
+    }
+  }
+
   implicit val slackReads: Reads[SlackTeamInfo] = (
     (__ \ 'id).read[SlackTeamId] and
     (__ \ 'name).read[SlackTeamName] and
     (__ \ 'domain).read[SlackTeamDomain] and
     (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(domainStr => SlackTeamEmailDomain(domainStr.trim))) and
-    (__ \ 'icon).read(SlackIconReads)
+    (__ \ 'icon).read(slackIconReads)
   )(SlackTeamInfo.apply _)
 }
 
@@ -127,7 +135,7 @@ case class SlackUserProfile(
   lastName: Option[String],
   fullName: Option[String],
   emailAddress: EmailAddress,
-  icon: Map[Int, String],
+  avatarUrl: Option[String],
   originalJson: JsValue)
 
 object SlackUserProfile {
@@ -136,7 +144,7 @@ object SlackUserProfile {
     (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'email).read[EmailAddress] and
-    SlackIconReads and
+    (__ \ "image_original").readNullable[String] and
     Reads(JsSuccess(_))
   )(SlackUserProfile.apply _)
 }
@@ -158,13 +166,5 @@ object SlackUserInfo {
   private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
 
   implicit val format: Format[SlackUserInfo] = Format(reads, writes)
-}
-
-object SlackIconReads extends Reads[Map[Int, String]] {
-  private val sizePattern = """^image_(\d+)$""".r
-  def reads(value: JsValue) = value.validate[JsObject].map { obj =>
-    val isDefaultImage = (obj \ "image_default").asOpt[Boolean].getOrElse(false)
-    if (isDefaultImage) Map.empty[Int, String] else obj.value.collect { case (sizePattern(ValidInt(size)), JsString(imageUrl)) => size -> imageUrl }.toMap
-  }
 }
 
