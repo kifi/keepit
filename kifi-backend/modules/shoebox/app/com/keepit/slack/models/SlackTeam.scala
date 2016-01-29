@@ -48,7 +48,7 @@ case class SlackTeam(
 
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
 
-  def noDigestNotificationSince: DateTime = lastDigestNotificationAt getOrElse createdAt
+  def unnotifiedSince: DateTime = lastDigestNotificationAt getOrElse createdAt
 }
 
 object SlackTeam {

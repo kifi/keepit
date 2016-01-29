@@ -104,7 +104,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       }
       ingestedLinksByChannel = librariesByChannel.map {
         case (channelId, libs) =>
-          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.noDigestNotificationSince).map(_.keepId).toSet
+          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.unnotifiedSince).map(_.keepId).toSet
           val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
           val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
             case (kId, SlackAttribution(msg)) if msg.channel.id == channelId => newSlackKeepsById.get(kId).map(_.url)
@@ -113,7 +113,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       }
       digest <- Some(SlackTeamDigest(
         slackTeam = slackTeam,
-        digestPeriod = new Period(slackTeam.noDigestNotificationSince, clock.now),
+        digestPeriod = new Period(slackTeam.unnotifiedSince, clock.now),
         org = org,
         ingestedLinksByChannel = ingestedLinksByChannel,
         librariesByChannel = librariesByChannel
