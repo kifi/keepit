@@ -5,7 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
 import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
@@ -42,6 +42,7 @@ class SlackController @Inject() (
     slackMembershipRepo: SlackTeamMembershipRepo,
     slackInfoCommander: SlackInfoCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    userValueRepo: UserValueRepo,
     val permissionCommander: PermissionCommander,
     val userActionsHelper: UserActionsHelper,
     val libraryAccessCommander: LibraryAccessCommander,
@@ -67,6 +68,12 @@ class SlackController @Inject() (
 
   private def redirectToOrganizationIntegrations(organizationId: Id[Organization]): SlackResponse.ActionPerformed = {
     val redirectUrl = getOrgUrl(organizationId) + "/settings/integrations"
+    SlackResponse.ActionPerformed(Some(redirectUrl))
+  }
+
+  private def hasSeenInstall(userId: Id[User]): Boolean = db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.hasSeenInstall) }
+  private def redirectToInstall = {
+    val redirectUrl = com.keepit.controllers.website.HomeControllerRoutes.install()
     SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
@@ -121,6 +128,7 @@ class SlackController @Inject() (
             case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
             case Some(orgId) =>
               if (isNewOrg) redirectToOrganization(orgId, showSlackDialog = true)
+              else if (!hasSeenInstall(userId)) redirectToInstall
               else if (slackTeam.publicChannelsLastSyncedAt.isDefined) redirectToOrganization(orgId, showSlackDialog = false)
               else redirectToOrganizationIntegrations(orgId)
           }
