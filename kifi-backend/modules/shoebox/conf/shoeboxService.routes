@@ -49,7 +49,7 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
 GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
-GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None, useIdentity: Boolean ?= false)
+GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None)
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, intent: Option[String] ?= None, modelPubId: Option[String] ?= None, authToken: Option[String] ?= None)
 # do we still use this endpoint?
