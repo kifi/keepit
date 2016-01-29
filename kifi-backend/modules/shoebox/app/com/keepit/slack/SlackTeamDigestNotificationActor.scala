@@ -18,7 +18,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
 import org.apache.commons.math3.random.MersenneTwister
-import org.joda.time.Period
+import org.joda.time.{ Duration, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -123,7 +123,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       }
       digest <- Some(SlackTeamDigest(
         slackTeam = slackTeam,
-        digestPeriod = new Period(slackTeam.unnotifiedSince, clock.now),
+        digestPeriod = new Duration(slackTeam.unnotifiedSince, clock.now),
         org = org,
         ingestedLinksByChannel = ingestedLinksByChannel,
         librariesByChannel = librariesByChannel

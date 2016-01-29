@@ -8,8 +8,8 @@ import com.keepit.macros.Location
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
 import com.keepit.slack.models.SlackEmoji
 import com.keepit.social.BasicUser
-import org.joda.time.{ DateTime, Period }
-import org.ocpsoft.prettytime._
+import org.joda.time.{ Duration, DateTime, Period }
+import org.ocpsoft.prettytime.PrettyTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
@@ -69,9 +69,9 @@ object DescriptionElements {
   implicit def fromSlackEmoji(emoji: SlackEmoji): BasicElement = emoji.value
 
   implicit def fromDateTime(time: DateTime): BasicElement = new PrettyTime().format(time.toDate)
-  def inTheLast(p: Period): BasicElement = {
+  def inTheLast(x: Duration): BasicElement = {
     val prettyTime = new PrettyTime(new java.util.Date(0))
-    prettyTime.formatDuration(new java.util.Date(-p.toStandardDuration.getMillis)) match {
+    prettyTime.formatDuration(new java.util.Date(-x.getMillis)) match {
       case "" => "just now"
       case d => s"in the last ${d.stripPrefix("1 ")}"
     }

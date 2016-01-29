@@ -16,7 +16,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
-import org.joda.time.Period
+import org.joda.time.{ Duration, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -106,7 +106,7 @@ class SlackChannelDigestNotificationActor @Inject() (
 
     Some(SlackChannelDigest(
       slackChannel = slackChannel,
-      digestPeriod = new Period(slackChannel.unnotifiedSince, clock.now),
+      digestPeriod = new Duration(slackChannel.unnotifiedSince, clock.now),
       ingestedLinks = ingestedLinks,
       libraries = librariesIngestedInto.values.toList
     )).filter(_.numIngestedLinks >= minIngestedLinksForChannelDigest)
