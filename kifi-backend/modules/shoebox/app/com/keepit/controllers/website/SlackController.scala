@@ -142,7 +142,7 @@ class SlackController @Inject() (
 
       case SyncPublicChannels() =>
         slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
-          case (orgId, _) => SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=$slackTeamId"))
+          case (orgId, _) => SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
         }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
