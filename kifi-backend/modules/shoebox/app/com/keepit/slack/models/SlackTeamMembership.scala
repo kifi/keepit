@@ -63,6 +63,7 @@ case class SlackTeamMembership(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
   def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
+  def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackAccessToken] = if (requiredScopes subsetOf scopes) token else None
 
   def revoked = this.copy(token = None, scopes = Set.empty)
   def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)

@@ -5,7 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.json.EitherFormat
 import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
@@ -16,7 +16,7 @@ import com.keepit.shoebox.controllers.{ LibraryAccessActions, OrganizationAccess
 import com.keepit.slack._
 import com.keepit.slack.models._
 import play.api.libs.json._
-import play.api.mvc.{ Request, RequestHeader, Result }
+import play.api.mvc.{ Request, RequestHeader }
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -134,31 +134,28 @@ class SlackController @Inject() (
           }
       }
 
-      case ConnectSlackTeam(orgId) => slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId) match {
-        case Success(team) if team.organizationId.contains(orgId) => Future.successful(redirectToOrganizationIntegrations(orgId))
-        case teamMaybe =>
-          val error = teamMaybe.map(team => new Exception(s"Something weird happen while connecting org $orgId with $team")).recover { case error => error }
-          throw error.get
-      }
-
-      case CreateSlackTeam() => slackTeamCommander.createOrganizationForSlackTeam(userId, slackTeamId).map { team =>
-        team.organizationId match {
-          case Some(orgId) => redirectToOrganization(orgId, showSlackDialog = true)
-          case None => throw new Exception(s"Something weird happen while creating org for $team")
+      case ConnectSlackTeam(orgId) => Future.fromTry {
+        slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId).map { _ =>
+          redirectToOrganizationIntegrations(orgId)
         }
       }
 
-      case SyncPublicChannels() =>
-        slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
-          case (orgId, _) => SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
-        }
+      case CreateSlackTeam() => slackTeamCommander.createOrganizationForSlackTeam(userId, slackTeamId).map { slackTeam =>
+        redirectToOrganization(slackTeam.organizationId.get, showSlackDialog = true)
+      }
 
+      case SyncPublicChannels(orgId) =>
+        Future.fromTry(slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId)).flatMap { slackTeam =>
+          slackTeamCommander.syncPublicChannels(userId, slackTeam).map { _ =>
+            SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
+          }
+        }
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
   }
 
   private def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit request: RequestHeader): Future[SlackResponse] = {
-    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt)(action.helper).flatMap {
+    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt, action).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
@@ -244,7 +241,7 @@ class SlackController @Inject() (
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
       slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
     }
-    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels())
+    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels(request.orgId))
       .map(handleAsAPIRequest)
   }
 
