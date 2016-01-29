@@ -51,11 +51,11 @@ class HomeController @Inject() (
     val special = promoCodeHandler(request)
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
       request match {
-        case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite("integrations/slackv2") |> special
+        case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite("integrations/slackv3") |> special
         case _: UserRequest[_] => Redirect("/slack-connect") |> special
       }
     } else {
-      MarketingSiteRouter.marketingSite("integrations/slackv2")
+      MarketingSiteRouter.marketingSite("integrations/slackv3")
     }
   }
 
