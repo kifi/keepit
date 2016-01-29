@@ -47,7 +47,7 @@ object SlackAuthScope {
 
   val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
   val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
-  val teamSetup = Set(UsersRead, TeamRead)
+  val teamSetup = Set(TeamRead)
   val syncPublicChannels = teamSetup ++ pushAnywhere ++ ingestAnywhere
 
   val userSignup: Set[SlackAuthScope] = Set(UsersRead, TeamRead)
