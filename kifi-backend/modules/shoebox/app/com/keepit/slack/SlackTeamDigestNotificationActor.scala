@@ -190,13 +190,15 @@ class SlackTeamDigestNotificationActor @Inject() (
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
-      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgLibrariesPage(digest.org)),
+      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, digest.slackTeam.slackTeamId).absolute),
         "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         "Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
-        DescriptionElements.unwordsPretty(topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))))
+        DescriptionElements.unwordsPretty {
+          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId).absolute)))
+        }
       )))).withFullMarkdown
     ) ++ prng.choice(kifiSlackTipAttachments)
 
