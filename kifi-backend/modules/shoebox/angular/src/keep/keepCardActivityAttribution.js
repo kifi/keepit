@@ -17,9 +17,9 @@ angular.module('kifi')
         var attribution = keep && keep.sourceAttribution;
         var keeper = (attribution && attribution.kifi) || (keep && keep.user);
         if (keeper && messages) {
-          scope.lastComment = messages.find(function (message) {
+          scope.lastComment = messages.filter(function (message) {
             return message.sentBy && message.sentBy.id !== keeper.id;
-          });
+          })[0];
         }
       }
     };
