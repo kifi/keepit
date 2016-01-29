@@ -111,7 +111,7 @@ class SlackOnboarderImpl @Inject() (
       msg <- (integ, slackTeamForLibrary) match {
         case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
         case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
           generalLibraryMessage(sctl, owner, lib, slackTeam)
