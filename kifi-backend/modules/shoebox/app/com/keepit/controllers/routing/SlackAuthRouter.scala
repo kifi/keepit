@@ -31,6 +31,18 @@ class SlackAuthRouter @Inject() (
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
+  def fromSlackToInstallPage(slackTeamId: SlackTeamId) = MaybeUserAction { implicit request =>
+    val redir = db.readOnlyMaster { implicit s =>
+      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive).map { org =>
+        val target = PathCommander.browserExtension.absolute
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case false => Redirect(target)
+        }
+      }
+    }
+    redir.getOrElse(notFound(request))
+  }
   def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User]) = MaybeUserAction { request =>
     // There is currently no authentication needed to see a user's profile
     val redir = db.readOnlyMaster { implicit s =>
