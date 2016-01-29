@@ -196,8 +196,10 @@ class SlackTeamDigestNotificationActor @Inject() (
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
+    log.info(s"[SLACK-TEAM-DIGEST] Trying to push a digest for team ${team.slackTeamId}")
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createTeamDigest(team).map(describeTeamDigest) }
+    log.info(s"[SLACK-TEAM-DIGEST] Generated message: ${msgOpt.map(_.text)}")
     val generalChannelFut = team.generalChannelId match {
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)
