@@ -36,9 +36,9 @@ private object Security extends Augmentor {
         val cspStr =
           "" +
             s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
-            s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' 'sha256-XnNQECY9o+nIv2Qgcd1A39YarwxTm10rhdzegH/JBxY=' $dev; " + // sha is twitter's lib
+            s"script-src 'self' d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' 'sha256-XnNQECY9o+nIv2Qgcd1A39YarwxTm10rhdzegH/JBxY=' $dev; " + // sha is twitter's lib
             s"font-src fonts.gstatic.com data: ; " +
-            s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com img.youtube.com $dev; " +
+            s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com img.youtube.com www.kifi.com $dev; " +
             s"form-action www.kifi.com api.kifi.com $dev; " +
             s"frame-src www.kifi.com *.facebook.com *.stripe.com *.youtube.com; " + // to support Safari 9
             s"child-src www.kifi.com *.facebook.com *.stripe.com *.youtube.com; " +
