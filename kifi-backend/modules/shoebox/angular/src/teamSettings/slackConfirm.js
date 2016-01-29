@@ -12,11 +12,11 @@ angular.module('kifi')
       $scope.canInstall = installService.canInstall;
     }
     $scope.platform = installService.getPlatformName();
-    var teamIdParam = '';
     if ($stateParams.slackTeamId) {
-      teamIdParam = '&slackTeamId=' + $stateParams.slackTeamId;
+      $scope.teamLink = 'https://www.kifi.com/s/' + $stateParams.slackTeamId + '/o/' + profile.organization.id;
+    } else {
+      $scope.teamLink = 'https://www.kifi.com/' + profile.organization.handle + '?signUpWithSlack';
     }
-    $scope.teamLink = 'https://www.kifi.com/' + profile.organization.handle + '?signUpWithSlack' + teamIdParam;
     $scope.profile = profile;
 
     $scope.showCopied =  function () {
