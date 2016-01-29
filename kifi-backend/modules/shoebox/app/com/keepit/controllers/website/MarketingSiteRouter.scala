@@ -72,7 +72,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   private object Version14 extends LandingVersion { val version = 14 }
   private object Version15 extends LandingVersion { val version = 15 }
   private val versions = Seq(Version1, Version2, Version3, Version4, Version5, Version6, Version7, Version8, Version9, Version10, Version11, Version12, Version13, Version14, Version15)
-  private val defaultVersion = Version14
+  private val defaultVersion = Version15
 
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
