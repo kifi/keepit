@@ -295,6 +295,10 @@ class AuthController @Inject() (
         } else if (userRequest.kifiInstallationId.isEmpty && !hasSeenInstall(userRequest)) {
           inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
           Redirect(com.keepit.controllers.website.HomeControllerRoutes.install())
+        } else if (userRequest.cookies.get("slackTeamId").isDefined) {
+          val slackTeamIdCookie = userRequest.cookies.get("slackTeamId").get
+          val slackTeamId = SlackTeamId(slackTeamIdCookie.value)
+          Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(Some(slackTeamId))).discardingCookies(DiscardingCookie(slackTeamIdCookie.name))
         } else {
           userRequest.session.get(SecureSocial.OriginalUrlKey) map { url =>
             Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
@@ -422,7 +426,8 @@ class AuthController @Inject() (
       val cookieModelPubId = request.cookies.get("modelPubId")
       val cookieAuthToken = request.cookies.get("authToken")
       val creditCodeCookie = request.cookies.get("creditCode")
-      val discardedCookies = Seq(cookieIntent, cookieModelPubId, cookieAuthToken, creditCodeCookie).flatten.map(c => DiscardingCookie(c.name))
+      val slackTeamIdCookie = request.cookies.get("slackTeamId")
+      val discardedCookies = Seq(cookieIntent, cookieModelPubId, cookieAuthToken, creditCodeCookie, slackTeamIdCookie).flatten.map(c => DiscardingCookie(c.name))
 
       def extractModelId[T](companion: PublicIdGenerator[T]): Option[Id[T]] = cookieModelPubId.flatMap(cookie => companion.validatePublicId(cookie.value).flatMap(companion.decodePublicId).toOption)
       val libIdOpt = extractModelId(Library)
@@ -458,7 +463,7 @@ class AuthController @Inject() (
               case "waitlist" =>
                 Redirect("/twitter/thanks")
               case "slack" =>
-                val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
+                val slackTeamIdFromCookie = slackTeamIdCookie.map(_.value).map(SlackTeamId(_))
                 val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
                 val slackTeamId = slackTeamIdFromCookie orElse slackTeamIdFromIdentity
                 Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url)
@@ -488,6 +493,8 @@ class AuthController @Inject() (
           val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity(_))
           if (identityOpt.isDefined) {
             val identity = identityOpt.get
+            val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+            val slackTeamIdCookie = slackTeamIdFromIdentity.map(id => Cookie("slackTeamId", id.value))
             if (identity.identityId.userId.trim.isEmpty) {
               throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
             }
@@ -498,7 +505,7 @@ class AuthController @Inject() (
               Ok(views.html.authMinimal.linkSocial(
                 identity.identityId.providerId,
                 identity.email.getOrElse(loginAndLinkEmail.getOrElse(""))
-              ))
+              )).withCookies(slackTeamIdCookie.toSeq: _*)
             } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               log.info(s"[doSignupPage] ${identity} logged in with wrong network")
