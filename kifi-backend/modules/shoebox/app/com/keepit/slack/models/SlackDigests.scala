@@ -1,11 +1,11 @@
 package com.keepit.slack.models
 
 import com.keepit.model.{ BasicOrganization, Library }
-import org.joda.time.Period
+import org.joda.time.{ Duration, Period }
 
 case class SlackTeamDigest(
     slackTeam: SlackTeam,
-    digestPeriod: Period,
+    digestPeriod: Duration,
     org: BasicOrganization,
     ingestedLinksByChannel: Map[SlackChannelId, Set[String]],
     librariesByChannel: Map[SlackChannelId, Set[Library]]) {
@@ -22,7 +22,7 @@ case class SlackTeamDigest(
 
 case class SlackChannelDigest(
     slackChannel: SlackChannel,
-    digestPeriod: Period,
+    digestPeriod: Duration,
     ingestedLinks: Set[String],
     libraries: Seq[Library]) {
   lazy val numIngestedLinks = ingestedLinks.size
