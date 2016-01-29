@@ -9,6 +9,7 @@ import com.google.inject.Inject
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
 import com.keepit.payments.CreditCode
+import com.keepit.slack.models.SlackTeamId
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -171,7 +172,7 @@ class AuthHelper @Inject() (
   case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
   case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
-  case object SlackReg extends PostRegIntent
+  case class Slack(slackTeamId: Option[SlackTeamId]) extends PostRegIntent
   case object NoIntent extends PostRegIntent
 
   def finishSignup(user: User,
@@ -218,7 +219,12 @@ class AuthHelper @Inject() (
         case "joinOrg" => generateRegIntent[Organization](modelPubIdFromCookie, authTokenFromCookie, Organization)
         case "joinKeep" => generateRegIntent[Keep](modelPubIdFromCookie, authTokenFromCookie, Keep)
         case "waitlist" => Some(JoinTwitterWaitlist)
-        case "slack" => Some(SlackReg)
+        case "slack" => {
+          val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
+          val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+          val slackTeamId = slackTeamIdFromCookie orElse slackTeamIdFromIdentity
+          Some(Slack(slackTeamId))
+        }
         case _ => None
       }
 
@@ -281,8 +287,8 @@ class AuthHelper @Inject() (
       .foreach(i => i(intent))
 
     val uri = intent match {
-      case SlackReg =>
-        "/teams/new?slack"
+      case Slack(slackTeamId) =>
+        com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url
       case ApplyCreditCode(creditCode) =>
         "/teams/new"
       case AutoFollowLibrary(libId, authTokenOpt) =>

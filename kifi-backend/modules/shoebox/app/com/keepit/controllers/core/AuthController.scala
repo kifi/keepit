@@ -458,7 +458,9 @@ class AuthController @Inject() (
               case "waitlist" =>
                 Redirect("/twitter/thanks")
               case "slack" =>
-                val slackTeamId = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+                val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
+                val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+                val slackTeamId = slackTeamIdFromCookie orElse slackTeamIdFromIdentity
                 Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url)
               case _ =>
                 Redirect(homeUrl)
