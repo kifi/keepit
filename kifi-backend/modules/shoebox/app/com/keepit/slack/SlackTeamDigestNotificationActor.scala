@@ -81,10 +81,17 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   private def processTask(ids: Set[Id[SlackTeam]]): Future[Map[SlackTeam, Try[Unit]]] = {
     log.info(s"[SLACK-TEAM-DIGEST] Processing slack teams: $ids")
-    for {
+    val result = for {
       teams <- db.readOnlyReplicaAsync { implicit s => slackTeamRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(teams)(pushDigestNotificationForTeam)
     } yield pushes
+
+    result.andThen {
+      case Success(pushesByTeam) => pushesByTeam.collect {
+        case (team, Failure(fail)) => slackLog.warn("Failed to push digest to", team.slackTeamId.value, "because", fail.getMessage)
+      }
+      case Failure(fail) => airbrake.notify("Somehow accumulateRobustly failed entirely?!?", fail)
+    }
   }
 
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
