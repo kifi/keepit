@@ -89,6 +89,11 @@ class PathCommander @Inject() (
   def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): String = keep.url // TODO(ryan): this should be a Kifi route at some point
 
   /**
+   * MISCELLANEOUS
+   */
+  def browserExtensionViaSlack(slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/i")
+
+  /**
    * I'd prefer if you just didn't use these routes
    */
   // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing
