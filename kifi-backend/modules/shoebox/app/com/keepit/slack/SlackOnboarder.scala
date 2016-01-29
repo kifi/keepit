@@ -113,7 +113,8 @@ class SlackOnboarderImpl @Inject() (
           explicitPushMessage(ltsc, owner, lib, slackTeam)
         case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
+        // TODO(ryan): restrict this message to SYSTEM_ORG_GENERAL libraries once we have spammed users enough
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if (lib.kind == LibraryKind.SYSTEM_ORG_GENERAL || lib.kind == LibraryKind.SLACK_CHANNEL) && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
           generalLibraryMessage(sctl, owner, lib, slackTeam)
         case (sctl: SlackChannelToLibrary, _) => None // for ingestions to any other type of library, stay quiet
         case (ltsc: LibraryToSlackChannel, _) =>
