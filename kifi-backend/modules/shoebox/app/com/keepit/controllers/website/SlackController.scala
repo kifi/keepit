@@ -158,7 +158,7 @@ class SlackController @Inject() (
   }
 
   private def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit request: RequestHeader): Future[SlackResponse] = {
-    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt)(action.helper).flatMap {
+    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt, action).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)

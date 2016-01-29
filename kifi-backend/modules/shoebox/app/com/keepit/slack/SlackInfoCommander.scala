@@ -170,7 +170,7 @@ class SlackInfoCommanderImpl @Inject() (
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
             val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val missingScopes = TurnOnChannelIngestion.getMissingScopes(existingScopes)
+            val missingScopes = TurnOnChannelIngestion(fs.id.get.id).getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
           }
@@ -182,7 +182,7 @@ class SlackInfoCommanderImpl @Inject() (
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
             lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val missingScopes = TurnOnLibraryPush.getMissingScopes(existingScopes)
+            val missingScopes = TurnOnLibraryPush(ts.id.get.id).getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
             else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
           }

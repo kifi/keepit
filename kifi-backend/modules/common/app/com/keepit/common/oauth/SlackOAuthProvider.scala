@@ -45,7 +45,7 @@ class SlackOAuthProviderImpl @Inject() (
         case None =>
           val slackTeamId = getParameter("slackTeamId").map(SlackTeamId(_))
           val action = Authenticate()
-          val requiredScopes = action.helper.getMissingScopes(Set.empty)
+          val requiredScopes = action.getMissingScopes(Set.empty)
           val link = slackStateCommander.getAuthLink(action, slackTeamId, requiredScopes, REDIRECT_URI).url
           Future.successful(Left(Results.Redirect(link, SEE_OTHER).withSession(request.session)))
         case Some(code) => {
