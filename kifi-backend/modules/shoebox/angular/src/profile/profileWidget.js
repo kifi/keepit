@@ -49,7 +49,7 @@ angular.module('kifi')
               potentialName = emails && emails[0] && getEmailDomain(emails[0].address);
             }
             if (potentialName) {
-              if (!orgNameExists(potentialName) && scope.organizations.length == 0) {
+              if (!orgNameExists(potentialName) && scope.organizations.length === 0) {
                 if (potentialName.length > 28) {
                   scope.companyName = potentialName.substr(0, 26) + '…';
                 } else {
