@@ -114,10 +114,9 @@ class SlackOnboarderImpl @Inject() (
           explicitPushMessage(ltsc, owner, lib, slackTeam)
         case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
+        case (sctl: SlackChannelToLibrary, _) => None // for ingestions to any other type of library, stay quiet
         case (ltsc: LibraryToSlackChannel, _) =>
           conservativePushMessage(ltsc, owner, lib)
-        case (sctl: SlackChannelToLibrary, _) =>
-          conservativeIngestionMessage(sctl, owner, lib)
       }
     } yield msg
   }
