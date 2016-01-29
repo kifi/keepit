@@ -7,7 +7,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.oauth.UserHandle
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -76,6 +75,15 @@ class PathCommander @Inject() (
   def libraryPageViaSlack(lib: Library, slackTeamId: SlackTeamId): Path = {
     Path(s"s/${slackTeamId.value}/l/${Library.publicId(lib.id.get).id}")
   }
+
+  /**
+   * KEEP
+   */
+  private def keepPageViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/k/${Keep.publicId(keep.id.get).id}/${UrlHash.hashUrl(keep.url).urlEncoded}")
+  }
+  def keepPageOnKifiViaSlack(keep: Keep, slackTeamId: SlackTeamId) = keepPageViaSlack(keep, slackTeamId) + "/kifi"
+  def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): String = keep.url // TODO(ryan): this should be a Kifi route at some point
 
   /**
    * I'd prefer if you just didn't use these routes

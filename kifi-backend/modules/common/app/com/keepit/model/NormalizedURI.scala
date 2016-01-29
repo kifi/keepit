@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.net.URI
+import play.api.mvc.PathBindable
 
 import scala.concurrent.duration._
 
@@ -94,10 +95,18 @@ object UrlHash {
     val binaryHash = MessageDigest.getInstance("MD5").digest(url)
     UrlHash(new String(new Base64().encode(binaryHash), UTF8))
   }
+  def fromUrlEncoding(str: String): UrlHash = {
+    UrlHash(str.replaceAllLiterally("-" -> "+", "_" -> "/"))
+  }
 
   implicit val format: Format[UrlHash] = new Format[UrlHash] {
     def reads(json: JsValue): JsResult[UrlHash] = json.validate[String].map(UrlHash.apply)
     def writes(o: UrlHash): JsValue = JsString(o.hash)
+  }
+
+  implicit val pathBinder = new PathBindable[UrlHash] {
+    override def bind(key: String, value: String): Either[String, UrlHash] = Right(UrlHash.fromUrlEncoding(value))
+    override def unbind(key: String, obj: UrlHash): String = obj.urlEncoded
   }
 }
 

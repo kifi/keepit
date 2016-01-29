@@ -695,12 +695,12 @@ class KeepRepoImpl @Inject() (
 
     val last_activity_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndLastActivityAt) match {
       case None => "true"
-      case Some((keepId, before)) => s"last_activity_at <= '$before' AND keep_id > $keepId"
+      case Some((keepId, before)) => s"last_activity_at < '$before' OR (last_activity_at = '$before' AND keep_id < $keepId)"
     }
 
     val last_activity_at_AFTER = afterIdOpt.flatMap(getKeepIdAndLastActivityAt) match {
       case None => "true"
-      case Some((keepId, after)) => s"last_activity_at > '$after' or (last_activity_at = $after and id > $keepId)"
+      case Some((keepId, after)) => s"last_activity_at > '$after' OR (last_activity_at = '$after' AND keep_id > $keepId)"
     }
 
     val keepInOrgFilter = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }

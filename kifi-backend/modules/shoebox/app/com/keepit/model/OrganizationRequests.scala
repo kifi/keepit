@@ -97,8 +97,7 @@ object OrganizationFail {
   case object INVALID_MODIFICATIONS extends OrganizationFail(BAD_REQUEST, "invalid_modifications")
   case object INVALID_MODIFY_NAME extends OrganizationFail(BAD_REQUEST, "invalid_modifications_name")
   case object INVALID_MODIFY_PERMISSIONS extends OrganizationFail(BAD_REQUEST, "invalid_modifications_permissions")
-  case object INVALID_MODIFY_SITEURL extends OrganizationFail(BAD_REQUEST, "invalid_modifications_name")
-  case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found_siteurl")
+  case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
   case object MODIFYING_UNEDITABLE_SETTINGS extends OrganizationFail(FORBIDDEN, "modifying_uneditable_settings")
@@ -119,7 +118,6 @@ object OrganizationFail {
       case INVALID_MODIFICATIONS.message => INVALID_MODIFICATIONS
       case INVALID_MODIFY_NAME.message => INVALID_MODIFY_NAME
       case INVALID_MODIFY_PERMISSIONS.message => INVALID_MODIFY_PERMISSIONS
-      case INVALID_MODIFY_SITEURL.message => INVALID_MODIFY_SITEURL
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
       case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN

@@ -21,7 +21,6 @@ object AdminEventTriggerController {
   object EventKind extends Enumerator[EventKind] {
     case object SlackTeamDigest extends EventKind("slack_team_digest") { def reads = EventTrigger.SlackTeamDigest.reads }
     case object SlackChannelDigest extends EventKind("slack_channel_digest") { def reads = EventTrigger.SlackChannelDigest.reads }
-    case object SlackTeamFTUI extends EventKind("slack_team_ftui") { def reads = EventTrigger.SlackTeamFTUI.reads }
     case object SlackIntegrationsFTUIs extends EventKind("slack_integrations_ftuis") { def reads = EventTrigger.SlackIntegrationsFTUIs.reads }
 
     private val all = _all.toSet
@@ -36,9 +35,6 @@ object AdminEventTriggerController {
 
     case class SlackChannelDigest(team: SlackTeamId, channel: SlackChannelId) extends EventTrigger
     object SlackChannelDigest { val reads = Json.reads[SlackChannelDigest] }
-
-    case class SlackTeamFTUI(team: SlackTeamId, user: SlackUserId) extends EventTrigger
-    object SlackTeamFTUI { val reads = Json.reads[SlackTeamFTUI] }
 
     case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
     object SlackIntegrationsFTUIs { val reads = Json.reads[SlackIntegrationsFTUIs] }
@@ -72,7 +68,6 @@ class AdminEventTriggerController @Inject() (
     val result = request.body.as[EventTrigger] match {
       case x: SlackTeamDigest => forceSlackTeamDigest(x)
       case x: SlackChannelDigest => ???
-      case x: SlackTeamFTUI => forceSlackTeamFTUI(x)
       case x: SlackIntegrationsFTUIs => forceSlackIntegrationsFTUIs(x)
     }
     result.map(Ok(_))
@@ -91,18 +86,6 @@ class AdminEventTriggerController @Inject() (
       }.getOrElse {
         Json.obj("ok" -> false, "err" -> "could not find team")
       }
-    }
-  }
-
-  private def forceSlackTeamFTUI(trigger: EventTrigger.SlackTeamFTUI): Future[JsValue] = {
-    db.readOnlyReplica { implicit s =>
-      val teamOpt = slackTeamRepo.getBySlackTeamId(trigger.team)
-      val membershipOpt = slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user)
-      for { team <- teamOpt; membership <- membershipOpt } yield (team, membership)
-    }.map {
-      case (team, membership) => slackOnboarder.talkAboutTeam(team, membership, forceOverride = true).map { _ => Json.obj("ok" -> true) }
-    }.getOrElse {
-      Future.successful(Json.obj("ok" -> false, "err" -> "could not find team and membership"))
     }
   }
 

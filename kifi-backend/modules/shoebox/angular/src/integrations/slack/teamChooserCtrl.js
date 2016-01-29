@@ -19,15 +19,18 @@ angular.module('kifi')
     });
 
     $scope.onClickedOrg = function(org) {
-      // do something
       $scope.selectedOrg = org;
     };
 
-      //createOrganizationForSlackTeam: post(shoebox, '/organizations/create/slack?slackTeamId=:slackTeamId'),
-      //    connectSlackTeamToOrganization: post(shoebox, '/organizations/:id/slack/connect?slackTeamId=:slackTeamId'),
     $scope.onClickedDone = function() {
-      $window.location = 'https://kifi.com/site/organizations/' + $scope.selectedOrg.id
-                            + '/slack/connect?slackTeamId=' + $scope.params.slackTeamId;
+      slackService.connectTeam($scope.selectedOrg.id).then(function (resp) {
+        if (resp.redirect) {
+          $window.location = resp.redirect;
+        } else {
+          // uh... how could this happen?
+          return;
+        }
+      });
     };
 
     $scope.onClickedCreateTeam = function() {

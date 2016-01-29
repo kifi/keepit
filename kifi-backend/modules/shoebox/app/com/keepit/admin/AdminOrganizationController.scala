@@ -427,9 +427,9 @@ class AdminOrganizationController @Inject() (
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
-    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.all().map(_.id.get) }
+    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
     val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
-      db.readWrite { implicit s =>
+      Try(db.readWrite { implicit s =>
         val account = paidAccountRepo.getByOrgId(orgId)
         val plan = paidPlanRepo.get(account.planId)
         val config = orgConfigRepo.getByOrgId(orgId)
@@ -437,14 +437,17 @@ class AdminOrganizationController @Inject() (
           val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
             case (f, default) =>
               val updatedSetting =
-                if (config.settings.settingFor(f).isEmpty || deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default
-                else config.settings.settingFor(f).get
+                if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default
+                else config.settings.settingFor(f).getOrElse(default)
               f -> updatedSetting
           })
           orgConfigRepo.save(config.withSettings(newSettings))
         }
         Json.stringify(Json.obj("orgId" -> orgId))
-      }
+      }).recover {
+        case error: Throwable =>
+          Json.stringify(Json.obj("orgId" -> orgId, "error" -> error.toString))
+      }.get
     }
     Ok.chunked(response)
   }

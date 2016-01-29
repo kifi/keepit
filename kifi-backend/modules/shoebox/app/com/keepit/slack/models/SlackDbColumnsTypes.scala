@@ -1,6 +1,7 @@
 package com.keepit.slack.models
 
 import com.keepit.common.db.slick.DataBaseComponent
+import play.api.libs.json.{ JsArray, Json }
 
 object SlackDbColumnTypes {
   def userId(db: DataBaseComponent) = {
@@ -23,6 +24,14 @@ object SlackDbColumnTypes {
     import db.Driver.simple._
     MappedColumnType.base[SlackChannelId, String](_.value, SlackChannelId(_))
   }
+  def channelIdSet(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[Set[SlackChannelId], String](
+      ids => Json.stringify(Json.toJson(ids)),
+      j => if (j.isEmpty) Set.empty else Json.parse(j).as[Set[SlackChannelId]]
+    )
+  }
+
   def channelName(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[SlackChannelName, String](_.value, SlackChannelName(_))
