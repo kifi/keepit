@@ -1,27 +1,43 @@
 @font-face {
   font-family: 'fontello';
-  src: url('/assets/ml/css/fonts/fontello.eot?80926365');
-  src: url('/assets/ml/css/fonts/fontello.eot?80926365#iefix') format('embedded-opentype'),
-  url('/assets/ml/css/fonts/fontello.woff?80926365') format('woff'),
-  url('/assets/ml/css/fonts/fontello.ttf?80926365') format('truetype'),
-  url('/assets/ml/css/fonts/fontello.svg?80926365#fontello') format('svg');
+  src: url('/assets/ml/css/fonts/fontello2.eot?80926365');
+  src: url('/assets/ml/css/fonts/fontello2.eot?80926365#iefix') format('embedded-opentype'),
+  url('/assets/ml/css/fonts/fontello2.woff?80926365') format('woff'),
+  url('/assets/ml/css/fonts/fontello2.ttf?80926365') format('truetype'),
+  url('/assets/ml/css/fonts/fontello2.svg?80926365#fontello') format('svg');
   font-weight: normal;
   font-style: normal;
 }
 
-[class^="i-"]:before, [class*=" i-"]:before {
+
+[class^="icon-"]:before, [class*=" icon-"]:before, [class^="i-"]:before, [class*=" i-"]:before {
   font-family: "fontello";
   font-style: normal;
   font-weight: normal;
   speak: none;
+
   display: inline-block;
   text-decoration: inherit;
   width: 1em;
+  margin-right: .2em;
   text-align: center;
   font-variant: normal;
   text-transform: none;
   line-height: 1em;
+  margin-left: .2em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+.icon-slack:before, .i-sbtn:before { content: '\e800'; } /* '' */
+.icon-facebook:before, .i-fbtn:before { content: '\e801'; } /* '' */
+.icon-facebook-circled:before { content: '\e802'; } /* '' */
+.icon-linkedin:before { content: '\e803'; } /* '' */
+.icon-linkedin-circled:before { content: '\e804'; } /* '' */
+.icon-twitter:before, .i-tbtn:before { content: '\e805'; } /* '' */
+.icon-twitter-circled:before { content: '\e806'; } /* '' */
+.icon-mail:before { content: '\e807'; } /* '' */
+.icon-github-circled:before { content: '\e808'; } /* '' */
 
 /* General Styles */
 
@@ -403,17 +419,8 @@ font-size: 18px;
 margin-bottom: 20px;
 }
 
-.auth_button.linkedin {
-  background-color: #0084BB;
-}
-
 .auth_button.twitter {
   background-color: #55ACEE;
-}
-
-.auth_button.facebook:hover {
-  background: #385591;
-  color: #fff;
 }
 
 .auth_button.twitter:hover {
@@ -421,8 +428,17 @@ margin-bottom: 20px;
   color: #fff;
 }
 
-.auth_button.linkedin:hover {
-  background: #006CA2;
+.auth_button.slack {
+  background-color: #2FB58F;
+}
+
+.auth_button.slack:hover {
+  background: #169C76;
+  color: #fff;
+}
+
+.auth_button.facebook:hover {
+  background: #385591;
   color: #fff;
 }
 
@@ -439,7 +455,7 @@ margin-bottom: 20px;
   font-size: 24px;
 }
 
-.auth_button span.fbtext, .auth_button span.twittertext, .auth_button span.linkedintext {
+.auth_button span.fbtext, .auth_button span.twittertext, .auth_button span.slacktext {
   margin-left: -40px;
   line-height: 50px;
 }
@@ -549,7 +565,7 @@ margin-bottom: 20px;
   font-size: 20px;
 }
 
-.photo-facebook, .photo-linkedin {
+.photo-facebook {
   display: inline-block;
   width: 70px;
   height: 70px;
@@ -566,18 +582,8 @@ margin-bottom: 20px;
   background: #446DAA;
 }
 
-.photo-linkedin {
-  background: #008DBF;
-  margin-left: 10px;
-}
-
 .photo-facebook:hover {
   background: #164180;
-  color: #fff;
-}
-
-.photo-linkedin:hover {
-  background: #02C0FF;
   color: #fff;
 }
 
@@ -680,34 +686,6 @@ a, .avatars li, img, .tabs_nav li {
 
 .social a:hover {
   color: #59616E;
-}
-
-.i-f:before {
-  content: '\e802';
-}
-
-.i-fbtn:before {
-  content: '\e800';
-}
-
-.i-lbtn:before {
-  content: '\e801';
-}
-
-.i-tbtn:before {
-  content: '\e806';
-}
-
-.i-l:before {
-  content: '\e803';
-}
-
-.i-t:before {
-  content: '\e804';
-}
-
-.i-g:before {
-  content: '\e805';
 }
 
 .input-wrapper {
