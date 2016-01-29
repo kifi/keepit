@@ -52,7 +52,7 @@ class HomeController @Inject() (
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
       request match {
         case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite("integrations/slackv2") |> special
-        case _: UserRequest[_] => Redirect("/integrations/slack/start") |> special
+        case _: UserRequest[_] => Redirect("/slack-connect") |> special
       }
     } else {
       MarketingSiteRouter.marketingSite("integrations/slackv2")
