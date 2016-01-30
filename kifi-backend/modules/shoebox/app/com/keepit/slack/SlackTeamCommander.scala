@@ -248,7 +248,7 @@ class SlackTeamCommanderImpl @Inject() (
                   }.toMap
                   val newLibraries = libCreationsByChannel.collect { case (ch, Right(lib)) => ch -> lib }
                   val failedChannels = libCreationsByChannel.collect { case (ch, Left(fail)) => ch -> fail }
-                  onboardingAgent.channels(membership, channels).flatMap { _ =>
+                  onboardingAgent.channels(membership, channelsToIntegrate).flatMap { _ =>
                     SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
                       "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
                       team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
