@@ -40,7 +40,7 @@ class SlackAuthRouter @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive).map { org =>
         val target = PathCommander.browserExtension.absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, None, target)
           case false => Redirect(target)
         }
       }
@@ -73,7 +73,7 @@ class SlackAuthRouter @Inject() (
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgIntegrationsPage(org).absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, None, target)
           case false => Redirect(target)
         }
       }
