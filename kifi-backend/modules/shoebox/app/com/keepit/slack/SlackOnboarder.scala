@@ -190,6 +190,7 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
+  //the big FTUE
   private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
@@ -197,18 +198,18 @@ class SlackOnboarderImpl @Inject() (
       "to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
-      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+      SlackAttachment(color = Some("7DBB70"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(
           SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
           "to access your automatically organized lists of links."
         ),
         DescriptionElements("Libraries have been created for each channel integrated. Join Kifi to access your lists of links messaged in Slack")
       ))))).withFullMarkdown,
-      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+      SlackAttachment(color = Some("FBF28D"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.star, s"Automatically save links from your #channels"),
         DescriptionElements("Every time someone includes a link in a chat message, we'll save it and capture every word on the page. It'll be automatically archived and searchable.")
       ))))).withFullMarkdown,
-      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+      SlackAttachment(color = Some("C15B81"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
         DescriptionElements(
           "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
