@@ -127,14 +127,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case Some(post) =>
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), ".", "Add Comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), "."
         )
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added",
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
           "to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute),
-          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), ".", "Add Comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), "."
         )
     }
   }
