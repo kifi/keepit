@@ -53,7 +53,7 @@ object SlackOnboarder {
     def dieIf(b: Boolean) = if (b) working = false
 
     def intro() = parent.teamAgent.intro(this)()
-    def channels(channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(channels)
+    def channels(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(membership, channels)
     def ingesting() = parent.teamAgent.ingesting(this)()
   }
 }
@@ -267,19 +267,41 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
-      (for {
-        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-          "Slack told us you have",
-          if (channels.nonEmpty) DescriptionElements(channels.length, "new channels.", "We're creating Kifi libraries for them now.")
-          else DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
-        )))).filter(_ => agent.isWorking)
-      } yield {
-        agent.dieIf(channels.isEmpty)
-        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
-      }) getOrElse {
-        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
-        Future.successful(Unit)
+    def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+      FutureHelpers.accumulateRobustly(channels) { ch =>
+        import SlackSearchRequest._
+        val query = Query(Query.in(ch.channelName), Query.hasLink)
+        slackClient.searchMessages(membership.token.get, SlackSearchRequest(query)).map { response =>
+          response.messages.total
+        }
+      }.flatMap { msgsByChannel =>
+        val numMsgsWithLinks = msgsByChannel.values.toList match {
+          case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
+          case results =>
+            slackLog.error(
+              "Failed to predict the number of ingestable links for", membership.slackTeamName.value,
+              results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
+            )
+            None
+        }
+        (for {
+          msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+            "Slack told us you have",
+            if (channels.nonEmpty) {
+              DescriptionElements(channels.length, "new channels.",
+                numMsgsWithLinks.map(numMsgs => DescriptionElements("We scanned through them and found", numMsgs, "messages with links")),
+                "We just created Kifi libraries for them.")
+            } else {
+              DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
+            }
+          )))).filter(_ => agent.isWorking)
+        } yield {
+          agent.dieIf(channels.isEmpty)
+          slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+        }) getOrElse {
+          slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+          Future.successful(Unit)
+        }
       }
     }
     def ingesting(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
