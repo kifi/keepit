@@ -2,7 +2,6 @@
 
   <div class="kf-container kf-container-toppad">
     <h2>😻 Congrats, we’re syncing your channels now 😻</h2>
-
     <p>We’re pulling in content to ​the <a ui-sref="orgProfile.libraries"><span ng-bind="profile.organization.name"></span> team page</a> — it make take a bit. Full search may take up to an hour because we’re downloading all your links so you can search them.</p>
   </div>
 
@@ -11,7 +10,7 @@
       <div class="kf-container-header"><span>Share the love with your team</span></div>
       <p>Since you already have our browser extensions (high five!), encourage your team to get it as well so they can benefit from the links kept here. Send them to this link to sign up with Slack and automatically join this Kifi team:</p>
       <div class="kf-slack-confirm-team-link-wrapper">
-        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
+        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="clickedCopy()">
         <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
       </div>
     </div>
@@ -31,7 +30,7 @@
       <div class="kf-container-header"><span>Share the love with your team</span></div>
       <p>After you explore around, you can quickly get your team on Kifi by sending them this link:</p>
       <div class="kf-slack-confirm-team-link-wrapper">
-        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
+        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="clickedCopy()">
         <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
       </div>
     </div>
