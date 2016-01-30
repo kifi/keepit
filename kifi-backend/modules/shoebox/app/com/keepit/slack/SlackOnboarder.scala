@@ -294,7 +294,7 @@ class SlackOnboarderImpl @Inject() (
               DescriptionElements("I just sync'd all your :linked_paperclips: links over to Kifi and boy are my robotic arms tired.",
                 numMsgsWithLinks.map(numMsgs => DescriptionElements(
                   "I found", numMsgs, "message with links in them, and once they're indexed you can access all of them inside your",
-                  14, "newly created libraries.  As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your granular team settings here.",
+                  channels.length, "newly created libraries.  As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your granular team settings here.",
                   "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
                 )))
             } else {
