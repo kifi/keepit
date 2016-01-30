@@ -7,7 +7,6 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
-import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject }
 import com.keepit.common.http._
@@ -55,22 +54,19 @@ class DeepLinkRouterImpl @Inject() (
   }
 
   def generateDiscussionViewRedirect(data: JsObject, redirectToKeepPage: Boolean): Option[DeepLinkRedirect] = {
-    val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
-    val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
     val keepPubIdOpt = (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
     val keepIdOpt = keepPubIdOpt.flatMap(kid => Keep.decodePublicIdStr(kid.id).toOption)
-    val keepPageOpt = for {
-      _ <- Some(()) if redirectToKeepPage
+    for {
       keepId <- keepIdOpt
       keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
-      _ <- Some(()) if keep.connections.libraries.size == 1 // redirect user to keep.url for library-less keep pages
       accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
-    } yield keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
-
-    for {
-      uri <- uriOpt
-      keepPubId <- keepPubIdOpt
-    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/${keepPubId.id}").filter(_ => keepPageOpt.isEmpty))
+    } yield {
+      val url = {
+        if (redirectToKeepPage) keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
+        else keep.url
+      }
+      DeepLinkRedirect(url, Some(s"/messages/${Keep.publicId(keep.id.get).id}").filterNot(_ => redirectToKeepPage))
+    }
   }
 
   def generateRedirectUrl(data: JsObject): Option[String] = {
@@ -107,8 +103,10 @@ class DeepLinkRouterImpl @Inject() (
 }
 
 object DeepLinkRouter {
-  def libraryLink(libId: PublicId[Library]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id)
-  def organizationLink(orgId: PublicId[Organization]): JsObject = Json.obj("t" -> DeepLinkType.OrganizationView, DeepLinkField.OrganizationId -> orgId.id)
+  private def authTokenField(authTokenOpt: Option[String]) = authTokenOpt.map(t => Json.obj(DeepLinkField.AuthToken -> t)).getOrElse(Json.obj(Seq.empty: _*))
+  def libraryLink(libId: PublicId[Library], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id) ++ authTokenField(authToken)
+  def organizationLink(orgId: PublicId[Organization], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.OrganizationView, DeepLinkField.OrganizationId -> orgId.id) ++ authTokenField(authToken)
+  def keepLink(keepId: PublicId[Keep], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.DiscussionView, DeepLinkField.KeepId -> keepId.id) ++ authTokenField(authToken)
 }
 
 object DeepLinkType {

@@ -13,7 +13,7 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
@@ -127,14 +127,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case Some(post) =>
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), "."
+          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), ".", "Add Comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
         )
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added",
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
           "to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute),
-          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), "."
+          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), ".", "Add Comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
         )
     }
   }

@@ -91,8 +91,9 @@ class PathCommander @Inject() (
   private def keepPageViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = {
     Path(s"s/${slackTeamId.value}/k/${Keep.publicId(keep.id.get).id}/${UrlHash.hashUrl(keep.url).urlEncoded}")
   }
-  def keepPageOnKifiViaSlack(keep: Keep, slackTeamId: SlackTeamId) = keepPageViaSlack(keep, slackTeamId) + "/kifi"
-  def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): String = keep.url // TODO(ryan): this should be a Kifi route at some point
+  def keepPageOnKifiViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/kifi"
+  def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/web"
+  def userPageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/u/${basicUser.externalId.id}")
 
   /**
    * MISCELLANEOUS
