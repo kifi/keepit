@@ -6,10 +6,10 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth.{ OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.oauth.{ SlackIdentity, OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
 import com.keepit.payments.CreditCode
-import com.keepit.slack.models.SlackTeamId
+import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamId }
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -63,6 +63,7 @@ class AuthHelper @Inject() (
     userValueRepo: UserValueRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
     orgRepo: OrganizationRepo,
+    slackMembershipRepo: SlackTeamMembershipRepo,
     ktlRepo: KeepToLibraryRepo,
     s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
@@ -252,6 +253,7 @@ class AuthHelper @Inject() (
               userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress))
             }
           }
+          if (slackMembershipRepo.getByUserId(user.id.get).nonEmpty) userValueRepo.setValue(user.id.get, UserValueName.SHOW_SLACK_CREATE_TEAM_POPUP, true)
           val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
           heimdal.trackEvent(completedSignupEvent)
         }
