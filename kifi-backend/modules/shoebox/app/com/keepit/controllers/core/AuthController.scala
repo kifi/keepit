@@ -464,9 +464,7 @@ class AuthController @Inject() (
                 Redirect("/twitter/thanks")
               case "slack" =>
                 val slackTeamIdFromCookie = slackTeamIdCookie.map(_.value).map(SlackTeamId(_))
-                val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-                val slackTeamId = slackTeamIdFromCookie orElse slackTeamIdFromIdentity
-                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url)
+                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamIdFromCookie).url)
               case _ =>
                 Redirect(homeUrl)
             } getOrElse Redirect(homeUrl)
@@ -634,7 +632,9 @@ class AuthController @Inject() (
   def startWithSlack(slackTeamId: Option[SlackTeamId]) = MaybeUserAction { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
-        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamId).url, SEE_OTHER)
+        val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
+        val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
+        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
