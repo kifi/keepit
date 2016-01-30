@@ -59,12 +59,13 @@ object OrganizationSlackInfo {
   implicit val writes: Writes[OrganizationSlackInfo] = Json.writes[OrganizationSlackInfo]
 }
 
-case class UserSlackInfo(
-  memberships: Seq[(SlackUsername, SlackTeamName)])
+case class UserSlackInfo(memberships: Seq[UserSlackTeamInfo])
+
+@json
+case class UserSlackTeamInfo(teamId: SlackTeamId, orgId: Option[PublicId[Organization]], teamName: SlackTeamName, slackUserId: SlackUserId, username: SlackUsername)
 
 object UserSlackInfo {
   def empty = UserSlackInfo(memberships = Seq.empty)
-  private implicit val helperWrites = KeyFormat.key2Writes[SlackUsername, SlackTeamName]("username", "teamName")
   implicit val writes: Writes[UserSlackInfo] = Json.writes[UserSlackInfo]
 }
 
@@ -258,7 +259,11 @@ class SlackInfoCommanderImpl @Inject() (
     if (!viewerId.contains(userId)) UserSlackInfo.empty
     else {
       val memberships = slackTeamMembershipRepo.getByUserId(userId)
-      UserSlackInfo(memberships = memberships.map(stm => (stm.slackUsername, stm.slackTeamName)))
+      val userSlackTeamInfos = memberships.map { stm =>
+        val orgIdOpt = slackTeamRepo.getBySlackTeamId(stm.slackTeamId).flatMap(_.organizationId)
+        UserSlackTeamInfo(stm.slackTeamId, orgIdOpt.map(Organization.publicId), stm.slackTeamName, stm.slackUserId, stm.slackUsername)
+      }
+      UserSlackInfo(userSlackTeamInfos)
     }
   }
 }

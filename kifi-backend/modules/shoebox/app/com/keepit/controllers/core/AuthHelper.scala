@@ -195,6 +195,7 @@ class AuthHelper @Inject() (
 
     val modelPubIdFromCookie = request.cookies.get("modelPubId").map(_.value)
     val authTokenFromCookie = request.cookies.get("authToken").map(_.value)
+    val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(cookie => SlackTeamId(cookie.value))
     def generateRegIntent[T](pubIdOpt: Option[String], authTokenOpt: Option[String], generator: PublicIdGenerator[T]): Option[PostRegIntent] = {
       generator match {
         case Library => pubIdOpt.flatMap(Library.validatePublicId(_).flatMap(Library.decodePublicId).toOption).map(id => AutoFollowLibrary(id, authTokenOpt))
@@ -209,8 +210,7 @@ class AuthHelper @Inject() (
       }
     }
 
-    val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-
+    val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
     val intent: PostRegIntent = {
       val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
         case "applyCredit" =>
@@ -319,7 +319,7 @@ class AuthHelper @Inject() (
         } else {
           Ok(Json.obj("uri" -> uri))
         }
-        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*).withCookies(slackTeamIdFromIdentity.map(id => Cookie("slackTeamId", id.value)).toSeq: _*)
+        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*)
           .withSession(request.session.setUserId(user.id.get))
       }
     )

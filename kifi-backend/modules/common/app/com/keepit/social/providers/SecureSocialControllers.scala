@@ -3,7 +3,7 @@ package com.keepit.social.providers
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession
 import com.keepit.common.logging.Logging
-import com.keepit.social.UserIdentity$
+import com.keepit.social.{ IdentityHelpers, UserIdentity$ }
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._
@@ -103,7 +103,10 @@ object ProviderController extends Controller with Logging {
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
         log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
-        val kifiCookies = Seq(request.cookies.get("modelPubId"), request.cookies.get("authToken"), request.cookies.get("intent")).flatten
+        val slackTeamIdCookie = IdentityHelpers.parseSlackIdMaybe(userIdentity.identityId).toOption.map {
+          case (slackTeamId, _) => Cookie("slackTeamId", slackTeamId.value)
+        }
+        val kifiCookies = Seq(request.cookies.get("modelPubId"), request.cookies.get("authToken"), request.cookies.get("intent"), slackTeamIdCookie).flatten
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
