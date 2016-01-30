@@ -24,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackTeamDigestConfig {
-  val minPeriodBetweenTeamDigests = Period.days(7)
+  val minPeriodBetweenTeamDigests = Period.days(3)
   val minIngestedLinksForTeamDigest = 10
 
   // TODO(ryan): to release to the public, change canPushToTeam to `true`
@@ -173,14 +173,15 @@ class SlackTeamDigestNotificationActor @Inject() (
       ).filter(_ => n == 9)
   }
 
-  private val kifiSlackTipAttachments: IndexedSeq[SlackAttachment] = {
+  private def kifiSlackTipAttachments(slackTeamId: SlackTeamId): IndexedSeq[SlackAttachment] = {
     import DescriptionElements._
     IndexedSeq(
-      SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.magnifyingGlass, "Search them using the `/kifi` Slack command"
-      )))).withFullMarkdown,
+      // TODO(ryan): uncomment this after Product Hunt launch
+      // SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+      //   SlackEmoji.magnifyingGlass, "Search them using the `/kifi` Slack command"
+      // )))).withFullMarkdown,
       SlackAttachment(color = Some(LibraryColor.ORANGE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        "See them on Google by installing the", "browser extension" --> LinkElement(PathCommander.browserExtension)
+        "See them on Google by installing the", "browser extension" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeamId))
       )))).withFullMarkdown
     )
   }
@@ -200,7 +201,7 @@ class SlackTeamDigestNotificationActor @Inject() (
           topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId).absolute)))
         }
       )))).withFullMarkdown
-    ) ++ prng.choice(kifiSlackTipAttachments)
+    ) ++ prng.choice(kifiSlackTipAttachments(digest.slackTeam.slackTeamId))
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
