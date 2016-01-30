@@ -243,7 +243,7 @@ class SlackTeamCommanderImpl @Inject() (
                 slackClient.getChannels(validToken, excludeArchived = true).flatMap { channels =>
                   def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || alreadyProcessedChannels.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
                   val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
-                  onboardingAgent.channels(channelsToIntegrate).flatMap { _ =>
+                  onboardingAgent.channels(membership, channelsToIntegrate).flatMap { _ =>
                     val libCreationsByChannel = channelsToIntegrate.map { ch =>
                       SlackChannelIdAndName(ch.channelId, ch.channelName) -> setupSlackChannel(team, membership, ch)
                     }.toMap
