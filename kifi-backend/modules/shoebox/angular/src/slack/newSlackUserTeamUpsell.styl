@@ -1,0 +1,53 @@
+.kf-new-slack-user-team-upsell
+  display: flex
+  flex-direction: column
+  align-items: center
+
+.kf-new-slack-user-team-upsell-logos
+  display: flex
+  justify-content: space-around
+  margin: 0 15px
+  width: 100%
+
+.kf-new-slack-user-team-upsell-logo
+  width: 64px
+  height: 64px
+  background-size: contain
+  background-position: center
+  background-repeat: no-repeat
+
+.kf-new-slack-user-team-upsell-slack
+  background-image: url('/img/svg/slack.svg')
+
+.kf-new-slack-user-team-upsell-arrow
+  height: 50%
+  background-image: url('/img/svg/arrow-right.svg')
+
+.kf-new-slack-user-team-upsell-arrow-left
+  transform: scaleX(-1)
+
+.kf-new-slack-user-team-upsell-kifi
+  background-image: url('/img/svg/kifi-clover-logo.svg')
+
+.kf-new-slack-user-team-upsell-lib
+  white-space: nowrap
+
+// Use pseudo element so the card's line of text doesn't
+// have extra head room to accommodate its height
+.kf-new-slack-user-team-upsell-card
+  position: relative
+  display: inline-block
+  width: 14px
+  margin-right: 2px
+
+.kf-new-slack-user-team-upsell-card:before
+  content: ''
+  position: absolute
+  top: -15px
+  display: inline-block
+  width: 14px
+  height: 18px
+  margin-right: 2px
+  border-radius: 17%
+  background-color: currentColor
+  box-shadow: 1px 1px 0px #ddd, 2px 2px 0px #aaa
