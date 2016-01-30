@@ -21,6 +21,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI]
+  def getByUrlHash(urlHash: UrlHash)(implicit session: RSession): Option[NormalizedURI]
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
@@ -150,6 +151,12 @@ class NormalizedURIRepoImpl @Inject() (
       keys.map { k => k -> fetched.get(k.urlHash) }.toMap
     }
     result.collect { case (_, Some(uri)) => uri.url -> uri }
+  }
+
+  def getByUrlHash(urlHash: UrlHash)(implicit session: RSession): Option[NormalizedURI] = {
+    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(urlHash)) {
+      rows.filter(row => row.urlHash === urlHash).firstOption
+    }
   }
 
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =

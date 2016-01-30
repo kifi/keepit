@@ -7,10 +7,13 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.http._
+import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
 import play.api.mvc.Result
 import securesocial.core.SecureSocial
+import views.html
 
 import scala.concurrent.ExecutionContext
 
@@ -21,6 +24,7 @@ class SlackAuthRouter @Inject() (
   orgRepo: OrganizationRepo,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  uriRepo: NormalizedURIRepo,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
@@ -45,7 +49,7 @@ class SlackAuthRouter @Inject() (
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgPage(org).absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, keepIdOpt = None, target)
           case false => Redirect(target)
         }
       }
@@ -59,24 +63,48 @@ class SlackAuthRouter @Inject() (
         (for {
           org <- lib.organizationId.map(orgRepo.get).filter(_.isActive)
           _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
-        } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
+        } yield redirectThroughSlackAuth(org, slackTeamId, keepIdOpt = None, target)) getOrElse Redirect(target)
       }
     }
     redir.getOrElse(notFound(request))
   }
 
   def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = MaybeUserAction { implicit request =>
-    val redir = db.readOnlyMaster { implicit s =>
-      Keep.decodePublicId(pubId).toOption.flatMap(keepId => Some(keepRepo.get(keepId)).filter(_.isActive)).map { keep =>
-        val target = pathCommander.pathForKeep(keep).absolute
-        (for {
-          org <- keep.organizationId.map(orgRepo.get).filter(_.isActive)
-          _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
-        } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
+    val (deepLinkRedirect, isLoggedIn) = request match {
+      case ur: UserRequest[_] => (ur.kifiInstallationId.isDefined && ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate), true)
+      case _ => (false, false)
+    }
+
+    // show 3rd party url with ext if possible, otherwise go to keep page (with proper upsells) or 3rd party url
+    val redirOpt = db.readOnlyMaster { implicit s =>
+      Keep.decodePublicId(pubId)
+        .map(keepId => keepRepo.get(keepId)).filter(_.isActive)
+        .map { keep =>
+          val keepPageUrl = pathCommander.pathForKeep(keep).absolute
+          if (deepLinkRedirect) {
+            val deepRedirect = DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")) // open ext
+            Ok(html.mobile.deepLinkRedirect(deepRedirect, DeepLinkRouter.keepLink(pubId, None)))
+          } else if (onKifi && isLoggedIn) {
+            Redirect(keepPageUrl)
+          } else if (onKifi && !isLoggedIn) {
+            val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
+            val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))
+            orgOpt
+              .map(org => redirectThroughSlackAuth(org, slackTeamId, Some(pubId), keepPageUrl))
+              .getOrElse(Redirect(keepPageUrl))
+          } else Redirect(keep.url)
+        }
+    }
+    redirOpt.getOrElse {
+      if (onKifi) notFound(request)
+      else {
+        db.readOnlyMaster { implicit s =>
+          uriRepo.getByUrlHash(urlHash)
+            .map(uri => Redirect(uri.url))
+            .getOrElse(notFound(request))
+        }
       }
     }
-    // TODO(ryan): at some point, maybe we can do something with the url hash if we can't find the keep
-    redir.getOrElse(notFound(request))
   }
 
   private def weWantThisUserToAuthWithSlack(userIdOpt: Option[Id[User]], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
@@ -92,8 +120,8 @@ class SlackAuthRouter @Inject() (
     }
   }
 
-  private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String)(implicit request: MaybeUserRequest[_]): Result = {
-    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack&slackTeamId=${slackTeamId.value}"
+  private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, keepIdOpt: Option[PublicId[Keep]], url: String)(implicit request: MaybeUserRequest[_]): Result = {
+    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack${keepIdOpt.map(_ => s"=keep").getOrElse("")}&slackTeamId=${slackTeamId.value}" + keepIdOpt.map(id => s"&keep=$id").getOrElse("")
     Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 

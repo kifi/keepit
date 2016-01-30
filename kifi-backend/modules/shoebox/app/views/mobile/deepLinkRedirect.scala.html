@@ -6,7 +6,6 @@
 @deepLinkStr = @{UriEncoding.encodePathSegment(deepLinkData.toString(), "ascii")}
 
 <!DOCTYPE html>
-
 @if(r.externalLocator.isDefined) {
 <html data-kifi-deep-link='{"url":"@{r.url}","locator":"@{r.externalLocator.get}"}'>
 }
