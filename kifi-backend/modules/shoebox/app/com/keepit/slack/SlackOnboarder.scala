@@ -272,6 +272,7 @@ class SlackOnboarderImpl @Inject() (
       }
     }
     def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+      import DescriptionElements._
       FutureHelpers.accumulateRobustly(channels) { ch =>
         import SlackSearchRequest._
         val query = Query(Query.in(ch.channelName), Query.hasLink)
@@ -289,6 +290,7 @@ class SlackOnboarderImpl @Inject() (
             None
         }
         (for {
+          org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
           msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
             if (channels.nonEmpty) {
               DescriptionElements("I just sync'd all your :linked_paperclips: links over to Kifi and boy are my robotic arms tired.",
@@ -300,7 +302,9 @@ class SlackOnboarderImpl @Inject() (
                     case 0 => "no messages. Bummer. If we HAD found any, you could find them"
                   },
                   "inside your", if (channels.length > 1) "newly created libraries" else "new library", ".",
-                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your granular team settings here.",
+                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
+                  "granular team settings",
+                  "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
                   "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
                 )))
             } else {
