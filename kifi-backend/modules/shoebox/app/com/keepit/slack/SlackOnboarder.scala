@@ -293,8 +293,14 @@ class SlackOnboarderImpl @Inject() (
             if (channels.nonEmpty) {
               DescriptionElements("I just sync'd all your :linked_paperclips: links over to Kifi and boy are my robotic arms tired.",
                 numMsgsWithLinks.map(numMsgs => DescriptionElements(
-                  "I found", numMsgs, "message with links in them, and once they're indexed you can access all of them inside your",
-                  channels.length, "newly created libraries.  As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your granular team settings here.",
+                  "I found",
+                  numMsgs match {
+                    case n if n > 1 => s"$n messages with links, and once they're indexed you can access all of them"
+                    case 1 => "one message with a link, and once it's indexed you can access it"
+                    case 0 => "no messages. Bummer. If we HAD found any, you could find them"
+                  },
+                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", ".",
+                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your granular team settings here.",
                   "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
                 )))
             } else {
