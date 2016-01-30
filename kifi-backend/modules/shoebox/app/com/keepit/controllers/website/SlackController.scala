@@ -145,10 +145,9 @@ class SlackController @Inject() (
       }
 
       case SyncPublicChannels(orgId) =>
-        Future.fromTry(slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId)).flatMap { slackTeam =>
-          slackTeamCommander.syncPublicChannels(userId, slackTeam).map { _ =>
-            SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
-          }
+        Future.fromTry(slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId)).map { slackTeam =>
+          slackTeamCommander.syncPublicChannels(userId, slackTeam)
+          SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
         }
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
