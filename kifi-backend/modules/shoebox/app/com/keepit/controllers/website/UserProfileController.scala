@@ -204,7 +204,7 @@ class UserProfileController @Inject() (
         userProfileCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
           val head = connections.take(limit)
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
-            val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
+            val userMap = basicUserRepo.loadAll(connections.take(750).map(_.userId).toSet)
             val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
             val headUserWithStatus = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
