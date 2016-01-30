@@ -6,9 +6,9 @@ angular.module('kifi')
   '$scope', '$timeout', 'billingService', 'profileService', 'ORG_PERMISSION', '$FB', '$twitter', 'URI',
   function ($scope, $timeout, billingService, profileService, ORG_PERMISSION, $FB, $twitter, URI) {
     $scope.redeemCode = '';
-    $scope.trackingType = 'org_settings:earn_credits';
+    $scope.trackingType = 'org_profile:settings:earn_credits';
     $scope.ORG_PERMISSION = ORG_PERMISSION;
-    
+
     $scope.hasPermission = function () {
       return $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
     };

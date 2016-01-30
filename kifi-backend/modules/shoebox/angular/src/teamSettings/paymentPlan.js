@@ -14,7 +14,7 @@ angular.module('kifi')
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.disableSaveButton = false;
-    $scope.trackingType = 'org_settings:payment_plan';
+    $scope.trackingType = 'org_profile:settings:payment_plan';
     $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
 
     var PREDEFINED_CYCLE_PERIOD = {

@@ -218,7 +218,7 @@ angular.module('kifi')
     }
 
     $scope.onClickTrack = function(trackingValue) {
-      orgProfileService.trackEvent('user_clicked_page', $scope.profile, { type: 'org_settings', action: trackingValue });
+      orgProfileService.trackEvent('user_clicked_page', $scope.profile, { type: 'org_profile', action: trackingValue });
     };
 
     function onBeforeUnload(e) {
