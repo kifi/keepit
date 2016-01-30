@@ -302,8 +302,10 @@ class SlackController @Inject() (
   private def handleAsAPIRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
     response match {
       case SlackResponse.RedirectClient(url) => Ok(Json.obj("redirect" -> url))
-      case SlackResponse.ActionPerformed(urlOpt) => Ok(Json.obj("success" -> true, "url" -> urlOpt))
-      case SlackResponse.Error(code) => BadRequest(Json.obj("error" -> code))
+      case SlackResponse.ActionPerformed(urlOpt) => Ok(Json.obj("success" -> true, "redirect" -> urlOpt))
+      case SlackResponse.Error(code) =>
+        log.warn(s"[SlackController#handleAsAPIRequest] Error: $code")
+        BadRequest(Json.obj("error" -> code))
     }
   }
 }

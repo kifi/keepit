@@ -1,46 +1,39 @@
 <div>
-  <!--
 
-  Section 1
-  Visible to everyone
-  "We're ingesting all of your teams links ..... blah blah this may take a few minutes
+  <div class="kf-container kf-container-toppad">
+    <h2>😻 Congrats, we’re syncing your channels now 😻</h2>
 
-  Section 2
-  If the user is currently in Chrome or FFX with an installed extension >  hide this section
-  If the user is in Chrome or FFX and no installed extension >  Buttons to install  (I don't care if they ever installed in the past, only if they are currently on a browser with it)
-  If the user is in IE, Safari, etc then buttons to download Chrome or FFX mentioning our awesome extension (same buttons we have on the /install page when you hit it on IE)
-
-  Section 3
-  Visible to everyone
-  Button to visit newly sync'd team (ideally less obvious than the install CTA).
-
-  -->
-
-  <h2>😻 Congrats, we’re syncing your channels now 😻</h2>
-
-  <p>We’re pulling in content to ​the <a ui-sref="orgProfile.libraries"><span ng-bind="profile.organization.name"></span> team page</a> — it make take a bit. Full search may take up to an hour because we’re downloading all your links so you can search them.</p>
+    <p>We’re pulling in content to ​the <a ui-sref="orgProfile.libraries"><span ng-bind="profile.organization.name"></span> team page</a> — it make take a bit. Full search may take up to an hour because we’re downloading all your links so you can search them.</p>
+  </div>
 
   <div ng-if="hasInstalled">
-    <p>Since you already have our browser extensions (high five!), encourage your team to get it as well so they can benefit from the links kept here. Send them to this link to sign up with Slack and automatically join this Kifi team:</p>
-    <div class="kf-slack-confirm-team-link-wrapper">
-      <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
-      <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
+    <div class="kf-container kf-container-toppad">
+      <div class="kf-container-header"><span>Share the love with your team</span></div>
+      <p>Since you already have our browser extensions (high five!), encourage your team to get it as well so they can benefit from the links kept here. Send them to this link to sign up with Slack and automatically join this Kifi team:</p>
+      <div class="kf-slack-confirm-team-link-wrapper">
+        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
+        <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
+      </div>
     </div>
   </div>
 
   <div ng-if="!hasInstalled">
-    <p>Don’t miss the best part of Kifi: our browser extension integrates your keeps with Google Search and allows you to talk <i>on pages</i> with your team.</p>
+    <div class="kf-container kf-container-toppad">
+      <div class="kf-container-header"><span>Get our browser add-on</span></div>
+      <p>Don’t miss the best part of Kifi: our browser extension integrates your keeps with Google Search and allows you to talk <i>on pages</i> with your team.</p>
+      <p ng-if="!canInstall">We currently support Chrome and Firefox, and will support Safari soon. Hang tight!</p>
+      <p ng-if="canInstall">
+        <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-slack-confirm-ext-btn" ng-click="installExt()">Get the <span ng-bind="platform"></span> extension</button>
+      </p>
+    </div>
 
-    <p ng-if="!canInstall">We currently support Chrome and Firefox, and will support Safari soon. Hang tight!</p>
-
-    <p ng-if="canInstall">
-      <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-slack-confirm-ext-btn" ng-click="installExt()">Get the <span ng-bind="platform"></span> extension</button>
-    </p>
-
-    <p>After you explore around, you can quickly get your team on Kifi by sending them this link:</p>
-    <div class="kf-slack-confirm-team-link-wrapper">
-      <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
-      <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
+    <div class="kf-container kf-container-toppad">
+      <div class="kf-container-header"><span>Share the love with your team</span></div>
+      <p>After you explore around, you can quickly get your team on Kifi by sending them this link:</p>
+      <div class="kf-slack-confirm-team-link-wrapper">
+        <input type="text" ng-model="teamLink" class="kf-textbox kf-slack-confirm-team-link" clipboard readonly text="teamLink" ng-click="showCopied()">
+        <div ng-if="showCopiedConfirm" class="kf-slack-confirm-copied">Copied!</div>
+      </div>
     </div>
   </div>
 </div>
