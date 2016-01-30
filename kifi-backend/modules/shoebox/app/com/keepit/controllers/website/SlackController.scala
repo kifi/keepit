@@ -91,8 +91,9 @@ class SlackController @Inject() (
       }
     } yield {
       result match {
-        case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER) // explicit error page?
-        case _ => Redirect("/", SEE_OTHER) // explicit error page?
+        case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
+        case SlackResponse.ActionPerformed(url) => Redirect(url getOrElse "/", SEE_OTHER)
+        case SlackResponse.Error => Redirect("/", SEE_OTHER) // explicit error page?
       }
     }
 
