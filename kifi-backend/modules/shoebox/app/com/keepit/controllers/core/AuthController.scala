@@ -284,6 +284,7 @@ class AuthController @Inject() (
     }
   }
 
+  // todo(Léo): why doesn't this deal with intents at all?
   def afterLogin() = MaybeUserAction { implicit req =>
     req match {
       case userRequest: UserRequest[_] =>
@@ -295,10 +296,6 @@ class AuthController @Inject() (
         } else if (userRequest.kifiInstallationId.isEmpty && !hasSeenInstall(userRequest)) {
           inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
           Redirect(com.keepit.controllers.website.HomeControllerRoutes.install())
-        } else if (userRequest.cookies.get("slackTeamId").isDefined) {
-          val slackTeamIdCookie = userRequest.cookies.get("slackTeamId").get
-          val slackTeamId = SlackTeamId(slackTeamIdCookie.value)
-          Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(Some(slackTeamId))).discardingCookies(DiscardingCookie(slackTeamIdCookie.name))
         } else {
           userRequest.session.get(SecureSocial.OriginalUrlKey) map { url =>
             Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
@@ -415,6 +412,7 @@ class AuthController @Inject() (
     authHelper.userPasswordSignupAction
   }
 
+  // todo(Léo): why does this deal with intents just like AuthHelper? DRY?
   private def doSignupPage(implicit request: MaybeUserRequest[_]): Result = {
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent(agent)
@@ -491,8 +489,6 @@ class AuthController @Inject() (
           val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity(_))
           if (identityOpt.isDefined) {
             val identity = identityOpt.get
-            val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-            val slackTeamIdCookie = slackTeamIdFromIdentity.map(id => Cookie("slackTeamId", id.value))
             if (identity.identityId.userId.trim.isEmpty) {
               throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
             }
@@ -503,7 +499,7 @@ class AuthController @Inject() (
               Ok(views.html.authMinimal.linkSocial(
                 identity.identityId.providerId,
                 identity.email.getOrElse(loginAndLinkEmail.getOrElse(""))
-              )).withCookies(slackTeamIdCookie.toSeq: _*)
+              ))
             } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               log.info(s"[doSignupPage] ${identity} logged in with wrong network")
@@ -633,8 +629,9 @@ class AuthController @Inject() (
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
+        val discardedCookie = DiscardingCookie("slackTeamId")
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
-        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER)
+        Redirect(com.keepit.controllers.website.routes.SlackController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
