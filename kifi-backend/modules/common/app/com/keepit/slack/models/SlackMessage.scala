@@ -141,6 +141,7 @@ object SlackReaction {
 
 case class SlackEmoji(value: String)
 object SlackEmoji {
+  val arrowsCounterclockwise = SlackEmoji(":arrows_counterclockwise:")
   val bee = SlackEmoji(":bee:")
   val clipboard = SlackEmoji(":clipboard:")
   val constructionWorker = SlackEmoji(":construction_worker:")
@@ -150,6 +151,7 @@ object SlackEmoji {
   val magnifyingGlass = SlackEmoji(":mag_right:")
   val rocket = SlackEmoji(":rocket:")
   val star = SlackEmoji(":star:")
+  val sweatSmile = SlackEmoji(":sweat_smile:")
 }
 
 sealed abstract class SlackCommand(val value: String)
