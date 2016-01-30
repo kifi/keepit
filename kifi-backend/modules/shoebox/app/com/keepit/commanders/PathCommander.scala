@@ -67,6 +67,7 @@ class PathCommander @Inject() (
     Path(s"s/${slackTeamId.value}/oi/${orgId.id}")
   }
   def orgIntegrationsPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgIntegrationsPageViaSlackByPublicId(org.orgId, slackTeamId)
+  def orgIntegrationsPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgIntegrationsPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
 
   /**
    * LIBRARY
