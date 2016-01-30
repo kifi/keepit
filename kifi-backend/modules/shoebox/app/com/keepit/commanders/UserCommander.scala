@@ -28,7 +28,7 @@ import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.UserSlackInfo
+import com.keepit.slack.{ SlackInfoCommander, UserSlackInfo }
 import com.keepit.slack.models._
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
@@ -80,7 +80,17 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationView], pendingOrgs: Seq[OrganizationView], potentialOrgs: Seq[OrganizationView])
+case class BasicUserInfo(
+  basicUser: BasicUser,
+  info: UpdatableUserInfo,
+  notAuthed: Seq[String],
+  numLibraries: Int,
+  numConnections: Int,
+  numFollowers: Int,
+  orgs: Seq[OrganizationView],
+  pendingOrgs: Seq[OrganizationView],
+  potentialOrgs: Seq[OrganizationView],
+  slack: UserSlackInfo)
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -189,6 +199,7 @@ class UserCommanderImpl @Inject() (
     experimentRepo: UserExperimentRepo,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    slackInfoCommander: SlackInfoCommander,
     airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -270,7 +281,7 @@ class UserCommanderImpl @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgs) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgs, userSlackInfo) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
@@ -301,7 +312,9 @@ class UserCommanderImpl @Inject() (
         }
       val potentialOrgViews = potentialOrgIds.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgViews.toSeq)
+      val userSlackInfo = slackInfoCommander.getUserSlackInfo(user.id.get, Some(user.id.get))
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgViews.toSeq, userSlackInfo)
     }
 
     val emailInfos = db.readOnlyReplica { implicit session =>
@@ -317,7 +330,7 @@ class UserCommanderImpl @Inject() (
           )
       }
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs, userSlackInfo)
   }
 
   private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)

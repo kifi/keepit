@@ -240,11 +240,16 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
+    function showSlackCreateTeamPopup() {
+      return profileService.prefs.show_slack_create_team_popup && profileService.me.slack.filter(function (slackTeamInfo) {
+        return slackTeamInfo.orgId !== null;
+      })[0] === null;
+    }
+
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
       var newInstall = installService.installedVersion && profileService.prefs.auto_show_guide;
       var ftue = profileService.prefs.has_seen_ftue === false;
-      var showCreateTeamPopup = profileService.prefs.show_slack_create_team_popup;
-      return newInstall || ftue || showCreateTeamPopup;
+      return newInstall || ftue || showSlackCreateTeamPopup();
     }, function (show) {
       if (show) {
         if (profileService.prefs.has_seen_ftue === false) {
@@ -255,15 +260,18 @@ angular.module('kifi')
           extensionLiaison.triggerGuide();
           profileService.savePrefs({auto_show_guide: null});
           unregisterAutoShowGuide();
-        } else if (profileService.isFakeUser() && profileService.prefs.show_slack_create_team_popup && $state.current.name === 'home.feed') {
+        } else if (profileService.isFakeUser() && showSlackCreateTeamPopup() && $state.current.name === 'home.feed') {
           profileService.savePrefs({show_slack_create_team_popup: false});
           modalService.open({
             template: 'slack/newSlackUserTeamUpsellModal.tpl.html',
             modalData: {}
           });
           unregisterAutoShowGuide();
+        } else if (profileService.prefs.show_slack_create_team_popup) {
+          profileService.savePrefs({show_slack_create_team_popup: false});
         }
       }
+
     });
   }
 ]);
