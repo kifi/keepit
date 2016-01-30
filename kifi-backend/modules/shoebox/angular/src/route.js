@@ -90,7 +90,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&libraryId',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId',
         params: {
           organization: null
         },
