@@ -188,11 +188,13 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   private def describeTeamDigest(digest: SlackTeamDigest)(implicit session: RSession): SlackMessageRequest = {
     import DescriptionElements._
+    val slackTeamId = digest.slackTeam.slackTeamId
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
-      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, digest.slackTeam.slackTeamId).absolute),
-        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod), SlackEmoji.gear --> LinkElement(PathCommander.settingsPage))
+      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).absolute),
+        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod),
+        SlackEmoji.gear --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(digest.org, slackTeamId)))
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
