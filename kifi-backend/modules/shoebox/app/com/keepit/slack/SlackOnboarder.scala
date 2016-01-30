@@ -31,14 +31,12 @@ object SlackOnboarder {
   private val KifiSlackTeamId = SlackTeamId("T02A81H50")
   private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
 
-  def getsNewFTUI(slackTeamId: SlackTeamId): Boolean = slackTeamId == KifiSlackTeamId || slackTeamId == BrewstercorpSlackTeamId
-
   def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
     case push: LibraryToSlackChannel => true
     case ingestion: SlackChannelToLibrary => true
   }
 
-  def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId
+  def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId || team.slackTeamName.value.startsWith("eishaytest")
 
   val installationDescription = {
     import DescriptionElements._
@@ -55,7 +53,7 @@ object SlackOnboarder {
     def dieIf(b: Boolean) = if (b) working = false
 
     def intro() = parent.teamAgent.intro(this)()
-    def channels(channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(channels)
+    def channels(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(membership, channels)
     def ingesting() = parent.teamAgent.ingesting(this)()
   }
 }
@@ -91,6 +89,7 @@ class SlackOnboarderImpl @Inject() (
       }.flatMap { welcomeMsg =>
         log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
         debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+          slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} in ${integ.slackTeamId}")
           slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
         }
       }.getOrElse {
@@ -110,18 +109,16 @@ class SlackOnboarderImpl @Inject() (
     for {
       owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
       msg <- (integ, slackTeamForLibrary) match {
-        case (ltsc: LibraryToSlackChannel, _) if !getsNewFTUI(integ.slackTeamId) =>
-          oldSchoolPushMessage(ltsc, owner, lib)
-        case _ if !getsNewFTUI(integ.slackTeamId) =>
-          None
         case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED || (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
           explicitIngestionMessage(sctl, owner, lib, slackTeam)
+        // TODO(ryan): restrict this message to SYSTEM_ORG_GENERAL libraries once we have spammed users enough
+        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if (lib.kind == LibraryKind.SYSTEM_ORG_GENERAL || lib.kind == LibraryKind.SLACK_CHANNEL) && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
+          generalLibraryMessage(sctl, owner, lib, slackTeam)
+        case (sctl: SlackChannelToLibrary, _) => None // for ingestions to any other type of library, stay quiet
         case (ltsc: LibraryToSlackChannel, _) =>
           conservativePushMessage(ltsc, owner, lib)
-        case (sctl: SlackChannelToLibrary, _) =>
-          conservativeIngestionMessage(sctl, owner, lib)
       }
     } yield msg
   }
@@ -139,7 +136,7 @@ class SlackOnboarderImpl @Inject() (
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
       owner, "connected", ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
-      "Links added from to", lib.name, "will be posted here", SlackEmoji.fireworks
+      "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
@@ -149,8 +146,8 @@ class SlackOnboarderImpl @Inject() (
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
         DescriptionElements(SlackEmoji.constructionWorker, "*Managing Links*"),
         DescriptionElements(
-          "Here's the library:", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), ".",
-          "If you don't have a Kifi account, setup is just 20 seconds. From here, you can add/remove/move links."
+          "Go to", "Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), "to access all your links.",
+          "If you don't have a Kifi account, you can sign up with your Slack account in just 20 seconds."
         )
       ))))).withFullMarkdown
     )
@@ -187,6 +184,37 @@ class SlackOnboarderImpl @Inject() (
         DescriptionElements(
           "Go to", "Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), "to access all your links.",
           "If you don't have a Kifi account, you can sign up with your Slack account in just 20 seconds."
+        )
+      ))))).withFullMarkdown
+    )
+    val msg = SlackMessageRequest.fromKifi(text = txt, attachments).quiet
+    Some(msg)
+  }
+
+  private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
+    import DescriptionElements._
+    val txt = DescriptionElements.formatForSlack(DescriptionElements(
+      owner, "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
+      "to auto-magically manage links", SlackEmoji.fireworks
+    ))
+    val attachments = List(
+      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+        DescriptionElements(
+          SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
+          "to access your automatically organized lists of links."
+        ),
+        DescriptionElements("Libraries have been created for each channel integrated. Join Kifi to access your lists of links messaged in Slack")
+      ))))).withFullMarkdown,
+      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+        DescriptionElements(SlackEmoji.star, s"Automatically save links from your #channels"),
+        DescriptionElements("Every time someone includes a link in a chat message, we'll save it and capture every word on the page. It'll be automatically archived and searchable.")
+      ))))).withFullMarkdown,
+      SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+        DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
+        DescriptionElements(
+          "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
+          "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), ".",
+          "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android apps" --> LinkElement(PathCommander.android)
         )
       ))))).withFullMarkdown
     )
@@ -239,19 +267,41 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def channels(agent: TeamOnboardingAgent)(channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
-      (for {
-        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-          "Slack told us you have",
-          if (channels.nonEmpty) DescriptionElements(channels.length, "new channels.", "We're creating Kifi libraries for them now.")
-          else DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
-        )))).filter(_ => agent.isWorking)
-      } yield {
-        agent.dieIf(channels.isEmpty)
-        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
-      }) getOrElse {
-        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
-        Future.successful(Unit)
+    def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+      FutureHelpers.accumulateRobustly(channels) { ch =>
+        import SlackSearchRequest._
+        val query = Query(Query.in(ch.channelName), Query.hasLink)
+        slackClient.searchMessages(membership.token.get, SlackSearchRequest(query)).map { response =>
+          response.messages.total
+        }
+      }.flatMap { msgsByChannel =>
+        val numMsgsWithLinks = msgsByChannel.values.toList match {
+          case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
+          case results =>
+            slackLog.error(
+              "Failed to predict the number of ingestable links for", membership.slackTeamName.value,
+              results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
+            )
+            None
+        }
+        (for {
+          msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+            "Slack told us you have",
+            if (channels.nonEmpty) {
+              DescriptionElements(channels.length, "new channels.",
+                numMsgsWithLinks.map(numMsgs => DescriptionElements("We scanned through them and found", numMsgs, "messages with links")),
+                "We just created Kifi libraries for them.")
+            } else {
+              DescriptionElements("no new channels. Sorry we couldn't be more helpful.")
+            }
+          )))).filter(_ => agent.isWorking)
+        } yield {
+          agent.dieIf(channels.isEmpty)
+          slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+        }) getOrElse {
+          slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+          Future.successful(Unit)
+        }
       }
     }
     def ingesting(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {

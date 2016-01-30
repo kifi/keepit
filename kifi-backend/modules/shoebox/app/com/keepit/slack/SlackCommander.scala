@@ -15,7 +15,7 @@ import play.api.libs.json._
 import com.keepit.common.json.{ TraversableFormat, formatNone }
 import com.keepit.common.core._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
@@ -27,7 +27,7 @@ object SlackCommander {
 trait SlackCommander {
   def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean
-  def getIdentityAndMissingScopes[A <: SlackAuthenticatedAction](userId: Id[User], slackTeamIdOpt: Option[SlackTeamId])(implicit helper: SlackAuthenticatedActionHelper[A]): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
+  def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
 }
 
 @Singleton
@@ -87,7 +87,7 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
-  def getIdentityAndMissingScopes[A <: SlackAuthenticatedAction](userId: Id[User], slackTeamIdOpt: Option[SlackTeamId])(implicit helper: SlackAuthenticatedActionHelper[A]): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
+  def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
     val savedIdentityAndExistingScopesOpt = for {
       slackTeamId <- slackTeamIdOpt
       slackTeamMembership <- db.readOnlyMaster { implicit session =>
@@ -105,7 +105,7 @@ class SlackCommanderImpl @Inject() (
     }
 
     futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, helper.getMissingScopes(existingScopes))
+      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes))
     }
   }
 }

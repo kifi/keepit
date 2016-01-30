@@ -129,7 +129,7 @@
               <td>@userStatistics.invitations</td>
               <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
               <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
-              <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+              <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) } @if( userStatistics.slackMemberships.nonEmpty ) { sl }</td>
               <td>@userStatistics.keepVisibilityCount.secret / @userStatistics.keepVisibilityCount.published / @userStatistics.keepVisibilityCount.organization / @userStatistics.keepVisibilityCount.discoverable</td>
               <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
               <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>

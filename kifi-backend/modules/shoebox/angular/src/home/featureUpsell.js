@@ -32,9 +32,8 @@ angular.module('kifi')
           scope.showFeatureUpsell = scope.showFeatureUpsell || showPromo;
         });
 
-        scope.onClickedSyncAllSlackChannels = function() {
+        scope.clickedConnectSlack = function() {
           $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackSyncAllChannels' });
-          $window.location = '/site/slack/add';
         };
 
         scope.clickedLearnMore = function() {

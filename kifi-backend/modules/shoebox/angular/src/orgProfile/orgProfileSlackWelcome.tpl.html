@@ -1,0 +1,9 @@
+<div class="kf-org-profile-slack-welcome">
+  <a ng-href="{{ user|profileUrl }}"><img class="kf-org-profile-slack-user-image kf-org-profile-slack-welcome-user" ng-src="{{ user|pic:100 }}"></a>
+  <p ng-show="user" class="kf-org-profile-slack-welcome-message">
+    <a class="kf-link kf-link-black kf-org-profile-slack-welcome-username" ng-bind="user|name" ng-href="{{ user|profileUrl }}"></a>
+    has created a
+    <a target="_blank" class="kf-link kf-link-black kf-org-profile-slack-welcome-team" ng-bind="profile|name" ng-href="{{ profile|profileUrl }}"></a>
+    team on Kifi so links sent in Slack channels will be automatically organized and searchable from Google.
+  </p>
+</div>

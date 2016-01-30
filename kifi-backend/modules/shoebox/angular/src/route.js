@@ -71,7 +71,8 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId',
+        // Any params you want passed to redirected states need to be listed here
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -89,10 +90,9 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId',
         params: {
-          organization: null,
-          slackTeamId: null
+          organization: null
         },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -126,10 +126,30 @@ angular.module('kifi')
         url: '',
         controller: 'OrgProfileSlackCtrl',
         templateUrl: 'orgProfile/orgProfileSlack.tpl.html',
+        activetab: null,
+        'abstract': true
+      })
+      .state('orgProfile.slack.basic', {
+        url: '',
+        activetab: null
+      })
+      .state('orgProfile.slack.welcome', {
+        url: '',
         params: {
-          slackTeamId: null,
-          signUpWithSlack: true
+          userId: null
         },
+        controller: 'OrgProfileSlackWelcomeCtrl',
+        templateUrl: 'orgProfile/orgProfileSlackWelcome.tpl.html',
+        activetab: null
+      })
+      .state('orgProfile.slack.keep', {
+        url: '',
+        params: {
+          keepId: null,
+          authToken: ''
+        },
+        controller: 'OrgProfileSlackKeepCtrl',
+        templateUrl: 'orgProfile/orgProfileSlackKeep.tpl.html',
         activetab: null
       })
       .state('orgProfile.members', {
@@ -308,11 +328,6 @@ angular.module('kifi')
         url : '/integrations/slack/teams?slackTeamId',
         templateUrl: 'integrations/slack/teamChooser.tpl.html',
         controller: 'SlackIntegrationTeamChooserCtrl'
-      })
-      .state('slackIntegrationFullSync', {
-        url: '/intregrations/slack/fullsync',
-        templateUrl: 'integrations/slack/fullSync.tpl.html',
-        controller: 'SlackIntegrationFullSyncCtrl'
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {

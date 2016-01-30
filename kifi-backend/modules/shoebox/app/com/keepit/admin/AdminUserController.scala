@@ -424,26 +424,6 @@ class AdminUserController @Inject() (
     }
   }
 
-  def usersStatisticsPage(userIds: Seq[Id[User]]): UserStatisticsPage = {
-
-    val userStats = db.readOnlyReplica { implicit s =>
-      val users = userRepo.getAllUsers(userIds)
-      val socialUserInfos = socialUserInfoRepo.getByUsers(userIds).groupBy(_.userId.get)
-      users.map(u => userStatisticsCommander.userStatistics(u._2, socialUserInfos)).toList
-    }
-
-    val userThreadStats = userIds.map(id => id -> eliza.getUserThreadStats(id)).seq.toMap
-
-    val (newUsers, recentUsers, inviteInfo) = db.readOnlyReplica { implicit s =>
-      val invites = invitationRepo.getRecentInvites()
-      val (accepted, sent) = invites.partition(_.state == InvitationStates.ACCEPTED)
-      val recentUsers = userRepo.getRecentActiveUsers()
-      (Some(userRepo.countNewUsers), recentUsers, Some(InvitationInfo(sent, accepted)))
-    }
-
-    UserStatisticsPage(All, userStats, userThreadStats, 0, userIds.size, userIds.size, newUsers, recentUsers, inviteInfo)
-  }
-
   def usersView(page: Int = 0) = AdminUserPage.async { implicit request =>
     userStatisticsPage(All, page).map { p => Ok(html.admin.users(p, None)) }
   }

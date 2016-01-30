@@ -40,6 +40,7 @@ object SlackTeamMembershipFactory {
     def withUser(user: User) = this.copy(stm = stm.copy(userId = Some(user.id.get)))
     def withTeam(team: SlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.slackTeamId, slackTeamName = team.slackTeamName))
     def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
+    def withScopes(scopes: Set[SlackAuthScope]) = this.copy(stm = stm.copy(scopes = scopes))
   }
 
   def memberships(count: Int) = List.fill(count)(membership())

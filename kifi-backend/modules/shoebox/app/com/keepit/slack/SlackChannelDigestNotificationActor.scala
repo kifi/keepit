@@ -16,7 +16,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
-import org.joda.time.Period
+import org.joda.time.{ Duration, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -83,10 +83,13 @@ class SlackChannelDigestNotificationActor @Inject() (
   }
 
   private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[SlackChannel, Try[Unit]]] = {
-    for {
+    val result = for {
       channels <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(channels)(pushDigestNotificationForChannel)
     } yield pushes
+    result.andThen {
+      case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)
+    }
   }
 
   private def createChannelDigest(slackChannel: SlackChannel)(implicit session: RSession): Option[SlackChannelDigest] = {
@@ -103,7 +106,7 @@ class SlackChannelDigestNotificationActor @Inject() (
 
     Some(SlackChannelDigest(
       slackChannel = slackChannel,
-      digestPeriod = new Period(slackChannel.unnotifiedSince, clock.now),
+      digestPeriod = new Duration(slackChannel.unnotifiedSince, clock.now),
       ingestedLinks = ingestedLinks,
       libraries = librariesIngestedInto.values.toList
     )).filter(_.numIngestedLinks >= minIngestedLinksForChannelDigest)
@@ -115,7 +118,9 @@ class SlackChannelDigestNotificationActor @Inject() (
       DescriptionElements("We have collected", digest.numIngestedLinks, "links from",
         digest.slackChannel.slackChannelName.value, inTheLast(digest.digestPeriod)),
       DescriptionElements("You can browse through them in",
-        DescriptionElements.unwordsPretty(digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.pathForLibrary(lib)))))
+        DescriptionElements.unwordsPretty {
+          digest.libraries.map(lib => lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackChannel.slackTeamId)))
+        })
     )))).quiet
   }
   private def pushDigestNotificationForChannel(channel: SlackChannel): Future[Unit] = {

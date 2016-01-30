@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
+import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
@@ -31,7 +31,7 @@ object LibraryToSlackChannelPusher {
   val maxDelayFromKeptAt = Period.minutes(5)
   val delayFromUpdatedAt = Period.seconds(15)
   val MAX_KEEPS_TO_SEND = 7
-  val INTEGRATIONS_BATCH_SIZE = 40
+  val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
 }
 
@@ -66,7 +66,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   import LibraryToSlackChannelPusher._
 
-  @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
+  @StatsdTimingAsync("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val integrationsToProcess = db.readWrite { implicit s =>
