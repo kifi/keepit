@@ -210,7 +210,6 @@ class AuthHelper @Inject() (
       }
     }
 
-    val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
     val intent: PostRegIntent = {
       val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
         case "applyCredit" =>
