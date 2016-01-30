@@ -37,16 +37,11 @@ class PathCommander @Inject() (
   private def orgMembersPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/members"
   private def orgLibrariesPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle)
   private def orgPlanPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/settings/plan"
+  private def orgIntegrationsPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/settings/integrations"
 
   def orgPage(org: Organization): Path = orgPageByHandle(org.primaryHandle.get.normalized)
   def orgPage(org: BasicOrganization): Path = orgPageByHandle(org.handle)
   def orgPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgRepo.get(orgId))
-
-  private def orgPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
-    Path(s"s/${slackTeamId.value}/o/${orgId.id}")
-  }
-  def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
-  def orgPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(org.orgId, slackTeamId)
 
   def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.primaryHandle.get.normalized)
   def orgMembersPage(org: BasicOrganization): Path = orgMembersPageByHandle(org.handle)
@@ -60,7 +55,18 @@ class PathCommander @Inject() (
   def orgPlanPage(org: BasicOrganization): Path = orgPlanPageByHandle(org.handle)
   def orgPlanPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPlanPage(orgRepo.get(orgId))
 
-  def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
+  def orgIntegrationsPage(org: Organization): Path = orgIntegrationsPageByHandle(org.primaryHandle.get.normalized)
+
+  private def orgPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/o/${orgId.id}")
+  }
+  def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
+  def orgPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(org.orgId, slackTeamId)
+
+  private def orgIntegrationsPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
+    Path(s"s/${slackTeamId.value}/oi/${orgId.id}")
+  }
+  def orgIntegrationsPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgIntegrationsPageViaSlackByPublicId(org.orgId, slackTeamId)
 
   /**
    * LIBRARY
@@ -92,6 +98,7 @@ class PathCommander @Inject() (
    * MISCELLANEOUS
    */
   def browserExtensionViaSlack(slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/i")
+  def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
 
   /**
    * I'd prefer if you just didn't use these routes

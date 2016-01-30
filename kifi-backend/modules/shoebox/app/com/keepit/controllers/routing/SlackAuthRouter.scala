@@ -64,6 +64,19 @@ class SlackAuthRouter @Inject() (
     }
     redir.getOrElse(notFound(request))
   }
+  def fromSlackToOrgIntegrations(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
+    val redir = db.readOnlyMaster { implicit s =>
+      Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
+        val target = pathCommander.orgIntegrationsPage(org).absolute
+        weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
+          case false => Redirect(target)
+        }
+      }
+    }
+    redir.getOrElse(notFound(request))
+  }
+
   def fromSlackToLibrary(slackTeamId: SlackTeamId, pubId: PublicId[Library]) = MaybeUserAction { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Library.decodePublicId(pubId).toOption.flatMap(libId => Some(libraryRepo.get(libId)).filter(_.isActive)).map { lib =>
