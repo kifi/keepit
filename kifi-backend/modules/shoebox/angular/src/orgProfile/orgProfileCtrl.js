@@ -36,8 +36,12 @@ angular.module('kifi')
     }
   });
 
-  if ($stateParams.signUpWithSlack) {
-    $state.go('orgProfile.slack', $stateParams);
+  if ($stateParams.signUpWithSlack === 'welcome') {
+    $state.go('orgProfile.slack.welcome', $stateParams);
+  } else if ($stateParams.signUpWithSlack === 'keep'){
+    $state.go('orgProfile.slack.keep', $stateParams);
+  } else if ($stateParams.signUpWithSlack === '' || $stateParams.signUpWithSlack){
+    $state.go('orgProfile.slack.basic', $stateParams);
   }
 
   [
