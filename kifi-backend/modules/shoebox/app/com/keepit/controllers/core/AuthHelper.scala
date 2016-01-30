@@ -319,7 +319,11 @@ class AuthHelper @Inject() (
         } else {
           Ok(Json.obj("uri" -> uri))
         }
+<<<<<<< HEAD
         result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*)
+=======
+        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*).withCookies(slackTeamIdFromCookie.map(id => Cookie("slackTeamId", id.value)).toSeq: _*)
+>>>>>>> ed4ce67005d196b7262cf783ce117b5b51b586e4
           .withSession(request.session.setUserId(user.id.get))
       }
     )
