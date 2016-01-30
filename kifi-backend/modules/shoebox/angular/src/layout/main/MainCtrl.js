@@ -243,7 +243,8 @@ angular.module('kifi')
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
       var newInstall = installService.installedVersion && profileService.prefs.auto_show_guide;
       var ftue = profileService.prefs.has_seen_ftue === false;
-      return newInstall || ftue;
+      var showCreateTeamPopup = profileService.prefs.show_slack_create_team_popup;
+      return newInstall || ftue || showCreateTeamPopup;
     }, function (show) {
       if (show) {
         if (profileService.prefs.has_seen_ftue === false) {
@@ -253,6 +254,13 @@ angular.module('kifi')
           // guide
           extensionLiaison.triggerGuide();
           profileService.savePrefs({auto_show_guide: null});
+          unregisterAutoShowGuide();
+        } else if (profileService.isFakeUser() && profileService.prefs.show_slack_create_team_popup) {
+          profileService.savePrefs({show_slack_create_team_popup: false});
+          modalService.open({
+            template: 'slack/newSlackUserTeamUpsellModal.tpl.html',
+            modalData: {}
+          });
           unregisterAutoShowGuide();
         }
       }

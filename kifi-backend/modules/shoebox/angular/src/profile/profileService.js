@@ -305,6 +305,10 @@ angular.module('kifi')
       return me.experiments && me.experiments.indexOf('admin') > -1;
     }
 
+    function isFakeUser() {
+      return me.experiments && me.experiments.indexOf('fake') > -1;
+    }
+
     function hasExperiment(experiment) {
       return me.experiments && me.experiments.indexOf(experiment) > -1;
     }
@@ -342,6 +346,7 @@ angular.module('kifi')
       closeAccountRequest: closeAccountRequest,
       hideOrgDomain: hideOrgDomain,
       isAdmin: isAdmin,
+      isFakeUser: isFakeUser,
       hasExperiment: hasExperiment
     };
   }
