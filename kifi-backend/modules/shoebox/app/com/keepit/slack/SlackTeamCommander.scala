@@ -125,6 +125,8 @@ class SlackTeamCommanderImpl @Inject() (
                       connectedTeamMaybe
                     }
                   }
+
+                case Left(error) => Future.failed(error)
               }
             }
           case None => Future.failed(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
@@ -141,13 +143,14 @@ class SlackTeamCommanderImpl @Inject() (
         slackTeamRepo.getBySlackTeamId(slackTeamId) match {
           case Some(team) => team.organizationId match {
             case None => if (slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)) Success {
-              if (team.organizationId.contains(newOrganizationId)) team
-              else slackTeamRepo.save(team.copy(organizationId = Some(newOrganizationId), lastChannelCreatedAt = None))
+              slackTeamRepo.save(team.copy(organizationId = Some(newOrganizationId), lastChannelCreatedAt = None))
             }
             else {
               Failure(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, None))
             }
-            case Some(orgId) => Failure(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, orgId))
+            case Some(connectedOrgId) =>
+              if (connectedOrgId == newOrganizationId) Success(team)
+              else Failure(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, connectedOrgId))
           }
           case None => Failure(SlackTeamNotFoundException(slackTeamId))
         }
