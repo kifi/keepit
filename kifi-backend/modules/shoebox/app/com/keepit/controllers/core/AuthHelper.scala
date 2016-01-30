@@ -210,8 +210,6 @@ class AuthHelper @Inject() (
     }
 
     val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
-    val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
-    val slackTeamId = slackTeamIdFromCookie orElse slackTeamIdFromIdentity
 
     val intent: PostRegIntent = {
       val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
@@ -224,7 +222,7 @@ class AuthHelper @Inject() (
         case "joinOrg" => generateRegIntent[Organization](modelPubIdFromCookie, authTokenFromCookie, Organization)
         case "joinKeep" => generateRegIntent[Keep](modelPubIdFromCookie, authTokenFromCookie, Keep)
         case "waitlist" => Some(JoinTwitterWaitlist)
-        case "slack" => Some(Slack(slackTeamId))
+        case "slack" => Some(Slack(slackTeamIdFromCookie))
         case _ => None
       }
 
