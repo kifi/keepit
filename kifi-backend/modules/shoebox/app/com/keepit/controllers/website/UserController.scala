@@ -317,7 +317,8 @@ class UserController @Inject() (
           "pendingFriendRequests" -> pendingFriendRequests,
           "orgs" -> pimpedUser.orgs,
           "pendingOrgs" -> pimpedUser.pendingOrgs,
-          "potentialOrgs" -> pimpedUser.potentialOrgs
+          "potentialOrgs" -> pimpedUser.potentialOrgs,
+          "slack" -> pimpedUser.slack
         )
     }
     Ok(json)
