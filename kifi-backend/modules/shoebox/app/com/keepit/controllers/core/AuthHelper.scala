@@ -209,7 +209,7 @@ class AuthHelper @Inject() (
       }
     }
 
-    val slackTeamIdFromIdentity = request.identityId.flatMap(IdentityHelpers.parseSlackIdMaybe(_).toOption).map(_._1)
+    val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
 
     val intent: PostRegIntent = {
       val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
@@ -319,7 +319,7 @@ class AuthHelper @Inject() (
         } else {
           Ok(Json.obj("uri" -> uri))
         }
-        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*).withCookies(slackTeamIdFromIdentity.map(id => Cookie("slackTeamId", id.value)).toSeq: _*)
+        result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*).withCookies(slackTeamIdFromCookie.map(id => Cookie("slackTeamId", id.value)).toSeq: _*)
           .withSession(request.session.setUserId(user.id.get))
       }
     )
