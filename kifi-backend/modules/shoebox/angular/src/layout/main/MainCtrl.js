@@ -241,9 +241,10 @@ angular.module('kifi')
     }
 
     function showSlackCreateTeamPopup() {
-      return profileService.prefs.show_slack_create_team_popup && profileService.me.slack.filter(function (slackTeamInfo) {
-        return slackTeamInfo.orgId !== null;
-      })[0] === null;
+      return profileService.prefs.show_slack_create_team_popup && profileService.me.slack &&
+        profileService.me.slack.memberships.filter(function (slackTeamInfo) {
+          return slackTeamInfo.orgId !== null;
+        })[0] === null;
     }
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
