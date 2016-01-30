@@ -255,7 +255,7 @@ angular.module('kifi')
           extensionLiaison.triggerGuide();
           profileService.savePrefs({auto_show_guide: null});
           unregisterAutoShowGuide();
-        } else if (profileService.isFakeUser() && profileService.prefs.show_slack_create_team_popup) {
+        } else if (profileService.isFakeUser() && profileService.prefs.show_slack_create_team_popup && $state.current.name === 'home.feed') {
           profileService.savePrefs({show_slack_create_team_popup: false});
           modalService.open({
             template: 'slack/newSlackUserTeamUpsellModal.tpl.html',
