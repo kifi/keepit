@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('OrgProfileSlackCtrl', [
   '$window', '$location', '$rootScope', '$analytics', '$scope', '$stateParams',
-  'profile', 'orgProfileService', 'originTrackingService',
+  '$state', 'profile', 'orgProfileService', 'originTrackingService',
   function ($window, $location, $rootScope, $analytics, $scope, $stateParams,
-            profile, orgProfileService, originTrackingService) {
+            $state, profile, orgProfileService, originTrackingService) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.userLoggedIn = $rootScope.userLoggedIn;
 

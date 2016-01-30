@@ -18,7 +18,7 @@ angular.module('kifi')
         var stateParams = $scope.getParams();
 
         if (stateParams.signUpWithSlack) {
-          $state.go('orgProfile.slack', stateParams);
+          $state.go('orgProfile.slack.basic', stateParams);
         } else {
           if ($scope.getStatus() === 403) {
             orgProfileService

@@ -1,0 +1,13 @@
+<div class="kf-org-profile-slack-keep">
+  <a ng-href="{{ user|profileUrl }}"><img class="kf-org-profile-slack-user-image kf-org-profile-slack-keep-user" ng-src="{{ user|pic:100 }}"></a>
+  <p ng-show="user" class="kf-org-profile-slack-keep-message">
+    <a class="kf-link kf-link-black kf-org-profile-slack-keep-username" ng-bind="user|name" ng-href="{{ user|profileUrl }}"></a>
+    has kept
+    <span class="kf-org-profile-slack-keep-title" ng-bind="keep.title"></span>
+    to the
+    <span class="kf-org-profile-slack-keep-library" ng-bind="library|name"></span>
+    library, but you haven't joined
+    <a class="kf-link kf-link-black kf-org-profile-slack-keep-team" ng-href="{{profile|profileUrl}}" ng-bind="profile|name"></a>
+    yet.
+  </p>
+</div>
