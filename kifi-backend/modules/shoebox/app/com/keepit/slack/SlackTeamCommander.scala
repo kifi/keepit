@@ -243,32 +243,30 @@ class SlackTeamCommanderImpl @Inject() (
                 slackClient.getChannels(validToken, excludeArchived = true).flatMap { channels =>
                   def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || alreadyProcessedChannels.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
                   val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
-                  onboardingAgent.channels(membership, channelsToIntegrate).flatMap { _ =>
-                    val libCreationsByChannel = channelsToIntegrate.map { ch =>
-                      SlackChannelIdAndName(ch.channelId, ch.channelName) -> setupSlackChannel(team, membership, ch)
-                    }.toMap
-                    val newLibraries = libCreationsByChannel.collect { case (ch, Right(lib)) => ch -> lib }
-                    val failedChannels = libCreationsByChannel.collect { case (ch, Left(fail)) => ch -> fail }
-                    onboardingAgent.ingesting().flatMap { _ =>
-                      SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                        "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
-                        team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
-                      ))))
-                      val updatedTeam = team
-                        .withPublicChannelsSyncedAt(clock.now)
-                        .withSyncedChannels(alreadyProcessedChannels ++ newLibraries.keySet.map(_.id))
-                        .copy(lastChannelCreatedAt = channels.map(_.createdAt).maxOpt orElse team.lastChannelCreatedAt)
-                        .copy(generalChannelId = channels.find(_.isGeneral).map(_.channelId) orElse team.generalChannelId)
-                      if (updatedTeam != team) {
-                        db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
-                      }
-                      if (failedChannels.nonEmpty) slackLog.warn(
-                        "Failed to create some libraries while integrating Slack team", team.slackTeamId.value, ".",
-                        "The errors are:", failedChannels.values.map(_.getMessage).mkString("[", ",", "]")
-                      )
-
-                      Future.successful(libCreationsByChannel)
+                  val libCreationsByChannel = channelsToIntegrate.map { ch =>
+                    SlackChannelIdAndName(ch.channelId, ch.channelName) -> setupSlackChannel(team, membership, ch)
+                  }.toMap
+                  val newLibraries = libCreationsByChannel.collect { case (ch, Right(lib)) => ch -> lib }
+                  val failedChannels = libCreationsByChannel.collect { case (ch, Left(fail)) => ch -> fail }
+                  onboardingAgent.channels(membership, channels).flatMap { _ =>
+                    SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+                      "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
+                      team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+                    ))))
+                    val updatedTeam = team
+                      .withPublicChannelsSyncedAt(clock.now)
+                      .withSyncedChannels(alreadyProcessedChannels ++ newLibraries.keySet.map(_.id))
+                      .copy(lastChannelCreatedAt = channels.map(_.createdAt).maxOpt orElse team.lastChannelCreatedAt)
+                      .copy(generalChannelId = channels.find(_.isGeneral).map(_.channelId) orElse team.generalChannelId)
+                    if (updatedTeam != team) {
+                      db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
                     }
+                    if (failedChannels.nonEmpty) slackLog.warn(
+                      "Failed to create some libraries while integrating Slack team", team.slackTeamId.value, ".",
+                      "The errors are:", failedChannels.values.map(_.getMessage).mkString("[", ",", "]")
+                    )
+
+                    Future.successful(libCreationsByChannel)
                   }
                 }
               }
