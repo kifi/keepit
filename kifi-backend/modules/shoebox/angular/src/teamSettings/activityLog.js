@@ -6,7 +6,7 @@ angular.module('kifi')
   '$scope', '$timeout', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
   function ($scope, $timeout, billingService, profile, billingState, modalService, Paginator) {
     $scope.billingState = billingState;
-    $scope.trackingType = 'org_settings:activity_log';
+    $scope.trackingType = 'org_profile:settings:activity_log';
 
     var activityLogPaginator = new Paginator(activitySource);
 

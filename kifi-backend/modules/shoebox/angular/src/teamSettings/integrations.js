@@ -40,6 +40,8 @@ angular.module('kifi')
       });
     });
 
+    $scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:settings:integrations' });
+
     $scope.onSlackIntegrationReactionChanged = function() {
       $scope.profile.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
       orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_reaction: $scope.profile.config.settings.slack_ingestion_reaction.setting })
