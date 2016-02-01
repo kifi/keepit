@@ -258,11 +258,11 @@ angular.module('kifi')
           $state.go('getStarted.followLibraries');
         } else if (profileService.prefs.auto_show_guide) {
           // guide
-          $timeout(function () {
+          $timeout(function () { // Let the dust settle a bit before starting guide.
             extensionLiaison.triggerGuide();
-            $timeout(function () {
+            $timeout(function () { // If any other tabs may show the guide, let them load before turning it off.
               profileService.savePrefs({auto_show_guide: null});
-            }, 5000);
+            }, 2000);
           }, 1000);
           unregisterAutoShowGuide();
         } else if (profileService.isFakeUser() && showSlackCreateTeamPopup() && $state.current.name === 'home.feed') {
