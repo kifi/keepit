@@ -143,7 +143,7 @@ class SlackTeamCommanderImpl @Inject() (
         slackTeamRepo.getBySlackTeamId(slackTeamId) match {
           case Some(team) => team.organizationId match {
             case None => if (slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)) Success {
-              slackTeamRepo.save(team.copy(organizationId = Some(newOrganizationId), lastChannelCreatedAt = None))
+              slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId)))
             }
             else {
               Failure(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, None))

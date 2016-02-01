@@ -40,6 +40,11 @@ case class SlackTeam(
   }
   def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
 
+  def withOrganizationId(newOrgId: Option[Id[Organization]]): SlackTeam = organizationId match {
+    case Some(orgId) if newOrgId.contains(orgId) => this
+    case _ => this.copy(organizationId = newOrgId, lastChannelCreatedAt = None, lastDigestNotificationAt = None, publicChannelsLastSyncedAt = None, channelsSynced = Set.empty)
+  }
+
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
 
   def unnotifiedSince: DateTime = lastDigestNotificationAt getOrElse createdAt
