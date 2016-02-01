@@ -153,7 +153,7 @@ class SlackIngestingActor @Inject() (
               }
             }
             if (shouldAddReaction) {
-              slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
+              slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
                 case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
               }
             }
