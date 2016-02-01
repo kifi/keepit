@@ -296,7 +296,7 @@ class SlackOnboarderImpl @Inject() (
                     case 1 => "one message with a link, and once it's indexed you can access it"
                     case 0 => "no messages. Bummer. If we HAD found any, you could find them"
                   },
-                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", ".",
+                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
                 )),
                 "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
                 "granular team settings",
