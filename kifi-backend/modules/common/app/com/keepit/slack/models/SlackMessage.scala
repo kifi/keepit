@@ -117,20 +117,24 @@ case class SlackMessage(
   channel: SlackChannelIdAndName,
   text: String,
   attachments: Seq[SlackAttachment],
-  permalink: String)
+  permalink: String,
+  originalJson: JsValue)
 
 object SlackMessage {
-  implicit val slackFormat = (
-    (__ \ "type").format[SlackMessageType] and
-    (__ \ "user").format[SlackUserId] and
-    (__ \ "username").format[SlackUsername] and
-    (__ \ "ts").format[SlackTimestamp] and
-    (__ \ "channel").format[SlackChannelIdAndName] and
-    (__ \ "text").format[String] and
-    (__ \ "attachments").formatNullable[Seq[SlackAttachment]].inmap[Seq[SlackAttachment]](_.getOrElse(Seq.empty), Some(_).filter(_.nonEmpty)) and
-    (__ \ "permalink").format[String]
-  )(apply, unlift(unapply))
+  private val reads: Reads[SlackMessage] = (
+    (__ \ "type").read[SlackMessageType] and
+    (__ \ "user").read[SlackUserId] and
+    (__ \ "username").read[SlackUsername] and
+    (__ \ "ts").read[SlackTimestamp] and
+    (__ \ "channel").read[SlackChannelIdAndName] and
+    (__ \ "text").read[String] and
+    (__ \ "attachments").readNullable[Seq[SlackAttachment]].map[Seq[SlackAttachment]](_.getOrElse(Seq.empty)) and
+    (__ \ "permalink").read[String] and
+    Reads(JsSuccess(_))
+  )(SlackMessage.apply _)
 
+  private val writes: Writes[SlackMessage] = Writes(r => r.originalJson)
+  implicit val format: Format[SlackMessage] = Format(reads, writes)
 }
 
 @json
