@@ -259,7 +259,12 @@ angular.module('kifi')
         } else if (profileService.prefs.auto_show_guide) {
           // guide
           extensionLiaison.triggerGuide();
-          profileService.savePrefs({auto_show_guide: null});
+          $timeout(function () {
+            extensionLiaison.triggerGuide();
+            $timeout(function () {
+              profileService.savePrefs({auto_show_guide: null});
+            }, 5000);
+          }, 1000);
           unregisterAutoShowGuide();
         } else if (profileService.isFakeUser() && showSlackCreateTeamPopup() && $state.current.name === 'home.feed') {
           profileService.savePrefs({show_slack_create_team_popup: false});
