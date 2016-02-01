@@ -915,7 +915,7 @@ class AdminUserController @Inject() (
   def setUsername(userId: Id[User]) = AdminUserPage { request =>
     val username: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("username").flatMap(_.headOption)).filter(_.length > 0)
     username.map { newUsername =>
-      userCommander.setUsername(userId, Username(newUsername.trim), overrideValidityCheck = true) match {
+      userCommander.setUsername(userId, Username(newUsername.trim), overrideValidityCheck = true, overrideProtection = true) match {
         case Right(_) => Ok
         case Left(err) => BadRequest(err)
       }
