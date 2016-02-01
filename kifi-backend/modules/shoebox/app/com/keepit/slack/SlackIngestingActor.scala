@@ -30,7 +30,8 @@ object SlackIngestionConfig {
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val channelIngestionConcurrency = 25
+  val minChannelIngestionConcurrency = 15
+  val maxChannelIngestionConcurrency = 30
   val messageBatchSize = 50
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
@@ -57,8 +58,8 @@ class SlackIngestingActor @Inject() (
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackIngestionConfig._
 
-  protected val minConcurrentTasks = channelIngestionConcurrency
-  protected val maxConcurrentTasks = channelIngestionConcurrency
+  protected val minConcurrentTasks = minChannelIngestionConcurrency
+  protected val maxConcurrentTasks = maxChannelIngestionConcurrency
 
   protected def pullTasks(limit: Int): Future[Seq[Id[SlackChannelToLibrary]]] = {
     db.readWrite { implicit session =>
