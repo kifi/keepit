@@ -94,11 +94,7 @@ class OrganizationCommanderImpl @Inject() (
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
     val badName = modifications.name.exists(_.isEmpty)
-    val normalizedSiteUrl = modifications.site.map { url =>
-      if (url.startsWith("http://") || url.startsWith("https://")) url
-      else "http://" + url
-    }
-    val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
+    val badSiteUrl = modifications.site.exists(URI.parse(_).isFailure)
 
     Stream(
       badName -> OrganizationFail.INVALID_MODIFY_NAME,

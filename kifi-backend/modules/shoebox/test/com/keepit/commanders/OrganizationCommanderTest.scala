@@ -137,7 +137,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           // An owner can do whatever they want
           val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = owner.id.get,
-            modifications = OrganizationModifications(name = Some("The view is nice from up here"), site = Some("www.kifi.com")))
+            modifications = OrganizationModifications(name = Some("The view is nice from up here"), rawSite = Some("www.kifi.com")))
           val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
           ownerModifyResponse must beRight
           ownerModifyResponse.right.get.request === ownerModifyRequest

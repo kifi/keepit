@@ -54,12 +54,12 @@ object OrganizationView {
   }
 }
 
-case class OrganizationInitialValues(name: String, description: Option[String] = None, site: Option[String] = None) {
+case class OrganizationInitialValues(name: String, description: Option[String] = None, rawSite: Option[String] = None) {
   def asOrganizationModifications: OrganizationModifications = {
     OrganizationModifications(
       name = Some(name),
       description = description,
-      site = site
+      rawSite = rawSite
     )
   }
 }
@@ -68,11 +68,7 @@ object OrganizationInitialValues {
   private val defaultReads: Reads[OrganizationInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String].map {
-      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
-      case Some(site) => Some(site)
-      case None => None
-    }
+    (__ \ 'site).readNullable[String]
   )(OrganizationInitialValues.apply _)
 
   val website = defaultReads
@@ -80,22 +76,22 @@ object OrganizationInitialValues {
 }
 
 case class OrganizationModifications(
-  name: Option[String] = None,
-  description: Option[String] = None,
-  site: Option[String] = None)
+    name: Option[String] = None,
+    description: Option[String] = None,
+    rawSite: Option[String] = None) {
+  def site = rawSite.map {
+    case validSite if validSite.matches("$https?://.*") => validSite
+    case noProtocolSite => "http://" + noProtocolSite
+  }
+}
 object OrganizationModifications {
   private val defaultReads: Reads[OrganizationModifications] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String].map {
-      case Some(site) if httpRegex.findFirstMatchIn(site).isEmpty => Some("http://" + site)
-      case Some(site) => Some(site)
-      case None => None
-    }
+    (__ \ 'site).readNullable[String]
   )(OrganizationModifications.apply _)
 
   val website = defaultReads
   val mobileV1 = defaultReads
 
-  private val httpRegex = "^https?://".r
 }
