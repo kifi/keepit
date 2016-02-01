@@ -36,7 +36,7 @@ object SlackOnboarder {
     case ingestion: SlackChannelToLibrary => true
   }
 
-  def canSendMessageAboutTeam(team: SlackTeam): Boolean = team.slackTeamId == KifiSlackTeamId || team.slackTeamId == BrewstercorpSlackTeamId || team.slackTeamName.value.startsWith("eishaytest")
+  def canSendMessageAboutTeam(team: SlackTeam): Boolean = true
 
   val installationDescription = {
     import DescriptionElements._
