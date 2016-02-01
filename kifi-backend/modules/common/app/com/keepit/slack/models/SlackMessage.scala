@@ -137,6 +137,7 @@ object SlackMessage {
 case class SlackReaction(value: String)
 object SlackReaction {
   val checkMark = SlackReaction("heavy_check_mark")
+  val robotFace = SlackReaction("robot_face")
 }
 
 case class SlackEmoji(value: String)

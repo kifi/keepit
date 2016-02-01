@@ -57,6 +57,7 @@ class SlackClientWrapperImpl @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   slackChannelRepo: SlackChannelRepo,
+  slackTeamRepo: SlackTeamRepo,
   channelToLibraryRepo: SlackChannelToLibraryRepo,
   libraryToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
@@ -179,6 +180,9 @@ class SlackClientWrapperImpl @Inject() (
         slackTeamMembershipRepo.getByToken(token).map(_.slackTeamId).foreach { teamId =>
           chs.foreach { ch =>
             slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
+          }
+          chs.find(_.isGeneral).foreach { generalCh =>
+            slackTeamRepo.getBySlackTeamId(teamId).foreach(team => slackTeamRepo.save(team.withGeneralChannelId(generalCh.channelId)))
           }
         }
       }

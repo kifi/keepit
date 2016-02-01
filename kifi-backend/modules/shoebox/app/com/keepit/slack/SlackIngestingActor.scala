@@ -154,7 +154,7 @@ class SlackIngestingActor @Inject() (
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
-              slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
+              slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
                 case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
               }
             }
