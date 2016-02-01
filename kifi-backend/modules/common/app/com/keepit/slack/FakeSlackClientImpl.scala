@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.json.{ Json, JsNull }
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -45,16 +46,17 @@ class FakeSlackClientImpl extends SlackClient {
   def sayInChannel(userId: SlackUserId, username: SlackUsername, teamId: SlackTeamId, token: Option[SlackAccessToken], ch: SlackChannelIdAndName)(str: String): Unit = {
     val key = (teamId, ch.name)
     val msgId = inc.incrementAndGet()
-    val msg = SlackMessage(
-      messageType = SlackMessageType("message"),
-      userId = userId,
-      username = username,
-      timestamp = SlackTimestamp(s"$msgId.00000"),
-      channel = ch,
-      text = str,
-      attachments = Seq.empty,
-      permalink = s"https://slack.com/$msgId"
+    val msgJson = Json.obj(
+      "type" -> "message",
+      "user" -> userId.value,
+      "username" -> username.value,
+      "ts" -> s"$msgId.00000",
+      "channel" -> ch,
+      "text" -> str,
+      "attachments" -> Json.arr(),
+      "permalink" -> s"https://slack.com/$msgId"
     )
+    val msg = msgJson.as[SlackMessage]
     token.foreach { tk => membershipToken.put(tk, teamId -> userId) }
     channelLog.put(key, msg :: channelLog(key))
   }

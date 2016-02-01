@@ -56,7 +56,7 @@ object RawTweet {
 
   def getUrl(handle: TwitterHandle, statusId: TwitterStatusId): String = s"https://twitter.com/${handle.value}/status/${statusId.id}"
 
-  implicit val reads: Reads[RawTweet] = (
+  private implicit val reads: Reads[RawTweet] = (
     (__ \ 'id_str).read(TwitterStatusId.stringReads) and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
     (__ \ 'text).read[String] and
@@ -74,7 +74,7 @@ object RawTweet {
     Reads(JsSuccess(_))
   )(RawTweet.apply _)
 
-  implicit val writes: Writes[RawTweet] = Writes(r => r.originalJson)
+  private implicit val writes: Writes[RawTweet] = Writes(r => r.originalJson)
   implicit val format = Format(reads, writes)
 
   // This is because Play json has a bug with recursive types
