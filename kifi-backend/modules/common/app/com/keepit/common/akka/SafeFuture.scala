@@ -1,11 +1,12 @@
 package com.keepit.common.akka
 
-import scala.concurrent.{ ExecutionContext, CanAwait, Awaitable, Future }
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifierStatic }
+import play.api.Logger
+
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ CanAwait, ExecutionContext, Future }
 import scala.util.Try
-import play.api.{ Logger }
-import com.keepit.FortyTwoGlobal
-import com.keepit.common.healthcheck.{ AirbrakeNotifierStatic, AirbrakeNotifier, AirbrakeError }
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] {
 
@@ -40,6 +41,6 @@ object SafeFuture {
   def apply[T](func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func })
   def apply[T](name: String)(func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func }, Some(name))
 
-  def swallow(f: => Future[Unit])(implicit executor: ExecutionContext) = new SafeFuture(Try(f).recover { case fail => Future.failed(fail) }.get)
+  def swallow(f: => Future[Unit])(implicit executor: ExecutionContext) = new SafeFuture(FutureHelpers.safely(f))
 }
 

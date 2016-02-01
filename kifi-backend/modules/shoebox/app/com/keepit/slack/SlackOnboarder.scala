@@ -22,7 +22,7 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
-  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit]
+  def talkAboutIntegration(integ: SlackIntegration): Future[Unit]
   def getTeamAgent(team: SlackTeam, membership: SlackTeamMembership, forceOverride: Boolean = false): TeamOnboardingAgent
 }
 
@@ -80,23 +80,17 @@ class SlackOnboarderImpl @Inject() (
   private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackOnboarder._
 
-  def talkAboutIntegration(integ: SlackIntegration, forceOverride: Boolean = false): Future[Unit] = SafeFuture.swallow {
-    log.info(s"[SLACK-ONBOARD] Maybe going to post a message about ${integ.slackChannelName} and ${integ.libraryId} by ${integ.slackUserId}")
-    if (forceOverride || canSendMessageAboutIntegration(integ)) {
-      db.readOnlyMaster { implicit s =>
-        generateOnboardingMessageForIntegration(integ)
-      }.flatMap { welcomeMsg =>
-        log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-        debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
-          slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} in ${integ.slackTeamId}")
-          slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
-        }
-      }.getOrElse {
-        log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
-        Future.successful(Unit)
+  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
+    db.readOnlyMaster { implicit s =>
+      generateOnboardingMessageForIntegration(integ)
+    }.flatMap { welcomeMsg =>
+      log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
+      debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+        slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
+        slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
       }
-    } else {
-      log.info("[SLACK-ONBOARD] Decided not to even try sending a message")
+    }.getOrElse {
+      log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
       Future.successful(Unit)
     }
   }
