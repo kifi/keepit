@@ -117,7 +117,7 @@ class SlackTeamCommanderImpl @Inject() (
                     case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
                   }
                   teamInfo.emailDomains.exists { domain =>
-                    orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(site = Some(domain.value)))).isRight
+                    orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(rawSite = Some(domain.value)))).isRight
                   }
                   val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, orgId)
                   futureAvatar.flatMap { _ =>
