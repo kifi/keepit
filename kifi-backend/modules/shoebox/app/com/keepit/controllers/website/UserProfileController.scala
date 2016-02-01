@@ -43,6 +43,7 @@ class UserProfileController @Inject() (
     organizationInfoCommander: OrganizationInfoCommander,
     orgInviteRepo: OrganizationInviteRepo,
     libraryRepo: LibraryRepo,
+    libInfoCommander: LibraryInfoCommander,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
@@ -98,10 +99,17 @@ class UserProfileController @Inject() (
   }
 
   def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
+    val useCustomLibraryOrderingLogic = request match {
+      case ur: UserRequest[_] if ur.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING) => true
+      case _ => false
+    }
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"unknown username ${username.value} requested")
         Future.successful(NotFound(username.value))
+      case Some(user) if useCustomLibraryOrderingLogic && filter == "own" =>
+        val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, user.id.get, None, pageSize)
+        Future.successful(Ok(Json.obj(filter -> output))) // explicitly incorrect, only used for testing
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)
