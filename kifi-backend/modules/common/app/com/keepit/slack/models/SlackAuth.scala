@@ -125,7 +125,7 @@ object SlackTeamInfo {
     (__ \ 'id).read[SlackTeamId] and
     (__ \ 'name).read[SlackTeamName] and
     (__ \ 'domain).read[SlackTeamDomain] and
-    (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(domainStr => SlackTeamEmailDomain(domainStr.trim))) and
+    (__ \ 'email_domain).read[String].map(domains => domains.split(',').toList.map(_.trim).collect { case domain if domain.nonEmpty => SlackTeamEmailDomain(domain) }) and
     (__ \ 'icon).read(slackIconReads)
   )(SlackTeamInfo.apply _)
 }
