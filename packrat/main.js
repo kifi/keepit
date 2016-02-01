@@ -2880,7 +2880,23 @@ api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
     var baseUri = webBaseUri();
-    var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+    var focused = api.tabs.getFocused();
+
+    var currentKifiTab;
+    if (focused && focused.url && focused.url.indexOf('https://www.kifi.com') === 0) {
+      currentKifiTab = focused;
+    }
+
+    var primaryKifiTab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+
+    var otherKifiSiteTab;
+    api.tabs.each(function (tab) {
+      if (tab.url.indexOf('https://www.kifi.com') === 0) { // Order doesn't matter at this point, just grab one.
+        otherKifiSiteTab = tab;
+      }
+    });
+
+    var tab = currentKifiTab || primaryKifiTab || otherKifiSiteTab;
     if (tab) {
       api.tabs.select(tab.id);
     } else {

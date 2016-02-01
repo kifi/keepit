@@ -181,7 +181,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
       whenMeKnown.push(loadAndDo.bind(null, args));
-    } else if (!k.me) {
+    } else if (!k.me && name !== 'guide') {
       openLoginWindow();
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
