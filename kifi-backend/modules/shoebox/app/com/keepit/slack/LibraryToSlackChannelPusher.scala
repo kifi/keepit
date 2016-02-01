@@ -153,7 +153,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
-          lib.name --> LinkElement(pathCommander.getPathForLibrary(lib))
+          lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
         )
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
