@@ -26,11 +26,6 @@ import scala.util.{ Failure, Success, Try }
 object SlackTeamDigestConfig {
   val minPeriodBetweenTeamDigests = Period.days(3)
   val minIngestedLinksForTeamDigest = 10
-
-  // TODO(ryan): to release to the public, change canPushToTeam to `true`
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
-  def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId || slackTeam.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
 }
 
 class SlackTeamDigestNotificationActor @Inject() (
@@ -72,10 +67,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   private def pullTask(): Future[Set[Id[SlackTeam]]] = {
     val now = clock.now
     db.readOnlyReplicaAsync { implicit session =>
-      val ids = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests)
-      slackTeamRepo.getByIds(ids.toSet).filter {
-        case (_, slackTeam) => canPushToTeam(slackTeam)
-      }.keySet tap { ids => log.info(s"[SLACK-TEAM-DIGEST] pullTask() yielded $ids") }
+      slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests).toSet
     }
   }
 
@@ -99,7 +91,6 @@ class SlackTeamDigestNotificationActor @Inject() (
       org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
       librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
-        val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
         val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
         teamIntegrations.groupBy(_.slackChannelId).collect {
           case (Some(channelId), integrations) =>
