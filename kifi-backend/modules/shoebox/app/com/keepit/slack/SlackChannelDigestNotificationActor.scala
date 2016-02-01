@@ -75,7 +75,11 @@ class SlackChannelDigestNotificationActor @Inject() (
 
   private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[SlackChannel, Try[Unit]]] = {
     val result = for {
-      channels <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids.toSet).values }
+      channels <- db.readOnlyReplicaAsync { implicit s =>
+        slackChannelRepo.getByIds(ids).values.groupBy(_.slackTeamId).collect {
+          case (_, channels) => channels.minBy(_.unnotifiedSince)
+        }
+      }
       pushes <- FutureHelpers.accumulateRobustly(channels)(pushDigestNotificationForChannel)
     } yield pushes
     result.andThen {
