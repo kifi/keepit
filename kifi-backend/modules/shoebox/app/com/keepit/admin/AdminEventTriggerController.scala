@@ -96,8 +96,8 @@ class AdminEventTriggerController @Inject() (
       (pushes, ingestions)
     }.flatMap {
       case (pushes, ingestions) => for {
-        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc, forceOverride = true))
-        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl, forceOverride = true))
+        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc))
+        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl))
       } yield ()
     }.map { _: Unit =>
       Json.obj("ok" -> true)
