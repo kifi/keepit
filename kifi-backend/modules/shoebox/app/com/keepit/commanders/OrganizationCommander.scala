@@ -94,7 +94,7 @@ class OrganizationCommanderImpl @Inject() (
     val badName = modifications.name.exists(_.isEmpty)
     val normalizedSiteUrl = modifications.site.map { url =>
       if (url.startsWith("http://") || url.startsWith("https://")) url
-      else "https://" + url
+      else "http://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
 
