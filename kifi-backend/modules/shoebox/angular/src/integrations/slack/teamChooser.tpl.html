@@ -1,44 +1,40 @@
 <div class="si-org-selector-container-wrapper">
-
-
-  <div class="si-org-selector-container"  >
-
+  <div class="si-org-selector-container">
     <span class="si-org-selector-header">Choose a team to integrate with Slack</span>
-
     <div class="si-org-selector-inner-container">
-
       <div ng-if="orgs.length === 0" class="si-org-selector-spinner-wrapper">
-        <div  class="si-org-selector-spinner" kf-simple-loading-spinner></div>
+        <div class="si-org-selector-spinner" kf-simple-loading-spinner></div>
       </div>
-
-
       <div ng-if="orgs.length">
-        <div  class="si-org-selector-org-row"
-              ng-class="{'si-org-selector-org-row-selected': selectedOrg && selectedOrg.id === org.id}"
-              ng-repeat="org in orgs" ng-class="{}" ng-click="onClickedOrg(org)">
-          <img ng-src="{{ org|pic:100 }}" />
-          <h1>{{org.name}}</h1>
+        <div
+          class="si-org-selector-org-row"
+          ng-class="{
+            'si-org-selector-org-row-selected': selectedOrg && selectedOrg.id === org.id
+          }"
+          ng-repeat="org in orgs"
+          ng-click="onClickedOrg(org)"
+        >
+          <img ng-src="{{ org|pic:100 }}"/>
+          <span class="si-org-selector-org-row-title" ng-bind="org|name"></span>
         </div>
-
       </div>
-      <div  ng-click="onClickedCreateTeam()" class="si-org-selector-org-row">
+      <div ng-click="onClickedCreateTeam()" class="si-org-selector-org-row">
         <div class="si-org-selector-svg-wrapper">
           <svg kf-symbol-sprite icon="plus"></svg>
         </div>
-        <h1>Create a new team</h1>
+        <span class="si-org-selector-org-row-title">Create a new team</h1>
       </div>
-
-      <div class="si-org-selector-bottom">
-        <!--<span class="si-org-selector-bottom-create-team kf-link-blue" style="cursor: pointer" >Create a new team</span>-->
+      <div
+        class="si-org-selector-bottom"
+        ng-attr-data-kf-tooltip="{{ selectedOrg ? undefined : 'Select or create a team to continue' }}"
+      >
         <button
-                class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
-                ng-class="{'si-org-selector-done-disabled': !selectedOrg, 'si-org-selector-done-enabled': selectedOrg}"
-                tabindex="0"
-                ng-click="onClickedDone()"
-                ng-bind="'Done'"></button>
+          class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+          tabindex="0"
+          ng-disabled="!selectedOrg"
+          ng-click="onClickedDone()"
+        >Done</button>
       </div>
     </div>
-
-
   </div>
 </div>
