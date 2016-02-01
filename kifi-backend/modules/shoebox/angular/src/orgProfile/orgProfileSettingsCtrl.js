@@ -17,13 +17,21 @@ angular.module('kifi')
     $scope.canEditIntegrations = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
 
     function onHashChange() {
-      var anchor = angular.element($window.location.hash.slice(0, -1))[0];
+      var scrollSettingsAnchorRe = /[a-zA-Z0-9-]+/g; // one or more alpha, hyphens (and numbers just to follow POLS)
+      var hash = $window.location.hash.slice(0, -1);
+
+      if (!scrollSettingsAnchorRe.test(hash)) {
+        return;
+      }
+
+      var anchor = angular.element(hash)[0];
+      var headerHeightIsh = 70; // TODO(carlos): find an elegant way to compute this
       var headingTop;
       var scrollDestination;
 
       if (anchor) {
         headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
-        scrollDestination = headingTop - 70; // make room for header
+        scrollDestination = headingTop - headerHeightIsh; // make room for header
 
         angular.element('html, body').animate({
           scrollTop: scrollDestination
