@@ -16,6 +16,7 @@ import com.keepit.model.Feature.{ SlackDigestNotification, SlackIngestionReactio
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
+import com.keepit.slack.models.SlackTeamRepo
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.Play
 import scala.concurrent.duration._
@@ -52,6 +53,7 @@ class OrganizationCommanderImpl @Inject() (
   orgMembershipCommander: OrganizationMembershipCommander,
   creditRewardCommander: CreditRewardCommander,
   organizationAnalytics: OrganizationAnalytics,
+  slackTeamRepo: SlackTeamRepo,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
@@ -215,6 +217,10 @@ class OrganizationCommanderImpl @Inject() (
           domains.foreach(orgDomainOwnershipRepo.deactivate)
 
           orgConfigRepo.deactivate(orgConfigRepo.getByOrgId(org.id.get))
+
+          slackTeamRepo.getByOrganizationId(org.id.get).foreach { slackTeam =>
+            slackTeamRepo.save(slackTeam.copy(organizationId = None))
+          }
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
