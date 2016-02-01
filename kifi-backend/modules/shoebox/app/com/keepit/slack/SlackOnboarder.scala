@@ -287,7 +287,8 @@ class SlackOnboarderImpl @Inject() (
           org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
           msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
             if (channels.nonEmpty) {
-              DescriptionElements("I just sync'd all your :linked_paperclips: links over to Kifi and boy are my robotic arms tired.",
+              DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+                "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
                 numMsgsWithLinks.map(numMsgs => DescriptionElements(
                   "I found",
                   numMsgs match {
@@ -296,11 +297,12 @@ class SlackOnboarderImpl @Inject() (
                     case 0 => "no messages. Bummer. If we HAD found any, you could find them"
                   },
                   "inside your", if (channels.length > 1) "newly created libraries" else "new library", ".",
-                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
-                  "granular team settings",
-                  "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
-                  "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
-                )))
+                )),
+                "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
+                "granular team settings",
+                "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
+                "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+              )
             } else {
               DescriptionElements(
                 SlackEmoji.sweatSmile, "I just looked but I didn't find any",
