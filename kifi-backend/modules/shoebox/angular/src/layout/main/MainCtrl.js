@@ -265,7 +265,7 @@ angular.module('kifi')
             }, 2000);
           }, 1000);
           unregisterAutoShowGuide();
-        } else if (profileService.isFakeUser() && showSlackCreateTeamPopup() && $state.current.name === 'home.feed') {
+        } else if (showSlackCreateTeamPopup() && $state.current.name === 'home.feed') {
           profileService.savePrefs({show_slack_create_team_popup: false});
           modalService.open({
             template: 'slack/newSlackUserTeamUpsellModal.tpl.html',
