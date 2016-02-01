@@ -109,7 +109,7 @@
       if (!hasSentTestMessage) {
         userIds = testUserIds;
       }
-      var delay = 500;
+      var delay = 1250;
       userIds.map(function (u, i) {
         setTimeout(function () {
           fetchUserData(u).then(function (user) {
