@@ -85,6 +85,7 @@ final class TraversableExtensionOps[A](xs: Traversable[A]) {
 
 final class MapExtensionOps[A, B](xs: Map[A, B]) {
   def mapValuesStrict[C](fn: B => C): Map[A, C] = xs.map { case (k, v) => k -> fn(v) }
+  def filterValues(predicate: B => Boolean): Map[A, B] = xs.filter { case (k, v) => predicate(v) }
 }
 
 final class EitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]) {
