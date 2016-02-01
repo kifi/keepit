@@ -130,10 +130,10 @@ class SlackIngestingActor @Inject() (
             }
             (Some(now plus delay), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            slackLog.warn(forbidden.toString)
+            slackLog.warn("Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelName.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            slackLog.warn(broken.toString)
+            slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelName.value, "in team", broken.integration.slackTeamId.value, "is broken")
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
             //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
