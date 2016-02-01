@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationConfigurationRepoImpl])
 trait OrganizationConfigurationRepo extends Repo[OrganizationConfiguration] {
   def getByOrgId(orgId: Id[Organization])(implicit session: RSession): OrganizationConfiguration
+  def getByOrgIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], OrganizationConfiguration]
   def deactivate(model: OrganizationConfiguration)(implicit session: RWSession): OrganizationConfiguration
 }
 
@@ -62,8 +63,13 @@ class OrganizationConfigurationRepoImpl @Inject() (
   initTable()
 
   def getByOrgId(orgId: Id[Organization])(implicit session: RSession): OrganizationConfiguration = {
-    rows.filter(_.organizationId === orgId).first
+    getByOrgIds(Set(orgId)).apply(orgId)
   }
+
+  def getByOrgIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], OrganizationConfiguration] = {
+    rows.filter(_.organizationId.inSet(orgIds)).list.map(config => config.organizationId -> config).toMap
+  }
+
   def deactivate(model: OrganizationConfiguration)(implicit session: RWSession): OrganizationConfiguration = {
     save(model.sanitizeForDelete)
   }

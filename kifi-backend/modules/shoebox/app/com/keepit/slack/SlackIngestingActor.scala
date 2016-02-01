@@ -11,6 +11,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.kifi.juggle._
 import com.keepit.model._
 import com.keepit.slack.models.SlackIntegration.{ ForbiddenSlackIntegration, BrokenSlackIntegration }
@@ -30,7 +31,8 @@ object SlackIngestionConfig {
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val channelIngestionConcurrency = 25
+  val minChannelIngestionConcurrency = 15
+  val maxChannelIngestionConcurrency = 30
   val messageBatchSize = 50
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
@@ -57,8 +59,8 @@ class SlackIngestingActor @Inject() (
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackIngestionConfig._
 
-  protected val minConcurrentTasks = channelIngestionConcurrency
-  protected val maxConcurrentTasks = channelIngestionConcurrency
+  protected val minConcurrentTasks = minChannelIngestionConcurrency
+  protected val maxConcurrentTasks = maxChannelIngestionConcurrency
 
   protected def pullTasks(limit: Int): Future[Seq[Id[SlackChannelToLibrary]]] = {
     db.readWrite { implicit session =>
@@ -70,7 +72,7 @@ class SlackIngestingActor @Inject() (
   }
 
   protected def processTasks(integrationIds: Seq[Id[SlackChannelToLibrary]]): Map[Id[SlackChannelToLibrary], Future[Unit]] = {
-    val (integrationsByIds, isAllowed, getTokenWithScopes) = db.readOnlyMaster { implicit session =>
+    val (integrationsByIds, isAllowed, getTokenWithScopes, getSettings) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
       val isAllowed = integrationsByIds.map {
@@ -88,19 +90,25 @@ class SlackIngestingActor @Inject() (
         }
       }
 
-      (integrationsByIds, isAllowed, getTokenWithScopes)
+      val getSettings = {
+        val orgIdsByIntegrationIds = integrationsByIds.mapValues(_.space).collect { case (integrationId, OrganizationSpace(orgId)) => integrationId -> orgId }
+        val settingsByOrgIds = orgConfigRepo.getByOrgIds(orgIdsByIntegrationIds.values.toSet).mapValues(_.settings)
+        orgIdsByIntegrationIds.mapValues(settingsByOrgIds.apply).get _
+      }
+
+      (integrationsByIds, isAllowed, getTokenWithScopes, getSettings)
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ())
+        integrationId -> ingestMaybe(integration, isAllowed, getTokenWithScopes, getSettings).imap(_ => ())
     }
   }
 
-  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes]): Future[Option[SlackTimestamp]] = {
+  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokenWithScopes: Id[SlackChannelToLibrary] => Option[SlackTokenWithScopes], getSettings: Id[SlackChannelToLibrary] => Option[OrganizationSettings]): Future[Option[SlackTimestamp]] = {
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
         getTokenWithScopes(integration.id.get) match {
-          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(tokenWithScopes, integration)
+          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(tokenWithScopes, getSettings(integration.id.get), integration)
           case invalidTokenOpt => Future.failed(BrokenSlackIntegration(integration, invalidTokenOpt.map(_.token), None))
         }
       } else {
@@ -138,28 +146,20 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def doIngest(tokenWithScopes: SlackTokenWithScopes, integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
+  private def doIngest(tokenWithScopes: SlackTokenWithScopes, settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
+    val shouldAddReactions = settings.exists(_.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
-          FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
-            val shouldAddReaction = db.readOnlyReplica { implicit s =>
-              integration.space match {
-                case LibrarySpace.OrganizationSpace(orgId) =>
-                  val config = orgConfigRepo.getByOrgId(orgId)
-                  config.settings.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED)
-                case _ => false
-              }
-            }
-            if (shouldAddReaction) {
+          val futureReactions = if (shouldAddReactions) {
+            FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
               slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
                 case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
               }
             }
-
-            Future.successful(Unit)
-          } imap { _ =>
+          } else Future.successful(Unit)
+          futureReactions imap { _ =>
             (newLastMessageTimestamp orElse lastMessageTimestamp, newLastMessageTimestamp.isEmpty)
           }
         } recoverWith {
