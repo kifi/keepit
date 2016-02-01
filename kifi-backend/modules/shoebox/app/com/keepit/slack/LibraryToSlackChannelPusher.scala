@@ -127,13 +127,13 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case Some(post) =>
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> LinkElement(pathCommander.getPathForLibrary(lib)), "."
+          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), "."
         )
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added",
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url),
-          "to", lib.name --> LinkElement(pathCommander.getPathForLibrary(lib)),
+          "to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute),
           keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), "."
         )
     }
@@ -153,7 +153,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
-          lib.name --> LinkElement(pathCommander.getPathForLibrary(lib))
+          lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId))
         )
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
