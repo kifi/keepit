@@ -5,7 +5,7 @@ import com.keepit.commanders.PathCommander
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
-import com.keepit.common.core.mapExtensionOps
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -29,6 +29,7 @@ object SlackChannelDigestConfig {
 
 class SlackChannelDigestNotificationActor @Inject() (
   db: Database,
+  slackTeamRepo: SlackTeamRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   slackChannelRepo: SlackChannelRepo,
   libRepo: LibraryRepo,
@@ -64,22 +65,19 @@ class SlackChannelDigestNotificationActor @Inject() (
     val now = clock.now
     db.readOnlyReplicaAsync { implicit session =>
       val ids = slackChannelRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenChannelDigests)
-      slackChannelRepo.getByIds(ids.toSet).filterValues { channel =>
-        channelToLibRepo.getBySlackTeamAndChannel(channel.slackTeamId, channel.slackChannelId).map(_.space).exists {
-          case UserSpace(_) => true
-          case OrganizationSpace(orgId) => orgConfigRepo.getByOrgId(orgId).settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
-        }
-      }.keySet
+      slackChannelRepo.getByIds(ids.toSet).values.groupBy(_.slackTeamId).flatMap {
+        case (teamId, chs) =>
+          val allowedToSendDigests = slackTeamRepo.getBySlackTeamId(teamId).flatMap(_.organizationId).exists { orgId =>
+            orgConfigRepo.getByOrgId(orgId).settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
+          }
+          Some(chs.minBy(_.unnotifiedSince).id.get).filter(_ => allowedToSendDigests)
+      }.toSet tap { task => log.info(s"[SLACK-CHANNEL-DIGEST] Pulled task $task") }
     }
   }
 
   private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[SlackChannel, Try[Unit]]] = {
     val result = for {
-      channels <- db.readOnlyReplicaAsync { implicit s =>
-        slackChannelRepo.getByIds(ids).values.groupBy(_.slackTeamId).collect {
-          case (_, channels) => channels.minBy(_.unnotifiedSince)
-        }
-      }
+      channels <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids).values }
       pushes <- FutureHelpers.accumulateRobustly(channels)(pushDigestNotificationForChannel)
     } yield pushes
     result.andThen {
