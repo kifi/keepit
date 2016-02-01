@@ -258,7 +258,6 @@ angular.module('kifi')
           $state.go('getStarted.followLibraries');
         } else if (profileService.prefs.auto_show_guide) {
           // guide
-          extensionLiaison.triggerGuide();
           $timeout(function () {
             extensionLiaison.triggerGuide();
             $timeout(function () {
