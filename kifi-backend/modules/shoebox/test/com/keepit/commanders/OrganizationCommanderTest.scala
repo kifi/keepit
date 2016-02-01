@@ -142,7 +142,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           ownerModifyResponse must beRight
           ownerModifyResponse.right.get.request === ownerModifyRequest
           ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
-          ownerModifyResponse.right.get.modifiedOrg.site.get === "www.kifi.com"
+          ownerModifyResponse.right.get.modifiedOrg.site.get === "http://www.kifi.com" // note that we fixed the link automatically
 
           db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === ownerModifyResponse.right.get.modifiedOrg
         }
