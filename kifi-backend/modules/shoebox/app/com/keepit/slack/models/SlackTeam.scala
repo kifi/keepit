@@ -198,7 +198,7 @@ class SlackTeamRepoImpl @Inject() (
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 5
+  override val version = 6
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }
