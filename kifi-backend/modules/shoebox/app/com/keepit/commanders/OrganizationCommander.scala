@@ -219,7 +219,7 @@ class OrganizationCommanderImpl @Inject() (
           orgConfigRepo.deactivate(orgConfigRepo.getByOrgId(org.id.get))
 
           slackTeamRepo.getByOrganizationId(org.id.get).foreach { slackTeam =>
-            slackTeamRepo.save(slackTeam.copy(organizationId = None))
+            slackTeamRepo.save(slackTeam.withOrganizationId(None))
           }
 
           orgRepo.save(org.sanitizeForDelete)
