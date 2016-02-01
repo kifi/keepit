@@ -171,9 +171,10 @@ class SlackInfoCommanderImpl @Inject() (
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
             val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val missingScopes = TurnOnChannelIngestion(fs.id.get.id).getMissingScopes(existingScopes)
+            val action = TurnOnChannelIngestion(fs.id.get.id)
+            val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
-            else Some(com.keepit.controllers.website.routes.SlackController.turnOnChannelIngestion(publicLibId, fsPubId.id).url)
+            else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackController.REDIRECT_URI).url)
           }
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
       }
@@ -182,10 +183,11 @@ class SlackInfoCommanderImpl @Inject() (
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
-            lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val missingScopes = TurnOnLibraryPush(ts.id.get.id).getMissingScopes(existingScopes)
+            val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
+            val action = TurnOnLibraryPush(ts.id.get.id)
+            val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
-            else Some(com.keepit.controllers.website.routes.SlackController.turnOnLibraryPush(publicLibId, tsPubId.id).url)
+            else Some(slackStateCommander.getAuthLink(action, Some(ts.slackTeamId), missingScopes, SlackController.REDIRECT_URI).url)
           }
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }
