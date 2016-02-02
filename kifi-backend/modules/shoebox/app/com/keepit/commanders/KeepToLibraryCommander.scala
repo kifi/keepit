@@ -61,7 +61,8 @@ class KeepToLibraryCommanderImpl @Inject() (
           addedAt = clock.now,
           uriId = keep.uriId,
           visibility = library.visibility,
-          organizationId = library.organizationId
+          organizationId = library.organizationId,
+          lastActivityAt = keep.lastActivityAt
         )
         ktlRepo.save(newKtlTemplate.copy(id = inactiveKtlOpt.map(_.id.get)))
     }
@@ -96,11 +97,11 @@ class KeepToLibraryCommanderImpl @Inject() (
   }
   def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary = {
     require(ktl.keepId == keep.id.get, "keep.id does not match ktl.keepId")
-    ktlRepo.save(ktl.withUriId(keep.uriId))
+    ktlRepo.save(ktl.withUriId(keep.uriId).withLastActivityAt(keep.lastActivityAt))
   }
   def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktl =>
-      ktlRepo.deactivate(ktl.withUriId(keep.uriId))
+      ktlRepo.deactivate(ktl.withUriId(keep.uriId).withLastActivityAt(keep.lastActivityAt))
     }
   }
 

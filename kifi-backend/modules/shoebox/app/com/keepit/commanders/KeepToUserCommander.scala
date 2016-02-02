@@ -46,7 +46,8 @@ class KeepToUserCommanderImpl @Inject() (
           userId = userId,
           addedBy = addedBy,
           addedAt = clock.now,
-          uriId = keep.uriId
+          uriId = keep.uriId,
+          lastActivityAt = keep.lastActivityAt
         )
         ktuRepo.save(newKtuTemplate.copy(id = existingKtuOpt.map(_.id.get)))
     }
@@ -77,12 +78,12 @@ class KeepToUserCommanderImpl @Inject() (
   }
   def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser = {
     require(ktu.keepId == keep.id.get, "keep.id does not match ktu.keepId")
-    ktuRepo.save(ktu.withUriId(keep.uriId))
+    ktuRepo.save(ktu.withUriId(keep.uriId).withLastActivityAt(keep.lastActivityAt))
   }
 
   def syncAndDeleteKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktuRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktu =>
-      ktuRepo.deactivate(ktu.withUriId(keep.uriId))
+      ktuRepo.deactivate(ktu.withUriId(keep.uriId).withLastActivityAt(keep.lastActivityAt))
     }
   }
 }
