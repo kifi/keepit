@@ -471,13 +471,18 @@ class AdminOrganizationController @Inject() (
     val slackLibraryIds = db.readOnlyMaster { implicit session =>
       libRepo.getBySpaceAndKind(OrganizationSpace(orgId), LibraryKind.SLACK_CHANNEL).map(_.id.get)
     }
-    FutureHelpers.sequentialExec(slackLibraryIds)(libCommander.unsafeAsyncDeleteLibrary).map { _ =>
-      val team = db.readWrite { implicit session =>
-        slackTeamRepo.getByOrganizationId(orgId).foreach { slackTeam =>
-          slackTeamRepo.save(slackTeam.withOrganizationId(None).withOrganizationId(Some(orgId)))
+    if (doIt) {
+      FutureHelpers.sequentialExec(slackLibraryIds)(libCommander.unsafeAsyncDeleteLibrary).map { _ =>
+        val team = db.readWrite { implicit session =>
+          slackTeamRepo.getByOrganizationId(orgId).map { slackTeam =>
+            slackTeamRepo.save(slackTeam.withOrganizationId(None).withOrganizationId(Some(orgId)))
+          }
         }
+        Ok(s"Deleted ${slackLibraryIds.size} libraries for team $team")
       }
-      Ok(s"Deleted ${slackLibraryIds.size} libraries for $team")
+    } else {
+      val team = db.readOnlyMaster { implicit session => slackTeamRepo.getByOrganizationId(orgId) }
+      Future.successful(Ok(s"Should we doIt? We'll delete ${slackLibraryIds.size} libraries for team $team."))
     }
   }
 }
