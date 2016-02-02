@@ -564,12 +564,7 @@ var socketHandlers = {
 };
 
 function shouldLinkToKeep(keep) {
-  return keep && (
-    keep.libraries && (
-      keep.libraries.length === 1 ||
-      (keep.libraries.length === 0 && experiments.indexOf('keep_nolib') !== -1)
-    )
-  );
+  return keep && keep.libraries && keep.libraries.length <= 1;
 }
 
 function emitAllTabs(name, data, options) {
