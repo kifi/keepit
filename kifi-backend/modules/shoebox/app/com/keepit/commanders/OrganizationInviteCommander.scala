@@ -303,10 +303,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
         SafeFuture {
           notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
-          acceptInvitationNotifications(invitesWithActiveInviter.map(_.inviterId).toSet, basicInvitee, organization)
-        }
-        SafeFuture {
-          acceptInvitationEmail(basicInvitee, organization)
         }
 
         invitations.foreach { invite =>
@@ -315,51 +311,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
       }
       success
-    }
-  }
-
-  private def acceptInvitationEmail(invitee: User, org: Organization): Unit = {
-    val subject = s"${invitee.firstName} ${invitee.lastName} has joined the ${org.abbreviatedName} team on Kifi"
-    val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
-    val recipiants = allMembers.filterNot(_ == invitee.id.get)
-
-    recipiants.foreach { toRecipient =>
-      val emailToSend = EmailToSend(
-        from = SystemEmailAddress.NOTIFICATIONS,
-        subject = subject,
-        to = Left(toRecipient),
-        category = NotificationCategory.User.ORGANIZATION_JOINED,
-        htmlTemplate = views.html.email.organizationMemberJoined(toRecipient, invitee.id.get, org),
-        textTemplate = Some(views.html.email.organizationMemberJoinedText(toRecipient, invitee.id.get, org)),
-        templateOptions = Seq(CustomLayout).toMap
-      )
-      emailTemplateSender.send(emailToSend) map (Some(_))
-    }
-  }
-
-  private def acceptInvitationNotifications(inviters: Set[Id[User]], invitee: User, org: Organization): Unit = {
-    val title = s"${invitee.firstName} has joined the ${org.abbreviatedName} team!"
-    val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
-    //don't send the inviter since he already gets a message via notifyInviterOnOrganizationInvitationAcceptance
-    val recipiants = allMembers.filterNot(m => inviters.contains(m)).filterNot(_ == invitee.id.get)
-
-    recipiants.foreach { recipiantId =>
-      elizaClient.sendNotificationEvent(
-        OrgMemberJoined(
-          recipient = Recipient(recipiantId),
-          time = currentDateTime,
-          memberId = invitee.id.get,
-          org.id.get)
-      )
-      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipiantId, KifiAndroidVersion("4.0.0"), KifiIPhoneVersion("4.0.0"))
-      if (canSendPush) {
-        elizaClient.sendUserPushNotification(
-          userId = recipiantId,
-          message = title,
-          recipient = invitee,
-          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-          category = UserPushNotificationCategory.NewOrganizationMember)
-      }
     }
   }
 
