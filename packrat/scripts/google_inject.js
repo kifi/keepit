@@ -1048,7 +1048,6 @@ if (searchUrlRe.test(document.URL)) !function () {
         sourceEl = sourceEls.pop();
         elsToRemove.push(sourceEl);
         pxToGo -= sourceEl.offsetWidth;
-        nUsers++;
       } else {
         break;
       }
