@@ -24,7 +24,8 @@ object KeepFactory {
       libraryId = None,
       note = None,
       connections = KeepConnections(Set.empty, Set(userId)),
-      originalKeeperId = Some(userId)
+      originalKeeperId = Some(userId),
+      lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
     ))
   }
 
@@ -35,6 +36,7 @@ object KeepFactory {
     def withUser(user: User) = this.copy(keep = keep.copy(userId = user.id.get, connections = keep.connections.withUsers(Set(user.id.get))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
     def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
+    def withLastActivityAt(time: DateTime) = this.copy(keep = keep.copy(lastActivityAt = time))
     def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))
     def withId(id: Int) = this.copy(keep = keep.copy(id = Some(Id[Keep](id))))
     def withId(id: ExternalId[Keep]) = this.copy(keep = keep.copy(externalId = id))

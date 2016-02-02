@@ -125,14 +125,20 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
     "most recent from followed libraries" in { //tests only that the query interpolates correctly
       withDb() { implicit injector =>
+        import com.keepit.common.core._
         db.readWrite { implicit s =>
+          val keepRepo = inject[KeepRepo]
           val user1 = user().saved
           val library = LibraryFactory.library().withOwner(user1).saved
-          val keep = KeepFactory.keep().withUser(user1).withLibrary(library).saved
+          val keeps = KeepFactory.keeps(100).map(_.withUser(user1).withLibrary(library).saved)
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None, None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, Some(keep.externalId), None, None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, Some(keep.externalId), None)
+          val firstPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, None, None, None)
+          firstPage must beEqualTo(firstPage.sortBy { case (k, time) => -k.lastActivityAt.getMillis })
+          val secondPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(firstPage.last._1.externalId), None, None)
+          secondPage must beEqualTo(firstPage.sortBy { case (k, time) => -k.lastActivityAt.getMillis })
+          val thirdPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(secondPage.last._1.externalId), None, None)
+          thirdPage must beEqualTo(firstPage.sortBy { case (k, time) => -k.lastActivityAt.getMillis })
+          keepRepo.getRecentKeepsByActivity(user1.id.get, 10, None, Some(keeps(5).externalId), None)
           1 === 1
         }
       }
