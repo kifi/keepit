@@ -119,7 +119,7 @@ class SlackOnboarderImpl @Inject() (
   private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "set up a Kifi integration.",
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId)), "set up a Kifi integration.",
       "Keeps from", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, ltsc.slackTeamId).absolute), "will be posted to this channel."
     ))
     val msg = SlackMessageRequest.fromKifi(text = txt).quiet
@@ -128,7 +128,8 @@ class SlackOnboarderImpl @Inject() (
   private def explicitPushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId)), "connected",
+      ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
       "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -160,7 +161,7 @@ class SlackOnboarderImpl @Inject() (
   private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", sctl.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, sctl.slackTeamId)), "connected", sctl.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
       "on Kifi to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -188,7 +189,7 @@ class SlackOnboarderImpl @Inject() (
   private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
       "to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
