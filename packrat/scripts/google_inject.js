@@ -1023,6 +1023,8 @@ if (searchUrlRe.test(document.URL)) !function () {
           pxToGo -= tagEl.offsetWidth;
         }
         break;
+      } else {
+        break;
       }
     }
 
