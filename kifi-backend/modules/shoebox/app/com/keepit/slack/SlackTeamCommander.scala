@@ -126,27 +126,30 @@ class SlackTeamCommanderImpl @Inject() (
 
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam] = {
     db.readWrite { implicit session =>
-      if (permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission)) {
-        slackTeamRepo.getBySlackTeamId(slackTeamId) match {
-          case Some(team) => team.organizationId match {
-            case None => if (slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)) Success {
-              slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId)))
-            }
-            else {
-              Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
-            }
-            case Some(connectedOrgId) =>
-              if (connectedOrgId == newOrganizationId) Success(team)
-              else Failure(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, connectedOrgId))
-          }
+      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission) match {
+        case false => Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        case true => slackTeamRepo.getBySlackTeamId(slackTeamId) match {
           case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
+          case Some(team) => team.organizationId match {
+            case Some(connectedOrg) if connectedOrg == newOrganizationId => Success(team)
+            case Some(otherOrg) => Failure(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, team.organizationId.get))
+            case None => slackTeamRepo.getByOrganizationId(newOrganizationId) match {
+              case Some(orgTeam) => Failure(SlackActionFail.OrgAlreadyConnected(newOrganizationId, orgTeam.slackTeamId, failedToConnectTeam = slackTeamId))
+              case None => slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId) match {
+                case None => Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
+                case Some(validMembership) => Success(slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId))))
+              }
+            }
+          }
         }
-      } else Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-    } map { team =>
-      SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-        "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
-      ))))
-      team
+      }
+    } tap {
+      case Success(team) =>
+        SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
+        ))))
+      case Failure(fail) =>
+        slackLog.warn(s"Failed to connect $slackTeamId to org $newOrganizationId for user $userId because:", fail.getMessage)
     }
   }
 
