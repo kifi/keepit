@@ -3,7 +3,7 @@ package com.keepit.search.controllers.slack
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{UserRequest, MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper}
+import com.keepit.common.controller.{ UserRequest, MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
