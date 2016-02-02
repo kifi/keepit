@@ -67,7 +67,7 @@ function getServicePID {
    return 0; }
 
 function startServiceProcess {
-   ulimit -Sn 4096
+   ulimit -Sn 8096
    cd $applDir || return 1
    rm -f $pidFile
    makeFileWritable $pidFile || return 1
