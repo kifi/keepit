@@ -4,15 +4,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
 import com.keepit.classify.NormalizedHostname
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
+import com.keepit.slack.models.SlackTeamRepo
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
 import play.twirl.api.HtmlFormat
@@ -37,6 +39,8 @@ class AdminOrganizationController @Inject() (
     paidAccountRepo: PaidAccountRepo,
     paidPlanRepo: PaidPlanRepo,
     libRepo: LibraryRepo,
+    libCommander: LibraryCommander,
+    slackTeamRepo: SlackTeamRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgCommander: OrganizationCommander,
@@ -461,5 +465,19 @@ class AdminOrganizationController @Inject() (
       }
     }
     Ok
+  }
+
+  def unsyncSlackLibraries(orgId: Id[Organization], doIt: Boolean = false) = AdminUserAction.async { implicit request =>
+    val slackLibraryIds = db.readOnlyMaster { implicit session =>
+      libRepo.getBySpaceAndKind(OrganizationSpace(orgId), LibraryKind.SLACK_CHANNEL).map(_.id.get)
+    }
+    FutureHelpers.sequentialExec(slackLibraryIds)(libCommander.unsafeAsyncDeleteLibrary).map { _ =>
+      val team = db.readWrite { implicit session =>
+        slackTeamRepo.getByOrganizationId(orgId).foreach { slackTeam =>
+          slackTeamRepo.save(slackTeam.withOrganizationId(None).withOrganizationId(Some(orgId)))
+        }
+      }
+      Ok(s"Deleted ${slackLibraryIds.size} libraries for $team")
+    }
   }
 }
