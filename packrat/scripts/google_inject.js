@@ -604,7 +604,7 @@ if (searchUrlRe.test(document.URL)) !function () {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
           click: 'toggle'});
-        ($a.data('hoverfu') || {}).$h.on('click', '.kifi-lc-follow[href]', function (e) {
+        ($a.data('hoverfu') || {on:api.noop}).$h.on('click', '.kifi-lc-follow[href]', function (e) {
           var $btn = $(this).removeAttr('href');
           var following = library.following;
           var withOutcome = progress($btn.parent(), 'kifi-lc-progress', function (success) {
@@ -864,6 +864,18 @@ if (searchUrlRe.test(document.URL)) !function () {
     hit.tags || (hit.tags = []);
   }
 
+  function prioritizeSlack(sourceA, sourceB) {
+    if (sourceA.slack && sourceB.twitter) {
+      // Slack is "smaller", because we want it at the beginning
+      return -1;
+    } else if (sourceB.slack && sourceA.twitter) {
+      // Twitter is "bigger", because we want it at the end
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
   function renderDataForHit(hit) {
     var who = (response.filter || {}).who;
     var users = hit.keepers.slice(0, who === 'm' ? 1 : 8);
@@ -887,7 +899,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       librariesMore: hit.librariesOmitted || '',
       tags: hit.tags,
       tagsMore: hit.tagsOmitted || '',
-      source: hit.source,
+      sources: (hit.sources || [ hit.source ]).sort(prioritizeSlack),
       origin: response.origin
     };
   }
@@ -1011,6 +1023,8 @@ if (searchUrlRe.test(document.URL)) !function () {
           pxToGo -= tagEl.offsetWidth;
         }
         break;
+      } else {
+        break;
       }
     }
 
@@ -1023,6 +1037,19 @@ if (searchUrlRe.test(document.URL)) !function () {
         elsToRemove.push(userEl);
         pxToGo -= userEl.offsetWidth;
         nUsers++;
+      } else {
+        break;
+      }
+    }
+
+    while (pxToGo > 0) {
+      var sourceEls = sourceEls || Array.prototype.slice.call(this.getElementsByClassName('kifi-res-source'));
+      var sourceEl;
+
+      if (sourceEls.length > 1) {
+        sourceEl = sourceEls.pop();
+        elsToRemove.push(sourceEl);
+        pxToGo -= sourceEl.offsetWidth;
       } else {
         break;
       }
