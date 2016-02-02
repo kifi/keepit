@@ -18,7 +18,7 @@ case class KeepToLibrary(
   // and from Library
   visibility: LibraryVisibility,
   organizationId: Option[Id[Organization]],
-  lastActivityAt: DateTime = currentDateTime)
+  lastActivityAt: DateTime) // denormalized from keep
     extends ModelWithState[KeepToLibrary] {
 
   def withId(id: Id[KeepToLibrary]): KeepToLibrary = this.copy(id = Some(id))
