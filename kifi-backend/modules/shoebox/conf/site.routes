@@ -35,7 +35,8 @@ GET     /url                       @com.keepit.controllers.routing.KifiSiteRoute
 GET     /k/:title/:id              @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfKeepFound(title: String, id: PublicId[Keep], authToken: Option[String] ?= None)
 
 GET     /s/:teamId/i                        @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToInstallPage(teamId: SlackTeamId)
-GET     /s/:teamId/u/:userId                @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToUser(teamId: SlackTeamId, userId: ExternalId[User])
+GET     /s/:teamId/u/:userId                @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToUser(teamId: SlackTeamId, userId: ExternalId[User], isWelcomeMessage: Boolean = false)
+GET     /s/:teamId/welcome/:userId          @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToUser(teamId: SlackTeamId, userId: ExternalId[User], isWelcomeMessage: Boolean = true)
 GET     /s/:teamId/o/:orgId                 @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToOrg(teamId: SlackTeamId, orgId: PublicId[Organization])
 GET     /s/:teamId/oi/:orgId                @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToOrgIntegrations(teamId: SlackTeamId, orgId: PublicId[Organization])
 GET     /s/:teamId/l/:libId                 @com.keepit.controllers.routing.SlackAuthRouter.fromSlackToLibrary(teamId: SlackTeamId, libId: PublicId[Library])

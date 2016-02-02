@@ -50,17 +50,21 @@ class SlackAuthRouter @Inject() (
     }
     redir.getOrElse(notFound(request))
   }
-  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User]) = MaybeUserAction { implicit request =>
+
+  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User], isWelcomeMessage: Boolean) = MaybeUserAction { implicit request =>
+    import com.keepit.common.core._
     db.readOnlyMaster { implicit s =>
       val userPathOpt = userRepo.getOpt(extId).filter(_.isActive).map(user => pathCommander.pathForUser(user).absolute)
-      if (request.userIdOpt.isDefined) userPathOpt.map(Redirect(_))
-      else {
-        for {
-          userPath <- userPathOpt
-          orgId <- slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId)
-          org <- orgRepo.getActive(orgId).orElse { airbrake.notify(s"[zombie-org] slackTeam=${slackTeamId.value} references inactive org=${orgId}"); None }
-        } yield redirectThroughSlackAuth(org, slackTeamId, userPath, userId = Some(extId))
-      }
+      (for {
+        _ <- Some(true) if request.userIdOpt.isEmpty || isWelcomeMessage
+        userPath <- userPathOpt
+        orgId <- slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId)
+        org <- orgRepo.getActive(orgId).tap {
+          case None => airbrake.notify(s"[inactive-org] slackTeam=${slackTeamId.value} references inactive org=${orgId.id}")
+          case _ =>
+        }
+        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+      } yield redirectThroughSlackAuth(org, slackTeamId, userPath)) orElse userPathOpt.map(Redirect(_))
     }.getOrElse(notFound(request))
   }
 
