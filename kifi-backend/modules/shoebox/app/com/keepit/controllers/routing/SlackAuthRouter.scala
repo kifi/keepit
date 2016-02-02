@@ -64,7 +64,7 @@ class SlackAuthRouter @Inject() (
           case _ =>
         }
         _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
-      } yield redirectThroughSlackAuth(org, slackTeamId, userPath)) orElse userPathOpt.map(Redirect(_))
+      } yield redirectThroughSlackAuth(org, slackTeamId, userPath, userId = Some(extId))) orElse userPathOpt.map(Redirect(_))
     }.getOrElse(notFound(request))
   }
 
