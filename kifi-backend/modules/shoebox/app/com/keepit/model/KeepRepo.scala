@@ -693,7 +693,7 @@ class KeepRepoImpl @Inject() (
       } yield (keepId, lastActivityAtForKeep)
     }
 
-    val last_activity_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndLastActivityAt).filter(_ => false) match {
+    val last_activity_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndLastActivityAt) match {
       case None => "true"
       case Some((keepId, before)) => s"last_activity_at < '$before' OR (last_activity_at = '$before' AND k.id < $keepId)"
     }
