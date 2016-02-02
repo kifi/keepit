@@ -604,7 +604,7 @@ if (searchUrlRe.test(document.URL)) !function () {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
           click: 'toggle'});
-        ($a.data('hoverfu') || {}).$h.on('click', '.kifi-lc-follow[href]', function (e) {
+        ($a.data('hoverfu') || {on:api.noop}).$h.on('click', '.kifi-lc-follow[href]', function (e) {
           var $btn = $(this).removeAttr('href');
           var following = library.following;
           var withOutcome = progress($btn.parent(), 'kifi-lc-progress', function (success) {
