@@ -3,7 +3,7 @@ package com.keepit.search.controllers.slack
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{UserRequest, MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper}
 import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
@@ -222,6 +222,10 @@ class SlackSearchController @Inject() (
           contextBuilder += ("slackTeamId", command.teamId.value)
           contextBuilder += ("slackUsername", command.username.value)
           contextBuilder += ("slackChannelId", command.channelId.value)
+          request match {
+            case ur: UserRequest[_] => contextBuilder.addExperiments(ur.experiments)
+            case _ =>
+          }
           val heimdalContext = contextBuilder.build
           val endedWith = "unload"
 

@@ -463,8 +463,8 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 
 ## endpoints only for testing, should be deleted by 2016-01-10
 POST    /site/rpb/setArrangement           @com.keepit.controllers.website.UserController.setPreferredLibraryArrangement()
-GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, limit: Int ?= 10)
-GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
+GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/push        @com.keepit.controllers.website.SlackController.turnOnLibraryPush(id: PublicId[Library], integrationId: String)

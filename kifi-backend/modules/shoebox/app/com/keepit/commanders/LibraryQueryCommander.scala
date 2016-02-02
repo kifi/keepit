@@ -15,6 +15,7 @@ case class LibraryQuery(
     target: LibraryQuery.Target,
     arrangement: Option[LibraryQuery.Arrangement] = None,
     fromId: Option[Id[Library]],
+    offset: Int,
     limit: Int) {
   def withArrangement(newArrangement: LibraryQuery.Arrangement) = this.copy(arrangement = Some(newArrangement))
 }
@@ -61,7 +62,7 @@ class LibraryQueryCommanderImpl @Inject() (
         preferredArrangement <- Try(preferredArrangementJson.as[LibraryQuery.Arrangement]).safeOption
       } yield preferredArrangement
     }
-    val customizedQuery = preferredArrangement.map(query.withArrangement).getOrElse(query)
+    val customizedQuery = preferredArrangement.fold(query)(query.withArrangement)
 
     val extraInfo = LibraryQuery.ExtraInfo(
       explicitlyAllowedLibraries = requester.map(userId => libMembershipRepo.getWithUserId(userId).map(_.libraryId).toSet).getOrElse(Set.empty),

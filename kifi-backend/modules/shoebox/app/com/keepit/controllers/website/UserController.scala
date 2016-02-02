@@ -546,21 +546,21 @@ class UserController @Inject() (
     NoContent
   }
 
-  def rpbGetUserLibraries(extId: ExternalId[User], fromIdOpt: Option[String], limit: Int) = UserAction { request =>
+  def rpbGetUserLibraries(extId: ExternalId[User], fromIdOpt: Option[String], offset: Int, limit: Int) = UserAction { request =>
     if (!request.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING)) Forbidden(Json.obj("err" -> "not_exposed_to_clients"))
     else {
       val userId = db.readOnlyReplica { implicit s => userRepo.getByExternalId(extId).id.get }
       val fromId = fromIdOpt.filter(_.nonEmpty).map(str => Library.decodePublicId(PublicId(str)).get)
-      val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, userId, fromId, limit)
+      val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, userId, fromId, offset = offset, limit = limit)
       Ok(Json.toJson(output))
     }
   }
-  def rpbGetOrgLibraries(pubId: PublicId[Organization], fromIdOpt: Option[String], limit: Int) = UserAction { request =>
+  def rpbGetOrgLibraries(pubId: PublicId[Organization], fromIdOpt: Option[String], offset: Int, limit: Int) = UserAction { request =>
     if (!request.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING)) Forbidden(Json.obj("err" -> "not_exposed_to_clients"))
     else {
       val orgId = Organization.decodePublicId(pubId).get
       val fromId = fromIdOpt.filter(_.nonEmpty).map(str => Library.decodePublicId(PublicId(str)).get)
-      val output = libInfoCommander.rpbGetOrgLibraries(request.userIdOpt, orgId, fromId, limit)
+      val output = libInfoCommander.rpbGetOrgLibraries(request.userIdOpt, orgId, fromId, offset = offset, limit = limit)
       Ok(Json.toJson(output))
     }
   }
