@@ -165,7 +165,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
         )))
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
-        val libLink = LinkElement(if (canSmartRoute(slackTeamId)) pathCommander.libraryPageViaSlack(lib, slackTeamId) else pathCommander.pathForLibrary(lib))
+        val libLink = pathCommander.libraryPageViaSlack(lib, slackTeamId)
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
           lib.name --> libLink
