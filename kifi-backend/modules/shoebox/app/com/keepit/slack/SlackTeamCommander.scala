@@ -19,17 +19,6 @@ import com.keepit.slack.models._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
-case class SlackTeamNotConnectedException(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName)
-  extends Exception(s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is not connected to any organization.")
-
-case class SlackTeamAlreadyConnectedException(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, connectedOrgId: Id[Organization])
-  extends Exception(s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is already connected to organization $connectedOrgId")
-
-case class SlackTeamNotFoundException(slackTeamId: SlackTeamId) extends Exception(s"We could not find SlackTeam ${slackTeamId.value}")
-
-case class InvalidSlackMembershipException(userId: Id[User], slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, membership: Option[SlackTeamMembership])
-  extends Exception(s"User $userId is not a valid member of SlackTeam ${slackTeamName.value} (${slackTeamId.value}): $membership")
-
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
   def getSlackTeams(userId: Id[User]): Set[SlackTeam]
@@ -92,7 +81,7 @@ class SlackTeamCommanderImpl @Inject() (
     teamOpt match {
       case Some(team) if team.organizationId.isEmpty && connectableOrgs.isEmpty => createOrganizationForSlackTeam(userId, slackTeamId).imap((_, true))
       case Some(team) => Future.successful((team, false))
-      case None => Future.failed(SlackTeamNotFoundException(slackTeamId))
+      case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
 
@@ -129,11 +118,11 @@ class SlackTeamCommanderImpl @Inject() (
                 case Left(error) => Future.failed(error)
               }
             }
-          case None => Future.failed(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+          case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
         }
-        case Some(orgId) => Future.failed(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, orgId))
+        case Some(orgId) => Future.failed(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, orgId))
       }
-      case None => Future.failed(SlackTeamNotFoundException(slackTeamId))
+      case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
 
@@ -146,13 +135,13 @@ class SlackTeamCommanderImpl @Inject() (
               slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId)))
             }
             else {
-              Failure(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, None))
+              Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
             }
             case Some(connectedOrgId) =>
               if (connectedOrgId == newOrganizationId) Success(team)
-              else Failure(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, connectedOrgId))
+              else Failure(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, connectedOrgId))
           }
-          case None => Failure(SlackTeamNotFoundException(slackTeamId))
+          case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
         }
       } else Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
     } map { team =>
@@ -270,11 +259,11 @@ class SlackTeamCommanderImpl @Inject() (
                   }
                 }
               }
-            case None => Future.failed(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+            case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
           }
         } else Future.failed(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-      case None => Future.failed(SlackTeamNotConnectedException(team.slackTeamId, team.slackTeamName))
+      case None => Future.failed(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
     }
   }
 

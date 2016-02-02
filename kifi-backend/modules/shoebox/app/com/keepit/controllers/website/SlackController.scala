@@ -5,7 +5,9 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.EitherFormat
 import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
@@ -47,6 +49,7 @@ class SlackController @Inject() (
     val userActionsHelper: UserActionsHelper,
     val libraryAccessCommander: LibraryAccessCommander,
     val db: Database,
+    airbrake: AirbrakeNotifier,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with LibraryAccessActions with ShoeboxServiceController {
 
@@ -93,12 +96,13 @@ class SlackController @Inject() (
       result match {
         case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
         case SlackResponse.ActionPerformed(url) => Redirect(url getOrElse "/", SEE_OTHER)
-        case SlackResponse.Error(_) => Redirect("/", SEE_OTHER) // explicit error page?
       }
     }
 
     resultFut.recover {
-      case fail: SlackAPIFailure => Redirect("/", SEE_OTHER) // we could have an explicit error page here
+      case fail =>
+        airbrake.notify(s"Slack authorization failed for user ${request.userId} with state $state and code $codeOpt", fail)
+        Redirect("/", SEE_OTHER) // we could have an explicit error page here
     }
   }
 
@@ -108,20 +112,19 @@ class SlackController @Inject() (
         case Some(webhook) =>
           slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackTeamId, slackUserId)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
-        case _ => Future.successful(SlackResponse.Error("missing_webhook"))
+        case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
       case TurnOnLibraryPush(integrationId) => incomingWebhook match {
         case Some(webhook) =>
           val libraryId = slackIntegrationCommander.turnOnLibraryPush(Id(integrationId), webhook, slackTeamId, slackUserId)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.successful(SlackResponse.Error("missing_webhook"))
+        case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
-      case TurnOnChannelIngestion(integrationId) => {
+      case TurnOnChannelIngestion(integrationId) =>
         val libraryId = slackIntegrationCommander.turnOnChannelIngestion(Id(integrationId), slackTeamId, slackUserId)
         Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-      }
 
       case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map {
         case (slackTeam, isNewOrg) =>
@@ -223,26 +226,26 @@ class SlackController @Inject() (
   }
 
   def addSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
-    processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam())
-      .map(handleAsBrowserRequest)
+    val res = processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam())
+    handleAsBrowserRequest(res)
   }
 
   def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
-    processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
-      .map(handleAsAPIRequest)
+    val res = processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
+    handleAsAPIRequest(res)(request.request)
   }
 
   def createSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
-    processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
-      .map(handleAsBrowserRequest)
+    val res = processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
+    handleAsBrowserRequest(res)(request)
   }
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
       slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
     }
-    processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels(request.orgId))
-      .map(handleAsAPIRequest)
+    val res = processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels(request.orgId))
+    handleAsAPIRequest(res)(request.request)
   }
 
   def getOrganizationsToConnectToSlackTeam() = UserAction { implicit request =>
@@ -260,8 +263,8 @@ class SlackController @Inject() (
   }
 
   def setupLibraryIntegrations(libraryId: PublicId[Library]) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
-    processActionOrElseAuthenticate(request.userId, None, SetupLibraryIntegrations(Library.decodePublicId(libraryId).get))
-      .map(handleAsAPIRequest)
+    val res = processActionOrElseAuthenticate(request.userId, None, SetupLibraryIntegrations(Library.decodePublicId(libraryId).get))
+    handleAsAPIRequest(res)
   }
 
   def turnOnLibraryPush(libraryId: PublicId[Library], integrationId: String) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
@@ -269,8 +272,8 @@ class SlackController @Inject() (
       case Success(libToSlackId) =>
         // todo(Léo): deal with broken webhook / missing write permissions ???
         val slackTeamId = db.readOnlyMaster { implicit session => libToSlackRepo.get(libToSlackId).slackTeamId }
-        processActionOrElseAuthenticate(request.userId, Some(slackTeamId), TurnOnLibraryPush(libToSlackId.id))
-          .map(handleAsBrowserRequest)
+        val res = processActionOrElseAuthenticate(request.userId, Some(slackTeamId), TurnOnLibraryPush(libToSlackId.id))
+        handleAsBrowserRequest(res)
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id")) // Bad bad bad
     }
   }
@@ -279,41 +282,45 @@ class SlackController @Inject() (
     SlackChannelToLibrary.decodePublicIdStr(integrationId) match {
       case Success(slackToLibId) =>
         val slackTeamId = db.readOnlyMaster { implicit session => slackToLibRepo.get(slackToLibId).slackTeamId }
-        processActionOrElseAuthenticate(request.userId, Some(slackTeamId), TurnOnChannelIngestion(slackToLibId.id))
-          .map(handleAsBrowserRequest)
+        val res = processActionOrElseAuthenticate(request.userId, Some(slackTeamId), TurnOnChannelIngestion(slackToLibId.id))
+        handleAsBrowserRequest(res)
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id")) // Bad bad bad
     }
   }
 
   // Can elegantly handle redirects (to HTML pages), *never* speaks JSON, should not be on /site/ routes
-  private def handleAsBrowserRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
-    response match {
+  private def handleAsBrowserRequest[T](response: Future[SlackResponse])(implicit request: UserRequest[T]) = {
+    response.map {
       case SlackResponse.RedirectClient(url) => Redirect(url, SEE_OTHER)
       case SlackResponse.ActionPerformed(urlOpt) =>
         val url = urlOpt.orElse(request.headers.get(REFERER).filter(_.startsWith("https://www.kifi.com"))).getOrElse("/")
         Redirect(url)
-      case SlackResponse.Error(code) =>
-        log.warn(s"[SlackController#handleAsBrowserRequest] Error: $code")
-        Redirect("/") // Bad bad bad
+    }.recover {
+      case fail: SlackActionFail =>
+        log.warn(s"[SlackController#handleAsBrowserRequest] Error: ${fail.code}")
+        Redirect(fail.bestEffortRedirect.fold("/")(_.absolute))
+      case badFail =>
+        airbrake.notify("Uncategorized failure for SlackAction", badFail)
+        Redirect("/")
     }
   }
 
   // Always speaks JSON, should be on /site/ routes, cannot handle Redirects to HTML pages
-  private def handleAsAPIRequest[T](implicit request: Request[T]) = { (response: SlackResponse) =>
-    response match {
+  private def handleAsAPIRequest[T](response: Future[SlackResponse])(implicit request: UserRequest[T]) = {
+    response.map {
       case SlackResponse.RedirectClient(url) => Ok(Json.obj("redirect" -> url))
-      case SlackResponse.ActionPerformed(urlOpt) => Ok(Json.obj("success" -> true, "redirect" -> urlOpt))
-      case SlackResponse.Error(code) =>
-        log.warn(s"[SlackController#handleAsAPIRequest] Error: $code")
-        BadRequest(Json.obj("error" -> code))
+      case SlackResponse.ActionPerformed(urlOpt) =>
+        Ok(Json.obj("success" -> true, "redirect" -> urlOpt))
+    }.recover {
+      case fail: SlackActionFail =>
+        log.warn(s"[SlackController#handleAsAPIRequest] Error: ${fail.code}")
+        fail.asErrorResponse
     }
   }
 }
 
-private sealed trait SlackResponse
-private object SlackResponse {
-  // Error, usually can't be elegantly recovered by clients.
-  final case class Error(code: String) extends SlackResponse
+sealed trait SlackResponse
+object SlackResponse {
   // Client should blindly go to `url`, typically because they need to go to 3rd party to auth
   final case class RedirectClient(url: String) extends SlackResponse
   // Requested action performed. Url included is a suggestion about a good place to go next, but clients can be smarter.
