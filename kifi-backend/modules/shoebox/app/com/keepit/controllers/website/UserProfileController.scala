@@ -108,8 +108,8 @@ class UserProfileController @Inject() (
         log.warn(s"unknown username ${username.value} requested")
         Future.successful(NotFound(username.value))
       case Some(user) if useCustomLibraryOrderingLogic && filter == "own" =>
-        val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, user.id.get, None, pageSize)
-        Future.successful(Ok(Json.obj(filter -> output))) // explicitly incorrect, only used for testing
+        val output = libInfoCommander.rpbGetUserLibraries(request.userIdOpt, user.id.get, None, offset = page * pageSize, limit = pageSize)
+        Future.successful(Ok(Json.obj(filter -> output)))
       case Some(user) =>
         val viewer = request.userOpt
         val paginator = Paginator(page, pageSize)

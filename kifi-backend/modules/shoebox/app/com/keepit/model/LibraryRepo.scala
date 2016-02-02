@@ -265,8 +265,8 @@ class LibraryRepoImpl @Inject() (
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.ASCENDING) => rs.sortBy(lib => (lib.memberCount asc, lib.id asc))
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.DESCENDING) => rs.sortBy(lib => (lib.memberCount desc, lib.id desc))
       }
-    } |> { rs => // then take the first page of the results
-      rs.map(_.id).take(query.limit).list
+    } |> { rs => // then page through the results
+      rs.map(_.id).drop(query.offset).take(query.limit).list
     }
   }
 
