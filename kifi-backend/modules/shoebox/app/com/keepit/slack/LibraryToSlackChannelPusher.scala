@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.path.Path
 import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
@@ -33,6 +34,8 @@ object LibraryToSlackChannelPusher {
   val MAX_KEEPS_TO_SEND = 7
   val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
+  def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackTeamId
 }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -123,17 +126,28 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case sa: SlackAttribution => sa.message
     }
 
+    val shouldSmartRoute = canSmartRoute(slackTeamId)
+
+    val userElement: DescriptionElements = {
+      val basicUser = getUser(keep.userId)
+      if (lib.organizationId.isEmpty || !shouldSmartRoute) basicUser
+      else basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId))
+    }
+    val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
+    val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
+
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute), "."
+          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
+          "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          "was added to", lib.name --> libLink, "."
         )
       case None =>
         DescriptionElements(
-          getUser(keep.userId), "added",
-          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url),
-          "to", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute),
+          userElement, "added",
+          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
+          "to", lib.name --> libLink,
           keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), "."
         )
     }
@@ -151,9 +165,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
         )))
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
+        val libLink = LinkElement(if (canSmartRoute(slackTeamId)) pathCommander.libraryPageViaSlack(lib, slackTeamId) else pathCommander.pathForLibrary(lib))
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
-          lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId))
+          lib.name --> libLink
         )
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
