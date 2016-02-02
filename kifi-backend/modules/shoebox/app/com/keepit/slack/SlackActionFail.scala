@@ -2,13 +2,11 @@ package com.keepit.slack
 
 import com.keepit.common.db.Id
 import com.keepit.common.path.Path
+import com.keepit.model.{ Organization, User }
+import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembership, SlackTeamName }
 import play.api.http.Status._
-import play.api.libs.json._
-import play.api.mvc.Results.Status
-import com.keepit.controllers.website.SlackResponse
-import com.keepit.model.{ Library, User, Organization }
-import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamName, SlackTeamId }
 import play.api.libs.json.Json
+import play.api.mvc.Results.Status
 
 sealed abstract class SlackActionFail(val code: String, val msg: String) extends Exception(msg) {
   def bestEffortRedirect: Option[Path] = None

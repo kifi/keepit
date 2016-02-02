@@ -1,14 +1,9 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders._
 import com.keepit.common.controller._
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model._
-import com.keepit.shoebox.controllers.{ LibraryAccessActions, OrganizationAccessActions }
 import com.keepit.slack._
 import com.keepit.slack.models._
 
@@ -23,25 +18,12 @@ class SlackOAuthController @Inject() (
   slackClient: SlackClient,
   slackCommander: SlackCommander,
   slackStateCommander: SlackAuthStateCommander,
-  slackIntegrationCommander: SlackIntegrationCommander,
-  slackTeamCommander: SlackTeamCommander,
-  authCommander: SlackAuthenticationCommander,
-  pathCommander: PathCommander,
-  slackToLibRepo: SlackChannelToLibraryRepo,
-  libToSlackRepo: LibraryToSlackChannelRepo,
-  userRepo: UserRepo,
-  slackMembershipRepo: SlackTeamMembershipRepo,
-  slackInfoCommander: SlackInfoCommander,
+  slackAuthCommander: SlackAuthenticationCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  userValueRepo: UserValueRepo,
-  val permissionCommander: PermissionCommander,
   val userActionsHelper: UserActionsHelper,
-  val libraryAccessCommander: LibraryAccessCommander,
-  val db: Database,
   airbrake: AirbrakeNotifier,
-  implicit val publicIdConfig: PublicIdConfiguration,
   implicit val ec: ExecutionContext)
-    extends UserActions with OrganizationAccessActions with LibraryAccessActions with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { implicit request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
@@ -53,7 +35,7 @@ class SlackOAuthController @Inject() (
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
         slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
-        authCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, slackAuth.incomingWebhook)
+        slackAuthCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, slackAuth.incomingWebhook)
       }
     } yield {
       result match {
@@ -71,13 +53,13 @@ class SlackOAuthController @Inject() (
 
   def addSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = authCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam())
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam())
     handleAsBrowserRequest(res)
   }
 
   def createSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = authCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
     handleAsBrowserRequest(res)(request)
   }
 

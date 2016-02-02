@@ -2,24 +2,14 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core.{ anyExtensionOps, _ }
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.SlackLog
-import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.DescriptionElements
-import com.keepit.controllers.website.SlackController
+import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
-import play.api.mvc.RequestHeader
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
 
 sealed trait SlackResponse
 object SlackResponse {
@@ -31,7 +21,6 @@ object SlackResponse {
 
 @ImplementedBy(classOf[SlackAuthenticationCommanderImpl])
 trait SlackAuthenticationCommander {
-  // put stuff here
   def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[SlackIncomingWebhook])(implicit context: HeimdalContext): Future[SlackResponse]
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse]
 }
@@ -39,33 +28,14 @@ trait SlackAuthenticationCommander {
 @Singleton
 class SlackAuthenticationCommanderImpl @Inject() (
   db: Database,
-  slackTeamRepo: SlackTeamRepo,
-  slackTeamMembershipRepo: SlackTeamMembershipRepo,
-  channelToLibRepo: SlackChannelToLibraryRepo,
-  libToChannelRepo: LibraryToSlackChannelRepo,
-  channelRepo: SlackChannelRepo,
-  slackClient: SlackClientWrapper,
-  slackOnboarder: SlackOnboarder,
   userValueRepo: UserValueRepo,
   slackCommander: SlackCommander,
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
   slackStateCommander: SlackAuthStateCommander,
   pathCommander: PathCommander,
-  permissionCommander: PermissionCommander,
-  orgCommander: OrganizationCommander,
-  orgAvatarCommander: OrganizationAvatarCommander,
-  libraryRepo: LibraryRepo,
-  libraryCommander: LibraryCommander,
-  orgMembershipRepo: OrganizationMembershipRepo,
-  orgMembershipCommander: OrganizationMembershipCommander,
-  organizationInfoCommander: OrganizationInfoCommander,
-  clock: Clock,
-  implicit val executionContext: ExecutionContext,
-  implicit val publicIdConfig: PublicIdConfiguration,
-  implicit val inhouseSlackClient: InhouseSlackClient)
+  implicit val executionContext: ExecutionContext)
     extends SlackAuthenticationCommander {
-  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
     val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
@@ -150,7 +120,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
       case (_, missingScopes) =>
-        val authUrl = slackStateCommander.getAuthLink(action, slackTeamIdOpt, missingScopes, SlackController.REDIRECT_URI).url
+        val authUrl = slackStateCommander.getAuthLink(action, slackTeamIdOpt, missingScopes, SlackOAuthController.REDIRECT_URI).url
         Future.successful(SlackResponse.RedirectClient(authUrl))
     }
   }

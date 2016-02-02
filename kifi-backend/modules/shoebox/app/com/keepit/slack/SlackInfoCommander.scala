@@ -1,23 +1,23 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander }
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.json.{ KeyFormat }
+import com.keepit.common.json.KeyFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.website.SlackController
+import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.json.{ Writes, Json }
+import play.api.libs.json.{ Json, Writes }
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -174,7 +174,7 @@ class SlackInfoCommanderImpl @Inject() (
             val action = TurnOnChannelIngestion(fs.id.get.id)
             val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
-            else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackController.REDIRECT_URI).url)
+            else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
           }
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
       }
@@ -187,7 +187,7 @@ class SlackInfoCommanderImpl @Inject() (
             val action = TurnOnLibraryPush(ts.id.get.id)
             val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
-            else Some(slackStateCommander.getAuthLink(action, Some(ts.slackTeamId), missingScopes, SlackController.REDIRECT_URI).url)
+            else Some(slackStateCommander.getAuthLink(action, Some(ts.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
           }
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }

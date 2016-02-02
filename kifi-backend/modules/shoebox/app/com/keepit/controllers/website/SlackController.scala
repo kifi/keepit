@@ -7,7 +7,6 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.EitherFormat
-import com.keepit.controllers.core.AuthHelper
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -19,27 +18,15 @@ import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-object SlackController {
-  val REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
-}
-
 @Singleton
 class SlackController @Inject() (
-  slackClient: SlackClient,
-  slackCommander: SlackCommander,
-  slackStateCommander: SlackAuthStateCommander,
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
-  authCommander: SlackAuthenticationCommander,
-  authHelper: AuthHelper,
-  pathCommander: PathCommander,
+  slackAuthCommander: SlackAuthenticationCommander,
   slackToLibRepo: SlackChannelToLibraryRepo,
-  libToSlackRepo: LibraryToSlackChannelRepo,
   userRepo: UserRepo,
-  slackMembershipRepo: SlackTeamMembershipRepo,
   slackInfoCommander: SlackInfoCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  userValueRepo: UserValueRepo,
   val permissionCommander: PermissionCommander,
   val userActionsHelper: UserActionsHelper,
   val libraryAccessCommander: LibraryAccessCommander,
@@ -108,7 +95,7 @@ class SlackController @Inject() (
 
   def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = authCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
     handleAsAPIRequest(res)(request.request)
   }
 
@@ -117,7 +104,7 @@ class SlackController @Inject() (
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
       slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
     }
-    val res = authCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels(request.orgId))
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, SyncPublicChannels(request.orgId))
     handleAsAPIRequest(res)(request.request)
   }
 
@@ -137,7 +124,7 @@ class SlackController @Inject() (
 
   def setupLibraryIntegrations(libraryId: PublicId[Library]) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = authCommander.processActionOrElseAuthenticate(request.userId, None, SetupLibraryIntegrations(Library.decodePublicId(libraryId).get))
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, None, SetupLibraryIntegrations(Library.decodePublicId(libraryId).get))
     handleAsAPIRequest(res)
   }
 
