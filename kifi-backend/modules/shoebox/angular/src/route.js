@@ -263,7 +263,8 @@ angular.module('kifi')
         controller: 'OrgProfileCreateCtrl',
         templateUrl: 'orgProfile/orgProfileCreate.tpl.html',
         params: {
-          showSlackPromo: false
+          showSlackPromo: false,
+          teamName: null
         }
       })
       .state('userProfile', {

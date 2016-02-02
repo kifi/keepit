@@ -63,6 +63,15 @@ angular.module('kifi')
           }
         });
 
+        var slackMemberships = (me.slack && me.slack.memberships) || [];
+        var slackTeamsWithNoOrgs = slackMemberships.filter(function (slackTeamInfo) {
+          return slackTeamInfo.orgId === undefined;
+        });
+        var slackTeamNames = slackTeamsWithNoOrgs.map(function(team) {
+          return team.teamName;
+        });
+        scope.prepopCreateTeamNames = ((slackTeamNames.length && slackTeamNames) || (scope.companyName && [scope.companyName]) || []).concat('');
+
         function orgNameExists(companyName) {
           var orgNames = profileService.me.orgs.map(function(org) { return org.name.toLowerCase(); });
           return orgNames.indexOf(companyName.toLowerCase()) !== -1;
@@ -104,7 +113,7 @@ angular.module('kifi')
           }
         };
 
-        scope.createTeam = function () {
+        scope.createTeam = function (teamName) {
           $analytics.eventTrack('user_clicked_page', {
             'type' : 'homeFeed',
             'action' : 'clickedCreateTeamRighthandRail'
@@ -114,10 +123,10 @@ angular.module('kifi')
             profileService.savePrefs({ hide_company_name: true });
           }
 
-          $state.go('teams.new');
+          $state.go('teams.new', { teamName: teamName });
         };
 
-        scope.openLearnMoreModal = function () {
+        scope.openLearnMoreModal = function (teamName) {
           $analytics.eventTrack('user_clicked_page', {
             'type': 'homeFeed',
             'action': 'learnMoreTeams'
@@ -126,7 +135,7 @@ angular.module('kifi')
           modalService.open({
             template: 'profile/learnMoreModal.tpl.html',
             modalData: {
-              companyName: scope.companyName,
+              companyName: teamName,
               triggerCreateTeam: function () {
                 $analytics.eventTrack('user_clicked_page', {
                   'type' : 'homeFeed',

@@ -108,14 +108,15 @@
       </div>
     </div>
   </div>
-  <div class="kf-pw-create-org" >
-    <div class="kf-pw-create-org-wrapper kf-link-parent" ng-click="createTeam()">
+  <div class="kf-pw-create-org" ng-repeat="teamName in prepopCreateTeamNames" >
+    <div class="kf-pw-create-org-wrapper kf-link-parent" ng-click="createTeam(teamName)">
       <span class="kf-pw-create-org-icon"><svg kf-symbol-sprite icon="plus"></svg></span>
-      <button class="kf-pw-create-org-label kf-link" ng-bind="'Create a team' + (companyName ? ' for ' + companyName : '')"></button>
+      <button class="kf-pw-create-org-label kf-link" ng-bind="'Create a team' + (teamName ? ' for ' + teamName : '')"></button>
     </div>
     <button
       class="kf-link kf-link-underline kf-pw-learn-more"
-      ng-click="openLearnMoreModal()"
+      ng-if="$last"
+      ng-click="openLearnMoreModal(teamName)"
     >
       Learn more
     </button>
