@@ -449,7 +449,7 @@ angular.module('kifi')
       // queue random logic
       if (!$rootScope.userLoggedIn) {
         // handle user needs to log in
-        signupService.register({ modelPubId: $scope.library.id, authToken: $stateParams.authToken, intent: 'follow' });
+        signupService.register({ libraryId: $scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
       } else if (profileService.me && profileService.me.orgs.length > 0) {
 
         if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
