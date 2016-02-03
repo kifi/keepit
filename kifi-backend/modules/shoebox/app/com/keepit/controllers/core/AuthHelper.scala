@@ -3,7 +3,7 @@ package com.keepit.controllers.core
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
-import com.keepit.common.crypto.{ PublicIdGenerator, PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth.{ SlackIdentity, OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
@@ -46,6 +46,30 @@ import com.keepit.common.core._
 object AuthHelper {
   val PWD_MIN_LEN = 7
   def validatePwd(pwd: String) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
+}
+
+case class PostRegIntentParams(
+  intent: Option[String],
+  publicLibraryId: Option[PublicId[Library]],
+  libAuthToken: Option[String],
+  orgPubId: Option[PublicId[Organization]],
+  orgAuthToken: Option[String],
+  keepPubId: Option[PublicId[Keep]],
+  keepAuthToken: Option[String],
+  slackTeamid: Option[SlackTeamId])
+object PostRegIntentParams {
+  def fromCookies(cookies: Cookies) = {
+    PostRegIntentParams(
+      cookies.get("intent").map(_.value),
+      cookies.get("publicLibraryId").map(c => PublicId[Library](c.value)),
+      cookies.get("libAuthToken").map(_.value),
+      cookies.get("publicOrgId").map(c => PublicId[Organization](c.value)),
+      cookies.get("orgAuthToken").map(_.value),
+      cookies.get("publicKeepId").map(c => PublicId[Keep](c.value)),
+      cookies.get("keepAuthToken").map(_.value),
+      cookies.get("slackTeamId").map(c => SlackTeamId(c.value))
+    )
+  }
 }
 
 class AuthHelper @Inject() (
@@ -180,8 +204,12 @@ class AuthHelper @Inject() (
     emailAddress: EmailAddress,
     newIdentity: Identity,
     emailConfirmedAlready: Boolean,
-    modelPublicId: Option[String],
-    authTokenFromQueryString: Option[String],
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    keepPublicId: Option[PublicId[Keep]],
+    keepAuthToken: Option[String],
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_], context: HeimdalContext): Result = {
 
     // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
@@ -193,23 +221,7 @@ class AuthHelper @Inject() (
     // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
     // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
 
-    val modelPubIdFromCookie = request.cookies.get("modelPubId").map(_.value)
-    val authTokenFromCookie = request.cookies.get("authToken").map(_.value)
     val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(cookie => SlackTeamId(cookie.value))
-    def generateRegIntent[T](pubIdOpt: Option[String], authTokenOpt: Option[String], generator: PublicIdGenerator[T]): Option[PostRegIntent] = {
-      generator match {
-        case Library => pubIdOpt.flatMap(Library.validatePublicId(_).flatMap(Library.decodePublicId).toOption).map(id => AutoFollowLibrary(id, authTokenOpt))
-        case Organization =>
-          for {
-            pubId <- pubIdOpt
-            orgId <- Organization.validatePublicId(pubId).flatMap(Organization.decodePublicId).toOption
-            authToken <- authTokenOpt
-          } yield AutoJoinOrganization(orgId, authToken)
-        case Keep => pubIdOpt.flatMap(Keep.validatePublicId(_).flatMap(Keep.decodePublicId).toOption).map(id => AutoJoinKeep(id, authTokenOpt))
-        case _ => None
-      }
-    }
-
     val intent: PostRegIntent = {
       val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
         case "applyCredit" =>
@@ -217,21 +229,40 @@ class AuthHelper @Inject() (
             case code if code.nonEmpty =>
               ApplyCreditCode(CreditCode.normalize(code))
           }
-        case "follow" => generateRegIntent[Library](modelPubIdFromCookie, authTokenFromCookie, Library)
-        case "joinOrg" => generateRegIntent[Organization](modelPubIdFromCookie, authTokenFromCookie, Organization)
-        case "joinKeep" => generateRegIntent[Keep](modelPubIdFromCookie, authTokenFromCookie, Keep)
-        case "waitlist" => Some(JoinTwitterWaitlist)
-        case "slack" => Some(Slack(slackTeamIdFromCookie))
+        case "follow" =>
+          request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).flatMap { libPubId =>
+            val authToken = request.cookies.get("libraryAuthToken").map(_.value)
+            Library.decodePublicId(libPubId).map(id => AutoFollowLibrary(id, authToken)).toOption
+          }
+        case "joinOrg" =>
+          request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
+            request.cookies.get("orgAuthToken").map(_.value).flatMap { authToken =>
+              Organization.decodePublicId(orgPubId).map(id => AutoJoinOrganization(id, authToken)).toOption
+            }
+          }
+        case "joinKeep" =>
+          request.cookies.get("publicKeepId").map(i => PublicId[Keep](i.value)).flatMap { keepPubId =>
+            val authToken = request.cookies.get("keepAuthToken").map(_.value)
+            Keep.decodePublicId(keepPubId).map(id => AutoJoinKeep(id, authToken)).toOption
+          }
+        case "waitlist" =>
+          Some(JoinTwitterWaitlist)
+        case "slack" =>
+          Some(Slack(slackTeamIdFromCookie))
         case _ => None
       }
 
-      lazy val intentFromQueryString = {
-        val generators: Stream[PublicIdGenerator[_]] = Stream(Library, Organization, Keep)
-        generators.flatMap { generator => generateRegIntent(modelPublicId, authTokenFromQueryString, generator) }.headOption
-      }
+      val intentFromParams: Option[PostRegIntent] = Stream(
+        libraryPublicId.flatMap(pubId => Library.decodePublicId(pubId).map(id => AutoFollowLibrary(id, libAuthToken)).toOption),
+        (orgPublicId, orgAuthToken) |> {
+          case (Some(pubId), Some(authToken)) =>
+            Organization.decodePublicId(pubId).map(id => AutoJoinOrganization(id, authToken)).toOption
+          case _ => None
+        },
+        keepPublicId.flatMap(pubId => Keep.decodePublicId(pubId).map(id => AutoJoinKeep(id, keepAuthToken)).toOption)
+      ).flatten.headOption
 
-      intentFromCookie orElse intentFromQueryString getOrElse NoIntent
-
+      intentFromCookie orElse intentFromParams getOrElse NoIntent
     }
 
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
@@ -308,7 +339,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("intent", "modelPubId", "authToken", "inv", "creditCode").map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken", "creditCode").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -360,20 +391,25 @@ class AuthHelper @Inject() (
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, None, None, isFinalizedImmediately = false)
+          handleSocialFinalizeInfo(sfi, None, None, None, None, None, None, isFinalizedImmediately = false)
       })
   }
 
   def doTokenFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     request.body.asOpt[TokenFinalizeInfo] match {
       case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
-      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.modelPublicId, info.authToken, isFinalizedImmediately = false)
+      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, info.libAuthToken,
+        info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken, isFinalizedImmediately = false)
     }
   }
 
   def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo,
-    modelPublicId: Option[String],
-    authToken: Option[String],
+    libraryPublicId: Option[PublicId[Library]],
+    libAuthToken: Option[String],
+    orgPublicId: Option[PublicId[Organization]],
+    orgAuthToken: Option[String],
+    keepPublicId: Option[PublicId[Keep]],
+    keepAuthToken: Option[String],
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     val identityOpt = request.identityId.flatMap(authCommander.getUserIdentity)
     require(identityOpt.isDefined, "A social identity should be available in order to finalize social account")
@@ -382,13 +418,14 @@ class AuthHelper @Inject() (
 
     val identity = identityOpt.get
     if (identity.identityId.userId.trim.isEmpty) {
-      throw new Exception(s"empty social id for $identity joining model id $modelPublicId with $sfi")
+      throw new Exception(s"empty social id for $identity joining library $libraryPublicId with $sfi")
     }
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
-    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, modelPublicId, authToken, isFinalizedImmediately = isFinalizedImmediately)
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken,
+      orgPublicId = orgPublicId, orgAuthToken = orgAuthToken, keepPublicId = keepPublicId, keepAuthToken = keepAuthToken, isFinalizedImmediately = isFinalizedImmediately)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -409,19 +446,18 @@ class AuthHelper @Inject() (
         Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
       }, {
         case efi: EmailPassFinalizeInfo =>
-          handleEmailPassFinalizeInfo(efi, None, None)
+          handleEmailPassFinalizeInfo(efi, None, None, None, None, None, None)
       }
     )
   }
 
-  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, modelPublicId: Option[String], authToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], orgPublicId: Option[PublicId[Organization]], orgAuthToken: Option[String], keepPublicId: Option[PublicId[Keep]], keepAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityId, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
-        val libraryPubId = modelPublicId.filter(_.startsWith("l")).map(pubId => PublicId[Library](pubId))
-        val verifiedEmail = verifySignupEmail(request.userId, email, libraryPubId, authToken)
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, modelPublicId, authToken, isFinalizedImmediately = false)
+        val verifiedEmail = verifySignupEmail(request.userId, email, libraryPublicId, libAuthToken)
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, orgPublicId, orgAuthToken, keepPublicId, keepAuthToken, isFinalizedImmediately = false)
     }
   }
 

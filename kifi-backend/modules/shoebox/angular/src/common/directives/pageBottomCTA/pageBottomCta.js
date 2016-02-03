@@ -23,7 +23,7 @@ angular.module('kifi')
           if (!scope.twitterHandle) {
             $event.preventDefault();
             scope.visible = false;
-            signupService.register({modelPubId: scope.library.id, authToken: $stateParams.authToken, intent: 'follow' });
+            signupService.register({ libraryId: scope.library.id, libAuthToken: $stateParams.authToken, intent: 'follow' });
           }
         };
 

@@ -104,9 +104,13 @@ angular.module('kifi')
       ////////////////////////////
       socialSignup: function (provider, opts) {
         var params = {
+          publicLibraryId : opts.libraryId || [],
           intent: opts.intent || [],
-          modelPubId: opts.modelPubId,
-          authToken: opts.authToken
+          libAuthToken: opts.libAuthToken || [],
+          publicOrgId: opts.orgId || [],
+          orgAuthToken: opts.orgAuthToken || [],
+          publicKeepId: opts.keepId || [],
+          keepAuthToken: opts.keepAuthToken || []
         };
         Object.keys(params).forEach(function (k) {
           if (params[k] === null || params[k] === undefined || params[k] === '') {

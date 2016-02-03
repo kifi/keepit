@@ -43,7 +43,7 @@ angular.module('kifi')
       scope.isKifiAdmin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
       if (!profileService.userLoggedIn() && scope.profile && scope.viewer.invite) {
-        signupService.register({modelPubId: scope.profile.id, intent: 'joinOrg', authToken: authToken, invite: scope.viewer.invite});
+        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite});
       }
 
       scope.goToMemberInvite = function () {
@@ -160,7 +160,7 @@ angular.module('kifi')
           label: 'Accept',
           className: 'kf-accept',
           click: function () {
-            signupService.register({modelPubId: scope.profile.id, intent: 'joinOrg', authToken: authToken, invite: scope.viewer.invite });
+            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite });
           }
         }
       ];
