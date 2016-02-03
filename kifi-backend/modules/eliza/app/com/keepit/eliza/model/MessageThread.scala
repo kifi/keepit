@@ -113,7 +113,7 @@ case class MessageThread(
     uriId: Id[NormalizedURI],
     url: String,
     nUrl: String,
-    startedBy: Id[User],
+    startedBy: Option[Id[User]],
     participants: MessageThreadParticipants,
     pageTitle: Option[String],
     keepId: Id[Keep]) extends Model[MessageThread] with ModelWithState[MessageThread] {
@@ -126,9 +126,9 @@ case class MessageThread(
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withStartedBy(owner: Id[User]) = if (participants.contains(owner)) {
-    this.copy(startedBy = owner)
+    this.copy(startedBy = Some(owner))
   } else {
-    this.withParticipants(currentDateTime, Set(owner)).copy(startedBy = owner)
+    this.withParticipants(currentDateTime, Set(owner)).copy(startedBy = Some(owner))
   }
   def withKeepId(newKeepId: Id[Keep]): MessageThread = this.copy(keepId = newKeepId)
 
@@ -163,7 +163,7 @@ object MessageThread {
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
-    (__ \ 'startedBy).format[Id[User]] and
+    (__ \ 'startedBy).formatNullable[Id[User]] and
     (__ \ 'participants).format[MessageThreadParticipants] and
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).format[Id[Keep]]
@@ -173,7 +173,7 @@ object MessageThread {
 }
 
 case class MessageThreadKeepIdKey(keepId: Id[Keep]) extends Key[MessageThread] {
-  override val version = 2
+  override val version = 3
   val namespace = "message_thread_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
