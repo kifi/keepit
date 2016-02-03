@@ -14,6 +14,9 @@ package object json {
       def readIfPossible[T](implicit reads: Reads[T]): Reads[Option[T]] = {
         jsp.readNullable[T] orElse emptyReads
       }
+      def formatIfPossible[T](implicit reads: Reads[T], writes: Writes[T]): OFormat[Option[T]] = {
+        OFormat(readIfPossible, jsp.writeNullable)
+      }
     }
   }
   object EnumFormat {
