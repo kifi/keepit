@@ -1,25 +1,23 @@
 package com.keepit.slack
 
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, RawBookmarkRepresentation, KeepInterner }
+import com.google.inject.Inject
+import com.keepit.commanders.{ KeepInterner, PermissionCommander, RawBookmarkRepresentation }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
-import com.kifi.juggle._
 import com.keepit.model._
-import com.keepit.slack.models.SlackIntegration.{ ForbiddenSlackIntegration, BrokenSlackIntegration }
+import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
 import com.keepit.slack.models._
+import com.kifi.juggle._
 import org.joda.time.Period
-import com.keepit.common.time._
-
-import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -65,7 +63,6 @@ class SlackIngestingActor @Inject() (
   protected def pullTasks(limit: Int): Future[Seq[Id[SlackChannelToLibrary]]] = {
     db.readWrite { implicit session =>
       val integrationIds = integrationRepo.getRipeForIngestion(limit, ingestionTimeout)
-      log.info(s"[SLACK-INGEST] Found ${integrationIds.length}/$limit integrations to process next.")
       integrationRepo.markAsIngesting(integrationIds: _*)
       Future.successful(integrationIds)
     }
@@ -136,8 +133,7 @@ class SlackIngestingActor @Inject() (
             slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelName.value, "in team", broken.integration.slackTeamId.value, "is broken")
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            //airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error) // please fix do this doesn't send so aggressively
-            log.warn(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
+            log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>
@@ -169,7 +165,6 @@ class SlackIngestingActor @Inject() (
   }
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
-    log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
     val slackUsers = messages.map(_.userId).toSet
     val userBySlackId = db.readOnlyMaster { implicit s =>
       slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
@@ -187,7 +182,6 @@ class SlackIngestingActor @Inject() (
     val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.getOrElse(msg.userId, integrationOwner)).map {
       case (user, msgs) => user -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
     }
-    log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarksByUser.values.flatten.map(_.url).toSet}")
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (user, rawBookmarks) =>
         val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, user, library, KeepSource.slack)(HeimdalContext.empty)
