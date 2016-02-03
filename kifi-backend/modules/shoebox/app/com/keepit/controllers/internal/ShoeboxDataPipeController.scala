@@ -191,7 +191,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-        val attributionById = sourceRepo.getByKeepIds(changedKeeps.flatMap(_.id).toSet)
+        val attributionById = sourceRepo.getRawByKeepIds(changedKeeps.flatMap(_.id).toSet)
         changedKeeps.map { keep =>
           val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
           val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)

@@ -175,7 +175,7 @@ class SlackSearchController @Inject() (
           val pretext = {
             val attribution = keepId.flatMap(sourceAttributions.get).map {
               case TwitterAttribution(tweet) =>
-                val tweetUrl = convertUrlToKifiRedirect(tweet.getUrl, command, "clickedTweetUrl")
+                val tweetUrl = convertUrlToKifiRedirect(tweet.permalink, command, "clickedTweetUrl")
                 Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweetUrl), "on Twitter")
               case SlackAttribution(message) => Elements("via", "@" + message.username.value, "in", "#" + message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
             }

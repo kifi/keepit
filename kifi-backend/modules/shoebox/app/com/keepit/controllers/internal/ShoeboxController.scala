@@ -603,7 +603,7 @@ class ShoeboxController @Inject() (
   def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
     val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
     val attributions = db.readOnlyMaster { implicit session =>
-      keepSourceAttributionRepo.getByKeepIdsNoCache(keepIds)
+      keepSourceAttributionRepo.getByKeepIds(keepIds)
     }
     implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))

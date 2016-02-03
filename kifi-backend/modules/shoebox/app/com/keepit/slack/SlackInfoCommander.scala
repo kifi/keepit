@@ -70,7 +70,7 @@ object UserSlackInfo {
 }
 
 object SlackInfoCommander {
-  val slackSetupPermission = OrganizationPermission.EDIT_ORGANIZATION
+  val slackSetupPermission = OrganizationPermission.CREATE_SLACK_INTEGRATION
 }
 
 @ImplementedBy(classOf[SlackInfoCommanderImpl])

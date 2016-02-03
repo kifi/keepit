@@ -280,8 +280,9 @@ class SlackTeamCommanderImpl @Inject() (
 
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization] = {
     val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
-    val existingSlackTeams = slackTeamRepo.getByOrganizationIds(allOrgIds)
-    val validOrgIds = allOrgIds.filter(existingSlackTeams(_).isEmpty)
+    val permissionsByOrgIds = permissionCommander.getOrganizationsPermissions(allOrgIds, Some(userId))
+    val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
+    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackCommander.slackSetupPermission))
     organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
   }
 }

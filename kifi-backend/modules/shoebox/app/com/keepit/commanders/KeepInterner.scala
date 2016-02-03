@@ -138,7 +138,7 @@ class KeepInternerImpl @Inject() (
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], libraryOpt: Option[Library], source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
-    sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
+    sourceAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
     // We intern by (library, uri)
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get) }
