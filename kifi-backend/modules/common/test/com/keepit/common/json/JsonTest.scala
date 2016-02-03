@@ -1,9 +1,9 @@
 package com.keepit.common.json
 
 import com.keepit.common.db.ExternalId
-import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ Feature, FeatureSetting, OrganizationRole }
 import org.specs2.mutable.Specification
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.util.Try
@@ -64,6 +64,30 @@ class JsonTest extends Specification {
 
         JsString("admin").validate[OrganizationRole](myReads) === JsSuccess(OrganizationRole.ADMIN)
         JsString("asdf").validate[OrganizationRole](myReads) must haveClass[JsError]
+      }
+    }
+    "robustly deserialize optional fields" in {
+      "work" in {
+        import com.keepit.common.json.ReadIfPossible.PimpedJsPath
+        case class Foo(x: Option[Int], y: Option[Int])
+        object Foo {
+          val reads = (
+            (__ \ 'x).readIfPossible[Int] and
+            (__ \ 'y).readIfPossible[Int]
+          )(Foo.apply _)
+        }
+
+        val tests = Seq(
+          Json.obj() -> Foo(None, None),
+          Json.obj("x" -> 1) -> Foo(Some(1), None),
+          Json.obj("y" -> 2) -> Foo(None, Some(2)),
+          Json.obj("x" -> 1, "y" -> 2) -> Foo(Some(1), Some(2)),
+          Json.obj("x" -> 1, "y" -> "bar") -> Foo(Some(1), None)
+        )
+        tests.foreach {
+          case (inp, expected) => inp.asOpt[Foo](Foo.reads) === Some(expected)
+        }
+        1 === 1
       }
     }
   }
