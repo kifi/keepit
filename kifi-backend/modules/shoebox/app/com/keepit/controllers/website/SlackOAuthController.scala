@@ -57,12 +57,6 @@ class SlackOAuthController @Inject() (
     handleAsBrowserRequest(res)
   }
 
-  def createSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
-    handleAsBrowserRequest(res)(request)
-  }
-
   // Can elegantly handle redirects (to HTML pages), *never* speaks JSON, should not be on /site/ routes
   private def handleAsBrowserRequest[T](response: Future[SlackResponse])(implicit request: UserRequest[T]) = {
     response.map {

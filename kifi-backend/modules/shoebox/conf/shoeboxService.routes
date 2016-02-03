@@ -17,7 +17,6 @@ GET     /oauth2/slack               @com.keepit.controllers.website.SlackOAuthCo
 
 # These really need to be non-site endpoints
 GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
-GET     /site/organizations/create/slack     @com.keepit.controllers.website.SlackOAuthController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -559,7 +558,8 @@ GET           /site/organizations/:id/rewards                   @com.keepit.cont
 # ↓ Take out of /site/
 
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
-POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
+POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
 POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
 

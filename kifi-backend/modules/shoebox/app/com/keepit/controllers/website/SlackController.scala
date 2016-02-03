@@ -93,7 +93,13 @@ class SlackController @Inject() (
     }
   }
 
-  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  def createSlackTeam(slackTeamId: Option[SlackTeamId], slackAction: Option[String]) = UserAction.async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam())
+    handleAsAPIRequest(res)(request)
+  }
+
+  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId], slackAction: Option[String]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId))
     handleAsAPIRequest(res)(request.request)

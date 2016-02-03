@@ -1,13 +1,18 @@
 package com.keepit.slack
 
+import java.net.URLEncoder
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.routes.ServiceRoute
 import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.slack.models._
+import play.api.libs.json.{ JsNull, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -87,7 +92,9 @@ class SlackAuthenticationCommanderImpl @Inject() (
       case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map {
         case (slackTeam, isNewOrg) =>
           slackTeam.organizationId match {
-            case None => SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}")
+            case None => {
+              SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}&slackState=whatever")
+            }
             case Some(orgId) =>
               if (isNewOrg) redirectToOrganization(orgId, showSlackDialog = true)
               else if (!hasSeenInstall(userId)) redirectToInstall
