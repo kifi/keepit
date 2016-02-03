@@ -54,9 +54,13 @@ class KeepSourceAttributionRepoImpl @Inject() (
   def table(tag: Tag) = new KeepSourceAttributionTable(tag)
   initTable()
 
-  def invalidateCache(keep: KeepSourceAttribution)(implicit session: RSession): Unit = {}
+  def invalidateCache(model: KeepSourceAttribution)(implicit session: RSession): Unit = {
+    sourceAttributionByKeepIdCache.set(SourceAttributionKeepIdKey(model.keepId), SourceAttribution.fromRawSourceAttribution(model.attribution))
+  }
 
-  def deleteCache(uri: KeepSourceAttribution)(implicit session: RSession): Unit = {}
+  def deleteCache(model: KeepSourceAttribution)(implicit session: RSession): Unit = {
+    sourceAttributionByKeepIdCache.remove(SourceAttributionKeepIdKey(model.keepId))
+  }
 
   private def activeRows = rows.filter(row => row.state === KeepSourceAttributionStates.ACTIVE)
 
