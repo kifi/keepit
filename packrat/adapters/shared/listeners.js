@@ -24,4 +24,6 @@ Object.defineProperty(Listeners.prototype, 'dispatch', {
 
 if (this.exports) {
   this.exports.Listeners = Listeners;
+} else {
+  this.Listeners = Listeners;
 }

@@ -52,6 +52,6 @@ api.identify('installed');
       }
     }
   }
-}(this.chrome && chrome.runtime && chrome.runtime.getManifest().version ||
-  this.self && self.options && self.options.version ||
+}(typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest().version ||
+  typeof self !== 'undefined' && self.options && self.options.version ||
   true));
