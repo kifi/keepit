@@ -12,7 +12,7 @@ case class KeepToLibrary(
   keepId: Id[Keep],
   libraryId: Id[Library],
   addedAt: DateTime = currentDateTime,
-  addedBy: Id[User],
+  addedBy: Option[Id[User]],
   // A bunch of denormalized fields from Keep
   uriId: Id[NormalizedURI],
   // and from Library
@@ -27,7 +27,7 @@ case class KeepToLibrary(
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
   def withOrganizationId(newOrgIdOpt: Option[Id[Organization]]): KeepToLibrary = this.copy(organizationId = newOrgIdOpt)
   def withAddedAt(time: DateTime): KeepToLibrary = this.copy(addedAt = time)
-  def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
+  def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = Some(newOwnerId))
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
 
   // denormalized from Keep.lastActivityAt, use in KeepCommander.updateLastActivityAtIfLater

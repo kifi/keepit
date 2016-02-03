@@ -102,11 +102,11 @@ class FeedCommander @Inject() (
             def convertKeep(keep: Keep): RssItem = {
               val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
                 val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-                (image.flatten, userRepo.getNoCache(keep.userId))
+                (image.flatten, keep.userId.map(userRepo.getNoCache))
               }
 
               RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
-                guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
+                guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.map(_.fullName).getOrElse("unknown"), // TODO(ryan): find the actual author!
                 icon = keepImage.map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url"))
             }
             rssItems(keeps map convertKeep)
