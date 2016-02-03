@@ -5,7 +5,6 @@ import com.keepit.commanders.PathCommander
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
-import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -13,7 +12,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
-import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
@@ -71,7 +69,7 @@ class SlackChannelDigestNotificationActor @Inject() (
             orgConfigRepo.getByOrgId(orgId).settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
           }
           Some(chs.minBy(_.unnotifiedSince).id.get).filter(_ => allowedToSendDigests)
-      }.toSet tap { task => log.info(s"[SLACK-CHANNEL-DIGEST] Pulled task $task") }
+      }.toSet
     }
   }
 
