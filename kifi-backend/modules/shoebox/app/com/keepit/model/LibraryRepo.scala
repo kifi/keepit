@@ -220,7 +220,9 @@ class LibraryRepoImpl @Inject() (
           for {
             lib <- rs
             lm <- libMemRows
-            if lm.libraryId === lib.id &&
+            if lib.ownerId === userId &&
+              lib.orgId.isEmpty &&
+              lm.libraryId === lib.id &&
               lm.userId === userId &&
               lm.access.inSet(roles) &&
               (lm.listed || lib.id.inSet(extraInfo.explicitlyAllowedLibraries))
