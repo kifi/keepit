@@ -47,7 +47,8 @@
       ],
       "exclude_matches": [
         "*://*/r/*",
-        "*://*/s/*"
+        "*://*/s/*",
+        "*://*/redir/*"
       ],
       "run_at": "document_start"
     },
@@ -60,7 +61,9 @@
         "*://www.kifi.com/r/*",
         "*://dev.ezkeep.com/r/*",
         "*://www.kifi.com/s/*",
-        "*://dev.ezkeep.com/s/*"
+        "*://dev.ezkeep.com/s/*",
+        "*://www.kifi.com/redir/*",
+        "*://dev.ezkeep.com/redir/*"
       ],
       "run_at": "document_start"
     },
