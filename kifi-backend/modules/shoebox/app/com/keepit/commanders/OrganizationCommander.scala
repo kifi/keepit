@@ -94,7 +94,7 @@ class OrganizationCommanderImpl @Inject() (
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
     val badName = modifications.name.exists(_.isEmpty)
-    val badSiteUrl = modifications.site.exists(URI.parse(_).isFailure)
+    val badSiteUrl = modifications.site.exists(!_.isValid)
 
     Stream(
       badName -> OrganizationFail.INVALID_MODIFY_NAME,
@@ -118,7 +118,7 @@ class OrganizationCommanderImpl @Inject() (
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
-      .withSite(modifications.site.orElse(org.site))
+      .withSite(modifications.site.map(_.value).getOrElse(org.site))
   }
 
   @AlertingTimer(2 seconds)
