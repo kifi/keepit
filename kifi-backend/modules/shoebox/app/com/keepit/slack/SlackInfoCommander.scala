@@ -223,7 +223,7 @@ class SlackInfoCommanderImpl @Inject() (
   }
 
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo = {
-    val (libIds, basicLibsById, integrationInfosByLib, slackTeams) = {
+    val (libIds, basicLibsById, integrationInfosByLib, slackTeam) = {
       val slackToLibs = channelToLibRepo.getIntegrationsByOrg(orgId)
       val libToSlacks = libToChannelRepo.getIntegrationsByOrg(orgId)
       val libIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).toSet
@@ -239,15 +239,14 @@ class SlackInfoCommanderImpl @Inject() (
         }.toMap
       }
       val integrationInfosByLib = generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
-      val slackTeams = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
+      val slackTeamOpt = slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
 
-      (libIds, basicLibsById, integrationInfosByLib, slackTeams)
+      (libIds, basicLibsById, integrationInfosByLib, slackTeamOpt)
     }
 
     val permissionsByLib = permissionCommander.getLibrariesPermissions(libIds, Some(viewerId))
     def canViewLib(libId: Id[Library]): Boolean = permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
 
-    val slackTeam = slackTeams.headOption
     val librarySlackInfosByLib = assembleLibrarySlackInfos(libIds, integrationInfosByLib)
     OrganizationSlackInfo(
       slackTeam,

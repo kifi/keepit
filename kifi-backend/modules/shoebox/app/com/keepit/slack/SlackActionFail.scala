@@ -19,6 +19,9 @@ object SlackActionFail {
   case class TeamAlreadyConnected(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, connectedOrgId: Id[Organization])
     extends SlackActionFail("slack_team_already_connected", s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is already connected to organization $connectedOrgId")
 
+  case class OrgAlreadyConnected(orgId: Id[Organization], connectedTeam: SlackTeamId, failedToConnectTeam: SlackTeamId)
+    extends SlackActionFail("kifi_org_already_connected", s"Organization $orgId is already connected to $connectedTeam so it cannot connect to $failedToConnectTeam")
+
   case class TeamNotFound(slackTeamId: SlackTeamId)
     extends SlackActionFail("slack_team_not_found", s"We could not find SlackTeam ${slackTeamId.value}")
 
