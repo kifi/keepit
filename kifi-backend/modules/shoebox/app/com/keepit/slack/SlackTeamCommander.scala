@@ -19,17 +19,6 @@ import com.keepit.slack.models._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
-case class SlackTeamNotConnectedException(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName)
-  extends Exception(s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is not connected to any organization.")
-
-case class SlackTeamAlreadyConnectedException(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, connectedOrgId: Id[Organization])
-  extends Exception(s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is already connected to organization $connectedOrgId")
-
-case class SlackTeamNotFoundException(slackTeamId: SlackTeamId) extends Exception(s"We could not find SlackTeam ${slackTeamId.value}")
-
-case class InvalidSlackMembershipException(userId: Id[User], slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, membership: Option[SlackTeamMembership])
-  extends Exception(s"User $userId is not a valid member of SlackTeam ${slackTeamName.value} (${slackTeamId.value}): $membership")
-
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
   def getSlackTeams(userId: Id[User]): Set[SlackTeam]
@@ -51,14 +40,12 @@ class SlackTeamCommanderImpl @Inject() (
   channelRepo: SlackChannelRepo,
   slackClient: SlackClientWrapper,
   slackOnboarder: SlackOnboarder,
-  pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
   orgAvatarCommander: OrganizationAvatarCommander,
   libraryRepo: LibraryRepo,
   libraryCommander: LibraryCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
-  orgMembershipCommander: OrganizationMembershipCommander,
   organizationInfoCommander: OrganizationInfoCommander,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -92,7 +79,7 @@ class SlackTeamCommanderImpl @Inject() (
     teamOpt match {
       case Some(team) if team.organizationId.isEmpty && connectableOrgs.isEmpty => createOrganizationForSlackTeam(userId, slackTeamId).imap((_, true))
       case Some(team) => Future.successful((team, false))
-      case None => Future.failed(SlackTeamNotFoundException(slackTeamId))
+      case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
 
@@ -117,7 +104,7 @@ class SlackTeamCommanderImpl @Inject() (
                     case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
                   }
                   teamInfo.emailDomains.exists { domain =>
-                    orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(site = Some(domain.value)))).isRight
+                    orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(rawSite = Some(domain.value)))).isRight
                   }
                   val connectedTeamMaybe = connectSlackTeamToOrganization(userId, slackTeamId, orgId)
                   futureAvatar.flatMap { _ =>
@@ -129,37 +116,40 @@ class SlackTeamCommanderImpl @Inject() (
                 case Left(error) => Future.failed(error)
               }
             }
-          case None => Future.failed(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+          case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
         }
-        case Some(orgId) => Future.failed(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, orgId))
+        case Some(orgId) => Future.failed(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, orgId))
       }
-      case None => Future.failed(SlackTeamNotFoundException(slackTeamId))
+      case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
 
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam] = {
     db.readWrite { implicit session =>
-      if (permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission)) {
-        slackTeamRepo.getBySlackTeamId(slackTeamId) match {
+      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission) match {
+        case false => Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        case true => slackTeamRepo.getBySlackTeamId(slackTeamId) match {
+          case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
           case Some(team) => team.organizationId match {
-            case None => if (slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)) Success {
-              slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId)))
+            case Some(connectedOrg) if connectedOrg == newOrganizationId => Success(team)
+            case Some(otherOrg) => Failure(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, team.organizationId.get))
+            case None => slackTeamRepo.getByOrganizationId(newOrganizationId) match {
+              case Some(orgTeam) => Failure(SlackActionFail.OrgAlreadyConnected(newOrganizationId, orgTeam.slackTeamId, failedToConnectTeam = slackTeamId))
+              case None => slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId) match {
+                case None => Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
+                case Some(validMembership) => Success(slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId))))
+              }
             }
-            else {
-              Failure(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, None))
-            }
-            case Some(connectedOrgId) =>
-              if (connectedOrgId == newOrganizationId) Success(team)
-              else Failure(SlackTeamAlreadyConnectedException(team.slackTeamId, team.slackTeamName, connectedOrgId))
           }
-          case None => Failure(SlackTeamNotFoundException(slackTeamId))
         }
-      } else Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-    } map { team =>
-      SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-        "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
-      ))))
-      team
+      }
+    } tap {
+      case Success(team) =>
+        SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
+        ))))
+      case Failure(fail) =>
+        slackLog.warn(s"Failed to connect $slackTeamId to org $newOrganizationId for user $userId because:", fail.getMessage)
     }
   }
 
@@ -270,18 +260,19 @@ class SlackTeamCommanderImpl @Inject() (
                   }
                 }
               }
-            case None => Future.failed(InvalidSlackMembershipException(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+            case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
           }
         } else Future.failed(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-      case None => Future.failed(SlackTeamNotConnectedException(team.slackTeamId, team.slackTeamName))
+      case None => Future.failed(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
     }
   }
 
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization] = {
     val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
-    val existingSlackTeams = slackTeamRepo.getByOrganizationIds(allOrgIds)
-    val validOrgIds = allOrgIds.filter(existingSlackTeams(_).isEmpty)
+    val permissionsByOrgIds = permissionCommander.getOrganizationsPermissions(allOrgIds, Some(userId))
+    val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
+    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackCommander.slackSetupPermission))
     organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
   }
 }

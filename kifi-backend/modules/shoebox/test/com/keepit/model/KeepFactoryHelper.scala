@@ -50,7 +50,8 @@ object KeepFactoryHelper {
           addedBy = finalKeep.userId,
           uriId = finalKeep.uriId,
           visibility = library.visibility,
-          organizationId = library.organizationId
+          organizationId = library.organizationId,
+          lastActivityAt = finalKeep.lastActivityAt
         )
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
       }
@@ -59,7 +60,8 @@ object KeepFactoryHelper {
         userId = finalKeep.userId,
         addedAt = finalKeep.keptAt,
         addedBy = finalKeep.userId,
-        uriId = finalKeep.uriId
+        uriId = finalKeep.uriId,
+        lastActivityAt = finalKeep.lastActivityAt
       )
       injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
       finalKeep

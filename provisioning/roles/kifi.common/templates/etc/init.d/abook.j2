@@ -6,7 +6,9 @@
 # {{ ansible_managed }}
 #
 # Set this to your Java installation
-[ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle || JAVA_HOME=/usr/local/java/jdk1.7.0_25
+[ -d {{ java_home }} ] && JAVA_HOME={{ java_home }} ||
+  ([ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle) ||
+  (echo "JAVA_HOME not set; check /etc/init.d/{{ service }}"; exit -1)
 
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }

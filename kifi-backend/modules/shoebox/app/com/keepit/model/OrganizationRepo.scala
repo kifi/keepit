@@ -15,6 +15,7 @@ import com.keepit.controllers.admin.AdminOrganizationController
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def allActive(implicit session: RSession): Seq[Organization]
+  def getActive(id: Id[Organization])(implicit session: RSession): Option[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
@@ -78,6 +79,10 @@ class OrganizationRepoImpl @Inject() (
     orgCache.getOrElse(OrganizationKey(id)) {
       getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
     }
+  }
+
+  def getActive(id: Id[Organization])(implicit session: RSession): Option[Organization] = {
+    orgCache.getOrElseOpt(OrganizationKey(id))(getCompiled(id).firstOption.filter(_.isActive))
   }
 
   // Be aware that this will return inactive organizations, so make sure you want the orgs you ask for

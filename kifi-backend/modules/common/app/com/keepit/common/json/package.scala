@@ -7,6 +7,18 @@ import play.api.data.validation.ValidationError
 import scala.util.{Success, Failure, Try}
 
 package object json {
+  object ReadIfPossible {
+    def emptyReads[T] = Reads { j => JsSuccess(Option.empty[T]) }
+    implicit class PimpedJsPath(jsp: JsPath) {
+      // validation with readIfPossible ALWAYS succeeds, be careful when using it
+      def readIfPossible[T](implicit reads: Reads[T]): Reads[Option[T]] = {
+        jsp.readNullable[T] orElse emptyReads
+      }
+      def formatIfPossible[T](implicit reads: Reads[T], writes: Writes[T]): OFormat[Option[T]] = {
+        OFormat(readIfPossible, jsp.writeNullable)
+      }
+    }
+  }
   object EnumFormat {
     def reads[T](fromStr: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
       def errMsg = if (domain.nonEmpty) s"$j is not one of these: $domain" else s"Could not recognize $j"

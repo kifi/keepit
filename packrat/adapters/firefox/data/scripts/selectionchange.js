@@ -1,3 +1,5 @@
+// @module
+
 // github.com/2is10/selectionchange-polyfill
 
 var selectionchange = (function (undefined) {

@@ -3,13 +3,12 @@
   display: flex
   flex-direction: column
   align-items: center
-  width: 100%
+  padding: 40px 0
 
 .si-org-selector-container
   display: flex
   flex-direction: column
   width: 600px
-  margin-top: 40px
   padding: 20px
   background-color: white
   border-radius: 10px
@@ -56,40 +55,28 @@
     border-radius: 10%
     box-shadow: 0px 1px 1px 1px #00000022
 
-  h1
-    font-size: 18px
-    text-align: center
-    margin-left: 5px
-    font-weight: bold
-    color: #333
+.si-org-selector-org-row-title
+  font-size: 18px
+  text-align: center
+  margin-left: 5px
+  font-weight: bold
+  color: #333
 
-  .si-org-selector-svg-wrapper
-      display: flex
-      justify-content: center
-      align-items: center
-      margin: 8px
-      width: 48px
-      height: 48px
-      border-radius: 10%
-      box-shadow: 0px 1px 1px 1px #00000022
+.si-org-selector-svg-wrapper
+    display: flex
+    justify-content: center
+    align-items: center
+    margin: 8px
+    width: 48px
+    height: 48px
+    border-radius: 10%
+    box-shadow: 0px 1px 1px 1px #00000022
 
 .si-org-selector-org-row-selected
   background-color: #EEEEEE !important
 
 .si-org-selector-bottom
-  margin-top: 10px
-  display: flex
-  width: 100%
+  display: inline-flex
   flex-direction: column
   align-items: center
-
-  .si-org-selector-bottom-create-team
-    font-size: 14px
-    margin-bottom: 20px
-
-
-.si-org-selector-done-enabled
-  opacity : 1.0
-
-.si-org-selector-done-disabled
-  opacity : .5
+  margin: 10px auto 0
