@@ -156,6 +156,7 @@ object SlackEmoji {
   val hourglass = SlackEmoji(":hourglass:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
   val rocket = SlackEmoji(":rocket:")
+  val speechBalloon = SlackEmoji(":speech_balloon:")
   val star = SlackEmoji(":star:")
   val sweatSmile = SlackEmoji(":sweat_smile:")
 }
