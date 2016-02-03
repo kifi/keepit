@@ -135,7 +135,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val addCommentOpt = {
-      if (shouldSmartRoute) Some(s"\n${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
+      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
       else None
     }
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
@@ -145,14 +145,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
           "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> libLink, addCommentOpt.getOrElse(".")
+          "was added to", lib.name --> libLink, addCommentOpt
         )
       case None =>
         DescriptionElements(
           userElement, "added",
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
           "to", lib.name --> libLink,
-          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), addCommentOpt.getOrElse(".")
+          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), addCommentOpt
         )
     }
   }
