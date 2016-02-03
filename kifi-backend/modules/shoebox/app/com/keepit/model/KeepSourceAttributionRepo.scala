@@ -14,8 +14,8 @@ import play.api.libs.json._
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
-  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
-  def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution
+  def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution]
+  def save(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
 @Singleton
@@ -35,12 +35,12 @@ class KeepSourceAttributionRepoImpl @Inject() (
   )
 
   def unapplyToDbRow(attr: KeepSourceAttribution) = {
-    val (attrType, js) = SourceAttribution.toJson(attr.attribution)
+    val (attrType, js) = RawSourceAttribution.toJson(attr.attribution)
     Some((attr.id, attr.createdAt, attr.updatedAt, attr.keepId, attrType, js, attr.state))
   }
 
   def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
-    val attr = SourceAttribution.fromJson(attrType, attrJson).get
+    val attr = RawSourceAttribution.fromJson(attrType, attrJson).get
     KeepSourceAttribution(id, createdAt, updatedAt, keepId, attr, state)
   }
 
@@ -62,15 +62,15 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
     sourceAttributionByKeepIdCache.bulkGetOrElse(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
-      getByKeepIdsNoCache(missingKeys.map(_.keepId)).map { case (keepId, attribution) => SourceAttributionKeepIdKey(keepId) -> attribution }
+      getRawByKeepIds(missingKeys.map(_.keepId)).map { case (keepId, rawAttribution) => SourceAttributionKeepIdKey(keepId) -> SourceAttribution.fromRawSourceAttribution(rawAttribution) }
     }.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution }
   }
 
-  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
+  def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution] = {
     activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
   }
 
-  def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
+  def save(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
     val keepAttributionOpt = rows.filter(_.keepId === keepId).firstOption
     save(KeepSourceAttribution(id = keepAttributionOpt.flatMap(_.id), keepId = keepId, attribution = attribution))
   }

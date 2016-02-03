@@ -226,10 +226,10 @@ object KeepSource {
   )
 }
 
-case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
+case class KeepAndTags(keep: Keep, source: Option[RawSourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
-  implicit val sourceFormat = SourceAttribution.internalFormat
+  implicit val sourceFormat = RawSourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
 }
 

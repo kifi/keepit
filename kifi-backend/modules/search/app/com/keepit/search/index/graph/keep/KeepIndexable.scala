@@ -49,9 +49,10 @@ object KeepFields {
   object Source {
     def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
+    def apply(source: RawSourceAttribution): String = Source(SourceAttribution.fromRawSourceAttribution(source))
     def apply(source: SourceAttribution): String = source match {
-      case twitter: TwitterAttribution => Source(twitter.tweet.user.screenName)
-      case slack: SlackAttribution => Source(slack.message.channel.id)
+      case TwitterAttribution(tweet) => Source(tweet.user.screenName)
+      case SlackAttribution(message) => Source(message.channel.id)
     }
   }
 
@@ -63,7 +64,7 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, sourceAttribution: Option[RawSourceAttribution], tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive || !shard.contains(keep.uriId)

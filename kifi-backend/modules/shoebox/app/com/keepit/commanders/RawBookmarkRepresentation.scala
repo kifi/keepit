@@ -22,7 +22,7 @@ case class RawBookmarkRepresentation(
     canonical: Option[String] = None,
     openGraph: Option[String] = None,
     keptAt: Option[DateTime] = None,
-    sourceAttribution: Option[SourceAttribution] = None, // clients can't provide this. probably a bad idea to have here
+    sourceAttribution: Option[RawSourceAttribution] = None, // clients can't provide this. probably a bad idea to have here
     note: Option[String] = None // supports strings "Formatted like #this"
     ) {
   def noteFormattedLikeOurNotes: Option[String] = note.map(n => Hashtags.formatExternalNote(n)).filter(_.nonEmpty)
