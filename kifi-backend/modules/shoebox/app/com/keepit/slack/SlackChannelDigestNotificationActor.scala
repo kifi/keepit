@@ -70,7 +70,9 @@ class SlackChannelDigestNotificationActor @Inject() (
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(channel: SlackChannel) = {
         teamById.get(channel.slackTeamId).exists { team =>
-          team.organizationId.flatMap(orgConfigById.get).exists { config =>
+          // We will only send a channel digest to a slack team that has NEVER synced their public channels
+          // AND that has connected to an org AND has the feature enabled
+          team.publicChannelsLastSyncedAt.isEmpty && team.organizationId.flatMap(orgConfigById.get).exists { config =>
             config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
           }
         }
