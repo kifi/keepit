@@ -17,7 +17,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ InvitationDecision, UserRepo, OrganizationMembershipRepo, Organization, UserFactory, OrganizationInviteRepo, OrganizationFactory, UserStates }
+import com.keepit.model.{ OrganizationHandle, InvitationDecision, UserRepo, OrganizationMembershipRepo, Organization, UserFactory, OrganizationInviteRepo, OrganizationFactory, UserStates }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -96,7 +96,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val result2 = authController.userPassFinalizeAccountAction()(request2)
         status(result2) === OK
         contentType(result2) must beSome("application/json")
-        contentAsString(result2) === Json.obj("uri" -> "/").toString
+        contentAsString(result2) === Json.obj("uri" -> "/?m=0").toString
         val session2 = session(result2)
         val cookies2 = cookies(result2)
         session2.getUserId.get === userId
@@ -142,7 +142,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val result = authController.emailSignup()(request)
         status(result) === OK
         contentType(result) must beSome("application/json")
-        contentAsString(result) === Json.obj("uri" -> "/").toString()
+        contentAsString(result) === Json.obj("uri" -> "/?m=0").toString()
         val sess = session(result)
         sess.getUserId.isDefined === true
         val userId = sess.getUserId.get
@@ -172,13 +172,12 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val inviteeEmail = EmailAddress("foo@bar.com")
         val (owner, org, authToken) = db.readWrite { implicit session =>
           val owner = UserFactory.user().withCreatedAt(DateTime.now).withName("Foo", "Bar").withUsername("foobar").saved
-          val org = OrganizationFactory.organization().withOwner(owner).withInvitedEmails(Seq(inviteeEmail)).saved
+          val org = OrganizationFactory.organization().withOwner(owner).withInvitedEmails(Seq(inviteeEmail)).withHandle(OrganizationHandle("foobar")).saved
           val authToken = inject[OrganizationInviteRepo].getByEmailAddress(inviteeEmail).head.authToken
           (owner, org, authToken)
         }
         val orgPubId = Organization.publicId(org.id.get)
         val path = "/auth/email-signup" + "?authToken=" + authToken
-        val orgPath = "/" + org.handle.value
         val payload = Json.obj("email" -> inviteeEmail, "password" -> "raboof", "firstName" -> "Foo", "lastName" -> "Bar",
           "orgPublicId" -> orgPubId, "orgAuthToken" -> authToken)
         val request = FakeRequest("POST", path).withBody(payload)
@@ -186,7 +185,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val newUserIdOpt = session(result).getUserId()
 
         status(result) === OK
-        contentAsJson(result) === Json.obj("uri" -> orgPath)
+        contentAsJson(result) === Json.obj("uri" -> org.handle.value)
         newUserIdOpt.isDefined === true
         db.readOnlyMaster { implicit session =>
           inject[OrganizationInviteRepo].getByEmailAddress(inviteeEmail).head.decision === InvitationDecision.ACCEPTED

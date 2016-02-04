@@ -366,7 +366,6 @@ class AuthCommander @Inject() (
         false
       },
       { library =>
-        log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
         true
       }
     )
