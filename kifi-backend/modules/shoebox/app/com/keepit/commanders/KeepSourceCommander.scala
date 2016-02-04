@@ -37,7 +37,7 @@ class KeepSourceCommanderImpl @Inject() (
       getTwitterAccountOwners(twitterUserIds)
     }
     val userBySlackId = {
-      val slackUserIds = attributions.collect { case SlackAttribution(message) => message.user.id }.toSet
+      val slackUserIds = attributions.collect { case SlackAttribution(message) => message.userId }.toSet
       getSlackAccountOwners(slackUserIds)
     }
     val userIds = (userByTwitterId.values ++ userBySlackId.values).toSet
@@ -45,7 +45,7 @@ class KeepSourceCommanderImpl @Inject() (
     sourcesByKeepId.mapValuesStrict { attr =>
       val userIdOpt = attr match {
         case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id)
-        case SlackAttribution(message) => userBySlackId.get(message.user.id)
+        case SlackAttribution(message) => userBySlackId.get(message.userId)
       }
       (attr, userIdOpt.flatMap(basicUserById.get))
     }
