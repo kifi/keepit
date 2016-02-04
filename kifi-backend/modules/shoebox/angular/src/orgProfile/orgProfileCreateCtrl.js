@@ -19,7 +19,9 @@ angular.module('kifi')
       }
     });
 
-    if (!profileService.prefs.company_name) {
+    if ($stateParams.teamName) {
+      $scope.orgName = $stateParams.teamName;
+    } else if (!profileService.prefs.company_name) {
       profileService.fetchPrefs().then(function (prefs) {
         if (prefs.company_name && !orgNameExists(prefs.company_name)) {
           $scope.orgName = prefs.company_name;
