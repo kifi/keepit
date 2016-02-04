@@ -181,9 +181,6 @@ class SlackClientWrapperImpl @Inject() (
           chs.foreach { ch =>
             slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
           }
-          chs.find(_.isGeneral).foreach { generalCh =>
-            slackTeamRepo.getBySlackTeamId(teamId).foreach(team => slackTeamRepo.save(team.withGeneralChannelId(generalCh.channelId)))
-          }
         }
       }
     }

@@ -258,11 +258,11 @@ class SlackTeamCommanderImpl @Inject() (
       case Some(team) =>
         team.organizationId match {
           case Some(orgId) =>
-            val (membershipOpt, teamWithChannelsSynced, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
+            val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == team.slackTeamId)
               val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).flatMap(_.slackChannelId).toSet
               val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackCommander.slackSetupPermission)
-              (membershipOpt, team.copy(channelsSynced = team.channelsSynced ++ integratedChannelIds), hasOrgPermissions)
+              (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
             if (hasOrgPermissions) {
               membershipOpt.flatMap(membership => membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels).map((membership, _))) match {
@@ -270,10 +270,15 @@ class SlackTeamCommanderImpl @Inject() (
                   val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
                   onboardingAgent.intro().flatMap { _ =>
                     slackClient.getChannels(validToken, excludeArchived = true).map { channels =>
-                      def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || teamWithChannelsSynced.channelsSynced.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
+                      val updatedTeam = {
+                        val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
+                        val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
+                        if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
+                      }
+                      def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
                       val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
                       val futureSlackChannelLibraries = SafeFuture {
-                        setupSlackChannels(teamWithChannelsSynced, membership, channelsToIntegrate)
+                        setupSlackChannels(updatedTeam, membership, channelsToIntegrate)
                       } flatMap { slackChannelLibraries =>
                         onboardingAgent.channels(membership, channelsToIntegrate).map { _ =>
                           slackChannelLibraries
