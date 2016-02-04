@@ -702,7 +702,7 @@ class ShoeboxServiceClientImpl @Inject() (
         "idealImageSize" -> idealImageSize,
         "viewerId" -> viewerId
       )
-      call(Shoebox.internal.getLibraryCardInfos, payload).map { r =>
+      call(Shoebox.internal.getLibraryCardInfos, payload, callTimeouts = longTimeout).map { r =>
         implicit val libraryCardInfoReads = LibraryCardInfo.internalReads
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], LibraryCardInfo]
         r.json.as[Seq[(Id[Library], LibraryCardInfo)]].toMap
