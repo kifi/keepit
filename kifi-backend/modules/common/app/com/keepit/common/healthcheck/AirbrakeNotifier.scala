@@ -93,7 +93,7 @@ class AirbrakeSender @Inject() (
             /**
               * https://help.airbrake.io/kb/api-2/notifier-api-v23
               * Error messages, files, components, actions, environment names, request URLs, and error class names are truncated after 255 characters.
-              * Any incoming element with text content over 2 kilobytes will be truncated.
+              * Any incoming element with text content over 2 kilobytes (not chars) will be truncated.
               */
             systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
               to = Seq(SystemEmailAddress.ENG),
