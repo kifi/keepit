@@ -15,7 +15,7 @@ case class ThreadEmailInfo(
   heroImageUrl: Option[String],
   pageDescription: Option[String],
   participants: Seq[String],
-  conversationStarter: String,
+  conversationStarter: Option[String],
   invitedByUser: Option[User],
   unsubUrl: Option[String],
   muteUrl: Option[String],

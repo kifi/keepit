@@ -76,7 +76,7 @@ class ElizaEmailCommander @Inject() (
       )
     }
 
-    val starterUser = allUsers(starterUserId)
+    val starterUser = starterUserId.flatMap(allUsers.get)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
 
     val invitedByUser = nonUserThread.flatMap(nut => allUsers.get(nut.createdBy))
@@ -94,7 +94,7 @@ class ElizaEmailCommander @Inject() (
       heroImageUrl = uriSummary.flatMap(_.images.get(idealImageSize).map(_.path.getUrl)),
       pageDescription = uriSummary.flatMap(_.article.description.map(_.take(190) + "...")),
       participants = participants.toSeq,
-      conversationStarter = starterUser.firstName + " " + starterUser.lastName,
+      conversationStarter = starterUser.map(_.fullName),
       invitedByUser = invitedByUser,
       unsubUrl = unsubUrl,
       muteUrl = muteUrl,

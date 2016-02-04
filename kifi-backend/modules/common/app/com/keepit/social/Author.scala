@@ -3,7 +3,7 @@ package com.keepit.social
 import com.keepit.common.db.Id
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
-import com.keepit.slack.models.{SlackUserId, SlackTeamId}
+import com.keepit.slack.models.{ SlackUserId, SlackTeamId }
 import com.keepit.social.twitter.TwitterUserId
 import play.api.libs.json.{ Json, Writes }
 
