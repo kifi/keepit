@@ -1,5 +1,6 @@
 package com.keepit.common.util
 
+import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.common.strings.StringWithReplacements
@@ -55,6 +56,7 @@ object DescriptionElements {
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
   implicit def fromText(text: String): BasicElement = BasicElement(text, None, None)
+  implicit def fromId[T](id: Id[T]): BasicElement = fromText(id.id.toString)
 
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq

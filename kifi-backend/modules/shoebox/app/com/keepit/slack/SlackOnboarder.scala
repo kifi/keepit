@@ -119,7 +119,7 @@ class SlackOnboarderImpl @Inject() (
   private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "set up a Kifi integration.",
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId)), "set up a Kifi integration.",
       "Keeps from", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, ltsc.slackTeamId).absolute), "will be posted to this channel."
     ))
     val msg = SlackMessageRequest.fromKifi(text = txt).quiet
@@ -128,7 +128,8 @@ class SlackOnboarderImpl @Inject() (
   private def explicitPushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId)), "connected",
+      ltsc.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId)), ".",
       "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -160,7 +161,7 @@ class SlackOnboarderImpl @Inject() (
   private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", sctl.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, sctl.slackTeamId)), "connected", sctl.slackChannelName.value, "with", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
       "on Kifi to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -188,7 +189,7 @@ class SlackOnboarderImpl @Inject() (
   private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner, "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
+      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
       "to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -287,7 +288,8 @@ class SlackOnboarderImpl @Inject() (
           org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
           msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
             if (channels.nonEmpty) {
-              DescriptionElements("I just sync'd all your :linked_paperclips: links over to Kifi and boy are my robotic arms tired.",
+              DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+                "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
                 numMsgsWithLinks.map(numMsgs => DescriptionElements(
                   "I found",
                   numMsgs match {
@@ -295,12 +297,13 @@ class SlackOnboarderImpl @Inject() (
                     case 1 => "one message with a link, and once it's indexed you can access it"
                     case 0 => "no messages. Bummer. If we HAD found any, you could find them"
                   },
-                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", ".",
-                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
-                  "granular team settings",
-                  "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
-                  "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
-                )))
+                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
+                )),
+                "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
+                "granular team settings",
+                "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
+                "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+              )
             } else {
               DescriptionElements(
                 SlackEmoji.sweatSmile, "I just looked but I didn't find any",

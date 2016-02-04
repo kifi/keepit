@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.time._
 import com.keepit.model.{ User, Organization }
 import org.joda.time.DateTime
@@ -72,8 +73,8 @@ object SlackTeamStates extends States[SlackTeam]
 @ImplementedBy(classOf[SlackTeamRepoImpl])
 trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam]
-  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
-  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam]
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam
@@ -167,13 +168,13 @@ class SlackTeamRepoImpl @Inject() (
     activeRows.filter(_.id.inSet(ids)).list.map { model => model.id.get -> model }.toMap
   }
 
-  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam] = {
     getByOrganizationIds(Set(orgId)).apply(orgId)
   }
 
-  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]] = {
-    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list.toSet[SlackTeam].groupBy(_.organizationId.get)
-    orgIds.map(orgId => orgId -> existing.getOrElse(orgId, Set.empty)).toMap
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]] = {
+    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list
+    orgIds.map(orgId => orgId -> existing.find(_.organizationId.contains(orgId))).toMap
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
@@ -203,7 +204,7 @@ class SlackTeamRepoImpl @Inject() (
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 7
+  override val version = 8
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }

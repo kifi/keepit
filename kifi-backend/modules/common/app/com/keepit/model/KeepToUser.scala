@@ -15,7 +15,7 @@ case class KeepToUser(
   addedBy: Id[User],
   // Denormalized fields from Keep
   uriId: Id[NormalizedURI],
-  lastActivityAt: DateTime = currentDateTime)
+  lastActivityAt: DateTime) // denormalized from keep
 
     extends ModelWithState[KeepToUser] {
 

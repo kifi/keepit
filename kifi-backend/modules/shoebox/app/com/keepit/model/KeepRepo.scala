@@ -683,7 +683,7 @@ class KeepRepoImpl @Inject() (
     val ktl_JOIN_om_WHERE_THIS_USER = s"""keep_to_library ktl inner join organization_membership om on (ktl.organization_id = om.organization_id) where om.state = 'active' and ktl.state = 'active' and (ktl.visibility = 'published' or ktl.visibility = 'organization') and om.user_id = $userId"""
     val ktu_WHERE_THIS_USER = s"""keep_to_user ktu where ktu.state = 'active' and ktu.user_id = $userId"""
 
-    def getLastActivityAt(keepId: Id[Keep]): Option[DateTime] = sql"""SELECT last_activity_at from bookmark where id = $keepId """.as[Option[DateTime]].first
+    def getLastActivityAt(keepId: Id[Keep]): Option[DateTime] = sql"""SELECT last_activity_at from bookmark where id = $keepId""".as[Option[DateTime]].first
 
     def getKeepIdAndLastActivityAt(id: ExternalId[Keep]): Option[(Id[Keep], DateTime)] = {
       for {
@@ -694,20 +694,28 @@ class KeepRepoImpl @Inject() (
     }
 
     val last_activity_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndLastActivityAt) match {
-      case None => "true"
-      case Some((keepId, before)) => s"last_activity_at < '$before' OR (last_activity_at = '$before' AND keep_id < $keepId)"
+      case None => (tableName: String) => "true"
+      case Some((keepId, before)) =>
+        (tableName: String) => {
+          if (tableName == "k") s"last_activity_at < '$before' AND k.id < $keepId"
+          else s"last_activity_at < '$before' AND $tableName.keep_id < $keepId"
+        }
     }
 
     val last_activity_at_AFTER = afterIdOpt.flatMap(getKeepIdAndLastActivityAt) match {
-      case None => "true"
-      case Some((keepId, after)) => s"last_activity_at > '$after' OR (last_activity_at = '$after' AND keep_id > $keepId)"
+      case None => (tableName: String) => "true"
+      case Some((keepId, after)) =>
+        (tableName: String) => {
+          if (tableName == "k") s"last_activity_at > '$after' AND k.id > $keepId"
+          else s"last_activity_at > '$after' AND $tableName.keep_id > $keepId"
+        }
     }
 
     val keepInOrgFilter = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }
 
-    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, max(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_lm_WHERE_THIS_USER AND $last_activity_at_BEFORE GROUP BY ktl.keep_id"""
-    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, max(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_om_WHERE_THIS_USER AND $last_activity_at_BEFORE ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
-    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.last_activity_at as most_recent_activity FROM $ktu_WHERE_THIS_USER AND $last_activity_at_BEFORE"""
+    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_lm_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} GROUP BY ktl.keep_id"""
+    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_om_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
+    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.last_activity_at as most_recent_activity FROM $ktu_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktu")}"""
 
     val fromQuery = filterOpt match {
       case Some(OwnKeeps) => keepsFromUser
@@ -716,11 +724,11 @@ class KeepRepoImpl @Inject() (
     }
 
     val keepsAndLastActivityAt = sql"""
-      SELECT k.id as keep_id, max(k.most_recent_activity) as last_activity_at
+      SELECT k.id, max(k.most_recent_activity) as last_activity_at
       FROM (#$fromQuery) as k
       GROUP BY k.id
-      HAVING #$last_activity_at_AFTER AND #$last_activity_at_BEFORE
-      ORDER BY last_activity_at DESC, keep_id DESC
+      HAVING #${last_activity_at_AFTER("k")} AND #${last_activity_at_BEFORE("k")}
+      ORDER BY last_activity_at DESC, k.id DESC
       LIMIT $limit
     """.as[(Id[Keep], DateTime)].list
 

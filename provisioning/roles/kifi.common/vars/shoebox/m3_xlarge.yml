@@ -1,0 +1,4 @@
+# m3.xlarge has 15 GiB
+---
+service_jvm_Xms: 7G
+service_jvm_Xmx: 7G

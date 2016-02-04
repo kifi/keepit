@@ -16,18 +16,19 @@ import com.keepit.common.core._
 
 @ImplementedBy(classOf[SlackAuthStateCommanderImpl])
 trait SlackAuthStateCommander {
+  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState
   def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
   def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
 }
 
 @Singleton
 class SlackAuthStateCommanderImpl @Inject() (stateCache: SlackAuthStateCache) extends SlackAuthStateCommander {
-  private def getNewSlackState(actionWithData: SlackAuthenticatedAction): SlackAuthState = {
-    SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), actionWithData) }
+  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState = {
+    SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), action) }
   }
 
   def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
-    val state = getNewSlackState(action)
+    val state = setNewSlackState(action)
     SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
   }
 
@@ -62,25 +63,25 @@ object TurnOnChannelIngestion extends SlackAuthenticatedActionHelper[TurnOnChann
 }
 
 object AddSlackTeam extends SlackAuthenticatedActionHelper[AddSlackTeam]("add_slack_team")
-case class AddSlackTeam() extends SlackAuthenticatedAction {
+@json case class AddSlackTeam(andThen: Option[SlackAuthenticatedAction]) extends SlackAuthenticatedAction {
   type A = AddSlackTeam
   def helper = AddSlackTeam
 }
 
 object ConnectSlackTeam extends SlackAuthenticatedActionHelper[ConnectSlackTeam]("connect_slack_team")
-@json case class ConnectSlackTeam(organizationId: Id[Organization]) extends SlackAuthenticatedAction {
+@json case class ConnectSlackTeam(organizationId: Id[Organization], andThen: Option[SlackAuthenticatedAction]) extends SlackAuthenticatedAction {
   type A = ConnectSlackTeam
   def helper = ConnectSlackTeam
 }
 
 object CreateSlackTeam extends SlackAuthenticatedActionHelper[CreateSlackTeam]("create_slack_team")
-case class CreateSlackTeam() extends SlackAuthenticatedAction {
+@json case class CreateSlackTeam(andThen: Option[SlackAuthenticatedAction]) extends SlackAuthenticatedAction {
   type A = CreateSlackTeam
   def helper = CreateSlackTeam
 }
 
 object SyncPublicChannels extends SlackAuthenticatedActionHelper[SyncPublicChannels]("sync_public_channels")
-@json case class SyncPublicChannels(orgId: Id[Organization]) extends SlackAuthenticatedAction {
+case class SyncPublicChannels() extends SlackAuthenticatedAction {
   type A = SyncPublicChannels
   def helper = SyncPublicChannels
 }
@@ -119,10 +120,10 @@ object SlackAuthenticatedActionHelper {
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
     case TurnOnLibraryPush => implicitly[Format[TurnOnLibraryPush]]
     case TurnOnChannelIngestion => implicitly[Format[TurnOnChannelIngestion]]
-    case AddSlackTeam => formatPure(AddSlackTeam())
+    case AddSlackTeam => implicitly[Format[AddSlackTeam]]
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
-    case CreateSlackTeam => formatPure(CreateSlackTeam())
-    case SyncPublicChannels => implicitly[Format[SyncPublicChannels]]
+    case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
+    case SyncPublicChannels => formatPure(SyncPublicChannels())
     case Authenticate => formatPure(Authenticate())
   }
 
@@ -130,10 +131,10 @@ object SlackAuthenticatedActionHelper {
     case SetupLibraryIntegrations(_) => SlackAuthScope.integrationSetup
     case TurnOnLibraryPush(_) => SlackAuthScope.push
     case TurnOnChannelIngestion(_) => SlackAuthScope.ingest
-    case AddSlackTeam() => SlackAuthScope.teamSetup
-    case ConnectSlackTeam(_) => SlackAuthScope.teamSetup
-    case CreateSlackTeam() => SlackAuthScope.teamSetup
-    case SyncPublicChannels(_) => SlackAuthScope.syncPublicChannels
+    case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
+    case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
+    case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
+    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
     case Authenticate() => SlackAuthScope.userSignup
   }
 

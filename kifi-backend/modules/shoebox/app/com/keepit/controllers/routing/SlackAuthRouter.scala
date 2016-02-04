@@ -7,7 +7,9 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
@@ -30,6 +32,7 @@ class SlackAuthRouter @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   permissionCommander: PermissionCommander,
   pathCommander: PathCommander,
+  val airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfiguration: PublicIdConfiguration)
@@ -40,28 +43,37 @@ class SlackAuthRouter @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive).map { org =>
         val target = PathCommander.browserExtension.absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, None, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
       }
     }
     redir.getOrElse(notFound(request))
   }
-  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User]) = MaybeUserAction { request =>
-    // There is currently no authentication needed to see a user's profile
-    val redir = db.readOnlyMaster { implicit s =>
-      userRepo.getOpt(extId).map { user =>
-        Redirect(pathCommander.profilePage(user).absolute)
-      }
-    }
-    redir.getOrElse(notFound(request))
+
+  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User], isWelcomeMessage: Boolean) = MaybeUserAction { implicit request =>
+    import com.keepit.common.core._
+    db.readOnlyMaster { implicit s =>
+      val userPathOpt = userRepo.getOpt(extId).filter(_.isActive).map(user => pathCommander.pathForUser(user).absolute)
+      (for {
+        _ <- Some(true) if request.userIdOpt.isEmpty || isWelcomeMessage
+        userPath <- userPathOpt
+        orgId <- slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId)
+        org <- orgRepo.getActive(orgId).tap {
+          case None => airbrake.notify(s"[inactive-org] slackTeam=${slackTeamId.value} references inactive org=${orgId.id}")
+          case _ =>
+        }
+        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+      } yield redirectThroughSlackAuth(org, slackTeamId, userPath, userId = Some(extId))) orElse userPathOpt.map(Redirect(_))
+    }.getOrElse(notFound(request))
   }
+
   def fromSlackToOrg(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgPage(org).absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, keepIdOpt = None, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
       }
@@ -73,7 +85,7 @@ class SlackAuthRouter @Inject() (
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgIntegrationsPage(org).absolute
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
-          case true => redirectThroughSlackAuth(org, slackTeamId, None, target)
+          case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
         }
       }
@@ -88,7 +100,7 @@ class SlackAuthRouter @Inject() (
         (for {
           org <- lib.organizationId.map(orgRepo.get).filter(_.isActive)
           _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
-        } yield redirectThroughSlackAuth(org, slackTeamId, keepIdOpt = None, target)) getOrElse Redirect(target)
+        } yield redirectThroughSlackAuth(org, slackTeamId, target, libraryId = Some(pubId))) getOrElse Redirect(target)
       }
     }
     redir.getOrElse(notFound(request))
@@ -115,7 +127,7 @@ class SlackAuthRouter @Inject() (
             val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
             val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))
             orgOpt
-              .map(org => redirectThroughSlackAuth(org, slackTeamId, Some(pubId), keepPageUrl))
+              .map(org => redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId)))
               .getOrElse(Redirect(keepPageUrl))
           } else Redirect(keep.url)
         }
@@ -145,8 +157,16 @@ class SlackAuthRouter @Inject() (
     }
   }
 
-  private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, keepIdOpt: Option[PublicId[Keep]], url: String)(implicit request: MaybeUserRequest[_]): Result = {
-    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack${keepIdOpt.map(_ => s"=keep").getOrElse("")}&slackTeamId=${slackTeamId.value}" + keepIdOpt.map(id => s"&keepId=${id.id}").getOrElse("")
+  private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String, keepId: Option[PublicId[Keep]] = None, libraryId: Option[PublicId[Library]] = None, userId: Option[ExternalId[User]] = None)(implicit request: MaybeUserRequest[_]): Result = {
+    val modelParams = (keepId, libraryId, userId) match {
+      case (Some(keepId), _, _) => s"=keep&keepId=${keepId.id}"
+      case (_, Some(libraryId), _) => s"=library&libraryId=${libraryId.id}"
+      case (_, _, Some(userId)) => s"=welcome&userId=${userId.id}"
+      case _ => "=true"
+    }
+
+    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack" + modelParams + s"&slackTeamId=${slackTeamId.value}"
+
     Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 

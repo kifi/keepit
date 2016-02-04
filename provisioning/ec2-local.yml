@@ -2,7 +2,7 @@
 # from Ubuntu cloud-init (set via the AWS EC2 user-data)
 ---
 - hosts: localhost
-  sudo: yes
+  become: yes
   tasks:
     - name: add localhost to the ec2 group
       add_host: name=localhost groups=ec2
@@ -10,7 +10,7 @@
 - include: kifi-node-setup.yml
 
 - hosts: localhost
-  sudo: yes
+  become: yes
   tasks:
     # the kifi-node-setup playbook writes this file on the ec2 instance
     - include_vars: /opt/kifi-vars.yml
@@ -33,7 +33,7 @@
 - include: ec2-service.yml
 
 - hosts: localhost
-  sudo: yes
+  become: yes
   tasks:
     - name: notify slack completed
       local_action:

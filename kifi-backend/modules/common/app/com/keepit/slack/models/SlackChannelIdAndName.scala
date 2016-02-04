@@ -13,15 +13,17 @@ import play.api.libs.json._
 
 // There is more stuff than just this returned
 case class SlackChannelInfo(
-  channelId: SlackChannelId,
-  channelName: SlackChannelName,
-  creator: SlackUserId,
-  createdAt: SlackTimestamp,
-  isArchived: Boolean,
-  isGeneral: Boolean,
-  numMembers: Int,
-  topic: Option[SlackChannelTopic],
-  purpose: Option[SlackChannelPurpose])
+    channelId: SlackChannelId,
+    channelName: SlackChannelName,
+    creator: SlackUserId,
+    createdAt: SlackTimestamp,
+    isArchived: Boolean,
+    isGeneral: Boolean,
+    numMembers: Int,
+    topic: Option[SlackChannelTopic],
+    purpose: Option[SlackChannelPurpose]) {
+  def channelIdAndName = SlackChannelIdAndName(channelId, channelName)
+}
 object SlackChannelInfo {
   implicit val reads: Reads[SlackChannelInfo] = (
     (__ \ 'id).read[SlackChannelId] and

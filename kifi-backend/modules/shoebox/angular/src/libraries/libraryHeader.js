@@ -39,7 +39,7 @@ angular.module('kifi')
 
 
         if (!profileService.userLoggedIn() && scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
-          signupService.register({modelPubId: scope.library.id, intent: 'follow', authToken: authToken, invite: scope.library.invite});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         }
 
         //
@@ -102,7 +102,7 @@ angular.module('kifi')
         };
 
         scope.signupFromInvitation = function () {
-          signupService.register({modelPubId: scope.library.id, intent: 'follow', authToken: authToken, invite: scope.library.invite});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         };
 
         scope.changeSubscription = function () {
@@ -554,7 +554,7 @@ angular.module('kifi')
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
           } else if (!$rootScope.userLoggedIn) {
-            return signupService.register({modelPubId: scope.library.id, intent: 'follow', authToken: authToken});
+            return signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
           }
 
           scope.followBtnJustClicked = (opts && opts.via) === 'followBtn';

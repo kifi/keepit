@@ -1,5 +1,5 @@
 - hosts: ec2
-  sudo: yes
+  become: yes
   tasks:
     - name: install kifi-node-setup python dependencies
       pip: name={{ item }}

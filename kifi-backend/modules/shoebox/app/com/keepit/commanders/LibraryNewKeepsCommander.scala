@@ -13,7 +13,7 @@ import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.LibraryNewKeep
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import com.google.inject.Singleton
@@ -43,7 +43,7 @@ class LibraryNewKeepsCommander @Inject() (
     if (toBeNotified.nonEmpty) {
       val keeper = usersById(keep.userId)
       val sourceOpt = db.readOnlyReplica { implicit s =>
-        keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(Set(keep.id.get)).values.headOption
+        keepSourceCommander.getSourceAttributionForKeeps(Set(keep.id.get)).values.headOption
       }
 
       if (toBeNotified.size > 150) {
@@ -57,8 +57,9 @@ class LibraryNewKeepsCommander @Inject() (
       }.map(title => s": $title").getOrElse("")
       val message = {
         sourceOpt.collect {
-          case (attr: SlackAttribution, slackKeeperOpt) =>
-            val name = slackKeeperOpt.map(_.fullName).getOrElse(s"@${attr.message.username.value}")
+          case (_, Some(kifiUser)) => s"${kifiUser.fullName} kept to $libTrunc" + titleString
+          case (attr: SlackAttribution, _) =>
+            val name = BasicAuthor.fromAttribution(attr).displayName
             s"$name added to #${attr.message.channel.name.value}" + titleString
         } getOrElse {
           s"${keeper.fullName} kept to $libTrunc" + titleString

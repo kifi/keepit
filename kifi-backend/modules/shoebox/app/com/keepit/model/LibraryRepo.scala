@@ -220,7 +220,9 @@ class LibraryRepoImpl @Inject() (
           for {
             lib <- rs
             lm <- libMemRows
-            if lm.libraryId === lib.id &&
+            if lib.ownerId === userId &&
+              lib.orgId.isEmpty &&
+              lm.libraryId === lib.id &&
               lm.userId === userId &&
               lm.access.inSet(roles) &&
               (lm.listed || lib.id.inSet(extraInfo.explicitlyAllowedLibraries))
@@ -265,8 +267,8 @@ class LibraryRepoImpl @Inject() (
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.ASCENDING) => rs.sortBy(lib => (lib.memberCount asc, lib.id asc))
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.DESCENDING) => rs.sortBy(lib => (lib.memberCount desc, lib.id desc))
       }
-    } |> { rs => // then take the first page of the results
-      rs.map(_.id).take(query.limit).list
+    } |> { rs => // then page through the results
+      rs.map(_.id).drop(query.offset).take(query.limit).list
     }
   }
 

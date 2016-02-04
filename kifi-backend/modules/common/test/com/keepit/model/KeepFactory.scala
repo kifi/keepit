@@ -24,7 +24,8 @@ object KeepFactory {
       libraryId = None,
       note = None,
       connections = KeepConnections(Set.empty, Set(userId)),
-      originalKeeperId = Some(userId)
+      originalKeeperId = Some(userId),
+      lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
     ))
   }
 
@@ -55,6 +56,7 @@ object KeepFactory {
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
     def withUri(uri: NormalizedURI) = this.copy(keep = keep.copy(uriId = uri.id.get, url = uri.url))
     def withUrl(url: String) = this.copy(keep = keep.copy(url = url))
+    def withLastActivityAt(time: DateTime) = this.copy(keep = keep.copy(lastActivityAt = time))
     def get: Keep = keep
   }
 

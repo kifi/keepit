@@ -1,7 +1,7 @@
 # run this playbook to update existing remote EC2 instances
 ---
 - hosts: ec2
-  sudo: yes
+  become: yes
   vars_files:
     - vars/ec2.yml
   tasks:

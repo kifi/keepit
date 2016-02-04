@@ -1,0 +1,4 @@
+# m3.2xlarge has 30 GiB
+---
+service_jvm_Xms: 7G
+service_jvm_Xmx: 7G

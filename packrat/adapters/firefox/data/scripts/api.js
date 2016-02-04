@@ -1,6 +1,6 @@
 // API for content scripts
 
-const api = (function () {
+window.api = window.api || (function () {
   // TODO: 'use strict'; after working around global definitions in eval’d scripts below
   var msgHandlers = [], nextCallbackId = 1, callbacks = {}, identity = {};
 
@@ -14,7 +14,6 @@ const api = (function () {
   }
 
   function onApiInject(styles, scripts, callbackId) {
-    var lazyLoad = window[(!![]+[])[!+[]+!+[]+!+[]]+'v'+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]]];
     styles.forEach(function (path) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
@@ -23,7 +22,12 @@ const api = (function () {
       (document.head || document.body).appendChild(el);
     });
     scripts.forEach(function (js) {
-      lazyLoad(js);
+      var initFunction = (typeof init_module !== 'undefined') && init_module[js];
+      if (initFunction) {
+        initFunction();
+      } else {
+        log('[onApiInject] Could not find module for', js);
+      }
     });
     var loadsLeft = styles.length;
     if (loadsLeft === 0) {
@@ -126,7 +130,15 @@ const api = (function () {
     require: function(paths, callback) {
       var callbackId = nextCallbackId++;
       callbacks[callbackId] = callback;
-      self.port.emit("api:require", paths, callbackId);
+      if (paths[0].slice(-3) === '.js') {
+        // since we aren't eval-ing the scripts, we don't need to
+        // send the filename and wait for the code to be sent.
+        // so just call the module now.
+        onApiInject([], paths, callbackId);
+      } else {
+        // we still do load CSS from text though, so do that.
+        self.port.emit("api:require", paths, callbackId);
+      }
     },
     url: function(path) {
       return self.options.dataUriPrefix + path;

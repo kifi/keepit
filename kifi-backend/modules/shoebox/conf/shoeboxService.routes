@@ -13,7 +13,10 @@ GET     /contacts/import/failure    @com.keepit.controllers.website.ContactsImpo
 GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:ExternalId[ABookInfo], provider:Option[String])
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
-GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
+GET     /oauth2/slack               @com.keepit.controllers.website.SlackOAuthController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
+
+# These really need to be non-site endpoints
+GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -51,7 +54,8 @@ GET     /slack-connect              @com.keepit.controllers.core.AuthController.
 GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
 GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, intent: Option[String] ?= None, modelPubId: Option[String] ?= None, authToken: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None)
+
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
@@ -463,15 +467,12 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 
 ## endpoints only for testing, should be deleted by 2016-01-10
 POST    /site/rpb/setArrangement           @com.keepit.controllers.website.UserController.setPreferredLibraryArrangement()
-GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, limit: Int ?= 10)
-GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, limit: Int ?= 10)
+GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserController.rpbGetUserLibraries(userId: ExternalId[User], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
-POST  /site/libraries/:id/slack/push        @com.keepit.controllers.website.SlackController.turnOnLibraryPush(id: PublicId[Library], integrationId: String)
-POST  /site/libraries/:id/slack/ingest      @com.keepit.controllers.website.SlackController.turnOnChannelIngestion(id: PublicId[Library], integrationId: String)
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
-
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -556,12 +557,11 @@ POST          /site/organizations/:id/redeemCode                @com.keepit.cont
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
 # ↓ Take out of /site/
-GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
-# ↓ Take out of /site/
-GET           /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
-POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
 POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
 
 
@@ -755,6 +755,7 @@ POST    /admin/organization/:id/transferOwner                @com.keepit.control
 POST    /admin/organization/:id/ownDomain                    @com.keepit.controllers.admin.AdminOrganizationController.addDomainOwnership(id: Id[Organization])
 GET     /admin/organization/:id/disownDomain/:domainHostname @com.keepit.controllers.admin.AdminOrganizationController.removeDomainOwnership(id: Id[Organization], domainHostname: String)
 POST    /admin/organization/:id/forceDeactivate              @com.keepit.controllers.admin.AdminOrganizationController.forceDeactivate(id: Id[Organization])
+POST    /admin/organization/:id/unsyncSlackLibraries         @com.keepit.controllers.admin.AdminOrganizationController.unsyncSlackLibraries(id: Id[Organization], doIt: Boolean ?= false)
 POST    /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
 GET     /admin/organizations                                 @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)

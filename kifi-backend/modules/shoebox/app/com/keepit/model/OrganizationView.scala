@@ -2,7 +2,9 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
+import com.keepit.common.net.URI
 import com.keepit.common.store.ImagePath
+import com.keepit.model.OrganizationModifications.SiteModification
 import com.keepit.slack.OrganizationSlackInfo
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
@@ -54,12 +56,12 @@ object OrganizationView {
   }
 }
 
-case class OrganizationInitialValues(name: String, description: Option[String] = None, site: Option[String] = None) {
+case class OrganizationInitialValues(name: String, description: Option[String] = None, rawSite: Option[String] = None) {
   def asOrganizationModifications: OrganizationModifications = {
     OrganizationModifications(
       name = Some(name),
       description = description,
-      site = site
+      rawSite = rawSite
     )
   }
 }
@@ -68,11 +70,7 @@ object OrganizationInitialValues {
   private val defaultReads: Reads[OrganizationInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String].map {
-      case Some(site) if "^https?://".r.findFirstMatchIn(site).isEmpty => Some("http://" + site)
-      case Some(site) => Some(site)
-      case None => None
-    }
+    (__ \ 'site).readNullable[String]
   )(OrganizationInitialValues.apply _)
 
   val website = defaultReads
@@ -80,22 +78,39 @@ object OrganizationInitialValues {
 }
 
 case class OrganizationModifications(
-  name: Option[String] = None,
-  description: Option[String] = None,
-  site: Option[String] = None)
+    name: Option[String] = None,
+    description: Option[String] = None,
+    rawSite: Option[String] = None) {
+  def site: Option[SiteModification] = rawSite.map(SiteModification(_))
+}
 object OrganizationModifications {
   private val defaultReads: Reads[OrganizationModifications] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String].map {
-      case Some(site) if httpRegex.findFirstMatchIn(site).isEmpty => Some("http://" + site)
-      case Some(site) => Some(site)
-      case None => None
-    }
+    (__ \ 'site).readNullable[String]
   )(OrganizationModifications.apply _)
 
   val website = defaultReads
   val mobileV1 = defaultReads
 
-  private val httpRegex = "^https?://".r
+  trait SiteModification {
+    val value: Option[String]
+    def isValid: Boolean
+  }
+  object SiteModification {
+    case object Remove extends SiteModification {
+      val value = None
+      def isValid = true
+    }
+    case class Site(url: String) extends SiteModification {
+      val value = Some(url)
+      def isValid = URI.parse(url).isSuccess
+    }
+
+    def apply(str: String): SiteModification = str match {
+      case emptySite if emptySite.isEmpty => SiteModification.Remove
+      case validSite if validSite.matches("^https?://.*") => Site(validSite)
+      case noProtocolSite => Site("http://" + noProtocolSite)
+    }
+  }
 }

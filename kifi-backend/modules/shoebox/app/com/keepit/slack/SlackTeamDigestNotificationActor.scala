@@ -5,7 +5,6 @@ import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
-import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -26,11 +25,6 @@ import scala.util.{ Failure, Success, Try }
 object SlackTeamDigestConfig {
   val minPeriodBetweenTeamDigests = Period.days(3)
   val minIngestedLinksForTeamDigest = 10
-
-  // TODO(ryan): to release to the public, change canPushToTeam to `true`
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
-  def canPushToTeam(slackTeam: SlackTeam): Boolean = slackTeam.slackTeamId == KifiSlackTeamId || slackTeam.slackTeamId == BrewstercorpSlackTeamId // TODO(ryan): change this to `true`
 }
 
 class SlackTeamDigestNotificationActor @Inject() (
@@ -60,7 +54,6 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   type Task = Set[Id[SlackTeam]]
   protected def pullTasks(limit: Int): Future[Seq[Task]] = {
-    log.info(s"[SLACK-TEAM-DIGEST] Pulling $limit tasks")
     if (limit == 1) pullTask().map(Seq(_))
     else Future.successful(Seq.empty)
   }
@@ -72,15 +65,11 @@ class SlackTeamDigestNotificationActor @Inject() (
   private def pullTask(): Future[Set[Id[SlackTeam]]] = {
     val now = clock.now
     db.readOnlyReplicaAsync { implicit session =>
-      val ids = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests)
-      slackTeamRepo.getByIds(ids.toSet).filter {
-        case (_, slackTeam) => canPushToTeam(slackTeam)
-      }.keySet tap { ids => log.info(s"[SLACK-TEAM-DIGEST] pullTask() yielded $ids") }
+      slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests).toSet
     }
   }
 
   private def processTask(ids: Set[Id[SlackTeam]]): Future[Map[SlackTeam, Try[Unit]]] = {
-    log.info(s"[SLACK-TEAM-DIGEST] Processing slack teams: $ids")
     val result = for {
       teams <- db.readOnlyReplicaAsync { implicit s => slackTeamRepo.getByIds(ids.toSet).values }
       pushes <- FutureHelpers.accumulateRobustly(teams)(pushDigestNotificationForTeam)
@@ -99,7 +88,6 @@ class SlackTeamDigestNotificationActor @Inject() (
       org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
       librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
-        val teamChannelIds = teamIntegrations.flatMap(_.slackChannelId).toSet
         val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
         teamIntegrations.groupBy(_.slackChannelId).collect {
           case (Some(channelId), integrations) =>
@@ -208,10 +196,8 @@ class SlackTeamDigestNotificationActor @Inject() (
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
-    log.info(s"[SLACK-TEAM-DIGEST] Trying to push a digest for team ${team.slackTeamId}")
     val now = clock.now
     val msgOpt = db.readOnlyMaster { implicit s => createTeamDigest(team).map(describeTeamDigest) }
-    log.info(s"[SLACK-TEAM-DIGEST] Generated message: ${msgOpt.map(_.text)}")
     val generalChannelFut = team.generalChannelId match {
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)
@@ -231,10 +217,7 @@ class SlackTeamDigestNotificationActor @Inject() (
             slackLog.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
         }
       }
-      pushOpt.getOrElse {
-        log.info(s"[SLACK-TEAM-DIGEST] Could not create a digest for slack team ${team.slackTeamId}")
-        Future.successful(Unit)
-      }
+      pushOpt.getOrElse { Future.successful(Unit) }
     }
   }
 }

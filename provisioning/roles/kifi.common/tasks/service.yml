@@ -14,6 +14,7 @@
     - "{{ ec2_tag_Service }}/{{ instance_type_key }}.yml"
     - "{{ ec2_tag_Service }}.yml"
   ignore_errors: yes
+- set_fact: java_home=/usr/java/jdk1.{{ java_version}}.0_{{ java_subversion }}
 - name: "install {{ service }} init.d script"
   template:
     src: etc/init.d/{{ service }}.j2
@@ -21,10 +22,11 @@
     mode: 0754
     owner: fortytwo
     group: fortytwo
-- stat: path=/etc/rc5.d/S20{{ service }}
+- name: check if {{ service }} service has been installed
+  stat: path=/etc/rc5.d/S20{{ service }}
   register: st
 - name: "update-rc.d {{ service }}"
   command: update-rc.d {{ service }} defaults
   when: not st.stat.exists
 - name: "enable {{ service }} service"
-  service: name={{ service }} enabled=yes state=started
+  service: name={{ service }} enabled=yes
