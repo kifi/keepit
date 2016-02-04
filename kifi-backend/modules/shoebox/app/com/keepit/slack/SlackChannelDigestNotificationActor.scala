@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.PathCommander
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -75,7 +75,7 @@ class SlackChannelDigestNotificationActor @Inject() (
           }
         }
       }
-      channels.filter(canSendDigestTo).map(_.id.get).toSet
+      channels.filter(canSendDigestTo).map(_.id.get).toSet tap { task => log.info(s"[SLACK-CHANNEL-DIGEST] Pulled $task") }
     }
   }
 
@@ -85,6 +85,9 @@ class SlackChannelDigestNotificationActor @Inject() (
       pushes <- FutureHelpers.accumulateRobustly(channelsByTeamId.values)(pushDigestNotificationForOneChannelInTeam)
     } yield pushes
     result.andThen {
+      case Success(pushes) =>
+        val failures = pushes.collect { case (chs, Failure(fail)) => chs.head.slackTeamId -> fail.getMessage }
+        if (failures.nonEmpty) slackLog.error("Failed to push channel digests:", failures.mkString("[", ",", "]"))
       case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)
     }
   }
