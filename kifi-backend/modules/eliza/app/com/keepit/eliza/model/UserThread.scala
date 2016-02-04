@@ -30,7 +30,7 @@ case class UserThread(
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationEmailed: Boolean = false,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
-  startedBy: Option[Id[User]], // denormalized from MessageThread
+  startedBy: Id[User], // denormalized from MessageThread
   accessToken: ThreadAccessToken = ThreadAccessToken())
     extends Model[UserThread] with ModelWithState[UserThread] with ParticipantThread {
 

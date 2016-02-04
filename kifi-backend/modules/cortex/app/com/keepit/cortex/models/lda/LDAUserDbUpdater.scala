@@ -64,8 +64,8 @@ class LDAUserDbUpdaterImpl @Inject() (
   }
 
   private def processTasks(keeps: Seq[CortexKeep])(implicit version: ModelVersion[DenseLDA]): Unit = {
-    val users = keeps.map { _.userId }.distinct
-    users.foreach { processUser(_) }
+    val users = keeps.flatMap(_.userId).distinct
+    users.foreach(processUser(_))
     log.info(s"${users.size} users processed")
     keeps.lastOption.map { keep =>
       db.readWrite { implicit s =>

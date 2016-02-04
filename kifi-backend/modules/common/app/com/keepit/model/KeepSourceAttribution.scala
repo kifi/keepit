@@ -16,7 +16,7 @@ case class KeepSourceAttribution(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     keepId: Id[Keep],
-    author: Author,
+    // author: Author, // TODO(ryan): add!
     attribution: RawSourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 

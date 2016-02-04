@@ -34,7 +34,7 @@ case class Keep(
   note: Option[String] = None,
   uriId: Id[NormalizedURI],
   url: String, // denormalized for efficiency
-  userId: Option[Id[User]],
+  userId: Option[Id[User]], // userId is None iff the message was imported from a foreign source (Slack, etc) and we don't have a Kifi user to attribute it to
   originalKeeperId: Option[Id[User]] = None,
   source: KeepSource,
   keptAt: DateTime = currentDateTime,
@@ -56,12 +56,13 @@ case class Keep(
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
   def withState(state: State[Keep]) = copy(state = state)
   def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
+  def withOwner(newOwner: Id[User]) = this.copy(userId = Some(newOwner))
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
+  def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
