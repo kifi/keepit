@@ -28,7 +28,7 @@ class LibraryNewKeepsCommander @Inject() (
     elizaClient: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
     libPathCommander: PathCommander,
-    keepSourceCommander: KeepSourceCommander,
+    keepSourceRepo: KeepSourceAttributionRepo,
     implicit val publicIdConfiguration: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) {
 
@@ -43,7 +43,7 @@ class LibraryNewKeepsCommander @Inject() (
     if (toBeNotified.nonEmpty) {
       val keeper = usersById(keep.userId)
       val sourceOpt = db.readOnlyReplica { implicit s =>
-        keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(Set(keep.id.get)).values.headOption
+        keepSourceRepo.getByKeepIds(Set(keep.id.get)).values.headOption
       }
 
       if (toBeNotified.size > 150) {
@@ -57,8 +57,8 @@ class LibraryNewKeepsCommander @Inject() (
       }.map(title => s": $title").getOrElse("")
       val message = {
         sourceOpt.collect {
-          case (attr: SlackAttribution, slackKeeperOpt) =>
-            val name = slackKeeperOpt.map(_.fullName).getOrElse(s"@${attr.message.username.value}")
+          case attr: SlackAttribution =>
+            val name = attr.author.displayName
             s"$name added to #${attr.message.channel.name.value}" + titleString
         } getOrElse {
           s"${keeper.fullName} kept to $libTrunc" + titleString

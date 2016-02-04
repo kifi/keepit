@@ -150,7 +150,7 @@ class KeepCommanderImpl @Inject() (
       val users = userRepo.getAllUsers(keeps.collect {
         case (id, keep) => keep.userId
       }.toSeq)
-      val attributions = keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(keeps.values.flatMap(_.id).toSet).collect {
+      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet).collect {
         case (keepId, (attr: SlackAttribution, userOpt)) => keepId -> (attr, userOpt)
       }
       keeps.map {

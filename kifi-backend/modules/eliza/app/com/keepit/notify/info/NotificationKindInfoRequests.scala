@@ -115,7 +115,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       val body = {
         val kifiBody = s"${keeper.firstName} just kept ${newKeep.title.getOrElse("a new item")}"
         val slackBody = attributionOpt.map { case (slackAttr, userOpt) =>
-          s"${userOpt.map(_.firstName).getOrElse(s"@${slackAttr.message.username.value}")} just added in #${slackAttr.message.channel.name.value}" +
+          s"${userOpt.map(_.firstName).getOrElse(s"@${slackAttr.message.user.name.value}")} just added in #${slackAttr.message.channel.name.value}" +
             newKeep.title.map(title => s": $title").getOrElse("")
         }
         slackBody.getOrElse(kifiBody)

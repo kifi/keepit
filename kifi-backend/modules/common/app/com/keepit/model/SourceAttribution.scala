@@ -4,14 +4,16 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.slack.models._
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.social.twitter.{ TwitterUserId, TwitterHandle, TwitterStatusId, RawTweet }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
 
-sealed trait SourceAttribution
+sealed trait SourceAttribution {
+  def author: BasicAuthor
+}
 object SourceAttribution {
   import KeepAttributionType._
   def toJson(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
@@ -89,18 +91,24 @@ object BasicTweet {
   def fromRawTweet(tweet: RawTweet): BasicTweet = BasicTweet(tweet.id, tweet.user, tweet.getUrl)
 }
 
-case class TwitterAttribution(tweet: BasicTweet) extends SourceAttribution
+case class TwitterAttribution(tweet: BasicTweet) extends SourceAttribution {
+  def author = BasicAuthor.fromTwitter(tweet.user)
+}
 object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 }
 
-case class BasicSlackMessage(channel: SlackChannelIdAndName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String)
+case class BasicSlackMessage(channel: SlackChannelIdAndName, user: BasicSlackMessage.User, timestamp: SlackTimestamp, permalink: String)
 object BasicSlackMessage {
+  case class User(id: SlackUserId, name: SlackUsername)
+  implicit val helperFormat = Json.format[User]
   implicit val format = Json.format[BasicSlackMessage]
-  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(message.channel, message.userId, message.username, message.timestamp, message.permalink)
+  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(message.channel, User(message.userId, message.username), message.timestamp, message.permalink)
 }
 
-case class SlackAttribution(message: BasicSlackMessage) extends SourceAttribution
+case class SlackAttribution(message: BasicSlackMessage) extends SourceAttribution {
+  def author = BasicAuthor.fromSlack(message.user)
+}
 object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
 }
