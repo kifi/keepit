@@ -53,9 +53,9 @@ class ShoeboxTasksPlugin @Inject() (
     scheduleTaskOnLeader(messageIngestionActor.system, 500 seconds, 3 minute, messageIngestionActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackIngestingActor.system, 3 minute, 20 seconds, slackIngestingActor.ref, IfYouCouldJustGoAhead)
 
-    // TODO(ryan): make these way slower, no need to run this that often
     scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnLeader(slackChannelDigestActor.system, 3 minute, 5 minutes, slackChannelDigestActor.ref, IfYouCouldJustGoAhead)
+    // TODO(ryan): if we ever want to push slack channel digests, you can uncomment this line
+    // scheduleTaskOnLeader(slackChannelDigestActor.system, 3 minute, 5 minutes, slackChannelDigestActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop() {

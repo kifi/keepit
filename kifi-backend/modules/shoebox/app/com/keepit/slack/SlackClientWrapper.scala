@@ -150,6 +150,7 @@ class SlackClientWrapperImpl @Inject() (
           case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
         }
       }
+      log.info(s"[SLACK-CLIENT-WRAPPER] Pushing to $slackChannelId in $slackTeamId from $slackUserId and using $workingToken")
       workingToken match {
         case None => Future.failed(SlackAPIFailure.NoValidToken)
         case Some(token) =>
