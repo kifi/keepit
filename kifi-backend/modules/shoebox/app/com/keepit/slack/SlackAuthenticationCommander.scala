@@ -1,18 +1,14 @@
 package com.keepit.slack
 
-import java.net.URLEncoder
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.routes.ServiceRoute
 import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.slack.models._
-import play.api.libs.json.{ JsNull, Json }
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -70,11 +66,15 @@ class SlackAuthenticationCommanderImpl @Inject() (
   }
 
   def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[SlackIncomingWebhook])(implicit context: HeimdalContext): Future[SlackResponse] = {
+    def continueWith(nextAction: SlackAuthenticatedAction): Future[SlackResponse] = processAuthorizedAction(userId, slackTeamId, slackUserId, nextAction, incomingWebhook)
+
     action match {
       case SetupLibraryIntegrations(libId) => incomingWebhook match {
         case Some(webhook) =>
-          slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackTeamId, slackUserId)
-          Future.successful(redirectToLibrary(libId, showSlackDialog = true))
+          Future.fromTry(slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackTeamId, slackUserId)).imap { team =>
+            redirectToOrganizationIntegrations(team.organizationId.get)
+          }
+
         case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
@@ -89,35 +89,47 @@ class SlackAuthenticationCommanderImpl @Inject() (
         val libraryId = slackIntegrationCommander.turnOnChannelIngestion(Id(integrationId), slackTeamId, slackUserId)
         Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
 
-      case AddSlackTeam() => slackTeamCommander.addSlackTeam(userId, slackTeamId).map {
+      case AddSlackTeam(andThen) => slackTeamCommander.addSlackTeam(userId, slackTeamId).flatMap {
         case (slackTeam, isNewOrg) =>
           slackTeam.organizationId match {
             case None => {
-              SlackResponse.RedirectClient(s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}&slackState=whatever")
+              val slackState = andThen.map(slackStateCommander.setNewSlackState)
+              val slackStateParam = slackState.map(state => s"&slackState=${state.state}") getOrElse ""
+              val redirectUrl = s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}$slackStateParam"
+              Future.successful(SlackResponse.RedirectClient(redirectUrl))
             }
             case Some(orgId) =>
-              if (isNewOrg) redirectToOrganization(orgId, showSlackDialog = true)
-              else if (!hasSeenInstall(userId)) redirectToInstall
-              else if (slackTeam.publicChannelsLastSyncedAt.isDefined) redirectToOrganization(orgId, showSlackDialog = false)
-              else redirectToOrganizationIntegrations(orgId)
+              andThen match {
+                case Some(action) => continueWith(action)
+                case None => Future.successful {
+                  if (isNewOrg) redirectToOrganization(orgId, showSlackDialog = true)
+                  else if (!hasSeenInstall(userId)) redirectToInstall
+                  else if (slackTeam.publicChannelsLastSyncedAt.isDefined) redirectToOrganization(orgId, showSlackDialog = false)
+                  else redirectToOrganizationIntegrations(orgId)
+                }
+              }
           }
       }
 
-      case ConnectSlackTeam(orgId) => Future.fromTry {
-        slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId).map { _ =>
-          redirectToOrganizationIntegrations(orgId)
+      case ConnectSlackTeam(orgId, andThen) => Future.fromTry(slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId)).flatMap { _ =>
+        andThen match {
+          case Some(action) => continueWith(action)
+          case None => Future.successful(redirectToOrganizationIntegrations(orgId))
         }
       }
 
-      case CreateSlackTeam() => slackTeamCommander.createOrganizationForSlackTeam(userId, slackTeamId).map { slackTeam =>
-        redirectToOrganization(slackTeam.organizationId.get, showSlackDialog = true)
+      case CreateSlackTeam(andThen) => slackTeamCommander.createOrganizationForSlackTeam(userId, slackTeamId).flatMap { slackTeam =>
+        andThen match {
+          case Some(action) => continueWith(action)
+          case None => Future.successful(redirectToOrganization(slackTeam.organizationId.get, showSlackDialog = true))
+        }
       }
 
-      case SyncPublicChannels(orgId) =>
-        Future.fromTry(slackTeamCommander.connectSlackTeamToOrganization(userId, slackTeamId, orgId)).map { slackTeam =>
-          slackTeamCommander.syncPublicChannels(userId, slackTeam)
+      case SyncPublicChannels() => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
+        case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
-        }
+      }
+
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
   }
