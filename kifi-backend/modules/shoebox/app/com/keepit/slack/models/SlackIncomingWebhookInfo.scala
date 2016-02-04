@@ -37,6 +37,7 @@ object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
 @ImplementedBy(classOf[SlackIncomingWebhookInfoRepoImpl])
 trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo] {
   def getForChannelByName(user: SlackUserId, teamId: SlackTeamId, name: SlackChannelName)(implicit session: RSession): Seq[SlackIncomingWebhookInfo]
+  def getByChannelIds(slackChannelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Seq[SlackIncomingWebhookInfo]]
 
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
@@ -137,6 +138,9 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
 
   def getForChannelByName(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Seq[SlackIncomingWebhookInfo] = {
     workingRows.filter(row => row.slackUserId === userId && row.slackTeamId === teamId && row.slackChannelName === channelName).list
+  }
+  def getByChannelIds(slackChannelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Seq[SlackIncomingWebhookInfo]] = {
+    workingRows.filter(row => row.slackChannelId.inSet(slackChannelIds)).list.groupBy(_.slackChannelId.get)
   }
 
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)] = {
