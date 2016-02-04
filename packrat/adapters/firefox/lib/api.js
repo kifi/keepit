@@ -113,23 +113,25 @@ exports.mode = {
 
 const hexRe = /^#[0-9a-f]{3}$/i;
 var log = exports.log = function log() {
-  var d = new Date, ds = d.toString(), t = '[' + ds.substr(0,2) + ds.substr(15,9) + '.' + String(+d).substr(10) + ']';
-  for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
-    var arg = args[i];
-    if (typeof arg == 'object') {
-      try {
-        args[i] = JSON.stringify(arg);
-      } catch (e) {
-        args[i] = String(arg) + '{' + Object.keys(arg).join(',') + '}';
+  if (exports.mode.isDev()) {
+    var d = new Date, ds = d.toString(), t = '[' + ds.substr(0,2) + ds.substr(15,9) + '.' + String(+d).substr(10) + ']';
+    for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
+      var arg = args[i];
+      if (typeof arg == 'object') {
+        try {
+          args[i] = JSON.stringify(arg);
+        } catch (e) {
+          args[i] = String(arg) + '{' + Object.keys(arg).join(',') + '}';
+        }
       }
     }
+    if (hexRe.test(args[0])) {
+      args[0] = t;
+    } else {
+      args.unshift(t);
+    }
+    console.log.apply(console, args);
   }
-  if (hexRe.test(args[0])) {
-    args[0] = t;
-  } else {
-    args.unshift(t);
-  }
-  console.log.apply(console, args);
 };
 
 // TODO: actually toggle content script logging
@@ -280,7 +282,7 @@ exports.socket = {
           self.data.url('scripts/lib/rwsocket.js'),
           self.data.url('scripts/workers/socket_worker.js')],
         contentScriptWhen: 'start',
-        contentScriptOptions: {socketId: socketId, url: url},
+        contentScriptOptions: {socketId: socketId, url: url, dev: exports.mode.isDev()},
         contentURL: self.data.url('html/workers/blank_worker.html')
       });
       socketPage.port.on('socket_connect', onSocketConnect);
