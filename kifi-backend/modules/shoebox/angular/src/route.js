@@ -325,7 +325,7 @@ angular.module('kifi')
         controller: 'KeepPageCtrl'
       })
       .state('slackIntegrationTeamChooser', {
-        url : '/integrations/slack/teams?slackTeamId',
+        url : '/integrations/slack/teams?slackTeamId&slackState',
         templateUrl: 'integrations/slack/teamChooser.tpl.html',
         controller: 'SlackIntegrationTeamChooserCtrl'
       })
