@@ -35,6 +35,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   echo $'\nDeploying REAL Firefox extension to kifi.com'
   read -p 'Press Enter or Ctrl-C '
 
+  REVIEW_STATUS_CODE=0
   bin/review.sh || REVIEW_STATUS_CODE=$?
 
   if [[ REVIEW_STATUS_CODE -ne 0 ]]; then
@@ -52,7 +53,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
       --content-type 'application/x-xpinstall' --body out/kifi-signed.xpi \
       --cache-control 'no-cache, no-store'
     aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi.update.rdf \
-      --content-type 'application/rdf+xml' --body ./kifi.update.rdf \
+      --content-type 'application/rdf+xml' --body out/kifi.update.rdf \
       --cache-control 'no-cache, no-store'
 
   else
