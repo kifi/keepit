@@ -119,15 +119,17 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         count = Integer.MAX_VALUE,
         withPageInfo = false
       )(request)
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
       val expected = Json.parse(s"""
-        {"collection":null,
+        {
+         "collection":null,
          "before":null,
          "after":null,
          "keeps":[
           {
+            "author":{"displayName":"Andrew C","picture":"0.jpg","url":"https://www.kifi.com/test1"},
             "id":"${bookmark2.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark2.id.get).id}",
             "title":"A1",
@@ -154,6 +156,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "permissions": ${Json.toJson(keepPermissions)}
             },
           {
+            "author":{"displayName":"Andrew C","picture":"0.jpg","url":"https://www.kifi.com/test1"},
             "id":"${bookmark1.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark1.id.get).id}",
             "title":"G1",

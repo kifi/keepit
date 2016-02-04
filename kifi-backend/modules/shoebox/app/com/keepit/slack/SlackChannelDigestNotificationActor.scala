@@ -88,7 +88,6 @@ class SlackChannelDigestNotificationActor @Inject() (
       case Success(pushes) =>
         val failures = pushes.collect {
           case (chs, Failure(fail)) => chs.head.slackTeamId -> fail.getMessage
-          case (chs, Success(false)) => chs.head.slackTeamId -> "could not generate a useful message for any of" + chs.map(_.slackChannelId).mkString("{", ",", "}")
         }
         if (failures.nonEmpty) slackLog.error("Failed to push channel digests:", failures.mkString("[", ",", "]"))
       case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)

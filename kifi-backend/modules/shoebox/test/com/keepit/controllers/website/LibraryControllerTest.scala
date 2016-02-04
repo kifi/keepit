@@ -1000,6 +1000,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           {
             "keeps": [
               {
+                "author":{"displayName":"Aaron Hsu","picture":"0.jpg","url":"https://www.kifi.com/test"},
                 "id": "${keep2.externalId}",
                 "pubId": "${Keep.publicId(keep2.id.get).id}",
                 "title": "k2",
@@ -1026,6 +1027,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "permissions": ${Json.toJson(keepPermissions)}
               },
               {
+                "author":{"displayName":"Aaron Hsu","picture":"0.jpg","url":"https://www.kifi.com/test"},
                 "id": "${keep1.externalId}",
                 "pubId": "${Keep.publicId(keep1.id.get).id}",
                 "title": "k1",
