@@ -72,6 +72,7 @@ object KeepInfo {
     new Writes[KeepInfo] {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
+        "author" -> o.author,
         "id" -> o.id,
         "pubId" -> o.pubId,
         "title" -> o.title,
