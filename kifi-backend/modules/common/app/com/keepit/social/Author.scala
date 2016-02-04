@@ -1,9 +1,7 @@
 package com.keepit.social
 
-import com.keepit.common.db.Id
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackTeamId, SlackUserId }
-import com.keepit.social.twitter.RawTweet
+import play.api.libs.json.{ Json, Writes }
 
 case class BasicAuthor(
   displayName: String,
@@ -11,6 +9,7 @@ case class BasicAuthor(
   url: Option[String])
 
 object BasicAuthor {
+  implicit val writes: Writes[BasicAuthor] = Json.writes[BasicAuthor]
   val FAKE = BasicAuthor(displayName = "you", picture = None, url = None)
   def fromAttribution(attr: SourceAttribution): BasicAuthor = {
     attr match {

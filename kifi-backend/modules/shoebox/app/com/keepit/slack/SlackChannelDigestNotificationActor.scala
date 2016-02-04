@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.PathCommander
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.core.{ anyExtensionOps, futureExtensionOps }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -30,6 +30,7 @@ class SlackChannelDigestNotificationActor @Inject() (
   slackTeamRepo: SlackTeamRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   slackChannelRepo: SlackChannelRepo,
+  slackWebhookRepo: SlackIncomingWebhookInfoRepo,
   libRepo: LibraryRepo,
   attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
@@ -64,27 +65,37 @@ class SlackChannelDigestNotificationActor @Inject() (
     db.readOnlyReplicaAsync { implicit session =>
       val ripeIds = slackChannelRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenChannelDigests).toSet
       val channels = slackChannelRepo.getByIds(ripeIds).values.toSeq
+      val webhooksByChannel = slackWebhookRepo.getByChannelIds(channels.map(_.slackChannelId).toSet)
       val teamIds = channels.map(_.slackTeamId).toSet
       val teamById = slackTeamRepo.getBySlackTeamIds(teamIds)
       val orgIds = teamById.values.flatMap(_.organizationId).toSet
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(channel: SlackChannel) = {
         teamById.get(channel.slackTeamId).exists { team =>
-          team.organizationId.flatMap(orgConfigById.get).exists { config =>
+          // We will only send a channel digest to a slack team that has NEVER synced their public channels
+          // AND that has connected to an org AND has the feature enabled
+          val teamHasDigestsEnabled = team.publicChannelsLastSyncedAt.isEmpty && team.organizationId.flatMap(orgConfigById.get).exists { config =>
             config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
           }
+          val channelHasWorkingWebhook = webhooksByChannel.contains(channel.slackChannelId) // you will fail if this isn't true
+          teamHasDigestsEnabled && channelHasWorkingWebhook
         }
       }
-      channels.filter(canSendDigestTo).map(_.id.get).toSet
+      channels.filter(canSendDigestTo).map(_.id.get).toSet tap { task => log.info(s"[SLACK-CHANNEL-DIGEST] Pulled $task") }
     }
   }
 
-  private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[Seq[SlackChannel], Try[Unit]]] = {
+  private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[Seq[SlackChannel], Try[Boolean]]] = {
     val result = for {
       channelsByTeamId <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids).values.toSeq.groupBy(_.slackTeamId) }
       pushes <- FutureHelpers.accumulateRobustly(channelsByTeamId.values)(pushDigestNotificationForOneChannelInTeam)
     } yield pushes
     result.andThen {
+      case Success(pushes) =>
+        val failures = pushes.collect {
+          case (chs, Failure(fail)) => chs.head.slackTeamId -> fail.getMessage
+        }
+        if (failures.nonEmpty) slackLog.error("Failed to push channel digests:", failures.mkString("[", ",", "]"))
       case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)
     }
   }
@@ -120,17 +131,18 @@ class SlackChannelDigestNotificationActor @Inject() (
         })
     )))).quiet
   }
-  private def pushDigestNotificationForOneChannelInTeam(channels: Seq[SlackChannel]): Future[Unit] = {
+  private def pushDigestNotificationForOneChannelInTeam(channels: Seq[SlackChannel]): Future[Boolean] = {
     val now = clock.now
     val channelAndMessage = db.readOnlyMaster { implicit s =>
       channels.sortBy(_.unnotifiedSince).toStream.flatMap { channel =>
         createChannelDigest(channel).map(describeChannelDigest).map(channel -> _)
       }.headOption
     }
+    log.info(s"[SLACK-CHANNEL-DIGEST] Trying to push channel digest for ${channels.map(_.slackChannelId).mkString(",")}, got msg $channelAndMessage")
     val pushOpt = channelAndMessage.map {
       case (channel, msg) =>
-        slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).andThen {
-          case Success(_: Unit) =>
+        slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).imap(_ => true).andThen {
+          case Success(_) =>
             db.readWrite { implicit s =>
               slackChannelRepo.save(slackChannelRepo.get(channel.id.get).withLastNotificationAtLeast(now))
             }
@@ -139,6 +151,6 @@ class SlackChannelDigestNotificationActor @Inject() (
             slackLog.warn("Failed to push a digest to", channel.slackChannelName.value, "in team", channel.slackTeamId.value)
         }
     }
-    pushOpt.getOrElse(Future.successful(Unit))
+    pushOpt.getOrElse(Future.successful(false))
   }
 }
