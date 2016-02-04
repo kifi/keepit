@@ -1,7 +1,33 @@
 package com.keepit.social
 
+import com.keepit.common.db.Id
+import com.keepit.common.strings.ValidLong
 import com.keepit.model._
+import com.keepit.slack.models.{SlackUserId, SlackTeamId}
+import com.keepit.social.twitter.TwitterUserId
 import play.api.libs.json.{ Json, Writes }
+
+sealed trait Author
+object Author {
+  case class KifiUser(userId: Id[User]) extends Author
+  case class SlackUser(teamId: SlackTeamId, userId: SlackUserId) extends Author
+  case class TwitterUser(userId: TwitterUserId) extends Author
+
+  def toIndexableString(author: Author): String = author match {
+    case KifiUser(userId) => s"kifi|${userId.id}"
+    case SlackUser(teamId, userId) => s"slack|${teamId.value}-${userId.value}"
+    case TwitterUser(userId) => s"twitter|${userId.id}"
+  }
+
+  private val kifi = """^kifi\|(.+)$""".r
+  private val slack = """^slack\|(.+)-(.+)$""".r
+  private val twitter = """^twitter\|(.+)$""".r
+  def fromIndexableString(str: String): Author = str match {
+    case kifi(ValidLong(id)) => KifiUser(Id[User](id))
+    case slack(teamId, userId) => SlackUser(SlackTeamId(teamId), SlackUserId(userId))
+    case twitter(ValidLong(id)) => TwitterUser(TwitterUserId(id))
+  }
+}
 
 case class BasicAuthor(
   displayName: String,
