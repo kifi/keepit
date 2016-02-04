@@ -30,6 +30,7 @@ class SlackChannelDigestNotificationActor @Inject() (
   slackTeamRepo: SlackTeamRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   slackChannelRepo: SlackChannelRepo,
+  slackWebhookRepo: SlackIncomingWebhookInfoRepo,
   libRepo: LibraryRepo,
   attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
@@ -64,6 +65,7 @@ class SlackChannelDigestNotificationActor @Inject() (
     db.readOnlyReplicaAsync { implicit session =>
       val ripeIds = slackChannelRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenChannelDigests).toSet
       val channels = slackChannelRepo.getByIds(ripeIds).values.toSeq
+      val webhooksByChannel = slackWebhookRepo.getByChannelIds(channels.map(_.slackChannelId).toSet)
       val teamIds = channels.map(_.slackTeamId).toSet
       val teamById = slackTeamRepo.getBySlackTeamIds(teamIds)
       val orgIds = teamById.values.flatMap(_.organizationId).toSet
@@ -72,9 +74,11 @@ class SlackChannelDigestNotificationActor @Inject() (
         teamById.get(channel.slackTeamId).exists { team =>
           // We will only send a channel digest to a slack team that has NEVER synced their public channels
           // AND that has connected to an org AND has the feature enabled
-          team.publicChannelsLastSyncedAt.isEmpty && team.organizationId.flatMap(orgConfigById.get).exists { config =>
+          val teamHasDigestsEnabled = team.publicChannelsLastSyncedAt.isEmpty && team.organizationId.flatMap(orgConfigById.get).exists { config =>
             config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
           }
+          val channelHasWorkingWebhook = webhooksByChannel.contains(channel.slackChannelId) // you will fail if this isn't true
+          teamHasDigestsEnabled && channelHasWorkingWebhook
         }
       }
       channels.filter(canSendDigestTo).map(_.id.get).toSet tap { task => log.info(s"[SLACK-CHANNEL-DIGEST] Pulled $task") }
