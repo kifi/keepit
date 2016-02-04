@@ -31,6 +31,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   db: Database,
   channelToLibRepo: SlackChannelToLibraryRepo,
   slackTeamRepo: SlackTeamRepo,
+  orgConfigRepo: OrganizationConfigurationRepo,
   libRepo: LibraryRepo,
   attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
@@ -65,7 +66,16 @@ class SlackTeamDigestNotificationActor @Inject() (
   private def pullTask(): Future[Set[Id[SlackTeam]]] = {
     val now = clock.now
     db.readOnlyReplicaAsync { implicit session =>
-      slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests).toSet
+      val ripeIds = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests).toSet
+      val teams = slackTeamRepo.getByIds(ripeIds).values.toSeq
+      val orgIds = teams.flatMap(_.organizationId).toSet
+      val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
+      def canSendDigestTo(team: SlackTeam) = {
+        team.organizationId.flatMap(orgConfigById.get).exists { config =>
+          config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
+        }
+      }
+      teams.filter(canSendDigestTo).map(_.id.get).toSet
     }
   }
 
