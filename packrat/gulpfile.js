@@ -22,6 +22,8 @@ var livereload = require('gulp-livereload');
 var gutil = require('gulp-util');
 var map = require('./gulp/vinyl-map.js');
 var filenames = require('gulp-filenames');
+var sourcemaps = require('gulp-sourcemaps');
+var babel = require('gulp-babel');
 var explicitGlobals = require('explicit-globals');
 
 var target = 'local';
@@ -166,6 +168,9 @@ gulp.task('copy', function () {
     }))
     .pipe(map(removeMostJsComments))
     .pipe(webkitInjectionFooter())
+    .pipe(sourcemaps.init())
+    .pipe(gulpif(/.*[.]js/g, babel({ presets: ['ES2015'] })))
+    .pipe(sourcemaps.write())
     .pipe(gulp.dest(outDir));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
