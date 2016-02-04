@@ -231,9 +231,8 @@ class SlackTeamCommanderImpl @Inject() (
 
     val updatedTeam = team
       .withPublicChannelsSyncedAt(clock.now)
-      .withSyncedChannels(team.channelsSynced ++ newLibraries.keySet.map(_.id))
+      .withSyncedChannels(newLibraries.keySet.map(_.id))
       .copy(lastChannelCreatedAt = channels.map(_.createdAt).maxOpt orElse team.lastChannelCreatedAt)
-      .copy(generalChannelId = channels.find(_.isGeneral).map(_.channelId) orElse team.generalChannelId)
     if (updatedTeam != team) {
       db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
     }
