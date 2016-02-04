@@ -79,14 +79,17 @@ class SlackChannelDigestNotificationActor @Inject() (
     }
   }
 
-  private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[Seq[SlackChannel], Try[Unit]]] = {
+  private def processTask(ids: Set[Id[SlackChannel]]): Future[Map[Seq[SlackChannel], Try[Boolean]]] = {
     val result = for {
       channelsByTeamId <- db.readOnlyReplicaAsync { implicit s => slackChannelRepo.getByIds(ids).values.toSeq.groupBy(_.slackTeamId) }
       pushes <- FutureHelpers.accumulateRobustly(channelsByTeamId.values)(pushDigestNotificationForOneChannelInTeam)
     } yield pushes
     result.andThen {
       case Success(pushes) =>
-        val failures = pushes.collect { case (chs, Failure(fail)) => chs.head.slackTeamId -> fail.getMessage }
+        val failures = pushes.collect {
+          case (chs, Failure(fail)) => chs.head.slackTeamId -> fail.getMessage
+          case (chs, Success(false)) => chs.head.slackTeamId -> "could not generate a useful message for any of" + chs.map(_.slackChannelId).mkString("{", ",", "}")
+        }
         if (failures.nonEmpty) slackLog.error("Failed to push channel digests:", failures.mkString("[", ",", "]"))
       case Failure(fail) => airbrake.notify("Failed to process tasks in the slack channel digest actor", fail)
     }
@@ -123,17 +126,18 @@ class SlackChannelDigestNotificationActor @Inject() (
         })
     )))).quiet
   }
-  private def pushDigestNotificationForOneChannelInTeam(channels: Seq[SlackChannel]): Future[Unit] = {
+  private def pushDigestNotificationForOneChannelInTeam(channels: Seq[SlackChannel]): Future[Boolean] = {
     val now = clock.now
     val channelAndMessage = db.readOnlyMaster { implicit s =>
       channels.sortBy(_.unnotifiedSince).toStream.flatMap { channel =>
         createChannelDigest(channel).map(describeChannelDigest).map(channel -> _)
       }.headOption
     }
+    log.info(s"[SLACK-CHANNEL-DIGEST] Trying to push channel digest for ${channels.map(_.slackChannelId).mkString(",")}, got msg $channelAndMessage")
     val pushOpt = channelAndMessage.map {
       case (channel, msg) =>
-        slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).andThen {
-          case Success(_: Unit) =>
+        slackClient.sendToSlackChannel(channel.slackTeamId, channel.idAndName, msg).imap(_ => true).andThen {
+          case Success(_) =>
             db.readWrite { implicit s =>
               slackChannelRepo.save(slackChannelRepo.get(channel.id.get).withLastNotificationAtLeast(now))
             }
@@ -142,6 +146,6 @@ class SlackChannelDigestNotificationActor @Inject() (
             slackLog.warn("Failed to push a digest to", channel.slackChannelName.value, "in team", channel.slackTeamId.value)
         }
     }
-    pushOpt.getOrElse(Future.successful(Unit))
+    pushOpt.getOrElse(Future.successful(false))
   }
 }
