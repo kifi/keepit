@@ -89,9 +89,10 @@ class SlackTeamDigestNotificationActor @Inject() (
     } yield pushes
 
     result.andThen {
-      case Success(pushesByTeam) => pushesByTeam.collect {
-        case (team, Failure(fail)) => slackLog.warn("Failed to push digest to", team.slackTeamId.value, "because", fail.getMessage)
-      }
+      case Success(pushesByTeam) =>
+        slackLog.warn(DescriptionElements.unlines(pushesByTeam.collect {
+          case (team, Failure(fail)) => DescriptionElements("Failed to push digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")", "because", fail.getMessage)
+        }.toSeq))
       case Failure(fail) => airbrake.notify("Somehow accumulateRobustly failed entirely?!?", fail)
     }
   }
@@ -225,9 +226,7 @@ class SlackTeamDigestNotificationActor @Inject() (
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
-            slackLog.info("Pushed a digest to", team.slackTeamName.value)
-          case Failure(fail) =>
-            slackLog.warn("Failed to push a digest to", team.slackTeamName.value, "because", fail.getMessage)
+            slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
         }
       }
       pushOpt.getOrElse { Future.successful(Unit) }
