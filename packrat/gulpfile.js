@@ -24,6 +24,7 @@ var filenames = require('gulp-filenames');
 var explicitGlobals = require('explicit-globals');
 
 var target = 'local';
+var listed = false;
 
 var outDir = 'out';
 
@@ -438,8 +439,13 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('firefox/package.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
-      json.updateURL = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf';
       json.updateLink = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi';
+
+      if (!listed) {
+        // updateURL is invalid for listed addons
+        json.updateURL = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf';
+        json.id = 'kifi-unlisted@42go.com';
+      }
 
       return json;
     }))
@@ -484,6 +490,9 @@ gulp.task('crx-chrome-dev', ['build', 'config-package-chrome'], shell.task([[
 ].join(' && ')]));
 
 gulp.task('xpi-firefox', ['build', 'config'], function () {
+
+  var glob = 'kifi*\@42go.com-*.*.*.*update.rdf';
+
   return gulp.src(outDir + '/firefox/package.json', {base: './'})
     .pipe(jeditor(function (json) {
       if (target === 'dev') {
@@ -502,9 +511,12 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
       cp icons/kifi.48.png out/firefox/icon.png && cp icons/kifi.64.png out/firefox/icon64.png && \
       cd ' + path.join(outDir + '/firefox') + ' && \
       jpm xpi && \
-      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi\@42go.com-*.*.*.update.rdf && \
+      sed -i ".bak" -e \'s/kifi.*\@42go.com/kifi\@42go.com/g\' ' + glob + ' && \
+      node ../../bin/duplicateRdfDescription.js ' + glob + ' kifi.update.rdf ' + (listed ? 'listed' : 'unlisted') + ' && \
+      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi.update.rdf && \
+      sed -i ".bak" -e \'s/<em:maxVersion>.*<\\/em:maxVersion>/<em:maxVersion>48.0<\\/em:maxVersion>/g\' kifi.update.rdf && \
       cp *.xpi ../kifi.xpi && \
-      cp *.update.rdf ../kifi.update.rdf && \
+      cp kifi.update.rdf ../kifi.update.rdf && \
       cd - > /dev/null'
     ]));
 });
@@ -531,6 +543,12 @@ gulp.task('package', function () {
   target = 'prod';
   runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
 });
+
+gulp.task('package-listed', function () {
+  target = 'prod';
+  listed = true;
+  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
+})
 
 gulp.task('package-dev', function () {
   target = 'dev';
