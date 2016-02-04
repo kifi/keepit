@@ -6,8 +6,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.util.Ord
+import com.keepit.common.util.{ Debouncing, Ord }
 import com.keepit.slack.models._
+import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try, Failure }
@@ -65,6 +66,8 @@ class SlackClientWrapperImpl @Inject() (
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends SlackClientWrapper with Logging {
+
+  val debouncer = new Debouncing.Dropper[Unit]
 
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit] = {
     slackChannel match {
@@ -144,27 +147,24 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    FutureHelpers.doUntil {
-      val workingToken = db.readOnlyMaster { implicit s =>
-        slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
-          case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
-        }
+    val workingToken = db.readOnlyMaster { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
+        case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
       }
-      log.info(s"[SLACK-CLIENT-WRAPPER] Pushing to $slackChannelId in $slackTeamId from $slackUserId and using $workingToken")
-      workingToken match {
-        case None => Future.failed(SlackAPIFailure.NoValidToken)
-        case Some(token) =>
-          val now = clock.now
-          val pushFut = slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
-            case Success(_: Unit) =>
-              db.readWrite { implicit s =>
-                slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
-                  slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
-                }
+    }
+    log.info(s"[SLACK-CLIENT-WRAPPER] Pushing to $slackChannelId in $slackTeamId from $slackUserId and using $workingToken")
+    workingToken match {
+      case None => Future.failed(SlackAPIFailure.NoValidToken)
+      case Some(token) =>
+        val now = clock.now
+        slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
+          case Success(_: Unit) =>
+            db.readWrite { implicit s =>
+              slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
+                slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
               }
-          }
-          pushFut.map(_ => true).recover { case fail: SlackAPIFailure => false }
-      }
+            }
+        }
     }
   }
 
@@ -221,6 +221,7 @@ class SlackClientWrapperImpl @Inject() (
         slackTeamMembershipRepo.deactivate(stm)
       }
     }
+    case Failure(otherFail) => debouncer.debounce("after-token", Period.seconds(5)) { airbrake.notify(otherFail) }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
