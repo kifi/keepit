@@ -17,6 +17,7 @@ import com.keepit.slack.models._
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 @Singleton
 class SlackController @Inject() (
@@ -25,6 +26,7 @@ class SlackController @Inject() (
   slackAuthCommander: SlackAuthenticationCommander,
   slackAuthStateCommander: SlackAuthStateCommander,
   slackToLibRepo: SlackChannelToLibraryRepo,
+  libToSlackRepo: LibraryToSlackChannelRepo,
   userRepo: UserRepo,
   slackInfoCommander: SlackInfoCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -137,6 +139,33 @@ class SlackController @Inject() (
     val action = AddSlackTeam(andThen = Some(SetupLibraryIntegrations(Library.decodePublicId(libraryId).get)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, None, action)
     handleAsAPIRequest(res)
+  }
+
+  def pushLibrary(libraryId: PublicId[Library], integrationIdStr: String, turnOn: Boolean) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    LibraryToSlackChannel.decodePublicIdStr(integrationIdStr) match {
+      case Success(integrationId) =>
+        val integration = db.readOnlyMaster { implicit session => libToSlackRepo.get(integrationId) }
+        val isBroken = integration.status == SlackIntegrationStatus.Broken
+        val turnAction = TurnLibraryPush(integrationId.id, isBroken = isBroken, turnOn = turnOn)
+        val action = if (turnOn) AddSlackTeam(andThen = Some(turnAction)) else turnAction // Wrapping with AddSlackTeam for now to encourage people to backfill / connect
+        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), action)
+        handleAsAPIRequest(res)
+      case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))
+    }
+  }
+
+  def ingestChannel(libraryId: PublicId[Library], integrationIdStr: String, turnOn: Boolean) = (UserAction andThen LibraryWriteAction(libraryId)).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    SlackChannelToLibrary.decodePublicIdStr(integrationIdStr) match {
+      case Success(integrationId) =>
+        val integration = db.readOnlyMaster { implicit session => slackToLibRepo.get(integrationId) }
+        val turnAction = TurnChannelIngestion(integrationId.id, turnOn = turnOn)
+        val action = if (turnOn) AddSlackTeam(andThen = Some(turnAction)) else turnAction // Wrapping with AddSlackTeam for now to encourage people to backfill / connect
+        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), action)
+        handleAsAPIRequest(res)
+      case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))
+    }
   }
 
   // Always speaks JSON, should be on /site/ routes, cannot handle Redirects to HTML pages

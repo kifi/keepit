@@ -50,16 +50,16 @@ object SetupLibraryIntegrations extends SlackAuthenticatedActionHelper[SetupLibr
   def helper = SetupLibraryIntegrations
 }
 
-object TurnOnLibraryPush extends SlackAuthenticatedActionHelper[TurnOnLibraryPush]("turn_on_library_push")
-@json case class TurnOnLibraryPush(integrationId: Long) extends SlackAuthenticatedAction { // Long actually Id[LibraryToSlackChannel]
-  type A = TurnOnLibraryPush
-  def helper = TurnOnLibraryPush
+object TurnLibraryPush extends SlackAuthenticatedActionHelper[TurnLibraryPush]("turn_library_push")
+@json case class TurnLibraryPush(integrationId: Long, isBroken: Boolean, turnOn: Boolean) extends SlackAuthenticatedAction { // Long actually Id[LibraryToSlackChannel]
+  type A = TurnLibraryPush
+  def helper = TurnLibraryPush
 }
 
-object TurnOnChannelIngestion extends SlackAuthenticatedActionHelper[TurnOnChannelIngestion]("turn_on_channel_ingestion")
-@json case class TurnOnChannelIngestion(integrationId: Long) extends SlackAuthenticatedAction { // Long actually Id[SlackChannelToLibrary]
-  type A = TurnOnChannelIngestion
-  def helper = TurnOnChannelIngestion
+object TurnChannelIngestion extends SlackAuthenticatedActionHelper[TurnChannelIngestion]("turn_channel_ingestion")
+@json case class TurnChannelIngestion(integrationId: Long, turnOn: Boolean) extends SlackAuthenticatedAction { // Long actually Id[SlackChannelToLibrary]
+  type A = TurnChannelIngestion
+  def helper = TurnChannelIngestion
 }
 
 object AddSlackTeam extends SlackAuthenticatedActionHelper[AddSlackTeam]("add_slack_team")
@@ -99,8 +99,8 @@ object SlackAuthenticatedActionHelper {
 
   private val all: Set[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Set(
     SetupLibraryIntegrations,
-    TurnOnLibraryPush,
-    TurnOnChannelIngestion,
+    TurnLibraryPush,
+    TurnChannelIngestion,
     AddSlackTeam,
     ConnectSlackTeam,
     CreateSlackTeam,
@@ -118,8 +118,8 @@ object SlackAuthenticatedActionHelper {
   private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
   def getInstanceFormat[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Format[A] = actionHelper match {
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
-    case TurnOnLibraryPush => implicitly[Format[TurnOnLibraryPush]]
-    case TurnOnChannelIngestion => implicitly[Format[TurnOnChannelIngestion]]
+    case TurnLibraryPush => implicitly[Format[TurnLibraryPush]]
+    case TurnChannelIngestion => implicitly[Format[TurnChannelIngestion]]
     case AddSlackTeam => implicitly[Format[AddSlackTeam]]
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
@@ -129,8 +129,8 @@ object SlackAuthenticatedActionHelper {
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
     case SetupLibraryIntegrations(_) => SlackAuthScope.integrationSetup
-    case TurnOnLibraryPush(_) => SlackAuthScope.push
-    case TurnOnChannelIngestion(_) => SlackAuthScope.ingest
+    case TurnLibraryPush(_, isBroken: Boolean, turnOn: Boolean) => if (turnOn && isBroken) SlackAuthScope.brokenPush else Set.empty
+    case TurnChannelIngestion(_, turnOn) => if (turnOn) SlackAuthScope.ingest else Set.empty
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
