@@ -147,17 +147,19 @@ window.api = window.api || (function () {
 
 var log = function log() {
   'use strict';
-  var d = new Date, ds = d.toString();
-  for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
-    var arg = args[i];
-    if (typeof arg == "object") {
-      try {
-        args[i] = JSON.stringify(arg);
-      } catch (e) {
-        args[i] = String(arg) + "{" + Object.keys(arg).join(",") + "}";
+  if (self.options.dev) {
+    var d = new Date, ds = d.toString();
+    for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
+      var arg = args[i];
+      if (typeof arg == "object") {
+        try {
+          args[i] = JSON.stringify(arg);
+        } catch (e) {
+          args[i] = String(arg) + "{" + Object.keys(arg).join(",") + "}";
+        }
       }
     }
+    args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
+    console.log.apply(console, args);
   }
-  args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
-  console.log.apply(console, args);
 };
