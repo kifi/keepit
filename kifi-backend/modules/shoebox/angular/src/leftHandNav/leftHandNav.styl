@@ -38,6 +38,7 @@
 leftHandNavWidth = 230px
 
 .kf-left-hand-nav
+  font-smoothing: antialiased
   width: leftHandNavWidth
   background-color: #3e4954
   display: flex
@@ -58,7 +59,8 @@ leftHandNavWidth = 230px
     display: flex
     flex-direction: column
     width: 100%
-    margin-top: 20px
+    margin-bottom: 20px
+    margin-top: 0px
 
     .kf-left-hand-nav-item-header
       img
@@ -105,32 +107,35 @@ leftHandNavWidth = 230px
     display: flex
     flex-direction: column
     width: 100%
+    margin-bottom: 20px
+    margin-top: 10px
 
   .kf-left-hand-nav-item-header
     display: flex
     align-items: center
 
     img
-      width: 35px
-      height: 35px
+      width: 30px
+      height: 30px
       border-radius 20px
       margin-right: 10px
 
     span
-      font-size: 18px
+      font-size: 16px
       color: white
-      font-weight: semi-bold
+      font-weight: bold
       white-space: nowrap
       overflow: hidden
       text-overflow: ellipsis
 
   .kf-left-hand-nav-libraries-container
-    margin-top: 10px
+    margin-top: 6px
     padding-left: 10px
 
     .kf-left-hand-nav-view-more-libraries
-      padding-left: 8px
-      font-size: 12px
+      padding-left: 10px
+      font-size: 14px
+      font-weight: bold
       color: #DDD
 
       &:hover
@@ -141,15 +146,15 @@ leftHandNavWidth = 230px
     .kf-left-hand-nav-library-header
       font-size: 14px
       color: #F5F5F5
-      font-weight: semi-bold
+      font-weight: bold
       margin-bottom: 4px
 
+
     .kf-left-hand-nav-library-container
-      margin-top: 1px
-      margin-bottom: 1px
+      margin: 4px 0px
       border-left-width: 3px
       border-left-style: solid
-      padding-left: 5px
+      padding-left: 6px
       display: block
 
       &:hover
