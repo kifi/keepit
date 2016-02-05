@@ -46,8 +46,12 @@ leftHandNavWidth = 230px
   user-select: none
   margin-top: - appHeaderHeight2
 
+  @media (max-width: appMobileWidth)
+    display: none
+
   @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
     margin-top: - appHeaderHeight1
+    background: red
 
   .kf-left-hand-nav-org-container
     flex-shrink: 0
