@@ -5,6 +5,13 @@
     <div class="dialog-body">
       <div class="opi-header">
         <p>Large team? <button class="kf-link kf-link-underline" ng-click="clickAddMany()">Add many emails at once…</button></p>
+        <div ng-if="slackLink">
+          <p>Invite members of your Slack team by sending them the link below via chat, email, etc.</p>
+          <div class="kf-organization-invite-search-slack-link-wrapper">
+            <input ng-class="{'kf-organization-invite-copied': showCopiedConfirm}" type="text" ng-model="slackLink" class="kf-textbox kf-organization-invite-search-slack-input" clipboard readonly text="slackLink" ng-click="clickedSlackCopy()">
+            <span ng-if="showCopiedConfirm" class="kf-organization-invite-confirm-copied">Copied to clipboard</span>
+          </div>
+        </div>
       </div>
       <!-- Search -->
       <div class="opi-search-box">
