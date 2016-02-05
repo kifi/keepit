@@ -81,7 +81,7 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        debouncer.debounce(ktu.userId.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
+        debouncer.debounce(ktu.userId.id.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
       }
 

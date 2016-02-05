@@ -132,7 +132,7 @@ class AdminAttributionController @Inject() (
     }
     heimdalClient.getUserReKeepsByDegree(keepIds) map { userReKeepsAcc =>
       val sorted = userReKeepsAcc.sortBy(_.userIds.flatten.length)(Ordering[Int].reverse)
-      val userIds = sorted.map(_.userIds).flatten.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c }
+      val userIds = sorted.flatMap(_.userIds.flatten).toSet
       val users = db.readOnlyMaster { implicit ro => userRepo.getUsers(userIds.toSeq) }
       val richByDeg = sorted.map {
         case UserReKeepsAcc(kId, userIdsByDeg) =>

@@ -67,7 +67,7 @@ class EventContextHelperImpl @Inject() (
         ("orgKeepCount", ContextDoubleData(shoeboxValues.keepCount)),
         ("orgInviteCount", ContextDoubleData(shoeboxValues.inviteCount)),
         ("orgLibrariesCollaborating", ContextDoubleData(shoeboxValues.collabLibCount))
-      ) ++ userWithMostClickedKeeps.map(userId => Seq(("overallKeepViews", ContextStringData(userId.toString)))).getOrElse(Seq.empty[(String, ContextData)])
+      ) ++ userWithMostClickedKeeps.map(userId => Seq(("overallKeepViews", ContextStringData(userId.id.toString)))).getOrElse(Seq.empty[(String, ContextData)])
     }
   }
 

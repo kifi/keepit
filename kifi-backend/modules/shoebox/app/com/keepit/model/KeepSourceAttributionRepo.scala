@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.social.Author
 import com.keepit.social.twitter.TwitterStatusId
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -15,6 +16,7 @@ import play.api.libs.json._
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
   def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution]
+  def getKeepIdsByAuthor(author: Author)(implicit session: RSession): Set[Id[Keep]] = ??? // TODO(ryan): uncomment and implement
   def save(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
@@ -33,22 +35,24 @@ class KeepSourceAttributionRepoImpl @Inject() (
     { attr => attr.name },
     { name => KeepAttributionType.fromString(name).get }
   )
+  implicit val authorTypeMapper = MappedColumnType.base[Author, String](Author.toIndexableString, Author.fromIndexableString)
 
-  def unapplyToDbRow(attr: KeepSourceAttribution) = {
+  private def toDbRow(attr: KeepSourceAttribution) = {
     val (attrType, js) = RawSourceAttribution.toJson(attr.attribution)
     Some((attr.id, attr.createdAt, attr.updatedAt, attr.keepId, attrType, js, attr.state))
   }
 
-  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
+  def fromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
     val attr = RawSourceAttribution.fromJson(attrType, attrJson).get
     KeepSourceAttribution(id, createdAt, updatedAt, keepId, attr, state)
   }
 
   class KeepSourceAttributionTable(tag: Tag) extends RepoTable[KeepSourceAttribution](db, tag, "keep_source_attribution") {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
+    // def author = column[Author]("author", O.NotNull) // TODO(ryan): uncomment!
     def attributionType = column[KeepAttributionType]("attr_type", O.NotNull)
     def attributionJson = column[JsValue]("attr_json", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, keepId, attributionType, attributionJson, state) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, keepId, attributionType, attributionJson, state) <> ((fromDbRow _).tupled, toDbRow)
   }
 
   def table(tag: Tag) = new KeepSourceAttributionTable(tag)

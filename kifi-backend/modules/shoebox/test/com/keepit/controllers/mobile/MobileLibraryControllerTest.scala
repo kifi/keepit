@@ -895,7 +895,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = KeepFactory.keep().withTitle(title).withUser(user).withUri(uri).withLibrary(lib).withNote(note.getOrElse("")).saved
     tags.foreach { tag =>
-      val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
+      val coll = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag(tag)))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))
     }
     keep

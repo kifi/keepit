@@ -4,6 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
+import com.keepit.social.Author
 import com.keepit.social.twitter.RawTweet
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -15,6 +16,7 @@ case class KeepSourceAttribution(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     keepId: Id[Keep],
+    // author: Author, // TODO(ryan): add!
     attribution: RawSourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 
