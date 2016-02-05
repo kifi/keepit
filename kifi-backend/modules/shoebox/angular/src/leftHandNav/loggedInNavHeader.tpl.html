@@ -1,0 +1,74 @@
+<div class="kf-lih" ng-controller="LoggedInHeaderCtrl" style="width: auto;">
+  <div class="kf-lih-inner-flex">
+    <div class="kf-lih-left-flex">
+      </div>
+    <div class="kf-lih-center-flex">
+      <label class="kf-lih-search kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
+        <span class="kf-lih-search-left">
+          <span class="kf-lih-search-icon svg-search-icon-gray"></span>
+          <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
+          <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }">{{library.name}}</span>
+          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
+        </span>
+        <span class="kf-lih-search-center">
+          <input class="kf-lih-search-input" type="text" placeholder="Search" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+        </span>
+        <span class="kf-lih-search-right" ng-if="search.text">
+          <button class="kf-lih-search-clear" ng-click="clearInput($event)">Clear</button>
+        </span>
+      </label>
+      <div class="kf-lih-search-suggestions" kf-search-suggest="search" library-id="library.id" ng-if="search.suggesting"></div>
+      <div class="kf-callout-search kf-callout-bubble kf-callout-bubble-bottom" ng-if="calloutVisible">
+        <p>We’ve tidied up a bit.<p>You can now click the search bar or<br>press <span class="kf-callout-key">/</span> to access your libraries.
+        <div class="kf-callout-bubble-action">
+          <button class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</button>
+        </div>
+      </div>
+    </div>
+    <div class="kf-lih-right-flex kifi-guide-target-3 kifi-guide-2">
+      <div class="kf-lih-dropdown-parent" kf-click-menu>
+        <button class="kf-lih-add-link sprite sprite-add-link">Add a link</button>
+        <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
+        <menu class="kf-dropdown-menu">
+          <button class="kf-dropdown-menu-item" ng-click="addKeeps()">
+            <span class="kf-lih-create-icon kf-lih-create-keep">&#10084;</span><!--
+         -->Add a keep
+          </button>
+          <button class="kf-dropdown-menu-item" ng-click="createLibrary()">
+            <span class="kf-lih-create-icon kf-lih-create-lib">+</span><!--
+         -->Create a library
+          </button>
+          <button class="kf-dropdown-menu-item" ng-click="createTeam()">
+            <span class="kf-lih-create-icon kf-lih-create-org">
+              <svg kf-symbol-sprite icon="org"></svg>
+            </span><!--
+         -->Create a team
+          </button>
+        </menu>
+      </div>
+      <div class="kf-lih-dropdown-parent" kf-click-menu>
+        <button class="kf-lih-profile" ng-style="{ 'background-image': 'url(' + (me|pic:100) + ')' }">Profile actions</button>
+        <menu class="kf-dropdown-menu" ng-class="me.orgs.length ? 'kf-dropdown-menu_split' : ''">
+          <nav class="kf-dropdown-menu-nav kf-lih-profiles" ng-if="me.orgs.length">
+            <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">
+              <img ng-src="{{ me|pic:100 }}" />
+              <h1>Your Profile</h1>
+            </a>
+            <a class="kf-dropdown-menu-item" ng-repeat="org in me.orgs" ng-href="{{org|profileUrl}}">
+              <img class="kf-lih-profiles-org" ng-src="{{ org|pic:100 }}" />
+              <h1>{{org.name}}</h1>
+            </a>
+          </nav>
+          <nav class="kf-dropdown-menu-nav">
+            <a ng-if="!me.orgs.length" class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
+            <a class="kf-dropdown-menu-item" ui-sref="settings">Settings</a>
+            <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
+          </nav>
+        </menu>
+      </div>
+    </div>
+  </div>
+  <span style="position: fixed; top: 10px; left: 5px; font-size:20px; color:white;" ng-bind="orgName"></span>
+  <div kf-mobile-interstitial></div>
+</div>

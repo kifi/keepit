@@ -13,7 +13,7 @@
 <!-- HEADER_PLACEHOLDER -->
 
 <div class="kf-app ng-cloak" ng-controller="AppCtrl">
-  <div ng-if="$root.userLoggedIn != null" ng-include="'layout/body.tpl.html'"></div>
+  <div ng-if="$root.userLoggedIn != null" ng-include="$root.navBarEnabled ? 'leftHandNav/body.tpl.html' : 'layout/body.tpl.html'"></div>
 </div>
 <script src="/dist/lib.min.js"></script>
 <script src="/dist/kifi.min.js"></script>

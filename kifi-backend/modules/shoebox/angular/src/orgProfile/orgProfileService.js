@@ -130,10 +130,10 @@ angular.module('kifi')
           return getResponseData(response);
         });
       },
-      getOrgLibraries: function (orgId, page, size) {
+      getOrgLibraries: function (orgId, offset, limit) {
         return net.getOrgLibraries(orgId, {
-          offset: page,
-          limit: size
+          offset: offset,
+          limit: limit
         })
         .then(getResponseData);
       },

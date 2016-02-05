@@ -1,0 +1,10 @@
+<div style="display: flex;">
+    <div kf-left-hand-nav></div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; height: calc(100vh - 54px); overflow: scroll;">
+        <header ng-if="!showSimpleHeader"
+                ng-include="$root.userLoggedIn ? 'leftHandNav/loggedInNavHeader.tpl.html' : 'header/loggedOutHeader.tpl.html'"></header>
+        <div ng-include="'layout/main/main.tpl.html'" style="width: 100%;"></div>
+    </div>
+</div>
+
+

@@ -168,6 +168,7 @@ angular.module('kifi', [
         $timeout(function () {
           profileService.fetchMe().then(function () {
             if ($rootScope.userLoggedIn) {
+              $rootScope.navBarEnabled = profileService.hasExperiment('new_sidebar');
               profileService.fetchPrefs();
               libraryService.fetchLibraryInfos(true);
             }

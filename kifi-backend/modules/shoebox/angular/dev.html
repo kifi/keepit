@@ -12,7 +12,7 @@
 <title id="kf-authenticated">Kifi</title><!-- remove the id attribute for logged-out experience -->
 
 <div class="kf-app ng-cloak" ng-controller="AppCtrl">
-  <div ng-if="$root.userLoggedIn != null" ng-include="'layout/body.tpl.html'"></div>
+  <div ng-if="$root.userLoggedIn != null" ng-include="$root.navBarEnabled ? 'leftHandNav/body.tpl.html' : 'layout/body.tpl.html'"></div>
 </div>
 <script>
   // Uncomment this to see micrologger reports in the console.
