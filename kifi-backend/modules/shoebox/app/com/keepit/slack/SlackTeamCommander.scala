@@ -170,11 +170,8 @@ class SlackTeamCommanderImpl @Inject() (
     // if not, just create a library as normal
     def createLibrary() = {
       val maybeOrgGeneralLibrary = if (channel.isGeneral) {
-        db.readWrite { implicit s =>
-          libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption.map { orgGeneral =>
-            libraryRepo.save(orgGeneral.withName(channel.channelName.value))
-          }
-        }
+        val generalLib = db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
+        generalLib.map { lib => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(name = Some(channel.channelName.value))).modifiedLibrary }
       } else None
 
       maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
