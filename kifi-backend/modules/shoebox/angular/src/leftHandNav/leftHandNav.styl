@@ -1,5 +1,44 @@
+
+
+//
+//::-webkit-scrollbar
+//  width: 8px
+//  height: 8px
+//
+//::-webkit-scrollbar-button:vertical
+//  border-width: 0px
+//
+//
+//
+//::-webkit-scrollbar-button:vertical:increment
+//  border-width: 0px
+//
+//::-webkit-scrollbar-button:vertical:decrement
+//  border-width: 0px
+//
+//::-webkit-scrollbar-track:vertical
+//  border-width: 0px
+//
+//::-webkit-scrollbar-track-piece:vertical:start
+//  border-width: 0px
+//
+//::-webkit-scrollbar-track-piece:vertical:end
+//  border-width: 0px
+//
+//
+//
+//::-webkit-scrollbar-thumb:vertical
+//  height: 50px
+//  background-color: red
+//  -webkit-border-radius: 8px
+//  -moz-border-radius: 8px
+//  border-radius: 8px
+
+
+leftHandNavWidth = 230px
+
 .kf-left-hand-nav
-  width: 230px
+  width: leftHandNavWidth
   background-color: #3e4954
   display: flex
   flex-direction: column
@@ -31,11 +70,33 @@
     @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
       height: appHeaderHeight1
 
-  .kf-left-hand-nav-content
-    overflow-y: scroll
-    overflow-x: hidden
-    padding-left: 10px
-    padding-right: 10px
+
+
+.kf-left-hand-nav-content
+  overflow-y: scroll
+  overflow-x: hidden
+  padding-left: 10px
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background-color: alpha(black, 0.0)
+    //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+  }
+
+  &:hover {
+    &::-webkit-scrollbar-thumb {
+      border-radius: 4px;
+      background-color: alpha(black, .5)
+      //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
+    }
+  }
+
+
+
 
   .kf-left-hand-nav-user-container
     flex-shrink: 0
