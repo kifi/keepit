@@ -32,7 +32,7 @@ case class ProbabilisticExperimentGenerator(
   def isActive: Boolean = this.state == ProbabilisticExperimentGeneratorStates.ACTIVE
 
   protected[model] def hash(userId: Id[User]): Double = {
-    val h = MurmurHash3.stringHashing.hash(salt + userId.id.toString)
+    val h = MurmurHash3.stringHashing.hash(salt + userId.toString)
     (Int.MaxValue.toDouble - h) / (Int.MaxValue.toDouble - Int.MinValue.toDouble)
   }
 

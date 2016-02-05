@@ -10,8 +10,7 @@ import com.keepit.notify.model.event._
 import play.api.libs.json.Json
 
 object ImageUrls {
-  val SLACK_LOGO = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
-  val KIFI_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
+  val SLACK_LOGO: String = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
 }
 
 @Singleton
@@ -103,7 +102,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
     )) { batched =>
       val newKeep = RequestKeep(event.keepId).lookup(batched)
-      val keeperOpt = newKeep.ownerId.map(userId => RequestUserExternal(userId).lookup(batched))
+      val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
 
       val attributionOpt = newKeep.attribution
@@ -111,14 +110,10 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
         val slackImage: Option[NotificationImage] = attributionOpt.map { case (_, userOpt) =>
           userOpt.map(UserImage).getOrElse(PublicImage(ImageUrls.SLACK_LOGO))
         }
-        slackImage orElse keeperOpt.map(UserImage) getOrElse PublicImage(ImageUrls.KIFI_LOGO)
+        slackImage.getOrElse(UserImage(keeper))
       }
       val body = {
-        val keepStr = newKeep.title.getOrElse("a new item")
-        val kifiBody = keeperOpt match {
-          case Some(keeper) => s"${keeper.firstName} just kept $keepStr"
-          case None => s"A need item was just kept"
-        }
+        val kifiBody = s"${keeper.firstName} just kept ${newKeep.title.getOrElse("a new item")}"
         val slackBody = attributionOpt.map { case (slackAttr, userOpt) =>
           s"${userOpt.map(_.firstName).getOrElse(s"@${slackAttr.message.username.value}")} just added in #${slackAttr.message.channel.name.value}" +
             newKeep.title.map(title => s": $title").getOrElse("")
@@ -134,7 +129,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
         linkText = "Go to page",
         locator = Some(MessageThread.locator(Keep.publicId(event.keepId))),
         extraJson = Some(Json.obj(
-          "keeper" -> keeperOpt,
+          "keeper" -> keeper,
           "library" -> Json.toJson(libraryKept),
           "keep" -> Json.obj(
             "id" -> newKeep.id,

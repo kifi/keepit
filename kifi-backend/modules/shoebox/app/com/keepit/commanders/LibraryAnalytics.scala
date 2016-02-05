@@ -168,7 +168,7 @@ class LibraryAnalytics @Inject() (
     SafeFuture {
       viewerId match {
         case Some(userId) =>
-          builder += ("viewerId", userId.id.toString)
+          builder += ("viewerId", userId.toString)
           heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.VIEWED_LIBRARY, when))
         case None =>
           heimdal.trackEvent(VisitorEvent(builder.build, VisitorEventTypes.VIEWED_LIBRARY, when))

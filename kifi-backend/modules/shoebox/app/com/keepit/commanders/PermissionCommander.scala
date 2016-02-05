@@ -3,7 +3,6 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.db.Id
-import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -281,18 +280,17 @@ class PermissionCommanderImpl @Inject() (
           }
           viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
         }
-        Option
         val canAddParticipants = canAddMessage
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
-          val viewerOwnsTheKeep = userIdOpt containsTheSameValueAs k.userId
+          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
           // This seems like a pretty strange operational definition...
-          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.safeContains(lib.ownerId))
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
           viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
         val canViewKeep = {
           // TODO(ryan): remove deprecated permissions when more confident they're unnecessary
-          val deprecatedPermissions = userIdOpt.containsTheSameValueAs(k.userId) || userIdOpt.containsTheSameValueAs(k.originalKeeperId)
+          val deprecatedPermissions = userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains)
 
           val viewerCanSeeKeepViaLibrary = keepLibraries.exists { libId =>
             libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
@@ -302,7 +300,7 @@ class PermissionCommanderImpl @Inject() (
         val canEditKeep = {
           userIdOpt.contains(k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)
         }
-        val canDeleteKeep = userIdOpt.containsTheSameValueAs(k.userId)
+        val canDeleteKeep = userIdOpt.contains(k.userId)
 
         kId -> List(
           canAddParticipants -> KeepPermission.ADD_PARTICIPANTS,

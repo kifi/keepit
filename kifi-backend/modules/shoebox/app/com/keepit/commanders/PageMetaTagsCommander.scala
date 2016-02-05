@@ -256,9 +256,9 @@ class PageMetaTagsCommander @Inject() (
     val urlPath = keepPathOnly(keep)
     val url = getKeepProfileUrl(keep)
     val keeperFut = db.readOnlyMasterAsync { implicit s =>
-      keep.userId.map(basicUserRepo.load)
+      basicUserRepo.load(keep.userId)
     }
-    keeperFut.map { keeperOpt =>
+    keeperFut.map { keeper =>
       PublicPageMetaFullTags( // todo(cam): see with Eishay if we can have more fun below
         unsafeTitle = keep.title.getOrElse(""),
         url = url,
@@ -269,8 +269,8 @@ class PageMetaTagsCommander @Inject() (
         facebookId = None,
         createdAt = keep.createdAt,
         updatedAt = keep.updatedAt,
-        unsafeFirstName = keeperOpt.map(_.firstName).getOrElse("unknown"),
-        unsafeLastName = keeperOpt.map(_.lastName).getOrElse("unknown"),
+        unsafeFirstName = keeper.firstName,
+        unsafeLastName = keeper.lastName,
         profileUrl = url,
         noIndex = true, // not sure if this is okay
         related = Seq.empty

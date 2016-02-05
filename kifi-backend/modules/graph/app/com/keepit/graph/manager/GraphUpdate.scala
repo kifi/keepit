@@ -80,7 +80,7 @@ case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnection
   def apply(connection: IndexableSocialConnection): SocialConnectionGraphUpdate = SocialConnectionGraphUpdate(connection.firstSocialUserId, connection.secondSocialUserId, connection.network, connection.state, connection.seq)
 }
 
-case class KeepGraphUpdate(id: Id[Keep], userId: Option[Id[User]], uriId: Id[NormalizedURI], libId: Option[Id[Library]], state: State[Keep], source: KeepSource, createdAt: DateTime, keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
+case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], libId: Option[Id[Library]], state: State[Keep], source: KeepSource, createdAt: DateTime, keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
   type U = KeepGraphUpdate
   def kind = KeepGraphUpdate
   def seq = kind.seq(keepSeq.value)

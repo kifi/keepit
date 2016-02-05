@@ -9,7 +9,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.json
-import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -244,7 +243,7 @@ class ExtLibraryController @Inject() (
             case (tags, image) =>
               val keepData = KeepData(
                 keep.externalId,
-                mine = keep.userId.safeContains(request.userId),
+                mine = keep.userId == request.userId,
                 removable = mem.canWrite,
                 secret = keep.visibility == LibraryVisibility.SECRET,
                 visibility = keep.visibility,
