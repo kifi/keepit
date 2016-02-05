@@ -31,7 +31,9 @@ object SlackIngestionConfig {
   val ingestionTimeout = Period.minutes(30)
   val minChannelIngestionConcurrency = 15
   val maxChannelIngestionConcurrency = 30
-  val messageBatchSize = 50
+
+  val messagesPerRequest = 10
+  val messagesPerIngestion = 50
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
@@ -146,7 +148,7 @@ class SlackIngestingActor @Inject() (
     val shouldAddReactions = settings.exists(_.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
-        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
+        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
@@ -234,21 +236,28 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)
-    val pageSize = PageSize((limit getOrElse 100) min PageSize.max)
-    FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
+
+    val bigPages = PageSize(messagesPerRequest)
+    val tinyPages = PageSize(1)
+
+    def getBatchedMessages(pageSize: PageSize): Future[Seq[SlackMessage]] = FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
         slackClient.searchMessages(token, request).map { response =>
           val allMessages = previousMessages ++ response.messages.matches.filterNot(m => lastMessageTimestamp.exists(m.timestamp <= _))
-          val messages = limit.map(allMessages.take(_)) getOrElse allMessages
-          val done = limit.exists(_ <= messages.length) || response.messages.paging.pages <= nextPage.page
+          val done = allMessages.length >= messagesPerIngestion || response.messages.paging.pages <= nextPage.page
+          val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
         }
     }
-
+    getBatchedMessages(bigPages).recoverWith {
+      case fail =>
+        slackLog.warn("Failed during ingestion", fail.getMessage, ", retrying with batch size of 1")
+        getBatchedMessages(tinyPages)
+    }
   }
 }
