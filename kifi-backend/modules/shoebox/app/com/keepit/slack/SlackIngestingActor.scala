@@ -244,7 +244,7 @@ class SlackIngestingActor @Inject() (
     val bigPages = PageSize(messagesPerRequest)
     val tinyPages = PageSize(1)
 
-    def getBatchedMessages(pageSize: PageSize): Future[Seq[SlackMessage]] = FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
+    def getBatchedMessages(pageSize: PageSize, skipFailures: Boolean): Future[Seq[SlackMessage]] = FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
         slackClient.searchMessages(token, request).map { response =>
@@ -252,12 +252,16 @@ class SlackIngestingActor @Inject() (
           val done = allMessages.length >= messagesPerIngestion || response.messages.paging.pages <= nextPage.page
           val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
+        }.recover {
+          case fail if skipFailures =>
+            slackLog.warn(s"Failed pulling the ${nextPage.page} page of size ${pageSize.count}, skipping it")
+            (previousMessages, false)
         }
     }
-    getBatchedMessages(bigPages).recoverWith {
+    getBatchedMessages(bigPages, skipFailures = false).recoverWith {
       case fail =>
-        slackLog.warn("Failed during ingestion", fail.getMessage, ", retrying with batch size of 1")
-        getBatchedMessages(tinyPages)
+        slackLog.warn(s"Failed ingesting from $channelName with $bigPages,retrying with $tinyPages")
+        getBatchedMessages(tinyPages, skipFailures = true)
     }
   }
 }
