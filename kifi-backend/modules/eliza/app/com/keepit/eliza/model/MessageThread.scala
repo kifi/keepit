@@ -173,7 +173,7 @@ object MessageThread {
 }
 
 case class MessageThreadKeepIdKey(keepId: Id[Keep]) extends Key[MessageThread] {
-  override val version = 3
+  override val version = 2
   val namespace = "message_thread_by_keep_id"
   def toKey(): String = keepId.id.toString
 }

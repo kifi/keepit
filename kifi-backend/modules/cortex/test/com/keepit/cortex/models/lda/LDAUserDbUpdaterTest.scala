@@ -26,7 +26,7 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
 
         db.readWrite { implicit s =>
           uris.map { CortexURI.fromURI(_) } foreach { uriRepo.save(_) }
-          val keeps = uris.map { uri => CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](1), uriId = uri.id.get, isPrivate = true, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](uri.seq.value), source = KeepSource.keeper) }
+          val keeps = uris.map { uri => CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = uri.id.get, isPrivate = true, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](uri.seq.value), source = KeepSource.keeper) }
           keeps.foreach { keepRepo.save(_) }
         }
 
@@ -61,7 +61,7 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
 
           db.readWrite { implicit s =>
             uris.map { CortexURI.fromURI(_) } foreach { uriRepo.save(_) }
-            val keeps = uris.map { uri => CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](1), uriId = uri.id.get, isPrivate = true, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](uri.seq.value), source = KeepSource.keeper) }
+            val keeps = uris.map { uri => CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = uri.id.get, isPrivate = true, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](uri.seq.value), source = KeepSource.keeper) }
             keeps.foreach { keepRepo.save(_) }
           }
 

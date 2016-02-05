@@ -985,7 +985,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val keepPermissions = KeepPermission.all
 
-        inject[FakeSearchServiceClient].setKeepers((keep1.userId.toSeq, 1), (keep2.userId.toSeq, 1))
+        inject[FakeSearchServiceClient].setKeepers((Seq(keep1.userId), 1), (Seq(keep2.userId), 1))
 
         val pubId1 = Library.publicId(lib1.id.get)
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url

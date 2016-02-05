@@ -84,10 +84,10 @@ class AtomCommander @Inject() (
       val entries = keeps.map { keep =>
         val (keepImageOpt, keeper) = db.readOnlyMaster { implicit s =>
           val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-          (image.flatten, keep.userId.map(userRepo.getNoCache))
+          (image.flatten, userRepo.getNoCache(keep.userId))
         }
         val title = keep.title.getOrElse("")
-        val author = keeper.map(_.fullName).getOrElse("unknown") // TODO(ryan): find actual author
+        val author = keeper.fullName
         val content = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse("")
         val id = keep.externalId.id
         val updatedAt = keep.updatedAt

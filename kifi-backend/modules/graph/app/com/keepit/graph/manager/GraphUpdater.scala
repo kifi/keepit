@@ -107,7 +107,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
   private def processKeepGraphUpdate(update: KeepGraphUpdate)(implicit writer: GraphWriter) = {
     val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
-    val userVertexIds: Set[VertexDataId[UserReader]] = update.userId.toSet.map(VertexDataId.fromUserId)
+    val userVertexId: VertexDataId[UserReader] = update.userId
     val libVertexIds: Set[VertexDataId[LibraryReader]] = update.libId.toSet.map(VertexDataId.fromLibraryId)
 
     writer.removeVertexIfExists(keepVertexId) // build the vertex and its neighbors from empty state. (e.g. LibraryId can change, this removes old links)
@@ -116,15 +116,15 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
       case KeepStates.ACTIVE if update.source != KeepSource.default =>
         writer.saveVertex(KeepData(keepVertexId))
         writer.saveVertex(UriData(uriVertexId))
-        userVertexIds.foreach { uv => writer.saveVertex(UserData(uv)) }
-        libVertexIds.foreach { lv => writer.saveVertex(LibraryData(lv)) }
-
-        userVertexIds.foreach { uv =>
-          writer.saveEdge(uv, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
-          writer.saveEdge(keepVertexId, uv, EmptyEdgeData)
+        writer.saveVertex(UserData(userVertexId))
+        libVertexIds.foreach { lvIdx =>
+          writer.saveVertex(LibraryData(lvIdx))
         }
 
+        writer.saveEdge(userVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
         writer.saveEdge(uriVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
+
+        writer.saveEdge(keepVertexId, userVertexId, EmptyEdgeData)
         writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
 
         libVertexIds.foreach { lvIdx =>

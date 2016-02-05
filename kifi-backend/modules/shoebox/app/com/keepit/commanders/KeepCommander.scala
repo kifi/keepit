@@ -74,7 +74,7 @@ trait KeepCommander {
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
@@ -147,23 +147,22 @@ class KeepCommanderImpl @Inject() (
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     db.readOnlyReplica { implicit session =>
       val keeps = keepRepo.getByIds(ids)
-      val users = userRepo.getAllUsers(keeps.flatMap {
+      val users = userRepo.getAllUsers(keeps.collect {
         case (id, keep) => keep.userId
       }.toSeq)
       val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet).collect {
         case (keepId, (attr: SlackAttribution, userOpt)) => keepId -> (attr, userOpt)
       }
       keeps.map {
-        case (kId, keep) =>
-          kId -> BasicKeep(
-            keep.externalId,
-            keep.title,
-            keep.url,
-            keep.visibility,
-            keep.libraryId.map(Library.publicId),
-            keep.userId.flatMap(uId => users.get(uId).map(_.externalId)),
-            attributions.get(kId)
-          )
+        case (id, keep) => id -> BasicKeep(
+          keep.externalId,
+          keep.title,
+          keep.url,
+          keep.visibility,
+          keep.libraryId.map(Library.publicId),
+          users(keep.userId).externalId,
+          attributions.get(id)
+        )
       }
     }
   }
@@ -459,7 +458,7 @@ class KeepCommanderImpl @Inject() (
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean)(implicit session: RWSession): Keep = {
     // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
-    val updatedKeep = oldKeep.withOwner(userId).withNote(noteToPersist)
+    val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
     val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
     val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
     session.onTransactionSuccess {
@@ -492,7 +491,7 @@ class KeepCommanderImpl @Inject() (
 
           if (k.isActive && existingNormalized.contains(tag.normalized)) {
             val newTags = existingTags.filterNot(_.normalized == tag.normalized).map(_.tag)
-            Try(syncTagsToNoteAndSaveKeep(k.userId.get, k, newTags)) match { // Note will be updated here
+            Try(syncTagsToNoteAndSaveKeep(k.userId, k, newTags)) match { // Note will be updated here
               case Success(r) => Some(r)
               case Failure(ex) =>
                 errors += k.id.get
@@ -518,8 +517,7 @@ class KeepCommanderImpl @Inject() (
         for {
           firstKeepId <- keeps.headOption
           keep = keepRepo.get(firstKeepId)
-          user <- keep.userId
-          existing <- collectionRepo.getByUserAndName(user, oldTag)
+          existing <- collectionRepo.getByUserAndName(keep.userId, oldTag)
         } yield {
           collectionRepo.save(existing.copy(name = newTag))
         }
@@ -534,7 +532,7 @@ class KeepCommanderImpl @Inject() (
           if (k.isActive && existingNormalized.contains(oldTag.normalized)) {
             val newTags = newTag.tag +: existingTags.filterNot(_.normalized == oldTag.normalized).map(_.tag)
             val newNote = k.note.map(Hashtags.replaceTagNameFromString(_, oldTag.tag, newTag.tag))
-            Try(syncTagsToNoteAndSaveKeep(k.userId.get, k.withNote(newNote), newTags)) match {
+            Try(syncTagsToNoteAndSaveKeep(k.userId, k.withNote(newNote), newTags)) match {
               case Success(r) => Some(r)
               case Failure(ex) =>
                 errors += k.id.get
@@ -597,8 +595,8 @@ class KeepCommanderImpl @Inject() (
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
     log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
-    if (socialShare.twitter) keep.userId.foreach { userId => twitterPublishingCommander.publishKeep(userId, keep, library) }
-    if (socialShare.facebook) keep.userId.foreach { userId => facebookPublishingCommander.publishKeep(userId, keep, library) }
+    if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
+    if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
     searchClient.updateKeepIndex()
   }
 
@@ -653,7 +651,7 @@ class KeepCommanderImpl @Inject() (
 
   // Only use this directly if you want to skip ALL interning features. You probably want KeepInterner.
   def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
-    require(k.userId.toSet subsetOf k.connections.users, "keep owner is not one of the connected users")
+    require(k.connections.users.contains(k.userId), "keep owner is not one of the connected users")
     require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
     val oldKeepOpt = k.id.map(keepRepo.get)
@@ -670,7 +668,7 @@ class KeepCommanderImpl @Inject() (
 
     updatedKeepOpt.getOrElse(newKeep)
   }
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+  def addUsersToKeep(keepId: Id[Keep], addedBy: Id[User], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
     val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
 
@@ -771,7 +769,7 @@ class KeepCommanderImpl @Inject() (
       case None =>
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
         ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
-        ktlCommander.internKeepInLibrary(k, toLibrary, Some(userId))
+        ktlCommander.internKeepInLibrary(k, toLibrary, userId)
         Right(movedKeep)
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
@@ -780,7 +778,7 @@ class KeepCommanderImpl @Inject() (
         ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
 
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
-        ktlCommander.internKeepInLibrary(movedKeep, toLibrary, Some(userId))
+        ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
 
         Right(movedKeep)
       case Some(existingKeep) =>
@@ -796,7 +794,7 @@ class KeepCommanderImpl @Inject() (
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeepOpt = keepRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get, excludeState = None)
     val newKeep = Keep(
-      userId = Some(userId),
+      userId = userId,
       url = k.url,
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
@@ -899,7 +897,7 @@ class KeepCommanderImpl @Inject() (
           val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
           if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
             log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            Try(updateKeepNote(keep.userId.get, keep, newNote, freshTag = false)).recover {
+            Try(updateKeepNote(keep.userId, keep, newNote, freshTag = false)).recover {
               case ex: Throwable =>
                 log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
             }
