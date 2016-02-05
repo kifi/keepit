@@ -35,6 +35,8 @@ leftHandNavWidth = 230px
     align-items: center
     margin-left: 10px
     flex-shrink: 0
+    z-index: 2
+    background-color: #3e4954
 
     @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
       height: appHeaderHeight1
@@ -46,6 +48,8 @@ leftHandNavWidth = 230px
   padding-top: 5px
   padding-bottom: 5px
   padding-left: 10px
+  z-index: 1
+  box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12);
 
   &::-webkit-scrollbar
     width: 8px
@@ -135,7 +139,7 @@ leftHandNavWidth = 230px
         &:hover
           color: #FFF
           cursor: pointer
-          
+
 .kf-left-hand-nav-content-spinner-container
   display: flex
   width: 100%
