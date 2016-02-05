@@ -63,6 +63,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
   // Org Library methods
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int
+  def countOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int
+  def countSlackOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int
   def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
   def getOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Seq[Library]
 
@@ -508,8 +510,22 @@ class LibraryRepoImpl @Inject() (
       )
     } yield lib
   }
+
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int = {
     visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).length.run
+  }
+
+  def countOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int = {
+    Query(
+      (for { t <- rows if t.orgId === orgId && t.state === LibraryStates.ACTIVE } yield t).length
+    ).first
+  }
+
+  def countSlackOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int = {
+    val libKind: LibraryKind = LibraryKind.SLACK_CHANNEL
+    Query(
+      (for { t <- rows if t.orgId === orgId && t.state === LibraryStates.ACTIVE && t.kind === libKind } yield t).length
+    ).first
   }
 
   def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
