@@ -184,10 +184,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    val edges = connections.flatMap { case (u, fs) => fs.flatMap { f => Array((u, f), (f, u)) } }.toSet
+    val edges = connections.map { case (u, fs) => fs.flatMap { f => Array((u, f), (f, u)) } }.flatten.toSet
     edges.groupBy(_._1).foreach { case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map { _._2 } }
 
-    val pairs = connections.flatMap { case (uid, friends) => friends.map { f => (uid, f) } }.toSet
+    val pairs = connections.map { case (uid, friends) => friends.map { f => (uid, f) } }.flatten.toSet
     pairs.foreach {
       case (u1, u2) =>
         getConnection(u1, u2).foreach { c =>
