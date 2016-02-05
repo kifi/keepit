@@ -60,6 +60,7 @@ class SlackCommanderImpl @Inject() (
   }
 
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
+    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName)
     val (membership, isNewIdentityOwner) = slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = userIdOpt,
       slackUserId = identity.userId,
@@ -70,7 +71,6 @@ class SlackCommanderImpl @Inject() (
       scopes = identity.scopes,
       slackUser = identity.user
     ))
-    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName)
     autojoinOrganization(membership)
     isNewIdentityOwner
   }

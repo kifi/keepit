@@ -20,7 +20,6 @@ CREATE TABLE slack_team_membership (
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
   INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
   INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id),
-  CONSTRAINT slack_team_membership_f_slack_team FOREIGN KEY slack_team_id REFERENCES slack_team(slack_team_id)
 );
 
 CREATE TABLE slack_incoming_webhook_info (
