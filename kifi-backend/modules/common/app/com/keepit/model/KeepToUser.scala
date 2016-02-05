@@ -12,7 +12,7 @@ case class KeepToUser(
   keepId: Id[Keep],
   userId: Id[User],
   addedAt: DateTime = currentDateTime,
-  addedBy: Id[User],
+  addedBy: Option[Id[User]],
   // Denormalized fields from Keep
   uriId: Id[NormalizedURI],
   lastActivityAt: DateTime) // denormalized from keep
