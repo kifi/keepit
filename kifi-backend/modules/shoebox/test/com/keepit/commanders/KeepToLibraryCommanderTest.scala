@@ -30,7 +30,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val keep = KeepFactory.keep().withLibrary(userLib).saved
 
             val otherLib = LibraryFactory.library().withOwner(user).saved
-            val ktl = ktlCommander.internKeepInLibrary(keep, otherLib, user.id.get)
+            val ktl = ktlCommander.internKeepInLibrary(keep, otherLib, Some(user.id.get))
 
             ktl.keepId === keep.id.get
             ktl.addedBy === user.id.get
@@ -48,12 +48,12 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).saved
 
             // user1 re-interns the keep
-            ktlCommander.internKeepInLibrary(keep, lib, user1.id.get).addedBy === user1.id.get
-            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
+            ktlCommander.internKeepInLibrary(keep, lib, Some(user1.id.get)).addedBy === Some(user1.id.get)
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === Some(user1.id.get)
 
             // user2 re-interns the keep
-            ktlCommander.internKeepInLibrary(keep, lib, user2.id.get).addedBy === user1.id.get
-            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === user1.id.get
+            ktlCommander.internKeepInLibrary(keep, lib, Some(user2.id.get)).addedBy === Some(user1.id.get)
+            ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib.id.get).get.addedBy === Some(user1.id.get)
           }
           1 === 1
         }
@@ -106,13 +106,13 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             for (i <- 1 to 10) {
               // lib1 -> lib2
               ktlCommander.removeKeepFromLibrary(keep.id.get, lib1.id.get)
-              ktlCommander.internKeepInLibrary(keep, lib2, user.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib2, Some(user.id.get))
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beNone
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beSome
 
               // lib2 -> lib1
               ktlCommander.removeKeepFromLibrary(keep.id.get, lib2.id.get)
-              ktlCommander.internKeepInLibrary(keep, lib1, user.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib1, Some(user.id.get))
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beSome
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
             }
@@ -120,7 +120,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
 
             for (i <- 1 to 10) {
               ktlCommander.removeKeepFromLibrary(keep.id.get, lib1.id.get)
-              ktlCommander.internKeepInLibrary(keep, lib1, user.id.get)
+              ktlCommander.internKeepInLibrary(keep, lib1, Some(user.id.get))
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib1.id.get) must beSome
               ktlRepo.getByKeepIdAndLibraryId(keep.id.get, lib2.id.get) must beNone
             }

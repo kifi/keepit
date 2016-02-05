@@ -39,7 +39,7 @@ object KeepFactoryHelper {
 
       val keep = partialKeep.get |> fixUriReferences |> fixLibraryReferences
 
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(keep.libraryId.toSet).withParticipants(Set(keep.userId)))
+      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(keep.libraryId.toSet).withParticipants(keep.userId.toSet))
       val libraries = finalKeep.libraryId.toSet[Id[Library]].map(libId => injector.getInstance(classOf[LibraryRepo]).get(libId))
 
       libraries.foreach { library =>
@@ -55,15 +55,17 @@ object KeepFactoryHelper {
         )
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
       }
-      val ktu = KeepToUser(
-        keepId = finalKeep.id.get,
-        userId = finalKeep.userId,
-        addedAt = finalKeep.keptAt,
-        addedBy = finalKeep.userId,
-        uriId = finalKeep.uriId,
-        lastActivityAt = finalKeep.lastActivityAt
-      )
-      injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
+      finalKeep.userId.foreach { userId =>
+        val ktu = KeepToUser(
+          keepId = finalKeep.id.get,
+          userId = userId,
+          addedAt = finalKeep.keptAt,
+          addedBy = finalKeep.userId,
+          uriId = finalKeep.uriId,
+          lastActivityAt = finalKeep.lastActivityAt
+        )
+        injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
+      }
       finalKeep
     }
 
