@@ -30,16 +30,15 @@ class AttributionCommander @Inject() (
     require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
     if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Seq[Id[User]]]]
     else {
-      val userKeeps = keepIds.groupBy(_.userId)
+      val userKeeps = keepIds.groupBy(_.userId).collect { case (Some(uId), keeps) => uId -> keeps }
 
       // sequential -- no need to overload shoebox
-      val res = userKeeps.map {
+      userKeeps.flatMap {
         case (userId, keeps) =>
           keeps.toSeq.map { keep =>
             keep.keepId -> getReKeepsByDegree(userId, keep.keepId, n).map { case (userIdsByDeg, _) => userIdsByDeg }
           }
-      }.flatten.toMap
-      res
+      }
     }
   }
 

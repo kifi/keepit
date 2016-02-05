@@ -277,7 +277,7 @@ class SearchAnalytics @Inject() (
     val mac = Mac.getInstance(algorithm)
     val key = new SecretKeySpec(searchId.id.getBytes, algorithm)
     mac.init(key)
-    Base64.encodeBase64String(mac.doFinal(userId.toString.getBytes()))
+    Base64.encodeBase64String(mac.doFinal(userId.id.toString.getBytes()))
   }
 
   private def keep(kifiHitContext: KifiHitContext): String = {

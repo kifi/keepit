@@ -6,6 +6,7 @@ import com.keepit.search.index.article.{ ShardedArticleIndexer, ArticleRecord }
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
+import com.keepit.common.core.optionExtensionOps
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.search.SearchTestHelper
@@ -24,14 +25,8 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
     "create index shards" in {
       withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
-        val expectedUriToUserEdges = uris.take(9).toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
+        val expectedUriToUserEdges = uris.take(9).toIterator.zip((1 to 9).iterator.map(users.take)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
-
-        val collKeeps = Seq(
-          bookmarks.filter { b => b.userId == users(0).id.get && b.uriId.id % 3 == 0 },
-          bookmarks.filter { b => b.userId == users(1).id.get && b.uriId.id % 3 == 1 },
-          bookmarks.filter { b => b.userId == users(1).id.get && b.uriId.id % 3 == 2 }
-        )
 
         val (articleIndexer, _, _, _, keepIndexer, _, _) = initIndexes()
 
@@ -51,25 +46,25 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             }
 
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-            val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet
+            val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().toSet
             keeps.forall(id => shard.contains(Id[NormalizedURI](id))) === true
 
-            bookmarks.filter(_.userId == userId).foreach { bookmark =>
+            bookmarks.filter(_.userId.safeContains(userId)).foreach { bookmark =>
               if (shard.contains(bookmark.uriId)) {
                 keeps.contains(bookmark.uriId.id) === true
-                keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, bookmark.id.get.id)(KeepRecord.fromByteArray).isDefined === true
+                keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, bookmark.id.get.id)(KeepRecord.fromByteArray) must beSome
               } else {
                 keeps.contains(bookmark.uriId.id) === false
               }
             }
           }
 
-          val keeps = bookmarks.filter(_.userId == userId).map(_.uriId.id).toSet
+          val keeps = bookmarks.filter(_.userId.safeContains(userId)).map(_.uriId.id).toSet
           val shardedKeeps = activeShards.local.map { shard =>
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().toSet
           }
-          shardedKeeps.foldLeft(0) { (sum, set) => sum + set.size } === keeps.size
+          shardedKeeps.foldLeft(0)(_ + _.size) == keeps.size
           shardedKeeps.flatten === keeps
         }
       }
@@ -89,7 +84,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
-        val originalBookmark = bookmarks.find(_.userId == userId).get
+        val originalBookmark = bookmarks.find(_.userId.safeContains(userId)).get
         val sourceShard = activeShards.local.find(_.contains(originalBookmark.uriId)).get
         val targetShard = activeShards.local.find(!_.contains(originalBookmark.uriId)).get
         val targetUri = uris.filter(u => targetShard.contains(u.id.get)).find(u => !bookmarks.exists(k => k.uriId == u.id.get)).get
@@ -98,27 +93,27 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
         def getKeepSize(shard: Shard[NormalizedURI]) = {
           val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-          keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet.size
+          keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().toSet.size
         }
 
-        val oldKeepSizes = activeShards.local.map { shard => (shard -> getKeepSize(shard)) }.toMap
+        val oldKeepSizes = activeShards.local.map { shard => shard -> getKeepSize(shard) }.toMap
 
         // migrate URI
         val Seq(migratedBookmark) = saveBookmarks(originalBookmark.copy(uriId = targetUri.id.get))
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
-        val newKeepSizes = activeShards.local.map { shard => (shard -> getKeepSize(shard)) }.toMap
+        val newKeepSizes = activeShards.local.map { shard => shard -> getKeepSize(shard) }.toMap
 
         activeShards.local.foreach { shard =>
           val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
 
           if (shard == sourceShard) {
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.contains(originalBookmark.uriId.id) === false
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().contains(originalBookmark.uriId.id) === false
 
             newKeepSizes(shard) === oldKeepSizes(shard) - 1
           } else if (shard == targetShard) {
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.contains(migratedBookmark.uriId.id) === true
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().contains(migratedBookmark.uriId.id) === true
 
             newKeepSizes(shard) === oldKeepSizes(shard) + 1
           } else {

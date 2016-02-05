@@ -75,7 +75,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
-          bm.userId === user.id.get
+          bm.userId.get === user.id.get
           bm.isPrivate === true
           bookmarks.size === 5
         }
@@ -105,7 +105,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
-          bm.userId === user.id.get
+          bm.userId.get === user.id.get
           bookmarks.size === 5
 
           collectionRepo.getAllTagsByUserSortedByNumKeeps(user.id.get).map(_._1.tag) === Seq("college", "hack", "stuff")
