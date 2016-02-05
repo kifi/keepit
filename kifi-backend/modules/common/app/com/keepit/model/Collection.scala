@@ -137,7 +137,7 @@ object SendableTag {
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
   override val version = 3
   val namespace = "user_collections"
-  def toKey(): String = userId.toString
+  def toKey(): String = userId.id.toString
 }
 
 class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -146,7 +146,7 @@ class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermo
 case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[CollectionSummary]] {
   override val version = 2
   val namespace = "user_collection_summaries"
-  def toKey(): String = userId.toString
+  def toKey(): String = userId.id.toString
 }
 
 class UserCollectionSummariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

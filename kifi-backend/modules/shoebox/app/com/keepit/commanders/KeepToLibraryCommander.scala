@@ -25,14 +25,13 @@ object KeepToLibraryFail {
 
 @ImplementedBy(classOf[KeepToLibraryCommanderImpl])
 trait KeepToLibraryCommander {
-  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]])(implicit session: RWSession): KeepToLibrary
   def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit]
   def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit
   def deactivate(ktl: KeepToLibrary)(implicit session: RWSession): Unit
 
   // Fun helper methods
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean
-  def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
   def syncWithKeep(ktl: KeepToLibrary, keep: Keep)(implicit session: RWSession): KeepToLibrary
@@ -50,7 +49,7 @@ class KeepToLibraryCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {
 
-  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Id[User])(implicit session: RWSession): KeepToLibrary = {
+  def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]])(implicit session: RWSession): KeepToLibrary = {
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStateOpt = None) match {
       case Some(existingKtl) if existingKtl.isActive => existingKtl
       case inactiveKtlOpt =>
@@ -85,10 +84,6 @@ class KeepToLibraryCommanderImpl @Inject() (
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {
     ktlRepo.getByKeepIdAndLibraryId(keepId, libraryId).isDefined
-  }
-
-  def changeOwner(ktl: KeepToLibrary, newOwnerId: Id[User])(implicit session: RWSession): KeepToLibrary = {
-    ktlRepo.save(ktl.withAddedBy(newOwnerId))
   }
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {

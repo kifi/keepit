@@ -95,7 +95,7 @@ class KeepDecoratorImpl @Inject() (
           val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
+          val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers) } //cached
         }
@@ -170,7 +170,7 @@ class KeepDecoratorImpl @Inject() (
               author <- sourceAttrs.get(keep.id.get).map {
                 case (_, Some(kifiUser)) => BasicAuthor.fromUser(kifiUser)
                 case (attr, _) => BasicAuthor.fromAttribution(attr)
-              } orElse idToBasicUser.get(keep.userId).map(BasicAuthor.fromUser)
+              } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
               KeepInfo(
                 id = Some(keep.externalId),
@@ -179,7 +179,7 @@ class KeepDecoratorImpl @Inject() (
                 url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
                 path = bestEffortPath,
                 isPrivate = keep.isPrivate,
-                user = idToBasicUser.get(keep.userId),
+                user = keep.userId.flatMap(idToBasicUser.get),
                 author = author,
                 createdAt = Some(getTimestamp(keep)),
                 keeps = Some(keeps),
@@ -267,7 +267,7 @@ class KeepDecoratorImpl @Inject() (
       grouped.get(uriId) match {
         case Some(keeps) =>
           val userKeeps = keeps.map { keep =>
-            val mine = userId == keep.userId
+            val mine = keep.userId.contains(userId)
             val removable = true // all keeps here are writeable
             PersonalKeep(
               id = keep.externalId,
