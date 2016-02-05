@@ -28,7 +28,7 @@ object SlackDbColumnTypes {
     import db.Driver.simple._
     MappedColumnType.base[Set[SlackChannelId], String](
       ids => Json.stringify(Json.toJson(ids)),
-      j => if (j.isEmpty) Set.empty else Json.parse(j).as[Set[SlackChannelId]]
+      j => Json.parse(j).as[Set[SlackChannelId]]
     )
   }
 

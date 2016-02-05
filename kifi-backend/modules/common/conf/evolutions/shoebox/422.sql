@@ -14,11 +14,12 @@ CREATE TABLE slack_team (
   general_channel_id VARCHAR(32) DEFAULT NULL,
   last_digest_notification_at DATETIME DEFAULT NULL,
   public_channels_last_synced_at DATETIME DEFAULT NULL,
-  channels_synced MEDIUMTEXT NOT NULL DEFAULT '',
+  channels_synced MEDIUMTEXT NOT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_u_slack_team_id (slack_team_id),
   UNIQUE KEY slack_team_u_organization_id (organization_id)
+  CONSTRAINT slack_team_f_organization FOREIGN KEY organization_id REFERENCES organization(id)
 );
 insert into evolutions(name, description) values('422.sql', 'create table slack_team');
 
