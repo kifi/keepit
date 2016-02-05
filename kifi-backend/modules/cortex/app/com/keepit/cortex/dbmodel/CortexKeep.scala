@@ -13,7 +13,7 @@ case class CortexKeep(
     updatedAt: DateTime = currentDateTime,
     keptAt: DateTime,
     keepId: Id[Keep],
-    userId: Id[User],
+    userId: Option[Id[User]],
     uriId: Id[NormalizedURI],
     isPrivate: Boolean,
     state: State[CortexKeep],
@@ -34,7 +34,7 @@ object CortexKeep {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'keptAt).format(DateTimeJsonFormat) and
     (__ \ 'keepId).format(Id.format[Keep]) and
-    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'userId).formatNullable[Id[User]] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'state).format(State.format[CortexKeep]) and

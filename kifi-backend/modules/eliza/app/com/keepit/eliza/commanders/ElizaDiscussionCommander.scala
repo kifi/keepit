@@ -114,14 +114,13 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  // Creates a MessageThread with a keepId set (gets the uriId and title from Shoebox)
-  // Does not automatically add any participants
-  private def getOrCreateMessageThreadForKeep(keepId: Id[Keep]): Future[MessageThread] = {
-    db.readOnlyMaster { implicit s =>
+  private def getOrCreateMessageThreadWithUser(keepId: Id[Keep], userId: Id[User]): Future[MessageThread] = {
+    val threadFut = db.readOnlyMaster { implicit s =>
       messageThreadRepo.getByKeepId(keepId)
     }.map(Future.successful).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
+        val users = csKeep.owner.toSet + userId
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
@@ -131,22 +130,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
               url = csKeep.url,
               nUrl = csKeep.url,
               pageTitle = csKeep.title,
-              startedBy = csKeep.owner,
-              participants = MessageThreadParticipants(Set(csKeep.owner)),
+              startedBy = csKeep.owner getOrElse userId,
+              participants = MessageThreadParticipants(users),
               keepId = csKeep.id
             ))
-            val ut = userThreadRepo.intern(UserThread.forMessageThread(mt)(csKeep.owner))
+            users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
             log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
             mt
           }
         }
       }
     }
-  }
-
-  private def getOrCreateMessageThreadWithUser(keepId: Id[Keep], userId: Id[User]): Future[MessageThread] = {
-    val futureMessageThread = getOrCreateMessageThreadForKeep(keepId)
-    futureMessageThread.map { thread =>
+    threadFut.map { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>

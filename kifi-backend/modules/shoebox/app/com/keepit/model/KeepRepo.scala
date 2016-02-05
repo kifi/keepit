@@ -94,7 +94,7 @@ class KeepRepoImpl @Inject() (
   Id[NormalizedURI], // uriId
   String // url
   )
-  type Rest = (Id[User], // userId
+  type Rest = (Option[Id[User]], // userId
   Option[Id[User]], // originalKeeperId
   KeepSource, // source
   DateTime, // keptAt
@@ -119,7 +119,7 @@ class KeepRepoImpl @Inject() (
       note: Option[String],
       uriId: Id[NormalizedURI],
       url: String), (
-      userId: Id[User],
+      userId: Option[Id[User]],
       originalKeeperId: Option[Id[User]],
       source: KeepSource,
       keptAt: DateTime,
@@ -145,7 +145,7 @@ class KeepRepoImpl @Inject() (
         uriId,
         url,
         userId,
-        originalKeeperId.orElse(Some(userId)),
+        originalKeeperId orElse userId,
         source,
         keptAt,
         lastActivityAt,
@@ -170,7 +170,7 @@ class KeepRepoImpl @Inject() (
       k.uriId,
       k.url),
       (k.userId,
-        k.originalKeeperId.orElse(Some(k.userId)),
+        k.originalKeeperId orElse k.userId,
         k.source,
         k.keptAt,
         k.lastActivityAt,
@@ -191,7 +191,7 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def url = column[String]("url", O.NotNull) //indexd
-    def userId = column[Id[User]]("user_id", O.Nullable) //indexd
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable) //indexd
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def source = column[KeepSource]("source", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
@@ -244,7 +244,7 @@ class KeepRepoImpl @Inject() (
         r.<<[Option[String]],
         r.<<[Id[NormalizedURI]],
         r.<<[String]),
-      (r.<<[Id[User]],
+      (r.<<[Option[Id[User]]],
         r.<<[Option[Id[User]]],
         r.<<[KeepSource],
         r.<<[DateTime],
@@ -291,8 +291,10 @@ class KeepRepoImpl @Inject() (
       keepByIdCache.remove(KeepIdKey(keepId))
       basicKeepByIdCache.remove(BasicKeepIdKey(keepId))
     }
-    keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
-    countCache.remove(KeepCountKey(keep.userId))
+    keep.userId.foreach { userId =>
+      keepUriUserCache.remove(KeepUriUserKey(keep.uriId, userId))
+      countCache.remove(KeepCountKey(userId))
+    }
   }
 
   override def invalidateCache(keep: Keep)(implicit session: RSession): Unit = {
@@ -305,8 +307,10 @@ class KeepRepoImpl @Inject() (
     } else {
       keepByIdCache.set(KeepIdKey(keep.id.get), keep)
       basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
-      keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
-      countCache.remove(KeepCountKey(keep.userId))
+      keep.userId.foreach { userId =>
+        keepUriUserCache.set(KeepUriUserKey(keep.uriId, userId), keep)
+        countCache.remove(KeepCountKey(userId))
+      }
     }
   }
 
@@ -485,15 +489,15 @@ class KeepRepoImpl @Inject() (
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
     countCache.bulkGetOrElse(userIds.map(KeepCountKey(_))) { missingKeys =>
       val missingUserIds = missingKeys.map(_.userId)
-      val missingCounts = (for (r <- rows if r.userId.inSet(missingUserIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
+      val missingCounts = (for (r <- rows if r.userId.inSet(missingUserIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId.get).map {
         case (userId, keeps) => (userId, keeps.length)
       }.run
-      missingCounts.map { case (userId, count) => KeepCountKey(userId) -> count }.toMap
+      missingCounts.collect { case (userId, count) => KeepCountKey(userId) -> count }.toMap
     }
   }.map { case (key, count) => key.userId -> count }
 
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int] = {
-    (for (r <- rows if r.userId.inSet(userIds) && r.source.inSet(sources) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
+    (for (r <- rows if r.userId.inSet(userIds) && r.source.inSet(sources) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId.get).map {
       case (userId, keeps) => (userId, keeps.length)
     }.run
   }.map { case (userId, count) => userId -> count }.toMap

@@ -18,7 +18,7 @@ object KeepToUserFail {
 
 @ImplementedBy(classOf[KeepToUserCommanderImpl])
 trait KeepToUserCommander {
-  def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Id[User])(implicit session: RWSession): KeepToUser
+  def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): KeepToUser
   def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Try[Unit]
   def removeKeepFromAllUsers(keep: Keep)(implicit session: RWSession): Unit
 
@@ -37,7 +37,7 @@ class KeepToUserCommanderImpl @Inject() (
   ktuRepo: KeepToUserRepo)
     extends KeepToUserCommander with Logging {
 
-  def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Id[User])(implicit session: RWSession): KeepToUser = {
+  def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Option[Id[User]])(implicit session: RWSession): KeepToUser = {
     ktuRepo.getByKeepIdAndUserId(keep.id.get, userId, excludeStateOpt = None) match {
       case Some(existingKtu) if existingKtu.isActive => existingKtu
       case existingKtuOpt =>

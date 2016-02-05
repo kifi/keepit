@@ -124,7 +124,7 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[RawSourceAttribut
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
-    doc.add(buildIdValueField(userIdField, keep.userId))
+    doc.add(buildIdValueField(userIdField, keep.userId.getOrElse(Id[User](-1)))) // TODO(ryan): defer to Léo on this, idk if this is right
     doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
     doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
