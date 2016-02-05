@@ -244,7 +244,7 @@ case class BasicKeep(
   attribution: Option[(SlackAttribution, Option[BasicUser])])
 
 object BasicKeep {
-  private val GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
+  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
   implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
@@ -306,7 +306,7 @@ object PersonalKeep {
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 1
+  override val version = 2
   val namespace = "basic_keep_by_id"
   def toKey(): String = id.id.toString
 }
