@@ -34,8 +34,8 @@ class SlackOAuthController @Inject() (
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), SlackOAuthController.REDIRECT_URI)
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
-        slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
-        slackAuthCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, slackAuth.incomingWebhook)
+        val webhookIdOpt = slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
+        slackAuthCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, webhookIdOpt)
       }
     } yield {
       result match {

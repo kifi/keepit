@@ -24,7 +24,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[SlackIntegrationCommanderImpl])
 trait SlackIntegrationCommander {
   // Open their own DB sessions, intended to be called directly from controllers
-  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Try[SlackTeam]
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhookId: Id[SlackIncomingWebhookInfo]): Try[SlackTeam]
   def turnLibraryPush(integrationId: Id[LibraryToSlackChannel], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Id[Library]
   def turnChannelIngestion(integrationId: Id[SlackChannelToLibrary], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Id[Library]
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
@@ -56,12 +56,17 @@ class SlackIntegrationCommanderImpl @Inject() (
   inhouseSlackClient: InhouseSlackClient)
     extends SlackIntegrationCommander with Logging {
 
-  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, slackTeamId: SlackTeamId, slackUserId: SlackUserId): Try[SlackTeam] = {
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhookId: Id[SlackIncomingWebhookInfo]): Try[SlackTeam] = {
     val teamWithPushIntegrationMaybe = db.readWrite { implicit s =>
+      val webhookInfo = slackIncomingWebhookInfoRepo.get(webhookId)
+      val slackTeamId = webhookInfo.slackTeamId
+      val slackUserId = webhookInfo.slackUserId
+
       slackTeamRepo.getBySlackTeamId(slackTeamId) match {
         case Some(team) =>
           team.organizationId match {
             case Some(orgId) =>
+              val webhook = webhookInfo.webhook
               webhook.channelId.map { channelId => channelRepo.getOrCreate(slackTeamId, channelId, webhook.channelName) }
 
               val space = LibrarySpace.fromOrganizationId(orgId)
@@ -101,7 +106,7 @@ class SlackIntegrationCommanderImpl @Inject() (
             val user = basicUserRepo.load(userId)
             val orgOpt = lib.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
             DescriptionElements(
-              user, s"set up Slack integrations between channel ${webhook.channelName.value} and",
+              user, s"set up Slack integrations between channel ${pushIntegration.slackChannelName.value} and",
               lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute),
               orgOpt.map(org => DescriptionElements("in", org.name --> LinkElement(pathCommander.orgPage(org))))
             )

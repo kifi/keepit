@@ -45,8 +45,8 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             teamId = stm.slackTeamId,
             userId = stm.slackUserId
           )
-          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw1.webhook, ident.teamId, ident.userId)
-          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.webhook, ident.teamId, ident.userId)
+          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw1.id.get)
+          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.id.get)
 
           val slackInfo = db.readOnlyMaster { implicit s =>
             slackInfoCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))

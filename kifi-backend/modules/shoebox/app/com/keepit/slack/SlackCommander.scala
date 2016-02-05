@@ -25,7 +25,7 @@ object SlackCommander {
 
 @ImplementedBy(classOf[SlackCommanderImpl])
 trait SlackCommander {
-  def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
+  def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]]
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean
   def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
 }
@@ -43,18 +43,18 @@ class SlackCommanderImpl @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander with Logging {
 
-  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]] = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
-      auth.incomingWebhook.foreach { webhook =>
+      auth.incomingWebhook.map { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
           slackChannelId = webhook.channelId,
           webhook = webhook,
           lastPostedAt = None
-        ))
+        )).id.get
       }
     }
   }

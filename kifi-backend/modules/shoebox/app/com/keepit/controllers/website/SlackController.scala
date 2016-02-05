@@ -136,7 +136,7 @@ class SlackController @Inject() (
 
   def setupLibraryIntegrations(libraryId: PublicId[Library]) = (UserAction andThen LibraryViewUserAction(libraryId)).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val action = AddSlackTeam(andThen = Some(SetupLibraryIntegrations(Library.decodePublicId(libraryId).get)))
+    val action = AddSlackTeam(andThen = Some(SetupLibraryIntegrations(Library.decodePublicId(libraryId).get, None)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, None, action)
     handleAsAPIRequest(res)
   }

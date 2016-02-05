@@ -45,7 +45,7 @@ sealed trait SlackAuthenticatedAction { self =>
 }
 
 object SetupLibraryIntegrations extends SlackAuthenticatedActionHelper[SetupLibraryIntegrations]("setup_library_integrations")
-@json case class SetupLibraryIntegrations(libraryId: Id[Library]) extends SlackAuthenticatedAction {
+@json case class SetupLibraryIntegrations(libraryId: Id[Library], incomingWebhookId: Option[Long]) extends SlackAuthenticatedAction { // Long actually Id[SlackIncomingWebhookInfo]
   type A = SetupLibraryIntegrations
   def helper = SetupLibraryIntegrations
 }
@@ -128,7 +128,7 @@ object SlackAuthenticatedActionHelper {
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
-    case SetupLibraryIntegrations(_) => SlackAuthScope.integrationSetup
+    case SetupLibraryIntegrations(_, incomingWebhookId) => if (incomingWebhookId.isDefined) Set.empty else SlackAuthScope.integrationSetup
     case TurnLibraryPush(_, isBroken: Boolean, turnOn: Boolean) => if (turnOn && isBroken) SlackAuthScope.brokenPush else Set.empty
     case TurnChannelIngestion(_, turnOn) => if (turnOn) SlackAuthScope.ingest else Set.empty
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
