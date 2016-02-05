@@ -171,7 +171,7 @@ class SlackInfoCommanderImpl @Inject() (
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
             val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val action = TurnOnChannelIngestion(fs.id.get.id)
+            val action = TurnChannelIngestion(fs.id.get.id, turnOn = true)
             val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
             else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
@@ -184,7 +184,7 @@ class SlackInfoCommanderImpl @Inject() (
           val authLink = {
             // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
             val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val action = TurnOnLibraryPush(ts.id.get.id)
+            val action = TurnLibraryPush(ts.id.get.id, isBroken = false, turnOn = true)
             val missingScopes = action.getMissingScopes(existingScopes)
             if (missingScopes.isEmpty) None
             else Some(slackStateCommander.getAuthLink(action, Some(ts.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)

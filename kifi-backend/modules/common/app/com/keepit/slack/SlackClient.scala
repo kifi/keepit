@@ -128,8 +128,13 @@ class SlackClientImpl(
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
     val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
-    searchMessages(token, searchRequest).map { response =>
-      response.messages.matches.headOption.map(_.channel.id)
+    searchMessages(token, searchRequest).flatMap { response =>
+      response.messages.matches.headOption.map(_.channel.id) match {
+        case Some(channelId) => Future.successful(Some(channelId))
+        case None => getChannels(token, excludeArchived = false).map { channels =>
+          channels.collectFirst { case channel if channel.channelName == channelName => channel.channelId }
+        }
+      }
     }
   }
 

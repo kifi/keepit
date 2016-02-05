@@ -78,15 +78,15 @@ class SlackAuthenticationCommanderImpl @Inject() (
         case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
-      case TurnOnLibraryPush(integrationId) => incomingWebhook match {
+      case TurnLibraryPush(integrationId, _, turnOn) => incomingWebhook match {
         case Some(webhook) =>
-          val libraryId = slackIntegrationCommander.turnOnLibraryPush(Id(integrationId), webhook, slackTeamId, slackUserId)
+          val libraryId = slackIntegrationCommander.turnLibraryPush(Id(integrationId), slackTeamId, slackUserId, turnOn)
           Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
         case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
-      case TurnOnChannelIngestion(integrationId) =>
-        val libraryId = slackIntegrationCommander.turnOnChannelIngestion(Id(integrationId), slackTeamId, slackUserId)
+      case TurnChannelIngestion(integrationId, turnOn) =>
+        val libraryId = slackIntegrationCommander.turnChannelIngestion(Id(integrationId), slackTeamId, slackUserId, turnOn)
         Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
 
       case AddSlackTeam(andThen) => slackTeamCommander.addSlackTeam(userId, slackTeamId).flatMap {
