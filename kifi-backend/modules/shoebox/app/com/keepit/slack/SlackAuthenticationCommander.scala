@@ -22,7 +22,7 @@ object SlackResponse {
 
 @ImplementedBy(classOf[SlackAuthenticationCommanderImpl])
 trait SlackAuthenticationCommander {
-  def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[SlackIncomingWebhook])(implicit context: HeimdalContext): Future[SlackResponse]
+  def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[Id[SlackIncomingWebhookInfo]])(implicit context: HeimdalContext): Future[SlackResponse]
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse]
 }
 
@@ -65,25 +65,22 @@ class SlackAuthenticationCommanderImpl @Inject() (
     SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
-  def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[SlackIncomingWebhook])(implicit context: HeimdalContext): Future[SlackResponse] = {
-    def continueWith(nextAction: SlackAuthenticatedAction): Future[SlackResponse] = processAuthorizedAction(userId, slackTeamId, slackUserId, nextAction, incomingWebhook)
+  def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhookId: Option[Id[SlackIncomingWebhookInfo]])(implicit context: HeimdalContext): Future[SlackResponse] = {
+    def continueWith(nextAction: SlackAuthenticatedAction): Future[SlackResponse] = processAuthorizedAction(userId, slackTeamId, slackUserId, nextAction, incomingWebhookId)
 
     action match {
-      case SetupLibraryIntegrations(libId) => incomingWebhook match {
-        case Some(webhook) =>
-          Future.fromTry(slackIntegrationCommander.setupIntegrations(userId, libId, webhook, slackTeamId, slackUserId)).imap { team =>
+      case SetupLibraryIntegrations(libId, cachedWebhookId) => (incomingWebhookId orElse cachedWebhookId.map(Id[SlackIncomingWebhookInfo](_))) match {
+        case Some(webhookId) =>
+          Future.fromTry(slackIntegrationCommander.setupIntegrations(userId, libId, webhookId)).imap { team =>
             redirectToOrganizationIntegrations(team.organizationId.get)
           }
 
         case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
       }
 
-      case TurnLibraryPush(integrationId, _, turnOn) => incomingWebhook match {
-        case Some(webhook) =>
-          val libraryId = slackIntegrationCommander.turnLibraryPush(Id(integrationId), slackTeamId, slackUserId, turnOn)
-          Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
-        case _ => Future.failed(SlackActionFail.MissingWebhook(userId))
-      }
+      case TurnLibraryPush(integrationId, _, turnOn) =>
+        val libraryId = slackIntegrationCommander.turnLibraryPush(Id(integrationId), slackTeamId, slackUserId, turnOn)
+        Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
 
       case TurnChannelIngestion(integrationId, turnOn) =>
         val libraryId = slackIntegrationCommander.turnChannelIngestion(Id(integrationId), slackTeamId, slackUserId, turnOn)
@@ -93,7 +90,10 @@ class SlackAuthenticationCommanderImpl @Inject() (
         case (slackTeam, isNewOrg) =>
           slackTeam.organizationId match {
             case None => {
-              val slackState = andThen.map(slackStateCommander.setNewSlackState)
+              val slackState = andThen.map {
+                case SetupLibraryIntegrations(libraryId, _) if incomingWebhookId.isDefined => SetupLibraryIntegrations(libraryId, incomingWebhookId.map(_.id))
+                case nextAction => nextAction
+              }.map(slackStateCommander.setNewSlackState)
               val slackStateParam = slackState.map(state => s"&slackState=${state.state}") getOrElse ""
               val redirectUrl = s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}$slackStateParam"
               Future.successful(SlackResponse.RedirectClient(redirectUrl))
