@@ -1,0 +1,17 @@
+@import com.keepit.commanders._
+
+@(orgs: Iterable[OrganizationStatisticsMin])
+
+<ul>
+  @for( orgStats <- orgs ) {
+  <li>
+    <span style="margin:2px">
+    <a data-hover="tooltip" title="@orgStats.org.description+"
+       class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgStats.org.id.get)">
+      @orgStats.org.name m:@{orgStats.memberCount},l:@{orgStats.libCount},s:@{orgStats.slackLibs}
+    </a> <a href="https://www.kifi.com/@{orgStats.org.handle.value}"><span style="font-family:'Segoe UI Symbol';color:black;font-size:10px;">♡</span></a>
+    </span>
+  </li>
+  }
+</ul>
+

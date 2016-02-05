@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
-import com.keepit.classify.{ DomainRepo, NormalizedHostname }
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -41,8 +41,14 @@ case class UserStatistics(
   librariesCreated: Int,
   librariesFollowed: Int,
   dateLastManualKeep: Option[DateTime],
-  orgs: Seq[Organization],
-  orgCandidates: Seq[Organization])
+  orgs: Seq[OrganizationStatisticsMin],
+  orgCandidates: Seq[OrganizationStatisticsMin])
+
+case class OrganizationStatisticsMin(
+  org: Organization,
+  memberCount: Int,
+  libCount: Int,
+  slackLibs: Int)
 
 case class OrganizationStatisticsOverview(
   org: Organization,
@@ -158,7 +164,9 @@ class UserStatisticsCommander @Inject() (
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
     val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+    val orgsStats = orgs.map(o => organizationStatisticsMin(o))
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+    val orgCandidatesStats = orgCandidates.map(o => organizationStatisticsMin(o))
     val slackMemberships = slackTeamMembershipRepo.getByUserId(user.id.get)
 
     UserStatistics(
@@ -175,8 +183,8 @@ class UserStatisticsCommander @Inject() (
       librariesCreated,
       librariesFollowed,
       latestManualKeepTime,
-      orgs,
-      orgCandidates
+      orgsStats,
+      orgCandidatesStats
     )
   }
 
@@ -347,6 +355,23 @@ class UserStatisticsCommander @Inject() (
       domains = domains,
       internalMemberChatStats = internalMemberChatStats,
       allMemberChatStats = allMemberChatStats
+    )
+  }
+
+  def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {
+    val orgId = org.id.get
+    val (mamberCount, libCount, slackLibs) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.countByOrgId(orgId)
+      val libraries = libraryRepo.countOrganizationLibraries(orgId)
+      val slack = libraryRepo.countSlackOrganizationLibraries(orgId)
+      (members, libraries, slack)
+    }
+
+    OrganizationStatisticsMin(
+      org = org,
+      memberCount = mamberCount,
+      libCount = libCount,
+      slackLibs = slackLibs
     )
   }
 
