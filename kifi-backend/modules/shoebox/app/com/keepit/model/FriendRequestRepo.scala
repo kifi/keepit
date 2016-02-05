@@ -28,7 +28,7 @@ trait FriendRequestRepo extends Repo[FriendRequest] {
 
 case class FriendRequestCountKey(userId: Id[User]) extends Key[Int] {
   val namespace = "friend_request_count"
-  def toKey(): String = userId.id.toString
+  def toKey(): String = userId.toString
 }
 
 class FriendRequestCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)

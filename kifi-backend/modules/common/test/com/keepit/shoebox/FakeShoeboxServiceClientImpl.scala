@@ -6,7 +6,6 @@ import com.google.inject.util.Providers
 import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db._
-import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
@@ -184,24 +183,24 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    val edges = connections.flatMap { case (u, fs) => fs.flatMap { f => Array((u, f), (f, u)) } }.toSet
-    edges.groupBy(_._1).foreach { case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map { _._2 } }
+    val edges = connections.map { case (u, fs) => fs.map { f => Array((u, f), (f, u)) }.flatten }.flatten.toSet
+    edges.groupBy(_._1).map { case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map { _._2 } }
 
-    val pairs = connections.flatMap { case (uid, friends) => friends.map { f => (uid, f) } }.toSet
-    pairs.foreach {
+    val pairs = connections.map { case (uid, friends) => friends.map { f => (uid, f) } }.flatten.toSet
+    pairs.map {
       case (u1, u2) =>
         getConnection(u1, u2).foreach { c =>
-          allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum())
+          allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum)
         }
     }
   }
 
   def clearUserConnections(userIds: Id[User]*) {
-    userIds.foreach { id =>
+    userIds.map { id =>
       if (allUserConnections.get(id).isDefined) {
         allUserConnections(id).foreach { friend =>
           getConnection(id, friend).foreach { conn =>
-            allConnections(conn.id.get) = conn.copy(state = UserConnectionStates.INACTIVE, seq = nextUserConnSeqNum())
+            allConnections(conn.id.get) = conn.copy(state = UserConnectionStates.INACTIVE, seq = nextUserConnSeqNum)
             allUserConnections(friend) = allUserConnections.getOrElse(friend, Set.empty) - id
           }
         }
@@ -211,9 +210,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def excludeFriend(userId: Id[User], friendId: Id[User]) {
-    allSearchFriends.values.find(x => x.userId == userId && x.friendId == friendId) match {
-      case Some(r) if r.state != SearchFriendStates.EXCLUDED => allSearchFriends(r.id.get) = r.copy(state = SearchFriendStates.EXCLUDED, seq = nextSearchFriendSeqNum())
-      case None => val id = nextSearchFriendId; allSearchFriends(id) = SearchFriend(id = Some(id), userId = userId, friendId = friendId, seq = nextSearchFriendSeqNum())
+    allSearchFriends.values.filter(x => x.userId == userId && x.friendId == friendId).headOption match {
+      case Some(r) if (r.state != SearchFriendStates.EXCLUDED) => allSearchFriends(r.id.get) = r.copy(state = SearchFriendStates.EXCLUDED, seq = nextSearchFriendSeqNum)
+      case None => val id = nextSearchFriendId; allSearchFriends(id) = SearchFriend(id = Some(id), userId = userId, friendId = friendId, seq = nextSearchFriendSeqNum)
     }
   }
 
@@ -225,7 +224,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         if (!uri.shouldHaveContent) { allNormalizedURIs += (uri.id.get -> uri.withContentRequest(true)) }
       }
       allBookmarks(id) = updatedBookmark
-      allUserBookmarks(b.userId.get) = allUserBookmarks.getOrElse(b.userId.get, Set.empty) + id
+      allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
     }
   }
@@ -253,7 +252,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         val url = uriToUrl(uri.id.get)
         Keep(
           title = optionalTitle orElse uri.title,
-          userId = Some(user.id.get),
+          userId = user.id.get,
           uriId = uri.id.get,
           url = url.url,
           source = source,
@@ -292,7 +291,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def saveFriendRequests(requests: (Id[User], Id[User])*) = {
-    requests.foreach { request =>
+    requests.map { request =>
       allUserFriendRequests(request._1) = allUserFriendRequests.getOrElse(request._1, Nil) :+ request._2
     }
   }
@@ -414,13 +413,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
     val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)
-    val fewerUris = if (fetchSize >= 0) uris.take(fetchSize) else uris
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
   def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
     val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && x.state == NormalizedURIStates.ACTIVE && x.shouldHaveContent).toSeq.sortBy(_.seq)
-    val fewerUris = if (fetchSize >= 0) uris.take(fetchSize) else uris
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
@@ -455,7 +454,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
-    val id = experiment.id.getOrElse(nextSearchExperimentId())
+    val id = experiment.id.getOrElse(nextSearchExperimentId)
     val experimentWithId = experiment.withId(id)
     allSearchExperiments(experimentWithId.id.get) = experimentWithId
 
@@ -623,8 +622,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
       PersonalKeep(
         keep.externalId,
-        keep.userId.safeContains(userId),
-        removable = true,
+        keep.userId == userId,
+        true,
         keep.visibility,
         keep.libraryId.map(Library.publicId)
       )
@@ -674,7 +673,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
     ids.map(id => id -> CrossServiceKeep(
       id = id,
-      owner = Some(Id[User](1)),
+      owner = Id[User](1),
       users = Set(Id[User](1)),
       libraries = Set(Id[Library](1)),
       url = "http://www.kifi.com",
@@ -696,7 +695,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(
       id = nextBookmarkId(),
-      owner = Some(creator),
+      owner = creator,
       users = users,
       libraries = Set.empty,
       url = url,

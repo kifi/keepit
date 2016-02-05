@@ -404,7 +404,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
 
         db.readWrite { implicit rw =>
-          (keeps1 ++ keeps2 ++ keeps3 ++ keeps4).groupBy(k => (k.userId.get, k.uriId)).keySet.foreach {
+          (keeps1 ++ keeps2 ++ keeps3 ++ keeps4).groupBy(k => (k.userId, k.uriId)).keySet.foreach {
             case (userId, uriId) =>
               userBookmarkClicksRepo.save(UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0))
           }

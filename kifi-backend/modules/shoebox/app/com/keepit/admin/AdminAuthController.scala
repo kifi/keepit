@@ -20,7 +20,7 @@ class AdminAuthController @Inject() (
     extends AdminUserActions {
 
   def unimpersonate = AdminUserAction { request =>
-    Ok(Json.obj("userId" -> request.userId)).discardingCookies(impersonateCookie.discard)
+    Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(impersonateCookie.discard)
   }
 
   def impersonate(id: Id[User]) = AdminUserAction { request =>

@@ -104,22 +104,18 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[RawSourceAttribut
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
-    doc.add(buildKeywordField(uriField, keep.uriId.id.toString))
-    keep.userId.foreach { userId =>
-      doc.add(buildKeywordField(userField, userId.id.toString))
-    }
+    doc.add(buildKeywordField(uriField, keep.uriId.toString))
+    doc.add(buildKeywordField(userField, keep.userId.toString))
 
     if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
-      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString))
-      keep.userId.foreach { userId =>
-        doc.add(buildKeywordField(userDiscoverableField, userId.id.toString))
-      }
+      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
+      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
     }
 
     keep.organizationId.foreach { orgId =>
-      doc.add(buildKeywordField(orgField, orgId.id.toString))
+      doc.add(buildKeywordField(orgField, orgId.toString))
       if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
-        doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
+        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
       }
     }
 
@@ -128,7 +124,7 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[RawSourceAttribut
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
-    doc.add(buildIdValueField(userIdField, keep.userId.getOrElse(Id[User](-1))))
+    doc.add(buildIdValueField(userIdField, keep.userId))
     doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
     doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 

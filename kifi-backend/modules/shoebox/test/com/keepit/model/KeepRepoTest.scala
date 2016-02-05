@@ -23,7 +23,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             uriId = Id[NormalizedURI](1),
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
-            userId = Some(Id[User](3)),
+            userId = Id[User](3),
             source = KeepSource.keeper,
             libraryId = Some(Id[Library](4)),
             connections = KeepConnections(Set(Id(4)), Set(Id(3)))

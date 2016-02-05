@@ -21,8 +21,8 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         val time = new DateTime(2014, 1, 30, 17, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
         db.readWrite { implicit s =>
-          keepRepo.save(CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
-          keepRepo.save(CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
+          keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
+          keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.2f, 0.8f, 0f))), state = URILDATopicStates.ACTIVE))
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
         }
@@ -55,8 +55,8 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
       val time = new DateTime(2014, 1, 30, 17, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
       db.readWrite { implicit s =>
-        keepRepo.save(CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
-        keepRepo.save(CortexKeep(keptAt = time, userId = Some(Id[User](1)), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
+        keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
+        keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
         uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.2f, 0.8f, 0f))), state = URILDATopicStates.ACTIVE))
         uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
       }

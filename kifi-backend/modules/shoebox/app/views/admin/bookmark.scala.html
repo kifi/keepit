@@ -1,4 +1,4 @@
-@(user: Option[User], bookmark: Keep, normalizedUri: NormalizedURI, imgUrl:String, screenshotUrl: String, keywords: com.keepit.commanders.KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, imgUrl:String, screenshotUrl: String, keywords: com.keepit.commanders.KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import com.keepit.controllers.admin.routes
 
@@ -23,7 +23,7 @@
         <th>Library</th><td>@libraryOpt.map(lib => adminHelper.libraryDisplay(lib))</td>
       </tr>
       <tr>
-        <th>Saved by</th><td>@user.foreach(adminHelper.userDisplay(_))</td>
+        <th>Saved by</th><td>@adminHelper.userDisplay(user)</td>
       </tr>
       <tr>
         <th>Creation time</th><td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>

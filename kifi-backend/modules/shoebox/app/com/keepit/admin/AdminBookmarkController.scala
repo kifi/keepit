@@ -55,7 +55,7 @@ class AdminBookmarksController @Inject() (
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
-      val user = bookmark.userId.map(userRepo.get)
+      val user = userRepo.get(bookmark.userId)
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
       val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
@@ -111,7 +111,7 @@ class AdminBookmarksController @Inject() (
         val usersFuture = Future {
           timing("load user") {
             db.readOnlyMaster { implicit s =>
-              bookmarks flatMap (_.userId) map { id =>
+              bookmarks map (_.userId) map { id =>
                 userMap.getOrElseUpdate(id, userRepo.get(id))
               }
             }
@@ -256,7 +256,7 @@ class AdminBookmarksController @Inject() (
       } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
       (userIds ++ rangeIds).flatMap { u =>
         keepRepo.getByUser(u)
-      }.sortBy(_.userId).map(_.id.get)
+      }.sortBy(_.userId.id).map(_.id.get)
     }
 
     keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
