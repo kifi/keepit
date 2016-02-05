@@ -1,0 +1,17 @@
+.kf-logged-in-nav-header
+  position: fixed
+  top: 0
+  width: calc(100vw - 220px)
+  height: appHeaderHeight2
+  background-color: pageHeaderColor
+  z-index: 500
+  user-select: none
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    height: appHeaderHeight1
+
+  [kifi-pane-parent] &
+    transition: width .25s ease-in
+
+  [kifi-with-pane] &
+    width: calc(100% - 322px)

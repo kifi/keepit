@@ -12,6 +12,8 @@ angular.module('kifi')
         scope.me = profileService.me;
         scope.libraries = [];
         scope.orgs = scope.me.orgs;
+        // TODO: REMOVE THIS HACK
+        document.body.style.overflow = 'hidden';
 
         var INITIAL_PAGE_SIZE = 3;
         var PAGE_SIZE = 10;
