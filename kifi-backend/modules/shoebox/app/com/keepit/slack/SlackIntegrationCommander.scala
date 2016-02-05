@@ -232,7 +232,7 @@ class SlackIntegrationCommanderImpl @Inject() (
       case (userId, teamId, channelName) =>
         log.info(s"Fetching channelId for Slack channel $channelName via user $userId in team $teamId")
         tokensWithScopesByUserIdAndTeamId(userId, teamId) match {
-          case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) => slackClient.getChannelId(token, channelName).map {
+          case Some((token, scopes)) if scopes intersect Set(SlackAuthScope.SearchRead, SlackAuthScope.ChannelsRead) nonEmpty => slackClient.getChannelId(token, channelName).map {
             case Some(channelId) =>
               log.info(s"Found channelId $channelId for Slack channel $channelName via user $userId in team $teamId")
               db.readWrite { implicit session =>

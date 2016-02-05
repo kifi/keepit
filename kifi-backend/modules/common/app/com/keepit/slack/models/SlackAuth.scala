@@ -41,7 +41,7 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
-  val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot)
+  val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot) + ChannelsRead // adding ChannelsReads *temporarily* as an attempt to backfill some of the missing channel ids
   val newPush: Set[SlackAuthScope] = Set(Commands, IncomingWebhook)
   val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
   val integrationSetup = newPush
