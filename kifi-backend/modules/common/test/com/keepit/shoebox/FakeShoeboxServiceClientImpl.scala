@@ -224,9 +224,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         if (!uri.shouldHaveContent) { allNormalizedURIs += (uri.id.get -> uri.withContentRequest(true)) }
       }
       allBookmarks(id) = updatedBookmark
-      b.userId.foreach { userId =>
-        allUserBookmarks(userId) = allUserBookmarks.getOrElse(userId, Set.empty) + id
-      }
+      allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
     }
   }
@@ -254,7 +252,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         val url = uriToUrl(uri.id.get)
         Keep(
           title = optionalTitle orElse uri.title,
-          userId = Some(user.id.get),
+          userId = user.id.get,
           uriId = uri.id.get,
           url = url.url,
           source = source,
@@ -675,7 +673,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
     ids.map(id => id -> CrossServiceKeep(
       id = id,
-      owner = Some(Id[User](1)),
+      owner = Id[User](1),
       users = Set(Id[User](1)),
       libraries = Set(Id[Library](1)),
       url = "http://www.kifi.com",
@@ -697,7 +695,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(
       id = nextBookmarkId(),
-      owner = Some(creator),
+      owner = creator,
       users = users,
       libraries = Set.empty,
       url = url,

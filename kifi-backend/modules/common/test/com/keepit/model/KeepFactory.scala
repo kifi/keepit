@@ -19,7 +19,7 @@ object KeepFactory {
       visibility = LibraryVisibility.SECRET,
       title = None,
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
-      userId = Some(userId),
+      userId = userId,
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
@@ -32,8 +32,8 @@ object KeepFactory {
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
   case class PartialKeep private[KeepFactory] (keep: Keep) {
-    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
-    def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
+    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = id, connections = keep.connections.withUsers(Set(id))))
+    def withUser(user: User) = this.copy(keep = keep.copy(userId = user.id.get, connections = keep.connections.withUsers(Set(user.id.get))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
     def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
     def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))

@@ -33,7 +33,7 @@ class CortexKeepRepoImpl @Inject() (
   class CortexKeepTable(tag: Tag) extends RepoTable[CortexKeep](db, tag, "cortex_keep") with SeqNumberColumn[CortexKeep] {
     def keptAt = column[DateTime]("kept_at", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
+    def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def isPrivate = column[Boolean]("is_private", O.NotNull)
     def source = column[KeepSource]("source", O.NotNull)

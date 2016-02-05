@@ -35,13 +35,13 @@ class LibraryNewKeepsCommander @Inject() (
   def notifyFollowersOfNewKeeps(library: Library, keep: Keep) = {
     val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
       val relevantFollowers: Set[Id[User]] = libraryMembershipRepo.getWithLibraryId(library.id.get).filter(_.subscribedToUpdates).map(_.userId).toSet
-      val usersById = userRepo.getUsers(keep.userId.toSeq :+ library.ownerId)
+      val usersById = userRepo.getUsers(keep.userId :: library.ownerId :: Nil)
       (relevantFollowers, usersById)
     }
 
-    val toBeNotified = relevantFollowers -- keep.userId
+    val toBeNotified = relevantFollowers - keep.userId
     if (toBeNotified.nonEmpty) {
-      val keeperOpt = keep.userId.flatMap(usersById.get)
+      val keeper = usersById(keep.userId)
       val sourceOpt = db.readOnlyReplica { implicit s =>
         keepSourceCommander.getSourceAttributionForKeeps(Set(keep.id.get)).values.headOption
       }
@@ -62,11 +62,7 @@ class LibraryNewKeepsCommander @Inject() (
             val name = BasicAuthor.fromAttribution(attr).displayName
             s"$name added to #${attr.message.channel.name.value}" + titleString
         } getOrElse {
-          val keepAdded = keeperOpt match {
-            case Some(bu) => s"${bu.fullName} kept to"
-            case None => "A keep was added to"
-          }
-          s"$keepAdded to $libTrunc" + titleString
+          s"${keeper.fullName} kept to $libTrunc" + titleString
         }
       }
 
@@ -75,19 +71,17 @@ class LibraryNewKeepsCommander @Inject() (
           userId,
           message = message,
           libraryId = library.id.get,
-          libraryUrl = db.readOnlyMaster { implicit s => libPathCommander.libraryPage(library).absolute },
+          libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
           pushNotificationExperiment = PushNotificationExperiment.Experiment1,
           category = LibraryPushNotificationCategory.LibraryChanged
         )
-        keeperOpt.map { keeper =>
-          elizaClient.sendNotificationEvent(LibraryNewKeep(
-            Recipient(userId),
-            currentDateTime,
-            keeper.id.get,
-            keep.id.get,
-            library.id.get
-          ))
-        }.getOrElse(Future.successful(Unit))
+        elizaClient.sendNotificationEvent(LibraryNewKeep(
+          Recipient(userId),
+          currentDateTime,
+          keeper.id.get,
+          keep.id.get,
+          library.id.get
+        ))
       }
     } else Future.successful((): Unit)
   }

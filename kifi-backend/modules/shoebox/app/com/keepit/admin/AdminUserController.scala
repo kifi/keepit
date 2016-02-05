@@ -172,34 +172,31 @@ class AdminUserController @Inject() (
   }
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminUserPage { implicit request =>
-    request.request.body.asFormUrlEncoded.map { _.map(r => r._1 -> r._2.head) }.map { map =>
-      val collectionNames = map.getOrElse("collections", "").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
-      db.readWrite { implicit s =>
+    request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
+      val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
+      val collections = db.readWrite { implicit s =>
         val bookmark = keepRepo.get(id)
-        bookmark.userId match {
-          case None => BadRequest(Json.obj("err" -> "keep has no user"))
-          case Some(userId) =>
-            val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
-            val colls = collectionNames.map { name =>
-              val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
-                case Some(coll) if coll.isActive => coll
-                case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
-                case None => collectionRepo.save(Collection(userId = userId, name = name))
-              }
-              existing.get(collection.id.get) match {
-                case Some(ktc) if ktc.isActive => ktc
-                case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-                case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
-              }
-              collection
-            }
-            (existing -- colls.map(_.id.get)).values.foreach { ktc =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-            }
-
-            Ok(Json.obj("collections" -> colls.map(_.name)))
+        val userId = bookmark.userId
+        val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
+        val colls = collectionNames.map { name =>
+          val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
+            case Some(coll) if coll.isActive => coll
+            case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
+            case None => collectionRepo.save(Collection(userId = userId, name = name))
+          }
+          existing.get(collection.id.get) match {
+            case Some(ktc) if ktc.isActive => ktc
+            case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+            case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
+          }
+          collection
         }
+        (existing -- colls.map(_.id.get)).values.foreach { ktc =>
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        }
+        colls.map(_.name)
       }
+      Ok(Json.obj("collections" -> collections))
     } getOrElse BadRequest
   }
 
