@@ -84,14 +84,22 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
         passwordReset.id must beSome
 
+        // SlackTeam
+        val slackTeamRepo = inject[SlackTeamRepo]
+        val slackTeam = db.readWrite { implicit session =>
+          val saved = slackTeamRepo.save(SlackTeam(slackTeamId = SlackTeamId("TFAKE"), slackTeamName = SlackTeamName("Fake"), organizationId = Some(org.id.get), generalChannelId = None))
+          slackTeamRepo.getBySlackTeamId(saved.slackTeamId) must beSome(saved)
+          saved
+        }
+
         // SlackTeamMembershipRepo
         val slackTeamMembershipRepo = inject[SlackTeamMembershipRepo]
         val slackAccount = SlackTeamMembershipInternRequest(
           Some(user.id.get),
           SlackUserId("UFAKE"),
           SlackUsername("@fake"),
-          SlackTeamId("TFAKE"),
-          SlackTeamName("Fake"),
+          slackTeam.slackTeamId,
+          slackTeam.slackTeamName,
           Some(SlackAccessToken("fake_token")),
           Set(SlackAuthScope.SearchRead),
           slackUser = None
@@ -130,13 +138,6 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         db.readWrite { implicit session =>
           val saved = slackChannelToLibraryRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
           slackChannelToLibraryRepo.getBySlackTeamChannelAndLibrary(integrationRequest.slackTeamId, integrationRequest.slackChannelName, integrationRequest.libraryId) must beSome(saved)
-        }
-
-        // SlackTeam
-        val slackTeamRepo = inject[SlackTeamRepo]
-        db.readWrite { implicit session =>
-          val saved = slackTeamRepo.save(SlackTeam(slackTeamId = slackAccount.slackTeamId, slackTeamName = slackAccount.slackTeamName, organizationId = Some(org.id.get), generalChannelId = None))
-          slackTeamRepo.getBySlackTeamId(integrationRequest.slackTeamId) must beSome(saved)
         }
       }
     }

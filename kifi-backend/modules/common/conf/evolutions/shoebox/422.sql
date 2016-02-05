@@ -19,8 +19,11 @@ CREATE TABLE slack_team (
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_u_slack_team_id (slack_team_id),
   UNIQUE KEY slack_team_u_organization_id (organization_id),
-  CONSTRAINT slack_team_f_organization FOREIGN KEY organization_id REFERENCES organization(id)
+  CONSTRAINT slack_team_f_organization FOREIGN KEY (organization_id) REFERENCES organization(id)
 );
+
+ALTER TABLE slack_team_membership ADD CONSTRAINT slack_team_membership_f_slack_team FOREIGN KEY (slack_team_id) REFERENCES slack_team(slack_team_id);
+
 insert into evolutions(name, description) values('422.sql', 'create table slack_team');
 
 # --- !Downs
