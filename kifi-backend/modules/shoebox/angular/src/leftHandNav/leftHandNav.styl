@@ -1,40 +1,3 @@
-
-
-//
-//::-webkit-scrollbar
-//  width: 8px
-//  height: 8px
-//
-//::-webkit-scrollbar-button:vertical
-//  border-width: 0px
-//
-//
-//
-//::-webkit-scrollbar-button:vertical:increment
-//  border-width: 0px
-//
-//::-webkit-scrollbar-button:vertical:decrement
-//  border-width: 0px
-//
-//::-webkit-scrollbar-track:vertical
-//  border-width: 0px
-//
-//::-webkit-scrollbar-track-piece:vertical:start
-//  border-width: 0px
-//
-//::-webkit-scrollbar-track-piece:vertical:end
-//  border-width: 0px
-//
-//
-//
-//::-webkit-scrollbar-thumb:vertical
-//  height: 50px
-//  background-color: red
-//  -webkit-border-radius: 8px
-//  -moz-border-radius: 8px
-//  border-radius: 8px
-
-
 leftHandNavWidth = 230px
 
 .kf-left-hand-nav
@@ -84,23 +47,18 @@ leftHandNavWidth = 230px
   padding-bottom: 5px
   padding-left: 10px
 
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
+  &::-webkit-scrollbar
+    width: 8px
 
-  &::-webkit-scrollbar-thumb {
-    border-radius: 4px;
+  &::-webkit-scrollbar-thumb
+    border-radius: 4px
     background-color: alpha(black, 0.0)
-    //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
-  }
 
-  &:hover {
-    &::-webkit-scrollbar-thumb {
+
+  &:hover
+    &::-webkit-scrollbar-thumb
       border-radius: 4px;
       background-color: alpha(black, .5)
-      //-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
-    }
-  }
 
   .kf-left-hand-nav-user-container
     flex-shrink: 0
@@ -131,6 +89,11 @@ leftHandNavWidth = 230px
   .kf-left-hand-nav-libraries-container
     margin-top: 6px
     padding-left: 10px
+
+    .kf-left-hand-nav-view-more-container
+      height: 12px
+
+
 
     .kf-left-hand-nav-view-more-libraries
       padding-left: 10px
@@ -173,17 +136,17 @@ leftHandNavWidth = 230px
           color: #FFF
           cursor: pointer
           
-.left-hand-nav-content-spinner-container
+.kf-left-hand-nav-content-spinner-container
   display: flex
   width: 100%
   justify-content: center
 
-.left-hand-nav-spinner
+.kf-left-hand-nav-spinner
   vertical-align: center
   text-align: left
   display: inline-block
 
-.left-hand-nav-spinner > div
+.kf-left-hand-nav-spinner > div
   width: 8px
   height: 8px
   margin-left: 2px
@@ -195,11 +158,11 @@ leftHandNavWidth = 230px
   -webkit-animation: sk-bouncedelay 1.4s infinite ease-in-out both
   animation: sk-bouncedelay 1.4s infinite ease-in-out both
 
-.left-hand-nav-spinner .bounce1
+.kf-left-hand-nav-spinner .bounce1
   -webkit-animation-delay: -0.32s
   animation-delay: -0.32s
 
-.left-hand-nav-spinner .bounce2
+.kf-left-hand-nav-spinner .bounce2
   -webkit-animation-delay: -0.16s
   animation-delay: -0.16s
 
@@ -216,3 +179,6 @@ leftHandNavWidth = 230px
   40%
     -webkit-transform: scale(1.0)
     transform: scale(1.0)
+
+.kf-left-hand-nav-spinner-scale
+  transform: scale(.5)
