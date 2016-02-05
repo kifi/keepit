@@ -55,7 +55,7 @@ object KeepFactoryHelper {
         )
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
       }
-      finalKeep.userId.foreach { userId =>
+      finalKeep.connections.users.foreach { userId =>
         val ktu = KeepToUser(
           keepId = finalKeep.id.get,
           userId = userId,

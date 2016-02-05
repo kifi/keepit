@@ -6,6 +6,7 @@ import com.keepit.search.index.article.{ ShardedArticleIndexer, ArticleRecord }
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
+import com.keepit.common.core.optionExtensionOps
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.search.SearchTestHelper
@@ -89,7 +90,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
-        val originalBookmark = bookmarks.find(_.userId == userId).get
+        val originalBookmark = bookmarks.find(_.userId.safeContains(userId)).get
         val sourceShard = activeShards.local.find(_.contains(originalBookmark.uriId)).get
         val targetShard = activeShards.local.find(!_.contains(originalBookmark.uriId)).get
         val targetUri = uris.filter(u => targetShard.contains(u.id.get)).find(u => !bookmarks.exists(k => k.uriId == u.id.get)).get

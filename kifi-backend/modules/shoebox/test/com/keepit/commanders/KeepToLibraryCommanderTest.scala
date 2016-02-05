@@ -33,7 +33,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             val ktl = ktlCommander.internKeepInLibrary(keep, otherLib, Some(user.id.get))
 
             ktl.keepId === keep.id.get
-            ktl.addedBy === user.id.get
+            ktl.addedBy === Some(user.id.get)
             ktl.libraryId === otherLib.id.get
           }
           1 === 1

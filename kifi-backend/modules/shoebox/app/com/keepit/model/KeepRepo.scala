@@ -677,7 +677,7 @@ class KeepRepoImpl @Inject() (
     val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
     val keepsById = getByIds(keepIds.toSet)
     keepsAndFirstAddedAt.map { case (keepId, firstAddedAt) => keepsById(keepId) -> firstAddedAt }
-      .filter { case (keep, _) => !shouldFilterByUser || keep.userId == userId }
+      .filter { case (keep, _) => !shouldFilterByUser || keep.userId.contains(userId) }
   }
 
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)] = {
@@ -740,7 +740,7 @@ class KeepRepoImpl @Inject() (
     val keepIds = keepsAndLastActivityAt.map { case (keepId, _) => keepId }
     val keepsById = getByIds(keepIds.toSet)
     keepsAndLastActivityAt.map { case (keepId, lastActivityAt) => keepsById(keepId) -> lastActivityAt }
-      .filter { case (keep, _) => !shouldFilterByUser || keep.userId == userId }
+      .filter { case (keep, _) => !shouldFilterByUser || keep.userId.contains(userId) }
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
