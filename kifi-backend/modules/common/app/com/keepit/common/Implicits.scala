@@ -105,6 +105,9 @@ final class OptionExtensionOpts[A](x: Option[A]) {
     case (Some(v1), Some(v2)) => v1 == v2
     case _ => false
   }
+
+  // Does not have the liberal [A1 >: A] type bound, which lets you do really dumb things
+  def safeContains(y: A): Boolean = x.contains(y)
 }
 
 final class JsObjectExtensionOps(x: JsObject) {
