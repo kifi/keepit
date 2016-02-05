@@ -2,10 +2,10 @@
   <div kf-delighted-survey hide="hideDelightedSurvey" ng-if="showDelightedSurvey"></div>
   <div class="kf-home-items" ui-view></div>
   <aside class="kf-home-sidebar kf-side-pane">
-    <div kf-profile-widget></div>
+    <div kf-profile-widget ng-if="!$root.navBarEnabled"></div>
     <div kf-feature-upsell></div>
     <div kf-user-checklist></div>
-    <div kf-goodies></div>
+    <div kf-goodies ng-if="!$root.navBarEnabled"></div>
     <div kf-people-you-may-know></div>
   </aside>
 </div>

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$rootElement', '$rootScope', '$document', 'profileService', 'userProfileActionService', 'orgProfileService',
-  function ($rootElement, $rootScope, $document, profileService, userProfileActionService, orgProfileService) {
+  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService',
+  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService) {
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
@@ -12,6 +12,8 @@ angular.module('kifi')
         scope.me = profileService.me;
         scope.libraries = [];
         scope.orgs = scope.me.orgs;
+        // TODO: REMOVE THIS HACK
+        document.body.style.overflow = 'hidden';
 
         var INITIAL_PAGE_SIZE = 3;
         var PAGE_SIZE = 10;
@@ -37,11 +39,12 @@ angular.module('kifi')
               });
         };
 
-        scope.fetchLibraries(0, PAGE_SIZE);
+        var promises = [];
+        promises.push(scope.fetchLibraries(0, PAGE_SIZE));
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
-          orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
+          return orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
             .then(function (data) {
               org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);
@@ -50,15 +53,27 @@ angular.module('kifi')
         };
 
         scope.orgs.forEach(function (org) {
-           scope.fetchOrgLibraries(org, 0, INITIAL_PAGE_SIZE);
+           promises.push(scope.fetchOrgLibraries(org, 0, INITIAL_PAGE_SIZE));
         });
 
+        scope.showUserAndOrgContent = false;
+        $q.all(promises).then(function() {
+          scope.showUserAndOrgContent = true;
+        });
+
+        scope.fetchingUserLibraries = false;
         scope.viewMoreOwnLibraries = function () {
-          scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE);
+          scope.fetchingUserLibraries = true;
+          scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE).then(function() {
+            scope.fetchingUserLibraries = false;
+          });
         };
 
         scope.viewMoreOrgLibraries = function (org) {
-          scope.fetchOrgLibraries(org, org.libraries.length, PAGE_SIZE);
+          org.fetchingLibraries = true;
+          scope.fetchOrgLibraries(org, org.libraries.length, PAGE_SIZE).then(function() {
+            org.fetchingLibraries = false;
+          });
         };
       }
     };

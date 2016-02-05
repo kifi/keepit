@@ -1,0 +1,26 @@
+.kf-logged-in-nav-header
+  position: fixed
+  top: 0
+  width: 'calc(100vw - %s)' % leftHandNavWidth
+  height: appHeaderHeight2
+  background-color: pageHeaderColor
+  z-index: 500
+  user-select: none
+  box-shadow: 0px 4px 4px -4px rgba(0, 0, 0, 0.4)
+
+  @media (max-width: appMobileWidth)
+    width: 100%
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    height: appHeaderHeight1
+
+  [kifi-pane-parent] &
+    transition: width .25s ease-in
+
+  [kifi-with-pane] &
+    width: calc(100% - 322px)
+
+  .kf-logged-in-nav-header-logo
+    display: none
+    @media (max-width: appMobileWidth)
+      display: block

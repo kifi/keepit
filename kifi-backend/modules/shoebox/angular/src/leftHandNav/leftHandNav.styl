@@ -1,11 +1,15 @@
 .kf-left-hand-nav
-  width: 230px
+  font-smoothing: antialiased
+  width: leftHandNavWidth
   background-color: #3e4954
   display: flex
   flex-direction: column
   height: 100vh
   user-select: none
   margin-top: - appHeaderHeight2
+
+  @media (max-width: appMobileWidth)
+    display: none
 
   @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
     margin-top: - appHeaderHeight1
@@ -15,7 +19,8 @@
     display: flex
     flex-direction: column
     width: 100%
-    margin-top: 20px
+    margin-bottom: 20px
+    margin-top: 0px
 
     .kf-left-hand-nav-item-header
       img
@@ -25,49 +30,76 @@
     height: appHeaderHeight2
     display: flex
     align-items: center
-    margin-left: 10px
+    padding-left: 10px
+    margin-left: 0px
     flex-shrink: 0
+    z-index: 2
+    background-color: #3e4954
 
     @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
       height: appHeaderHeight1
 
-  .kf-left-hand-nav-content
-    overflow-y: scroll
-    overflow-x: hidden
-    padding-left: 10px
-    padding-right: 10px
+
+.kf-left-hand-nav-content
+  overflow-y: scroll
+  overflow-x: hidden
+  padding-left: 10px
+  height: 100%
+  z-index: 1
+  box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
+
+  &::-webkit-scrollbar
+    width: 8px
+
+  &::-webkit-scrollbar-thumb
+    border-radius: 4px
+    background-color: alpha(black, 0.0)
+
+
+  &:hover
+    &::-webkit-scrollbar-thumb
+      border-radius: 4px;
+      background-color: alpha(black, .5)
 
   .kf-left-hand-nav-user-container
     flex-shrink: 0
     display: flex
     flex-direction: column
     width: 100%
+    margin-bottom: 20px
+    margin-top: 6px
 
   .kf-left-hand-nav-item-header
     display: flex
     align-items: center
 
     img
-      width: 35px
-      height: 35px
+      width: 30px
+      height: 30px
       border-radius 20px
       margin-right: 10px
 
     span
-      font-size: 18px
+      font-size: 16px
       color: white
-      font-weight: semi-bold
+      font-weight: bold
       white-space: nowrap
       overflow: hidden
       text-overflow: ellipsis
 
   .kf-left-hand-nav-libraries-container
-    margin-top: 10px
+    margin-top: 6px
     padding-left: 10px
 
+    .kf-left-hand-nav-view-more-container
+      height: 12px
+
+
+
     .kf-left-hand-nav-view-more-libraries
-      padding-left: 8px
-      font-size: 12px
+      padding-left: 10px
+      font-size: 14px
+      font-weight: bold
       color: #DDD
 
       &:hover
@@ -78,15 +110,15 @@
     .kf-left-hand-nav-library-header
       font-size: 14px
       color: #F5F5F5
-      font-weight: semi-bold
+      font-weight: bold
       margin-bottom: 4px
 
+
     .kf-left-hand-nav-library-container
-      margin-top: 1px
-      margin-bottom: 1px
+      margin: 4px 0px
       border-left-width: 3px
       border-left-style: solid
-      padding-left: 5px
+      padding-left: 6px
       display: block
 
       &:hover
@@ -104,3 +136,39 @@
         &:hover
           color: #FFF
           cursor: pointer
+
+.kf-left-hand-nav-content-spinner-container
+  display: flex
+  width: 100%
+  justify-content: center
+
+.kf-left-hand-nav-spinner
+  vertical-align: center
+  text-align: left
+  display: inline-block
+
+.kf-left-hand-nav-spinner > div
+  width: 8px
+  height: 8px
+  margin-left: 2px
+  margin-right: 2px
+  background-color: #f9f9f9
+
+  border-radius: 100%
+  display: inline-block
+  animation: sk-bouncedelay 1.4s infinite ease-in-out both
+
+.kf-left-hand-nav-spinner .bounce1
+  animation-delay: -0.32s
+
+.kf-left-hand-nav-spinner .bounce2
+  animation-delay: -0.16s
+
+@keyframes sk-bouncedelay
+  0%, 80%, 100%
+    transform: scale(0)
+  40%
+    transform: scale(1.0)
+
+.kf-left-hand-nav-spinner-scale
+  transform: scale(.5)
