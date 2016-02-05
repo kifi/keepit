@@ -214,6 +214,14 @@ gulp.task('copy', function () {
   var safariIcons = gulp.src('icons/kifi.{128,256,monochrome*}.png')
     .pipe(gulp.dest(outDir + '/safari/kifi.safariextension/icons'));
 
+  var safariExtensionIcon = gulp.src('icons/kifi.{64,128}.png')
+    .pipe(rename(function (path) {
+      path.basename = path.basename.replace('kifi.','Icon-');
+      path.dirname = './';
+      return path;
+    }))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
+
   var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')
     .pipe(gulp.dest(outDir + '/firefox/data/icons'));
 
@@ -236,7 +244,7 @@ gulp.task('copy', function () {
   return es.merge(
     chromeAdapters, safariAdapters, firefoxAdapters, sharedAdapters,
     chromeResources, safariResources, firefoxResources,
-    chromeIcons, safariIcons, firefoxIcons,
+    chromeIcons, safariIcons, safariExtensionIcon, firefoxIcons,
     rwsocket, background);
 });
 

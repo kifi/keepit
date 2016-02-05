@@ -220,7 +220,7 @@ var api = api || (function () {
     var kind = e.name, data = e.message.data, callbackId = e.message.callbackId;
     var handler = portHandlers[kind];
     if (handler) {
-      l`${CGREEN}[onMessage] %s %s', page.id, kind, data != null ? (data.join ? data.join(' ') : data) : '')`;
+      l`${CGREEN}[onMessage] %s${page.id} %s${kind} %s${data != null ? (data.join ? data.join(' ') : data) : ''}`;
       handler(data, respondToTab.bind(null, page, callbackId), page);
     } else {
       l`${CRED}[onMessage] %s${page.id} %s${kind} ignored, page: %O${page} handler: %s${!!handler}`;
@@ -578,7 +578,7 @@ var api = api || (function () {
         var page = pages[tab.id];
         if (page && (page === tab || page.url.match(hostRe)[0] === tab.url.match(hostRe)[0])) {
           if ((page._handling || {})[type]) {
-            l`CGREEN, '[api.tabs.emit] %s${tab.id} %s${type} %O${data}`;
+            l`${CGREEN}[api.tabs.emit] %s${tab.id} %s${type} %O${data}`;
             page._port.postMessage(type, data);
           } else if (opts && opts.queue) {
             var toEmit = page.toEmit;
