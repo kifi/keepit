@@ -244,6 +244,7 @@ case class BasicKeep(
   attribution: Option[(SlackAttribution, Option[BasicUser])])
 
 object BasicKeep {
+  private val GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
   implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
@@ -251,7 +252,7 @@ object BasicKeep {
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'ownerId).formatNullable[ExternalId[User]] and
+    (__ \ 'ownerId).format[ExternalId[User]].inmap[Option[ExternalId[User]]](Some(_), _.getOrElse(GARBAGE_UUID)) and
     (__ \ 'slackAttribution).formatNullable[(SlackAttribution, Option[BasicUser])]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
