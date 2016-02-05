@@ -1,5 +1,4 @@
 .kf-left-hand-nav
-  overflow-y: scroll
   width: 230px
   background-color: #3e4954
   display: flex
@@ -8,6 +7,10 @@
   padding-left: 10px
   padding-right: 10px
   user-select: none
+  margin-top: - appHeaderHeight2
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    margin-top: - appHeaderHeight1
 
   .kf-left-hand-nav-org-container
     flex-shrink: 0
@@ -20,6 +23,15 @@
       img
         border-radius: 4px
 
+  .kf-left-hand-nav-header
+    height: appHeaderHeight2
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    height: appHeaderHeight1
+
+  .kf-left-hand-nav-content
+    overflow-y: scroll
+    overflow-x: hidden
 
   .kf-left-hand-nav-user-container
     flex-shrink: 0

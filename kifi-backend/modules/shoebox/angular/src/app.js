@@ -164,6 +164,7 @@ angular.module('kifi', [
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/join_us\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
+      $scope.navBarEnabled = profileService.hasExperiment('new_sidebar');
       if ($rootElement.find('#kf-authenticated').removeAttr('id').length) {
         $timeout(function () {
           profileService.fetchMe().then(function () {

@@ -9,7 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
       link: function (scope) {
-
+        scope.navBarEnabled = profileService.hasExperiment('new_sidebar');
         scope.me = profileService.me;
         scope.libraries = [];
         scope.orgs = scope.me.orgs;
