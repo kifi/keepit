@@ -15,7 +15,7 @@ angular.module('kifi')
         scope.orgs = scope.me.orgs;
 
         var INITIAL_PAGE_SIZE = 3;
-        var PAGE_SIZE = 10
+        var PAGE_SIZE = 10;
         var extraLibraries = [];
         scope.fetchLibraries = function (pageNumber, pageSize) {
           var filter = 'own';
@@ -26,9 +26,9 @@ angular.module('kifi')
                 scope.loaded = true;
                 return data[filter];
               }).then(function(libs) {
-                scope.hasMoreUserLibaries = libs.length == pageSize + 1;
+                scope.hasMoreUserLibaries = libs.length === pageSize + 1;
                 libs.splice(pageSize);
-                if (pageNumber == 0) {
+                if (pageNumber === 0) {
                   extraLibraries = libs.splice(INITIAL_PAGE_SIZE);
                   scope.libraries = scope.libraries.concat(libs);
                 } else {
@@ -44,23 +44,23 @@ angular.module('kifi')
           org.hasMoreLibraries = false;
           orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
             .then(function (data) {
-              org.hasMoreLibraries = data.libraries.length == limit + 1;
+              org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);
               org.libraries = (org.libraries || []).concat(data.libraries);
             });
-        }
+        };
 
         scope.orgs.forEach(function (org) {
            scope.fetchOrgLibraries(org, 0, INITIAL_PAGE_SIZE);
         });
 
         scope.viewMoreOwnLibraries = function () {
-          scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE)
-        }
+          scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE);
+        };
 
         scope.viewMoreOrgLibraries = function (org) {
-          scope.fetchOrgLibraries(org, org.libraries.length, PAGE_SIZE)
-        }
+          scope.fetchOrgLibraries(org, org.libraries.length, PAGE_SIZE);
+        };
       }
     };
   }
