@@ -149,7 +149,7 @@ class KeepInternerImpl @Inject() (
       id = existingKeepOpt.map(_.id.get),
       externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
       title = kTitle,
-      userId = userId,
+      userId = Some(userId),
       uriId = uri.id.get,
       url = url,
       source = source,
@@ -157,7 +157,7 @@ class KeepInternerImpl @Inject() (
       libraryId = libraryOpt.map(_.id.get),
       keptAt = keptAt,
       note = kNote,
-      originalKeeperId = existingKeepOpt.map(_.userId) orElse Some(userId),
+      originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse Some(userId),
       organizationId = libraryOpt.flatMap(_.organizationId),
       connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
     )
@@ -178,7 +178,7 @@ class KeepInternerImpl @Inject() (
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
     def tryFixKeepNote(keep: Keep)(implicit session: RWSession) = {
-      Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse("")))
+      Try(keepCommander.updateKeepNote(keep.userId.get, keep, keep.note.getOrElse(""))) // will throw if keep.userId.isEmpty
     }
 
     // Attach tags to keeps

@@ -45,15 +45,15 @@ class KeepToUserRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def addedAt = column[DateTime]("added_at", O.NotNull)
-    def addedBy = column[Id[User]]("added_by", O.NotNull)
+    def addedBy = column[Option[Id[User]]]("added_by", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def lastActivityAt = column[DateTime]("last_activity_at", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, state, keepId, userId, addedAt, addedBy, uriId, lastActivityAt) <> ((fromDbRow _).tupled, toDbRow)
   }
 
-  def fromDbRow(id: Option[Id[KeepToUser]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToUser],
-    keepId: Id[Keep], userId: Id[User], addedAt: DateTime, addedBy: Id[User],
+  private def fromDbRow(id: Option[Id[KeepToUser]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToUser],
+    keepId: Id[Keep], userId: Id[User], addedAt: DateTime, addedBy: Option[Id[User]],
     uriId: Id[NormalizedURI], lastActivityAt: DateTime): KeepToUser = {
     KeepToUser(
       id, createdAt, updatedAt, state,
@@ -61,7 +61,7 @@ class KeepToUserRepoImpl @Inject() (
       uriId, lastActivityAt)
   }
 
-  def toDbRow(ktu: KeepToUser) = {
+  private def toDbRow(ktu: KeepToUser) = {
     Some(
       (ktu.id, ktu.createdAt, ktu.updatedAt, ktu.state,
         ktu.keepId, ktu.userId, ktu.addedAt, ktu.addedBy,

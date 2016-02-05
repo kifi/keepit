@@ -1,7 +1,7 @@
 @(library: Library,
   owner: User,
   totalKeepCount: Int,
-  keepInfos: Seq[(Keep, NormalizedURI, User, Seq[Hashtag])],
+  keepInfos: Seq[(Keep, NormalizedURI, Option[User], Seq[Hashtag])],
   page: Int,
   pageSize: Int
 )(implicit request: com.keepit.common.controller.UserRequest[_])
@@ -34,7 +34,7 @@
           <th>Created At</th>
           <th>State</th>
 		    </tr>
-			 @for(((keep, uri, keepOwner, tags), i) <- keepInfos.zipWithIndex) {
+			 @for(((keep, uri, _, tags), i) <- keepInfos.zipWithIndex) {
 			   <tr>
 		        <td>@{i+1}</td>
 		        <td><span class="badge">@keep.id.get.id</span></td>

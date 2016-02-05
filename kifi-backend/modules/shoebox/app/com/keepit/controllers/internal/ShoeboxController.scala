@@ -634,7 +634,7 @@ class ShoeboxController @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
     val users = (request.body \ "users").as[Set[Id[User]]]
     db.readWrite { implicit s =>
-      keepCommander.addUsersToKeep(keepId, adderId, users)
+      keepCommander.addUsersToKeep(keepId, Some(adderId), users)
     }
     Ok
   }

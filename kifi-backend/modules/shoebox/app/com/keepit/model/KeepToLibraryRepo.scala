@@ -65,7 +65,7 @@ class KeepToLibraryRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def addedAt = column[DateTime]("added_at", O.NotNull)
-    def addedBy = column[Id[User]]("added_by", O.NotNull)
+    def addedBy = column[Option[Id[User]]]("added_by", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
@@ -75,8 +75,8 @@ class KeepToLibraryRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, state, keepId, libraryId, addedAt, addedBy, uriId, isPrimary, visibility, organizationId, lastActivityAt) <> ((fromDbRow _).tupled, toDbRow)
   }
 
-  def fromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
-    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Id[User],
+  private def fromDbRow(id: Option[Id[KeepToLibrary]], createdAt: DateTime, updatedAt: DateTime, state: State[KeepToLibrary],
+    keepId: Id[Keep], libraryId: Id[Library], addedAt: DateTime, addedBy: Option[Id[User]],
     uriId: Id[NormalizedURI], isPrimary: Option[Boolean], libraryVisibility: LibraryVisibility,
     libraryOrganizationId: Option[Id[Organization]], lastActivityAt: DateTime): KeepToLibrary = {
     KeepToLibrary(

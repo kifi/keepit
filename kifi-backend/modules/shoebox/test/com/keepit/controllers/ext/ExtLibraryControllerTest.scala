@@ -700,7 +700,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withUrl(url).withTitle(title).saved
     tags.foreach { tag =>
-      val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
+      val coll = collectionRepo.save(Collection(userId = keep.userId.get, name = Hashtag(tag)))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))
     }
     keep
