@@ -4,6 +4,16 @@
         <div class="kifi-guide-target-1"></div><!-- TODO: remove all kifi-guide-target-# after all extension users at 3.3.50 -->
     </div>
     <div class="kf-left-hand-nav-content">
+        <div class="left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent">
+            <!--TODO: make a directive-->
+            <div class="left-hand-nav-spinner">
+                <div class="bounce1"></div>
+                <div class="bounce2"></div>
+                <div class="bounce3"></div>
+            </div>
+        </div>
+
+        <div ng-if="showUserAndOrgContent">
             <div class="kf-left-hand-nav-user-container">
                 <a class="kf-left-hand-nav-item-header" ng-href="{{ me|profileUrl }}">
                     <img ng-src="{{ me|pic:100 }}" />
@@ -14,7 +24,15 @@
                     <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in libraries" ng-style="{'border-left-color': library.color}">
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
-                    <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOwnLibraries()" ng-if="hasMoreUserLibaries">view more</div>
+                    <div style="height: 12px" ng-if="hasMoreUserLibaries || fetchingUserLibraries">
+                        <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOwnLibraries()"  ng-if="hasMoreUserLibaries">view more</div>
+                        <div class="left-hand-nav-spinner" style="transform: scale(.5)" ng-if="fetchingUserLibraries">
+                            <div class="bounce1"></div>
+                            <div class="bounce2"></div>
+                            <div class="bounce3"></div>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
@@ -28,8 +46,17 @@
                     <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in org.libraries" ng-style="{'border-left-color': library.color}">
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
-                    <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOrgLibraries(org)" ng-if="org.hasMoreLibraries">view more</div>
+                    <div style="height: 12px" ng-if="org.hasMoreLibraries || org.fetchingLibraries">
+                        <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOrgLibraries(org)" ng-if="org.hasMoreLibraries">view more</div>
+                        <!--TODO: make a directive-->
+                        <div class="left-hand-nav-spinner" style="transform: scale(.5)" ng-if="org.fetchingLibraries">
+                            <div class="bounce1"></div>
+                            <div class="bounce2"></div>
+                            <div class="bounce3"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
     </div>
 </div>
