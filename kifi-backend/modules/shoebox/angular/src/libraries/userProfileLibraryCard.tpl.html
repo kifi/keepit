@@ -1,28 +1,32 @@
 <div class="kf-upl-card kf-upl-lib-card" ng-style="{'background-color': lib.color}"
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
-  <a class="kf-upl-card-setting svg-settings-gear" ng-if="hasPermission(LIB_PERMISSION.EDIT_LIBRARY)" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
-  <span
-    ng-if="lib.kind === 'user_created' && lib.org.viewer.membership.role === 'admin'"
-    kf-upsell
-    position="bottom"
-    on-click="onClickUpsellEditLibrary(lib.org)"
-    on-hover="onHoverUpsellEditLibrary(lib.org)"
-    class="kf-upl-card-upsell"
-  >
-    <span ng-if="!getMeOrg().config.showUpsells">
-      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
-        Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
+  <span class="kf-upl-card-setting kf-tooltip-parent kf-tooltip-parent-noclose">
+    <span
+      ng-click="onClickUpsellEditLibrary(lib.org)"
+      ng-hover="onHoverUpsellEditLibrary(lib.org)"
+      class="kf-tooltip-body"
+    >
+
+      <span ng-if="!getMeOrg().config.showUpsells">
+        <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+          Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
+        </span>
+        <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+          Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
+        </span>
+        <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+          All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
+        </span>
       </span>
-      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
-        Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
-      </span>
-      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
-        All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
+      <span ng-if="getMeOrg().config.showUpsells">
+        Enable admins or all team members to edit library settings by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: lib.org.handle, upgrade: true })">upgrading your plan</a>.
       </span>
     </span>
-    <span ng-if="getMeOrg().config.showUpsells">
-      Enable admins or all team members to edit library settings by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: lib.org.handle, upgrade: true })">upgrading your plan</a>.
-    </span>
+    <button
+      class="kf-upl-card-setting-icon svg-settings-gear"
+      ng-disabled="!hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+      ng-click="openModifyLibrary(lib, currentPageOrigin)"
+    ></button>
   </span>
   <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
     <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::(lib.kind === 'system_main' || lib.kind === 'system_secret')"></div>

@@ -157,20 +157,38 @@ cardBorderRadius = 16px
   position: absolute
   top: 5px
   right: 5px
-  width: 20px
-  height: 20px
-  z-index: 2
-  background-position: center
-  background-size: 15px 15px
-  background-repeat: no-repeat
+  margin: 5px
   z-index: 10
 
   :not(:hover) > &
     display: none
 
-  &:not(:hover):not(:focus)
+.kf-upl-card-setting-icon
+  display: inline-block
+  width: 15px
+  height: 15px
+  padding: 0
+  border: 0
+  opacity: .8
+  background-color: transparent
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+
+  &:not([disabled])
+    &:hover
+    &:focus
+      opacity: .9
+
+    &:hover:active
+      opacity: 1
+
   &:active
     opacity: .7
+
+.kf-upl-card-setting-icon[disabled]
+  cursor: no-drop
+  opacity: .45
 
 name-line-height = 22px
 
