@@ -22,6 +22,8 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 @ImplementedBy(classOf[WebSocketRouterImpl])
 trait WebSocketRouter {
 
+  def areUsersOnline(users: Set[Id[User]]): Map[Id[User], Boolean]
+
   def sendNotification(userOpt: Option[Id[User]], notification: UserThreadNotification): Unit
 
   def onNotification(f: (Option[Id[User]], UserThreadNotification) => Unit): Unit
@@ -55,6 +57,10 @@ class WebSocketRouterImpl @Inject() (
   private var notificationCallbacks = Vector[(Option[Id[User]], UserThreadNotification) => Unit]()
   private val userSockets = TrieMap[Id[User], TrieMap[Long, SocketInfo]]()
   private val userSocketLastTracked = TrieMap[Id[User], DateTime]()
+
+  def areUsersOnline(users: Set[Id[User]]): Map[Id[User], Boolean] = users.map { user =>
+    (user, userSockets.get(user).exists(s => s.nonEmpty))
+  }.toMap
 
   def getArbitrarySocketInfo: Option[SocketInfo] = userSockets.values.map(_.values).flatten.headOption
 

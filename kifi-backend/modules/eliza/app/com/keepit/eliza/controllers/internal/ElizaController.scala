@@ -36,6 +36,11 @@ class ElizaController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends ElizaServiceController with Logging {
 
+  def areUsersOnline(users: String) = Action { request =>
+    val usersIds = users.split(",").map(_.toInt).map(Id[User](_)).toSet
+    Ok(notificationRouter.areUsersOnline(usersIds).map { case (id, res) => s""""$id":$res""" }.toArray.mkString("{", ",", "}"))
+  }
+
   def disableDevice(id: Id[Device]) = Action { request =>
     val device = db.readWrite { implicit s =>
       val device = deviceRepo.get(id)
