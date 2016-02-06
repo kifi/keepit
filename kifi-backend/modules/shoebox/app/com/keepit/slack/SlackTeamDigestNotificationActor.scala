@@ -73,7 +73,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(team: SlackTeam) = {
         val teamHasDigestsEnabled = team.organizationId.flatMap(orgConfigById.get).exists { config =>
-          config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
+          config.settings.settingFor(Feature.SlackNotifications).contains(FeatureSetting.ENABLED)
         }
         val teamHasValidTokens = slackMembershipRepo.getBySlackTeam(team.slackTeamId).flatMap(_.tokenWithScopes).exists(_.scopes.contains(SlackAuthScope.ChatWriteBot))
         teamHasDigestsEnabled && teamHasValidTokens

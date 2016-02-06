@@ -70,6 +70,7 @@ class SlackOnboarderImpl @Inject() (
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
   orgRepo: OrganizationRepo,
+  orgConfigRepo: OrganizationConfigurationRepo,
   attributionRepo: KeepSourceAttributionRepo,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -90,30 +91,41 @@ class SlackOnboarderImpl @Inject() (
         slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
       }
     }.getOrElse {
-      log.info("[SLACK-ONBOARD] Could not generate a useful message, bailing")
+      log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")
       Future.successful(Unit)
     }
   }
 
   private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
-    val slackTeamForLibrary = slackTeamRepo.getBySlackTeamId(integ.slackTeamId).filter(_.organizationId containsTheSameValueAs lib.organizationId)
-
-    for {
-      owner <- slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load)
-      msg <- (integ, slackTeamForLibrary) match {
-        case (ltsc: LibraryToSlackChannel, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
-          explicitPushMessage(ltsc, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if lib.kind == LibraryKind.USER_CREATED =>
-          explicitIngestionMessage(sctl, owner, lib, slackTeam)
-        // TODO(ryan): restrict this message to SYSTEM_ORG_GENERAL libraries once we have spammed users enough
-        case (sctl: SlackChannelToLibrary, Some(slackTeam)) if (lib.kind == LibraryKind.SYSTEM_ORG_GENERAL || lib.kind == LibraryKind.SLACK_CHANNEL) && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
-          generalLibraryMessage(sctl, owner, lib, slackTeam)
-        case (sctl: SlackChannelToLibrary, _) => None // for ingestions to any other type of library, stay quiet
-        case (ltsc: LibraryToSlackChannel, _) =>
-          conservativePushMessage(ltsc, owner, lib)
+    val slackTeamOpt = slackTeamRepo.getBySlackTeamId(integ.slackTeamId)
+    val allowedToSendToSlackTeam = slackTeamOpt.exists { team =>
+      team.organizationId.map(orgConfigRepo.getByOrgId).exists { config =>
+        config.settings.settingFor(Feature.SlackNotifications).contains(FeatureSetting.ENABLED)
       }
-    } yield msg
+    }
+    if (!allowedToSendToSlackTeam) None
+    else slackTeamMembershipRepo.getBySlackTeamAndUser(integ.slackTeamId, integ.slackUserId).flatMap(_.userId).map(basicUserRepo.load).flatMap { owner =>
+      slackTeamOpt match {
+        case Some(slackTeam) if slackTeam.organizationId containsTheSameValueAs lib.organizationId =>
+          // We can be more explicit about what is happening
+          integ match {
+            case ltsc: LibraryToSlackChannel if lib.kind == LibraryKind.USER_CREATED =>
+              explicitPushMessage(ltsc, owner, lib, slackTeam)
+            case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.USER_CREATED =>
+              explicitIngestionMessage(sctl, owner, lib, slackTeam)
+            case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
+              generalLibraryMessage(sctl, owner, lib, slackTeam)
+          }
+        case None =>
+          // be very conservative, this integration is not on one of this team's org libraries
+          integ match {
+            case sctl: SlackChannelToLibrary => None
+            case ltsc: LibraryToSlackChannel =>
+              conservativePushMessage(ltsc, owner, lib)
+          }
+      }
+    }
   }
 
   private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library)(implicit session: RSession): Option[SlackMessageRequest] = {
