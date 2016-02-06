@@ -1,7 +1,11 @@
 package com.keepit.search.engine
 
+import com.keepit.FortyTwoGlobal
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.logging.Logging
 import java.net.{ DatagramPacket, DatagramSocket, InetAddress }
+import play.api.Play
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object DebugOption {
 
@@ -12,7 +16,6 @@ object DebugOption {
       if (parts.length > 1 && parts.head == "trace") Some(parts.tail.map(_.toLong).toSet) else None
     }
   }
-
   object Library {
     val flag = 0x00000002
     def unapply(str: String): Boolean = (str == "library")
@@ -44,6 +47,8 @@ trait DebugOption { self: Logging =>
   protected var debugStartTime: Long = System.currentTimeMillis()
   var debugFlags: Int = 0
   var debugTracedIds: Set[Long] = null
+
+  def instanceInfo: Option[AmazonInstanceInfo] = Play.maybeApplication.map(_.global).collect { case global: FortyTwoGlobal => global.injector.instance[AmazonInstanceInfo] }
 
   // debug flags
   def debug(debugMode: String): Unit = {
@@ -80,7 +85,8 @@ trait DebugOption { self: Logging =>
   def debugLog(msg: => String) = {
     if ((debugFlags & DebugOption.Log.flag) != 0) {
       val elapsed = (System.currentTimeMillis() - debugStartTime)
-      val bytes = s"$elapsed: ${msg}".getBytes()
+      val instance = instanceInfo.map(_.getName).getOrElse("")
+      val bytes = s"[$instance] $elapsed: ${msg}".getBytes()
       val packet = new DatagramPacket(bytes, bytes.length, debugLogDestination._1, debugLogDestination._2)
       DebugOption.socket.send(packet)
     }
