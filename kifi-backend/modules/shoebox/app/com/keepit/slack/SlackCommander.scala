@@ -11,6 +11,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.oauth.SlackIdentity
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.keepit.social.Author
 import play.api.libs.json._
 import com.keepit.common.json.{ TraversableFormat, formatNone }
 import com.keepit.common.core._
@@ -39,6 +40,7 @@ class SlackCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   slackClient: SlackClientWrapper,
+  keepSourceCommander: KeepSourceCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander with Logging {
@@ -72,6 +74,7 @@ class SlackCommanderImpl @Inject() (
       slackUser = identity.user
     ))
     autojoinOrganization(membership)
+    userIdOpt.foreach { userId => keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.userId), userId) }
     isNewIdentityOwner
   }
 
