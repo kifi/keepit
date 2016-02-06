@@ -57,7 +57,7 @@
         </div>
         <div class="kf-ts-integrations-checkrow">
           <input ng-model="slackIntegrationDigestModel.enabled" ng-change="onSlackIntegrationDigestChanged()"  type="checkbox" />
-          <span>Receive infrequent summary updates to channels.</span>
+          <span ng-bind="'Receive a welcome message & updates about ' + slackTeam.name + '\'s usage in the #general channel (max 2 times per week)'"></span>
         </div>
       </div>
 
