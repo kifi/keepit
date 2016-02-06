@@ -54,6 +54,7 @@ GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.M
 # INTERNAL ROUTES/Eliza
 ##########################################
 
+GET   /internal/eliza/areUsersOnline                   @com.keepit.eliza.controllers.internal.ElizaController.areUsersOnline(users: String)
 POST  /internal/eliza/sendGeneralPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendGeneralPushNotification
 POST  /internal/eliza/sendLibraryPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendLibraryPushNotification
 POST  /internal/eliza/sendUserPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendUserPushNotification
