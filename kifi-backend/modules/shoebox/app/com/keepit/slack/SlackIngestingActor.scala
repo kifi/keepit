@@ -279,7 +279,7 @@ class SlackIngestingActor @Inject() (
     }
     getBatchedMessages(bigPages, skipFailures = false).recoverWith {
       case fail =>
-        slackLog.warn(s"Failed ingesting from $channelName with $bigPages,retrying with $tinyPages")
+        slackLog.warn(s"Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
         getBatchedMessages(tinyPages, skipFailures = true)
     }
   }
