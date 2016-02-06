@@ -55,12 +55,18 @@ angular.module('kifi')
     }
 
     $scope.createOrg = function() {
+      if (!this.orgName) {
+        $scope.$error = { message: 'Please enter a name for your team' };
+        return;
+      }
+
       $scope.disableCreate = true;
       profileService.savePrefs({ hide_company_name: true });
 
       orgProfileService
       .createOrg(this.orgName)
       .then(function(org) {
+        $scope.$error = null;
         if ($scope.redeemCode) {
           billingService.applyReferralCode(org.id, $scope.redeemCode)['finally'](next);
         } else {
