@@ -116,13 +116,14 @@ class SlackOnboarderImpl @Inject() (
               explicitIngestionMessage(sctl, owner, lib, slackTeam)
             case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
               generalLibraryMessage(sctl, owner, lib, slackTeam)
+            case _ => None
           }
         case None =>
           // be very conservative, this integration is not on one of this team's org libraries
           integ match {
-            case sctl: SlackChannelToLibrary => None
             case ltsc: LibraryToSlackChannel =>
               conservativePushMessage(ltsc, owner, lib)
+            case _ => None
           }
       }
     }
