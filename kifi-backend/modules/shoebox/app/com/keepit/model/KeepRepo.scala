@@ -489,18 +489,18 @@ class KeepRepoImpl @Inject() (
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
     countCache.bulkGetOrElse(userIds.map(KeepCountKey(_))) { missingKeys =>
       val missingUserIds = missingKeys.map(_.userId)
-      val missingCounts = (for (r <- rows if r.userId.inSet(missingUserIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId.get).map {
+      val missingCounts = (for (r <- rows if r.userId.inSet(missingUserIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
         case (userId, keeps) => (userId, keeps.length)
-      }.run
-      missingCounts.collect { case (userId, count) => KeepCountKey(userId) -> count }.toMap
+      }.list
+      missingCounts.collect { case (Some(userId), count) => KeepCountKey(userId) -> count }.toMap
     }
   }.map { case (key, count) => key.userId -> count }
 
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int] = {
-    (for (r <- rows if r.userId.inSet(userIds) && r.source.inSet(sources) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId.get).map {
+    (for (r <- rows if r.userId.inSet(userIds) && r.source.inSet(sources) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.userId).map {
       case (userId, keeps) => (userId, keeps.length)
-    }.run
-  }.map { case (userId, count) => userId -> count }.toMap
+    }.list
+  }.collect { case (Some(userId), count) => userId -> count }.toMap
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
