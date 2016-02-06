@@ -201,7 +201,7 @@ class SlackIngestingActor @Inject() (
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (user, rawBookmarks) =>
         val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, user, library, KeepSource.slack)(HeimdalContext.empty)
-        (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case RawSlackAttribution(message) => message })
+        (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>
       db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
