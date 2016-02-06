@@ -1,8 +1,8 @@
-@import com.keepit.slack.models._
 @(user: User,
   userThreadStats: com.keepit.eliza.model.UserThreadStats,
   totalKeeps: Int,
   libs: com.keepit.commanders.LibCountStatistics,
+  slacks: com.keepit.commanders.SlackStatistics,
   manualKeepsLastWeek: Int,
   organizations: Seq[Organization],
   candidateOrganizations: Seq[Organization],
@@ -10,7 +10,6 @@
   socialUsers: Seq[SocialUserBasicInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
-  allowedInvites: Int,
   emails: Seq[UserEmailAddress],
   abookInfos: Seq[ABookInfo],
   econtactCount: Int,
@@ -19,7 +18,7 @@
   potentialOrganizations: Seq[Organization],
   ignoreForPotentialOrganizations: Boolean,
   recommendedOrganizations: Seq[(Organization, Double)],
-  slackTeamMemberships: Seq[SlackTeamMembership]
+  slackTeamMemberships: Seq[com.keepit.slack.models.SlackTeamMembership]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -58,8 +57,8 @@
       <tr>
         <th>Total Keeps</th><td>@totalKeeps</td>
       </tr>
-      <tr><td>Slack Libs</td>
-        <td>@libs.slackLibCount</td>
+      <tr><td>Slack Integrations</td>
+        <td>@slacks.activeSlackLibs happy, @slacks.inactiveSlackLibs inactive libs, @slacks.closedSlackLibs user closed on kifi side, @slacks.brokenSlackLibs user broke on slack side</td>
       </tr>
       <tr><td>Libs prv/org/pub</td>
         <td>@libs.privateLibCount / @libs.protectedLibCount / @libs.publicLibCount</td>
@@ -171,15 +170,6 @@
           </form>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.sendEmail(user.id.get, "activity")" class="form-inline send-email" method="POST" style="display: inline-block;">
             <input type="submit" value="Send Activity Email">
-          </form>
-        </td>
-      </tr>
-      <tr>
-        <th>Allowed Invites</th>
-        <td>
-          <form action="@com.keepit.controllers.admin.routes.AdminUserController.setInvitesCount(user.id.get)" class="form-inline" method="POST">
-            <input type="text" name="allowedInvites" value="@allowedInvites">
-            <input type="submit" value="Save">
           </form>
         </td>
       </tr>

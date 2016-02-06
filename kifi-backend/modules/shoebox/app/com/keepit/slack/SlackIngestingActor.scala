@@ -1,8 +1,8 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepInterner, PermissionCommander, RawBookmarkRepresentation }
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.commanders.{ OrganizationInfoCommander, KeepInterner, PermissionCommander, RawBookmarkRepresentation }
+import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.UrlClassifier
+import com.keepit.common.util.{ DescriptionElements, UrlClassifier }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
@@ -43,6 +43,8 @@ class SlackIngestingActor @Inject() (
   integrationRepo: SlackChannelToLibraryRepo,
   slackChannelRepo: SlackChannelRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  organizationInfoCommander: OrganizationInfoCommander,
+  slackTeamRepo: SlackTeamRepo,
   permissionCommander: PermissionCommander,
   libraryRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
@@ -133,6 +135,18 @@ class SlackIngestingActor @Inject() (
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
             slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelName.value, "in team", broken.integration.slackTeamId.value, "is broken")
+            SafeFuture {
+              val team = db.readOnlyReplica { implicit s =>
+                slackTeamRepo.getBySlackTeamId(broken.integration.slackTeamId)
+              }
+              val org = db.readOnlyMaster { implicit s =>
+                team.flatMap(_.organizationId).flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+              }
+              val name = team.map(_.slackTeamName.value).getOrElse("???")
+              val cause = broken.cause.map(_.toString).getOrElse("???")
+              inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+                "Broke Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelName.value, "cause", cause)))
+            }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
             log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
