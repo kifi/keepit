@@ -188,7 +188,7 @@ object Feature extends Enumerator[Feature] {
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
   }
 
-  case object SlackDigestNotification extends Feature {
+  case object SlackNotifications extends Feature {
     val value = "slack_digest_notif"
     val settings: Set[FeatureSetting] = Set(DISABLED, ENABLED)
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION

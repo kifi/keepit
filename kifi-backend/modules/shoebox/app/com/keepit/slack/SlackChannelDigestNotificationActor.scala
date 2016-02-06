@@ -75,7 +75,7 @@ class SlackChannelDigestNotificationActor @Inject() (
           // We will only send a channel digest to a slack team that has NEVER synced their public channels
           // AND that has connected to an org AND has the feature enabled
           val teamHasDigestsEnabled = team.publicChannelsLastSyncedAt.isEmpty && team.organizationId.flatMap(orgConfigById.get).exists { config =>
-            config.settings.settingFor(Feature.SlackDigestNotification).contains(FeatureSetting.ENABLED)
+            config.settings.settingFor(Feature.SlackNotifications).contains(FeatureSetting.ENABLED)
           }
           val channelHasWorkingWebhook = webhooksByChannel.contains(channel.slackChannelId) // you will fail if this isn't true
           teamHasDigestsEnabled && channelHasWorkingWebhook

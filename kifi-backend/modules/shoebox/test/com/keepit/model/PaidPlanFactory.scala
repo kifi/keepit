@@ -25,7 +25,7 @@ object PaidPlanFactory {
     Feature.ViewSettings -> FeatureSetting.MEMBERS,
     Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS,
     Feature.SlackIngestionReaction -> FeatureSetting.DISABLED,
-    Feature.SlackDigestNotification -> FeatureSetting.ENABLED
+    Feature.SlackNotifications -> FeatureSetting.ENABLED
   ))
 
   def paidPlan(): PartialPaidPlan = {

@@ -514,7 +514,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val orgPubId = Organization.publicId(org.id.get)
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.CreateSlackIntegration -> FeatureSetting.DISABLED) }
-        val alteredSlackSettings = OrganizationSettings(Map(Feature.SlackIngestionReaction -> FeatureSetting.ENABLED, Feature.SlackDigestNotification -> FeatureSetting.DISABLED))
+        val alteredSlackSettings = OrganizationSettings(Map(Feature.SlackIngestionReaction -> FeatureSetting.ENABLED, Feature.SlackNotifications -> FeatureSetting.DISABLED))
 
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, initOrgSettings)) must beRight
 
