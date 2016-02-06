@@ -18,6 +18,7 @@ import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, Forbid
 import com.keepit.slack.models._
 import com.kifi.juggle._
 import org.joda.time.Period
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -267,7 +268,7 @@ class SlackIngestingActor @Inject() (
           val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
         }.recover {
-          case fail if skipFailures =>
+          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures && payload.toString().length > 4000 =>
             slackLog.warn(s"Failed pulling the ${nextPage.page} page of size ${pageSize.count}, skipping it")
             (previousMessages, false)
         }
