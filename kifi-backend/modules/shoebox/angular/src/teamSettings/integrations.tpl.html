@@ -52,11 +52,11 @@
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam">
         <div class="kf-container-header"><span>Slack settings</span></div>
         <div class="kf-ts-integrations-checkrow">
-          <input ng-model="slackIntegrationReactionModel.enabled" ng-change="onSlackIntegrationReactionChanged()"  type="checkbox" />
+          <input class="kf-ts-integrations-checkbox" ng-model="slackIntegrationReactionModel.enabled" ng-change="onSlackIntegrationReactionChanged()"  type="checkbox" />
           <span>Show the emoji <strong>✓</strong> on links after they have been successfully saved in Kifi.</span>
         </div>
         <div class="kf-ts-integrations-checkrow">
-          <input ng-model="slackIntegrationDigestModel.enabled" ng-change="onSlackIntegrationDigestChanged()"  type="checkbox" />
+          <input class="kf-ts-integrations-checkbox" ng-model="slackIntegrationDigestModel.enabled" ng-change="onSlackIntegrationDigestChanged()"  type="checkbox" />
           <span ng-bind="'Receive a welcome message & updates about ' + slackTeam.name + '\'s usage in the #general channel (max 2 times per week)'"></span>
         </div>
       </div>
