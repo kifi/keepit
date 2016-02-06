@@ -259,7 +259,7 @@ class AdminUserController @Inject() (
     val (libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val keepCount = keepRepo.getCountByUser(userId)
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
-      val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllByOwner(userId))
+      val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllBySlackUserIds(slackTeamMembershipRepo.getByUserId(userId).map(_.slackUserId).toSet))
       val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
       val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
       val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
