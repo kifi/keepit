@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'linkify', 'LIB_PERMISSION',
+  'routeService', 'linkify', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, linkify, LIB_PERMISSION) {
+            routeService, linkify, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       replace: true,
@@ -37,7 +37,6 @@ angular.module('kifi')
         var smallWindowLimit = 479;
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
-
         if (!profileService.userLoggedIn() && scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
           signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         }
@@ -47,6 +46,8 @@ angular.module('kifi')
         //
         scope.Math = Math;
         scope.LIB_PERMISSION = LIB_PERMISSION;
+        scope.ORG_PERMISSION = ORG_PERMISSION;
+        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         scope.search = { 'text': $stateParams.q || '' };
         scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.descExpanded = false;
@@ -521,6 +522,10 @@ angular.module('kifi')
           return scope.library.permissions.indexOf(permission) !== -1;
         };
 
+        scope.hasOrgPermission = function (permission) {
+          return scope.library.org.viewer.permissions.indexOf(permission) !== -1;
+        };
+
         scope.isSelf = function (user) {
           return profileService.me.id === user.id;
         };
@@ -543,6 +548,14 @@ angular.module('kifi')
 
         scope.isOwnerOrCollaborator = function () {
           return scope.library.permissions && scope.library.permissions.indexOf('remove_other_keeps') !== -1;
+        };
+
+        scope.getMeOrg = function getMeOrg() {
+          var scope = this;
+          var me = profileService.me;
+
+          var meOrg = (me.orgs || []).filter(function (o) { return o.id === scope.library.org.id; })[0];
+          return meOrg;
         };
 
         scope.followLibrary = function (opts) {
@@ -611,6 +624,14 @@ angular.module('kifi')
 
         scope.trackTwitterProfile = function () {
           libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedTwitterProfileURL' });
+        };
+
+        scope.onClickUpsellEditLibrary = function (library) {
+          libraryService.trackEvent('user_clicked_page', library, { action: 'clickEditLibraryUpsell' });
+        };
+
+        scope.onHoverUpsellEditLibrary = function (library) {
+          libraryService.trackEvent('user_viewed_page', library, { action: 'viewEditLibraryUpsell' });
         };
 
         scope.openMembersModal = function (filterType) {
