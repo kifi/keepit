@@ -22,7 +22,7 @@ import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.models.{ SlackTeamMembershipStates, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ SlackChannelToLibraryRepo, SlackTeamMembershipStates, SlackTeamMembershipRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -65,6 +65,7 @@ import com.keepit.controllers.admin.UserViewTypes._
 class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
@@ -255,9 +256,10 @@ class AdminUserController @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
     }
 
-    val (libs, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
+    val (libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val keepCount = keepRepo.getCountByUser(userId)
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
+      val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllByOwner(userId))
       val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
       val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
       val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
@@ -266,10 +268,9 @@ class AdminUserController @Inject() (
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
-      val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
-      (libs, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
+      (libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers)
     }
 
     val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
@@ -285,8 +286,8 @@ class AdminUserController @Inject() (
       slackInfo <- slackInfoF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
-      Ok(html.admin.user(user, chatStats, keepCount, libs, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
-        fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
+      Ok(html.admin.user(user, chatStats, keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
+        fortyTwoConnections, kifiInstallations, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
   }
@@ -519,14 +520,6 @@ class AdminUserController @Inject() (
     }
 
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
-  }
-
-  def setInvitesCount(userId: Id[User]) = AdminUserPage { implicit request =>
-    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
-    db.readWrite { implicit session =>
-      userValueRepo.setValue(userId, UserValues.availableInvites.name, count)
-    }
-    Redirect(routes.AdminUserController.userView(userId))
   }
 
   //todo: this code may become hard to maintain, should be unified with the production path

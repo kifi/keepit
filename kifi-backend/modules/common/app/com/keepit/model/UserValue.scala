@@ -42,7 +42,6 @@ object UserValueName {
   val EXT_MAX_RESULTS = UserValueName("ext_max_results")
   val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
   val EXT_SHOW_LIBRARY_INTRO = UserValueName("ext_show_library_intro")
-  val AVAILABLE_INVITES = UserValueName("availableInvites")
   val HAS_SEEN_INSTALL = UserValueName("has_seen_install")
   val WELCOME_EMAIL_SENT = UserValueName("welcomeEmailSent")
   val LAST_ACTIVE = UserValueName("last_active")
@@ -161,7 +160,6 @@ object UserValues {
 
   val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
 
-  val availableInvites = UserValueIntHandler(UserValueName.AVAILABLE_INVITES, 1000)
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)
   val welcomeEmailSent = UserValueBooleanHandler(UserValueName.WELCOME_EMAIL_SENT, false)
 

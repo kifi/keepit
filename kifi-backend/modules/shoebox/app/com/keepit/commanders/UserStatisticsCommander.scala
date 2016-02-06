@@ -17,7 +17,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
-import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamMembership }
+import com.keepit.slack.models._
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -59,6 +59,7 @@ case class OrganizationStatisticsOverview(
   name: String,
   description: Option[String],
   libStats: LibCountStatistics,
+  slackStats: SlackStatistics,
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
@@ -76,7 +77,20 @@ case class MemberStatistics(
 
   dateLastManualKeep: Option[DateTime])
 
-case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int, slackLibCount: Int)
+case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int)
+
+object SlackStatistics {
+  def apply(slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
+    SlackStatistics(
+      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.On },
+      slacking.count { s => s.state == SlackChannelToLibraryStates.INACTIVE },
+      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Off },
+      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Broken }
+    )
+  }
+}
+
+case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
 
 object LibCountStatistics {
   def apply(allLibs: Iterable[Library]): LibCountStatistics = {
@@ -84,8 +98,7 @@ object LibCountStatistics {
     LibCountStatistics(
       libs.count(_.isSecret),
       libs.count(_.visibility == LibraryVisibility.ORGANIZATION),
-      libs.count(_.isPublished),
-      allLibs.count(_.kind == LibraryKind.SLACK_CHANNEL))
+      libs.count(_.isPublished))
   }
 }
 
@@ -98,6 +111,7 @@ case class OrganizationStatistics(
   name: String,
   description: Option[String],
   libStats: LibCountStatistics,
+  slackStats: SlackStatistics,
   numKeeps: Int,
   numKeepsLastWeek: Int,
   members: Set[OrganizationMembership],
@@ -126,6 +140,7 @@ class UserStatisticsCommander @Inject() (
     db: Database,
     clock: Clock,
     kifiInstallationRepo: KifiInstallationRepo,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     keepRepo: KeepRepo,
     keepToLibraryRepo: KeepToLibraryRepo,
     emailRepo: UserEmailAddressRepo,
@@ -228,16 +243,17 @@ class UserStatisticsCommander @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
     }
 
-    val (org, libraries, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, slackStats, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
+      val slackStats = SlackStatistics(slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get)))
       val numKeeps = libraries.map(_.keepCount).sum
       val numKeepsLastWeek = keepRepo.getCountByLibrariesSince(libraries.map(_.id.get).toSet, clock.now().minusWeeks(1))
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-      (org, libraries, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains)
+      (org, libraries, slackStats, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains)
     }
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
@@ -304,6 +320,7 @@ class UserStatisticsCommander @Inject() (
       name = org.name,
       description = org.description,
       libStats = LibCountStatistics(libraries),
+      slackStats = slackStats,
       numKeeps = numKeeps,
       numKeepsLastWeek = numKeepsLastWeek,
       members = members,
@@ -325,13 +342,14 @@ class UserStatisticsCommander @Inject() (
 
   def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val (allUsers, libraries, members, candidates, domains) = db.readOnlyReplica { implicit session =>
+    val (allUsers, libraries, slackStats, members, candidates, domains) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.getAllByOrgId(orgId)
       val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
       val allUsers = members.map(_.userId) | candidates.map(_.userId)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
-      (allUsers, libraries, members, candidates, domains)
+      val slackStats = SlackStatistics(slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get)))
+      (allUsers, libraries, slackStats, members, candidates, domains)
     }
     val numKeeps = libraries.map(_.keepCount).sum
 
@@ -349,6 +367,7 @@ class UserStatisticsCommander @Inject() (
       name = org.name,
       description = org.description,
       libStats = LibCountStatistics(libraries),
+      slackStats = slackStats,
       numKeeps = numKeeps,
       members = members,
       candidates = candidates,

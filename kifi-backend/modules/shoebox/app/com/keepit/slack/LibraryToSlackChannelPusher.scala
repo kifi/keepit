@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
@@ -50,6 +51,9 @@ trait LibraryToSlackChannelPusher {
 @Singleton
 class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
+  inhouseSlackClient: InhouseSlackClient,
+  organizationInfoCommander: OrganizationInfoCommander,
+  slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
@@ -194,6 +198,17 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           .recover {
             case f: SlackAPIFailure =>
               log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
+              SafeFuture {
+                val team = db.readOnlyReplica { implicit s =>
+                  slackTeamRepo.getBySlackTeamId(lts.slackTeamId)
+                }
+                val org = db.readOnlyMaster { implicit s =>
+                  team.flatMap(_.organizationId).flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+                }
+                val name = team.map(_.slackTeamName.value).getOrElse("???")
+                inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+                  "Broke Slack integration of team", name, "and Kifi org", org, "channel", lts.slackChannelName.value, "cause", f.toString)))
+              }
               false
           }
       }

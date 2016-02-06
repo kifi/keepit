@@ -19,7 +19,10 @@
    <ul>
        <li>Members: @orgs.map(_.members).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
        <li>Candidates: @orgs.map(_.candidates).flatten.filterNot(_.id == fakeOwnerId).toSet.size</li>
-       <li>Slack Libraries: @orgs.map(_.libStats.slackLibCount).sum</li>
+       <li>Active Slack Libraries: @orgs.map(_.slackStats.activeSlackLibs).sum</li>
+       <li>Inactive Slack Libraries: @orgs.map(_.slackStats.inactiveSlackLibs).sum</li>
+       <li>Closed Slack Libraries: @orgs.map(_.slackStats.closedSlackLibs).sum</li>
+       <li>Broken Slack Libraries: @orgs.map(_.slackStats.brokenSlackLibs).sum</li>
        <li>Private Libraries: @orgs.map(_.libStats.privateLibCount).sum</li>
        <li>Org Libraries: @orgs.map(_.libStats.protectedLibCount).sum</li>
        <li>Public Libraries: @orgs.map(_.libStats.publicLibCount).sum</li>
@@ -38,7 +41,10 @@
                     <th>Name</th>
                     <th>Members</th>
                     <th>Membership candidates</th>
-                    <th>Slack Libs</th>
+                    <th>Active Slacks</th>
+                    <th>InActive Slacks</th>
+                    <th>Closed Slacks</th>
+                    <th>Broken Slacks</th>
                     <th>Libs prv/org/pub</th>
                     <th>Org keeps</th>
                     <th>Chats between members</th>
@@ -54,7 +60,10 @@
                         <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
                         <td>@orgStats.members.filterNot(_.id == fakeOwnerId).size</td>
                         <td>@orgStats.candidates.filterNot(_.id == fakeOwnerId).size</td>
-                        <td>@orgStats.libStats.slackLibCount</td>
+                        <td>@orgStats.slackStats.activeSlackLibs</td>
+                        <td>@orgStats.slackStats.inactiveSlackLibs</td>
+                        <td>@orgStats.slackStats.closedSlackLibs</td>
+                        <td>@orgStats.slackStats.brokenSlackLibs</td>
                         <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td>
                         <td>@orgStats.numKeeps</td>
                         <td>@orgStats.internalMemberChatStats</td>

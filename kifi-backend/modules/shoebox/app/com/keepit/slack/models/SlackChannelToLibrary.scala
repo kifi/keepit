@@ -56,6 +56,8 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Map[Id[SlackChannelToLibrary], SlackChannelToLibrary]
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
+  def getAllByOwner(userId: Id[User])(implicit session: RSession): Set[SlackChannelToLibrary]
+  def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary]
@@ -177,8 +179,17 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary] = {
     activeRows.filter(_.id.inSet(ids)).list.toSet
   }
+
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary] = {
     activeRows.filter(_.libraryId === libraryId).list.toSet
+  }
+
+  def getAllByOwner(userId: Id[User])(implicit session: RSession): Set[SlackChannelToLibrary] = {
+    (for (r <- rows if r.userId === userId) yield r).list.toSet
+  }
+
+  def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary] = {
+    (for (r <- rows if r.libraryId inSet libIds) yield r).list.toSet
   }
 
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
