@@ -55,6 +55,7 @@ class SlackIngestingActor @Inject() (
   airbrake: AirbrakeNotifier,
   slackOnboarder: SlackOnboarder,
   orgConfigRepo: OrganizationConfigurationRepo,
+  userValueRepo: UserValueRepo,
   implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
@@ -269,7 +270,10 @@ class SlackIngestingActor @Inject() (
           (messages, done)
         }.recover {
           case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures && payload.toString().length > 4000 =>
-            slackLog.warn(s"Failed pulling the ${nextPage.page} page of size ${pageSize.count}, skipping it")
+            db.readWriteAsync { implicit s =>
+              userValueRepo.setValue(Id[User](84792), UserValueName.HORRIFYING_LOGGING_METHOD, payload)
+            }
+            slackLog.warn(s"Failed pulling the ${nextPage.page} page of size ${pageSize.count}, skipping it. Check ryan's horrifying log for the payload")
             (previousMessages, false)
         }
     }

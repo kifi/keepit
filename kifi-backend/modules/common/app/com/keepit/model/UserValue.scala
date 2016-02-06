@@ -94,6 +94,7 @@ object UserValueName {
   val PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL = UserValueName("pending_org_domain_ownership_by_email")
 
   val DEFAULT_LIBRARY_ARRANGEMENT = UserValueName("default_library_arrangement")
+  val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
