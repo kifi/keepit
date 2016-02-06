@@ -118,7 +118,7 @@ class SlackOnboarderImpl @Inject() (
               generalLibraryMessage(sctl, owner, lib, slackTeam)
             case _ => None
           }
-        case None =>
+        case _ =>
           // be very conservative, this integration is not on one of this team's org libraries
           integ match {
             case ltsc: LibraryToSlackChannel =>
