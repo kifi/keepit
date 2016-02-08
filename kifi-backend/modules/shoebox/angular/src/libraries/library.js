@@ -105,31 +105,31 @@ angular.module('kifi')
       };
 
       this.onKeepToSlackChanged = function(on) {
-        // make request
-        // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        if (on && this.data.toSlack.authLink) {
-          // need to authorize
-          $window.location = this.data.toSlack.authLink;
-        } else {
-          this.data.toSlack.status = on ? 'on' : 'off';
-          this.data.toSlack.space = this.data.space;
-          libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
-        }
-
+        this.data.toSlack.status = on ? 'on' : 'off';
+        this.data.toSlack.space = this.data.space;
+        slackService.modifyLibraryPushIntegration(this.library.id, this.data.toSlack.id, on)
+        .then(function (resp) {
+          if (resp.success) {
+            return;
+          } else if (resp.redirect && resp.redirect.indexOf('showSlackDialog') === -1) {
+            // indexOf can be removed when the backend starts saying `success: true`
+            $window.location = resp.redirect;
+          }
+        });
       };
 
       this.onSlackToKeepChanged = function(on) {
-        // make request
-        // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        if (on && this.data.fromSlack.authLink) {
-          // need to authorize
-          $window.location = this.data.fromSlack.authLink;
-        } else {
-          this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
-          this.data.fromSlack.space = this.data.space;
-          libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
-        }
-
+        this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
+        this.data.fromSlack.space = this.data.space;
+        slackService.modifyLibraryIngestIntegration(this.library.id, this.data.fromSlack.id, on)
+        .then(function (resp) {
+          if (resp.success) {
+            return;
+          } else if (resp.redirect && resp.redirect.indexOf('showSlackDialog') === -1) {
+            // indexOf can be removed when the backend starts saying `success: true`
+            $window.location = resp.redirect;
+          }
+        });
       };
 
       this.getChannelName = function() {
@@ -150,7 +150,8 @@ angular.module('kifi')
 
         this.data.fromSlack.space = this.data.space;
         this.data.toSlack.space = this.data.space;
-        libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack, this.data.toSlack]);
+        //libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack, this.data.toSlack]);
+        // Uh, how do I move the integration now?
         $scope.sortSlackIntegrations();
         this.menuItems = this.getSpaceMenuItems();
       };

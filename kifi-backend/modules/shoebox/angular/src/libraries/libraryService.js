@@ -327,11 +327,6 @@ angular.module('kifi')
         return net.joinLibraries(libraryIds);
       },
 
-      // integrationsToModify => [{"id": "integration-id", "status": "off|on", "space": {"org": "id"}|{"user": "id"}}]
-      modifySlackIntegrations: function(libraryId, integrationsToModify) {
-        return net.modifyLibrarySlackIntegrations(libraryId, {'integrations': integrationsToModify});
-      },
-
       // integrationsToDelete => ["integration-id", ...]
       deleteSlackIntegrations: function(libraryId, integrationsToDelete) {
         return net.deleteLibrarySlackIntegrations(libraryId, {'integrations': integrationsToDelete});

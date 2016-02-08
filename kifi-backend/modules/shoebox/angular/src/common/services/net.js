@@ -93,7 +93,8 @@ angular.module('kifi')
       sendMobileAppSMS: post(shoebox, '/sms'),
 
       // library slack integration
-      modifyLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/modify'),
+      modifyLibraryPushSlackIntegration: post(shoebox, '/libraries/:id/slack/push/:ltsId?turnOn=:turnOn'),
+      modifyLibraryIngestSlackIntegration: post(shoebox, '/libraries/:id/slack/ingest/:stlId?turnOn=:turnOn'),
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
 
       // slack
