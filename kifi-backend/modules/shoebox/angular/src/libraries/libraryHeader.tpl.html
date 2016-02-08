@@ -25,16 +25,15 @@
         ></svg>
       </div>
       <span
-        ng-if="!library.isSystem"
+        ng-if="(!!library.org && library.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
         ng-class="{
-          'kf-tooltip-parent': library.kind === 'user_created' && library.org.viewer.membership.role === 'admin',
-          'kf-tooltip-parent-noclose': library.kind === 'user_created' && library.org.viewer.membership.role === 'admin'
+          'kf-tooltip-parent kf-tooltip-parent-noclose': library.org.viewer.membership.role === 'admin' && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)
         }"
         data-kf-tooltip-position="bottom"
       >
         <span
           class="kf-tooltip-body"
-          ng-if="library.kind === 'user_created' && library.org.viewer.membership.role === 'admin'"
+          ng-if="library.org.viewer.membership.role === 'admin' && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
           ng-click="onClickUpsellEditLibrary(library)"
           ng-hover="onHoverUpsellEditLibrary(library)"
         >

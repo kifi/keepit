@@ -1,12 +1,17 @@
 <div class="kf-upl-card kf-upl-lib-card" ng-style="{'background-color': lib.color}"
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
-  <span class="kf-upl-card-setting kf-tooltip-parent kf-tooltip-parent-noclose">
+  <span
+    class="kf-upl-card-setting"
+    ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose': !!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY) }"
+    ng-if="(!!lib.org && lib.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+  >
+
     <span
+      ng-if="!!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
       ng-click="onClickUpsellEditLibrary(lib.org)"
       ng-hover="onHoverUpsellEditLibrary(lib.org)"
       class="kf-tooltip-body"
     >
-
       <span ng-if="!getMeOrg().config.showUpsells">
         <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
           Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
@@ -24,7 +29,7 @@
     </span>
     <button
       class="kf-upl-card-setting-icon svg-settings-gear"
-      ng-disabled="!hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+      ng-disabled="!!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
       ng-click="openModifyLibrary(lib, currentPageOrigin)"
     ></button>
   </span>
