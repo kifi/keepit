@@ -21,7 +21,9 @@
                 </a>
                 <div class="kf-left-hand-nav-libraries-container">
                     <div class="kf-left-hand-nav-library-header">Libraries</div>
-                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in libraries" ng-style="{'border-left-color': library.color}">
+                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in libraries">
+                        <div class="kf-left-hand-nav-library-container-bg" ng-style="{'background': library.color}"></div>
+                        <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
                     <div lass="kf-left-hand-nav-view-more-container"  ng-if="hasMoreUserLibaries || fetchingUserLibraries">
@@ -43,7 +45,9 @@
                 </a>
                 <div class="kf-left-hand-nav-libraries-container">
                     <div class="kf-left-hand-nav-library-header">Libraries</div>
-                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in org.libraries" ng-style="{'border-left-color': library.color}">
+                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in org.libraries">
+                        <div class="kf-left-hand-nav-library-container-bg" ng-style="{'background': library.color}"></div>
+                        <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
                     <div class="kf-left-hand-nav-view-more-container" ng-if="org.hasMoreLibraries || org.fetchingLibraries">

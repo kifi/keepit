@@ -89,7 +89,7 @@
 
   .kf-left-hand-nav-libraries-container
     margin-top: 6px
-    padding-left: 10px
+    padding-left: 5px
 
     .kf-left-hand-nav-view-more-container
       height: 12px
@@ -111,31 +111,56 @@
       font-size: 14px
       color: #F5F5F5
       font-weight: bold
-      margin-bottom: 4px
+      margin-bottom: 2px
 
 
     .kf-left-hand-nav-library-container
-      margin: 4px 0px
-      border-left-width: 3px
-      border-left-style: solid
-      padding-left: 6px
       display: block
-
-      &:hover
-        background-color: alpha(white, 0.2)
-
+      position: relative
 
       .kf-left-hand-nav-library
         font-size: 14px
         color: #DDD
-        margin-bottom: 4px
+        padding: 2px 0
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
+        margin-left: 9px
+        height: 100%
 
-        &:hover
-          color: #FFF
-          cursor: pointer
+      .kf-left-hand-nav-library-color
+        width: 3px
+        margin: auto
+        top: 2px
+        bottom: 2px
+        position: absolute
+        background: gray
+
+      .kf-left-hand-nav-library-container-bg
+        position: absolute
+        width: 50%
+        opacity: 0.0
+        margin: auto
+        top: 2px
+        bottom: 2px
+        background: gray
+        z-index: -1
+
+    .kf-left-hand-nav-library-container:hover
+      // .kf-left-hand-nav-library-color
+      //   top: 0px
+      //   bottom: 0px
+
+      .kf-left-hand-nav-library
+        color: #FFF
+        cursor: pointer
+
+      .kf-left-hand-nav-library-container-bg
+        transition: width 0.15s ease-in
+        opacity: 0.5
+        width: 100%
+
+
 
 .kf-left-hand-nav-content-spinner-container
   display: flex
