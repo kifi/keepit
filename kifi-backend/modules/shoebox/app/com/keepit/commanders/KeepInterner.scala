@@ -37,15 +37,15 @@ case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], fai
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
 
   // Because we're nice, you get some extras:
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val response = internRawBookmarksWithStatus(rawBookmarks, ownerId, Some(library), source)
+    val response = internRawBookmarksWithStatus(rawBookmarks, Some(ownerId), Some(library), source)
     (response.successes, response.failures)
   }
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
-    internRawBookmarksWithStatus(Seq(rawBookmark), ownerId, Some(library), source) match {
+    internRawBookmarksWithStatus(Seq(rawBookmark), Some(ownerId), Some(library), source) match {
       case KeepInternResponse(Seq(newKeep), _, _) => Success((newKeep, true))
       case KeepInternResponse(_, Seq(existingKeep), _) => Success((existingKeep, false))
       case KeepInternResponse(_, _, Seq(failedKeep)) => Failure(new Exception(s"could not intern $failedKeep"))
@@ -81,26 +81,26 @@ class KeepInternerImpl @Inject() (
 
   implicit private val fj = ExecutionContext.fj
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
-    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerId, libraryOpt, source)
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
+    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerIdOpt, libraryOpt, source)
 
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    reportNewKeeps(ownerId, newKeeps, libraryOpt, context, notifyExternalSources = true)
+    ownerIdOpt.foreach { ownerId => reportNewKeeps(ownerId, newKeeps, libraryOpt, context, notifyExternalSources = true) }
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource) = {
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource) = {
     // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
     val (validUrls, invalidUrls) = bms.partition(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
 
     val (persisted, failed) = db.readWriteBatch(validUrls, attempts = 5) {
       case ((session, bm)) =>
         implicit val s = session
-        internUriAndBookmark(bm, ownerId, libraryOpt, source).get // Exception caught by readWriteBatch
+        internUriAndBookmark(bm, ownerIdOpt, libraryOpt, source).get // Exception caught by readWriteBatch
     }.partition { case (bm, res) => res.isSuccess }
 
     val keeps = persisted.values.map(_.get).toSeq
@@ -108,8 +108,8 @@ class KeepInternerImpl @Inject() (
     updateKeepTagsUsingNote(keeps.map(_.keep).filter(_.note.exists(_.nonEmpty)))
 
     if (failed.nonEmpty) {
-      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(ownerId)))
-      failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $ownerId from $source: ${f._1.url}", f._2.failed.get) }
+      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = ownerIdOpt))
+      failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $ownerIdOpt from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList ++ invalidUrls
     (keeps, failedRaws)
@@ -117,16 +117,16 @@ class KeepInternerImpl @Inject() (
 
   private val httpPrefix = "https?://".r
 
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
       } catch {
-        case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $ownerId, from $source", t)
+        case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $ownerIdOpt, from $source", t)
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerId, libraryOpt, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.noteFormattedLikeOurNotes)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerIdOpt, libraryOpt, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.noteFormattedLikeOurNotes)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -136,9 +136,10 @@ class KeepInternerImpl @Inject() (
       Failure(e)
   }
 
-  private def internKeep(uri: NormalizedURI, userId: Id[User], libraryOpt: Option[Library], source: KeepSource,
+  private def internKeep(uri: NormalizedURI, userIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
+    airbrake.verify(userIdOpt.isDefined || sourceAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
     // We intern by (library, uri)
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get) }
@@ -149,7 +150,7 @@ class KeepInternerImpl @Inject() (
       id = existingKeepOpt.map(_.id.get),
       externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
       title = kTitle,
-      userId = Some(userId),
+      userId = userIdOpt,
       uriId = uri.id.get,
       url = url,
       source = source,
@@ -157,9 +158,9 @@ class KeepInternerImpl @Inject() (
       libraryId = libraryOpt.map(_.id.get),
       keptAt = keptAt,
       note = kNote,
-      originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse Some(userId),
+      originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
+      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet)
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>

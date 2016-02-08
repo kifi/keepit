@@ -37,7 +37,7 @@ class ExtKeepController @Inject() (
       }
     } yield lib
 
-    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), request.userId, libOpt, KeepSource.keeper)
+    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(request.userId), libOpt, KeepSource.keeper)
 
     response.successes.headOption.map { k =>
       Ok(Json.obj("id" -> Keep.publicId(k.id.get)))
