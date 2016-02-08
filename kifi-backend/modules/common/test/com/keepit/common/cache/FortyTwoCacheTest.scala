@@ -2,6 +2,7 @@ package com.keepit.common.cache
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.serializer._
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -206,6 +207,7 @@ class FortyTwoCacheTest extends Specification with CommonTestInjector {
         Await.result(res3, Duration(100, "millis")).get.value === 9
         client.getCounter === 2
 
+        inject[WatchableExecutionContext].drain()
         cache.get(IntWithTimeCacheKey(3)).get.value === 9
       }
     }

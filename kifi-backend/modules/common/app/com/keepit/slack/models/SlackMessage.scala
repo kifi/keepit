@@ -136,6 +136,17 @@ object SlackMessage {
 
   private val writes: Writes[SlackMessage] = Writes(r => r.originalJson)
   implicit val format: Format[SlackMessage] = Format(reads, writes)
+
+  // Slack has a few isolated cases where they send total garbage instead of a valid message
+  // I do not know WHY or HOW this happens, only that it is repeatable
+  // We don't want to skip parse errors in general, but these get in the way
+  def weKnowWeCannotParse(jsv: JsValue): Boolean = {
+    jsv.asOpt[JsObject] exists { obj =>
+      (obj \ "username").asOpt[String].exists(_.isEmpty) &&
+        (obj \ "text").asOpt[String].exists(_.isEmpty) &&
+        (obj \ "ts").asOpt[SlackTimestamp].exists(_.value == "0000000000.000000")
+    }
+  }
 }
 
 @json
