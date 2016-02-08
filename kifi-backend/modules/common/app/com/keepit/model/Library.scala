@@ -160,7 +160,7 @@ object Library extends PublicIdGenerator[Library] {
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
-    name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
+    name.nonEmpty && name.length <= 200 && !name.contains('"')
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
@@ -275,7 +275,7 @@ object LibrarySlug {
   private val AfterTruncate = Seq("-$" -> "") map compile
 
   def isValidSlug(slug: String): Boolean = {
-    slug.nonEmpty && !slug.contains(' ') && slug.length <= MaxLength
+    slug.nonEmpty && !slug.contains(' ') && !slug.contains('/') && slug.length <= MaxLength
   }
 
   def isReservedSlug(slug: String): Boolean = {
@@ -284,7 +284,7 @@ object LibrarySlug {
 
   def generateFromName(name: String): String = {
     // taken from generateSlug() in angular/src/common/util.js
-    val s1 = BeforeTruncate.foldLeft(name.toLowerCase())(replaceAll)
+    val s1 = BeforeTruncate.foldLeft(name.toLowerCase)(replaceAll)
     val s2 = AfterTruncate.foldLeft(s1.take(MaxLength))(replaceAll)
     if (isReservedSlug(s2)) s2 + '-' else s2
   }
