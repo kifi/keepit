@@ -19,7 +19,7 @@ import com.keepit.slack.models._
 import com.kifi.juggle._
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Period
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -274,8 +274,9 @@ class SlackIngestingActor @Inject() (
           val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
         }.recover {
-          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures && SlackMessage.weKnowWeCannotParse(payload) =>
-            slackLog.info("Skipping a known unparseable message")
+          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures &&
+            (payload \ "messages" \ "matches").asOpt[Seq[JsValue]].exists(_.forall(SlackMessage.weKnowWeCannotParse)) =>
+            slackLog.info("Skipping known unparseable messages")
             (previousMessages, false)
         }
     }
