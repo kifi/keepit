@@ -95,7 +95,16 @@ class OrganizationController @Inject() (
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("libraries" -> Json.toJson(libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+    val useCustomLibraryOrderingLogic = request.request match {
+      case ur: UserRequest[_] if ur.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING) => true
+      case _ => false
+    }
+    val libCards = if (useCustomLibraryOrderingLogic) {
+      libraryInfoCommander.rpbGetOrgLibraries(request.request.userIdOpt, request.orgId, None, offset = offset, limit = limit)
+    } else {
+      libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit))
+    }
+    Ok(Json.obj("libraries" -> libCards))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
