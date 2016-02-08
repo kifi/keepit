@@ -10,7 +10,12 @@ angular.module('kifi')
     $scope.slackTeamId = $stateParams.slackTeamId;
 
     $scope.linkSlack = function (e) {
-      e.target.href = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;
+      var url = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;
+      try {
+        e.target.href = url;
+      } catch (e) {
+        $window.location = url;
+      }
     };
 
     $timeout(function () {
