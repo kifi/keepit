@@ -30,7 +30,7 @@ orgStats: OrganizationStatistics
                 <input type="Submit" value="Change">
             </form>
         </td></tr>
-    <tr><td>Description</td>organizations.scala.html:22
+    <tr><td>Description</td>
         <td>
         <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
             <input id="set-description-input" type="text" name="description" value="@orgStats.description">
@@ -69,14 +69,6 @@ orgStats: OrganizationStatistics
     </td>
     </tr>
 
-    <tr>
-        <th>Active</th>
-        <td>
-            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
-                <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
-            </form>
-        </td>
-    </tr>
     <tr>
         <th>Admin Chat to all members</th>
         <td>
@@ -204,6 +196,14 @@ orgStats: OrganizationStatistics
             <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
         </tr>
     }
+    <tr>
+        <th>Active</th>
+        <td>
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
+        </form>
+        </td>
+    </tr>
 </table>
 
 <h3>Chat Engagement</h3>
