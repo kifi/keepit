@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
 import com.keepit.slack.models._
 import com.kifi.juggle._
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Period
 import play.api.libs.json.Json
 
@@ -279,8 +280,12 @@ class SlackIngestingActor @Inject() (
     }
     getBatchedMessages(bigPages, skipFailures = false).recoverWith {
       case fail =>
-        slackLog.warn(s"Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
-        getBatchedMessages(tinyPages, skipFailures = true)
+        val key = RandomStringUtils.randomAlphabetic(5).toUpperCase
+        slackLog.warn(s"[$key] Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
+        getBatchedMessages(tinyPages, skipFailures = true).andThen {
+          case Success(_) => slackLog.info(s"[$key] That fixed it :+1:")
+          case Failure(fail2) => slackLog.error(s"[$key] :scream: Failed with $tinyPages too, with error ${fail2.getMessage.take(100)}.")
+        }
     }
   }
 }
