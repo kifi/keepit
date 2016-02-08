@@ -30,34 +30,9 @@ orgStats: OrganizationStatistics
                 <input type="Submit" value="Change">
             </form>
         </td></tr>
-    <tr><td>Description</td>
-        <td>
-        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
-            <input id="set-description-input" type="text" name="description" value="@orgStats.description">
-            <input type="Submit" value="Change">
-        </form>
-        </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
 
 </table>
-
-<table class="org-domains table table-bordered" style="width:800px">
-    <tr>
-        <th>Owned Domain</th>
-    </tr>
-    @for(domain <- orgStats.domains) {
-    <tr>
-        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.value)">@{domain.value}</a><td>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.value)"
-               class="btn btn-small">Remove </a></td>
-    </tr>
-    }
-</table>
-
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
-    <input type="text" name="domainName" placeholder="Domain name">
-    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
-</form>
 
 @orgStats.members.size members @orgStats.candidates.size candidates
 
@@ -139,6 +114,24 @@ orgStats: OrganizationStatistics
     <input type="Submit" value="Refresh">
 </form>
 
+<table class="org-domains table table-bordered" style="width:800px">
+    <tr>
+        <th>Owned Domain</th>
+    </tr>
+    @for(domain <- orgStats.domains) {
+    <tr>
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.value)">@{domain.value}</a><td>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.value)"
+               class="btn btn-small">Remove </a></td>
+    </tr>
+    }
+</table>
+
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
+    <input type="text" name="domainName" placeholder="Domain name">
+    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
+</form>
+
 
 <table class="org-member-recos table table-bordered" style="width:800px">
     <tr>
@@ -157,7 +150,7 @@ orgStats: OrganizationStatistics
         </tr>
     }
 </form>
-    
+
 <table class="org-member-recos table table-bordered" style="width:800px">
     <tr><td><a href="https://docs.google.com/document/d/1CBScReiMB7snaZ3yBLjM1v7RtkMq6UrmBIy6mntA0aw/edit">Plan</a></td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.months} months) <button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
     <tr><td>Plan Renewal</td><td>@adminHelper.dateTimeDisplay(orgStats.planRenewal)</td></tr>
@@ -190,6 +183,14 @@ orgStats: OrganizationStatistics
         </td>
     </tr>
 
+    <tr><td>Description</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+                <input id="set-description-input" type="text" name="description" value="@orgStats.description">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
+
     <tr>
         <th>Admin Chat to all members</th>
         <td>
@@ -207,6 +208,8 @@ orgStats: OrganizationStatistics
         </form>
         </td>
     </tr>
+
+
 </table>
 
 <h3>Chat Engagement</h3>
