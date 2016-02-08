@@ -170,7 +170,7 @@ angular.module('kifi')
       } else {
         return (me.orgs || []).filter(function (o) { return o.id === org.id; })[0];
       }
-    };
+    }
 
     function onClickUpsellEditLibrary(organization) {
       orgProfileService.trackEvent('user_clicked_page', organization, { action: 'clickEditLibraryUpsell' });
