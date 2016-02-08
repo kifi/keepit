@@ -38,10 +38,10 @@ class SlackAuthenticationCommanderImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends SlackAuthenticationCommander {
 
-  private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.RedirectClient = {
+  private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.ActionPerformed = {
     val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
     val redirectUrl = if (showSlackDialog) libraryUrl + "?showSlackDialog" else libraryUrl
-    SlackResponse.RedirectClient(redirectUrl)
+    SlackResponse.ActionPerformed(Some(redirectUrl))
   }
 
   private def getOrgUrl(organizationId: Id[Organization]): String = {
