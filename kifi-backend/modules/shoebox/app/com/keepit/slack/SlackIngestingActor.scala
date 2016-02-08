@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
 import com.keepit.slack.models._
 import com.kifi.juggle._
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Period
 import play.api.libs.json.Json
 
@@ -197,13 +198,17 @@ class SlackIngestingActor @Inject() (
       val library = libraryRepo.get(integration.libraryId)
       (userId, library)
     }
-    val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.getOrElse(msg.userId, integrationOwner)).map {
-      case (user, msgs) => user -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
+    val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.get(msg.userId)).map {
+      case (kifiUser, msgs) => kifiUser -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
-      case (user, rawBookmarks) =>
-        val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, user, library, KeepSource.slack)(HeimdalContext.empty)
-        (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case RawSlackAttribution(message) => message })
+      case (kifiUser, rawBookmarks) =>
+        // For now, only the Brewstercorp slack team is allowed to have user-less keeps
+        // For everyone else, if we can't figure out who the Kifi user is, we attribute it to the integration owner
+        val keepOwner = if (integration.slackTeamId == SlackTeamId("T0FUL04N4")) kifiUser else kifiUser orElse Some(integrationOwner)
+        if (keepOwner.isEmpty) log.info(s"[SLACK-INGEST] Found a few keeps (${rawBookmarks.length}) that we could not attribute, putting them in lib ${library.id.get}")
+        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, keepOwner, Some(library), KeepSource.slack)(HeimdalContext.empty)
+        (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>
       db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
@@ -279,8 +284,12 @@ class SlackIngestingActor @Inject() (
     }
     getBatchedMessages(bigPages, skipFailures = false).recoverWith {
       case fail =>
-        slackLog.warn(s"Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
-        getBatchedMessages(tinyPages, skipFailures = true)
+        val key = RandomStringUtils.randomAlphabetic(5).toUpperCase
+        slackLog.warn(s"[$key] Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
+        getBatchedMessages(tinyPages, skipFailures = true).andThen {
+          case Success(_) => slackLog.info(s"[$key] That fixed it :+1:")
+          case Failure(fail2) => slackLog.error(s"[$key] :scream: Failed with $tinyPages too, with error ${fail2.getMessage.take(100)}.")
+        }
     }
   }
 }

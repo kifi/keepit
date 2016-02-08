@@ -169,9 +169,10 @@ class SlackIntegrationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val integration = libToChannelRepo.get(integrationId)
       if (integration.isActive && integration.slackTeamId == slackTeamId) {
+        val newStatus = if (turnOn) SlackIntegrationStatus.On else SlackIntegrationStatus.Off
         val updatedIntegration = {
           if (integration.slackUserId == slackUserId) integration else integration.copy(slackUserId = slackUserId)
-        }.withStatus(SlackIntegrationStatus.On)
+        }.withStatus(newStatus)
         libToChannelRepo.save(updatedIntegration)
       }
       integration.libraryId
@@ -182,9 +183,10 @@ class SlackIntegrationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val integration = channelToLibRepo.get(integrationId)
       if (integration.isActive && integration.slackTeamId == slackTeamId) {
+        val newStatus = if (turnOn) SlackIntegrationStatus.On else SlackIntegrationStatus.Off
         val updatedIntegration = {
           if (integration.slackUserId == slackUserId) integration else integration.copy(slackUserId = slackUserId)
-        }.withStatus(SlackIntegrationStatus.On)
+        }.withStatus(newStatus)
         channelToLibRepo.save(updatedIntegration)
       }
       integration.libraryId

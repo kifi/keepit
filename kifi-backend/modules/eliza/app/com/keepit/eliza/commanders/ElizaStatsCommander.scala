@@ -1,11 +1,10 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.performance.StatsdTiming
 import com.keepit.eliza.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ ChangedURI, User }
 
 class ElizaStatsCommander @Inject() (
