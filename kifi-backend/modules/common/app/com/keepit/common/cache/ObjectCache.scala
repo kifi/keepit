@@ -7,6 +7,8 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.util.Success
+
 trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val minTTL: Duration
@@ -79,25 +81,19 @@ trait ObjectCache[K <: Key[T], T] {
 
   def getOrElseFuture(key: K, needRefresh: T => Boolean = Function.const(false))(orElse: => Future[T]): Future[T] = {
     get(key) match {
-      case Some(value) =>
-        if (needRefresh(value)) orElse.onSuccess { case value => set(key, value) }
-        Promise.successful(value).future
-      case None =>
-        val valueFuture = orElse
-        valueFuture.onSuccess { case value => set(key, value) }
-        valueFuture
+      case Some(value) if !needRefresh(value) =>
+        Future.successful(value)
+      case _ =>
+        orElse.andThen { case Success(newValue) => set(key, newValue) }
     }
   }
 
   def getOrElseFutureOpt(key: K, needRefresh: Option[T] => Boolean = Function.const(false))(orElse: => Future[Option[T]]): Future[Option[T]] = {
     internalGet(key) match {
-      case Found(valueOpt) =>
-        if (needRefresh(valueOpt)) orElse.onSuccess { case valOpt => set(key, valOpt) }
+      case Found(valueOpt) if !needRefresh(valueOpt) =>
         Future.successful(valueOpt)
       case _ =>
-        val valueOptFuture = orElse
-        valueOptFuture.onSuccess { case valueOpt => set(key, valueOpt) }
-        valueOptFuture
+        orElse.andThen { case Success(valueOpt) => set(key, valueOpt) }
     }
   }
 
