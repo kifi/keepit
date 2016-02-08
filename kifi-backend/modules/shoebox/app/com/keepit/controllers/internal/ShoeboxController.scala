@@ -622,7 +622,7 @@ class ShoeboxController @Inject() (
     val input = request.body.as[Request]
     val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
     implicit val context = HeimdalContext.empty
-    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), input.creator, libraryOpt = None, source = KeepSource.discussion)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, source = KeepSource.discussion)
     val keep = internResponse.newKeeps.head
     db.readWrite { implicit s =>
       keepCommander.persistKeep(keep.withParticipants(input.users))

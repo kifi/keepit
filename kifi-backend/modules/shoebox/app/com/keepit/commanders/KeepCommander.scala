@@ -371,7 +371,7 @@ class KeepCommanderImpl @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, Some(library), source)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, Some(userId), Some(library), source)
 
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
