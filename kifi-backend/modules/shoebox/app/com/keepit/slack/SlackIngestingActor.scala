@@ -274,11 +274,8 @@ class SlackIngestingActor @Inject() (
           val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
         }.recover {
-          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures && payload.toString().length > 4000 =>
-            db.readWriteAsync { implicit s =>
-              userValueRepo.setValue(Id[User](84792), UserValueName.HORRIFYING_LOGGING_METHOD, payload)
-            }
-            slackLog.warn(s"Failed pulling the ${nextPage.page} page of size ${pageSize.count}, skipping it. Check ryan's horrifying log for the payload")
+          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures && SlackMessage.weKnowWeCannotParse(payload) =>
+            slackLog.info("Skipping a known unparseable message")
             (previousMessages, false)
         }
     }
