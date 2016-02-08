@@ -112,7 +112,6 @@ angular.module('kifi')
           if (resp.success) {
             return;
           } else if (resp.redirect && resp.redirect.indexOf('showSlackDialog') === -1) {
-            // indexOf can be removed when the backend starts saying `success: true`
             $window.location = resp.redirect;
           }
         });
@@ -126,7 +125,6 @@ angular.module('kifi')
           if (resp.success) {
             return;
           } else if (resp.redirect && resp.redirect.indexOf('showSlackDialog') === -1) {
-            // indexOf can be removed when the backend starts saying `success: true`
             $window.location = resp.redirect;
           }
         });
@@ -138,22 +136,6 @@ angular.module('kifi')
         } else {
           return '#' + this.data.channelName.replace('#', '');
         }
-      };
-
-      this.moveIntegration = function(space) {
-        this.spaceName = space.type === 'me' ? 'Your' : space.name;
-        if (space.type === 'org') {
-          this.data.space = {org: space.id};
-        } else {
-          this.data.space = {user: space.id};
-        }
-
-        this.data.fromSlack.space = this.data.space;
-        this.data.toSlack.space = this.data.space;
-        //libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack, this.data.toSlack]);
-        // Uh, how do I move the integration now?
-        $scope.sortSlackIntegrations();
-        this.menuItems = this.getSpaceMenuItems();
       };
 
       this.guardDeleteIntegration = function() {
