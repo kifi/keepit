@@ -163,10 +163,14 @@ angular.module('kifi')
     function getMeOrg() {
       var scope = this;
       var me = profileService.me;
+      var org = scope.lib.org;
 
-      var meOrg = (me.orgs || []).filter(function (o) { return o.id === scope.lib.org.id; })[0];
-      return meOrg;
-    }
+      if (!org) {
+        return {};
+      } else {
+        return (me.orgs || []).filter(function (o) { return o.id === org.id; })[0];
+      }
+    };
 
     function onClickUpsellEditLibrary(organization) {
       orgProfileService.trackEvent('user_clicked_page', organization, { action: 'clickEditLibraryUpsell' });
