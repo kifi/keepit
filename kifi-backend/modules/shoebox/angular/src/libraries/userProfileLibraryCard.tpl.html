@@ -5,7 +5,6 @@
     ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose': !!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY) }"
     ng-if="(!!lib.org && lib.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
   >
-
     <span
       ng-if="!!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
       ng-click="onClickUpsellEditLibrary(lib.org)"
