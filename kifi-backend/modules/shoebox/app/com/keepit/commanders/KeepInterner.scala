@@ -163,7 +163,7 @@ class KeepInternerImpl @Inject() (
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
-        sourceAttribution.foreach { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
+        sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
       }
     } catch {
       case ex: UndeclaredThrowableException =>
