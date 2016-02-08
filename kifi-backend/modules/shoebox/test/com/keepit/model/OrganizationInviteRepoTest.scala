@@ -4,7 +4,9 @@ import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.model.OrganizationFactory._
+import com.keepit.model.OrganizationInviteFactory._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.OrganizationInviteFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 
@@ -76,6 +78,28 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
         }
         allInvites.length === 11
         allInvites.exists(invite => invite.userId.isEmpty && invite.emailAddress.isEmpty) === true
+      }
+    }
+
+    "get organization counts of pending invites" in withDb() { implicit injector =>
+      val orgIds = db.readWrite { implicit session =>
+        val inviter = user().saved
+        val orgs = organizations(3).map(org => org.withOwner(inviter).saved)
+
+        orgs.foreach { org =>
+          OrganizationInviteFactory.organizationInvite().withDecision(InvitationDecision.PENDING).withOrganization(org).saved
+          OrganizationInviteFactory.organizationInvite().withDecision(InvitationDecision.ACCEPTED).withOrganization(org).saved
+          OrganizationInviteFactory.organizationInvite().withDecision(InvitationDecision.DECLINED).withOrganization(org).saved
+        }
+
+        orgs.map(_.id.get)
+      }
+
+      val orgInviteRepo = inject[OrganizationInviteRepo]
+      db.readOnlyMaster { implicit session =>
+        orgInviteRepo.getDecisionCountsGroupedByOrganization(Set(InvitationDecision.PENDING)) === Seq((orgIds(0), 1), (orgIds(1), 1), (orgIds(2), 1))
+        orgInviteRepo.getDecisionCountsGroupedByOrganization(Set(InvitationDecision.ACCEPTED, InvitationDecision.DECLINED)) === Seq((orgIds(0), 2), (orgIds(1), 2), (orgIds(2), 2))
+        orgInviteRepo.getDecisionCountsGroupedByOrganization(Set()) === Seq.empty
       }
     }
   }

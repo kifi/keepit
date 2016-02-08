@@ -1,4 +1,5 @@
 package com.keepit.model
+
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.classify.NormalizedHostname

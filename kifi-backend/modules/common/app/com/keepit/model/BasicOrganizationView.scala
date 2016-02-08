@@ -40,6 +40,8 @@ object OrganizationInviteInfo {
   )(OrganizationInviteInfo.apply, unlift(OrganizationInviteInfo.unapply))
 
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
+    // TODO(josh) should this be changed to the following?
+    // OrganizationInviteInfo(inviter, invite.emailAddress, invite.lastReminderSentAt.getOrElse(invite.createdAt))
     OrganizationInviteInfo(inviter, invite.emailAddress, invite.createdAt)
   }
 }
