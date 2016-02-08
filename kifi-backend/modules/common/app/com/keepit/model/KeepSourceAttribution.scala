@@ -1,10 +1,9 @@
 package com.keepit.model
 
 import com.keepit.common.db._
-import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
-import com.keepit.slack.models.{ SlackTeamId, SlackMessage }
+import com.keepit.slack.models.SlackMessage
 import com.keepit.social.Author
 import com.keepit.social.twitter.RawTweet
 import org.joda.time.DateTime
@@ -17,7 +16,7 @@ case class KeepSourceAttribution(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     keepId: Id[Keep],
-    author: Option[Author], // TODO(ryan): once this is backfilled, make it mandatory
+    // author: Author, // TODO(ryan): add!
     attribution: RawSourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 
@@ -34,10 +33,17 @@ sealed abstract class KeepAttributionType(val name: String)
 object KeepAttributionType extends Enumerator[KeepAttributionType] {
   case object Twitter extends KeepAttributionType("twitter")
   case object Slack extends KeepAttributionType("slack")
-  private def all = _all
-  def fromString(name: String): Option[KeepAttributionType] = all.find(_.name equalsIgnoreCase name)
+  def all = _all
+  def fromString(name: String): Try[KeepAttributionType] = {
+    all.collectFirst {
+      case attrType if attrType.name equalsIgnoreCase name => Success(attrType)
+    } getOrElse Failure(UnknownAttributionTypeException(name))
+  }
 
-  implicit val format: Format[KeepAttributionType] = EnumFormat.format(fromString, _.name, all.map(_.name).toSet)
+  implicit val format = Format[KeepAttributionType](
+    Reads(_.validate[String].flatMap(name => KeepAttributionType.fromString(name).map(JsSuccess(_)).recover { case error => JsError(error.getMessage) }.get)),
+    Writes(attrType => JsString(attrType.name))
+  )
 }
 
 sealed trait RawSourceAttribution

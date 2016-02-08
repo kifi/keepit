@@ -32,7 +32,6 @@ object KeepFactory {
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
   case class PartialKeep private[KeepFactory] (keep: Keep) {
-    def withNoUser() = this.copy(keep = keep.copy(userId = None, connections = keep.connections.copy(users = Set.empty)))
     def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
     def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))

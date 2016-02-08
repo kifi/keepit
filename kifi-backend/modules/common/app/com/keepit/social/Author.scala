@@ -10,25 +10,21 @@ import play.api.libs.json.{ Json, Writes }
 sealed trait Author
 object Author {
   case class KifiUser(userId: Id[User]) extends Author
-  case class SlackUser(userId: SlackUserId) extends Author
+  case class SlackUser(teamId: SlackTeamId, userId: SlackUserId) extends Author
   case class TwitterUser(userId: TwitterUserId) extends Author
-  def fromSource(attr: RawSourceAttribution): Author = attr match {
-    case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
-    case RawSlackAttribution(msg) => SlackUser(msg.userId)
-  }
 
   def toIndexableString(author: Author): String = author match {
     case KifiUser(userId) => s"kifi|${userId.id}"
-    case SlackUser(userId) => s"slack|${userId.value}"
+    case SlackUser(teamId, userId) => s"slack|${teamId.value}-${userId.value}"
     case TwitterUser(userId) => s"twitter|${userId.id}"
   }
 
   private val kifi = """^kifi\|(.+)$""".r
-  private val slack = """^slack\|(.+)$""".r
+  private val slack = """^slack\|(.+)-(.+)$""".r
   private val twitter = """^twitter\|(.+)$""".r
   def fromIndexableString(str: String): Author = str match {
     case kifi(ValidLong(id)) => KifiUser(Id[User](id))
-    case slack(userId) => SlackUser(SlackUserId(userId))
+    case slack(teamId, userId) => SlackUser(SlackTeamId(teamId), SlackUserId(userId))
     case twitter(ValidLong(id)) => TwitterUser(TwitterUserId(id))
   }
 }

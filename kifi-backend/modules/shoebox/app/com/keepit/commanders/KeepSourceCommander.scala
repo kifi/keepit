@@ -1,38 +1,28 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.core.mapExtensionOps
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackUserId, SlackTeamMembershipRepo }
-import com.keepit.social.{ Author, BasicUser, SocialNetworks, SocialId }
+import com.keepit.social.{ BasicUser, SocialNetworks, SocialId }
 import com.keepit.social.twitter.TwitterUserId
-
-import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepSourceCommanderImpl])
 trait KeepSourceCommander {
   // TODO(ryan): once we have made `Keep.userId` optional and have set up proper attribution backfilling, remove the Option[BasicUser] here
   // it is trying to hotfix misattributed keeps, and we should instead just do the Right Thing the first time
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])]
-
-  def reattributeKeeps(author: Author, user: Id[User]): Future[Set[Id[Keep]]]
 }
 
 @Singleton
 class KeepSourceCommanderImpl @Inject() (
-  db: Database,
   sourceAttributionRepo: KeepSourceAttributionRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  basicUserRepo: BasicUserRepo,
-  keepRepo: KeepRepo,
-  keepCommander: KeepCommander,
-  implicit val defaultContext: ExecutionContext)
+  basicUserRepo: BasicUserRepo)
     extends KeepSourceCommander {
 
   // Get the source attribution for the provided keeps
@@ -69,17 +59,5 @@ class KeepSourceCommanderImpl @Inject() (
 
   private def getSlackAccountOwners(userIds: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, Id[User]] = {
     slackTeamMembershipRepo.getBySlackUserIds(userIds).flatMap { case (slackUserId, membership) => membership.userId.map(slackUserId -> _) }
-  }
-
-  def reattributeKeeps(author: Author, userId: Id[User]): Future[Set[Id[Keep]]] = {
-    db.readOnlyReplicaAsync { implicit s => sourceAttributionRepo.getKeepIdsByAuthor(author) }.map { keepIds =>
-      keepIds.grouped(100).flatMap { batchedKeepIds =>
-        db.readWrite { implicit s =>
-          keepRepo.getByIds(batchedKeepIds).values.collect {
-            case keep if keep.userId.isEmpty => keepCommander.setKeepOwner(keep, userId).id.get
-          }
-        }
-      }.toSet
-    }
   }
 }

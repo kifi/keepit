@@ -79,7 +79,6 @@ trait KeepCommander {
   // Updating / managing
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
-  def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
@@ -470,13 +469,6 @@ class KeepCommanderImpl @Inject() (
       Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
     }
     keep
-  }
-
-  def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep = {
-    require(keep.userId.isEmpty) // TODO(ryan): necessary?
-    keepRepo.save(keep.withOwner(newOwner).withConnections(keep.connections.plusUser(newOwner))) tap { updatedKeep =>
-      ktuCommander.internKeepInUser(updatedKeep, newOwner, None)
-    }
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
