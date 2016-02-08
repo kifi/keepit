@@ -13,7 +13,7 @@ angular.module('kifi')
       var url = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;
       try {
         e.target.href = url;
-      } catch (e) {
+      } catch (err) {
         $window.location = url;
       }
     };
