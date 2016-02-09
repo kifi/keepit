@@ -69,12 +69,12 @@ case class OrganizationStatisticsOverview(
 
 case class MemberStatistics(
   user: User,
+  online: Option[Boolean],
   numChats: Int,
   keepVisibilityCount: KeepVisibilityCount,
   numLibrariesCreated: Int,
   numLibrariesCollaborating: Int,
   numLibrariesFollowing: Int,
-
   dateLastManualKeep: Option[DateTime])
 
 case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int)
@@ -204,8 +204,10 @@ class UserStatisticsCommander @Inject() (
   }
 
   def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
+    val onlineUsersF = elizaClient.areUsersOnline(userIds.toSeq)
     val membersStatsFut = userIds.map { userId =>
       val numChatsFut = elizaClient.getUserThreadStats(userId)
+      val installed = kifiInstallationRepo.all(userId).nonEmpty
       val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
       val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
@@ -213,11 +215,13 @@ class UserStatisticsCommander @Inject() (
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
       val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
       val user = userRepo.get(userId)
-      for (
+      for {
         numChats <- numChatsFut
-      ) yield {
+        onlineUsers <- onlineUsersF
+      } yield {
         userId -> MemberStatistics(
           user = user,
+          online = if (installed) Some(onlineUsers(userId)) else None,
           numChats = numChats.all,
           keepVisibilityCount = keepVisibilityCount,
           numLibrariesCreated = numLibrariesCreated,
