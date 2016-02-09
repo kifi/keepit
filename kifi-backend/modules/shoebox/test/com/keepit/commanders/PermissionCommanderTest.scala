@@ -45,10 +45,10 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
       def follower = Some(users.follower.id.get)
       def rando = Some(users.rando.id.get)
       def noone = None
-      def allUsers: Set[Option[Id[User]]] = Set(owner, admin, member, collab, follower, rando, noone)
+      def everyone: Set[Option[Id[User]]] = Set(owner, admin, member, collab, follower, rando, noone)
+      def allUsers: Set[Option[Id[User]]] = Set(owner, admin, member, collab, follower, rando)
       def libMembers: Set[Option[Id[User]]] = Set(owner, collab, follower)
       def orgMembers: Set[Option[Id[User]]] = Set(owner, admin, member)
-      def proUsers: Set[Option[Id[User]]] = orgMembers
 
       def public = libs.public.id.get
       def secret = libs.secret.id.get
@@ -61,7 +61,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
   def runPermissionsTest(permission: LibraryPermission)(tests: (Id[Library], Set[Option[Id[User]]])*)(implicit injector: Injector, session: RSession, data: TestSetup.Data): Unit = {
     tests.foreach {
       case (lib, expected) =>
-        data.allUsers.filter(x => permissionCommander.getLibraryPermissions(lib, x).contains(permission)) === expected
+        data.everyone.filter(x => permissionCommander.getLibraryPermissions(lib, x).contains(permission)) === expected
     }
   }
   def setup()(implicit injector: Injector, session: RWSession): TestSetup.Data = {
@@ -148,7 +148,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
               data.main -> Set(data.owner),
               data.secret -> Set(data.owner, data.collab, data.follower),
               data.orgVisible -> (data.orgMembers ++ data.libMembers),
-              data.public -> data.allUsers
+              data.public -> data.everyone
             )
             runPermissionsTest(LibraryPermission.ADD_KEEPS)(
               data.main -> Set(data.owner),
@@ -160,7 +160,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
               data.main -> Set(data.owner),
               data.secret -> data.libMembers,
               data.orgVisible -> (data.orgMembers ++ data.libMembers),
-              data.public -> data.allUsers
+              data.public -> data.everyone
             )
             runPermissionsTest(LibraryPermission.EDIT_LIBRARY)(
               data.main -> Set.empty,
@@ -203,9 +203,9 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
             runPermissionsTest(LibraryPermission.CREATE_SLACK_INTEGRATION)(
               data.main -> Set(data.owner),
               data.orgGeneral -> data.orgMembers,
-              data.secret -> Set(data.owner),
+              data.secret -> data.libMembers,
               data.orgVisible -> data.orgMembers,
-              data.public -> data.proUsers
+              data.public -> data.allUsers
             )
           }
           1 === 1
