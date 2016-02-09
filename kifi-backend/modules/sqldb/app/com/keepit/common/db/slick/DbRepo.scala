@@ -221,10 +221,10 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def tableWithSeq(tag: Tag) = table(tag).asInstanceOf[SeqNumberColumn[M]]
   protected def rowsWithSeq = TableQuery(tableWithSeq)
 
-  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
+  def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int)(implicit session: RSession): Seq[M] = {
     // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take)
     val q = (for (t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
-    if (fetchSize >= 0) q.take(fetchSize).list else q.list
+    if (fetchSize > 0) q.take(fetchSize).list else Seq.empty
   }
 
   def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M] = {
