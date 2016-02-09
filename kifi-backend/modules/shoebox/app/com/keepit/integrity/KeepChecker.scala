@@ -38,7 +38,7 @@ class KeepChecker @Inject() (
 
   private val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
   private val KEEP_SEQ_FETCH_SIZE = 100
-  private val KEEP_INTEGRITY_ID = Name[SystemValue]("keep_integrity_plugin_id")
+  private val KEEP_INTEGRITY_COUNT = Name[SystemValue]("keep_integrity_plugin_id")
   private val KEEP_PAGE_SIZE = 100
 
   @AlertingTimer(120 seconds)
@@ -48,10 +48,10 @@ class KeepChecker @Inject() (
     // • By seq num will catch issues that arise from updates to existing keeps
     // • By keep id will catch issues on new keeps
     db.readWrite { implicit s =>
-      val lastKeepId = systemValueRepo.getValue(KEEP_INTEGRITY_ID).flatMap(p => Try(p.toLong).toOption.map(k => Id[Keep](k))).getOrElse(Id[Keep](0L))
+      val lastKeepCount = systemValueRepo.getValue(KEEP_INTEGRITY_COUNT).flatMap(p => Try(p.toInt).toOption).getOrElse(0)
       val lastSeq = systemValueRepo.getSequenceNumber(KEEP_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Keep])
 
-      val recentKeeps = keepRepo.pageAscending((lastKeepId.id.toInt + 1) / KEEP_PAGE_SIZE, KEEP_PAGE_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
+      val recentKeeps = keepRepo.pageAscending(lastKeepCount / KEEP_PAGE_SIZE, KEEP_PAGE_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
       val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_SEQ_FETCH_SIZE)
       val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
 
@@ -66,8 +66,8 @@ class KeepChecker @Inject() (
           ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
-        recentKeeps.map(_.id.get.id).maxOpt.foreach { hwm =>
-          systemValueRepo.setValue(KEEP_INTEGRITY_ID, hwm.toString)
+        recentKeeps.map(_.id.get.id).maxOpt.foreach { _ =>
+          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, (lastKeepCount + recentKeeps.length + 1).toString)
         }
         seqNumKeeps.map(_.seq).maxOpt.foreach { hwm =>
           systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, hwm)
