@@ -39,6 +39,7 @@ case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[I
 case class UserStatisticsPage(
     userViewType: UserViewType,
     users: Seq[UserStatistics],
+    usersOnline: Map[Id[User], Boolean],
     userThreadStats: Map[Id[User], Future[UserThreadStats]],
     page: Int,
     userCount: Int,
@@ -276,6 +277,7 @@ class AdminUserController @Inject() (
     val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
       slackTeamMembershipRepo.getByUserId(userId)
     }
+    val usersOnlineF = eliza.areUsersOnline(Seq(userId))
 
     for {
       abookInfos <- abookInfoF
@@ -284,9 +286,10 @@ class AdminUserController @Inject() (
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
       slackInfo <- slackInfoF
+      usersOnline <- usersOnlineF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
-      Ok(html.admin.user(user, chatStats, keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
+      Ok(html.admin.user(user, usersOnline, chatStats, keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, emails, abookInfos, econtactCount,
         contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
@@ -410,6 +413,10 @@ class AdminUserController @Inject() (
       case (users, _) => (users.map(u => (u.id.get -> eliza.getUserThreadStats(u.id.get)))).seq.toMap
     }
 
+    val usersOnlineF = usersF.map {
+      case (users, _) => eliza.areUsersOnline(users.map(_.id.get))
+    }
+
     val (newUsers, recentUsers, inviteInfo) = userViewType match {
       case Registered =>
         db.readOnlyReplica { implicit s =>
@@ -424,7 +431,8 @@ class AdminUserController @Inject() (
 
     (userStatsF zip userThreadStatsF).map {
       case ((users, userCount), userThreadStats) =>
-        UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, pageSize, newUsers, recentUsers, inviteInfo)
+        val usersOnline = Await.result(Await.result(usersOnlineF, Duration.Inf), Duration.Inf)
+        UserStatisticsPage(userViewType, users, usersOnline, userThreadStats, page, userCount, pageSize, newUsers, recentUsers, inviteInfo)
     }
   }
 
@@ -490,7 +498,9 @@ class AdminUserController @Inject() (
           val userId = u.user.id.get
           (userId -> eliza.getUserThreadStats(u.user.id.get))
         }).seq.toMap
-        Ok(html.admin.users(UserStatisticsPage(All, users, userThreadStats, 0, users.size, users.size, None), searchTerm))
+        val usersOnlineF = eliza.areUsersOnline(userIds)
+        val usersOnline = Await.result(usersOnlineF, Duration.Inf)
+        Ok(html.admin.users(UserStatisticsPage(All, users, usersOnline, userThreadStats, 0, users.size, users.size, None), searchTerm))
     }
   }
 
