@@ -13,7 +13,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.logging.Logging
 
-class LibraryMembershipIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[LibraryMembership, LibraryMembership, LibraryMembershipIndexer](indexDirectory) {
+class LibraryMembershipIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[LibraryMembership, LibraryMembership, LibraryMembershipIndexable, LibraryMembershipIndexer](indexDirectory) {
   val name = "LibraryMembershipIndexer"
 
   def update(): Int = throw new UnsupportedOperationException()
@@ -39,11 +39,7 @@ class LibraryMembershipIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxS
   }
 
   private def processIndexables(indexables: Seq[LibraryMembershipIndexable]): Int = updateLock.synchronized {
-    doUpdate(name)(indexables.iterator)
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
+    doUpdate(indexables.iterator)
   }
 }
 

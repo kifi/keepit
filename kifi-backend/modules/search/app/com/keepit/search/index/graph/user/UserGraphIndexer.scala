@@ -6,6 +6,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index._
+import com.keepit.search.index.graph.user.UserGraphIndexer.UserGraphIndexable
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.index.graph.Util
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,9 +23,11 @@ object UserGraphFields {
 class UserGraphIndexer(
     indexDirectory: IndexDirectory,
     override val airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory) {
+    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, UserConnection, UserGraphIndexable, UserGraphIndexer](indexDirectory) {
 
   import UserGraphIndexer._
+
+  val name = "UserGraphIndex"
 
   override val commitBatchSize = 500
   private val fetchSize = commitBatchSize / 2 // one userConnection's seqNum corresponds to two userGraphIndexable's seqNum. Divide by 2 to make sure these two indexables are committed together.
@@ -66,7 +69,7 @@ class UserGraphIndexer(
     var total = 0
     var done = false
     while (!done) {
-      total += doUpdate("UserGraphIndex") {
+      total += doUpdate {
         val indexables = getIndexables()
         done = indexables.isEmpty
         indexables.toIterator
@@ -74,11 +77,6 @@ class UserGraphIndexer(
     }
     total
   }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("UserGraphIndex" + name)
-  }
-
 }
 
 object UserGraphIndexer {
