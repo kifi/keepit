@@ -12,9 +12,8 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
 import com.keepit.model._
-import com.keepit.slack.{ UserSlackInfo, SlackInfoCommander }
+import com.keepit.slack.SlackInfoCommander
 import com.keepit.social.BasicUser
-import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -73,7 +72,6 @@ class UserProfileController @Inject() (
     orgInviteRepo: OrganizationInviteRepo,
     libraryRepo: LibraryRepo,
     libInfoCommander: LibraryInfoCommander,
-    libQueryCommander: LibraryQueryCommander,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
