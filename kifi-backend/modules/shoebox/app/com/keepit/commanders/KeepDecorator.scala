@@ -183,7 +183,7 @@ class KeepDecoratorImpl @Inject() (
                 author = author,
                 createdAt = Some(getTimestamp(keep)),
                 keeps = Some(keeps),
-                keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),
+                keepers = Some(keepers.flatMap { case (keeperId, _) => idToBasicUser.get(keeperId) }),
                 keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
                 keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
                 libraries = Some(libraries),
@@ -195,12 +195,12 @@ class KeepDecoratorImpl @Inject() (
                 summary = Some(pageInfoForKeep),
                 siteName = DomainToNameMapper.getNameFromUrl(keep.url),
                 libraryId = keep.libraryId.map(Library.publicId),
-                library = keep.libraryId.map(idToLibraryCard(_)),
+                library = keep.libraryId.flatMap(idToLibraryCard.get),
                 organization = keep.libraryId.flatMap(idToBasicOrg.get),
                 sourceAttribution = sourceAttrs.get(keep.id.get),
                 note = keep.note,
                 discussion = discussionsByKeep.get(keep.id.get),
-                participants = ktusByKeep(keep.id.get).map(ktu => idToBasicUser(ktu.userId)),
+                participants = ktusByKeep.getOrElse(keep.id.get, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
                 permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
               )
             }) tap {
