@@ -133,8 +133,7 @@ class SlackTeamDigestNotificationActor @Inject() (
           DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
           DescriptionElements(
             "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
-            "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), ".",
-            "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android apps" --> LinkElement(PathCommander.android)
+            "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), "."
           )
         ))))).withFullMarkdown
       )
