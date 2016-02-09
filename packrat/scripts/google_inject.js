@@ -915,7 +915,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       librariesMore: hit.librariesOmitted || '',
       tags: hit.tags,
       tagsMore: hit.tagsOmitted || '',
-      sources: (hit.sources || [ hit.source ]).sort(prioritizeSlack),
+      sources: (hit.sources || []).sort(prioritizeSlack),
       origin: response.origin
     };
   }
