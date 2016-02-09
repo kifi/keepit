@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -43,6 +44,8 @@ trait LibraryInfoCommander {
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
+  def getBasicLibrariesForUser(userId: Id[User], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary]
+  def getBasicLibrariesForOrg(orgId: Id[Organization], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary]
 
   def rpbGetUserLibraries(viewer: Option[Id[User]], userId: Id[User], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo]
   def rpbGetOrgLibraries(viewer: Option[Id[User]], orgId: Id[Organization], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo]
@@ -69,6 +72,7 @@ class LibraryInfoCommanderImpl @Inject() (
     keepCommander: KeepCommander,
     libraryAnalytics: LibraryAnalytics,
     keepDecorator: KeepDecorator,
+    orgRepo: OrganizationRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     libraryInviteRepo: LibraryInviteRepo,
     basicUserRepo: BasicUserRepo,
@@ -547,6 +551,30 @@ class LibraryInfoCommanderImpl @Inject() (
     libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
   }
 
+  def getBasicLibrariesForUser(userId: Id[User], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
+    import LibraryQuery._
+    val query = LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER)), arrangement, fromIdOpt, offset, limit)
+    val sortedLibIds = libraryQueryCommander.getLibraries(viewer, query)
+    val libsById = libraryRepo.getActiveByIds(sortedLibIds.toSet)
+    val basicUser = basicUserRepo.load(userId)
+    sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser, None))
+  }
+
+  def getBasicLibrariesForOrg(orgId: Id[Organization], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
+    val libs = getSortedLibrariesForOrg(viewer, orgId, arrangement, fromIdOpt = None, offset, limit)
+    val libOwners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+    val orgHandle = orgRepo.get(orgId).primaryHandle.get.normalized
+    libs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId), Some(orgHandle)))
+  }
+
+  private def getSortedLibrariesForOrg(viewer: Option[Id[User]], orgId: Id[Organization], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[Library] = {
+    import LibraryQuery._
+    val query = LibraryQuery(target = ForOrg(orgId), arrangement, fromId = fromIdOpt, offset = offset, limit = limit)
+    val libIds = libraryQueryCommander.getLibraries(viewer, query)
+    val libsById = libraryRepo.getActiveByIds(libIds.toSet)
+    libIds.flatMap(libsById.get)
+  }
+
   def rpbGetUserLibraries(viewer: Option[Id[User]], userId: Id[User], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
     import LibraryQuery._
     val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForUser(userId, LibraryAccess.collaborativePermissions), fromId = fromIdOpt, offset = offset, limit = limit))
@@ -556,10 +584,7 @@ class LibraryInfoCommanderImpl @Inject() (
     libraryCardCommander.createLibraryCardInfos(libs, basicOwnersById, viewer, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq
   }
   def rpbGetOrgLibraries(viewer: Option[Id[User]], orgId: Id[Organization], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
-    import LibraryQuery._
-    val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForOrg(orgId), fromId = fromIdOpt, offset = offset, limit = limit))
-    val libsById = libraryRepo.getActiveByIds(libIds.toSet)
-    val libs = libIds.flatMap(libsById.get)
+    val libs = getSortedLibrariesForOrg(viewer, orgId, arrangement = None, fromIdOpt, offset, limit)
     val basicOwnersById = basicUserRepo.loadAll(libs.map(_.ownerId).toSet) // god I hate that createLibraryCardInfos makes you precompute the basic users
     libraryCardCommander.createLibraryCardInfos(libs, basicOwnersById, viewer, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq
   }

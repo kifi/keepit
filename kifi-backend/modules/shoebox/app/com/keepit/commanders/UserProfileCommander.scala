@@ -11,6 +11,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.util.Paginator
 import com.keepit.common.performance.StatsdTiming
+import com.keepit.controllers.website.{ BasicUserWithTopLibraries, BasicOrgWithTopLibraries, LeftHandRailResponse }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -40,6 +41,9 @@ class UserProfileCommander @Inject() (
     userValueRepo: UserValueRepo,
     libraryCardCommander: LibraryCardCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
+    libQueryCommander: LibraryQueryCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
+    orgMembershipRepo: OrganizationMembershipRepo,
     graphServiceClient: GraphServiceClient,
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
@@ -275,6 +279,41 @@ class UserProfileCommander @Inject() (
   private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
     UserValueSettings.retrieveSetting(userVal, settingsJs)
+  }
+
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[LibraryQuery.Arrangement]): LeftHandRailResponse = {
+    db.readOnlyMaster { implicit s =>
+      import LibraryQuery._
+
+      val sortingArrangement = arrangement.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+
+      def getLibsByQuery(query: LibraryQuery): Seq[Library] = {
+        val sortedLibIds = libQueryCommander.getLibraries(requester = Some(userId), query)
+        val libsById = libraryRepo.getActiveByIds(sortedLibIds.toSet)
+        sortedLibIds.flatMap(libsById.get)
+      }
+
+      val userQuery = LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE)), Some(sortingArrangement), fromId = None, offset = 0, limit = numLibs)
+      val userLibs = getLibsByQuery(userQuery)
+
+      val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+      def orgQuery(orgId: Id[Organization]) = LibraryQuery(ForOrg(orgId), Some(sortingArrangement), fromId = None, offset = 0, limit = numLibs)
+      val orgLibs = orgIds.map(orgId => orgId -> getLibsByQuery(orgQuery(orgId))).toMap
+
+      val libOwners = basicUserRepo.loadAll((userLibs ++ orgLibs.values.flatten).map(_.ownerId).toSet)
+      val basicUserLibs = userLibs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId), orgHandle = None))
+      val basicOrgsWithTopLibs = organizationInfoCommander.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
+        .map {
+          case (id, org) =>
+            val basicLibs = orgLibs.getOrElse(id, Seq.empty).map(lib => BasicLibrary(lib, libOwners(lib.ownerId), Some(org.handle)))
+            BasicOrgWithTopLibraries(org, basicLibs)
+        }
+
+      LeftHandRailResponse(
+        BasicUserWithTopLibraries(basicUserRepo.load(userId), basicUserLibs),
+        basicOrgsWithTopLibs
+      )
+    }
   }
 
 }
