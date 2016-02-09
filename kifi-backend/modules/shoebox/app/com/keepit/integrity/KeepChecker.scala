@@ -38,7 +38,7 @@ class KeepChecker @Inject() (
 
   private val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
   private val KEEP_INTEGRITY_COUNT = Name[SystemValue]("keep_integrity_plugin_id")
-  private val KEEP_PAGE_SIZE = 250
+  private val BATCH_SIZE = 250
 
   @AlertingTimer(120 seconds)
   @StatsdTiming("keepChecker.check")
@@ -47,11 +47,11 @@ class KeepChecker @Inject() (
     // • By seq num will catch issues that arise from updates to existing keeps
     // • By keep id will catch issues on new keeps
     db.readWrite { implicit s =>
-      val lastKeepCount = systemValueRepo.getValue(KEEP_INTEGRITY_COUNT).flatMap(p => Try(p.toInt).toOption).getOrElse(0)
+      val lastKeepId = Id[Keep](systemValueRepo.getValue(KEEP_INTEGRITY_COUNT).flatMap(p => Try(p.toLong).toOption).getOrElse(0L))
       val lastSeq = systemValueRepo.getSequenceNumber(KEEP_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Keep])
 
-      val recentKeeps = keepRepo.pageAscending(lastKeepCount / KEEP_PAGE_SIZE, KEEP_PAGE_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
-      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_PAGE_SIZE - recentKeeps.length)
+      val recentKeeps = keepRepo.getByIdGreaterThan(lastKeepId, BATCH_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
+      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, BATCH_SIZE - recentKeeps.length)
       val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
 
       log.info(s"[KeepChecker] Running keep checker. Recent: ${recentKeeps.length} (${recentKeeps.flatMap(_.id).maxOpt}), seq: ${seqNumKeeps.length} (${seqNumKeeps.map(_.seq).maxOpt}")
@@ -65,8 +65,8 @@ class KeepChecker @Inject() (
           ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
-        recentKeeps.map(_.id.get.id).maxOpt.foreach { _ =>
-          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, (lastKeepCount + recentKeeps.length).toString)
+        recentKeeps.map(_.id.get.id).maxOpt.foreach { maxId =>
+          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, maxId.toString)
         }
         seqNumKeeps.map(_.seq).maxOpt.foreach { hwm =>
           systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, hwm)
