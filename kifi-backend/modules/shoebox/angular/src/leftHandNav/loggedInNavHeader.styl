@@ -3,7 +3,7 @@
   top: 0
   width: 'calc(100vw - %s)' % leftHandNavWidth
   height: appHeaderHeight2
-  background-color: pageHeaderColor
+  background-color: white
   z-index: 500
   user-select: none
   box-shadow: 0px 4px 4px -4px rgba(0, 0, 0, 0.4)
@@ -24,3 +24,17 @@
     display: none
     @media (max-width: appMobileWidth)
       display: block
+
+.kf-left-hand-nav-container
+
+  .kf-lih-search-lhn
+    background-color: #F5F5F5 !important
+
+
+  .kf-lih-add-link
+    &:hover
+      sprite2x($add-link-2-active)
+
+  .kf-lih-center-flex
+    padding-left: 15%
+    padding-right: 15%
