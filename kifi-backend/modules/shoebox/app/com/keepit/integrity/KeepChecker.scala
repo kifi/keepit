@@ -64,8 +64,12 @@ class KeepChecker @Inject() (
           ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
-        systemValueRepo.setValue(KEEP_INTEGRITY_ID, recentKeeps.map(_.id.get.id).max.toString)
-        systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, seqNumKeeps.map(_.seq).max)
+        recentKeeps.map(_.id.get.id).maxOpt.foreach { hwm =>
+          systemValueRepo.setValue(KEEP_INTEGRITY_ID, hwm.toString)
+        }
+        seqNumKeeps.map(_.seq).maxOpt.foreach { hwm =>
+          systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, hwm)
+        }
       }
     }
   }
