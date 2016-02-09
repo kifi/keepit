@@ -27,17 +27,6 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
-  val minDelayForExplicitMsg = Period.days(2)
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
-
-  def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
-    case push: LibraryToSlackChannel => true
-    case ingestion: SlackChannelToLibrary => true
-  }
-
-  def canSendMessageAboutTeam(team: SlackTeam): Boolean = true
-
   val installationDescription = {
     import DescriptionElements._
     DescriptionElements(
@@ -48,7 +37,7 @@ object SlackOnboarder {
   }
 
   class TeamOnboardingAgent(val team: SlackTeam, val membership: SlackTeamMembership, val forceOverride: Boolean)(implicit parent: SlackOnboarderImpl) {
-    private var working = forceOverride || canSendMessageAboutTeam(team)
+    private var working = true
     def isWorking = working
     def dieIf(b: Boolean) = if (b) working = false
 
@@ -114,8 +103,6 @@ class SlackOnboarderImpl @Inject() (
               explicitPushMessage(ltsc, owner, lib, slackTeam)
             case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.USER_CREATED =>
               explicitIngestionMessage(sctl, owner, lib, slackTeam)
-            case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
-              generalLibraryMessage(sctl, owner, lib, slackTeam)
             case _ => None
           }
         case _ =>
@@ -191,38 +178,6 @@ class SlackOnboarderImpl @Inject() (
         DescriptionElements(
           "Go to", "Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute), "to access all your links.",
           "If you don't have a Kifi account, you can sign up with your Slack account in just 20 seconds."
-        )
-      ))))).withFullMarkdown
-    )
-    val msg = SlackMessageRequest.fromKifi(text = txt, attachments).quiet
-    Some(msg)
-  }
-
-  //the big FTUE
-  private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
-    import DescriptionElements._
-    val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
-      "to auto-magically manage links", SlackEmoji.fireworks
-    ))
-    val attachments = List(
-      SlackAttachment(color = Some("#7DBB70"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(
-          SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
-          "to access your automatically organized lists of links."
-        ),
-        DescriptionElements("Libraries have been created for each channel integrated. Join Kifi to access your lists of links messaged in Slack")
-      ))))).withFullMarkdown,
-      SlackAttachment(color = Some("#FBF28D"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.star, s"Automatically save links from your #channels"),
-        DescriptionElements("Every time someone includes a link in a chat message, we'll save it and capture every word on the page. It'll be automatically archived and searchable.")
-      ))))).withFullMarkdown,
-      SlackAttachment(color = Some("#C15B81"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
-        DescriptionElements(
-          "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
-          "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), ".",
-          "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android apps" --> LinkElement(PathCommander.android)
         )
       ))))).withFullMarkdown
     )
