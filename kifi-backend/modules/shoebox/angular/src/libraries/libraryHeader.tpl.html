@@ -25,7 +25,7 @@
         ></svg>
       </div>
       <span
-        ng-if="(!!library.org && library.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+        ng-if="((!!library.org && library.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)) && isMutable()"
         ng-class="{
           'kf-tooltip-parent kf-tooltip-parent-noclose': library.org.viewer.membership.role === 'admin' && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)
         }"

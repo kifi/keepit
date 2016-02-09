@@ -160,6 +160,12 @@ angular.module('kifi')
       return scope.lib.permissions.indexOf(permission) !== -1;
     }
 
+    function isMutable() {
+      var scope = this;
+      var kind = scope.lib.kind;
+      return (kind === 'user_created' || kind === 'slack_channel');
+    }
+
     function getMeOrg() {
       var scope = this;
       var me = profileService.me;
@@ -235,6 +241,7 @@ angular.module('kifi')
         scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
         scope.hasPermission = hasPermission;
+        scope.isMutable = isMutable;
         scope.getMeOrg = getMeOrg;
         scope.onClickUpsellEditLibrary = onClickUpsellEditLibrary;
         scope.onHoverUpsellEditLibrary = onHoverUpsellEditLibrary;
