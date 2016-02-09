@@ -12,8 +12,10 @@ import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.Debouncing
 import com.keepit.model._
 import org.joda.time.Period
+import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.Try
 
 @Singleton
 class KeepChecker @Inject() (
@@ -33,19 +35,28 @@ class KeepChecker @Inject() (
 
   private val debouncer = new Debouncing.Dropper[Unit]
   private[this] val lock = new AnyRef
-  private val timeSlicer = new TimeSlicer(clock)
 
-  private[integrity] val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
-  private val KEEP_FETCH_SIZE = 100
+  private val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
+  private val KEEP_SEQ_FETCH_SIZE = 100
+  private val KEEP_INTEGRITY_ID = Name[SystemValue]("keep_integrity_plugin_id")
+  private val KEEP_PAGE_SIZE = 100
 
-  @AlertingTimer(30 seconds)
+  @AlertingTimer(120 seconds)
   @StatsdTiming("keepChecker.check")
   def check(): Unit = lock.synchronized {
+    // There are two data sources:.
+    // • By seq num will catch issues that arise from updates to existing keeps
+    // • By keep id will catch issues on new keeps
     db.readWrite { implicit s =>
+      val lastKeepId = systemValueRepo.getValue(KEEP_INTEGRITY_ID).flatMap(p => Try(p.toLong).toOption.map(k => Id[Keep](k))).getOrElse(Id[Keep](0L))
       val lastSeq = systemValueRepo.getSequenceNumber(KEEP_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Keep])
-      val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
+
+      val recentKeeps = keepRepo.pageAscending((lastKeepId.id.toInt + 1) / KEEP_PAGE_SIZE, KEEP_PAGE_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
+      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_SEQ_FETCH_SIZE)
+      val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
+
       if (keeps.nonEmpty) {
-        keeps.foreach { keep =>
+        keeps.foreach { keep => // Best not to use this object directly, because the underlying row gets updated
           ensureStateIntegrity(keep.id.get)
           ensureUriIntegrity(keep.id.get)
           ensureLibrariesIntegrity(keep.id.get)
@@ -53,7 +64,8 @@ class KeepChecker @Inject() (
           ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
-        systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, keeps.map(_.seq).max)
+        systemValueRepo.setValue(KEEP_INTEGRITY_ID, recentKeeps.map(_.id.get.id).max.toString)
+        systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, seqNumKeeps.map(_.seq).max)
       }
     }
   }
@@ -125,7 +137,6 @@ class KeepChecker @Inject() (
     val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
     val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
     if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
-      // todo: Change to airbrake.notify after we're sure this won't wake people up at night
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
       keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide
     }
