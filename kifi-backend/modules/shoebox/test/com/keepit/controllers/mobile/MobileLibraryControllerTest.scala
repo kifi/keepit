@@ -167,11 +167,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val lib = Json.parse(contentAsString(result1)) \ "library"
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
         (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
         (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
-        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
+        (lib \ "membership").as[LibraryMembershipInfo] === LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = libPerms)
+        (lib \ "permissions").as[Set[LibraryPermission]] === libPerms
       }
     }
 
@@ -194,11 +195,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val lib = Json.parse(contentAsString(result1)) \ "library"
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
         (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
         (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
-        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
+        (lib \ "membership").as[LibraryMembershipInfo] === LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = libPerms)
+        (lib \ "permissions").as[Set[LibraryPermission]] === libPerms
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>
