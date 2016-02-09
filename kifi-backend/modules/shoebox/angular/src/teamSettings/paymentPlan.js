@@ -96,21 +96,49 @@ angular.module('kifi')
       });
     }
 
-    $scope.changePlanToFree = function () {
-      var freeTierPlans = plansByTier[Object.keys(plansByTier)[0]];
-      var firstFreeTierPlan = freeTierPlans[0];
-      $scope.plan.name = firstFreeTierPlan.name;
-      $scope.plan.cycle = firstFreeTierPlan.cycle;
-      $scope.planSelectsForm.$setDirty();
-      $scope.trackClick('free_card:downgrade');
+    $scope.changePlanToFree = function (retried) {
+      retried = (typeof retried === 'boolean' ? retried : false);
+
+      // Sometimes the controller can run before ng-form assigns the form object
+      // to the scope. If that happens, try one more time after a timeout
+      if ($scope.planSelectsForm) {
+        var freeTierPlans = plansByTier[Object.keys(plansByTier)[0]];
+        var firstFreeTierPlan = freeTierPlans[0];
+        $scope.plan.name = firstFreeTierPlan.name;
+        $scope.plan.cycle = firstFreeTierPlan.cycle;
+        $scope.planSelectsForm.$setDirty();
+        $scope.trackClick('free_card:downgrade');
+      } else {
+        if (!retried) {
+          $timeout(function () {
+            $scope.changePlanToFree(true);
+          });
+        } else {
+          $scope.trackClick('free_card:downgrade:fail');
+        }
+      }
     };
 
-    $scope.changePlanToStandard = function () {
-      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
-      var firstStandardTierPlan = standardTierPlans[0];
-      $scope.plan.name = firstStandardTierPlan.name;
-      $scope.planSelectsForm.$setDirty();
-      $scope.trackClick('standard_card:upgrade');
+    $scope.changePlanToStandard = function (retried) {
+      retried = (typeof retried === 'boolean' ? retried : false);
+
+      // Sometimes the controller can run before ng-form assigns the form object
+      // to the scope. If that happens, try one more time after a timeout.
+      if ($scope.planSelectsForm) {
+        var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
+        var firstStandardTierPlan = standardTierPlans[0];
+        $scope.plan.name = firstStandardTierPlan.name;
+        $scope.planSelectsForm.$setDirty();
+        $scope.trackClick('standard_card:upgrade');
+      } else {
+        if (!retried) {
+          $timeout(function () {
+            $scope.changePlanToStandard(true);
+          });
+        } else {
+          $scope.trackClick('standard_card:upgrade:fail');
+        }
+      }
     };
 
     var plansByTier = paymentPlans.plans;
