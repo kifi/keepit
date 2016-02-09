@@ -37,7 +37,6 @@ case class SlackToLibraryIntegrationInfo(
 case class LibrarySlackIntegrationInfo(
   teamName: SlackTeamName,
   channelName: SlackChannelName,
-  creatorName: SlackUsername,
   space: ExternalLibrarySpace,
   toSlack: Option[LibraryToSlackIntegrationInfo],
   fromSlack: Option[SlackToLibraryIntegrationInfo])
@@ -147,17 +146,11 @@ class SlackInfoCommanderImpl @Inject() (
       }.toMap
     }
 
-    case class SlackIntegrationInfoKey(space: LibrarySpace, slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackUsername: SlackUsername, slackChannelName: SlackChannelName)
+    // todo(Léo): migrate to use SlackChannelId
+    case class SlackIntegrationInfoKey(space: LibrarySpace, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName)
     object SlackIntegrationInfoKey {
-      def fromSTL(stl: SlackChannelToLibrary) = {
-        val username = teamMembershipMap(stl.slackUserId, stl.slackTeamId).slackUsername
-        SlackIntegrationInfoKey(stl.space, stl.slackUserId, stl.slackTeamId, username, stl.slackChannelName)
-      }
-
-      def fromLTS(lts: LibraryToSlackChannel) = {
-        val username = teamMembershipMap(lts.slackUserId, lts.slackTeamId).slackUsername
-        SlackIntegrationInfoKey(lts.space, lts.slackUserId, lts.slackTeamId, username, lts.slackChannelName)
-      }
+      def fromSTL(stl: SlackChannelToLibrary) = SlackIntegrationInfoKey(stl.space, stl.slackTeamId, stl.slackChannelName)
+      def fromLTS(lts: LibraryToSlackChannel) = SlackIntegrationInfoKey(lts.space, lts.slackTeamId, lts.slackChannelName)
     }
     libraryIds.map { libId =>
       val permissions = permissionsByLib.getOrElse(libId, Set.empty)
@@ -195,12 +188,11 @@ class SlackInfoCommanderImpl @Inject() (
         LibrarySlackIntegrationInfo(
           teamName = teamNameByTeamId(key.slackTeamId),
           channelName = key.slackChannelName,
-          creatorName = key.slackUsername,
           space = externalSpaceBySpace(key.space),
           toSlack = toSlackGroupedInfos.get(key),
           fromSlack = fromSlackGroupedInfos.get(key)
         )
-      }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
+      }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value))
 
       libId -> integrations
     }.toMap
