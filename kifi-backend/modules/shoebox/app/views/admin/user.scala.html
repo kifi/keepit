@@ -14,7 +14,6 @@
   emails: Seq[UserEmailAddress],
   abookInfos: Seq[ABookInfo],
   econtactCount: Int,
-  contacts: Seq[com.keepit.abook.model.RichContact],
   invitedBy: Seq[User],
   potentialOrganizations: Seq[Organization],
   ignoreForPotentialOrganizations: Boolean,
@@ -42,7 +41,7 @@
         <th>Name</th>
         <td>
           <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25><a href="https://www.kifi.com/@user.primaryUsername.map(_.original.value).getOrElse("")">@user.firstName @user.lastName</a>
-          @if(userData.usersOnline(userStatistics.user.id.get)) {
+          @if(usersOnline) {
             <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
           } else {
             <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
@@ -320,26 +319,7 @@
   }
   @if(econtactCount > 0) {
     <br/>
-    <h3>Contacts (total=@econtactCount; display up to 500)</h3>
-    <div class="scrollArea">
-        <table class="table table-condensed table-striped">
-            <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
-            @for(contact <- contacts) {
-            <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td>
-              @if(experiments.contains(UserExperimentType.ADMIN)) {
-                <td>
-                    <form class="form-inline" style="display:inline" action="/invite" method="POST">
-                        <input type="hidden" name="fullSocialId" value="email/@contact.email">
-                        <input type="hidden" name="subject" value="You've been invited to join Kifi!">
-                        <input type="hidden" name="message" value="Come join us!">
-                        <button type="submit" class="btn btn-default">Invite</button>
-                    </form>
-                </td>
-              }
-            </tr>
-            }
-        </table>
-    </div>
+    <h3>Contacts count: @econtactCount</h3>
   }
 
   <script type="text/javascript">
