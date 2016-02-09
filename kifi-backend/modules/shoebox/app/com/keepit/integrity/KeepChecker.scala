@@ -37,9 +37,8 @@ class KeepChecker @Inject() (
   private[this] val lock = new AnyRef
 
   private val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
-  private val KEEP_SEQ_FETCH_SIZE = 100
   private val KEEP_INTEGRITY_COUNT = Name[SystemValue]("keep_integrity_plugin_id")
-  private val KEEP_PAGE_SIZE = 100
+  private val KEEP_PAGE_SIZE = 250
 
   @AlertingTimer(120 seconds)
   @StatsdTiming("keepChecker.check")
@@ -52,7 +51,7 @@ class KeepChecker @Inject() (
       val lastSeq = systemValueRepo.getSequenceNumber(KEEP_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Keep])
 
       val recentKeeps = keepRepo.pageAscending(lastKeepCount / KEEP_PAGE_SIZE, KEEP_PAGE_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
-      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_SEQ_FETCH_SIZE)
+      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_PAGE_SIZE - recentKeeps.length)
       val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
 
       log.info(s"[KeepChecker] Running keep checker. Recent: ${recentKeeps.length} (${recentKeeps.flatMap(_.id).maxOpt}), seq: ${seqNumKeeps.length} (${seqNumKeeps.map(_.seq).maxOpt}")
@@ -67,7 +66,7 @@ class KeepChecker @Inject() (
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
         recentKeeps.map(_.id.get.id).maxOpt.foreach { _ =>
-          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, (lastKeepCount + recentKeeps.length + 1).toString)
+          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, (lastKeepCount + recentKeeps.length).toString)
         }
         seqNumKeeps.map(_.seq).maxOpt.foreach { hwm =>
           systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, hwm)
@@ -144,7 +143,7 @@ class KeepChecker @Inject() (
     val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
     if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
-      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide
+      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately
     }
 
     // We don't want later checkers to overwrite the eventual note, so change the note they see when they load from db
