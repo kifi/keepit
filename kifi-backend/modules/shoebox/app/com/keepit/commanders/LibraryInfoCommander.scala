@@ -551,17 +551,19 @@ class LibraryInfoCommanderImpl @Inject() (
     libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
   }
 
-  def getBasicLibrariesForUser(userId: Id[User], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
+  def getBasicLibrariesForUser(userId: Id[User], viewer: Option[Id[User]], arrangementOpt: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
     import LibraryQuery._
-    val query = LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER)), arrangement, fromIdOpt, offset, limit)
+    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+    val query = LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER)), Some(arrangement), fromIdOpt, offset, limit)
     val sortedLibIds = libraryQueryCommander.getLibraries(viewer, query)
     val libsById = libraryRepo.getActiveByIds(sortedLibIds.toSet)
     val basicUser = basicUserRepo.load(userId)
     sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser, None))
   }
 
-  def getBasicLibrariesForOrg(orgId: Id[Organization], viewer: Option[Id[User]], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
-    val libs = getSortedLibrariesForOrg(viewer, orgId, arrangement, fromIdOpt = None, offset, limit)
+  def getBasicLibrariesForOrg(orgId: Id[Organization], viewer: Option[Id[User]], arrangementOpt: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Int, limit: Int)(implicit session: RSession): Seq[BasicLibrary] = {
+    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+    val libs = getSortedLibrariesForOrg(viewer, orgId, Some(arrangement), fromIdOpt = None, offset, limit)
     val libOwners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
     val orgHandle = orgRepo.get(orgId).primaryHandle.get.normalized
     libs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId), Some(orgHandle)))
