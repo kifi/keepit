@@ -14,20 +14,16 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 
-class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 4) {
+class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexable, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 4) {
   val name = "KeepIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
   override val commitBatchSize = 200
 
-  private[keep] def processIndexables(indexables: Seq[KeepIndexable]): Int = updateLock.synchronized {
-    indexables.foreach(validate)
-    doUpdate(indexables.iterator)
-  }
+  override protected def shouldDelete(indexable: KeepIndexable): Boolean = indexable.isDeleted || !shard.contains(indexable.keep.uriId)
 
-  private def validate(indexable: KeepIndexable): Unit = {
-    val isValidIndexable = shard.contains(indexable.keep.uriId) || indexable.isDeleted
-    if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
+  private[keep] def processIndexables(indexables: Seq[KeepIndexable]): Int = updateLock.synchronized {
+    doUpdate(indexables.iterator)
   }
 }
 
@@ -45,24 +41,21 @@ class ShardedKeepIndexer(
   def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     fetchIndexables(sequenceNumber, fetchSize).map {
-      case Some((shardedIndexables, maxSeq, exhausted)) =>
-        processShardedIndexables(shardedIndexables, maxSeq)
+      case Some((indexables, maxSeq, exhausted)) =>
+        processIndexables(indexables, maxSeq)
         exhausted
       case None =>
         true
     }
   }
 
-  private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[KeepIndexable]], SequenceNumber[Keep], Boolean)]] = {
+  private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Seq[KeepIndexable], SequenceNumber[Keep], Boolean)]] = {
     shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
       if (changedKeepsAndTags.nonEmpty) {
-        val shardedIndexables = indexShards.keys.map { shard =>
-          val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags, shard) }
-          shard -> indexables
-        }.toMap
-        val exhausted = changedKeepsAndTags.length < fetchSize
+        val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags) }
+        val exhausted = changedKeepsAndTags.isEmpty
         val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
-        Some((shardedIndexables, maxSeq, exhausted))
+        Some((indexables, maxSeq, exhausted))
       } else {
         None
       }
@@ -70,10 +63,10 @@ class ShardedKeepIndexer(
   }
 
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
-  private def processShardedIndexables(shardedIndexables: Map[Shard[NormalizedURI], Seq[KeepIndexable]], maxSeq: SequenceNumber[Keep]): Int = updateLock.synchronized {
+  private def processIndexables(indexables: Seq[KeepIndexable], maxSeq: SequenceNumber[Keep]): Int = updateLock.synchronized {
     val count = indexShards.map {
       case (shard, indexer) =>
-        shardedIndexables.get(shard).map(indexer.processIndexables).getOrElse(0)
+        indexer.processIndexables(indexables)
     }.sum
     sequenceNumber = maxSeq
     count

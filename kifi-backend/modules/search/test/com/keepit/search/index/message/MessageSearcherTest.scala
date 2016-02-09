@@ -147,7 +147,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       airbrake = inject[AirbrakeNotifier]
     )
 
-    val threadIndexableIterable = Seq[Indexable[ThreadContent, ThreadContent]](threadIndexable1, threadIndexable2, threadIndexable3, threadIndexable4, threadIndexable5)
+    val threadIndexableIterable = Seq(threadIndexable1, threadIndexable2, threadIndexable3, threadIndexable4, threadIndexable5)
 
     val indexer = new MessageIndexer(
       indexDirectory = new VolatileIndexDirectory(),

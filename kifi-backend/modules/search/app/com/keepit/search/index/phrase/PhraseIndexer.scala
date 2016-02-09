@@ -10,7 +10,7 @@ import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 
-abstract class PhraseIndexer(indexDirectory: IndexDirectory) extends Indexer[Phrase, Phrase, PhraseIndexer](indexDirectory) {
+abstract class PhraseIndexer(indexDirectory: IndexDirectory) extends Indexer[Phrase, Phrase, PhraseIndexable, PhraseIndexer](indexDirectory) {
   def update(): Int
 }
 

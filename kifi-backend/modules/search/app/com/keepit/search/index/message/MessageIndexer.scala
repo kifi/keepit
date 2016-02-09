@@ -133,7 +133,7 @@ class MessageIndexer(
   indexDirectory: IndexDirectory,
   eliza: ElizaServiceClient,
   override val airbrake: AirbrakeNotifier)
-    extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory) {
+    extends Indexer[ThreadContent, ThreadContent, MessageContentIndexable, MessageIndexer](indexDirectory) {
 
   val name = "MessageIndex"
 

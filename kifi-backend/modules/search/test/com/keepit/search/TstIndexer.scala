@@ -11,10 +11,10 @@ import java.io.StringReader
 
 class Tst(val id: Id[Tst], val text: String, val personalText: String)
 
-class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIndexer](indexDirectory) {
+class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIndexable, TstIndexer](indexDirectory) {
   val name = "TestIndexer"
-  def buildIndexable(id: Id[Tst]): Indexable[Tst, Tst] = throw new UnsupportedOperationException()
-  def buildIndexable(data: Tst): Indexable[Tst, Tst] = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
+  def buildIndexable(id: Id[Tst]): TstIndexable = throw new UnsupportedOperationException()
+  def buildIndexable(data: Tst): TstIndexable = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
 
   def index(id: Id[Tst], text: String, personalText: String) = {
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)

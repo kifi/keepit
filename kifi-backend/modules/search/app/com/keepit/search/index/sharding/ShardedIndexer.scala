@@ -7,7 +7,7 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.index.IndexInfo
 import com.keepit.common.logging.Logging
 
-trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging {
+trait ShardedIndexer[K, S, I <: Indexer[_, S, _, I]] extends IndexManager[S, I] with Logging {
   val indexShards: Map[Shard[K], I]
   protected val updateLock = new AnyRef
   @volatile protected var closing = false

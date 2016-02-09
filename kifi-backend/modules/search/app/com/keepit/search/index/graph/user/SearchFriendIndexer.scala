@@ -6,6 +6,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index._
+import com.keepit.search.index.graph.user.SearchFriendIndexer.SearchFriendIndexable
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.index.graph.Util
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,7 +23,7 @@ object SearchFriendFields {
 class SearchFriendIndexer(
     indexDirectory: IndexDirectory,
     override val airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, SearchFriend, SearchFriendIndexer](indexDirectory) {
+    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, SearchFriend, SearchFriendIndexable, SearchFriendIndexer](indexDirectory) {
 
   import SearchFriendIndexer._
 
