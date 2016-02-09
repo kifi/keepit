@@ -25,7 +25,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   var completedNotifications = List.empty[Recipient]
 
-  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = Future.successful(Map.empty())
+  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = Future.successful(Map.empty)
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray) = Future.successful((): Unit)
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = Future.successful(1)

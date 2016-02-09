@@ -4,7 +4,7 @@ import org.joda.time.{ Duration, DateTime, Period }
 import org.specs2.mutable.Specification
 
 class DescriptionElementsTest extends Specification {
-  "Debouncing" should {
+  "DescriptionElements" should {
     "format time periods properly" in {
       import DescriptionElements._
       val now = new DateTime
