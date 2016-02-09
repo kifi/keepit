@@ -561,7 +561,7 @@ class ShoeboxController @Inject() (
 
   def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Set[Id[Organization]]]
-    val basicOrgs = organizationInfoCommander.getBasicOrganizations(orgIds)
+    val basicOrgs = db.readOnlyMaster(implicit s => organizationInfoCommander.getBasicOrganizations(orgIds))
     Ok(Json.toJson(basicOrgs))
   }
 

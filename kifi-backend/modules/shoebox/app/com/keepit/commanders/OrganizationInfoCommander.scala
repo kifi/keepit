@@ -31,7 +31,7 @@ trait OrganizationInfoCommander {
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
   def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
-  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
+  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization]
   def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
 
 }
@@ -87,17 +87,15 @@ class OrganizationInfoCommanderImpl @Inject() (
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
 
-  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
-    val cacheFormattedMap = db.readOnlyReplica { implicit session =>
-      basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
-        missing.map(_.id).map {
-          orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
-        }.collect {
-          case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
-        }.map {
-          case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
-        }.toMap
-      }
+  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization] = {
+    val cacheFormattedMap = basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
+      missing.map(_.id).map {
+        orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
+      }.collect {
+        case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
+      }.map {
+        case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
+      }.toMap
     }
     cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }

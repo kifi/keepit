@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -105,6 +106,15 @@ class OrganizationController @Inject() (
       libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit))
     }
     Ok(Json.obj("libraries" -> libCards))
+  }
+
+  def getBasicLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    val arrangement = for {
+      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
+      direction <- directionOpt.flatMap(SortDirection.fromStr)
+    } yield Arrangement(ordering, direction)
+    val basicLibs = db.readOnlyMaster(implicit s => libraryInfoCommander.getBasicLibrariesForOrg(request.orgId, request.request.userIdOpt, arrangement, fromIdOpt = None, offset, limit))
+    Ok(Json.obj("libraries" -> basicLibs))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>

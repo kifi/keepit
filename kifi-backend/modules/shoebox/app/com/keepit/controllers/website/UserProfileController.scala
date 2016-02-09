@@ -13,9 +13,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
 import com.keepit.model._
 import com.keepit.slack.SlackInfoCommander
-import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.Future
@@ -24,6 +24,34 @@ import scala.util.{ Success, Try }
 case class ProfileStats(libs: Int, followers: Int, connections: Int)
 
 case class ProfileMutualStats(libs: Int, connections: Int)
+
+case class BasicUserWithTopLibraries(
+  user: BasicUser,
+  libs: Seq[BasicLibrary])
+object BasicUserWithTopLibraries {
+  implicit val writes: Writes[BasicUserWithTopLibraries] = (
+    (__ \ 'user).write[BasicUser] and
+    (__ \ 'libs).write[Seq[BasicLibrary]]
+  )(unlift(BasicUserWithTopLibraries.unapply))
+}
+case class BasicOrgWithTopLibraries(
+  org: BasicOrganization,
+  libs: Seq[BasicLibrary])
+object BasicOrgWithTopLibraries {
+  implicit val writes: Writes[BasicOrgWithTopLibraries] = (
+    (__ \ 'org).write[BasicOrganization] and
+    (__ \ 'libs).write[Seq[BasicLibrary]]
+  )(unlift(BasicOrgWithTopLibraries.unapply))
+}
+case class LeftHandRailResponse(
+  user: BasicUserWithTopLibraries,
+  orgs: Seq[BasicOrgWithTopLibraries])
+object LeftHandRailResponse {
+  implicit val writes: Writes[LeftHandRailResponse] = (
+    (__ \ 'userWithLibs).write[BasicUserWithTopLibraries] and
+    (__ \ 'orgs).write[Seq[BasicOrgWithTopLibraries]]
+  )(unlift(LeftHandRailResponse.unapply))
+}
 
 class UserProfileController @Inject() (
     db: Database,
@@ -373,5 +401,14 @@ class UserProfileController @Inject() (
       case None =>
         NotFound(s"user id $extUserId")
     }
+  }
+
+  def getLeftHandRail(numLibs: Int, orderingOpt: Option[String], directionOpt: Option[String]) = UserAction { request =>
+    val arrangement = for {
+      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
+      direction <- directionOpt.flatMap(SortDirection.fromStr)
+    } yield LibraryQuery.Arrangement(ordering, direction)
+    val lhrResponse = userProfileCommander.getLeftHandRailResponse(request.userId, numLibs, arrangement)
+    Ok(Json.obj("lhr" -> lhrResponse))
   }
 }
