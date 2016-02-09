@@ -1,7 +1,7 @@
 package com.keepit.search.index.article
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -15,27 +15,19 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 import scala.concurrent.duration._
+import com.keepit.common.core._
 
-class ArticleIndexer(val indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
+class ArticleIndexer(val indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexable, ArticleIndexer](indexDirectory) {
   val name = "ArticleIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
   override val commitBatchSize = 200
 
+  override protected def shouldDelete(indexable: ArticleIndexable): Boolean = indexable.isDeleted || !shard.contains(indexable.uri.id.get)
+
   private[article] def processIndexables(indexables: Seq[ArticleIndexable]): Int = updateLock.synchronized {
-    indexables.foreach(validate)
-    doUpdate(name)(indexables.iterator)
+    doUpdate(indexables.iterator)
   }
-
-  private def validate(indexable: ArticleIndexable): Unit = {
-    val isValidIndexable = shard.contains(indexable.uri.id.get) || indexable.isDeleted
-    if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
-  }
-
 }
 
 class ShardedArticleIndexer(
@@ -51,23 +43,18 @@ class ShardedArticleIndexer(
 
   def asyncUpdate(): Future[Option[Int]] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-    fetchIndexables(fetchSize).map {
-      _.map {
-        case (shardedIndexables, maxSeq) =>
-          processShardedIndexables(shardedIndexables, maxSeq)
-      }
+    fetchIndexables(fetchSize).flatMap {
+      case None => Future.successful(None)
+      case Some((indexables, maxSeq)) => processIndexables(indexables, maxSeq).imap(Some(_))
     }
   }
 
-  private def fetchIndexables(fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
+  private def fetchIndexables(fetchSize: Int): Future[Option[(Seq[ArticleIndexable], SequenceNumber[NormalizedURI])]] = {
     getIndexableUris(fetchSize).flatMap {
       case None => Future.successful(None)
       case Some((uris, maxSeq)) => rover.getBestArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
-        val shardedIndexables = indexShards.keys.map { shard =>
-          val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get), shard) }
-          shard -> indexables
-        }.toMap
-        Some((shardedIndexables, maxSeq))
+        val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get)) }
+        Some((indexables, maxSeq))
       }
     }
   }
@@ -88,13 +75,12 @@ class ShardedArticleIndexer(
   }
 
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
-  private def processShardedIndexables(shardedIndexables: Map[Shard[NormalizedURI], Seq[ArticleIndexable]], maxSeq: SequenceNumber[NormalizedURI]): Int = updateLock.synchronized {
-    val count = indexShards.map {
-      case (shard, indexer) =>
-        shardedIndexables.get(shard).map(indexer.processIndexables).getOrElse(0)
-    }.sum
-    sequenceNumber = maxSeq
-    count
+  private def processIndexables(indexables: Seq[ArticleIndexable], maxSeq: SequenceNumber[NormalizedURI]): Future[Int] = updateLock.synchronized {
+    val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
+    Future.sequence(futureCounts).map { counts =>
+      sequenceNumber = maxSeq
+      counts.sum
+    }
   }
 
   override def getDbHighestSeqNum(): SequenceNumber[NormalizedURI] = {

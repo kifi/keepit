@@ -56,13 +56,13 @@ angular.module('kifi')
 
     $scope.onKifiToSlackChanged = function(integration) {
       integration.integration.toSlack.status = integration.kifiToSlack ? 'on' : 'off';
-      libraryService.modifySlackIntegrations(integration.library.id, [integration.integration.fromSlack, integration.integration.toSlack])
+      slackService.modifyLibraryPushIntegration(integration.library.id, integration.integration.toSlack.id, integration.kifiToSlack)
       .then(onSave, onError);
     };
 
     $scope.onSlackToKifiChanged = function(integration) {
       integration.integration.fromSlack.status = integration.slackToKifi ? 'on' : 'off';
-      libraryService.modifySlackIntegrations(integration.library.id, [integration.integration.fromSlack, integration.integration.toSlack])
+      slackService.modifyLibraryIngestIntegration(integration.library.id, integration.integration.fromSlack.id, integration.slackToKifi)
       .then(onSave, onError);
     };
 

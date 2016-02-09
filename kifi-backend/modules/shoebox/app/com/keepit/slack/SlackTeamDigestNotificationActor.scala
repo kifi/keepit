@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.RandomChoice._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
@@ -23,6 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackTeamDigestConfig {
+  val initialDelayForWelcomeMessage = Period.hours(2)
   val minPeriodBetweenTeamDigests = Period.days(3)
   val minIngestedLinksForTeamDigest = 10
 }
@@ -37,6 +39,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   attributionRepo: KeepSourceAttributionRepo,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   slackClient: SlackClientWrapper,
   clock: Clock,
@@ -68,7 +71,7 @@ class SlackTeamDigestNotificationActor @Inject() (
     val now = clock.now
     db.readOnlyReplicaAsync { implicit session =>
       val ripeIds = slackTeamRepo.getRipeForPushingDigestNotification(now minus minPeriodBetweenTeamDigests).toSet
-      val teams = slackTeamRepo.getByIds(ripeIds).values.toSeq
+      val teams = slackTeamRepo.getByIds(ripeIds).values
       val orgIds = teams.flatMap(_.organizationId).toSet
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(team: SlackTeam) = {
@@ -76,7 +79,8 @@ class SlackTeamDigestNotificationActor @Inject() (
           config.settings.settingFor(Feature.SlackNotifications).contains(FeatureSetting.ENABLED)
         }
         val teamHasValidTokens = slackMembershipRepo.getBySlackTeam(team.slackTeamId).flatMap(_.tokenWithScopes).exists(_.scopes.contains(SlackAuthScope.ChatWriteBot))
-        teamHasDigestsEnabled && teamHasValidTokens
+        val creatorHadTimeToTurnUsOff = team.lastDigestNotificationAt.isDefined || team.publicChannelsLastSyncedAt.exists(_ isBefore now.minus(initialDelayForWelcomeMessage))
+        teamHasDigestsEnabled && teamHasValidTokens && creatorHadTimeToTurnUsOff
       }
       teams.filter(canSendDigestTo).map(_.id.get).toSet
     }
@@ -97,6 +101,45 @@ class SlackTeamDigestNotificationActor @Inject() (
     }
   }
 
+  private def createMessage(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
+    if (slackTeam.lastDigestNotificationAt.isEmpty) createTeamIntroMessage(slackTeam)
+    else createTeamDigest(slackTeam).map(describeTeamDigest)
+  }
+  private def createTeamIntroMessage(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
+    import DescriptionElements._
+    for {
+      ownerId <- slackMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.userId.isDefined).minBy(_.createdAt).userId // TODO(ryan): this might be stupid...
+      owner <- basicUserRepo.loadActive(ownerId)
+      orgId <- slackTeam.organizationId
+      org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
+    } yield {
+      val txt = DescriptionElements.formatForSlack(DescriptionElements(
+        owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", slackTeam.slackTeamName.value, "with", s"${org.name} on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(org, slackTeam.slackTeamId).absolute),
+        "to auto-magically manage links", SlackEmoji.fireworks
+      ))
+      val attachments = List(
+        SlackAttachment(color = Some("#7DBB70"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+          DescriptionElements(
+            SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
+            "to access your automatically organized lists of links."
+          ),
+          DescriptionElements("Libraries have been created for each of your public channels. Join Kifi to access your archived links from Slack")
+        ))))).withFullMarkdown,
+        SlackAttachment(color = Some("#FBF28D"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+          DescriptionElements(SlackEmoji.star, s"Automatically save links from your #channels"),
+          DescriptionElements("Every time someone includes a link in a chat message, we'll save it and capture every word on the page. It'll be automatically archived and searchable.")
+        ))))).withFullMarkdown,
+        SlackAttachment(color = Some("#C15B81"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
+          DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
+          DescriptionElements(
+            "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
+            "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), "."
+          )
+        ))))).withFullMarkdown
+      )
+      SlackMessageRequest.fromKifi(text = txt, attachments).quiet
+    }
+  }
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
     for {
       org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
@@ -211,7 +254,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   }
   private def pushDigestNotificationForTeam(team: SlackTeam): Future[Unit] = {
     val now = clock.now
-    val msgOpt = db.readOnlyMaster { implicit s => createTeamDigest(team).map(describeTeamDigest) }
+    val msgOpt = db.readOnlyMaster { implicit s => createMessage(team) }
     val generalChannelFut = team.generalChannelId match {
       case Some(channelId) => Future.successful(Some(channelId))
       case None => slackClient.getGeneralChannelId(team.slackTeamId)

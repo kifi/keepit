@@ -5,7 +5,6 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.TraversableFormat
 import com.keepit.common.json.TupleFormat._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
@@ -20,15 +19,12 @@ import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
-import com.keepit.social.BasicNonUser
-import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.eliza.ElizaServiceClient._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 sealed case class LibraryPushNotificationCategory(name: String)
 sealed case class UserPushNotificationCategory(name: String)
@@ -114,6 +110,7 @@ trait ElizaServiceClient extends ServiceClient {
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -249,6 +246,28 @@ class ElizaServiceClientImpl @Inject() (
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds), attempts = 2, callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[Boolean]]
+    }
+  }
+
+  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = {
+    if (users.isEmpty) {
+      Future.successful(Map.empty)
+    } else {
+      def mergeMaps(maps: Seq[Map[Id[User], Boolean]]): Map[Id[User], Boolean] = {
+        val merged = collection.mutable.Map[Id[User], Boolean](maps.head.toSeq: _*)
+        maps.tail.foreach { tomerge =>
+          tomerge.foreach { case (id, online) =>
+            if (online) merged(id) = online
+          }
+        }
+        Map(merged.toSeq: _*)
+      }
+      def read(json: JsValue): Map[Id[User], Boolean] = {
+        json.as[JsObject].fieldSet.map{ case (key, value) => Id[User](key.toInt) -> value.as[Boolean] }.toMap
+      }
+      Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
+        mergeMaps(responses.map(res => read(res.json)))
+      }
     }
   }
 

@@ -34,6 +34,12 @@ angular.module('kifi')
       // Returns a link that we should send the client to if they want to create a Kifi team from a Slack team
       createTeam: function (optSlackTeamId, optSlackState) {
         return net.createTeamFromSlack(optSlackTeamId, optSlackState).then(dataLens);
+      },
+      modifyLibraryPushIntegration: function (libraryId, syncId, turnOn) {
+        return net.modifyLibraryPushSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
+      },
+      modifyLibraryIngestIntegration: function (libraryId, syncId, turnOn) {
+        return net.modifyLibraryIngestSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
       }
     };
     return api;

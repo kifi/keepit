@@ -30,82 +30,9 @@ orgStats: OrganizationStatistics
                 <input type="Submit" value="Change">
             </form>
         </td></tr>
-    <tr><td>Description</td>organizations.scala.html:22
-        <td>
-        <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
-            <input id="set-description-input" type="text" name="description" value="@orgStats.description">
-            <input type="Submit" value="Change">
-        </form>
-        </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
-    <tr><td><a href="https://docs.google.com/document/d/1CBScReiMB7snaZ3yBLjM1v7RtkMq6UrmBIy6mntA0aw/edit">Plan</a></td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.months} months) <button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
-    <tr><td>Plan Renewal</td><td>@adminHelper.dateTimeDisplay(orgStats.planRenewal)</td></tr>
-    <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
-    <tr>
-        <td>Frozen?</td>
-        <td>
-            @orgStats.accountFrozen
-            @if(orgStats.accountFrozen){
-                <button id="unfreeze-account" class="btn btn-danger btn-xs">Unfreeze Account</button>
-            }
-        </td>
-    </tr>
-    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>) - Payment @{orgStats.paymentStatus.value}</td></tr>
-    <tr><td>Extra credit</td><td>
-        Amount - dollars, no cents <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
-        Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
-        Attributed to: <input id="extra-credit-member" type="number" placeholder="optional userId"></input>
-        <button id="extra-credit-submit" class="btn btn-default btn-xs">Do it!</button>
-    </td></tr>
-    <tr><td>Account</td><td><a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(orgStats.orgId, 0)">View Activity</a></td></tr>
-    <tr>
-    <th>Experiments</th>
-    <td id="experiments" class="form-inline">
-    @for(exp <- OrganizationExperimentType._ALL) {
-        <label class="checkbox">
-            <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
-        </label>
-    }
-    </td>
-    </tr>
-
-    <tr>
-        <th>Active</th>
-        <td>
-            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
-                <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
-            </form>
-        </td>
-    </tr>
-    <tr>
-        <th>Admin Chat to all members</th>
-        <td>
-            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
-            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
-            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
-            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.members.map(m => orgStats.membersStatistics(m.userId).user.externalId.id).mkString(", \n"))}</textarea><br/>
-            <button id="admin-chat-button" class="btn btn-default btn-xs">Start Chat</button>
-    </tr>
 
 </table>
-
-<table class="org-domains table table-bordered" style="width:800px">
-    <tr>
-        <th>Owned Domain</th>
-    </tr>
-    @for(domain <- orgStats.domains) {
-    <tr>
-        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.value)">@{domain.value}</a><td>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.value)"
-               class="btn btn-small">Remove </a></td>
-    </tr>
-    }
-</table>
-
-<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
-    <input type="text" name="domainName" placeholder="Domain name">
-    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
-</form>
 
 @orgStats.members.size members @orgStats.candidates.size candidates
 
@@ -126,7 +53,18 @@ orgStats: OrganizationStatistics
     <tbody>
         @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
             <tr>
-                <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+                <td>
+                    @adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)
+                    @if(orgStats.membersStatistics(membership.userId).online.isEmpty) {
+                      <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
+                    } else {
+                      @if(orgStats.membersStatistics(membership.userId).online.get) {
+                        <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
+                      } else {
+                        <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
+                      }
+                    }
+                </td>
                 <td>@membership.role</td>
                 <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
@@ -187,6 +125,24 @@ orgStats: OrganizationStatistics
     <input type="Submit" value="Refresh">
 </form>
 
+<table class="org-domains table table-bordered" style="width:800px">
+    <tr>
+        <th>Owned Domain</th>
+    </tr>
+    @for(domain <- orgStats.domains) {
+    <tr>
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.value)">@{domain.value}</a><td>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.value)"
+               class="btn btn-small">Remove </a></td>
+    </tr>
+    }
+</table>
+
+<form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
+    <input type="text" name="domainName" placeholder="Domain name">
+    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
+</form>
+
 
 <table class="org-member-recos table table-bordered" style="width:800px">
     <tr>
@@ -204,12 +160,85 @@ orgStats: OrganizationStatistics
             <td><input type="button" value="Add member" onclick="addMember(@{orgStats.orgId}, @{reco.user.id.get})"></td>
         </tr>
     }
+</form>
+
+<table class="org-member-recos table table-bordered" style="width:800px">
+    <tr><td><a href="https://docs.google.com/document/d/1CBScReiMB7snaZ3yBLjM1v7RtkMq6UrmBIy6mntA0aw/edit">Plan</a></td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.months} months) <button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td>Plan Renewal</td><td>@adminHelper.dateTimeDisplay(orgStats.planRenewal)</td></tr>
+    <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
+    <tr>
+        <td>Frozen?</td>
+        <td>
+            @orgStats.accountFrozen
+            @if(orgStats.accountFrozen){
+            <button id="unfreeze-account" class="btn btn-danger btn-xs">Unfreeze Account</button>
+            }
+        </td>
+    </tr>
+    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>) - Payment @{orgStats.paymentStatus.value}</td></tr>
+    <tr><td>Extra credit</td><td>
+        Amount - dollars, no cents <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
+        Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
+        Attributed to: <input id="extra-credit-member" type="number" placeholder="optional userId"></input>
+        <button id="extra-credit-submit" class="btn btn-default btn-xs">Do it!</button>
+    </td></tr>
+    <tr><td>Account</td><td><a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(orgStats.orgId, 0)">View Activity</a></td></tr>
+    <tr>
+        <th>Experiments</th>
+        <td id="experiments" class="form-inline">
+            @for(exp <- OrganizationExperimentType._ALL) {
+            <label class="checkbox">
+                <input type="checkbox" data-exp="@exp.value" @if(orgStats.experiments.contains(exp)) {checked}>@exp.value
+            </label>
+            }
+        </td>
+    </tr>
+
+    <tr><td>Description</td>
+        <td>
+            <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.setDescription(orgStats.orgId)" method="POST" class="form-inline set-description">
+                <input id="set-description-input" type="text" name="description" value="@orgStats.description">
+                <input type="Submit" value="Change">
+            </form>
+        </td></tr>
+
+    <tr>
+        <th>Admin Chat to all members</th>
+        <td>
+            URL:<br/><textarea id="admin-chat-url" rows="1" cols="120">http://www.kifi.com/@{orgStats.handle.value}</textarea><br/>
+            Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
+            Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
+            Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.members.map(m => orgStats.membersStatistics(m.userId).user.externalId.id).mkString(", \n"))}</textarea><br/>
+            <button id="admin-chat-button" class="btn btn-default btn-xs">Start Chat</button>
+    </tr>
+    <tr>
+        <th>Active</th>
+        <td>
+            @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+            <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
+        </form>
+        </td>
+    </tr>
+
+
 </table>
 
 <h3>Chat Engagement</h3>
 
 
 <canvas id="org-engagement-chart" style="width: 100%; height: 400px;"></canvas>
+
+
+  <table class="table table-bordered" style="width:800px">
+  <tr>
+    <th>Active</th>
+    <td>
+      @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
+      <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
+    </form>
+    </td>
+  </tr>
+</table>
 
     <style type="text/css">
     .line-legend span {

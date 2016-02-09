@@ -59,7 +59,7 @@ class ArticleIndexerController @Inject() (
       val uri = IndexableUri(Await.result(shoeboxClient.getNormalizedURI(id), 30 seconds))
       val htmlDoc = {
         val articles = Await.result(rover.getBestArticlesByUris(Set(uri.id.get)), 30 seconds)(uri.id.get)
-        val doc = ArticleIndexable(uri, articles, Shard(1, 1)).buildDocument
+        val doc = ArticleIndexable(uri, articles).buildDocument
         html.admin.luceneDocDump("Article", doc, getDecoder)
       }
       Ok(htmlDoc)

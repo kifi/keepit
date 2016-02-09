@@ -60,7 +60,6 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[SlackChannelToLibrary]
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
@@ -201,15 +200,20 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     activeRows.filter(row => row.organizationId === orgId).list
   }
 
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {
-    rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelName === slackChannelName && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
+  def getBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest, excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {
+    rows.filter(row => row.slackTeamId === request.slackTeamId && (row.slackChannelId === request.slackChannelId || (row.slackUserId === request.slackUserId && row.slackChannelName === request.slackChannelName)) && row.libraryId === request.libraryId && row.state =!= excludeState.orNull).firstOption
   }
 
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary = {
-    getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
+    getBySlackTeamChannelAndLibrary(request, excludeState = None) match {
       case Some(integration) if integration.isActive =>
         val updatedStatus = if (integration.status == SlackIntegrationStatus.On) integration.status else request.status
-        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName).withStatus(updatedStatus)
+        val updated = integration.copy(
+          space = request.space,
+          slackUserId = request.slackUserId,
+          slackChannelName = request.slackChannelName,
+          slackChannelId = request.slackChannelId
+        ).withStatus(updatedStatus)
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>

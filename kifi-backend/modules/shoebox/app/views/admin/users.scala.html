@@ -120,7 +120,18 @@
         <tbody>
           @for(userStatistics <- userData.users) {
             <tr>
-              <td><span class="badge">@userStatistics.user.id.get.id</span></td>
+              <td>
+                <span class="badge">@userStatistics.user.id.get.id</span>
+                @if(userData.usersOnline(userStatistics.user.id.get)) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
+                } else {
+                  @if(userStatistics.kifiInstallations.isEmpty) {
+                    <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
+                  } else {
+                    <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
+                  }
+                }
+              </td>
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
               <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
               <td>@adminHelper.orgsStatisticsMinDisplay(userStatistics.orgs) / @adminHelper.orgsStatisticsMinDisplay(userStatistics.orgCandidates)</td>

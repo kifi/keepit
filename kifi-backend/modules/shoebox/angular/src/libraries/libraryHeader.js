@@ -526,6 +526,11 @@ angular.module('kifi')
           return scope.library.org.viewer.permissions.indexOf(permission) !== -1;
         };
 
+        scope.isMutable = function () {
+          var kind = scope.library.kind;
+          return (kind === 'user_created' || kind === 'slack_channel');
+        };
+
         scope.isSelf = function (user) {
           return profileService.me.id === user.id;
         };
@@ -553,9 +558,13 @@ angular.module('kifi')
         scope.getMeOrg = function getMeOrg() {
           var scope = this;
           var me = profileService.me;
+          var org = scope.library.org;
 
-          var meOrg = (me.orgs || []).filter(function (o) { return o.id === scope.library.org.id; })[0];
-          return meOrg;
+          if (!org) {
+            return {};
+          } else {
+            return (me.orgs || []).filter(function (o) { return o.id === org.id; })[0];
+          }
         };
 
         scope.followLibrary = function (opts) {

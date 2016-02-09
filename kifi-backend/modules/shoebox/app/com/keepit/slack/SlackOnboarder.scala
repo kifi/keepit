@@ -27,17 +27,6 @@ trait SlackOnboarder {
 }
 
 object SlackOnboarder {
-  val minDelayForExplicitMsg = Period.days(2)
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  private val BrewstercorpSlackTeamId = SlackTeamId("T0FUL04N4")
-
-  def canSendMessageAboutIntegration(integ: SlackIntegration): Boolean = integ match {
-    case push: LibraryToSlackChannel => true
-    case ingestion: SlackChannelToLibrary => true
-  }
-
-  def canSendMessageAboutTeam(team: SlackTeam): Boolean = true
-
   val installationDescription = {
     import DescriptionElements._
     DescriptionElements(
@@ -48,7 +37,7 @@ object SlackOnboarder {
   }
 
   class TeamOnboardingAgent(val team: SlackTeam, val membership: SlackTeamMembership, val forceOverride: Boolean)(implicit parent: SlackOnboarderImpl) {
-    private var working = forceOverride || canSendMessageAboutTeam(team)
+    private var working = true
     def isWorking = working
     def dieIf(b: Boolean) = if (b) working = false
 
@@ -114,8 +103,6 @@ class SlackOnboarderImpl @Inject() (
               explicitPushMessage(ltsc, owner, lib, slackTeam)
             case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.USER_CREATED =>
               explicitIngestionMessage(sctl, owner, lib, slackTeam)
-            case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.SYSTEM_ORG_GENERAL && (sctl.slackChannelId containsTheSameValueAs slackTeam.generalChannelId) =>
-              generalLibraryMessage(sctl, owner, lib, slackTeam)
             case _ => None
           }
         case _ =>
@@ -198,38 +185,6 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
-  //the big FTUE
-  private def generalLibraryMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
-    import DescriptionElements._
-    val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", sctl.slackChannelName.value, "with", s"${lib.name} on Kifi" --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).absolute),
-      "to auto-magically manage links", SlackEmoji.fireworks
-    ))
-    val attachments = List(
-      SlackAttachment(color = Some("#7DBB70"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(
-          SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
-          "to access your automatically organized lists of links."
-        ),
-        DescriptionElements("Libraries have been created for each channel integrated. Join Kifi to access your lists of links messaged in Slack")
-      ))))).withFullMarkdown,
-      SlackAttachment(color = Some("#FBF28D"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.star, s"Automatically save links from your #channels"),
-        DescriptionElements("Every time someone includes a link in a chat message, we'll save it and capture every word on the page. It'll be automatically archived and searchable.")
-      ))))).withFullMarkdown,
-      SlackAttachment(color = Some("#C15B81"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
-        DescriptionElements(
-          "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
-          "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), ".",
-          "You'll also love our award winning (thanks Mom!)", "iOS" --> LinkElement(PathCommander.iOS), "and", "Android apps" --> LinkElement(PathCommander.android)
-        )
-      ))))).withFullMarkdown
-    )
-    val msg = SlackMessageRequest.fromKifi(text = txt, attachments).quiet
-    Some(msg)
-  }
-
   private def doneIngestingMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library)(implicit session: RSession): Option[DescriptionElements] = {
     import DescriptionElements._
     val keepsFromSlack = keepRepo.getByIds(ktlRepo.getAllByLibraryId(sctl.libraryId).map(_.keepId).toSet).filter {
@@ -301,22 +256,28 @@ class SlackOnboarderImpl @Inject() (
           org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
           msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
             if (channels.nonEmpty) {
-              DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
-                "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
-                numMsgsWithLinks.map(numMsgs => DescriptionElements(
-                  "I found",
-                  numMsgs match {
-                    case n if n > 1 => s"$n messages with links, and once they're indexed you can access all of them"
-                    case 1 => "one message with a link, and once it's indexed you can access it"
-                    case 0 => "no messages. Bummer. If we HAD found any, you could find them"
-                  },
-                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
-                )),
-                "As a :robot_face: robot, I pledge to take mission control settings pretty seriously, take a look at your",
-                "granular team settings",
-                "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)), ".",
-                "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
-              )
+              DescriptionElements.unlines(Seq(
+                DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+                  "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
+                  numMsgsWithLinks.map(numMsgs => DescriptionElements(
+                    "I",
+                    numMsgs match {
+                      case n if n > 1 => s"found $n messages with links, and once they're indexed you can access all of them"
+                      case 1 => "only found one message with a link, though. Once it's indexed you can access it"
+                      case 0 => "couldn't find any messages with links, though. Sorry :(. If we HAD found any, you could find them"
+                    },
+                    "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
+                  )),
+                  "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+                ),
+                DescriptionElements(
+                  "As soon as your libraries and links are nice and tidy, I'll send a welcome message to your team in #general",
+                  "to let them know about what Kifi's Slack integration can do for them.",
+                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously. Take a look at your granular team settings",
+                  "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)),
+                  "and you can turn off any messages I send to your team (and toggle all of your library integrations)."
+                )
+              ))
             } else {
               DescriptionElements(
                 SlackEmoji.sweatSmile, "I just looked but I didn't find any",

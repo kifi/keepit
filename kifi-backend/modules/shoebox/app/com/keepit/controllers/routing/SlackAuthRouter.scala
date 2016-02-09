@@ -83,7 +83,7 @@ class SlackAuthRouter @Inject() (
   def fromSlackToOrgIntegrations(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
-        val target = pathCommander.orgIntegrationsPage(org).absolute
+        val target = pathCommander.orgIntegrationsPage(org).absolute + "#slack-settings-" // Carlos magic to smooth-scroll to the settings part
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
           case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)

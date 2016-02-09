@@ -40,10 +40,10 @@ object ArticleIndexable {
   }
 }
 
-case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Shard[NormalizedURI]) extends Indexable[NormalizedURI, NormalizedURI] {
+case class ArticleIndexable(uri: IndexableUri, articles: Set[Article]) extends Indexable[NormalizedURI, NormalizedURI] {
   val id = uri.id.get
   val sequenceNumber = uri.seq
-  val isDeleted = ArticleIndexable.shouldDelete(uri) || !shard.contains(uri.id.get)
+  val isDeleted = ArticleIndexable.shouldDelete(uri)
 
   implicit def toReader(text: String) = new StringReader(text)
 

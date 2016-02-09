@@ -2,10 +2,11 @@
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
   <span
     class="kf-upl-card-setting"
-    ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose': !!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY) }"
-    ng-if="(!!lib.org && lib.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+    ng-class="{
+      'kf-tooltip-parent kf-tooltip-parent-noclose': !!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)
+    }"
+    ng-if="((!!lib.org && lib.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)) && isMutable()"
   >
-
     <span
       ng-if="!!lib.org && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
       ng-click="onClickUpsellEditLibrary(lib.org)"

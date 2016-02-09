@@ -27,15 +27,6 @@
               <span class="kf-library-slack-integration-modal-item-title" ng-bind="si.getChannelName()"></span>
               <span>(Kifi)</span>
 
-              <div class="kf-library-slack-integration-modal-move-dropdown-container" kf-click-menu style="">
-                <a class="kf-library-slack-integration-modal-item-delete">move</a>
-                <menu class="kf-library-slack-integration-modal-move-dropdown-menu">
-                  <button ng-repeat="item in si.menuItems" class="kf-dropdown-menu-item" ng-click="si.moveIntegration(item)">
-                    <img class="kf-library-slack-integration-modal-move-dropdown-item-img" ng-src="{{ item.userOrOrg|pic:100 }}" />{{item.name}}
-                  </button>
-                </menu>
-              </div>
-
               <a class="kf-library-slack-integration-modal-item-delete"
                  ng-click="si.guardDeleteIntegration()">delete</a>
             </div>
