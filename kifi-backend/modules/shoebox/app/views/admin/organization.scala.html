@@ -53,7 +53,18 @@ orgStats: OrganizationStatistics
     <tbody>
         @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
             <tr>
-                <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+                <td>
+                    @adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)
+                    @if(orgStats.membersStatistics(membership.userId).online.isEmpty) {
+                      <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
+                    } else {
+                      if(orgStats.membersStatistics(membership.userId).online.get) {
+                        <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
+                      } else {
+                        <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
+                      }
+                    }
+                </td>
                 <td>@membership.role</td>
                 <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
