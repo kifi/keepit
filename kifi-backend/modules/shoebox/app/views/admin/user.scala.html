@@ -44,7 +44,7 @@
           @if(usersOnline) {
             <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
           } else {
-            if (kifiInstallations.isEmpty) {
+            @if(kifiInstallations.isEmpty) {
               <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
             } else {
               <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
