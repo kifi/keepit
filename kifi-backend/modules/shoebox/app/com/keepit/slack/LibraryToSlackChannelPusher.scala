@@ -126,10 +126,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution])(implicit session: RSession): DescriptionElements = {
     import DescriptionElements._
 
-    val slackMessageOpt = attribution.collect {
-      case sa: SlackAttribution => sa.message
-    }
-
+    val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
     val shouldSmartRoute = canSmartRoute(slackTeamId)
 
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
@@ -156,7 +153,13 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         DescriptionElements(
           userElement.map(ue => DescriptionElements(ue, "added", keepElement)) getOrElse DescriptionElements(keepElement, "was added"),
           "to", lib.name --> libLink,
-          keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), addCommentOpt
+          keep.note.map(note => DescriptionElements(
+            "— “",
+            // Slack breaks italics over newlines, so we have to split into lines and italicize each independently
+            DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
+            "”"
+          )),
+          addCommentOpt
         )
     }
   }
