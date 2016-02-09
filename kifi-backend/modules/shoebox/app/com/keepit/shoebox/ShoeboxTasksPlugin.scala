@@ -36,7 +36,7 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnLeader(system, 1 minute, 30 seconds, "fetching missing Slack channel ids") {
+    scheduleTaskOnLeader(system, 1 minute, 6 hours, "fetching missing Slack channel ids") {
       slackIntegrationCommander.fetchMissingChannelIds()
     }
 
