@@ -198,7 +198,7 @@ class SlackTeamRepoImpl @Inject() (
     }
   }
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]] = {
-    activeRows.filter(row => (row.createdAt < lastPushOlderThan && row.lastDigestNotificationAt.isEmpty) || (row.lastDigestNotificationAt < lastPushOlderThan)).map(_.id).list
+    activeRows.filter(row => row.lastDigestNotificationAt.isEmpty || row.lastDigestNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
 }

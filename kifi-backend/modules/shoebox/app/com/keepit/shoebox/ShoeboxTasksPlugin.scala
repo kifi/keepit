@@ -21,7 +21,6 @@ class ShoeboxTasksPlugin @Inject() (
     quartz: ActorInstance[QuartzActor],
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
     messageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
-    slackChannelDigestActor: ActorInstance[SlackChannelDigestNotificationActor],
     slackTeamDigestActor: ActorInstance[SlackTeamDigestNotificationActor],
     slackIngestingActor: ActorInstance[SlackIngestingActor],
     planRenewalCommander: PlanRenewalCommander,

@@ -19,11 +19,3 @@ case class SlackTeamDigest(
     case (lib, channels) => lib -> channels.flatMap(numIngestedLinksByChannel.get).sum
   }
 }
-
-case class SlackChannelDigest(
-    slackChannel: SlackChannel,
-    digestPeriod: Duration,
-    ingestedLinks: Set[String],
-    libraries: Seq[Library]) {
-  lazy val numIngestedLinks = ingestedLinks.size
-}
