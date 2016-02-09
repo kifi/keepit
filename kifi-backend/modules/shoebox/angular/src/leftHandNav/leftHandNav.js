@@ -8,6 +8,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
+      replace: true,
       link: function (scope) {
         scope.me = profileService.me;
         scope.libraries = [];

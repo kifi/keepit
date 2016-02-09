@@ -6,13 +6,9 @@
   flex-direction: column
   height: 100vh
   user-select: none
-  margin-top: - appHeaderHeight2
 
   @media (max-width: appMobileWidth)
     display: none
-
-  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-    margin-top: - appHeaderHeight1
 
   .kf-left-hand-nav-button-container
     display: flex
@@ -57,7 +53,7 @@
       font-size: 13px
 
   .kf-left-hand-nav-header
-    height: appHeaderHeight2
+    height: appHeaderHeightWithNav
     display: flex
     align-items: center
     padding-left: 10px
@@ -66,17 +62,13 @@
     z-index: 2
     background-color: #3e4954
 
-    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-      height: appHeaderHeight1
-
-
 .kf-left-hand-nav-content
   overflow-y: scroll
   overflow-x: hidden
   padding-left: 10px
   height: 100%
   z-index: 1
-  box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
+  //box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
 
   &::-webkit-scrollbar
     width: 8px

@@ -11,7 +11,7 @@
 
 <title id="kf-authenticated">Kifi</title><!-- remove the id attribute for logged-out experience -->
 
-<div class="kf-app ng-cloak" ng-controller="AppCtrl">
+<div class="kf-app ng-cloak" ng-controller="AppCtrl" ng-class="{'kf-nav-bar-enabled': $root.navBarEnabled}">
   <div ng-if="$root.userLoggedIn != null" ng-include="$root.navBarEnabled ? 'leftHandNav/body.tpl.html' : 'layout/body.tpl.html'"></div>
 </div>
 <script>
