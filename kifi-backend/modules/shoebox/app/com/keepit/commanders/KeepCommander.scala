@@ -479,7 +479,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
+  private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
     val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
     val collection = collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     collection match {
@@ -567,7 +567,7 @@ class KeepCommanderImpl @Inject() (
   case class ChangedCollection(id: Id[Collection], isNewKeep: Boolean, inactivateIfEmpty: Boolean)
   private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String], freshTag: Boolean = false)(implicit session: RWSession) = {
     // get all tags from hashtag names list
-    val selectedTags = allTagsKeepShouldHave.map { getOrCreateTag(userId, _) }
+    val selectedTags = allTagsKeepShouldHave.flatMap { t => Try(getOrCreateTag(userId, t)).toOption }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
     // get all active tags for keep to figure out which tags to add & which tags to remove
     val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
