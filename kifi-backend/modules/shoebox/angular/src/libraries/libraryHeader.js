@@ -526,6 +526,11 @@ angular.module('kifi')
           return scope.library.org.viewer.permissions.indexOf(permission) !== -1;
         };
 
+        scope.isMutable = function () {
+          var kind = scope.library.kind;
+          return (kind === 'user_created' || kind === 'slack_channel');
+        };
+
         scope.isSelf = function (user) {
           return profileService.me.id === user.id;
         };
