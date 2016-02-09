@@ -1,7 +1,7 @@
 package com.keepit.search.index.graph.keep
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.search.index._
-import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ KeepAndTags, NormalizedURI, Keep }
@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.core._
 
 class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[Keep, Keep, KeepIndexable, KeepIndexer](indexDirectory, KeepFields.maxPrefixLength, 4) {
   val name = "KeepIndexer" + shard.indexNameSuffix
@@ -40,12 +41,9 @@ class ShardedKeepIndexer(
 
   def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-    fetchIndexables(sequenceNumber, fetchSize).map {
-      case Some((indexables, maxSeq, exhausted)) =>
-        processIndexables(indexables, maxSeq)
-        exhausted
-      case None =>
-        true
+    fetchIndexables(sequenceNumber, fetchSize).flatMap {
+      case None => Future.successful(true)
+      case Some((indexables, maxSeq, exhausted)) => processIndexables(indexables, maxSeq).imap(_ => exhausted)
     }
   }
 
@@ -63,13 +61,12 @@ class ShardedKeepIndexer(
   }
 
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
-  private def processIndexables(indexables: Seq[KeepIndexable], maxSeq: SequenceNumber[Keep]): Int = updateLock.synchronized {
-    val count = indexShards.map {
-      case (shard, indexer) =>
-        indexer.processIndexables(indexables)
-    }.sum
-    sequenceNumber = maxSeq
-    count
+  private def processIndexables(indexables: Seq[KeepIndexable], maxSeq: SequenceNumber[Keep]): Future[Int] = updateLock.synchronized {
+    val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
+    Future.sequence(futureCounts).map { counts =>
+      sequenceNumber = maxSeq
+      counts.sum
+    }
   }
 }
 

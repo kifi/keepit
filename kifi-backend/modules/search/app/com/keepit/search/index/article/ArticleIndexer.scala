@@ -1,5 +1,6 @@
 package com.keepit.search.index.article
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -14,6 +15,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 import scala.concurrent.duration._
+import com.keepit.common.core._
 
 class ArticleIndexer(val indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexable, ArticleIndexer](indexDirectory) {
   val name = "ArticleIndexer" + shard.indexNameSuffix
@@ -41,11 +43,9 @@ class ShardedArticleIndexer(
 
   def asyncUpdate(): Future[Option[Int]] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
-    fetchIndexables(fetchSize).map {
-      _.map {
-        case (indexables, maxSeq) =>
-          processIndexables(indexables, maxSeq)
-      }
+    fetchIndexables(fetchSize).flatMap {
+      case None => Future.successful(None)
+      case Some((indexables, maxSeq)) => processIndexables(indexables, maxSeq).imap(Some(_))
     }
   }
 
@@ -75,13 +75,12 @@ class ShardedArticleIndexer(
   }
 
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
-  private def processIndexables(indexables: Seq[ArticleIndexable], maxSeq: SequenceNumber[NormalizedURI]): Int = updateLock.synchronized {
-    val count = indexShards.map {
-      case (shard, indexer) =>
-        indexer.processIndexables(indexables)
-    }.sum
-    sequenceNumber = maxSeq
-    count
+  private def processIndexables(indexables: Seq[ArticleIndexable], maxSeq: SequenceNumber[NormalizedURI]): Future[Int] = updateLock.synchronized {
+    val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
+    Future.sequence(futureCounts).map { counts =>
+      sequenceNumber = maxSeq
+      counts.sum
+    }
   }
 
   override def getDbHighestSeqNum(): SequenceNumber[NormalizedURI] = {
