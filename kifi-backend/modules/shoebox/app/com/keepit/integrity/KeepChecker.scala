@@ -136,6 +136,7 @@ class KeepChecker @Inject() (
     }
   }
 
+  // Do this last
   private def ensureNoteAndTagsAreInSync(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
 
@@ -145,9 +146,5 @@ class KeepChecker @Inject() (
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
       keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately
     }
-
-    // We don't want later checkers to overwrite the eventual note, so change the note they see when they load from db
-    val newNote = Option(Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)).filter(_.nonEmpty)
-    keepRepo.save(keep.withNote(newNote))
   }
 }
