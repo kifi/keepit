@@ -224,7 +224,8 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int)(implicit session: RSession): Seq[M] = {
     // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take)
     val q = (for (t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
-    if (fetchSize > 0) q.take(fetchSize).list else Seq.empty
+    val realSize = if (fetchSize >= 0) fetchSize else 400 // because we have tests that send -1, which blows my mind.
+    q.take(realSize).list
   }
 
   def getBySequenceNumber(lowerBound: SequenceNumber[M], upperBound: SequenceNumber[M])(implicit session: RSession): Seq[M] = {
