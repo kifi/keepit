@@ -114,6 +114,7 @@ trait ElizaServiceClient extends ServiceClient {
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -252,6 +253,22 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = {
+    import GetElizaUsersOnline._
+    def mergeMaps(maps: Seq[Map[Id[User], Boolean]]): Map[Id[User], Boolean] = {
+      val merged = collection.mutable.Map[Id[User], Boolean](maps.head.toSeq: _*)
+      maps.tail.foreach { tomerge =>
+        tomerge.foreach { case (id, online) =>
+          if (online) merged(id) = online
+        }
+      }
+      Map(merged.toSeq: _*)
+    }
+    Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
+      mergeMaps(responses.map(_.json.as[Response].areUsersOnline))
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -385,6 +402,10 @@ object ElizaServiceClient {
     case class Request(msgIds: Set[Id[Message]])
     case class Response(msgs: Map[Id[Message], CrossServiceMessage])
     implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetElizaUsersOnline {
+    case class Response(areUsersOnline: Map[Id[User], Boolean])
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object GetDiscussionsForKeeps {
