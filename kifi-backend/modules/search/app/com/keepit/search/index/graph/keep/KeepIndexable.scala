@@ -64,7 +64,7 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: Keep, sourceAttribution: Option[RawSourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive
