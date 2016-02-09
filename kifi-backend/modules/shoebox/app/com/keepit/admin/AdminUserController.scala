@@ -240,7 +240,6 @@ class AdminUserController @Inject() (
     val chatStatsF = eliza.getUserThreadStats(userId)
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
       val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
@@ -282,16 +281,15 @@ class AdminUserController @Inject() (
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
-      contacts <- contactsF
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
       slackInfo <- slackInfoF
       usersOnline <- usersOnlineF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
-      Ok(html.admin.user(user, usersOnline, chatStats, keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
+      Ok(html.admin.user(user, chatStats, usersOnline(userId), keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
+        invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
   }
 
