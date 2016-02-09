@@ -85,16 +85,8 @@ class PermissionCommanderImpl @Inject() (
   }
 
   private def computeUserPermissions(userId: Id[User])(implicit session: RSession): Set[UserPermission] = {
-    val orgMemberships = orgMembershipRepo.getAllByUserId(userId).toSet
-    val permissionsViaOrgMembership = orgMemberships.flatMap { mem =>
-      userPermissionsFromOrganization(mem.organizationId)
-    }
-    val personalPermissions: Set[UserPermission] = Set.empty // Right now there is no way for a user to get their own UserPermissions
-
-    personalPermissions ++ permissionsViaOrgMembership
-  }
-  private def userPermissionsFromOrganization(orgId: Id[Organization])(implicit session: RSession): Set[UserPermission] = {
-    Set(UserPermission.CREATE_SLACK_INTEGRATION) // Right now, any org membership will grant a user permission to create Slack integrations
+    val personalPermissions: Set[UserPermission] = Set(UserPermission.CREATE_SLACK_INTEGRATION)
+    personalPermissions
   }
 
   @StatsdTiming("PermissionCommander.getLibraryPermissions")
