@@ -65,6 +65,8 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   minPrefixLength: Int = 1)
     extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
+  def name: String
+
   val commitBatchSize = 1000
 
   protected def indexWriterConfig = new IndexWriterConfig(Version.LATEST, DefaultAnalyzer.defaultAnalyzer)
@@ -143,7 +145,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     }
   }
 
-  def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T, S]]): Int = {
+  def doUpdate(changedIndexables: => Iterator[Indexable[T, S]]): Int = {
     try {
       log.info(s"updating $name")
       val indexables = changedIndexables
@@ -179,7 +181,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   def getIndexerFor(id: Long): Indexer[T, S, I] = this
 
-  def indexInfos(name: String): Seq[IndexInfo] = {
+  def indexInfos: Seq[IndexInfo] = {
     Seq(IndexInfo(
       name = name,
       numDocs = numDocs,

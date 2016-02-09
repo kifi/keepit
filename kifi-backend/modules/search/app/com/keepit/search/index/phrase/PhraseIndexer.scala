@@ -19,6 +19,8 @@ class PhraseIndexerImpl(
     override val airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory) with Logging {
 
+  val name = "PhraseIndex"
+
   override val commitBatchSize = 1000
 
   def update(): Int = updateLock.synchronized {
@@ -26,17 +28,13 @@ class PhraseIndexerImpl(
     var total = 0
     var done = false
     while (!done) {
-      total += doUpdate("PhraseIndex") {
+      total += doUpdate {
         val phrases = Await.result(shoeboxClient.getPhrasesChanged(sequenceNumber, commitBatchSize), 180 seconds)
         done = phrases.isEmpty
         phrases.iterator.map(PhraseIndexable(_))
       }
     }
     total
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("PhraseIndex" + name)
   }
 
   override def onFailure(indexable: Indexable[Phrase, Phrase], e: Throwable): Unit = {

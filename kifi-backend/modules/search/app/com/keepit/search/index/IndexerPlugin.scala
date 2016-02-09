@@ -39,7 +39,7 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def warmUpIndexDirectory(): Unit
   def reindex(): Unit
   def close(): Unit
-  def indexInfos(name: String): Seq[IndexInfo]
+  def indexInfos: Seq[IndexInfo]
   def lastBackup: Long
 
   val airbrake: AirbrakeNotifier
@@ -140,7 +140,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
 
   override def committedAt: Option[String] = indexer.committedAt
 
-  def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
+  def indexInfos: Seq[IndexInfo] = indexer.indexInfos
 }
 
 sealed abstract class IndexerActor[S, I <: Indexer[_, S, I]](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake)

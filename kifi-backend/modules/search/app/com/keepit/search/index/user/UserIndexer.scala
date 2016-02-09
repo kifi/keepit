@@ -53,11 +53,7 @@ class UserIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient,
   }
 
   private def processIndexables(indexables: Seq[UserIndexable]): Int = updateLock.synchronized {
-    doUpdate(name)(indexables.iterator)
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
+    doUpdate(indexables.iterator)
   }
 }
 

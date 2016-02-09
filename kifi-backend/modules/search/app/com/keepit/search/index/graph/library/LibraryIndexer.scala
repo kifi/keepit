@@ -39,11 +39,7 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
   }
 
   private def processIndexables(indexables: Seq[LibraryIndexable]): Int = updateLock.synchronized {
-    doUpdate(name)(indexables.iterator)
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
+    doUpdate(indexables.iterator)
   }
 }
 

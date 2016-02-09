@@ -26,6 +26,8 @@ class SearchFriendIndexer(
 
   import SearchFriendIndexer._
 
+  val name = "SearchFriendIndex"
+
   override val commitBatchSize = 500
   private val fetchSize = commitBatchSize
 
@@ -52,17 +54,13 @@ class SearchFriendIndexer(
     var total = 0
     var done = false
     while (!done) {
-      total += doUpdate("SearchFriendIndex") {
+      total += doUpdate {
         val indexables = getIndexables()
         done = indexables.isEmpty
         indexables.toIterator
       }
     }
     total
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("SearchFriendIndex" + name)
   }
 }
 

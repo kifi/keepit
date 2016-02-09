@@ -39,11 +39,7 @@ class OrganizationIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServic
   }
 
   private def processIndexables(indexables: Seq[OrganizationIndexable]): Int = updateLock.synchronized {
-    doUpdate(name)(indexables.iterator)
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
+    doUpdate(indexables.iterator)
   }
 }
 

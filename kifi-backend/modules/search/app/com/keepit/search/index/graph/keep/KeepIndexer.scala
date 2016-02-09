@@ -1,6 +1,5 @@
 package com.keepit.search.index.graph.keep
 
-import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -23,18 +22,13 @@ class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], v
 
   private[keep] def processIndexables(indexables: Seq[KeepIndexable]): Int = updateLock.synchronized {
     indexables.foreach(validate)
-    doUpdate(name)(indexables.iterator)
+    doUpdate(indexables.iterator)
   }
 
   private def validate(indexable: KeepIndexable): Unit = {
     val isValidIndexable = shard.contains(indexable.keep.uriId) || indexable.isDeleted
     if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
   }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
-  }
-
 }
 
 class ShardedKeepIndexer(

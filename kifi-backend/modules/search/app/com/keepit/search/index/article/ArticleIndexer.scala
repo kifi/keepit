@@ -1,7 +1,6 @@
 package com.keepit.search.index.article
 
 import com.keepit.rover.RoverServiceClient
-import com.keepit.search.index.IndexInfo
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -24,18 +23,13 @@ class ArticleIndexer(val indexDirectory: IndexDirectory, shard: Shard[Normalized
 
   private[article] def processIndexables(indexables: Seq[ArticleIndexable]): Int = updateLock.synchronized {
     indexables.foreach(validate)
-    doUpdate(name)(indexables.iterator)
+    doUpdate(indexables.iterator)
   }
 
   private def validate(indexable: ArticleIndexable): Unit = {
     val isValidIndexable = shard.contains(indexable.uri.id.get) || indexable.isDeleted
     if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
   }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
-  }
-
 }
 
 class ShardedArticleIndexer(

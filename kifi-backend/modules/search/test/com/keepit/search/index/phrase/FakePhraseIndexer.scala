@@ -5,6 +5,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.search.index.VolatileIndexDirectory
 
 class FakePhraseIndexer(override val airbrake: AirbrakeNotifier) extends PhraseIndexer(new VolatileIndexDirectory) {
+  val name = "FakePhraseIndexer"
   def update() = 0
   def getCommitBatchSize() = 0
 }

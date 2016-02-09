@@ -49,8 +49,8 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
   def getIndexerFor(id: Id[K]): I = getIndexer(indexShards.keysIterator.find(_.contains(id)).get)
   def getIndexer(shard: Shard[K]): I = indexShards(shard)
 
-  def indexInfos(name: String): Seq[IndexInfo] = {
-    indexShards.flatMap { case (shard, indexer) => indexer.indexInfos(shard.indexNameSuffix) }.toSeq
+  def indexInfos: Seq[IndexInfo] = {
+    indexShards.flatMap { case (shard, indexer) => indexer.indexInfos }.toSeq
   }
 
   def numDocs: Int = indexShards.valuesIterator.map(_.numDocs).sum

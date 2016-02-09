@@ -12,6 +12,7 @@ import java.io.StringReader
 class Tst(val id: Id[Tst], val text: String, val personalText: String)
 
 class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIndexer](indexDirectory) {
+  val name = "TestIndexer"
   def buildIndexable(id: Id[Tst]): Indexable[Tst, Tst] = throw new UnsupportedOperationException()
   def buildIndexable(data: Tst): Indexable[Tst, Tst] = new TstIndexable(data.id, data.text, data.personalText, indexWriterConfig.getAnalyzer)
 

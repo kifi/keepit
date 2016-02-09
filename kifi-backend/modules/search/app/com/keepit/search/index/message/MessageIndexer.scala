@@ -135,6 +135,8 @@ class MessageIndexer(
   override val airbrake: AirbrakeNotifier)
     extends Indexer[ThreadContent, ThreadContent, MessageIndexer](indexDirectory) {
 
+  val name = "MessageIndex"
+
   val loadBatchSize: Int = 100
   override val commitBatchSize: Int = 50
 
@@ -144,7 +146,7 @@ class MessageIndexer(
     var total = 0
     var done = false
     while (!done) {
-      total += doUpdate("MessageIndex") {
+      total += doUpdate {
         val batch = Await.result(eliza.getThreadContentForIndexing(sequenceNumber, loadBatchSize), 60 seconds)
         done = batch.length <= 1
         batch.iterator.map { threadContent =>
@@ -158,10 +160,6 @@ class MessageIndexer(
       }
     }
     total
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("MessageIndex" + name)
   }
 }
 
