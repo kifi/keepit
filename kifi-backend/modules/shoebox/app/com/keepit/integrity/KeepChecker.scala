@@ -55,6 +55,8 @@ class KeepChecker @Inject() (
       val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_SEQ_FETCH_SIZE)
       val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
 
+      log.info(s"[KeepChecker] Running keep checker. Recent: ${recentKeeps.length} (${recentKeeps.flatMap(_.id).maxOpt}), seq: ${seqNumKeeps.length} (${seqNumKeeps.map(_.seq).maxOpt}")
+
       if (keeps.nonEmpty) {
         keeps.foreach { keep => // Best not to use this object directly, because the underlying row gets updated
           ensureStateIntegrity(keep.id.get)
