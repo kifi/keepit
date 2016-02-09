@@ -101,7 +101,9 @@ angular.module('kifi')
       var firstFreeTierPlan = freeTierPlans[0];
       $scope.plan.name = firstFreeTierPlan.name;
       $scope.plan.cycle = firstFreeTierPlan.cycle;
-      $scope.planSelectsForm.$setDirty();
+      if ($scope.planSelectsForm) {
+        $scope.planSelectsForm.$setDirty();
+      }
       $scope.trackClick('free_card:downgrade');
     };
 
@@ -109,7 +111,9 @@ angular.module('kifi')
       var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
       var firstStandardTierPlan = standardTierPlans[0];
       $scope.plan.name = firstStandardTierPlan.name;
-      $scope.planSelectsForm.$setDirty();
+      if ($scope.planSelectsForm) {
+        $scope.planSelectsForm.$setDirty();
+      }
       $scope.trackClick('standard_card:upgrade');
     };
 
