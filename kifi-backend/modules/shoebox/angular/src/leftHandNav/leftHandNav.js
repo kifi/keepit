@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state', 'modalService',
-  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state, modalService) {
+  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state', 'modalService', '$analytics',
+  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state, modalService, $analytics) {
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
@@ -17,7 +17,6 @@ angular.module('kifi')
         if (scope.me.pendingOrgs) {
           scope.me.pendingOrgs.forEach(function (o) {
             o.pending = true;
-            o.declined = false;
           });
           scope.orgs = scope.orgs.concat(scope.me.pendingOrgs);
         }
@@ -25,7 +24,6 @@ angular.module('kifi')
         if (scope.me.potentialOrgs) {
           scope.me.potentialOrgs.forEach(function (o) {
             o.potential = true;
-            o.declined = false;
           });
           scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
         }
@@ -113,7 +111,7 @@ angular.module('kifi')
 
         scope.declineOrg = function(org) {
           orgProfileService.declineOrgMemberInvite(org.id);
-          org.declined = true;
+          _.remove(scope.orgs, org);
         };
 
         scope.sendMemberConfirmationEmail = function(email, org) {
@@ -128,7 +126,7 @@ angular.module('kifi')
         };
 
         scope.hideOrgDomain = function(org) {
-          org.declined = true;
+          _.remove(scope.orgs, org);
           orgProfileService.trackEvent('user_clicked_page', org,
             {
               'type': 'homeFeed',
@@ -145,6 +143,91 @@ angular.module('kifi')
             scope: scope
           });
         }
+
+        // Code for showing potential company name and create team dialogs
+        var companyNameP;
+        if (Object.keys(profileService.prefs).length === 0) {
+          companyNameP = profileService.fetchPrefs().then(function (prefs) {
+            return prefs.company_name;
+          });
+        } else {
+          companyNameP = $q.when(profileService.prefs.company_name);
+        }
+        companyNameP.then(function (companyName) {
+          if (profileService.prefs.hide_company_name) {
+            scope.companyName = null;
+          } else {
+            var potentialName = companyName;
+            if (!potentialName) {
+              var emails = potentialCompanyEmails(scope.me.emails);
+              potentialName = emails && emails[0] && getEmailDomain(emails[0].address);
+            }
+            if (potentialName) {
+              if (!orgNameExists(potentialName) && scope.organizations.length === 0) {
+                if (potentialName.length > 28) {
+                  scope.companyName = potentialName.substr(0, 26) + '…';
+                } else {
+                  scope.companyName = potentialName;
+                }
+              } else {
+                scope.companyName = null;
+                profileService.savePrefs({ hide_company_name: true });
+              }
+            }
+          }
+        });
+
+        function orgNameExists(companyName) {
+          var orgNames = profileService.me.orgs.map(function(org) { return org.name.toLowerCase(); });
+          return orgNames.indexOf(companyName.toLowerCase()) !== -1;
+        }
+
+        function potentialCompanyEmails(emails) {
+          return emails.filter(function(email){
+            return !email.isOwned && !email.isFreeMail;
+          });
+        }
+
+        var domainSuffixRegex = /\..*$/;
+
+        function getEmailDomain(address) {
+          var domain = address.slice(address.lastIndexOf('@') + 1).replace(domainSuffixRegex, '');
+          return domain[0].toUpperCase() + domain.slice(1, domain.length);
+        }
+
+        scope.createTeam = function () {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : 'homeFeed',
+            'action' : 'clickedCreateTeamRighthandRail'
+          });
+
+          if (!profileService.prefs.hide_company_name) {
+            profileService.savePrefs({ hide_company_name: true });
+          }
+
+          $state.go('teams.new');
+        };
+
+        scope.openLearnMoreModal = function () {
+          $analytics.eventTrack('user_clicked_page', {
+            'type': 'homeFeed',
+            'action': 'learnMoreTeams'
+          });
+
+          modalService.open({
+            template: 'profile/learnMoreModal.tpl.html',
+            modalData: {
+              companyName: scope.companyName,
+              triggerCreateTeam: function () {
+                $analytics.eventTrack('user_clicked_page', {
+                  'type' : 'homeFeed',
+                  'action' : 'clickedCreateTeamLearnMore'
+                });
+                scope.createTeam();
+              }
+            }
+          });
+        };
       }
     };
   }

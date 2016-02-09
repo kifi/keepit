@@ -39,7 +39,7 @@
                 </div>
 
             </div>
-            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs | filter: {declined: '!true'}">
+            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs">
                 <a class="kf-left-hand-nav-item-header" ng-href="{{ org.handle }}">
                     <img ng-src="{{ org|pic:100 }}" />
                     <div class="kf-left-hand-nav-user-img"></div><span ng-bind="org.name"></span>
@@ -80,6 +80,13 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <!--Only show create team if we are a member of no orgs (orgs you are a member of are first in the list)-->
+            <div ng-if="!orgs[0].viewer.membership">
+                <span class="kf-left-hand-nav-create-team">+
+                    <span ng-bind="'Create a team' + (companyName ? ' for ' + companyName : '')" ng-click="createTeam()"></span>
+                    [<span class="kf-left-hand-nav-create-team-learn-more" ng-click="openLearnMoreModal()">learn more</span>]
+                </span>
             </div>
         </div>
     </div>
