@@ -1,10 +1,10 @@
-<div class="kf-logged-in-nav-header" ng-controller="LoggedInHeaderCtrl">
+<div class="kf-logged-in-nav-header kf-left-hand-nav-container" ng-controller="LoggedInHeaderCtrl">
   <div class="kf-lih-inner-flex">
     <div class="kf-lih-left-flex">
       <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
     </div>
     <div class="kf-lih-center-flex">
-      <label class="kf-lih-search kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
+      <label class="kf-lih-search kf-lih-search-lhn kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
@@ -29,7 +29,7 @@
     </div>
     <div class="kf-lih-right-flex kifi-guide-target-3 kifi-guide-2">
       <div class="kf-lih-dropdown-parent" kf-click-menu>
-        <button class="kf-lih-add-link sprite sprite-add-link">Add a link</button>
+        <button class="kf-lih-add-link sprite sprite-add-link-2">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="addKeeps()">

@@ -6,13 +6,33 @@
   flex-direction: column
   height: 100vh
   user-select: none
-  margin-top: - appHeaderHeight2
 
   @media (max-width: appMobileWidth)
     display: none
 
-  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-    margin-top: - appHeaderHeight1
+  .kf-left-hand-nav-button-container
+    display: flex
+    width: 100%
+    justify-content: center
+    margin-top: 3px
+
+    > * + *
+      margin-left: 5px
+
+  .kf-left-hand-nav-button-accept
+  .kf-left-hand-nav-button-decline
+    font-size: 13px
+    color: #FFF
+    border-radius: 2px
+    padding: 2px 10px
+    cursor: pointer
+
+  .kf-left-hand-nav-button-accept
+    background: accentGreen
+
+  .kf-left-hand-nav-button-decline
+    background: gray
+    opacity: 0.6
 
   .kf-left-hand-nav-org-container
     flex-shrink: 0
@@ -26,8 +46,17 @@
       img
         border-radius: 4px
 
+    .kf-left-hand-nav-org-message
+      color: #DDD
+      margin-top: 4px
+      margin-left: 4px
+      font-size: 13px
+
+    .kf-left-hand-nav-org-email
+      text-align: center
+
   .kf-left-hand-nav-header
-    height: appHeaderHeight2
+    height: appHeaderHeightWithNav
     display: flex
     align-items: center
     padding-left: 10px
@@ -36,17 +65,13 @@
     z-index: 2
     background-color: #3e4954
 
-    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-      height: appHeaderHeight1
-
-
 .kf-left-hand-nav-content
   overflow-y: scroll
   overflow-x: hidden
   padding-left: 10px
   height: 100%
   z-index: 1
-  box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
+  //box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
 
   &::-webkit-scrollbar
     width: 8px
@@ -89,14 +114,16 @@
 
   .kf-left-hand-nav-libraries-container
     margin-top: 6px
-    padding-left: 10px
+    padding-left: 5px
 
-    .kf-left-hand-nav-view-more-container
-      height: 12px
+    .kf-left-hand-nav-actions-container
+      display: flex
+      flex-direction: column
+      min-height: 12px
 
 
 
-    .kf-left-hand-nav-view-more-libraries
+    .kf-left-hand-nav-action
       padding-left: 10px
       font-size: 14px
       font-weight: bold
@@ -111,31 +138,56 @@
       font-size: 14px
       color: #F5F5F5
       font-weight: bold
-      margin-bottom: 4px
+      margin-bottom: 2px
 
 
     .kf-left-hand-nav-library-container
-      margin: 4px 0px
-      border-left-width: 3px
-      border-left-style: solid
-      padding-left: 6px
       display: block
-
-      &:hover
-        background-color: alpha(white, 0.2)
-
+      position: relative
 
       .kf-left-hand-nav-library
         font-size: 14px
         color: #DDD
-        margin-bottom: 4px
+        padding: 2px 0
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
+        margin-left: 9px
+        height: 100%
 
-        &:hover
-          color: #FFF
-          cursor: pointer
+      .kf-left-hand-nav-library-color
+        width: 3px
+        margin: auto
+        top: 2px
+        bottom: 2px
+        position: absolute
+        background: gray
+
+      .kf-left-hand-nav-library-container-bg
+        position: absolute
+        width: 50%
+        opacity: 0.0
+        margin: auto
+        top: 2px
+        bottom: 2px
+        background: gray
+        z-index: -1
+
+    .kf-left-hand-nav-library-container:hover
+      // .kf-left-hand-nav-library-color
+      //   top: 0px
+      //   bottom: 0px
+
+      .kf-left-hand-nav-library
+        color: #FFF
+        cursor: pointer
+
+      .kf-left-hand-nav-library-container-bg
+        transition: width 0.15s ease-in
+        opacity: 0.5
+        width: 100%
+
+
 
 .kf-left-hand-nav-content-spinner-container
   display: flex

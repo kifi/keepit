@@ -1,12 +1,18 @@
+.kf-app.kf-nav-bar-enabled
+  padding-top: 0px
+
 .kf-body-container
   display: flex
+  flex-direction: row-reverse
 
   .kf-body-container-content
     flex-grow: 1
     display: flex
     flex-direction: column
-    height: calc(100vh - 54px)
+    height: 'calc(100vh - %s)' % appHeaderHeightWithNav
+    margin-top: appHeaderHeightWithNav
     overflow: scroll
 
   .kf-body-container-content-main
     width: 100%
+    position: relative

@@ -3,20 +3,38 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService',
-  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService) {
+  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state', 'modalService',
+  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state, modalService) {
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
+      replace: true,
       link: function (scope) {
         scope.me = profileService.me;
         scope.libraries = [];
         scope.orgs = scope.me.orgs;
+
+        if (scope.me.pendingOrgs) {
+          scope.me.pendingOrgs.forEach(function (o) {
+            o.pending = true;
+            o.declined = false;
+          });
+          scope.orgs = scope.orgs.concat(scope.me.pendingOrgs);
+        }
+
+        if (scope.me.potentialOrgs) {
+          scope.me.potentialOrgs.forEach(function (o) {
+            o.potential = true;
+            o.declined = false;
+          });
+          scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
+        }
+
         // TODO: REMOVE THIS HACK
         document.body.style.overflow = 'hidden';
 
-        var INITIAL_PAGE_SIZE = 3;
-        var PAGE_SIZE = 10;
+        var INITIAL_PAGE_SIZE = 6;
+        var PAGE_SIZE = 15;
         var extraLibraries = [];
         scope.fetchLibraries = function (pageNumber, pageSize) {
           var filter = 'own';
@@ -75,6 +93,58 @@ angular.module('kifi')
             org.fetchingLibraries = false;
           });
         };
+
+        scope.createOwnLibrary = function () {
+          $state.go('userProfile.libraries.own', { handle: scope.me.username, openCreateLibrary: true }, {reload: true});
+        };
+
+        scope.createOrgLibrary = function (org) {
+          $state.go('orgProfile.libraries', { handle: org.handle, openCreateLibrary: true }, {reload: true});
+        };
+
+
+        scope.joinOrg = function(org) {
+          orgProfileService
+            .acceptOrgMemberInvite(org.id)
+            .then(function() {
+              org.pending = false;
+            });
+        };
+
+        scope.declineOrg = function(org) {
+          orgProfileService.declineOrgMemberInvite(org.id);
+          org.declined = true;
+        };
+
+        scope.sendMemberConfirmationEmail = function(email, org) {
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'verifyOrgEmail'
+            }
+          );
+          showVerificationAlert(email);
+          profileService.sendMemberConfirmationEmail(org.id, email);
+        };
+
+        scope.hideOrgDomain = function(org) {
+          org.declined = true;
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'hideOrgDomain'
+            }
+          );
+          profileService.hideOrgDomain(org);
+        };
+
+        function showVerificationAlert(email) {
+          scope.emailForVerification = email;
+          modalService.open({
+            template: 'profile/emailResendVerificationModal.tpl.html',
+            scope: scope
+          });
+        }
       }
     };
   }
