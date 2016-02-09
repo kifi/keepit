@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import com.keepit.model.{ Name, SystemValueRepo }
 import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamMembership }
-import com.keepit.social.Author.SlackUser
+import com.keepit.social.Author
 import com.kifi.juggle._
 
 import scala.concurrent.{ Future, ExecutionContext }
@@ -43,7 +43,7 @@ class SlackKeepAttributionActor @Inject() (
     if (memberships.nonEmpty) {
       memberships.foreach { membership =>
         membership.userId.foreach { userId =>
-          keepSourceCommander.reattributeKeeps(SlackUser(membership.slackUserId), userId)
+          keepSourceCommander.reattributeKeeps(Author.SlackUser(membership.slackTeamId, membership.slackUserId), userId)
         }
       }
       val maxSeq = memberships.map(_.seq).max

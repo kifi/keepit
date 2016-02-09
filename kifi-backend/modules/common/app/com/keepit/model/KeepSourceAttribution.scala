@@ -4,7 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
-import com.keepit.slack.models.{ SlackTeamId, SlackMessage }
+import com.keepit.slack.models.{ SlackTeamName, SlackTeamId, SlackMessage }
 import com.keepit.social.Author
 import com.keepit.social.twitter.RawTweet
 import org.joda.time.DateTime
@@ -80,7 +80,7 @@ object RawTwitterAttribution {
   implicit val format = Json.format[RawTwitterAttribution]
 }
 
-case class RawSlackAttribution(message: SlackMessage, teamId: Option[SlackTeamId]) extends RawSourceAttribution
+case class RawSlackAttribution(message: SlackMessage, teamId: SlackTeamId) extends RawSourceAttribution
 object RawSlackAttribution {
   implicit val format = Json.format[RawSlackAttribution]
 }
