@@ -25,14 +25,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object SlackIngestionConfig {
-  val nextIngestionDelayAfterFailure = Period.minutes(10)
-  val nextIngestionDelayWithoutNewMessages = Period.minutes(2)
-  val nextIngestionDelayAfterNewMessages = Period.seconds(30)
+  val nextIngestionDelayAfterFailure = Period.minutes(15)
+  val nextIngestionDelayWithoutNewMessages = Period.minutes(5)
+  val nextIngestionDelayAfterNewMessages = Period.minutes(2)
   val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
-  val minChannelIngestionConcurrency = 15
-  val maxChannelIngestionConcurrency = 30
+  val minChannelIngestionConcurrency = 5
+  val maxChannelIngestionConcurrency = 15
 
   val messagesPerRequest = 10
   val messagesPerIngestion = 50
@@ -281,7 +281,7 @@ class SlackIngestingActor @Inject() (
         }
     }
     getBatchedMessages(bigPages, skipFailures = false).recoverWith {
-      case fail =>
+      case fail @ SlackAPIFailure(_, SlackAPIFailure.Error.parse, _) =>
         val key = RandomStringUtils.randomAlphabetic(5).toUpperCase
         slackLog.warn(s"[$key] Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
         getBatchedMessages(tinyPages, skipFailures = true).andThen {
