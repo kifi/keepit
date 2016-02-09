@@ -158,6 +158,13 @@ class AugmentationCommanderImpl @Inject() (
         KeepRecord.fromByteArray(ref.bytes, ref.offset, ref.length)
       }
 
+      @inline def getAndCountUserId(userId: Long): Option[Id[User]] = if (userId < 0) None else {
+        uniqueKeepers += userId
+        Some(Id(userId))
+      }
+
+      @inline def getLibraryId(libraryId: Long): Option[Id[Library]] = if (libraryId < 0) None else Some(Id(libraryId))
+
       if (docs != null) {
         var docId = docs.nextDoc()
         while (docId < NO_MORE_DOCS) {
@@ -170,41 +177,35 @@ class AugmentationCommanderImpl @Inject() (
 
           if (item.keepId.isDefined && item.keepId.get.id == keepId) { // canonical keep, get note
             val record = getKeepRecord(docId)
-            uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, if (libraryId < 0) None else Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
-            uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
           } else if (organizationIdFilter.findIndex(orgId) >= 0) visibility match { // kept in my organizations
             case PUBLISHED | ORGANIZATION =>
               val record = getKeepRecord(docId)
-              uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
             case SECRET | DISCOVERABLE => // ignore
           }
           else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
-              uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
-              uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, Some(Id(userId)), None, Set.empty)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, getAndCountUserId(userId), None, Set.empty)
             case SECRET | ORGANIZATION => // ignore
           }
           else if (restrictedUserIdFilter.findIndex(userId) < 0) visibility match { // kept by others
             case PUBLISHED =>
-              uniqueKeepers += userId
               if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }
             case DISCOVERABLE =>
-              uniqueKeepers += userId
+              getAndCountUserId(userId)
               otherDiscoverableKeeps += 1
             case SECRET | ORGANIZATION => // ignore
           }
