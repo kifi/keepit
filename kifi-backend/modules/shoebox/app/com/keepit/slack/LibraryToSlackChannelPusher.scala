@@ -207,7 +207,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
                 }
                 val name = team.map(_.slackTeamName.value).getOrElse("???")
                 inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                  "Broke Slack integration of team", name, "and Kifi org", org, "channel", lts.slackChannelName.value, "cause", f.toString)))
+                  "Can't push updates - Broke Slack integration of team", name, "and Kifi org", org, "channel", lts.slackChannelName.value, "cause", f.toString)))
               }
               false
           }
