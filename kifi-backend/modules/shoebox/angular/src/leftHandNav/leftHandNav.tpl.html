@@ -26,13 +26,14 @@
                         <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
-                    <div lass="kf-left-hand-nav-view-more-container"  ng-if="hasMoreUserLibaries || fetchingUserLibraries">
-                        <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOwnLibraries()"  ng-if="hasMoreUserLibaries">view more</div>
+                    <div lass="kf-left-hand-nav-actions-container">
+                        <div class="kf-left-hand-nav-action" ng-click="viewMoreOwnLibraries()"  ng-if="hasMoreUserLibaries">view more</div>
                         <div class="kf-left-hand-nav-spinner kf-left-hand-nav-spinner-scale" ng-if="fetchingUserLibraries">
                             <div class="bounce1"></div>
                             <div class="bounce2"></div>
                             <div class="bounce3"></div>
                         </div>
+                        <div class="kf-left-hand-nav-action" ng-click="createOwnLibrary()"  ng-if="libraries.length < 5">create a library</div>
                     </div>
 
                 </div>
@@ -43,21 +44,37 @@
                     <img ng-src="{{ org|pic:100 }}" />
                     <div class="kf-left-hand-nav-user-img"></div><span ng-bind="org.name"></span>
                 </a>
-                <div class="kf-left-hand-nav-libraries-container">
+                <div class="kf-left-hand-nav-libraries-container" ng-if="!org.pending && !org.potential">
                     <div class="kf-left-hand-nav-library-header">Libraries</div>
                     <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in org.libraries">
                         <div class="kf-left-hand-nav-library-container-bg" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
                     </a>
-                    <div class="kf-left-hand-nav-view-more-container" ng-if="org.hasMoreLibraries || org.fetchingLibraries">
-                        <div class="kf-left-hand-nav-view-more-libraries" ng-click="viewMoreOrgLibraries(org)" ng-if="org.hasMoreLibraries">view more</div>
+                    <div class="kf-left-hand-nav-actions-container">
+                        <div class="kf-left-hand-nav-action" ng-click="viewMoreOrgLibraries(org)" ng-if="org.hasMoreLibraries">view more</div>
                         <!--TODO: make a directive-->
                         <div class="kf-left-hand-nav-spinner kf-left-hand-nav-spinner-scale"  ng-if="org.fetchingLibraries">
                             <div class="bounce1"></div>
                             <div class="bounce2"></div>
                             <div class="bounce3"></div>
                         </div>
+                        <div class="kf-left-hand-nav-action" ng-click="createOrgLibrary(org)" ng-if="org.libraries.length < 3">create a library</div>
+                    </div>
+                </div>
+                <div class="kf-left-hand-nav-org-message" ng-if="org.pending">
+                    You are invited to join this team!
+                    <div class="kf-left-hand-nav-button-container">
+                        <span class="kf-left-hand-nav-button-accept" ng-click="joinOrg(org)">Accept</span>
+                        <span class="kf-left-hand-nav-button-decline" ng-click="declineOrg(org)">Decline</span>
+                    </div>
+                </div>
+
+                <div class="kf-left-hand-nav-org-message" ng-if="org.potential">
+                    Verify your email to join this team
+                    <div class="kf-left-hand-nav-button-container">
+                        <span class="kf-left-hand-nav-button-accept" ng-click="verifyEmail(org)">Verify</span>
+                        <span class="kf-left-hand-nav-button-decline" ng-click="declineOrg(org)">Decline</span>
                     </div>
                 </div>
             </div>
