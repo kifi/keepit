@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state',
-  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state) {
+  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state', 'modalService',
+  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state, modalService) {
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
@@ -116,27 +116,35 @@ angular.module('kifi')
           org.declined = true;
         };
 
-        // scope.verifyEmail = function(email, org) {
-        //   orgProfileService.trackEvent('user_clicked_page', org,
-        //     {
-        //       'type': 'homeFeed',
-        //       'action': 'verifyOrgEmail'
-        //     }
-        //   );
-        //   showVerificationAlert(email);
-        //   profileService.sendMemberConfirmationEmail(org.id, email);
-        // };
+        scope.sendMemberConfirmationEmail = function(email, org) {
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'verifyOrgEmail'
+            }
+          );
+          showVerificationAlert(email);
+          profileService.sendMemberConfirmationEmail(org.id, email);
+        };
 
-        // scope.hideOrgDomain = function(org) {
-        //   org.declined = true;
-        //   orgProfileService.trackEvent('user_clicked_page', org,
-        //     {
-        //       'type': 'homeFeed',
-        //       'action': 'hideOrgDomain'
-        //     }
-        //   );
-        //   profileService.hideOrgDomain(org);
-        // };
+        scope.hideOrgDomain = function(org) {
+          org.declined = true;
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'hideOrgDomain'
+            }
+          );
+          profileService.hideOrgDomain(org);
+        };
+
+        function showVerificationAlert(email) {
+          scope.emailForVerification = email;
+          modalService.open({
+            template: 'profile/emailResendVerificationModal.tpl.html',
+            scope: scope
+          });
+        }
       }
     };
   }
