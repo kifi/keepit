@@ -125,8 +125,9 @@ angular.module('kifi')
         }
       } else if ($state.includes('orgProfile.slack')) {
         orgProfileService.userOrOrg($stateParams.handle).then(function (resData) {
-          resData.result &&
+          if (resData.result) {
             orgProfileService.trackEvent('visitor_clicked_page', resData.result.organization, { type: 'orgLanding', action: 'clickedSignupHeader' });
+          }
         });
       }
     };
@@ -162,8 +163,9 @@ angular.module('kifi')
         }
       } else if ($state.includes('orgProfile.slack')) {
         orgProfileService.userOrOrg($stateParams.handle).then(function (resData) {
-          resData.result &&
+          if (resData.result) {
             orgProfileService.trackEvent('visitor_clicked_page', resData.result.organization, { type: 'orgLanding', action: 'clickedLoginHeader' });
+          }
         });
       }
     };
