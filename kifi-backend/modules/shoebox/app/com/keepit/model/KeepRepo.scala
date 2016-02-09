@@ -595,7 +595,7 @@ class KeepRepoImpl @Inject() (
 
   def getByIdGreaterThan(lowerBoundId: Id[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = {
     val q = for { t <- rows if t.id > lowerBoundId } yield t
-    q.sortBy(_.id desc).take(limit).list
+    q.sortBy(_.id asc).take(limit).list
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {
