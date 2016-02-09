@@ -148,7 +148,7 @@ class SlackIngestingActor @Inject() (
               val name = team.map(_.slackTeamName.value).getOrElse("???")
               val cause = broken.cause.map(_.toString).getOrElse("???")
               inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                "Can't Injest - Broken Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelName.value, "cause", cause)))
+                "Can't Ingest - Broken Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelName.value, "cause", cause)))
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
