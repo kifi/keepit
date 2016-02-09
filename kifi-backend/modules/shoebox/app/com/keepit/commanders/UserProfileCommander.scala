@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
@@ -281,7 +282,7 @@ class UserProfileCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[LibraryQuery.Arrangement]): LeftHandRailResponse = {
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement]): LeftHandRailResponse = {
     db.readOnlyMaster { implicit s =>
       import LibraryQuery._
 
