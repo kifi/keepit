@@ -40,12 +40,12 @@ angular.module('kifi')
           var filter = 'own';
           scope.hasMoreUserLibaries = false;
           return userProfileActionService
-              .getLibraries(scope.me.username, filter, pageNumber, pageSize + 1)
+              .getLibraries(scope.me.username, filter, pageNumber, pageSize)
               .then(function (data) {
                 scope.loaded = true;
                 return data[filter];
               }).then(function(libs) {
-                scope.hasMoreUserLibaries = libs.length === pageSize + 1;
+                scope.hasMoreUserLibaries = libs.length === pageSize;
                 libs.splice(pageSize);
                 if (pageNumber === 0) {
                   extraLibraries = libs.splice(INITIAL_PAGE_SIZE);
