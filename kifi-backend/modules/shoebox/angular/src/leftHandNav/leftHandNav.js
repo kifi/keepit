@@ -3,8 +3,9 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$rootElement', '$rootScope', '$document', '$q', 'profileService', 'userProfileActionService', 'orgProfileService', '$state', 'modalService', '$analytics',
-  function ($rootElement, $rootScope, $document, $q, profileService, userProfileActionService, orgProfileService, $state, modalService, $analytics) {
+  '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state','profileService', 'userProfileActionService', 'orgProfileService', 'modalService',
+  function ($analytics, $rootElement,  $rootScope, $document, $q, $state, profileService, userProfileActionService, orgProfileService, modalService) {
+
     return {
       restrict: 'A',
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
@@ -34,6 +35,9 @@ angular.module('kifi')
         var INITIAL_PAGE_SIZE = 6;
         var PAGE_SIZE = 15;
         var extraLibraries = [];
+        var pageName = function() {
+          return $state.$current.name;
+        };
         scope.fetchLibraries = function (pageNumber, pageSize) {
           var filter = 'own';
           scope.hasMoreUserLibaries = false;
@@ -83,12 +87,23 @@ angular.module('kifi')
           scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE).then(function() {
             scope.fetchingUserLibraries = false;
           });
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedViewMoreMyLibraries'
+          });
         };
 
         scope.viewMoreOrgLibraries = function (org) {
           org.fetchingLibraries = true;
           scope.fetchOrgLibraries(org, org.libraries.length, PAGE_SIZE).then(function() {
             org.fetchingLibraries = false;
+          });
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedViewMoreTeamLibraries',
+            'team' : org.id
           });
         };
 
@@ -197,8 +212,9 @@ angular.module('kifi')
 
         scope.createTeam = function () {
           $analytics.eventTrack('user_clicked_page', {
-            'type' : 'homeFeed',
-            'action' : 'clickedCreateTeamRighthandRail'
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedCreateTeam'
           });
 
           if (!profileService.prefs.hide_company_name) {
@@ -210,7 +226,8 @@ angular.module('kifi')
 
         scope.openLearnMoreModal = function () {
           $analytics.eventTrack('user_clicked_page', {
-            'type': 'homeFeed',
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
             'action': 'learnMoreTeams'
           });
 
@@ -220,7 +237,8 @@ angular.module('kifi')
               companyName: scope.companyName,
               triggerCreateTeam: function () {
                 $analytics.eventTrack('user_clicked_page', {
-                  'type' : 'homeFeed',
+                  'type' : pageName(),
+                  'subType' : 'leftHandNav',
                   'action' : 'clickedCreateTeamLearnMore'
                 });
                 scope.createTeam();
@@ -228,6 +246,44 @@ angular.module('kifi')
             }
           });
         };
+
+        scope.onClickedMyProfile = function() {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedGoToMyProfile'
+          });
+        };
+
+        scope.onClickedMyLibrary = function(library) {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedGoToMyProfile',
+            'library': library.id
+          });
+        };
+
+
+        scope.onClickedTeam = function(team) {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedGoToTeam',
+            'team' : team.id
+          });
+        };
+
+        scope.onClickedTeamLibrary = function(team, library) {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : pageName(),
+            'subType' : 'leftHandNav',
+            'action' : 'clickedGoToLibrary',
+            'team' : team.id,
+            'library' : library.id
+          });
+        };
+
       }
     };
   }
