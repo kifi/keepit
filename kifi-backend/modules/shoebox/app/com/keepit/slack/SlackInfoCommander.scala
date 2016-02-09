@@ -68,10 +68,6 @@ object UserSlackInfo {
   implicit val writes: Writes[UserSlackInfo] = Json.writes[UserSlackInfo]
 }
 
-object SlackInfoCommander {
-  val slackSetupPermission = OrganizationPermission.CREATE_SLACK_INTEGRATION
-}
-
 @ImplementedBy(classOf[SlackInfoCommanderImpl])
 trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients

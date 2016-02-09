@@ -50,7 +50,6 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
   )
 
   "MobileUserProfileController" should {
-
     "get profile for self" in {
       withDb(modules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
@@ -311,19 +310,20 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         val result1 = getProfileLibraries(user1, 0, 10, "own")
         status(result1) must equalTo(OK)
 
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(Set(lib1.id.get, lib2.id.get), user1.id) }
         val resultJson = Json.parse(contentAsString(result1))
         val libs = (resultJson \ "own").as[Seq[JsObject]]
         (libs.head \ "id").as[PublicId[Library]] must equalTo(pubId2)
         (libs.head \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (libs.head \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
         (libs.head \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = libPerms(lib2.id.get)))
         )
 
         (libs.last \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (libs.last \ "owner" \ "id").as[ExternalId[User]] must equalTo(user1.externalId)
         (libs.last \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = libPerms(lib1.id.get)))
         )
         val result2 = getProfileLibraries(user1, 0, 10, "all")
         status(result2) must equalTo(OK)

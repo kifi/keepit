@@ -442,11 +442,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val lib1Json = Json.parse(contentAsString(result1)) \ "library"
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
         (lib1Json \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (lib1Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib1Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib1Json \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
-        (lib1Json \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
+        (lib1Json \ "membership").as[LibraryMembershipInfo] === LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = libPerms)
+        (lib1Json \ "permissions").as[Set[LibraryPermission]] === libPerms
 
         // viewed by another user with an invite
         val user2 = db.readWrite { implicit s =>
@@ -462,10 +463,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val lib2Json = Json.parse(contentAsString(result2)) \ "library"
+        val libPerms2 = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1Updated2.id.get, user2.id) }
         (lib2Json \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (lib2Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib2Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib2Json \ "permissions").as[Set[LibraryPermission]] must equalTo(db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1Updated2.id.get, user2.id) })
+        (lib2Json \ "permissions").as[Set[LibraryPermission]] === libPerms2
         (lib2Json \ "invite").as[LibraryInviteInfo] must equalTo(LibraryInviteInfo(access = LibraryAccess.READ_ONLY, lastInvitedAt = t1.plusMinutes(3), inviter = basicUser1))
 
       }
@@ -535,13 +537,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val lib1Json = Json.parse(contentAsString(result1)) \ "library"
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
         (lib1Json \ "id").as[PublicId[Library]] must equalTo(Library.publicId(lib1.id.get))
         (lib1Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib1Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib1Json \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = false, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
-        (lib1Json \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
+        (lib1Json \ "membership").as[LibraryMembershipInfo] === LibraryMembershipInfo(LibraryAccess.OWNER, listed = false, subscribed = false, permissions = libPerms)
+        (lib1Json \ "permissions").as[Set[LibraryPermission]] === libPerms
 
-        Json.parse(contentAsString(result3)) must equalTo(Json.parse(contentAsString(result1)))
+        contentAsJson(result3) === contentAsJson(result1)
       }
     }
 
@@ -638,11 +641,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val resultJson = Json.parse(contentAsString(result1))
         val lib = (resultJson \ "libraries").as[Seq[JsObject]].head
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
         (lib \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
-        (lib \ "owner").as[BasicUser] must equalTo(basicUser1)
+        (lib \ "permissions").as[Set[LibraryPermission]] === libPerms
+        (lib \ "owner").as[BasicUser] === basicUser1
       }
     }
 
@@ -912,14 +916,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser2 = db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }
 
-        val expected1 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.READ_WRITE), includeOrgWriteAccess = false))}}}""")
+        val libPerms = db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1.id.get, user1.id) }
+        val expected1 = Json.obj("membership" -> Json.obj("access" -> "read_write", "listed" -> true, "subscribed" -> true, "permissions" -> libPerms))
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
         val result11 = libraryController.joinLibrary(pubLibId1, None, Some(true))(request1)
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 
-        val expected11 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.READ_WRITE), includeOrgWriteAccess = false))}}}""")
+        val expected11 = Json.obj("membership" -> Json.obj("access" -> "read_write", "listed" -> true, "subscribed" -> true, "permissions" -> libPerms))
         Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)
