@@ -250,20 +250,24 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = {
-    def mergeMaps(maps: Seq[Map[Id[User], Boolean]]): Map[Id[User], Boolean] = {
-      val merged = collection.mutable.Map[Id[User], Boolean](maps.head.toSeq: _*)
-      maps.tail.foreach { tomerge =>
-        tomerge.foreach { case (id, online) =>
-          if (online) merged(id) = online
+    if (users.isEmpty) {
+      Future.successful(Map.empty)
+    } else {
+      def mergeMaps(maps: Seq[Map[Id[User], Boolean]]): Map[Id[User], Boolean] = {
+        val merged = collection.mutable.Map[Id[User], Boolean](maps.head.toSeq: _*)
+        maps.tail.foreach { tomerge =>
+          tomerge.foreach { case (id, online) =>
+            if (online) merged(id) = online
+          }
         }
+        Map(merged.toSeq: _*)
       }
-      Map(merged.toSeq: _*)
-    }
-    def read(json: JsValue): Map[Id[User], Boolean] = {
-      json.as[JsObject].fieldSet.map{ case (key, value) => Id[User](key.toInt) -> value.as[Boolean] }.toMap
-    }
-    Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
-      mergeMaps(responses.map(res => read(res.json)))
+      def read(json: JsValue): Map[Id[User], Boolean] = {
+        json.as[JsObject].fieldSet.map{ case (key, value) => Id[User](key.toInt) -> value.as[Boolean] }.toMap
+      }
+      Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
+        mergeMaps(responses.map(res => read(res.json)))
+      }
     }
   }
 
