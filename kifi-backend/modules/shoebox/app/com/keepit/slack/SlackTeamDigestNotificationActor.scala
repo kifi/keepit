@@ -221,10 +221,9 @@ class SlackTeamDigestNotificationActor @Inject() (
   private def kifiSlackTipAttachments(slackTeamId: SlackTeamId): IndexedSeq[SlackAttachment] = {
     import DescriptionElements._
     IndexedSeq(
-      // TODO(ryan): uncomment this after Product Hunt launch
-      // SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-      //   SlackEmoji.magnifyingGlass, "Search them using the `/kifi` Slack command"
-      // )))).withFullMarkdown,
+      SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.magnifyingGlass, "Search them using the `/kifi` Slack command"
+      )))).withFullMarkdown,
       SlackAttachment(color = Some(LibraryColor.ORANGE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         "See them on Google by installing the", "browser extension" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeamId))
       )))).withFullMarkdown
