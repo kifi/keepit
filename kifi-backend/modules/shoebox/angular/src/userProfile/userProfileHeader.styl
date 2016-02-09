@@ -1,7 +1,10 @@
 uphSmallMaxDim = 736px // for @media max-height and max-width
+.kf-nav-bar-enabled
+  .kf-uph
+    background: userAndTeamHeaderColor
 
 .kf-uph
-  background: userAndTeamHeaderColor
+  background: pageHeaderColor
   color: #fff
   padding-bottom: 25px
 
@@ -157,6 +160,10 @@ actionGapBelow = 3px
   &:active
     opacity: .85
 
+.kf-nav-bar-enabled
+  .kf-uph-share-url
+    background-color: tint(userAndTeamHeaderColor, 10%)
+
 .kf-uph-share-url
   position: absolute
   right: 0
@@ -165,7 +172,7 @@ actionGapBelow = 3px
   font-size: .8em
   border-radius: 4px
   border: 1px solid rgba(255,255,255,.5)
-  background-color: tint(userAndTeamHeaderColor, 10%)
+  background-color: tint(pageHeaderColor, 10%)
   padding: .3em .4em
   white-space: nowrap
   font-smoothing: antialiased
