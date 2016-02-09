@@ -39,7 +39,7 @@
                 </div>
 
             </div>
-            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs | filter: {declined: false} ">
+            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs | filter: {declined: '!true'}">
                 <a class="kf-left-hand-nav-item-header" ng-href="{{ org.handle }}">
                     <img ng-src="{{ org|pic:100 }}" />
                     <div class="kf-left-hand-nav-user-img"></div><span ng-bind="org.name"></span>
