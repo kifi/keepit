@@ -155,7 +155,7 @@ class SlackController @Inject() (
     }
   }
 
-  def ingestChannel(libraryId: PublicId[Library], integrationIdStr: String, turnOn: Boolean) = (UserAction andThen LibraryWriteAction(libraryId)).async { implicit request =>
+  def ingestChannel(libraryId: PublicId[Library], integrationIdStr: String, turnOn: Boolean) = (UserAction andThen LibraryWriteOrJoinAction(libraryId)).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     SlackChannelToLibrary.decodePublicIdStr(integrationIdStr) match {
       case Success(integrationId) =>
