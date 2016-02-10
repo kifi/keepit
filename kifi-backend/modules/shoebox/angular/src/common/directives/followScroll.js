@@ -20,6 +20,7 @@ angular.module('kifi')
       };
     }
 
+    var bodyContainer = angular.element('#kf-body-container-content')[0];
     var documentElement = $window.document.documentElement;
     var desktopMq = $window.matchMedia('(min-width: 480px)');
 
@@ -27,8 +28,8 @@ angular.module('kifi')
       restrict: 'A',
       link: function ($scope, element, attrs) {
         function moveFloatMenu() {
-          var pageScroll = -documentElement.getBoundingClientRect().top;
-          var headerOffset = $header.height() + 8;
+          var pageScroll = bodyContainer ? bodyContainer.scrollTop : -documentElement.getBoundingClientRect().top;
+          var headerOffset = (bodyContainer ? bodyContainer.getBoundingClientRect().top : $header.height()) + 8;
           var offset = pageScroll - positionY + headerOffset;
 
           if (offset < 0 || pageScroll + headerOffset < positionY) {
@@ -46,10 +47,10 @@ angular.module('kifi')
 
         function updateMq() {
           if (desktopMq.matches) {
-            $window.addEventListener('scroll', moveFloatMenu);
+            (bodyContainer || $window).addEventListener('scroll', moveFloatMenu);
             moveFloatMenu();
           } else {
-            $window.removeEventListener('scroll', moveFloatMenu);
+            (bodyContainer || $window).removeEventListener('scroll', moveFloatMenu);
             element.css({
               'position': '',
               'top': ''
@@ -68,7 +69,7 @@ angular.module('kifi')
           updateMq();
 
           $scope.$on('$destroy', function () {
-            $window.removeEventListener('scroll', moveFloatMenu);
+            (bodyContainer || $window).removeEventListener('scroll', moveFloatMenu);
             desktopMq.removeListener(updateMq);
           });
         });
