@@ -18,6 +18,7 @@ import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
 import com.keepit.slack.models.SlackTeamRepo
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.slack.models.SlackChannelToLibraryRepo
 import play.api.Play
 import scala.concurrent.duration._
 
@@ -44,6 +45,7 @@ class OrganizationCommanderImpl @Inject() (
   userRepo: UserRepo,
   paidPlanRepo: PaidPlanRepo,
   libraryRepo: LibraryRepo,
+  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
   organizationInfoCommander: OrganizationInfoCommander,
   planManagementCommander: PlanManagementCommander,
@@ -227,6 +229,9 @@ class OrganizationCommanderImpl @Inject() (
 
           val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
           val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED, excludeState = None).map(_.id.get)
+
+          libsToReturn.foreach(slackChannelToLibraryRepo.getActiveByLibrary(_).foreach(slackChannelToLibraryRepo.deactivate))
+
           (libsToReturn, libsToDelete)
         }
 
