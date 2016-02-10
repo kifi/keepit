@@ -57,7 +57,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   var refinements = -1;   // how many times the user has refined the search on the same page. No searches at all yet.
   var showMoreOnArrival;
   var clicks = {kifi: [], google: []};  // clicked result link hrefs
-  var time = {google: {shown: 0}, kifi: {queried: 0, received: 0, shown: 0}};  // for timing stats
+  var time = {google: {shown: 0, shownAnalytics: 0}, kifi: {queried: 0, received: 0, shown: 0}};  // for timing stats
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
   $(function() {
@@ -79,7 +79,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   checkSearchType();
   search(true, null, true);  // Google can be slow to initialize the input field, or it may be missing
   if (document.getElementById('ires')) {
-    time.google.shown = time.kifi.queried;
+    time.google.shown = time.google.shownAnalytics = time.kifi.queried;
   }
 
   var isVertical;
@@ -94,7 +94,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
-    var kgDelta = time.kifi.shown - time.google.shown;
+    var kgDelta = time.kifi.shown - time.google.shownAnalytics;
     api.port.emit("log_search_event", [
       "searched",
       {
@@ -110,7 +110,7 @@ if (searchUrlRe.test(document.URL)) !function () {
         "kifiExpanded": response.expanded || false,
         "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
         "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
-        "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
+        "thirdPartyShownTime": Math.max(-1, time.google.shownAnalytics - time.kifi.queried),
         "kifiResultsClicked": clicks.kifi.length,
         "thirdPartyResultsClicked": clicks.google.length,
         "chunkDelta": response.chunkDelta,
@@ -159,11 +159,13 @@ if (searchUrlRe.test(document.URL)) !function () {
     $arrow.removeAttr('href');
     $res.find('#kifi-res-list,.kifi-res-end').css('opacity', .2);
 
+    var previousQuery = time.kifi.queried;
     var t1 = time.kifi.queried = Date.now();
     refinements++;
     api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
         log("[results] ignoring for query:", q, "filter:", newFilter);
+        t1 = time.kifi.queried = previousQuery; // since we ignore this query, set the time we queried back to the original
         return;
       } else if (!resp.me) {
         log("[results] no user info");
@@ -218,7 +220,10 @@ if (searchUrlRe.test(document.URL)) !function () {
       if (showPreview) {
         stashExtraHits(resp, resp.prefs.maxResults);
       }
+      var timeBeforeAttach = +new Date();
       attachResults();
+      var timeAfterAttach = +new Date();
+      log('[results.attach] timeBefore: %s, timeAfter: %s, delta: %s', timeBeforeAttach, timeAfterAttach, timeAfterAttach - timeBeforeAttach);
       $bar[0].className = 'kifi-res-bar' + (showPreview ? ' kifi-preview' : showAny ? '' : ' kifi-collapsed');
       $arrow[0].href = 'javascript:';
       if (inDoc) {
@@ -282,8 +287,9 @@ if (searchUrlRe.test(document.URL)) !function () {
     if (attachKifiRes() > 0) {
       log('[withMutations] Google results inserted');
       var now = Date.now();
-      if (time.google.shown < time.kifi.queried) {  // updating if we haven't searched would make us look artificially good
-        time.google.shown = now;
+      time.google.shown = now;
+      if (time.google.shownAnalytics < time.kifi.queried) {  // updating if we haven't searched would make us look artificially good
+        time.google.shownAnalytics = now;
       }
       if (time.kifi.shown < time.kifi.received) {  // updating if we haven't received anything new would make us look artificially bad
         time.kifi.shown = now;
@@ -371,7 +377,7 @@ if (searchUrlRe.test(document.URL)) !function () {
           "kifiExpanded": response.expanded || false,
           "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
           "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
-          "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
+          "thirdPartyShownTime": Math.max(-1, time.google.shownAnalytics - time.kifi.queried),
           "kifiResultsClicked": clicks.kifi.length,
           "thirdPartyResultsClicked": clicks.google.length,
           "resultPosition": resIdx,
