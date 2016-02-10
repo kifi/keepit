@@ -2,8 +2,8 @@ package com.keepit.slack.models
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
-import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.db.slick._
+import com.keepit.common.db._
 import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.time._
 import com.keepit.model.User
@@ -51,6 +51,7 @@ case class SlackTeamMembership(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[SlackTeamMembership] = SlackTeamMembershipStates.ACTIVE,
+    seq: SequenceNumber[SlackTeamMembership] = SequenceNumber.ZERO,
     userId: Option[Id[User]],
     slackUserId: SlackUserId,
     slackUsername: SlackUsername,
@@ -58,7 +59,7 @@ case class SlackTeamMembership(
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
     scopes: Set[SlackAuthScope],
-    slackUser: Option[SlackUserInfo]) extends ModelWithState[SlackTeamMembership] {
+    slackUser: Option[SlackUserInfo]) extends ModelWithState[SlackTeamMembership] with ModelWithSeqNumber[SlackTeamMembership] {
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
@@ -72,7 +73,7 @@ case class SlackTeamMembership(
 object SlackTeamMembershipStates extends States[SlackTeamMembership]
 
 @ImplementedBy(classOf[SlackTeamMembershipRepoImpl])
-trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
+trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFunction[SlackTeamMembership] {
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
@@ -88,7 +89,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
 class SlackTeamMembershipRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    userIdentityCache: IdentityUserIdCache) extends DbRepo[SlackTeamMembership] with SlackTeamMembershipRepo {
+    userIdentityCache: IdentityUserIdCache) extends DbRepo[SlackTeamMembership] with SeqNumberDbFunction[SlackTeamMembership] with SlackTeamMembershipRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -105,6 +106,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[SlackTeamMembership],
+    seq: SequenceNumber[SlackTeamMembership],
     userId: Option[Id[User]],
     slackUserId: SlackUserId,
     slackUsername: SlackUsername,
@@ -118,6 +120,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       createdAt,
       updatedAt,
       state,
+      seq,
       userId,
       slackUserId,
       slackUsername,
@@ -134,6 +137,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.createdAt,
     membership.updatedAt,
     membership.state,
+    membership.seq,
     membership.userId,
     membership.slackUserId,
     membership.slackUsername,
@@ -146,7 +150,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   type RepoImpl = SlackTeamMembershipTable
 
-  class SlackTeamMembershipTable(tag: Tag) extends RepoTable[SlackTeamMembership](db, tag, "slack_team_membership") {
+  class SlackTeamMembershipTable(tag: Tag) extends RepoTable[SlackTeamMembership](db, tag, "slack_team_membership") with SeqNumberColumn[SlackTeamMembership] {
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackUsername = column[SlackUsername]("slack_username", O.NotNull)
@@ -155,12 +159,17 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def token = column[Option[SlackAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
     def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamMembershipStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamMembershipTable(tag)
   initTable()
+
+  override def save(membership: SlackTeamMembership)(implicit session: RWSession): SlackTeamMembership = {
+    super.save(membership.copy(seq = sequence.incrementAndGet()))
+  }
+
   override def deleteCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {
     userIdentityCache.remove(IdentityUserIdKey(membership.slackTeamId, membership.slackUserId))
   }
