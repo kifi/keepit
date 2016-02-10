@@ -13,10 +13,8 @@ angular.module('kifi')
       templateUrl: 'leftHandNav/leftHandNav.tpl.html',
       replace: true,
       link: function (scope) {
-        scope.me = profileService.me;
         scope.libraries = [];
         scope.orgs = [];
-
         var appendPendingAndPotentialOrgs = function () {
           if (scope.me.pendingOrgs) {
             scope.me.pendingOrgs.forEach(function (o) {
@@ -33,6 +31,30 @@ angular.module('kifi')
             });
             scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
           }
+        };
+
+        var reloadData = function(me, hideReload) {
+          var futureMe = (me && $q.when(me)) || profileService.fetchMe();
+          scope.showUserAndOrgContent = hideReload;
+          futureMe.then(function (me) {
+            scope.me = me;
+            net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
+              var lhr = res.data.lhr;
+              scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
+              lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
+              scope.libraries = lhr.userWithLibs.libs;
+              scope.orgs = res.data.lhr.orgs.map(function(tuple) {
+                var org = tuple.org;
+                org.hasMoreLibraries = tuple.libs.length === INITIAL_PAGE_SIZE + 1;
+                tuple.libs.splice(INITIAL_PAGE_SIZE);
+                org.libraries = tuple.libs;
+                return org;
+              });
+              scope.showCreateTeam = scope.orgs.length === 0;
+              appendPendingAndPotentialOrgs();
+              scope.showUserAndOrgContent = true;
+            });
+          });
         };
 
         // TODO: REMOVE THIS HACK
@@ -57,24 +79,6 @@ angular.module('kifi')
               });
         };
 
-        net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
-          var lhr = res.data.lhr;
-          scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
-          lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
-          scope.libraries = lhr.userWithLibs.libs;
-          scope.orgs = res.data.lhr.orgs.map(function(tuple) {
-            var org = tuple.org;
-            org.hasMoreLibraries = tuple.libs.length === INITIAL_PAGE_SIZE + 1;
-            tuple.libs.splice(INITIAL_PAGE_SIZE);
-            org.libraries = tuple.libs;
-            return org;
-          });
-          scope.showCreateTeam = scope.orgs.length === 0;
-          appendPendingAndPotentialOrgs();
-          scope.showUserAndOrgContent = true;
-        });
-
-
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
           return orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
@@ -84,8 +88,6 @@ angular.module('kifi')
               org.libraries = (org.libraries || []).concat(data.libraries);
             });
         };
-
-
 
         scope.fetchingUserLibraries = false;
         scope.viewMoreOwnLibraries = function () {
@@ -292,6 +294,14 @@ angular.module('kifi')
           });
         };
 
+        reloadData(profileService.me);
+        [
+          $rootScope.$on('refreshLeftHandNav', function() {
+            reloadData();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
+        });
       }
     };
   }
