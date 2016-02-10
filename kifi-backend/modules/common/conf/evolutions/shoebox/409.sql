@@ -7,6 +7,7 @@ CREATE TABLE slack_team_membership (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
+  seq bigint(20) NOT NULL,
   user_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_username VARCHAR(32) NOT NULL,
@@ -20,7 +21,14 @@ CREATE TABLE slack_team_membership (
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
   INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
   INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id),
+  INDEX slack_team_membership_i_seq (seq),
 );
+
+-- MySQL:
+-- CREATE TABLE slack_team_membership_sequence (id bigint(20) NOT NULL);
+-- INSERT INTO slack_team_membership_sequence VALUES (0);
+
+CREATE SEQUENCE slack_team_membership_sequence;
 
 CREATE TABLE slack_incoming_webhook_info (
   id BIGINT(20) NOT NULL AUTO_INCREMENT,
