@@ -34,7 +34,7 @@ class AdminOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
-    keepRepo: KeepRepo,
+    keepRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     paidAccountRepo: PaidAccountRepo,

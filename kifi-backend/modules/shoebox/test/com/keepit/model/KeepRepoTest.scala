@@ -202,31 +202,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-    //
-    //    "orgsWithKeeps" in {
-    //      withDb() { implicit injector =>
-    //        val (user1, org) = db.readWrite { implicit s =>
-    //          val user1 = UserFactory.user().saved
-    //          val user2 = UserFactory.user().saved
-    //          val org = OrganizationFactory.organization().withOwner(user1).saved
-    //          val lib1 = LibraryFactory.library().withOwner(user1).saved
-    //          val lib2 = LibraryFactory.library().withOwner(user1).withOrganization(org).withCollaborators(Seq(user2)).saved
-    //          keeps(22).map(_.withLibrary(lib1).withUser(user1)).saved
-    //          keeps(18).map(_.withLibrary(lib2).withUser(user2)).saved
-    //          orgExperimentRepo.all() //touch
-    //          (user1, org)
-    //        }
-    //
-    //        val user1Id = user1.id.get
-    //
-    //        db.readOnlyMaster { implicit s =>
-    //          val res = keepRepo.orgsWithKeeps()
-    //          res.length must equalTo(1)
-    //          res.head._1 === org.id.get
-    //          res.head._2 === 18
-    //        }
-    //      }
-    //    }
 
   }
 }
