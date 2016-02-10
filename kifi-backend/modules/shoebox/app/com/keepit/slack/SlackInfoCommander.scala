@@ -171,7 +171,7 @@ class SlackInfoCommanderImpl @Inject() (
             else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
           }
 
-          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = canUserJoinOrWritetoLib.get(libId).contains(true))
+          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
         case (key, Seq(ts)) =>
