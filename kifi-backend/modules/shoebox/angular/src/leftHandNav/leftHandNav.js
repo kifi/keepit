@@ -67,6 +67,7 @@ angular.module('kifi')
             org.libraries = tuple.libs;
             return org;
           });
+          scope.showCreateTeam = scope.orgs.length === 0;
           appendPendingAndPotentialOrgs();
           scope.showUserAndOrgContent = true;
         });

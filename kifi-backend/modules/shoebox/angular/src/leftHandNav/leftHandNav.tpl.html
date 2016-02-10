@@ -81,8 +81,7 @@
                     </div>
                 </div>
             </div>
-            <!--Only show create team if we are a member of no orgs (orgs you are a member of are first in the list)-->
-            <div ng-if="!orgs[0].viewer.membership">
+            <div ng-if="showCreateTeam">
                 <span class="kf-left-hand-nav-create-team">+
                     <span ng-bind="'Create a team' + (companyName ? ' for ' + companyName : '')" ng-click="createTeam()"></span>
                     [<span class="kf-left-hand-nav-create-team-learn-more" ng-click="openLearnMoreModal()">learn more</span>]
