@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state','profileService', 'userProfileActionService', 'orgProfileService', 'modalService',
-  function ($analytics, $rootElement,  $rootScope, $document, $q, $state, profileService, userProfileActionService, orgProfileService, modalService) {
+  '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state','profileService', 'userProfileActionService', 'orgProfileService',
+    'modalService', 'net',
+  function ($analytics, $rootElement,  $rootScope, $document, $q, $state, profileService, userProfileActionService, orgProfileService,
+            modalService ,net) {
 
     return {
       restrict: 'A',
@@ -34,33 +36,38 @@ angular.module('kifi')
 
         var INITIAL_PAGE_SIZE = 6;
         var PAGE_SIZE = 15;
-        var extraLibraries = [];
         var pageName = function() {
           return $state.$current.name;
         };
-        scope.fetchLibraries = function (pageNumber, pageSize) {
-          var filter = 'own';
+        scope.fetchLibraries = function (offset, limit) {
           scope.hasMoreUserLibaries = false;
           return userProfileActionService
-              .getLibraries(scope.me.username, filter, pageNumber, pageSize)
+              .getBasicLibraries(scope.me.id, offset, limit + 1)
               .then(function (data) {
                 scope.loaded = true;
-                return data[filter];
-              }).then(function(libs) {
-                scope.hasMoreUserLibaries = libs.length === pageSize;
-                libs.splice(pageSize);
-                if (pageNumber === 0) {
-                  extraLibraries = libs.splice(INITIAL_PAGE_SIZE);
-                  scope.libraries = scope.libraries.concat(libs);
-                } else {
-                  scope.libraries = scope.libraries.concat(extraLibraries).concat(libs);
-                  extraLibraries = [];
-                }
+                return data;
+              }).then(function(data) {
+                scope.hasMoreUserLibaries = data.libs.length === limit + 1;
+                data.libs.splice(limit);
+                scope.libraries = (scope.libraries || []).concat(data.libs);
               });
         };
 
-        var promises = [];
-        promises.push(scope.fetchLibraries(0, PAGE_SIZE));
+        net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
+          var lhr = res.data.lhr;
+          scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
+          lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
+          scope.libraries = lhr.userWithLibs.libs;
+          scope.orgs = res.data.lhr.orgs.map(function(tuple) {
+            var org = tuple.org;
+            org.hasMoreLibraries = tuple.libs.length === INITIAL_PAGE_SIZE + 1;
+            tuple.libs.splice(INITIAL_PAGE_SIZE);
+            org.libraries = tuple.libs;
+            return org;
+          });
+          scope.showUserAndOrgContent = true;
+        });
+
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
@@ -72,19 +79,12 @@ angular.module('kifi')
             });
         };
 
-        scope.orgs.forEach(function (org) {
-           promises.push(scope.fetchOrgLibraries(org, 0, INITIAL_PAGE_SIZE));
-        });
 
-        scope.showUserAndOrgContent = false;
-        $q.all(promises).then(function() {
-          scope.showUserAndOrgContent = true;
-        });
 
         scope.fetchingUserLibraries = false;
         scope.viewMoreOwnLibraries = function () {
           scope.fetchingUserLibraries = true;
-          scope.fetchLibraries(Math.ceil(scope.libraries.length / PAGE_SIZE), PAGE_SIZE).then(function() {
+          scope.fetchLibraries(scope.libraries.length, PAGE_SIZE).then(function() {
             scope.fetchingUserLibraries = false;
           });
           $analytics.eventTrack('user_clicked_page', {
