@@ -45,7 +45,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -325,13 +324,6 @@ class KeepRepoImpl @Inject() (
     keepByIdCache.getOrElseOpt(KeepIdKey(id)) {
       getCompiled(id).firstOption.filter(keep => !excludeStates.contains(keep.state))
     }
-  }
-
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 1 DAY)  group by organization_id order by count(*) desc"""
-    val res = q.as[(Long, Int)].list
-    res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
 
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
