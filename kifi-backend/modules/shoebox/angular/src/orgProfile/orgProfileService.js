@@ -76,12 +76,12 @@ angular.module('kifi')
         .then(profileService.fetchMe);
       },
       removeOrgMember: function (orgId, removeFields) {
-
         return net
         .removeOrgMember(orgId, removeFields)
         .then(function () {
           invalidateOrgProfileCache();
-        });
+        })
+        .then(profileService.fetchMe);
       },
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
