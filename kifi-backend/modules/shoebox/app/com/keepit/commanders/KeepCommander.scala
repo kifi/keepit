@@ -665,7 +665,8 @@ class KeepCommanderImpl @Inject() (
     }
 
     val updatedKeepOpt = if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
-      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newKeep.connections.users))
+      val newUsers = oldKeepOpt.map(oldKeep => newKeep.connections.users -- oldKeep.connections.users).getOrElse(newKeep.connections.users)
+      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers))
     } else None
 
     updatedKeepOpt.getOrElse(newKeep)
