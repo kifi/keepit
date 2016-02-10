@@ -125,6 +125,7 @@ class SlackInfoCommanderImpl @Inject() (
   private def generateLibrarySlackIntegrationInfos(viewerId: Id[User], slackToLibs: Seq[SlackChannelToLibrary], libToSlacks: Seq[LibraryToSlackChannel])(implicit session: RSession): Map[Id[Library], Seq[LibrarySlackIntegrationInfo]] = {
     val libraryIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).toSet
     val permissionsByLib = permissionCommander.getLibrariesPermissions(libraryIds, Some(viewerId))
+    val canUserJoinOrWritetoLib = permissionCommander.canJoinOrWriteToLibrary(viewerId, libraryIds)
     val teamMembershipMap = {
       val slackUserTeamPairs = slackToLibs.map(stl => (stl.slackUserId, stl.slackTeamId)).toSet ++ libToSlacks.map(lts => (lts.slackUserId, lts.slackTeamId)).toSet
       slackUserTeamPairs.flatMap {
@@ -165,7 +166,8 @@ class SlackInfoCommanderImpl @Inject() (
             if (missingScopes.isEmpty) None
             else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
           }
-          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = permissions.contains(LibraryPermission.ADD_KEEPS))
+
+          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
         case (key, Seq(ts)) =>
