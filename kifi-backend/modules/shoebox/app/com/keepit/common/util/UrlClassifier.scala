@@ -5,23 +5,23 @@ import com.keepit.common.logging.Logging
 object UrlClassifier {
   val SocialActivityUrls = {
     "(" + Seq(
-      """http[s]?://www.swarmapp.com/c/.*""",
-      """http[s]?://4sq.com/.*""",
-      """http[s]?://www.periscope.tv/.*""",
-      """http[s]?://instagram.com/.*""",
-      """http[s]?://super.me/p/.*""",
-      """http[s]?://mrk.tv/.*""", //http://meerkatapp.co/
-      """http[s]?://instagr.am/.*""",
-      """http[s]?://shar.es/.*""",
-      """http[s]?://twitter.com//.*""", //this one is a bit strange and may take out legit twitter articles. the core issue is people linking to other tweets that have nothing but the tweet and it looks bad
-      """http[s]?://runkeeper.com/user/.*/activity/.*""",
-      """http[s]?://techmeme.com/.*""",
-      """http[s]?://rnkpr.com/.*"""
+      """https?://www.swarmapp\.com/c/.*""",
+      """https?://4sq\.com/.*""",
+      """https?://www.periscope\.tv/.*""",
+      """https?://instagram\.com/.*""",
+      """https?://super\.me/p/.*""",
+      """https?://mrk\.tv/.*""", //http://meerkatapp.co/
+      """https?://instagr\.am/.*""",
+      """https?://shar\.es/.*""",
+      """https?://twitter\.com//.*""", //this one is a bit strange and may take out legit twitter articles. the core issue is people linking to other tweets that have nothing but the tweet and it looks bad
+      """https?://runkeeper\.com/user/.*/activity/.*""",
+      """https?://techmeme\.com/.*""",
+      """https?://rnkpr\.com/.*"""
     ).map("(" + _ + ")").mkString("|") + ")"
   }.r
 
-  val slackFileUrl = """http[s]?://.*?\.slack\.com/files/.*""".r
-  val slackArchiveUrl = """http[s]?://.*?\.slack\.com/archives/.*""".r
+  val slackFileUrl = """https?://.*\.slack\.com/files/.*""".r
+  val slackArchiveUrl = """https?://.*\.slack\.com/archives/.*""".r
 }
 
 class UrlClassifier extends Logging {
