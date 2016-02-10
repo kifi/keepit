@@ -20,7 +20,7 @@ trait KeepSourceCommander {
   // it is trying to hotfix misattributed keeps, and we should instead just do the Right Thing the first time
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])]
 
-  def reattributeKeeps(author: Author, user: Id[User]): Future[Set[Id[Keep]]]
+  def reattributeKeeps(author: Author, user: Id[User]): Set[Id[Keep]]
 }
 
 @Singleton
@@ -71,15 +71,14 @@ class KeepSourceCommanderImpl @Inject() (
     slackTeamMembershipRepo.getBySlackUserIds(userIds).flatMap { case (slackUserId, membership) => membership.userId.map(slackUserId -> _) }
   }
 
-  def reattributeKeeps(author: Author, userId: Id[User]): Future[Set[Id[Keep]]] = {
-    db.readOnlyReplicaAsync { implicit s => sourceAttributionRepo.getKeepIdsByAuthor(author) }.map { keepIds =>
-      keepIds.grouped(100).flatMap { batchedKeepIds =>
-        db.readWrite { implicit s =>
-          keepRepo.getByIds(batchedKeepIds).values.collect {
-            case keep if keep.userId.isEmpty => keepCommander.setKeepOwner(keep, userId).id.get
-          }
+  def reattributeKeeps(author: Author, userId: Id[User]): Set[Id[Keep]] = {
+    val keepIds = db.readOnlyMaster { implicit session => sourceAttributionRepo.getKeepIdsByAuthor(author) }
+    keepIds.grouped(100).flatMap { batchedKeepIds =>
+      db.readWrite { implicit s =>
+        keepRepo.getByIds(batchedKeepIds).values.collect {
+          case keep if keep.userId.isEmpty => keepCommander.setKeepOwner(keep, userId).id.get
         }
-      }.toSet
-    }
+      }
+    }.toSet
   }
 }
