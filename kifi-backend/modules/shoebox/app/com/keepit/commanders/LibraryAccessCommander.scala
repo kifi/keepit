@@ -102,18 +102,7 @@ class LibraryAccessCommander @Inject() (
 
   def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean = {
     // todo: This needs to be rectified with LibraryAccessCommander logic elsewhere (which does not check ADD_KEEPS like this one)
-    val (libsUserCanJoin, libsUserCannotJoin) = db.readWrite { implicit s =>
-      val libsUserCannotWriteTo = permissionCommander.getLibrariesPermissions(libIds, Some(userId)).collect {
-        case (libId, ps) if !ps.contains(LibraryPermission.ADD_KEEPS) => libId
-      }.toSet
-      libsUserCannotWriteTo.partition { libId =>
-        val lib = libraryRepo.get(libId)
-        val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
-        val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
-          lib.organizationId.exists(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
-        userHasInvite || libHasOpenCollaboration
-      }
-    }
+    val (_, libsUserCanJoin, libsUserCannotJoin) = db.readOnlyMaster { implicit session => permissionCommander.partitionLibrariesUserCanJoinOrWriteTo(userId, libIds) }
     if (libsUserCannotJoin.nonEmpty) false
     else {
       implicit val context = HeimdalContext.empty
