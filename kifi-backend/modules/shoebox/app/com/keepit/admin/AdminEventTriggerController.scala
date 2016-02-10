@@ -20,7 +20,6 @@ object AdminEventTriggerController {
   sealed abstract class EventKind(val key: String) { def reads: Reads[_ <: EventTrigger] }
   object EventKind extends Enumerator[EventKind] {
     case object SlackTeamDigest extends EventKind("slack_team_digest") { def reads = EventTrigger.SlackTeamDigest.reads }
-    case object SlackChannelDigest extends EventKind("slack_channel_digest") { def reads = EventTrigger.SlackChannelDigest.reads }
     case object SlackIntegrationsFTUIs extends EventKind("slack_integrations_ftuis") { def reads = EventTrigger.SlackIntegrationsFTUIs.reads }
 
     private val all = _all.toSet
@@ -32,9 +31,6 @@ object AdminEventTriggerController {
   object EventTrigger {
     case class SlackTeamDigest(team: SlackTeamId, user: SlackUserId) extends EventTrigger
     object SlackTeamDigest { val reads = Json.reads[SlackTeamDigest] }
-
-    case class SlackChannelDigest(team: SlackTeamId, channel: SlackChannelId) extends EventTrigger
-    object SlackChannelDigest { val reads = Json.reads[SlackChannelDigest] }
 
     case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
     object SlackIntegrationsFTUIs { val reads = Json.reads[SlackIntegrationsFTUIs] }
@@ -67,7 +63,6 @@ class AdminEventTriggerController @Inject() (
     import AdminEventTriggerController.EventTrigger._
     val result = request.body.as[EventTrigger] match {
       case x: SlackTeamDigest => forceSlackTeamDigest(x)
-      case x: SlackChannelDigest => ???
       case x: SlackIntegrationsFTUIs => forceSlackIntegrationsFTUIs(x)
     }
     result.map(Ok(_))

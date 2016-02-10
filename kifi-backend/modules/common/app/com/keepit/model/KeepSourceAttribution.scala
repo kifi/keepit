@@ -80,7 +80,7 @@ object RawTwitterAttribution {
   implicit val format = Json.format[RawTwitterAttribution]
 }
 
-case class RawSlackAttribution(message: SlackMessage) extends RawSourceAttribution
+case class RawSlackAttribution(message: SlackMessage, teamId: Option[SlackTeamId]) extends RawSourceAttribution
 object RawSlackAttribution {
   implicit val format = Json.format[RawSlackAttribution]
 }

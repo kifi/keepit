@@ -36,6 +36,8 @@ trait SlackChannelRepo extends Repo[SlackChannel] {
   def getByChannelId(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)(implicit session: RSession): Option[SlackChannel]
   def getOrCreate(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName)(implicit session: RWSession): SlackChannel
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]]
+
+  def adminGetChannel(channelId: SlackChannelId)(implicit session: RSession): Option[SlackChannel]
 }
 
 @Singleton
@@ -123,5 +125,9 @@ class SlackChannelRepoImpl @Inject() (
   }
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]] = {
     activeRows.filter(row => (row.createdAt < lastPushOlderThan && row.lastNotificationAt.isEmpty) || (row.lastNotificationAt < lastPushOlderThan)).map(_.id).list
+  }
+
+  def adminGetChannel(channelId: SlackChannelId)(implicit session: RSession): Option[SlackChannel] = {
+    rows.filter(_.slackChannelId === channelId).firstOption
   }
 }
