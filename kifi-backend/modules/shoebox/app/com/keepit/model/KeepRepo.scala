@@ -329,8 +329,7 @@ class KeepRepoImpl @Inject() (
 
   def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val yesterday = SQL_DATETIME_FORMAT.print(clock.now().minusDays(1))
-    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > '$yesterday' group by organization_id order by count(*) desc;"""
+    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 1 DAY)  group by organization_id order by count(*) desc"""
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
