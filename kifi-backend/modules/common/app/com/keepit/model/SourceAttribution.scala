@@ -30,7 +30,7 @@ object SourceAttribution {
 
   def fromRawSourceAttribution(source: RawSourceAttribution): SourceAttribution = source match {
     case RawTwitterAttribution(tweet) => TwitterAttribution(BasicTweet.fromRawTweet(tweet))
-    case RawSlackAttribution(message) => SlackAttribution(BasicSlackMessage.fromSlackMessage(message))
+    case RawSlackAttribution(message, teamId) => SlackAttribution(BasicSlackMessage.fromSlackMessage(message))
   }
 
   val internalFormat = new OFormat[SourceAttribution] {

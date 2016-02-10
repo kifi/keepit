@@ -36,7 +36,7 @@ object RawKeep extends Logging {
         val attrOpt = keep.originalJson.flatMap(_.asOpt[RawTweet].map(RawTwitterAttribution(_)))
         if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
         attrOpt
-      case KeepSource.slack => keep.originalJson.map(value => RawSlackAttribution(value.as[SlackMessage]))
+      case KeepSource.slack => throw new UnsupportedOperationException("Slack keeps should not be put into the RawKeep")
       case _ => None
     }
   }

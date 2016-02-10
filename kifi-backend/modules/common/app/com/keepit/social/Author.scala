@@ -14,7 +14,7 @@ object Author {
   case class TwitterUser(userId: TwitterUserId) extends Author
   def fromSource(attr: RawSourceAttribution): Author = attr match {
     case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
-    case RawSlackAttribution(msg) => SlackUser(msg.userId)
+    case RawSlackAttribution(msg, teamId) => SlackUser(msg.userId)
   }
 
   def toIndexableString(author: Author): String = author match {

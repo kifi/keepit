@@ -199,7 +199,7 @@ class SlackIngestingActor @Inject() (
       (userId, library)
     }
     val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.get(msg.userId)).map {
-      case (kifiUser, msgs) => kifiUser -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
+      case (kifiUser, msgs) => kifiUser -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUser, rawBookmarks) =>
@@ -225,7 +225,7 @@ class SlackIngestingActor @Inject() (
   private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
   private def doNotIngest(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url)
 
-  private def toRawBookmarks(message: SlackMessage): Set[RawBookmarkRepresentation] = {
+  private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId): Set[RawBookmarkRepresentation] = {
     if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
@@ -250,7 +250,7 @@ class SlackIngestingActor @Inject() (
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),
-            sourceAttribution = Some(RawSlackAttribution(message)),
+            sourceAttribution = Some(RawSlackAttribution(message, Some(slackTeamId))),
             note = None
           )
       }
