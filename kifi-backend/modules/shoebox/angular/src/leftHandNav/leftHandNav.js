@@ -21,6 +21,7 @@ angular.module('kifi')
           if (scope.me.pendingOrgs) {
             scope.me.pendingOrgs.forEach(function (o) {
               o.pending = true;
+              o.libraries = [];
             });
             scope.orgs = scope.orgs.concat(scope.me.pendingOrgs);
           }
@@ -28,6 +29,7 @@ angular.module('kifi')
           if (scope.me.potentialOrgs) {
             scope.me.potentialOrgs.forEach(function (o) {
               o.potential = true;
+              o.libraries = [];
             });
             scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
           }
@@ -125,6 +127,8 @@ angular.module('kifi')
             .acceptOrgMemberInvite(org.id)
             .then(function() {
               org.pending = false;
+              scope.viewMoreOrgLibraries(org);
+              $state.reload();
             });
         };
 
