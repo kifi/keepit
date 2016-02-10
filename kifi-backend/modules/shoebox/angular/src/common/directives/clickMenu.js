@@ -7,6 +7,9 @@ angular.module('kifi')
   function ($window) {
     return {
       restrict: 'A',
+      scope: {
+        toggleOpen: '=toggleOpen'
+      },
       link: function (scope, element) {
 
         function showMenu() {
@@ -35,6 +38,8 @@ angular.module('kifi')
               // Only open the menu if it's closed
               if (!isOpen()) {
                 showMenu();
+              } else if (scope.toggleOpen) {
+                hideMenu();
               }
             } else {
               hideMenu();

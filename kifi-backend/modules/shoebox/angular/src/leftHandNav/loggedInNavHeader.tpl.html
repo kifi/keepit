@@ -28,7 +28,7 @@
       </div>
     </div>
     <div class="kf-lih-right-flex kifi-guide-target-3 kifi-guide-2">
-      <div class="kf-lih-dropdown-parent" kf-click-menu>
+      <div class="kf-lih-dropdown-parent" kf-click-menu toggle-open="true">
         <button class="kf-lih-add-link sprite sprite-add-link-2">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
@@ -66,7 +66,7 @@
           </button>
         </menu>
       </div>
-      <div class="kf-lih-dropdown-parent" kf-click-menu>
+      <div class="kf-lih-dropdown-parent" kf-click-menu toggle-open="true">
         <button class="kf-lih-profile" ng-style="{ 'background-image': 'url(' + (me|pic:100) + ')' }">Profile actions</button>
         <menu class="kf-dropdown-menu" ng-class="me.orgs.length ? 'kf-dropdown-menu_split' : ''">
           <nav class="kf-dropdown-menu-nav kf-lih-profiles" ng-if="me.orgs.length">
