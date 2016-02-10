@@ -21,6 +21,7 @@ object UrlClassifier {
   }.r
 
   val slackFileUrl = """http[s]?://.*?\.slack\.com/files/.*""".r
+  val slackArchiveUrl = """http[s]?://.*?\.slack\.com/archives/.*""".r
 }
 
 class UrlClassifier extends Logging {
@@ -33,4 +34,5 @@ class UrlClassifier extends Logging {
   }
 
   def isSlackFile(url: String): Boolean = UrlClassifier.slackFileUrl.findFirstIn(url).isDefined
+  def isSlackArchivedMessage(url: String): Boolean = UrlClassifier.slackArchiveUrl.findFirstIn(url).isDefined
 }

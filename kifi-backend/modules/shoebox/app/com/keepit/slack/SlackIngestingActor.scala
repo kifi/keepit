@@ -222,11 +222,11 @@ class SlackIngestingActor @Inject() (
     (lastMessageTimestamp, ingestedMessages)
   }
 
-  private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
-  private def doNotIngest(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url)
+  private def ignoreMessage(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
+  private def ignoreUrl(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url) || urlClassifier.isSlackArchivedMessage(url)
 
   private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId): Set[RawBookmarkRepresentation] = {
-    if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
+    if (ignoreMessage(message)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
@@ -242,7 +242,7 @@ class SlackIngestingActor @Inject() (
       }.toMap
 
       (linksFromText.keySet ++ linksFromAttachments.keySet).collect {
-        case url if !doNotIngest(url) =>
+        case url if !ignoreUrl(url) =>
           val title = linksFromText.get(url).flatten orElse linksFromAttachments.get(url).flatMap(_.title.map(_.value))
           RawBookmarkRepresentation(
             title = title,
