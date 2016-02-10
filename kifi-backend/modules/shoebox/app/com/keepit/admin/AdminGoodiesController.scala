@@ -96,25 +96,23 @@ class AdminGoodiesController @Inject() (
         val attrsToFix = db.readOnlyMaster { implicit s =>
           keepSourceAttributionRepo.adminGetFromId(fromIdOpt, limit)
         }
-        if (!attrsToFix.exists(a => a.attribution match {
-          case RawSlackAttribution(msg, None) => true
-          case _ => false
-        })) channel.push(s"Could not find anything to do with ids ${attrsToFix.map(_.id.get).minOpt} through ${attrsToFix.map(_.id.get).maxOpt}\n")
-
-        attrsToFix.foreach { attr =>
+        val fixed = attrsToFix.flatMap { attr =>
           attr.attribution match {
             case RawSlackAttribution(msg, None) =>
               db.readWrite { implicit s =>
                 slackChannelRepo.adminGetChannel(msg.channel.id) match {
-                  case None => channel.push(s"Could not find ${msg.channel.id} in the channel repo (attr id ${attr.id.get})\n")
+                  case None =>
+                    channel.push(s"Could not find ${msg.channel.id} in the channel repo (attr id ${attr.id.get})\n")
+                    None
                   case Some(ch) =>
                     keepSourceAttributionRepo.save(attr.copy(attribution = RawSlackAttribution(msg, Some(ch.slackTeamId))))
-                    channel.push(s"Fixed attr ${attr.id.get} from channel ${msg.channel.id} in team ${ch.slackTeamId}\n")
+                    Some(ch.slackChannelId)
                 }
               }
-            case _ => // nothing to do
+            case _ => None
           }
         }
+        channel.push(s"Fixed ${fixed.size} attributions")
         Future.successful((attrsToFix.map(_.id.get).maxOpt, attrsToFix.isEmpty))
       } andThen {
         case res =>
