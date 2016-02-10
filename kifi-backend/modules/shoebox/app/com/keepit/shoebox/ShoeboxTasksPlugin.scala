@@ -23,6 +23,7 @@ class ShoeboxTasksPlugin @Inject() (
     messageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
     slackTeamDigestActor: ActorInstance[SlackTeamDigestNotificationActor],
     slackIngestingActor: ActorInstance[SlackIngestingActor],
+    slackKeepAttributionActor: ActorInstance[SlackKeepAttributionActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackIntegrationCommander: SlackIntegrationCommander,
@@ -51,6 +52,7 @@ class ShoeboxTasksPlugin @Inject() (
     scheduleTaskOnLeader(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion)
     scheduleTaskOnLeader(messageIngestionActor.system, 500 seconds, 3 minute, messageIngestionActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackIngestingActor.system, 3 minute, 20 seconds, slackIngestingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(slackKeepAttributionActor.system, 1 minute, 30 minutes, slackIngestingActor.ref, IfYouCouldJustGoAhead)
 
     scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
     // TODO(ryan): if we ever want to push slack channel digests, you can uncomment this line
@@ -58,7 +60,7 @@ class ShoeboxTasksPlugin @Inject() (
   }
 
   override def onStop() {
-    Seq(messageIngestionActor, slackIngestingActor).foreach(_.ref ! Close)
+    Seq(messageIngestionActor, slackIngestingActor, slackKeepAttributionActor, slackTeamDigestActor).foreach(_.ref ! Close)
     super.onStop()
   }
 

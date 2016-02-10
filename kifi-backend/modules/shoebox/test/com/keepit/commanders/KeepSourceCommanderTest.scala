@@ -67,7 +67,7 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
             ktuRepo.getAllByUserId(user.id.get).map(_.keepId).toSet === domesticIds
           }
           // Then we assign $slackId to that user
-          val reattributedKeeps = Await.result(sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackId), user.id.get), Duration.Inf)
+          val reattributedKeeps = sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackId), user.id.get)
           reattributedKeeps === foreignIds
           db.readOnlyMaster { implicit s =>
             keepRepo.getByUser(user.id.get).map(_.id.get).toSet === domesticIds ++ foreignIds

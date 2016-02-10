@@ -74,7 +74,11 @@ class SlackCommanderImpl @Inject() (
       slackUser = identity.user
     ))
     autojoinOrganization(membership)
-    userIdOpt.foreach { userId => keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.userId), userId) }
+    userIdOpt.foreach { userId =>
+      session.onTransactionSuccess {
+        keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.userId), userId)
+      }
+    }
     isNewIdentityOwner
   }
 
