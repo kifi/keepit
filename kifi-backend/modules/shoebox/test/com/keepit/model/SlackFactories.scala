@@ -68,13 +68,15 @@ object SlackIncomingWebhookFactory {
   def webhook(): PartialSlackIncomingWebhook = {
     val teamStr = ran(10)
     val botStr = ran(10)
+    val slackChannelId = SlackChannelId("C" + ra(8))
+    val slackChannelName = SlackChannelName(ra(10))
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
-      slackChannelId = Some(SlackChannelId(ra(8))),
+      slackChannelId = Some(slackChannelId),
       webhook = SlackIncomingWebhook(
-        channelName = SlackChannelName(ra(10)),
-        channelId = Some(SlackChannelId(ra(10))),
+        channelName = slackChannelName,
+        channelId = Some(slackChannelId),
         url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
         configUrl = s"https://${ra(5)}.slack.com/services/$botStr"
       ),
