@@ -420,7 +420,7 @@ GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfile
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
 GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.UserProfileController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
-GET     /site/users/:id/basicLibraries   @com.keepit.controllers.website.LibraryController.getBasicLibrariesForUser(id: ExternalId[User], orderingOpt: Option[String] ?= None, directionOpt: Option[String] ?= None, offset: Int, limit: Int)
+GET     /site/users/:id/basicLibraries   @com.keepit.controllers.website.LibraryController.getBasicLibrariesForUser(id: ExternalId[User], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 GET     /site/keepableLibraries     @com.keepit.controllers.website.LibraryController.getKeepableLibraries(includeOrgLibraries: Boolean ?= false)
