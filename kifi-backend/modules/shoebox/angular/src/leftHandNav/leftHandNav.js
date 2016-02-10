@@ -6,7 +6,7 @@ angular.module('kifi')
   '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state','profileService', 'userProfileActionService', 'orgProfileService',
     'modalService', 'net',
   function ($analytics, $rootElement,  $rootScope, $document, $q, $state, profileService, userProfileActionService, orgProfileService,
-            modalService ,net) {
+              modalService ,net) {
 
     return {
       restrict: 'A',
@@ -15,21 +15,23 @@ angular.module('kifi')
       link: function (scope) {
         scope.me = profileService.me;
         scope.libraries = [];
-        scope.orgs = scope.me.orgs;
+        scope.orgs = [];
 
-        if (scope.me.pendingOrgs) {
-          scope.me.pendingOrgs.forEach(function (o) {
-            o.pending = true;
-          });
-          scope.orgs = scope.orgs.concat(scope.me.pendingOrgs);
-        }
+        var appendPendingAndPotentialOrgs = function () {
+          if (scope.me.pendingOrgs) {
+            scope.me.pendingOrgs.forEach(function (o) {
+              o.pending = true;
+            });
+            scope.orgs = scope.orgs.concat(scope.me.pendingOrgs);
+          }
 
-        if (scope.me.potentialOrgs) {
-          scope.me.potentialOrgs.forEach(function (o) {
-            o.potential = true;
-          });
-          scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
-        }
+          if (scope.me.potentialOrgs) {
+            scope.me.potentialOrgs.forEach(function (o) {
+              o.potential = true;
+            });
+            scope.orgs = scope.orgs.concat(scope.me.potentialOrgs);
+          }
+        };
 
         // TODO: REMOVE THIS HACK
         document.body.style.overflow = 'hidden';
@@ -65,6 +67,7 @@ angular.module('kifi')
             org.libraries = tuple.libs;
             return org;
           });
+          appendPendingAndPotentialOrgs();
           scope.showUserAndOrgContent = true;
         });
 
