@@ -145,7 +145,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
 
           db.readWrite { implicit session =>
             val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            paidPlanRepo.save(oldPlan.copy(defaultSettings = oldPlan.defaultSettings.withFeatureSetTo((Feature.ViewMembers, FeatureSetting.DISABLED)))) // mock db migration, remove features
+            paidPlanRepo.save(oldPlan.copy(defaultSettings = oldPlan.defaultSettings.withFeatureSetTo((Feature.ViewMembers, FeatureSelection.DISABLED)))) // mock db migration, remove features
           }
 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ADMIN))
@@ -157,7 +157,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           chunkedResultAsJson(response).value.map { jsv => (jsv \ "orgId").as[Id[Organization]] }.toSet === Set(org.id.get)
 
           val newConfig = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
-          newConfig.settings must equalTo(oldConfig.settings.withFeatureSetTo((Feature.ViewMembers, FeatureSetting.DISABLED)))
+          newConfig.settings must equalTo(oldConfig.settings.withFeatureSetTo((Feature.ViewMembers, FeatureSelection.DISABLED)))
         }
       }
     }

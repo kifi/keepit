@@ -12,20 +12,20 @@ object PaidPlanFactory {
   // tests will fail when adding new Features, update 398.sql with new features and their default settings
   val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
-    Feature.PublishLibraries -> FeatureSetting.MEMBERS,
-    Feature.InviteMembers -> FeatureSetting.MEMBERS,
-    Feature.GroupMessaging -> FeatureSetting.MEMBERS,
-    Feature.ForceEditLibraries -> FeatureSetting.DISABLED,
-    Feature.ViewOrganization -> FeatureSetting.ANYONE,
-    Feature.ViewMembers -> FeatureSetting.ANYONE,
-    Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
-    Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS,
-    Feature.EditOrganization -> FeatureSetting.ADMINS,
-    Feature.ExportKeeps -> FeatureSetting.ADMINS,
-    Feature.ViewSettings -> FeatureSetting.MEMBERS,
-    Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS,
-    Feature.SlackIngestionReaction -> FeatureSetting.DISABLED,
-    Feature.SlackNotifications -> FeatureSetting.ENABLED
+    Feature.PublishLibraries -> FeatureSelection.MEMBERS,
+    Feature.InviteMembers -> FeatureSelection.MEMBERS,
+    Feature.GroupMessaging -> FeatureSelection.MEMBERS,
+    Feature.ForceEditLibraries -> FeatureSelection.DISABLED,
+    Feature.ViewOrganization -> FeatureSelection.ANYONE,
+    Feature.ViewMembers -> FeatureSelection.ANYONE,
+    Feature.RemoveLibraries -> FeatureSelection.MEMBERS,
+    Feature.CreateSlackIntegration -> FeatureSelection.MEMBERS,
+    Feature.EditOrganization -> FeatureSelection.ADMINS,
+    Feature.ExportKeeps -> FeatureSelection.ADMINS,
+    Feature.ViewSettings -> FeatureSelection.MEMBERS,
+    Feature.JoinByVerifying -> FeatureSelection.NONMEMBERS,
+    Feature.SlackIngestionReaction -> FeatureSelection.DISABLED,
+    Feature.SlackNotifications -> FeatureSelection.ENABLED
   ))
 
   def paidPlan(): PartialPaidPlan = {

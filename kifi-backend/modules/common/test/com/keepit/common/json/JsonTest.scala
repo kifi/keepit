@@ -1,7 +1,7 @@
 package com.keepit.common.json
 
 import com.keepit.common.db.ExternalId
-import com.keepit.model.{ Feature, FeatureSetting, OrganizationRole }
+import com.keepit.model.{ Feature, FeatureSelection, OrganizationRole }
 import org.specs2.mutable.Specification
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -46,11 +46,11 @@ class JsonTest extends Specification {
         input.as[Map[OrganizationRole, Feature]](myFormat) === expected
       }
       "robustly handle complex js objects" in {
-        def settingsReads(f: Feature): Reads[FeatureSetting] = f.settingReads
-        val myFormat = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting](Feature.reads, settingsReads)
+        def settingsReads(f: Feature): Reads[FeatureSelection] = f.settingReads
+        val myFormat = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSelection](Feature.reads, settingsReads)
         val input = Json.obj("view_organization" -> "members", "force_edit_libraries" -> "anyone")
-        val expected = Map(Feature.ViewOrganization -> FeatureSetting.MEMBERS)
-        input.as[Map[Feature, FeatureSetting]](myFormat) === expected
+        val expected = Map(Feature.ViewOrganization -> FeatureSelection.MEMBERS)
+        input.as[Map[Feature, FeatureSelection]](myFormat) === expected
       }
     }
     "robustly deserialize enumerated items" in {
