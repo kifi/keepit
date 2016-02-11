@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -35,7 +36,8 @@ class SlackAuthenticationCommanderImpl @Inject() (
   slackTeamCommander: SlackTeamCommander,
   slackStateCommander: SlackAuthStateCommander,
   pathCommander: PathCommander,
-  implicit val executionContext: ExecutionContext)
+  implicit val executionContext: ExecutionContext,
+  airbrake: AirbrakeNotifier)
     extends SlackAuthenticationCommander {
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.ActionPerformed = {
@@ -132,7 +134,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
-  }
+  } tap (_.onFailure { case error => airbrake.notify(error) })
 
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse] = {
     slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt, action).flatMap {

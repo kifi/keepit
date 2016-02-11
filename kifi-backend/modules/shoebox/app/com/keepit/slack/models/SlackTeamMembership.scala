@@ -185,8 +185,12 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean) = {
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
+        membership.userId.foreach { ownerId =>
+          request.userId.foreach { requesterId =>
+            if (requesterId != ownerId) throw new IllegalStateException(s"SlackMembership requested by user $requesterId is already owned by user $ownerId: $membership")
+          }
+        }
         val updated = membership.copy(
-          userId = request.userId orElse membership.userId, // let a Kifi user steal a slack membership
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
           token = request.token orElse membership.token,
