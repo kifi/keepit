@@ -8,6 +8,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/repair_transitionend.js
 // @require scripts/html/keeper/keeper.js
 
 $.fn.layout = function () {

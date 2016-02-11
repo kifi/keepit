@@ -1,0 +1,42 @@
+{
+  "Author": "FortyTwo, Inc.",
+  "Builder Version": "11601.3.9",
+  "CFBundleDisplayName": "Kifi - Connecting People with Knowledge",
+  "CFBundleIdentifier": "com.fortytwo.kifi",
+  "CFBundleInfoDictionaryVersion": "6.0",
+  "CFBundleShortVersionString": "",
+  "CFBundleVersion": "",
+  "Chrome": {
+    "Global Page": "global.html",
+    "Toolbar Items": [
+      {
+        "Command": "kifi-icon",
+        "Identifier": "kifi",
+        "Image": "icons/kifi.monochrome.png",
+        "Include By Default": true,
+        "Label": "Kifi",
+        "Palette Label": "Kifi",
+        "Tool Tip": "Kifi"
+      }
+    ]
+  },
+  "Content": {
+    "Scripts": {
+      "Start": [
+        "listeners.js",
+        "scripts/api.js"
+      ]
+    }
+  },
+  "Description": "Kifi allows you to easily keep anything you find online, then quickly find it in your favorite search engine, together with pages from your team.",
+  "DeveloperIdentifier": "V4GCE6T8A5",
+  "ExtensionInfoDictionaryVersion": "1.0",
+  "Permissions": {
+    "Website Access": {
+      "Include Secure Pages": true,
+      "Level": "All"
+    }
+  },
+  "Update Manifest URL": "https://www.kifi.com/extensions/safari/KifiUpdates.plist",
+  "Website": "https://www.kifi.com"
+}

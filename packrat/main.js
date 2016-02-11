@@ -1322,7 +1322,7 @@ api.port.on({
       if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
         results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
       }
-      respond(results);
+      return results;
     }
   },
   delete_contact: function (email, respond) {

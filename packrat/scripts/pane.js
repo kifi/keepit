@@ -1,5 +1,7 @@
 // @require styles/keeper/pane.css
 // @require scripts/lib/q.min.js
+// @require scripts/lib/jquery.js
+// @require scripts/repair_transitionend.js
 // @require scripts/keeper.js
 // @require scripts/listen.js
 // @require scripts/html/keeper/pane.js
@@ -136,11 +138,11 @@ k.pane = k.pane || function () {  // idempotent for Chrome
       }
       if ($pane[0].offsetWidth) {
         $pane.on('transitionend', function f(e) {
-        if (e.target === this) {
-          $(this).off(e.type, f);
-          onPaneShown();
-        }
-      });
+          if (e.target === this) {
+            $(this).off(e.type, f);
+            onPaneShown();
+          }
+        });
       } else {
         setTimeout(function f(ms) {
           log('[onPaneShown:delayed]', ms);
