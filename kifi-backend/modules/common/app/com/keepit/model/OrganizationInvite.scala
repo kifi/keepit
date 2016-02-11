@@ -34,6 +34,8 @@ case class OrganizationInvite(
   def declined: OrganizationInvite = this.copy(decision = InvitationDecision.DECLINED)
   def sanitizeForDelete = this.copy(state = OrganizationInviteStates.INACTIVE)
 
+  def isAnonymous: Boolean = userId.isEmpty && emailAddress.isEmpty
+
   override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,decision=$decision,email=$emailAddress,role=$role,state=$state, authToken=$authToken]"
 }
 
