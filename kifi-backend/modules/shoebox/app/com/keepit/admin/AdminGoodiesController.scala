@@ -91,7 +91,7 @@ class AdminGoodiesController @Inject() (
     }
   }
   def fixAuthors() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    val usersToClear = request.body.as[Set[Id[User]]]
+    val usersToClear = (request.body \ "users").as[Set[Id[User]]]
     if (!(request.body \ "doIt").asOpt[Boolean].contains(true)) Ok(s"Parsed $usersToClear, if you want to go ahead include doIt: true")
     else {
       val response: Enumerator[String] = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
