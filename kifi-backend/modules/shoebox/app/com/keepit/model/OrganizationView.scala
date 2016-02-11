@@ -38,7 +38,7 @@ object OrganizationInfo {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
     (__ \ 'config).writeNullable[ExternalOrganizationConfiguration] and
-    (__ \ 'slack).writeNullable[OrganizationSlackTeamInfo]
+    (__ \ 'slackTeam).writeNullable[OrganizationSlackTeamInfo]
   )(unlift(OrganizationInfo.unapply))
 }
 
