@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -144,6 +145,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
+  @StatsdTiming("OrganizationInfoCommander.getOrganizationInfo")
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
@@ -168,7 +170,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-    val slackInfo = Try(viewerIdOpt.map(slackInfoCommander.getOrganizationSlackInfo(orgId, _))).recover {
+    val slackTeamOpt = Try(viewerIdOpt.flatMap(slackInfoCommander.getOrganizationSlackTeam(orgId, _))).recover {
       case fail =>
         airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
         None
@@ -186,7 +188,7 @@ class OrganizationInfoCommanderImpl @Inject() (
       numMembers = memberCount,
       numLibraries = numLibraries,
       config = config,
-      slack = slackInfo)
+      slackTeam = slackTeamOpt)
   }
 
   private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {
