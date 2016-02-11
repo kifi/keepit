@@ -61,11 +61,9 @@ case class OrganizationStatisticsOverview(
   libStats: LibCountStatistics,
   slackStats: SlackStatistics,
   numKeeps: Int,
-  members: Set[OrganizationMembership],
-  candidates: Set[OrganizationMembershipCandidate],
+  members: Int,
   domains: Set[NormalizedHostname],
-  internalMemberChatStats: Int,
-  allMemberChatStats: Int)
+  paying: Boolean)
 
 case class MemberStatistics(
   user: User,
@@ -346,39 +344,34 @@ class UserStatisticsCommander @Inject() (
 
   def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val (allUsers, libraries, slackStats, members, candidates, domains) = db.readOnlyReplica { implicit session =>
-      val members = orgMembershipRepo.getAllByOrgId(orgId)
-      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-      val allUsers = members.map(_.userId) | candidates.map(_.userId)
+    db.readOnlyReplicaAsync { implicit session =>
+      val members = orgMembershipRepo.countByOrgId(orgId)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackStats = SlackStatistics(slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get)))
-      (allUsers, libraries, slackStats, members, candidates, domains)
+      (libraries, slackStats, members, domains)
+    } map {
+      case (libraries, slackStats, members, domains) =>
+        val plan = planManagementCommander.currentPlan(orgId)
+        val paying = plan.pricePerCyclePerUser.cents > 0
+        val numKeeps = libraries.map(_.keepCount).sum
+
+        OrganizationStatisticsOverview(
+          org = org,
+          orgId = orgId,
+          pubId = Organization.publicId(orgId),
+          ownerId = org.ownerId,
+          handle = org.handle,
+          name = org.name,
+          description = org.description,
+          libStats = LibCountStatistics(libraries),
+          slackStats = slackStats,
+          numKeeps = numKeeps,
+          members = members,
+          domains = domains,
+          paying = paying
+        )
     }
-    val numKeeps = libraries.map(_.keepCount).sum
-
-    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
-
-    for {
-      internalMemberChatStats <- internalMemberChatStatsF
-      allMemberChatStats <- allMemberChatStatsF
-    } yield OrganizationStatisticsOverview(
-      org = org,
-      orgId = orgId,
-      pubId = Organization.publicId(orgId),
-      ownerId = org.ownerId,
-      handle = org.handle,
-      name = org.name,
-      description = org.description,
-      libStats = LibCountStatistics(libraries),
-      slackStats = slackStats,
-      numKeeps = numKeeps,
-      members = members,
-      candidates = candidates,
-      domains = domains,
-      internalMemberChatStats = internalMemberChatStats,
-      allMemberChatStats = allMemberChatStats
-    )
   }
 
   def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {
