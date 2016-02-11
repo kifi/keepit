@@ -311,8 +311,8 @@ class NotificationDeliveryCommander @Inject() (
     message.createdAt
   }
 
-  def getSendableNotification(userId: Id[User], keepId: Id[Keep], includeUriSummary: Boolean): Future[NotificationJson] = {
-    getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(Set(keepId)), limit = 1), includeUriSummary).map(_.head)
+  def getSendableNotification(userId: Id[User], keepId: Id[Keep], includeUriSummary: Boolean): Future[Option[NotificationJson]] = {
+    getNotificationsByUser(userId, UserThreadQuery(keepIds = Some(Set(keepId)), limit = 1), includeUriSummary).map(_.headOption)
   }
 
   def getUnreadThreadNotifications(userId: Id[User]): Seq[UserThreadNotification] = {

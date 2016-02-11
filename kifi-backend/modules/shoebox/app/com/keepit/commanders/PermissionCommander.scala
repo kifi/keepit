@@ -275,7 +275,6 @@ class PermissionCommanderImpl @Inject() (
           }
           viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
         }
-        Option
         val canAddParticipants = canAddMessage
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
