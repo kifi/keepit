@@ -97,8 +97,9 @@ class AdminGoodiesController @Inject() (
             keepSourceAttributionRepo.save(attr)
           }
         }.map { fixedAttrs =>
-          channel.push(s"Fixed $numProcessed authors so far (up to attr ${fixedAttrs.map(_.id.get).maxOpt})")
-          (numProcessed + fixedAttrs.length, fixedAttrs.isEmpty)
+          val processed = numProcessed + fixedAttrs.length
+          channel.push(s"Fixed $processed authors so far (up to attr ${fixedAttrs.map(_.id.get).maxOpt})\n")
+          (processed, fixedAttrs.isEmpty)
         }
       }.andThen {
         case res =>
