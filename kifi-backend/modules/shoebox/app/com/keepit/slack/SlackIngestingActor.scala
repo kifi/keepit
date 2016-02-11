@@ -250,7 +250,7 @@ class SlackIngestingActor @Inject() (
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),
-            sourceAttribution = Some(RawSlackAttribution(message, Some(slackTeamId))),
+            sourceAttribution = Some(RawSlackAttribution(message, slackTeamId)),
             note = None
           )
       }

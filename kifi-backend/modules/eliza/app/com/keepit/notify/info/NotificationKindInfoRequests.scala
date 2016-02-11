@@ -7,12 +7,8 @@ import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
 import com.keepit.model.{Keep, LibraryAccess, NotificationCategory}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
+import com.keepit.social.ImageUrls
 import play.api.libs.json.Json
-
-object ImageUrls {
-  val SLACK_LOGO = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
-  val KIFI_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
-}
 
 @Singleton
 class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {

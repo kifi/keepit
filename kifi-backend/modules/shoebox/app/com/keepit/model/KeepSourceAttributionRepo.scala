@@ -19,7 +19,7 @@ trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getKeepIdsByAuthor(author: Author)(implicit session: RSession): Set[Id[Keep]]
   def intern(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 
-  def adminGetFromId(fromIdOpt: Option[Id[KeepSourceAttribution]], limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution]
+  def adminGetWithoutAuthor(limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution]
 }
 
 @Singleton
@@ -89,11 +89,8 @@ class KeepSourceAttributionRepoImpl @Inject() (
     save(KeepSourceAttribution(id = keepAttributionOpt.map(_.id.get), keepId = keepId, author = Some(Author.fromSource(attribution)), attribution = attribution))
   }
 
-  def adminGetFromId(fromIdOpt: Option[Id[KeepSourceAttribution]], limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution] = {
-    fromIdOpt match {
-      case None => rows.sortBy(_.id).take(limit).list
-      case Some(fromId) => rows.filter(_.id > fromId).sortBy(_.id).take(limit).list
-    }
+  def adminGetWithoutAuthor(limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution] = {
+    rows.filter(_.author.isEmpty).take(limit).list
   }
 }
 

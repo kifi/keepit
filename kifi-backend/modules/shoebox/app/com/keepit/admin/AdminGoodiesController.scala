@@ -89,32 +89,18 @@ class AdminGoodiesController @Inject() (
         (companion, a, b)
     }
   }
-
-  def fixSlackAttributions(from: Option[Long], limit: Int, n: Int) = AdminUserAction(parse.tolerantJson) { implicit request =>
+  def fixAuthors(limit: Int, n: Int) = AdminUserAction { implicit request =>
     val response: Enumerator[String] = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
-      FutureHelpers.foldLeftUntil(Seq.fill(n)(Unit))(from.map(Id[KeepSourceAttribution])) { (fromIdOpt, _) =>
-        val attrsToFix = db.readOnlyMaster { implicit s =>
-          keepSourceAttributionRepo.adminGetFromId(fromIdOpt, limit)
-        }
-        val fixed = attrsToFix.flatMap { attr =>
-          attr.attribution match {
-            case RawSlackAttribution(msg, None) =>
-              db.readWrite { implicit s =>
-                slackChannelRepo.adminGetChannel(msg.channel.id) match {
-                  case None =>
-                    channel.push(s"Could not find ${msg.channel.id} in the channel repo (attr id ${attr.id.get})\n")
-                    None
-                  case Some(ch) =>
-                    keepSourceAttributionRepo.save(attr.copy(attribution = RawSlackAttribution(msg, Some(ch.slackTeamId))))
-                    Some(ch.slackChannelId)
-                }
-              }
-            case _ => None
+      FutureHelpers.foldLeftUntil(Seq.fill(n)(Unit))(0) { (numProcessed, _) =>
+        db.readWriteAsync { implicit s =>
+          keepSourceAttributionRepo.adminGetWithoutAuthor(limit).map { attr =>
+            keepSourceAttributionRepo.save(attr)
           }
+        }.map { fixedAttrs =>
+          channel.push(s"Fixed $numProcessed authors so far (up to attr ${fixedAttrs.map(_.id.get).maxOpt})")
+          (numProcessed + fixedAttrs.length, fixedAttrs.isEmpty)
         }
-        channel.push(s"Fixed ${fixed.size} attributions")
-        Future.successful((attrsToFix.map(_.id.get).maxOpt, attrsToFix.isEmpty))
-      } andThen {
+      }.andThen {
         case res =>
           if (res.isFailure) channel.push("server error\n")
           if (res.isSuccess) channel.push("Finished!\n")
