@@ -1,7 +1,9 @@
 <div class="kf-logged-in-nav-header" ng-controller="LoggedInHeaderCtrl" ng-class="{'kf-logged-in-nav-header-drawer-open': $root.leftHandNavIsOpen}">
   <div class="kf-lih-inner-flex">
     <div class="kf-lih-left-flex">
-      <svg class="kf-logged-in-nav-header-left-menu-icon" kf-symbol-sprite icon="view-list" ng-if="!$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = true"></svg>
+      <div class="kf-logged-in-nav-header-left-menu-button" ng-if="!$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = true">
+        <svg class="kf-logged-in-nav-header-left-menu-icon" kf-symbol-sprite icon="view-list"></svg>
+      </div>
       <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed" ng-if="!$root.leftHandNavIsOpen"></a>
     </div>
     <div class="kf-lih-center-flex">

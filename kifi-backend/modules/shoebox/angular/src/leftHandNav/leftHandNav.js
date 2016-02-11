@@ -15,7 +15,23 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
-        $rootScope.leftHandNavIsOpen = $window.matchMedia('(min-width: 480px)').matches;
+
+        var mql = $window.matchMedia('(min-width: 480px)');
+        $rootScope.leftHandNavIsOpen = mql.matches;
+        mql.addListener(handleMatchMedia);
+        scope.$on('$destroy', function () {
+          mql.removeListener(handleMatchMedia);
+        });
+
+        function handleMatchMedia(mqlEvent) {
+          if ($rootScope.leftHandNavIsOpen && !mqlEvent.matches) {
+            scope.$apply(function() {
+              $rootScope.leftHandNavIsOpen = false;
+            });
+          }
+        }
+
+
         var appendPendingAndPotentialOrgs = function () {
           if (scope.me.pendingOrgs) {
             scope.me.pendingOrgs.forEach(function (o) {
