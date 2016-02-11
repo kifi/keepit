@@ -75,17 +75,6 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
   fi
 
-  echo $'\nSigning Safari extension...'
-  ( \
-    cd out/safari &&
-    exec ../../node_modules/xar-js/xarjs create ../kifi.safariextz \
-      --cert ../../certs/cert.pem \
-      --cert ../../certs/apple-intermediate.pem \
-      --cert ../../certs/apple-root.pem \
-      --private-key ../../certs/privatekey.pem \
-      kifi.safariextension \
-  )
-
   if [[ -f out/kifi.safariextz ]]; then
 
     echo 'Uploading Safari to S3...'

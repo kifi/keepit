@@ -1,7 +1,7 @@
 {
-  "Author": "kifi",
+  "Author": "FortyTwo, Inc.",
   "Builder Version": "11601.3.9",
-  "CFBundleDisplayName": "kifi",
+  "CFBundleDisplayName": "Kifi - Connecting People with Knowledge",
   "CFBundleIdentifier": "com.fortytwo.kifi",
   "CFBundleInfoDictionaryVersion": "6.0",
   "CFBundleShortVersionString": "",
@@ -28,7 +28,7 @@
       ]
     }
   },
-  "Description": "kifi",
+  "Description": "Kifi allows you to easily keep anything you find online, then quickly find it in your favorite search engine, together with pages from your team.",
   "DeveloperIdentifier": "V4GCE6T8A5",
   "ExtensionInfoDictionaryVersion": "1.0",
   "Permissions": {

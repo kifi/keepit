@@ -613,6 +613,25 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
     ]));
 });
 
+gulp.task('xar-safari', ['build', 'config'], shell.task([
+  'echo "Signing Safari extension..."',
+  'if [[ ! -f certs/privatekey.pem ]]; then \
+    echo "\n***ERROR***: need certs/*.pem for signing Safari extensions (ask Carlos or Andrew)." ; \
+    echo "Good instructions are here:" ; \
+    echo "https://github.com/robertknight/xar-js#building-a-safari-extension\n" ; \
+    exit 1 ; \
+  fi',
+  '( \
+    cd out/safari && \
+    exec ../../node_modules/xar-js/xarjs create ../kifi.safariextz \
+      --cert ../../certs/cert.pem \
+      --cert ../../certs/apple-intermediate.pem \
+      --cert ../../certs/apple-root.pem \
+      --private-key ../../certs/privatekey.pem \
+      kifi.safariextension \
+  )'
+]));
+
 gulp.task('watch', function () {
   livereload.listen(livereload.options.port);
   gulp.watch(
@@ -634,7 +653,7 @@ gulp.task('watch', function () {
 
 gulp.task('package', function () {
   target = 'prod';
-  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
+  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox', 'xar-safari']);
 });
 
 gulp.task('package-listed', function () {
