@@ -265,7 +265,7 @@ function onBeforeUnload(e) {
   api.port.emit('api:beforeunload', { url: window.location.href });
 }
 
-function onUnload() {
+function onUnload(e) {
   log('[onUnload] %O', e);
   api.port.emit('api:unload', { url: window.location.href });
 }
