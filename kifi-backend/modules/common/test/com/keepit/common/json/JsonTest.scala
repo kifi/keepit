@@ -90,6 +90,32 @@ class JsonTest extends Specification {
         1 === 1
       }
     }
+    "drop fields" in {
+      "work" in {
+        import DropField.PimpedJsPath
+        case class Foo(x: Int, y: Int, z: Int)
+        object Foo {
+          val normalFormat = (
+            (__ \ 'x).format[Int] and
+            (__ \ 'y).format[Int] and
+            (__ \ 'z).format[Int]
+          )(Foo.apply, unlift(Foo.unapply))
+          val dropFormat = (
+            (__ \ 'x).format[Int] and
+            (__ \ 'y).dropField[Int](5) and
+            (__ \ 'z).format[Int]
+          )(Foo.apply, unlift(Foo.unapply))
+        }
+
+        val x = Foo(1, 2, 3)
+        Foo.normalFormat.writes(x) === Json.obj("x" -> 1, "y" -> 2, "z" -> 3)
+        Foo.dropFormat.writes(x) === Json.obj("x" -> 1, "z" -> 3)
+
+        Foo.normalFormat.reads(Json.obj("x" -> 1, "y" -> 2, "z" -> 3)) === JsSuccess(x)
+        Foo.dropFormat.reads(Json.obj("x" -> 1, "z" -> 3)) === JsSuccess(x.copy(y = 5))
+        Foo.dropFormat.reads(Json.obj("x" -> 1, "y" -> 2, "z" -> 3)) === JsSuccess(x.copy(y = 5))
+      }
+    }
   }
 
 }

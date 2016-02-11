@@ -19,6 +19,15 @@ package object json {
       }
     }
   }
+  object DropField {
+    implicit class PimpedJsPath(jsp: JsPath) {
+      // validation with readIfPossible ALWAYS succeeds, be careful when using it
+      def dropField[T](default: T): OFormat[T] = OFormat(
+        Reads[T] { j => JsSuccess(default) },
+        OWrites[T] { v => Json.obj() }
+      )
+    }
+  }
   object EnumFormat {
     def reads[T](fromStr: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
       def errMsg = if (domain.nonEmpty) s"$j is not one of these: $domain" else s"Could not recognize $j"
