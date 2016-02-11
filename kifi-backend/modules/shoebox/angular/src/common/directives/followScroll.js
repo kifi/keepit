@@ -22,7 +22,7 @@ angular.module('kifi')
 
     var bodyContainer = angular.element('#kf-body-container-content')[0];
     var documentElement = $window.document.documentElement;
-    var desktopMq = $window.matchMedia('(min-width: 480px)');
+    var desktopMq = $window.matchMedia(bodyContainer ? '(min-width: 710px)' : '(min-width: 480px)');
 
     return {
       restrict: 'A',
