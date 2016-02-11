@@ -1,6 +1,7 @@
 package com.keepit.social
 
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.path.Path
 import com.keepit.common.store.{ S3ExternalIdImageStore, S3ImageConfig }
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
@@ -59,48 +60,45 @@ sealed abstract class BasicAuthor(val kind: AuthorKind) {
 }
 
 object BasicAuthor {
-  case object Fake extends BasicAuthor(AuthorKind.Kifi) {
-    override def id = "42424242-4242-4242-424242424242"
-    override def name = "fake"
-    override def picture = ImageUrls.KIFI_LOGO
-  }
-  case class KifiUser(user: BasicUser)(implicit s3: S3ExternalIdImageStore) extends BasicAuthor(AuthorKind.Kifi) {
-    override def id = user.externalId.id
-    override def name = user.fullName
-    override def picture = s3.avatarUrlByUser(user)
-    def url = user.path.absolute
-  }
-  case class SlackUser(msg: BasicSlackMessage) extends BasicAuthor(AuthorKind.Slack) {
-    override def id = msg.userId.value
-    override def name = msg.username.value
-    override def picture = ImageUrls.SLACK_LOGO
-    def url = msg.permalink
-  }
-  case class TwitterUser(tweet: BasicTweet) extends BasicAuthor(AuthorKind.Twitter) {
-    override def id = tweet.user.id.id.toString
-    override def name = tweet.user.name
-    override def picture = ImageUrls.TWITTER_LOGO
-    def url = tweet.permalink
-  }
+  val Fake = KifiUser(
+    id = "42424242-4242-4242-424242424242",
+    name = "fake",
+    picture = ImageUrls.KIFI_LOGO,
+    url = Path.base
+  )
+  case class KifiUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Kifi)
+  case class SlackUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Slack)
+  case class TwitterUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Twitter)
 
+  def fromUser(user: BasicUser)(implicit s3: S3ExternalIdImageStore): BasicAuthor = KifiUser(
+    id = user.externalId.id,
+    name = user.fullName,
+    picture = s3.avatarUrlByUser(user),
+    url = user.path.absolute
+  )
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
-    case SlackAttribution(msg) => SlackUser(msg)
-    case TwitterAttribution(tweet) => TwitterUser(tweet)
+    case SlackAttribution(msg) => SlackUser(
+      id = msg.userId.value,
+      name = msg.username.value,
+      picture = ImageUrls.SLACK_LOGO,
+      url = msg.permalink
+    )
+    case TwitterAttribution(tweet) => TwitterUser(
+      id = tweet.user.id.id.toString,
+      name = tweet.user.name,
+      picture = ImageUrls.TWITTER_LOGO,
+      url = tweet.permalink
+    )
   }
 
-  implicit val writes: Writes[BasicAuthor] = OWrites { ba =>
-    val basicFields = Json.obj(
-      "kind" -> ba.kind.value,
-      "id" -> ba.id,
-      "name" -> ba.name,
-      "picture" -> ba.picture
-    )
-    val extraFields = ba match {
-      case Fake => Json.obj()
-      case KifiUser(user) => Json.obj("url" -> user.path.absolute)
-      case SlackUser(msg) => Json.obj("url" -> msg.permalink)
-      case TwitterUser(tweet) => Json.obj("url" -> tweet.permalink)
-    }
-    basicFields ++ extraFields
+  private val kifiWrites = Json.writes[KifiUser]
+  private val slackWrites = Json.writes[SlackUser]
+  private val twitterWrites = Json.writes[TwitterUser]
+  implicit val writes: Writes[BasicAuthor] = Writes { obj =>
+    (obj match {
+      case ba: KifiUser => kifiWrites.writes(ba)
+      case ba: SlackUser => slackWrites.writes(ba)
+      case ba: TwitterUser => twitterWrites.writes(ba)
+    }) ++ Json.obj("kind" -> obj.kind.value)
   }
 }
