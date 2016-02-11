@@ -66,8 +66,12 @@ angular.module('kifi')
       .then(onSave, onError);
     };
 
-    function onSave() {
-      messageTicker({ text: 'Saved!', type: 'green' });
+    function onSave(resp) {
+      if (resp.success) {
+        messageTicker({ text: 'Saved!', type: 'green' });
+      } else if (resp.redirect) {
+        $window.location = resp.redirect;
+      }
     }
 
     function onError() {
