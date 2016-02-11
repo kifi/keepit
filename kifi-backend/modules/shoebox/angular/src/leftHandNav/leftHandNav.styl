@@ -8,7 +8,19 @@
   user-select: none
 
   @media (max-width: appMobileWidth)
-    display: none
+    position: absolute
+    width: 100%
+    z-index: 99999
+
+  .kf-left-hand-nav-close-icon
+    width: 18px
+    height: 18px
+    margin-right: 8px
+    cursor: pointer
+    fill: alpha(white, 0.8)
+
+    &:hover
+      fill: white
 
   .kf-left-hand-nav-logo
     display: inline-block

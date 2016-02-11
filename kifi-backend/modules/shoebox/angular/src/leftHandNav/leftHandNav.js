@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLeftHandNav', [
-  '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state','profileService', 'userProfileActionService', 'orgProfileService',
+  '$analytics', '$rootElement', '$rootScope', '$document', '$q', '$state', '$window', 'profileService', 'userProfileActionService', 'orgProfileService',
     'modalService', 'net',
-  function ($analytics, $rootElement,  $rootScope, $document, $q, $state, profileService, userProfileActionService, orgProfileService,
-              modalService ,net) {
+  function ($analytics, $rootElement,  $rootScope, $document, $q, $state, $window, profileService, userProfileActionService, orgProfileService,
+              modalService, net) {
 
     return {
       restrict: 'A',
@@ -15,6 +15,7 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
+        $rootScope.leftHandNavIsOpen = $window.matchMedia('(min-width: 480px)').matches;
         var appendPendingAndPotentialOrgs = function () {
           if (scope.me.pendingOrgs) {
             scope.me.pendingOrgs.forEach(function (o) {

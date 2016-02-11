@@ -1,14 +1,15 @@
-<div class="kf-logged-in-nav-header kf-left-hand-nav-container" ng-controller="LoggedInHeaderCtrl">
+<div class="kf-logged-in-nav-header" ng-controller="LoggedInHeaderCtrl" ng-class="{'kf-logged-in-nav-header-drawer-open': $root.leftHandNavIsOpen}">
   <div class="kf-lih-inner-flex">
     <div class="kf-lih-left-flex">
-      <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
+      <svg class="kf-logged-in-nav-header-left-menu-icon" kf-symbol-sprite icon="view-list" ng-if="!$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = true"></svg>
+      <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed" ng-if="!$root.leftHandNavIsOpen"></a>
     </div>
     <div class="kf-lih-center-flex">
       <label class="kf-lih-search kf-lih-search-lhn kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
+    `      <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
