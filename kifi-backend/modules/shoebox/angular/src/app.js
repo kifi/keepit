@@ -16,7 +16,8 @@ angular.module('kifi', [
   'stripe.checkout',
   'ui.slider',
   'angulartics',
-  'kifi.templates'
+  'kifi.templates',
+  'sun.scrollable'
 ])
 
 // fix for when ng-view is inside of ng-include:

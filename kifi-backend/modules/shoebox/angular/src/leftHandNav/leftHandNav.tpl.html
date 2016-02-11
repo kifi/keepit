@@ -1,9 +1,10 @@
-<div class="kf-left-hand-nav" ng-if="navBarEnabled">
+<div class="kf-left-hand-nav" ng-if="navBarEnabled && $root.leftHandNavIsOpen">
     <div class="kf-left-hand-nav-header">
-        <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
+        <a class="kf-left-hand-nav-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
         <div class="kifi-guide-target-1"></div><!-- TODO: remove all kifi-guide-target-# after all extension users at 3.3.50 -->
+        <svg class="kf-left-hand-nav-close-icon" kf-symbol-sprite icon="error" ng-if="$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = false"></svg>
     </div>
-    <div class="kf-left-hand-nav-content">
+    <div class="kf-left-hand-nav-content" scrollable>
         <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent">
             <!--TODO: make a directive-->
             <div class="kf-left-hand-nav-spinner">
@@ -13,15 +14,15 @@
             </div>
         </div>
 
-        <div ng-if="showUserAndOrgContent">
+        <div ng-if="showUserAndOrgContent" class="kf-left-hand-nav-inner-content">
             <div class="kf-left-hand-nav-user-container">
-                <a class="kf-left-hand-nav-item-header" ng-href="{{ me|profileUrl }}">
+                <a class="kf-left-hand-nav-item-header" ng-click="onClickedMyProfile()" ng-href="{{ me|profileUrl }}">
                     <img ng-src="{{ me|pic:100 }}" />
                     <div class="kf-left-hand-nav-user-img"></div><span ng-bind="me|name"></span>
                 </a>
                 <div class="kf-left-hand-nav-libraries-container">
                     <div class="kf-left-hand-nav-library-header">Libraries</div>
-                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in libraries">
+                    <a class="kf-left-hand-nav-library-container" ng-click="onClickedMyLibrary(library)" ng-href="{{library.path}}" ng-repeat="library in libraries">
                         <div class="kf-left-hand-nav-library-container-bg" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
@@ -39,14 +40,14 @@
                 </div>
 
             </div>
-            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs | filter: {declined: '!true'}">
-                <a class="kf-left-hand-nav-item-header" ng-href="{{ org.handle }}">
+            <div class="kf-left-hand-nav-org-container" ng-repeat="org in orgs">
+                <a class="kf-left-hand-nav-item-header" ng-click="onClickedTeam(org)" ng-href="{{ org.handle }}">
                     <img ng-src="{{ org|pic:100 }}" />
                     <div class="kf-left-hand-nav-user-img"></div><span ng-bind="org.name"></span>
                 </a>
                 <div class="kf-left-hand-nav-libraries-container" ng-if="!org.pending && !org.potential">
                     <div class="kf-left-hand-nav-library-header">Libraries</div>
-                    <a class="kf-left-hand-nav-library-container" ng-href="{{library.path}}" ng-repeat="library in org.libraries">
+                    <a class="kf-left-hand-nav-library-container" ng-click="onClickedTeamLibrary(org, library)" ng-href="{{library.path}}" ng-repeat="library in org.libraries">
                         <div class="kf-left-hand-nav-library-container-bg" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library-color" ng-style="{'background': library.color}"></div>
                         <div class="kf-left-hand-nav-library" ng-bind="library.name"></div>
@@ -80,6 +81,12 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div ng-if="showCreateTeam">
+                <span class="kf-left-hand-nav-create-team">+
+                    <span ng-bind="'Create a team' + (companyName ? ' for ' + companyName : '')" ng-click="createTeam()"></span>
+                    [<span class="kf-left-hand-nav-create-team-learn-more" ng-click="openLearnMoreModal()">learn more</span>]
+                </span>
             </div>
         </div>
     </div>

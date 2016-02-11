@@ -137,6 +137,9 @@ angular.module('kifi')
         })
         .then(getResponseData);
       },
+      getBasicLibraries: function (orgId, offset, limit) {
+          return net.getBasicLibraries(orgId, offset, limit).then(getResponseData);
+      },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {
           offset: offset,
