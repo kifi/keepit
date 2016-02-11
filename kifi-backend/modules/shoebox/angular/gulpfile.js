@@ -85,7 +85,8 @@ var libCssFiles = [
   'lib/normalize-css/normalize.css',
   ['managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css', 'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'],
   'managed-lib/select-css/src/select.css',
-  'managed-lib/pace/pace.css'
+  'managed-lib/pace/pace.css',
+  'lib/nanoscroller/bin/css/nanoscroller.css'
 ];
 var libJsFiles = [
   ['lib/lodash/lodash.js', 'lib/lodash/lodash.min.js'],
@@ -110,7 +111,9 @@ var libJsFiles = [
   'managed-lib/angular-smart-scroll/src/angular-smart-scroll.js',
   'lib/angulartics/dist/angulartics.min.js',
   ['lib/fuse.js/src/fuse.js', 'lib/fuse.js/src/fuse.min.js'],
-  'lib/angular-clipboard/angular-clipboard.js'
+  'lib/angular-clipboard/angular-clipboard.js',
+  ['lib/nanoscroller/bin/javascripts/jquery.nanoscroller.js', 'lib/nanoscroller/bin/javascripts/jquery.nanoscroller.min.js'],
+  'lib/angular-nanoscroller/scrollable.js'
 ];
 
 var devFiles = function (files) {

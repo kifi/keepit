@@ -3,7 +3,7 @@
         <a class="kf-left-hand-nav-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
         <div class="kifi-guide-target-1"></div><!-- TODO: remove all kifi-guide-target-# after all extension users at 3.3.50 -->
     </div>
-    <div class="kf-left-hand-nav-content">
+    <div class="kf-left-hand-nav-content" scrollable>
         <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent">
             <!--TODO: make a directive-->
             <div class="kf-left-hand-nav-spinner">
@@ -13,7 +13,7 @@
             </div>
         </div>
 
-        <div ng-if="showUserAndOrgContent">
+        <div ng-if="showUserAndOrgContent" class="kf-left-hand-nav-inner-content">
             <div class="kf-left-hand-nav-user-container">
                 <a class="kf-left-hand-nav-item-header" ng-click="onClickedMyProfile()" ng-href="{{ me|profileUrl }}">
                     <img ng-src="{{ me|pic:100 }}" />

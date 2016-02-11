@@ -99,25 +99,14 @@
         text-decoration: underline
 
 .kf-left-hand-nav-content
-  overflow-y: scroll
+  overflow-y: hidden
   overflow-x: hidden
   padding-left: 10px
   height: 100%
   z-index: 1
-  //box-shadow: 2px 0px 2px -0px rgba(0, 0, 0, 0.12)
 
-  &::-webkit-scrollbar
-    width: 8px
-
-  &::-webkit-scrollbar-thumb
-    border-radius: 4px
-    background-color: alpha(black, 0.0)
-
-
-  &:hover
-    &::-webkit-scrollbar-thumb
-      border-radius: 4px;
-      background-color: alpha(black, .5)
+  .kf-left-hand-nav-inner-content
+    padding-right: 10px
 
   .kf-left-hand-nav-user-container
     flex-shrink: 0
