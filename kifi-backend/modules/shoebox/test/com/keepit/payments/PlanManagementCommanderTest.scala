@@ -33,12 +33,12 @@ class PlanManagementCommanderTest extends SpecificationLike with ShoeboxTestInje
         (restrictedPlan, currentConfig)
       }
 
-      val featureSettingsToReset: Map[Feature, FeatureSetting] = Map( // random features with hopefully altered settings
-        Feature.PublishLibraries -> FeatureSetting.DISABLED,
-        Feature.InviteMembers -> FeatureSetting.ADMINS,
-        Feature.ForceEditLibraries -> FeatureSetting.ADMINS
+      val featureSettingsToReset: Map[Feature, FeatureSelection] = Map( // random features with hopefully altered settings
+        Feature.PublishLibraries -> FeatureSelection.DISABLED,
+        Feature.InviteMembers -> FeatureSelection.ADMINS,
+        Feature.ForceEditLibraries -> FeatureSelection.ADMINS
       )
-      val featureSettingsToMaintain = Map(Feature.EditOrganization -> FeatureSetting.DISABLED)
+      val featureSettingsToMaintain = Map(Feature.EditOrganization -> FeatureSelection.DISABLED)
       val alteredSettings = currentConfig.settings.setAll(featureSettingsToReset ++ featureSettingsToMaintain)
       currentConfig.settings !== alteredSettings // assert settings will actually change from old default
       restrictedPlan.defaultSettings !== alteredSettings // assert settings will actually change to new default

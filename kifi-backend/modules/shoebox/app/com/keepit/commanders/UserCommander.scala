@@ -335,7 +335,7 @@ class UserCommanderImpl @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs, userSlackInfo)
   }
 
-  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSelection.NONMEMBERS)
   private def isFreeMail(email: UserEmailAddress)(implicit session: RSession): Boolean = {
     NormalizedHostname.fromHostname(email.address.hostname) match {
       case None =>
