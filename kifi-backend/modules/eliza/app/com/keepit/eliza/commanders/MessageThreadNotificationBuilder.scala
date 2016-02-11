@@ -150,7 +150,14 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         messageThreadRepo.getByKeepIds(keepIds)
       }
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
-        keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
+        keepIds.map { keepId =>
+          keepId -> messageRepo.getLatest(keepId, filterNonUser = true).orElse {
+            // if keep has no recent user message, but a message thread, it may be due to adding participants
+            messageRepo.getLatest(keepId, filterNonUser = false).filter { message =>
+              message.auxData.exists(data => data.value.headOption.exists(_.asOpt[String].contains("add_participants")))
+            }
+          }
+        }.toMap
       }
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap

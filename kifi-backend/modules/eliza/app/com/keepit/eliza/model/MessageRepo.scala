@@ -28,7 +28,7 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
   def getMessageCounts(keepId: Id[Keep], afterOpt: Option[DateTime])(implicit session: RSession): MessageCount
   def getAllMessageCounts(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
-  def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage]
+  def getLatest(keepId: Id[Keep], filterNonUser: Boolean = true)(implicit session: RSession): Option[ElizaMessage]
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
 
@@ -141,8 +141,8 @@ class MessageRepoImpl @Inject() (
     activeRows.filter(row => row.keepId.inSet(keepIds) && row.fromHuman).groupBy(_.keepId).map { case (keepId, messages) => (keepId, messages.length) }.list.toMap
   }
 
-  def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage] = {
-    activeRows.filter(row => row.keepId === keepId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
+  def getLatest(keepId: Id[Keep], filterNonUser: Boolean)(implicit session: RSession): Option[ElizaMessage] = {
+    activeRows.filter(row => row.keepId === keepId && (row.from.isDefined || !filterNonUser)).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
   private def getByThreadHelper(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection)(implicit session: RSession) = {
