@@ -169,9 +169,9 @@ class KeepDecoratorImpl @Inject() (
 
             (for {
               author <- sourceAttrs.get(keep.id.get).map {
-                case (_, Some(kifiUser)) => BasicAuthor.KifiUser(kifiUser)
+                case (_, Some(kifiUser)) => BasicAuthor.fromUser(kifiUser)
                 case (attr, _) => BasicAuthor.fromSource(attr)
-              } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.KifiUser(_)))
+              } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
               KeepInfo(
                 id = Some(keep.externalId),

@@ -123,7 +123,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       status(result) must equalTo(OK)
       contentType(result) must beSome("application/json")
 
-      val author = BasicAuthor.KifiUser(BasicUser.fromUser(user1))
+      val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
       val expected = Json.parse(s"""
         {
          "collection":null,

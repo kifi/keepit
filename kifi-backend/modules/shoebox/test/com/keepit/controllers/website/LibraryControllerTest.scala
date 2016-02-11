@@ -1001,7 +1001,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        val author = BasicAuthor.KifiUser(BasicUser.fromUser(user1))
+        val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
         val expected1 = Json.parse(
           s"""
           {
