@@ -8,6 +8,15 @@
   flex-shrink: 0
   user-select: none
 
+  .nano
+    flex-grow: 1
+    .nano-pane
+      background: alpha(#000, 0.0)
+
+    .nano-slider
+      background: alpha(#FFF, 0.2)
+
+
   @media (max-width: appMobileWidth)
     position: absolute
     width: 100%
@@ -117,6 +126,8 @@
   padding-left: 10px
   height: 100%
   z-index: 1
+  display: flex
+  flex-direction: column
 
   .kf-left-hand-nav-inner-content
     padding-right: 10px
