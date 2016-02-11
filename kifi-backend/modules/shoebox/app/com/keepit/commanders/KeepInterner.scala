@@ -150,6 +150,8 @@ class KeepInternerImpl @Inject() (
       id = existingKeepOpt.map(_.id.get),
       externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
       title = kTitle,
+      note = kNote,
+      hasBeenEdited = true,
       userId = userIdOpt,
       uriId = uri.id.get,
       url = url,
@@ -157,7 +159,6 @@ class KeepInternerImpl @Inject() (
       visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
       libraryId = libraryOpt.map(_.id.get),
       keptAt = keptAt,
-      note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
       connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet)

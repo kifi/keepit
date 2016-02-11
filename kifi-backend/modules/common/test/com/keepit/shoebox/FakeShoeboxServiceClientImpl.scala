@@ -252,6 +252,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
         Keep(
+          hasBeenEdited = true,
           title = optionalTitle orElse uri.title,
           userId = Some(user.id.get),
           uriId = uri.id.get,

@@ -89,6 +89,7 @@ class KeepRepoImpl @Inject() (
   DateTime, // updatedAt
   State[Keep], // state
   SequenceNumber[Keep], // seq
+  Option[SequenceNumber[Keep]], // hseq
   ExternalId[Keep], // externalId
   Option[String], // title
   Option[String], // note
@@ -115,6 +116,7 @@ class KeepRepoImpl @Inject() (
       updatedAt: DateTime,
       state: State[Keep],
       seq: SequenceNumber[Keep],
+      hseq: Option[SequenceNumber[Keep]],
       externalId: ExternalId[Keep],
       title: Option[String],
       note: Option[String],
@@ -140,6 +142,8 @@ class KeepRepoImpl @Inject() (
         updatedAt,
         state,
         seq,
+        hseq getOrElse seq,
+        hasBeenEdited = false,
         externalId,
         title,
         note,
@@ -165,6 +169,7 @@ class KeepRepoImpl @Inject() (
       k.updatedAt,
       k.state,
       k.seq,
+      if (k.hasBeenEdited) None else Some(k.hseq),
       k.externalId,
       k.title,
       k.note,
@@ -188,6 +193,7 @@ class KeepRepoImpl @Inject() (
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
+    def deferredHseq = column[Option[SequenceNumber[Keep]]]("hseq", O.Nullable) //indexd
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def note = column[Option[String]]("note", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
@@ -209,7 +215,7 @@ class KeepRepoImpl @Inject() (
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
     def * = (
-      (id.?, createdAt, updatedAt, state, seq, externalId, title, note, uriId, url),
+      (id.?, createdAt, updatedAt, state, seq, deferredHseq, externalId, title, note, uriId, url),
       (userId, originalKeeperId, source, keptAt, lastActivityAt, messageSeq,
         connections, libraryId, visibility, organizationId,
         isPrimary, librariesHash, participantsHash)
@@ -219,6 +225,7 @@ class KeepRepoImpl @Inject() (
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
       visibility.inSet(privateVisibilities)
     }
+    def hseq: Column[SequenceNumber[Keep]] = deferredHseq.ifNull(seq)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -240,6 +247,7 @@ class KeepRepoImpl @Inject() (
         r.<<[DateTime],
         r.<<[State[Keep]],
         r.<<[SequenceNumber[Keep]],
+        r.<<[Option[SequenceNumber[Keep]]],
         r.<<[ExternalId[Keep]],
         r.<<[Option[String]],
         r.<<[Option[String]],

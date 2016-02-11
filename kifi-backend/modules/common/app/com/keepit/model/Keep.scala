@@ -5,7 +5,7 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db._
-import com.keepit.common.json.{ EnumFormat, TraversableFormat, TupleFormat }
+import com.keepit.common.json._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
@@ -29,6 +29,8 @@ case class Keep(
   updatedAt: DateTime = currentDateTime,
   state: State[Keep] = KeepStates.ACTIVE,
   seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
+  hseq: SequenceNumber[Keep] = SequenceNumber.ZERO, // human-activity sequence number
+  hasBeenEdited: Boolean,
   externalId: ExternalId[Keep] = ExternalId(),
   title: Option[String] = None,
   note: Option[String] = None,
@@ -61,8 +63,8 @@ case class Keep(
   def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
   def withOwner(newOwner: Id[User]) = this.copy(userId = Some(newOwner))
-  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
-  def withNote(newNote: Option[String]) = this.copy(note = newNote)
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url), hasBeenEdited = true)
+  def withNote(newNote: Option[String]) = this.copy(note = newNote, hasBeenEdited = true)
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
@@ -108,28 +110,57 @@ object Keep extends PublicIdGenerator[Keep] {
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
-  implicit val format: Format[Keep] = (
-    (__ \ 'id).formatNullable[Id[Keep]] and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
-    (__ \ 'state).format[State[Keep]] and
-    (__ \ 'seq).format[SequenceNumber[Keep]] and
-    (__ \ 'externalId).format[ExternalId[Keep]] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'note).formatNullable[String] and
-    (__ \ 'uriId).format[Id[NormalizedURI]] and
-    (__ \ 'url).format[String] and
-    (__ \ 'userId).formatNullable[Id[User]] and
-    (__ \ 'originalKeeperId).formatNullable[Id[User]] and
-    (__ \ 'source).format[KeepSource] and
-    (__ \ 'keptAt).format[DateTime] and
-    (__ \ 'lastActivityAt).format[DateTime] and
-    (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
-    (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'libraryId).formatNullable[Id[Library]] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'organizationId).formatNullable[Id[Organization]]
-  )(Keep.apply, unlift(Keep.unapply))
+
+  // I am so sorry. For this, among other sins, I should probably feel really bad.
+  private type KeepFirstArguments = (Id[Keep], DateTime, DateTime, State[Keep], SequenceNumber[Keep], SequenceNumber[Keep], ExternalId[Keep], Option[String], Option[String], Id[NormalizedURI], String)
+  private type KeepSecondArguments = (Option[Id[User]], Option[Id[User]], KeepSource, DateTime, DateTime, Option[SequenceNumber[Message]], KeepConnections, Option[Id[Library]], LibraryVisibility, Option[Id[Organization]])
+  private def fromSadnessTuples(firsts: KeepFirstArguments, seconds: KeepSecondArguments): Keep = (firsts, seconds) match {
+    case (
+      (id, createdAt, updatedAt, state, seq, hseq, externalId, title, note, uriId, url),
+      (userId, originalKeeperId, source, keptAt, lastActivityAt, messageSeq, connections, libraryId, visibility, organizationId)
+      ) =>
+      Keep(
+        id = Some(id), createdAt = createdAt, updatedAt = updatedAt, state = state, seq = seq, hseq = hseq, hasBeenEdited = false,
+        externalId = externalId, title = title, note = note, uriId = uriId, url = url,
+        userId = userId, originalKeeperId = originalKeeperId, source = source,
+        keptAt = keptAt, lastActivityAt = lastActivityAt, messageSeq = messageSeq,
+        connections = connections, libraryId = libraryId, visibility = visibility, organizationId = organizationId
+      )
+  }
+  private def toSadnessTuples(k: Keep): (KeepFirstArguments, KeepSecondArguments) = {
+    ((k.id.get, k.createdAt, k.updatedAt, k.state, k.seq, k.hseq, k.externalId, k.title, k.note, k.uriId, k.url),
+      (k.userId, k.originalKeeperId, k.source, k.keptAt, k.lastActivityAt, k.messageSeq, k.connections, k.libraryId, k.visibility, k.organizationId))
+  }
+
+  implicit val format: Format[Keep] = {
+    import DropField.PimpedJsPath
+    val formatFirst = (
+      (__ \ 'id).format[Id[Keep]] and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'state).format[State[Keep]] and
+      (__ \ 'seq).format[SequenceNumber[Keep]] and
+      (__ \ 'hseq).format[SequenceNumber[Keep]] and
+      (__ \ 'externalId).format[ExternalId[Keep]] and
+      (__ \ 'title).formatNullable[String] and
+      (__ \ 'note).formatNullable[String] and
+      (__ \ 'uriId).format[Id[NormalizedURI]] and
+      (__ \ 'url).format[String]
+    ).tupled
+    val formatSecond = (
+      (__ \ 'userId).formatNullable[Id[User]] and
+      (__ \ 'originalKeeperId).formatNullable[Id[User]] and
+      (__ \ 'source).format[KeepSource] and
+      (__ \ 'keptAt).format[DateTime] and
+      (__ \ 'lastActivityAt).format[DateTime] and
+      (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
+      (__ \ 'connections).format[KeepConnections] and
+      (__ \ 'libraryId).formatNullable[Id[Library]] and
+      (__ \ 'visibility).format[LibraryVisibility] and
+      (__ \ 'organizationId).formatNullable[Id[Organization]]
+    ).tupled
+    (formatFirst and formatSecond)(fromSadnessTuples, toSadnessTuples)
+  }
 }
 
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
@@ -151,7 +182,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 15
+  override val version = 16
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -169,7 +200,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 6
+  override val version = 7
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
