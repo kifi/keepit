@@ -87,9 +87,9 @@ case class BasicUserInfo(
   numLibraries: Int,
   numConnections: Int,
   numFollowers: Int,
-  orgs: Seq[OrganizationView],
-  pendingOrgs: Seq[OrganizationView],
-  potentialOrgs: Seq[OrganizationView],
+  orgs: Seq[BasicOrganizationView],
+  pendingOrgs: Seq[BasicOrganizationView],
+  potentialOrgs: Seq[BasicOrganizationView],
   slack: UserSlackInfo)
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
@@ -297,10 +297,10 @@ class UserCommanderImpl @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipRepo.getByUserId(user.id.get, Limit(Int.MaxValue), Offset(0)).map(_.organizationId)
-      val orgViews = orgs.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val orgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(orgs.toSet, user.id, authTokenOpt = None)
 
       val pendingOrgs = organizationInviteRepo.getByInviteeIdAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
-      val pendingOrgViews = pendingOrgs.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val pendingOrgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(pendingOrgs, user.id, authTokenOpt = None)
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(email.address.hostname))
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
@@ -309,12 +309,14 @@ class UserCommanderImpl @Inject() (
           case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) &&
             !potentialOrgsToHide.contains(ownership.organizationId) && canVerifyToJoin(ownership.organizationId) =>
             ownership.organizationId
-        }
-      val potentialOrgViews = potentialOrgIds.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+        }.toSet
+      val potentialOrgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(potentialOrgIds, user.id, authTokenOpt = None)
 
       val userSlackInfo = slackInfoCommander.getUserSlackInfo(user.id.get, Some(user.id.get))
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgViews.toSeq, userSlackInfo)
+      (basicUser, biography, emails, pendingPrimary, notAuthed,
+        numLibraries, numConnections, numFollowers,
+        orgs.flatMap(orgViews.get), pendingOrgs.flatMap(pendingOrgViews.get), potentialOrgIds.flatMap(potentialOrgViews.get), userSlackInfo)
     }
 
     val emailInfos = db.readOnlyReplica { implicit session =>
@@ -330,7 +332,7 @@ class UserCommanderImpl @Inject() (
           )
       }
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs, userSlackInfo)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs.toSeq, userSlackInfo)
   }
 
   private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
