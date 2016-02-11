@@ -6,6 +6,9 @@ orgStats: OrganizationStatistics
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
+@if(orgStats.plan.pricePerCyclePerUser.cents > 0){
+  <div style="text-align: right"><img src="https://media.giphy.com/media/xTiTnz33weTH3K8Uvu/giphy.gif" width="448" height="306"></div>
+}
 <table class="org-summary table table-bordered" style="width:600px">
     <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId, @adminHelper.orgDisplay(orgStats.org)</td></tr>
     <tr><td>Name</td>
