@@ -122,7 +122,6 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
       )
 
       val res1 = authCommander.loginWithTrustedSocialIdentity(identityId)
-      println(res1)
       res1.header.status === OK
       res1.session.getUserId.isDefined === true
       res1.session.getUserId.get === user.id.get
