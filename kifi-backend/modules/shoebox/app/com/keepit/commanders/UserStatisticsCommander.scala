@@ -29,9 +29,9 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
 
 case class UserStatistics(
   user: User,
+  paying: Boolean,
   emailAddress: Option[EmailAddress],
   connections: Int,
-  invitations: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
   slackMemberships: Seq[SlackTeamMembership],
@@ -177,16 +177,21 @@ class UserStatisticsCommander @Inject() (
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
     val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+
     val orgsStats = orgs.map(o => organizationStatisticsMin(o))
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidatesStats = orgCandidates.map(o => organizationStatisticsMin(o))
     val slackMemberships = slackTeamMembershipRepo.getByUserId(user.id.get)
+    val paying = orgs.exists { org =>
+      val plan = planManagementCommander.currentPlan(org.id.get)
+      plan.pricePerCyclePerUser.cents > 0
+    }
 
     UserStatistics(
       user,
+      paying = paying,
       emailAddress,
       userConnectionRepo.getConnectionCount(user.id.get),
-      invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
       slackMemberships,
@@ -355,7 +360,6 @@ class UserStatisticsCommander @Inject() (
         val plan = planManagementCommander.currentPlan(orgId)
         val paying = plan.pricePerCyclePerUser.cents > 0
         val numKeeps = libraries.map(_.keepCount).sum
-
         OrganizationStatisticsOverview(
           org = org,
           orgId = orgId,
