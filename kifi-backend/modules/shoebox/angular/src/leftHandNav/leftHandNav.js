@@ -18,6 +18,7 @@ angular.module('kifi')
         var sortOpts = {
           ordering: 'most_recent_keeps_by_user',
           direction: 'asc',
+          window_size: 14
         };
 
         var mql = $window.matchMedia('(min-width: 480px)');
@@ -68,12 +69,12 @@ angular.module('kifi')
         scope.reloadData = function(me, hideReload) {
           var futureMe = (me && $q.when(me)) || profileService.fetchMe();
           scope.showUserAndOrgContent = hideReload;
-          scope.initialFetchFailed = false
+          scope.initialFetchFailed = false;
           futureMe.then(function (me) {
             scope.me = me;
             net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
               var lhr = res.data.lhr;
-              scope.initialFetchFailed = false
+              scope.initialFetchFailed = false;
               scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
               lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
               scope.libraries = lhr.userWithLibs.libs;
