@@ -5,7 +5,6 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
 import play.api.libs.json._
 
-
 trait Feature {
   def value: String
   def editableWith: OrganizationPermission
