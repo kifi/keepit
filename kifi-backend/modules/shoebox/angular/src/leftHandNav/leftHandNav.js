@@ -16,8 +16,11 @@ angular.module('kifi')
         scope.libraries = [];
         scope.orgs = [];
 
+
+
         var mql = $window.matchMedia('(min-width: 480px)');
         $rootScope.leftHandNavIsOpen = mql.matches;
+        var isMobile = !mql.matches;
         mql.addListener(handleMatchMedia);
         scope.$on('$destroy', function () {
           mql.removeListener(handleMatchMedia);
@@ -29,7 +32,12 @@ angular.module('kifi')
               $rootScope.leftHandNavIsOpen = false;
             });
           }
+          isMobile = !mql.matches;
         }
+
+        var maybeClose = function() {
+            $rootScope.leftHandNavIsOpen = !isMobile;
+        };
 
 
         var appendPendingAndPotentialOrgs = function () {
@@ -243,7 +251,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action' : 'clickedCreateTeam'
           });
-
+          maybeClose();
           if (!profileService.prefs.hide_company_name) {
             profileService.savePrefs({ hide_company_name: true });
           }
@@ -257,6 +265,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action': 'learnMoreTeams'
           });
+          maybeClose();
 
           modalService.open({
             template: 'profile/learnMoreModal.tpl.html',
@@ -280,6 +289,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action' : 'clickedGoToMyProfile'
           });
+          maybeClose();
         };
 
         scope.onClickedMyLibrary = function(library) {
@@ -289,6 +299,7 @@ angular.module('kifi')
             'action' : 'clickedGoToMyProfile',
             'library': library.id
           });
+          maybeClose();
         };
 
 
@@ -299,6 +310,7 @@ angular.module('kifi')
             'action' : 'clickedGoToTeam',
             'team' : team.id
           });
+          maybeClose();
         };
 
         scope.onClickedTeamLibrary = function(team, library) {
@@ -309,6 +321,7 @@ angular.module('kifi')
             'team' : team.id,
             'library' : library.id
           });
+          maybeClose();
         };
 
         reloadData(profileService.me);
