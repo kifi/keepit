@@ -35,6 +35,7 @@ angular.module('kifi')
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
+        net.getBasicLibraries,
         net.getOrgMembers,
         net.userOrOrg,
         net.getOrgSettings,
@@ -138,7 +139,7 @@ angular.module('kifi')
         .then(getResponseData);
       },
       getBasicLibraries: function (orgId, offset, limit) {
-          return net.getBasicLibraries(orgId, offset, limit).then(getResponseData);
+          return net.getOrgBasicLibraries(orgId, offset, limit).then(getResponseData);
       },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {
