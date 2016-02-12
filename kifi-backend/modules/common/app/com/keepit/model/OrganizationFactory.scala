@@ -21,7 +21,7 @@ object OrganizationFactory {
       members: Seq[User] = Seq.empty[User],
       invitedUsers: Seq[User] = Seq.empty[User],
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress],
-      nonstandardSettings: Map[Feature, FeatureSelection] = Map.empty,
+      nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty,
       // TODO(ryan): this Long is literally my least favorite thing in the world right now
       planOpt: Option[Long] = None,
       domain: Option[NormalizedHostname] = None) {
@@ -38,11 +38,11 @@ object OrganizationFactory {
     def withDomain(domain: String): PartialOrganization = this.copy(domain = Some(NormalizedHostname.fromHostname(domain).get))
 
     // This method makes it so an org's members cannot invite, useful for testing
-    def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.InviteMembers -> FeatureSelection.ADMINS))
+    def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.InviteMembers -> StaticFeatureSetting.ADMINS))
     // admins can force-edit
-    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ForceEditLibraries -> FeatureSelection.ADMINS))
-    def withSlackProhibited() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.CreateSlackIntegration -> FeatureSelection.DISABLED))
-    def secret() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ViewOrganization -> FeatureSelection.MEMBERS) + (Feature.ViewMembers -> FeatureSelection.MEMBERS))
+    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.ForceEditLibraries -> StaticFeatureSetting.ADMINS))
+    def withSlackProhibited() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.CreateSlackIntegration -> StaticFeatureSetting.DISABLED))
+    def secret() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.ViewOrganization -> StaticFeatureSetting.MEMBERS) + (StaticFeature.ViewMembers -> StaticFeatureSetting.MEMBERS))
 
     def withPlan(planId: Long) = this.copy(planOpt = Some(planId))
   }

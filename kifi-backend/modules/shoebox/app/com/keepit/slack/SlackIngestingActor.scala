@@ -162,7 +162,7 @@ class SlackIngestingActor @Inject() (
   }
 
   private def doIngest(tokenWithScopes: SlackTokenWithScopes, settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
-    val shouldAddReactions = settings.exists(_.settingFor(Feature.SlackIngestionReaction).contains(FeatureSelection.ENABLED))
+    val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>

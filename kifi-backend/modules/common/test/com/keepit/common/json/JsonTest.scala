@@ -1,7 +1,7 @@
 package com.keepit.common.json
 
 import com.keepit.common.db.ExternalId
-import com.keepit.model.{ Feature, FeatureSelection, OrganizationRole }
+import com.keepit.model._
 import org.specs2.mutable.Specification
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -42,15 +42,15 @@ class JsonTest extends Specification {
       "robustly handle simple js objects" in {
         val myFormat = TraversableFormat.safeObjectReads[OrganizationRole, Feature](OrganizationRole.reads, Feature.reads)
         val input = Json.obj("member" -> "view_organization", "garbage_role" -> "view_members", "admin" -> "garbage_feature")
-        val expected = Map(OrganizationRole.MEMBER -> Feature.ViewOrganization)
+        val expected = Map(OrganizationRole.MEMBER -> StaticFeature.ViewOrganization)
         input.as[Map[OrganizationRole, Feature]](myFormat) === expected
       }
       "robustly handle complex js objects" in {
-        def settingsReads(f: Feature): Reads[FeatureSelection] = f.settingReads
-        val myFormat = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSelection](Feature.reads, settingsReads)
+        def settingsReads(f: Feature): Reads[FeatureSetting] = f.settingReads
+        val myFormat = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting](Feature.reads, settingsReads)
         val input = Json.obj("view_organization" -> "members", "force_edit_libraries" -> "anyone")
-        val expected = Map(Feature.ViewOrganization -> FeatureSelection.MEMBERS)
-        input.as[Map[Feature, FeatureSelection]](myFormat) === expected
+        val expected = Map(StaticFeature.ViewOrganization -> StaticFeatureSetting.MEMBERS)
+        input.as[Map[Feature, FeatureSetting]](myFormat) === expected
       }
     }
     "robustly deserialize enumerated items" in {

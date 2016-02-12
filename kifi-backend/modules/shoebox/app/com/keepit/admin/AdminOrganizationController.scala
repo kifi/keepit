@@ -437,8 +437,8 @@ class AdminOrganizationController @Inject() (
         val account = paidAccountRepo.getByOrgId(orgId)
         val plan = paidPlanRepo.get(account.planId)
         val config = orgConfigRepo.getByOrgId(orgId)
-        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.kvs.nonEmpty) {
-          val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
+        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.selections.nonEmpty) {
+          val newSettings = OrganizationSettings(plan.defaultSettings.selections.map {
             case (f, default) =>
               val updatedSetting =
                 if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default

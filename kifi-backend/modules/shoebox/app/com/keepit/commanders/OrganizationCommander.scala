@@ -12,7 +12,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.Feature.{ SlackNotifications, SlackIngestionReaction }
+import com.keepit.model.StaticFeature.{ SlackNotifications, SlackIngestionReaction }
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
