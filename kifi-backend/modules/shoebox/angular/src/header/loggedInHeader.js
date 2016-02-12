@@ -26,7 +26,7 @@ angular.module('kifi')
 
     $scope.viewGuide = function() {
       extensionLiaison.triggerGuide();
-    }
+    };
 
     $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');
 
