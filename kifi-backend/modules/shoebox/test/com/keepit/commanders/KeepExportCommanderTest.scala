@@ -147,7 +147,7 @@ class KeepExportCommanderTest extends Specification with ShoeboxTestInjector {
           }
 
           val personalLibs = libs.filter(_.space == UserSpace(user.id.get)).map(_.id.get).toSet
-          val expected = keeps.filter(k => k.userId.safeContains(user.id.get) && personalLibs.contains(k.libraryId.get)).sortBy(_.keptAt).map(_.id.get)
+          val expected = keeps.filter(k => k.userId.safely.contains(user.id.get) && personalLibs.contains(k.libraryId.get)).sortBy(_.keptAt).map(_.id.get)
 
           val actual = exportedKeeps.map(_.id.get)
 
