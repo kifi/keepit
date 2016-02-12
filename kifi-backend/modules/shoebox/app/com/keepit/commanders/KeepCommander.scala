@@ -806,6 +806,7 @@ class KeepCommanderImpl @Inject() (
     val currentKeepOpt = keepRepo.getByUriAndLibrary(k.uriId, toLibrary.id.get, excludeState = None)
     val newKeep = Keep(
       userId = Some(userId),
+      hasBeenEdited = true,
       url = k.url,
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),

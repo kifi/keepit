@@ -20,6 +20,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         db.readWrite { implicit session =>
           val savedKeep = keepRepo.save(Keep(
+            hasBeenEdited = true,
             uriId = Id[NormalizedURI](1),
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
