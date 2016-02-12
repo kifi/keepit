@@ -3,11 +3,13 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.slick._
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 import com.keepit.common.time.dateTimeOrdering
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success, Try }
@@ -20,16 +22,19 @@ trait KeepExportCommander {
 
 @Singleton
 class KeepExportCommanderImpl @Inject() (
-    db: Database,
-    keepRepo: KeepRepo,
-    ktlRepo: KeepToLibraryRepo,
-    ktcRepo: KeepToCollectionRepo,
-    collectionRepo: CollectionRepo,
-    permissionCommander: PermissionCommander,
-    libraryRepo: LibraryRepo,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends KeepExportCommander with Logging {
+  db: Database,
+  keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
+  ktcRepo: KeepToCollectionRepo,
+  collectionRepo: CollectionRepo,
+  permissionCommander: PermissionCommander,
+  libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
+  implicit val defaultContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends KeepExportCommander with Logging {
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
     // HTML format that follows Delicious exports
@@ -86,10 +91,14 @@ class KeepExportCommanderImpl @Inject() (
           case OrganizationSpace(_) => false
         }
         val libIdsToExportFrom = libraryRepo.getActiveByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
-        ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId)
+        slackLog.info(s"Exporting personal keeps from ${libIdsToExportFrom.size} for user $userId")
+        ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId) tap { ktls =>
+          log.info(s"[KEEP-EXPORT] Personal export for user $userId has ${writableLibIds.size} writeable libs and ${libIdsToExportFrom.size} exportable libs, so ${ktls.size} keeps")
+        }
 
       case OrganizationKeepExportRequest(userId, orgIds) =>
         val libIdsToExportFrom = orgIds.flatMap { orgId => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }.filter(!_.isSecret).map(_.id.get)
+        slackLog.info(s"Exporting org keeps from ${libIdsToExportFrom.size} for user $userId")
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.map(_.keepId)
     }
     val keeps = keepRepo.getByIds(keepIds.toSet).values.toSeq
