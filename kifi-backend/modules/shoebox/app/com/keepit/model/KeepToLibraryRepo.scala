@@ -8,7 +8,7 @@ import scala.collection.mutable
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
@@ -30,6 +30,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibrariesAddedSince(libraryIds: Set[Id[Library]], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary]
+  def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], daysSince: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
@@ -143,6 +144,16 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
     getByLibraryIdsHelper(libraryIds, excludeStateOpt).list.groupBy(_.libraryId)
+  }
+
+  def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], since: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]] = {
+    val ktls = orgIdOpt match {
+      case None => activeRows.filter(r => r.addedBy === userId && r.organizationId.isEmpty && r.addedAt >= since)
+      case Some(orgId) => activeRows.filter(r => r.addedBy === userId && r.organizationId === orgId && r.addedAt >= since)
+    }
+    ktls.groupBy(_.libraryId).map { case (libId, ktls) => (libId, ktls.length, ktls.map(_.addedAt).max) }
+      .sortBy { case (libId, count, lastAdded) => (count desc, lastAdded desc) }
+      .map { case (libId, _, _) => libId }.drop(offset.value).take(limit.value).list
   }
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]] = {
