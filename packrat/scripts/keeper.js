@@ -257,7 +257,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       $slider
       .off('transitionend')
       .on('transitionend', function (e) {
-        if (e.target === this) {
+        if (e.target === this && e.originalEvent.propertyName === 'opacity') {
           hideSlider2();
         }
       })
