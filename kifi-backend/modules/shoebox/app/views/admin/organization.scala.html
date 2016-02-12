@@ -7,7 +7,7 @@ orgStats: OrganizationStatistics
 
 @admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
 @if(orgStats.plan.pricePerCyclePerUser.cents > 0){
-  <div style="text-align: right; display:inline-block">
+  <div style="float: right">
     <div style="display:inline-block"><img src="https://marketing-assets-b-prod.s3.amazonaws.com/img/money.gif" width="448" height="306"></div>
   </div>
 }
