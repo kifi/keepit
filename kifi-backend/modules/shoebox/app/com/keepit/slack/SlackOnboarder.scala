@@ -42,7 +42,7 @@ object SlackOnboarder {
     def dieIf(b: Boolean) = if (b) working = false
 
     def intro() = parent.teamAgent.intro(this)()
-    def channels(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]) = parent.teamAgent.channels(this)(membership, channels)
+    def channels(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.channels(this)(membership, channels)
   }
 }
 
@@ -234,7 +234,7 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+    def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
       import DescriptionElements._
       FutureHelpers.accumulateRobustly(channels) { ch =>
         import SlackSearchRequest._

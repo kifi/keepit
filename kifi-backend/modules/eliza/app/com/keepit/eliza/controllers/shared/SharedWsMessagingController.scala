@@ -126,9 +126,9 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsString(keepIdStr) +: _ =>
         Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
           (for {
-            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, keepId, needsPageImages(socket))
+            jsonOpt <- notificationDeliveryCommander.getSendableNotification(socket.userId, keepId, needsPageImages(socket))
           } yield {
-            socket.channel.push(Json.arr(requestId.toLong, json.obj))
+            socket.channel.push(Json.arr(requestId.toLong, jsonOpt.map(_.obj).getOrElse[JsValue](JsNull)))
           }).onFailure {
             case f =>
               airbrake.notify(f)

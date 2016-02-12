@@ -18,8 +18,6 @@ trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution]
   def getKeepIdsByAuthor(author: Author)(implicit session: RSession): Set[Id[Keep]]
   def intern(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution
-
-  def adminGetFromId(fromIdOpt: Option[Id[KeepSourceAttribution]], limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution]
 }
 
 @Singleton
@@ -44,14 +42,14 @@ class KeepSourceAttributionRepoImpl @Inject() (
     Some((attr.id, attr.createdAt, attr.updatedAt, attr.keepId, attr.author, attrType, js, attr.state))
   }
 
-  def fromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], author: Option[Author], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
+  def fromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], author: Author, attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
     val attr = RawSourceAttribution.fromJson(attrType, attrJson).get
     KeepSourceAttribution(id, createdAt, updatedAt, keepId, author, attr, state)
   }
 
   class KeepSourceAttributionTable(tag: Tag) extends RepoTable[KeepSourceAttribution](db, tag, "keep_source_attribution") {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def author = column[Option[Author]]("author", O.Nullable)
+    def author = column[Author]("author", O.NotNull)
     def attributionType = column[KeepAttributionType]("attr_type", O.NotNull)
     def attributionJson = column[JsValue]("attr_json", O.NotNull)
     def * = (id.?, createdAt, updatedAt, keepId, author, attributionType, attributionJson, state) <> ((fromDbRow _).tupled, toDbRow)
@@ -86,14 +84,7 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def intern(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
     val keepAttributionOpt = rows.filter(_.keepId === keepId).firstOption
-    save(KeepSourceAttribution(id = keepAttributionOpt.map(_.id.get), keepId = keepId, author = Some(Author.fromSource(attribution)), attribution = attribution))
-  }
-
-  def adminGetFromId(fromIdOpt: Option[Id[KeepSourceAttribution]], limit: Int)(implicit session: RSession): Seq[KeepSourceAttribution] = {
-    fromIdOpt match {
-      case None => rows.sortBy(_.id).take(limit).list
-      case Some(fromId) => rows.filter(_.id > fromId).sortBy(_.id).take(limit).list
-    }
+    save(KeepSourceAttribution(id = keepAttributionOpt.map(_.id.get), keepId = keepId, author = Author.fromSource(attribution), attribution = attribution))
   }
 }
 

@@ -12,7 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.TestHelper
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ FakeShoeboxStoreModule, ImagePath, ImageSize }
+import com.keepit.common.store.{ S3ImageStore, FakeShoeboxStoreModule, ImagePath, ImageSize }
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
@@ -28,7 +28,7 @@ import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
@@ -58,6 +58,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   )
 
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+  implicit def s3Config(implicit injector: Injector): S3ImageStore = inject[S3ImageStore]
   private def controller(implicit injector: Injector) = inject[LibraryController]
   private def route = com.keepit.controllers.website.routes.LibraryController
   def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -1000,12 +1001,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
+        val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
         val expected1 = Json.parse(
           s"""
           {
             "keeps": [
               {
-                "author":{"displayName":"Aaron Hsu","picture":"0.jpg","url":"https://www.kifi.com/test"},
+                "author":${Json.toJson(author)},
                 "id": "${keep2.externalId}",
                 "pubId": "${Keep.publicId(keep2.id.get).id}",
                 "title": "k2",
@@ -1032,7 +1034,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "permissions": ${Json.toJson(keepPermissions)}
               },
               {
-                "author":{"displayName":"Aaron Hsu","picture":"0.jpg","url":"https://www.kifi.com/test"},
+                "author":${Json.toJson(author)},
                 "id": "${keep1.externalId}",
                 "pubId": "${Keep.publicId(keep1.id.get).id}",
                 "title": "k1",

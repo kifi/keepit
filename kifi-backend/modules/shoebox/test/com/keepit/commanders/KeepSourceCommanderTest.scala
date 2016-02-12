@@ -49,13 +49,13 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
 
             val foreignKeeps = KeepFactory.keeps(71).map(_.withNoUser().saved)
             foreignKeeps.foreach { keep =>
-              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(slackUserId), Some(slackTeamId)))
+              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(slackUserId), slackTeamId))
             }
 
             val randoSlackId = SlackUserId("URANDORANDO")
             val randoKeeps = KeepFactory.keeps(49).map(_.withNoUser().saved)
             randoKeeps.foreach { keep =>
-              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(randoSlackId), Some(slackTeamId)))
+              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(randoSlackId), slackTeamId))
             }
 
             (user, domesticKeeps, foreignKeeps)
@@ -68,7 +68,7 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
             ktuRepo.getAllByUserId(user.id.get).map(_.keepId).toSet === domesticIds
           }
           // Then we assign $slackId to that user
-          val reattributedKeeps = sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackUserId), user.id.get)
+          val reattributedKeeps = sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackTeamId, slackUserId), user.id.get)
           reattributedKeeps === foreignIds
           db.readOnlyMaster { implicit s =>
             keepRepo.getByUser(user.id.get).map(_.id.get).toSet === domesticIds ++ foreignIds

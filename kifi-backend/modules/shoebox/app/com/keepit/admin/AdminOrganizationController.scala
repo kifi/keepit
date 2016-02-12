@@ -34,6 +34,7 @@ class AdminOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
+    keepRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     paidAccountRepo: PaidAccountRepo,
@@ -88,7 +89,7 @@ class AdminOrganizationController @Inject() (
 
   def liveOrganizationsView() = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit s =>
-      val orgIds = libRepo.orgsWithMostLibs().map(_._1)
+      val orgIds = keepRepo.orgsWithKeeps().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }

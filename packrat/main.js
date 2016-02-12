@@ -1102,9 +1102,13 @@ api.port.on({
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
-        standardizeNotification(th);
-        updateIfJustRead(th);
-        notificationsById[th.thread] = th;
+        if (th) { 
+          standardizeNotification(th);
+          updateIfJustRead(th);
+          notificationsById[th.thread] = th;
+        } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
+          th = { thread: id };
+        }
         emitThreadInfoToTab(th, keep, tab);
       });
     }
@@ -1314,7 +1318,6 @@ api.port.on({
       if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
         appendUserResult(contacts, data.n, SUPPORT);
       }
-      //debugger;
       var results = contacts
         .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
         .slice(0, data.n)
@@ -1322,7 +1325,7 @@ api.port.on({
       if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
         results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
       }
-      respond(results);
+      return results;
     }
   },
   delete_contact: function (email, respond) {

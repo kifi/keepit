@@ -1,0 +1,13 @@
+@import com.keepit.controllers.website.DeepLinkRedirect
+@(r: DeepLinkRedirect, noExtUrl: String)
+<!doctype html>
+<html data-kifi-deep-link='{"url":"@{r.url}","locator":"@{r.externalLocator}"}'>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  setTimeout(function() {
+    window.location = "@noExtUrl";
+  }, 2000);
+});
+</script>
+<div class="kifi-deep-link-no-extension" style="visibility:hidden"></div>
+</html>

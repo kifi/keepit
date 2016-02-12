@@ -16,6 +16,7 @@ angular.module('kifi')
       event: post(shoebox, '/events'),
 
       getLibraryInfos: get(shoebox, '/libraries', 30),
+      getBasicLibraries: get(shoebox, '/users/:id/basicLibraries?offset=:offset&limit=:limit&ordering=alphabetical'), // [ordering&direction]
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
       getLibraryByHandleAndSlug: get(shoebox, '/user-or-org/:handle/libraries/:slug?authToken=:authToken', 30),
       getLibraryById: get(shoebox, '/libraries/:id', 30),
@@ -33,6 +34,7 @@ angular.module('kifi')
       uploadOrgAvatar: post(shoebox, '/organizations/:id/avatar/upload?x=:x&y=:y&s=:sideLength'),
       getOrgMembers: get(shoebox, '/organizations/:id/members', 30),
       getOrgLibraries: get(shoebox, '/organizations/:id/libraries', 30),
+      getOrgBasicLibraries: get(shoebox, '/organizations/:id/basicLibraries?offset=:offset&limit=:limit&ordering=alphabetical'), // [ordering&direction]
       sendOrgMemberInvite: post(shoebox, '/organizations/:id/members/invite'),
       declineOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/decline'),
       acceptOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/accept?authToken=:authToken'),
@@ -92,13 +94,16 @@ angular.module('kifi')
 
       sendMobileAppSMS: post(shoebox, '/sms'),
 
+      // left hand rail
+
+      getInitialLeftHandRailInfo: get(shoebox, '/user/leftHandRail?numLibs=:numLibs&ordering=alphabetical'), // &[ordering=alphabetical&direction=asc]
+
       // library slack integration
       modifyLibraryPushSlackIntegration: post(shoebox, '/libraries/:id/slack/push/:ltsId?turnOn=:turnOn'),
       modifyLibraryIngestSlackIntegration: post(shoebox, '/libraries/:id/slack/ingest/:stlId?turnOn=:turnOn'),
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
 
       // slack
-
       getSlackIntegrationsForOrg: get(shoebox, '/organizations/:id/slack/list'),
       getKifiOrgsForSlackIntegration: get(shoebox, '/slack/add/organizations'),
       getAddSlackIntegrationLink: post(shoebox, '/libraries/:libraryId/slack/add'),

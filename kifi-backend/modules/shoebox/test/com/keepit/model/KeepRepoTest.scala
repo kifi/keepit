@@ -24,6 +24,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
             userId = Some(Id[User](3)),
+            originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
             libraryId = Some(Id[Library](4)),
             connections = KeepConnections(Set(Id(4)), Set(Id(3)))
@@ -200,7 +201,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OwnKeeps)).length must equalTo(22)
           keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OrganizationKeeps(org.id.get))).length must equalTo(18)
         }
-        1 === 1
       }
     }
 

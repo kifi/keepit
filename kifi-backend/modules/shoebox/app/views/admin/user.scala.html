@@ -1,20 +1,10 @@
 @(user: User,
   userThreadStats: com.keepit.eliza.model.UserThreadStats,
   usersOnline: Boolean,
-  totalKeeps: Int,
-  libs: com.keepit.commanders.LibCountStatistics,
-  slacks: com.keepit.commanders.SlackStatistics,
-  manualKeepsLastWeek: Int,
-  organizations: Seq[Organization],
-  candidateOrganizations: Seq[Organization],
+  fullUserStatistics: com.keepit.commanders.FullUserStatistics,
   experiments: Set[UserExperimentType],
-  socialUsers: Seq[SocialUserBasicInfo],
-  fortyTwoConnections: Seq[User],
-  kifiInstallations: Seq[KifiInstallation],
-  emails: Seq[UserEmailAddress],
   abookInfos: Seq[ABookInfo],
   econtactCount: Int,
-  invitedBy: Seq[User],
   potentialOrganizations: Seq[Organization],
   ignoreForPotentialOrganizations: Boolean,
   recommendedOrganizations: Seq[(Organization, Double)],
@@ -30,6 +20,11 @@
 }
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+    @if(fullUserStatistics.paying){
+    <div style="float: right">
+      <div style="display:inline-block"><img src="https://marketing-assets-b-prod.s3.amazonaws.com/img/money.gif" width="448" height="306"></div>
+    </div>
+    }
     <button class="btn btn-default" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn btn-default" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
     <button class="btn btn-default" onclick="impersonate()">Impersonate User</button>
@@ -44,7 +39,7 @@
           @if(usersOnline) {
             <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
           } else {
-            @if(kifiInstallations.isEmpty) {
+            @if(fullUserStatistics.kifiInstallations.isEmpty) {
               <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
             } else {
               <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
@@ -67,33 +62,33 @@
         <th>External services</th><td><a href="https://mixpanel.com/report/311211/explore/#user?distinct_id=@{user.externalId.id}">Mixpanel Profile</a>, <a href="https://mixpanel.com/report/311211/live/#chosen_columns:!('$browser','$city',mp_country_code,distinct_id,'$referring_domain'),column_widths:!(200,100,122,84,118,141,170),query:(distinct_ids:!(),is_or_query:!f,on:'properties%5B%22userId%22%5D%20%3D%3D%201',property_selectors:!((defaults:(filter_state:(),human_readable_params:!(),query:''),distinct_id_operator:and,distinct_ids:!(),human_readable_params:!((type:property,val:userId),(type:operator,val:equals),(type:operand,val:@{user.id.get.id})),query:'properties%5B%22userId%22%5D%20%3D%3D%201',valid_segfilter:(filters:!((filter:(operand:'@{user.id.get.id}',operator:%3D%3D),property:userId,selected_property_type:number,type:number)),op:and))))">Mixpanel Live View</a>, <a href="https://www.linkedin.com/vsearch/p?orig=TRNV&keywords=@{user.firstName}+@{user.lastName}">LinkedIn Search by name</a></td>
       </tr>
       <tr>
-        <th>Total Keeps</th><td>@totalKeeps</td>
+        <th>Total Keeps</th><td>@fullUserStatistics.keepCount</td>
       </tr>
       <tr><td>Slack Integrations</td>
-        <td>@slacks.activeSlackLibs happy, @slacks.inactiveSlackLibs inactive libs, @slacks.closedSlackLibs user closed on kifi side, @slacks.brokenSlackLibs user broke on slack side</td>
+        <td>@fullUserStatistics.slacks.activeSlackLibs happy, @fullUserStatistics.slacks.inactiveSlackLibs inactive libs, @fullUserStatistics.slacks.closedSlackLibs user closed on kifi side, @fullUserStatistics.slacks.brokenSlackLibs user broke on slack side</td>
       </tr>
       <tr><td>Libs prv/org/pub</td>
-        <td>@libs.privateLibCount / @libs.protectedLibCount / @libs.publicLibCount</td>
+        <td>@fullUserStatistics.libs.privateLibCount / @fullUserStatistics.libs.protectedLibCount / @fullUserStatistics.libs.publicLibCount</td>
       </tr>
       <tr>
-        <th>Manual Keeps Last Week</th><td>@manualKeepsLastWeek</td>
+        <th>Manual Keeps Last Week</th><td>@fullUserStatistics.manualKeepsLastWeek</td>
       </tr>
       <tr>
         <th>Messages all/active/started</th><td>@{userThreadStats.all}/@{userThreadStats.active}/@{userThreadStats.started}</td>
       </tr>
-      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(organizations)</td></tr>
-      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(candidateOrganizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> mem</th><td>@adminHelper.orgsDisplay(fullUserStatistics.organizations)</td></tr>
+      <tr><th><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0)">Orgs</a> cand</th><td>@adminHelper.orgsDisplay(fullUserStatistics.candidateOrganizations)</td></tr>
       <tr><th>Slack Memberships</th><td>@adminHelper.slackMembershipsDisplay(slackTeamMemberships)</td></tr>
       <tr>
         <th>Social Users</th>
         <td>
-          @for(u <- socialUsers) { <div>@adminHelper.socialUserDisplay(u, true)</div> }
+          @for(u <- fullUserStatistics.socialUsers) { <div>@adminHelper.socialUserDisplay(u, true)</div> }
         </td>
       </tr>
       <tr>
         <th>Invited By</th>
         <td>
-          @for(u <- invitedBy) { <div>@adminHelper.userDisplay(u)</div> }
+          @for(u <- fullUserStatistics.invitedByUsers) { <div>@adminHelper.userDisplay(u)</div> }
         </td>
       </tr>
     <tr>
@@ -104,7 +99,7 @@
             </form>
         </td>
     </tr>
-      @if((organizations ++ candidateOrganizations).isEmpty) {
+      @if((fullUserStatistics.organizations ++ fullUserStatistics.candidateOrganizations).isEmpty) {
         <tr>
             <th>Potential Organizations</th>
             <td>
@@ -163,13 +158,13 @@
         <th>Last Update</th><td>@adminHelper.dateTimeDisplay(user.updatedAt)</td>
       </tr>
       <tr>
-        <th>Versions</th><td>@{formatKifiInstallations(kifiInstallations)}</td>
+        <th>Versions</th><td>@{formatKifiInstallations(fullUserStatistics.kifiInstallations)}</td>
       </tr>
       <tr>
         <th>Email</th>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.updateUser(user.id.get)" method="POST" class="form-inline">
-            <input type="text" name="emails" value="@{emails.map(_.address).mkString(",")}">
+            <input type="text" name="emails" value="@{fullUserStatistics.emails.map(_.address).mkString(",")}">
             <input type="submit" value="Save">
           </form>
         </td>
@@ -259,10 +254,10 @@
       <a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(user.id.get)">User Search Config</a>
     </p>
 
-      <h2>@fortyTwoConnections.size Kifi Users</h2>
+      <h2>@fullUserStatistics.fortyTwoConnections.size Kifi Users</h2>
       <div class="scrollArea">
         <ol>
-        @for(u <- fortyTwoConnections) {
+        @for(u <- fullUserStatistics.fortyTwoConnections) {
           <li>@adminHelper.userDisplay(u)</li>
         }
         </ol>

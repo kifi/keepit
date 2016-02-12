@@ -158,7 +158,7 @@ class SlackTeamCommanderImpl @Inject() (
     }
   }
 
-  private def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+  private def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackPublicChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     require(membership.slackTeamId == team.slackTeamId, s"SlackTeam ${team.id.get}/${team.slackTeamId.value} doesn't match SlackTeamMembership ${membership.id.get}/${membership.slackTeamId.value}")
     require(membership.userId.isDefined, s"SlackTeamMembership ${membership.id.get} doesn't belong to any user.")
 
@@ -218,7 +218,7 @@ class SlackTeamCommanderImpl @Inject() (
     }
   }
 
-  private def setupSlackChannels(team: SlackTeam, membership: SlackTeamMembership, channels: Seq[SlackChannelInfo])(implicit context: HeimdalContext): SlackChannelLibraries = {
+  private def setupSlackChannels(team: SlackTeam, membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo])(implicit context: HeimdalContext): SlackChannelLibraries = {
     val libCreationsByChannel = channels.map { channel =>
       channel.channelIdAndName -> setupSlackChannel(team, membership, channel)
     }.toMap
@@ -271,7 +271,7 @@ class SlackTeamCommanderImpl @Inject() (
                         val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
                         if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
                       }
-                      def shouldBeIgnored(channel: SlackChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
+                      def shouldBeIgnored(channel: SlackPublicChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
                       val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
                       val futureSlackChannelLibraries = SafeFuture {
                         setupSlackChannels(updatedTeam, membership, channelsToIntegrate)
