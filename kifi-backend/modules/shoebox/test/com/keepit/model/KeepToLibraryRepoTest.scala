@@ -265,6 +265,17 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
           1 === 1
         }
       }
+
+      "getSortedByKeepCountSince compiles" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit s =>
+            val user = UserFactory.user().saved
+            val libs = randomLibs(20, user)
+            val libIds = inject[KeepToLibraryRepo].getSortedByKeepCountSince(user.id.get, None, currentDateTime.minusDays(14), Offset(0), Limit(10))
+            1 === 1
+          }
+        }
+      }
     }
   }
 }
