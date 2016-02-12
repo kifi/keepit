@@ -6,6 +6,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
@@ -146,7 +147,7 @@ class KeepExportCommanderTest extends Specification with ShoeboxTestInjector {
           }
 
           val personalLibs = libs.filter(_.space == UserSpace(user.id.get)).map(_.id.get).toSet
-          val expected = keeps.filter(k => k.userId == user.id.get && personalLibs.contains(k.libraryId.get)).sortBy(_.keptAt).map(_.id.get)
+          val expected = keeps.filter(k => k.userId.safeContains(user.id.get) && personalLibs.contains(k.libraryId.get)).sortBy(_.keptAt).map(_.id.get)
 
           val actual = exportedKeeps.map(_.id.get)
 
