@@ -193,6 +193,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
         val updated = membership.copy(
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
+          userId = request.userId orElse membership.userId,
           token = request.token orElse membership.token,
           scopes = request.scopes,
           slackUser = request.slackUser orElse membership.slackUser
