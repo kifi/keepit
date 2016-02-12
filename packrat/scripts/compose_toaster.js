@@ -36,7 +36,8 @@ k.toaster = k.toaster || (function () {
       show($parent, trigger, guided, recipient);
     },
     hideIfBlank: function () {
-      if ($toast && $toast.data('compose').isBlank()) {
+      var compose = $toast && $toast.data('compose');
+      if (compose && compose.isBlank && compose.isBlank()) {
         hide();
       } else {
         log('[toaster:hideIfBlank] no-op');
