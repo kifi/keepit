@@ -54,7 +54,7 @@ trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
-  def validateToken(token: SlackAccessToken): Future[Boolean]
+  def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
@@ -110,8 +110,8 @@ class SlackClientImpl(
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
   }
-  def validateToken(token: SlackAccessToken): Future[Boolean] = {
-    slackCall[Unit](SlackAPI.Test(token))(readUnit).map(_ => true).recover { case f => false }
+  def testToken(token: SlackAccessToken): Future[Unit] = {
+    slackCall[Unit](SlackAPI.Test(token))(readUnit)
   }
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
