@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.reflection.Enumerator
-import com.keepit.model.StaticFeature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
+import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
 import play.api.libs.json._
 
 /*
@@ -19,7 +19,8 @@ trait Feature {
   def settingReads: Reads[FeatureSetting]
 }
 object Feature {
-  val all: Set[Feature] = StaticFeature.ALL.toSeq.toSet
+  val all: Set[Feature] = StaticFeature.ALL.toSet
+
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
 
@@ -31,6 +32,10 @@ object Feature {
   implicit val writes = Writes(format.writes)
   val reads: Reads[Feature] = Reads(format.reads)
   implicit val safeSetReads = TraversableFormat.safeSetReads[Feature](reads)
+
+  case class InvalidSettingForFeatureException(feature: Feature, str: String) extends Exception(s""""$str" is not a valid setting for feature ${feature.value}""")
+  case class FeatureNotFoundException(featureStr: String) extends Exception(s"""Feature "$featureStr" not found""")
+
 }
 trait FeatureSetting {
   def value: String
@@ -113,10 +118,8 @@ object StaticFeatureSetting {
 }
 
 object StaticFeature extends Enumerator[StaticFeature] {
-  case class InvalidSettingForFeatureException(feature: Feature, str: String) extends Exception(s""""$str" is not a valid setting for feature ${feature.value}""")
-  case class FeatureNotFoundException(featureStr: String) extends Exception(s"""Feature "$featureStr" not found""")
 
-  val ALL: Set[StaticFeature] = _all.toSet
+  val ALL: Seq[StaticFeature] = _all
 
   import StaticFeatureSetting._
   case object PublishLibraries extends StaticFeature with FeatureWithPermissions {
