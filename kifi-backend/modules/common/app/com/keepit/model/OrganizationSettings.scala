@@ -5,13 +5,6 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
 import play.api.libs.json._
 
-/*
-Glossary of terms (these can be probably named better, so feel free):
-• StaticFeature → StaticSelection pairs are for a single selection from a set of possible values ("who can create libraries" -> "admins")
-• Anything else
-•
-
- */
 
 trait Feature {
   def value: String
