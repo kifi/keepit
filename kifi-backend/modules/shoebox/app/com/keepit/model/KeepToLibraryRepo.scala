@@ -147,13 +147,21 @@ class KeepToLibraryRepoImpl @Inject() (
   }
 
   def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], since: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]] = {
-    val ktls = orgIdOpt match {
-      case None => activeRows.filter(r => r.addedBy === userId && r.organizationId.isEmpty && r.addedAt >= since)
-      case Some(orgId) => activeRows.filter(r => r.addedBy === userId && r.organizationId === orgId && r.addedAt >= since)
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val idAndLastKept = orgIdOpt match {
+      case None => s"""select id, last_kept from library where owner_id = $userId and organization_id is null and state = 'active'"""
+      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active'"""
     }
-    ktls.groupBy(_.libraryId).map { case (libId, ktls) => (libId, ktls.length, ktls.map(_.addedAt).max) }
-      .sortBy { case (libId, count, lastAdded) => (count desc, lastAdded desc) }
-      .map { case (libId, _, _) => libId }.drop(offset.value).take(limit.value).list
+    val idAndCount = orgIdOpt match {
+      case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""
+      case Some(orgId) => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where added_by = $userId and organization_id = $orgId and added_at >= '$since' group by library_id"""
+    }
+
+    sql"""
+    select idAndLastKept.id
+    from (#$idAndLastKept) as idAndLastKept left join (#$idAndCount) as idAndCount on idAndLastKept.id = idAndCount.id
+    order by idAndCount.num_keeps desc, idAndLastKept.last_kept desc
+    limit ${limit.value} offset ${offset.value};""".as[Id[Library]].list
   }
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]] = {

@@ -169,7 +169,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   def validateToken(token: SlackAccessToken): Future[Boolean] = {
-    slackClient.validateToken(token)
+    slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
   }
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))

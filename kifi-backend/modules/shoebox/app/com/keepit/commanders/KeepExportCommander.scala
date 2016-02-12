@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.core.{ anyExtensionOps, optionExtensionOps }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
@@ -91,17 +91,18 @@ class KeepExportCommanderImpl @Inject() (
           case OrganizationSpace(_) => false
         }
         val libIdsToExportFrom = libraryRepo.getActiveByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
-        slackLog.info(s"Exporting personal keeps from ${libIdsToExportFrom.size} for user $userId")
-        ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId) tap { ktls =>
-          log.info(s"[KEEP-EXPORT] Personal export for user $userId has ${writableLibIds.size} writeable libs and ${libIdsToExportFrom.size} exportable libs, so ${ktls.size} keeps")
+        val ktlsByLibrary = ktlRepo.getAllByLibraryIds(libIdsToExportFrom)
+        ktlsByLibrary.values.flatten.filter(_.addedBy safeContains userId).map(_.keepId).toSet tap { keepIds =>
+          slackLog.info(s"Exporting ${keepIds.size} personal keeps from ${libIdsToExportFrom.size} libs for user $userId")
         }
 
       case OrganizationKeepExportRequest(userId, orgIds) =>
         val libIdsToExportFrom = orgIds.flatMap { orgId => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }.filter(!_.isSecret).map(_.id.get)
-        slackLog.info(s"Exporting org keeps from ${libIdsToExportFrom.size} for user $userId")
-        ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.map(_.keepId)
+        ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.map(_.keepId).toSet tap { keepIds =>
+          slackLog.info(s"Exporting ${keepIds.size} org keeps from ${libIdsToExportFrom.size} libs for user $userId")
+        }
     }
-    val keeps = keepRepo.getByIds(keepIds.toSet).values.toSeq
+    val keeps = keepRepo.getByIds(keepIds).values.toSeq
 
     val tagIds = ktcRepo.getCollectionsForKeeps(keeps)
     val idToTag = collectionRepo.getByIds(tagIds.flatten.toSet).mapValues(_.name.tag)
