@@ -1353,7 +1353,7 @@ api.port.on({
   },
   open_deep_link: function(link, _, tab) {
     var tabIdWithLink;
-    if (link.inThisTab || tab.nUri === link.nUri) {
+    if (link.inThisTab || tab.nUri === link.nUri || tab.url === link.nUri) {
       tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
       trackClick();
@@ -1789,7 +1789,8 @@ function awaitDeepLink(link, tabId, retrySec) {
     api.timers.clearTimeout(timeouts[tabId]);
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
-    if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
+    var linkUrl = link.url || link.nUri;
+    if (tab && (sameOrLikelyRedirected(linkUrl, tab.nUri) || sameOrLikelyRedirected(linkUrl, tab.url))) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);
