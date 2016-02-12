@@ -98,7 +98,7 @@ angular.module('kifi')
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
-          return orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
+          return orgProfileService.getBasicLibraries(org.id, offset, limit + 1)
             .then(function (data) {
               org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);
