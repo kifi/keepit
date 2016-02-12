@@ -50,7 +50,7 @@ var api = api || (function () {
         break;
       case 'api:inject':
         injectContentScript(msg[1], msg[2]);
-        markInjected(msg[1]);
+        markInjected(msg[2].paths);
         break;
       case 'api:log':
         var enable = msg[1], buf = log.buffer;
@@ -197,8 +197,8 @@ var api = api || (function () {
       if (typeof paths === 'string') {
         paths = [paths];
       }
-      api.port.emit('api:require', { paths, injected }, function (paths) {
-        markInjected(paths.scripts.concat(paths.styles));
+      api.port.emit('api:require', { paths, injected }, function (data) {
+        markInjected(data.paths);
         callback();
       });
     },

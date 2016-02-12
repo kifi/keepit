@@ -167,6 +167,7 @@ var api = api || (function () {
     var loadsLeft = (scriptPaths || []).length;// + (stylePaths || []).length;
     var scripts = [];
     var styles = [];
+    var paths = scriptPaths.concat(stylePaths);
     scriptPaths.forEach(function (p) {
       loadContent(p, function (text) {
         scripts.push(text);
@@ -182,9 +183,9 @@ var api = api || (function () {
 
     function done() {
       if (loadsLeft === 0) {
-        page._port.postMessage('api:inject', { scripts, styles });
+        page._port.postMessage('api:inject', { scripts, styles, paths });
         if (callback) {
-          callback({ scripts, styles });
+          callback({ scripts, styles, paths });
         }
       } else {
         loadsLeft--;
