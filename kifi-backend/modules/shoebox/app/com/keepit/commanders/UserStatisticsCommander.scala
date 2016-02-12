@@ -132,6 +132,20 @@ case class OrganizationMemberRecommendationInfo(
   emailAddress: Option[EmailAddress],
   score: Double)
 
+case class FullUserStatistics(
+  libs: LibCountStatistics,
+  slacks: SlackStatistics,
+  keepCount: Int,
+  manualKeepsLastWeek: Int,
+  organizations: Seq[Organization],
+  candidateOrganizations: Seq[Organization],
+  socialUsers: Seq[SocialUserBasicInfo],
+  fortyTwoConnections: Seq[User],
+  kifiInstallations: Seq[KifiInstallation],
+  emails: Seq[UserEmailAddress],
+  invitedByUsers: Seq[User],
+  paying: Boolean)
+
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
@@ -149,6 +163,7 @@ class UserStatisticsCommander @Inject() (
     invitationRepo: InvitationRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -165,6 +180,27 @@ class UserStatisticsCommander @Inject() (
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
     val inviters = invites.flatMap(_.senderUserId)
     userRepo.getAllUsers(inviters).values.toSeq
+  }
+
+  def fullUserStatistics(userId: Id[User]) = db.readOnlyReplicaAsync { implicit s =>
+    val keepCount = keepRepo.getCountByUser(userId)
+    val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
+    val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllBySlackUserIds(slackTeamMembershipRepo.getByUserId(userId).map(_.slackUserId).toSet))
+    val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
+    val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+    val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+    val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
+    val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
+      userRepo.get(userId)
+    }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
+    val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
+    val emails = emailRepo.getAllByUser(userId)
+    val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
+    val paying = organizations.exists { org =>
+      val plan = planManagementCommander.currentPlan(org.id.get)
+      plan.pricePerCyclePerUser.cents > 0
+    }
+    FullUserStatistics(libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying)
   }
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {

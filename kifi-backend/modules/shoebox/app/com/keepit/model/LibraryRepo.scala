@@ -210,7 +210,7 @@ class LibraryRepoImpl @Inject() (
     import LibraryQuery._
     val published: LibraryVisibility = LibraryVisibility.PUBLISHED
     val orgVisible: LibraryVisibility = LibraryVisibility.ORGANIZATION
-    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT) // if we're going to do this, why not just set the default in the constructor?
 
     activeRows |> { rs =>
       // Actually perform the query
@@ -239,7 +239,8 @@ class LibraryRepoImpl @Inject() (
       query.fromId.map { fromId =>
         val fromLib = get(fromId)
         arrangement.ordering match {
-          case LibraryOrdering.ALPHABETICAL =>
+          case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER | // use KeepToLibraryRepo.getSortedByKeepCountSince for this
+            LibraryOrdering.ALPHABETICAL =>
             val fromName = fromLib.name
             arrangement.direction match {
               case SortDirection.ASCENDING => rs.filter(_.name > fromName)
@@ -269,7 +270,7 @@ class LibraryRepoImpl @Inject() (
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.DESCENDING) => rs.sortBy(lib => (lib.memberCount desc, lib.id desc))
       }
     } |> { rs => // then page through the results
-      rs.map(_.id).drop(query.offset).take(query.limit).list
+      rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
     }
   }
 
@@ -401,7 +402,8 @@ class LibraryRepoImpl @Inject() (
   def getOrderBySql(tableName: String, membershipTable: String, orderingOpt: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true) = {
     val ordering = orderingOpt match {
       case Some(ordering) => ordering match {
-        case LibraryOrdering.ALPHABETICAL => s"$tableName.name ${direction.getOrElse(SortDirection.ASCENDING).value}, $tableName.id desc"
+        case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER | // use KeepToLibrary.getSortedByKeepCountSince for this
+          LibraryOrdering.ALPHABETICAL => s"$tableName.name ${direction.getOrElse(SortDirection.ASCENDING).value}, $tableName.id desc"
         case LibraryOrdering.MEMBER_COUNT => s"$tableName.member_count ${direction.getOrElse(SortDirection.DESCENDING).value}"
         case LibraryOrdering.LAST_KEPT_INTO => s"$tableName.last_kept ${direction.getOrElse(SortDirection.DESCENDING).value}"
       }
@@ -604,6 +606,7 @@ object LibraryOrdering extends Enumerator[LibraryOrdering] {
   case object LAST_KEPT_INTO extends LibraryOrdering("last_kept_into")
   case object ALPHABETICAL extends LibraryOrdering("alphabetical")
   case object MEMBER_COUNT extends LibraryOrdering("member_count")
+  case object MOST_RECENT_KEEPS_BY_USER extends LibraryOrdering("most_recent_keeps_by_user")
 
   val all = _all
   def fromStr(str: String): Option[LibraryOrdering] = all.find(_.value == str)

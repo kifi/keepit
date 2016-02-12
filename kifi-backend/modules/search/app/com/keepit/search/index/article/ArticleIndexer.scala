@@ -39,7 +39,7 @@ class ShardedArticleIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  val fetchSize = 200
+  val fetchSize = 50
 
   def asyncUpdate(): Future[Option[Int]] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
