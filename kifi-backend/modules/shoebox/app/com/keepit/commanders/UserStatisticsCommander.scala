@@ -164,7 +164,6 @@ class UserStatisticsCommander @Inject() (
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userStatisticsCommander: UserStatisticsCommander,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -196,7 +195,7 @@ class UserStatisticsCommander @Inject() (
     }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
     val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
     val emails = emailRepo.getAllByUser(userId)
-    val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
+    val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
     val paying = organizations.exists { org =>
       val plan = planManagementCommander.currentPlan(org.id.get)
       plan.pricePerCyclePerUser.cents > 0
