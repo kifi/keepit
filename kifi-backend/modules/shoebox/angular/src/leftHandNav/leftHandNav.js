@@ -15,8 +15,10 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
-
-
+        var sortOpts = {
+          ordering: 'most_recent_keeps_by_user',
+          direction: 'asc',
+        };
 
         var mql = $window.matchMedia('(min-width: 480px)');
         $rootScope.leftHandNavIsOpen = mql.matches;
@@ -58,13 +60,20 @@ angular.module('kifi')
           }
         };
 
-        var reloadData = function(me, hideReload) {
+        var initialLoadFailed = function () {
+          scope.showUserAndOrgContent = false;
+          scope.initialFetchFailed = true;
+        };
+
+        scope.reloadData = function(me, hideReload) {
           var futureMe = (me && $q.when(me)) || profileService.fetchMe();
           scope.showUserAndOrgContent = hideReload;
+          scope.initialFetchFailed = false
           futureMe.then(function (me) {
             scope.me = me;
-            net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
+            net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
               var lhr = res.data.lhr;
+              scope.initialFetchFailed = false
               scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
               lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
               scope.libraries = lhr.userWithLibs.libs;
@@ -78,8 +87,8 @@ angular.module('kifi')
               scope.showCreateTeam = scope.orgs.length === 0;
               appendPendingAndPotentialOrgs();
               scope.showUserAndOrgContent = true;
-            });
-          });
+            })['catch'](initialLoadFailed);
+          })['catch'](initialLoadFailed);
         };
 
         // TODO: REMOVE THIS HACK
@@ -93,24 +102,25 @@ angular.module('kifi')
         scope.fetchLibraries = function (offset, limit) {
           scope.hasMoreUserLibaries = false;
           return userProfileActionService
-              .getBasicLibraries(scope.me.id, offset, limit + 1)
+              .getBasicLibraries(scope.me.id, offset, limit + 1, sortOpts)
               .then(function (data) {
-                scope.loaded = true;
-                return data;
-              }).then(function(data) {
                 scope.hasMoreUserLibaries = data.libs.length === limit + 1;
                 data.libs.splice(limit);
                 scope.libraries = (scope.libraries || []).concat(data.libs);
+              })['catch'](function () {
+                scope.hasMoreUserLibaries = true;
               });
         };
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
-          return orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
+          return orgProfileService.getOrgBasicLibraries(org.id, offset, limit + 1, sortOpts)
             .then(function (data) {
               org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);
               org.libraries = (org.libraries || []).concat(data.libraries);
+            })['catch'](function () {
+              org.hasMoreLibraries = true;
             });
         };
 
@@ -324,10 +334,10 @@ angular.module('kifi')
           maybeClose();
         };
 
-        reloadData(profileService.me);
+        scope.reloadData(profileService.me);
         [
           $rootScope.$on('refreshLeftHandNav', function() {
-            reloadData();
+            scope.reloadData();
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);

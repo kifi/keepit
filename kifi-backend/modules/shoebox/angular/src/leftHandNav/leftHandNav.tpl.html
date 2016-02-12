@@ -5,13 +5,18 @@
         <svg class="kf-left-hand-nav-close-icon" kf-symbol-sprite icon="error" ng-if="$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = false"></svg>
     </div>
     <div class="kf-left-hand-nav-content" scrollable>
-        <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent">
+        <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent && !initialFetchFailed">
             <!--TODO: make a directive-->
             <div class="kf-left-hand-nav-spinner">
                 <div class="bounce1"></div>
                 <div class="bounce2"></div>
                 <div class="bounce3"></div>
             </div>
+        </div>
+
+        <div class="kf-left-hand-nav-load-error" ng-if="initialFetchFailed">
+            Woops there was an error
+            <div class="kf-left-hand-nav-load-error-reload" ng-click="reloadData()">Retry</div>
         </div>
 
         <div ng-if="showUserAndOrgContent" class="kf-left-hand-nav-inner-content">
