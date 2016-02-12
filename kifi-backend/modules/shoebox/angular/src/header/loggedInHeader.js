@@ -4,11 +4,12 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$rootElement', '$analytics', '$rootScope', '$document', 'profileService', 'libraryService',
-  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS', '$window',
+  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS', '$window', 'extensionLiaison',
   function (
     $scope, $rootElement, $analytics, $rootScope, $document, profileService, libraryService,
-    $location, util, KEY, modalService, $timeout, $state, mobileOS, $window) {
+    $location, util, KEY, modalService, $timeout, $state, mobileOS, $window, extensionLiaison) {
 
+    $scope.hasExtension = !!$window.document.documentElement.getAttribute('data-kifi-ext');
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
 
@@ -21,6 +22,10 @@ angular.module('kifi')
       $scope.calloutVisible = false;
       profileService.prefs.site_notify_libraries_in_search = false;
       profileService.savePrefs({site_notify_libraries_in_search: false});
+    };
+
+    $scope.viewGuide = function() {
+      extensionLiaison.triggerGuide();
     };
 
     $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');

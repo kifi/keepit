@@ -137,8 +137,13 @@ angular.module('kifi')
         })
         .then(getResponseData);
       },
-      getBasicLibraries: function (orgId, offset, limit) {
-          return net.getBasicLibraries(orgId, offset, limit).then(getResponseData);
+      // optArgs {
+      //  ordering: "alphabetical" | "most_recent_keeps_by_user"
+      //  direction: "asc" | "desc"
+      //  window_size: #days (used for most_recent_keeps_by_user)
+      // }
+      getOrgBasicLibraries: function (orgId, offset, limit, optArgs) {
+          return net.getOrgBasicLibraries(orgId, offset, limit, optArgs).then(getResponseData);
       },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {
