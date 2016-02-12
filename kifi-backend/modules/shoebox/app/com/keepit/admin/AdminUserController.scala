@@ -256,22 +256,7 @@ class AdminUserController @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
     }
 
-    val (libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
-      val keepCount = keepRepo.getCountByUser(userId)
-      val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
-      val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllBySlackUserIds(slackTeamMembershipRepo.getByUserId(userId).map(_.slackUserId).toSet))
-      val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
-      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
-      val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
-      val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
-        userRepo.get(userId)
-      }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
-      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
-      val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
-      (libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers)
-    }
+    val fullUserStatisticsF = userStatisticsCommander.fullUserStatistics(userId)
 
     val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
       slackTeamMembershipRepo.getByUserId(userId)
@@ -279,6 +264,7 @@ class AdminUserController @Inject() (
     val usersOnlineF = eliza.areUsersOnline(Seq(userId))
 
     for {
+      fullUserStatistics <- fullUserStatisticsF
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
       orgRecos <- fOrgRecos
@@ -287,9 +273,8 @@ class AdminUserController @Inject() (
       usersOnline <- usersOnlineF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
-      Ok(html.admin.user(user, chatStats, usersOnline(userId), keepCount, libs, slacks, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
-        fortyTwoConnections, kifiInstallations, emails, abookInfos, econtactCount,
-        invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
+      Ok(html.admin.user(user, chatStats, usersOnline(userId), fullUserStatistics, experiments, abookInfos, econtactCount,
+        potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
   }
 
