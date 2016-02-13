@@ -5,7 +5,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
 import play.api.libs.json._
 
-trait Feature {
+sealed trait Feature {
   def value: String
   def editableWith: OrganizationPermission
   def settingReads: Reads[FeatureSetting]
@@ -16,10 +16,7 @@ object Feature {
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
 
-  val format: Format[Feature] = Format(
-    EnumFormat.reads(get, all.map(_.value)),
-    Writes { x => JsString(x.value) }
-  )
+  val format: Format[Feature] = EnumFormat.format[Feature](get, _.value)
 
   implicit val writes = Writes(format.writes)
   val reads: Reads[Feature] = Reads(format.reads)
@@ -29,7 +26,7 @@ object Feature {
   case class FeatureNotFoundException(featureStr: String) extends Exception(s"""Feature "$featureStr" not found""")
 
 }
-trait FeatureSetting {
+sealed trait FeatureSetting {
   def value: String
 }
 
@@ -208,5 +205,21 @@ object StaticFeature extends Enumerator[StaticFeature] {
     val value = "slack_digest_notif"
     val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
+  }
+}
+
+case class TextFeatureSetting(val value: String) extends FeatureSetting
+sealed trait TextFeature extends Feature {
+  val value: String
+  val editableWith: OrganizationPermission
+  protected def parse(x: String): Option[TextFeatureSetting]
+
+  def settingReads: Reads[FeatureSetting] = Reads { j =>
+    j.validate[String].flatMap { r =>
+      parse(r) match {
+        case Some(valid) => JsSuccess(valid)
+        case None => JsError("invalid_setting_value")
+      }
+    }
   }
 }
