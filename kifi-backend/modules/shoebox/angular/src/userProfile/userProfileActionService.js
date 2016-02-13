@@ -32,7 +32,7 @@ angular.module('kifi')
     // optArgs {
     //  ordering: "alphabetical" | "most_recent_keeps_by_user"
     //  direction: "asc" | "desc"
-    //  window_size: #days (used for most_recent_keeps_by_user)
+    //  windowSize: #days (used for most_recent_keeps_by_user)
     // }
     var basicLibrariesClutch = new Clutch( function(id, offset, limit, optArgs) {
         return net.getBasicLibraries(id, offset, limit, optArgs).then(getData);

@@ -17,8 +17,8 @@ angular.module('kifi')
         scope.orgs = [];
         var sortOpts = {
           ordering: 'most_recent_keeps_by_user',
-          direction: 'asc',
-          window_size: 14
+          direction: 'desc',
+          windowSize: 14
         };
 
         var mql = $window.matchMedia('(min-width: 480px)');
