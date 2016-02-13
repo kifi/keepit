@@ -29,7 +29,9 @@ case class LibraryInvite(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
     authToken: String = RandomStringUtils.randomAlphanumeric(16),
-    message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
+    message: Option[String] = None,
+    remindersSent: Int = 0,
+    lastReminderSentAt: Option[DateTime] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -38,7 +40,7 @@ case class LibraryInvite(
   def isCollaborator = access == LibraryAccess.READ_WRITE
   def isFollower = access == LibraryAccess.READ_ONLY
 
-  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
+  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state,remindersSent=$remindersSent,lastReminderSentAt=$lastReminderSentAt]"
 }
 
 object LibraryInvite extends PublicIdGenerator[LibraryInvite] {
@@ -57,8 +59,11 @@ object LibraryInvite extends PublicIdGenerator[LibraryInvite] {
     updatedAt: DateTime,
     state: State[LibraryInvite],
     authToken: String,
-    message: Option[String]) = {
-    LibraryInvite(id, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message)
+    message: Option[String],
+    remindersSent: Int,
+    lastReminderSentAt: Option[DateTime]) = {
+    LibraryInvite(id, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken,
+      message, remindersSent, lastReminderSentAt)
   }
 
   implicit def format = (
@@ -72,7 +77,9 @@ object LibraryInvite extends PublicIdGenerator[LibraryInvite] {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String] and
-    (__ \ 'message).format[Option[String]]
+    (__ \ 'message).format[Option[String]] and
+    (__ \ 'remindersSent).format[Int] and
+    (__ \ 'lastReminderSentAt).formatNullable(DateTimeJsonFormat)
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 }
 

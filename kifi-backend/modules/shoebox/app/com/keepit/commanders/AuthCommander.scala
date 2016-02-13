@@ -359,7 +359,7 @@ class AuthCommander @Inject() (
 
   def autoJoinLib(userId: Id[User], libId: Id[Library], authToken: Option[String]): Boolean = { // true for success, false for failure
     // Abstracting away errors and manually reporting. If someone needs the specific error, feel free to change the signature.
-    implicit val context = HeimdalContext(Map())
+    implicit val context = HeimdalContext.empty
     libraryMembershipCommander.joinLibrary(userId, libId, authToken).fold(
       { libFail =>
         airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")

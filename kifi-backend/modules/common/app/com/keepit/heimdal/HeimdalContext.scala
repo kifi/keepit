@@ -87,6 +87,8 @@ case class HeimdalContext(data: Map[String, ContextData]) {
 }
 
 object HeimdalContext {
+  def apply(data: (String, ContextData)*): HeimdalContext = HeimdalContext(Map[String, ContextData](data: _*))
+
   implicit val format = new Format[HeimdalContext] {
 
     def reads(json: JsValue): JsResult[HeimdalContext] = {
@@ -100,7 +102,7 @@ object HeimdalContext {
     def writes(context: HeimdalContext): JsValue = Json.toJson(context.data)
   }
 
-  val empty = HeimdalContext(Map.empty)
+  val empty = HeimdalContext(Map.empty[String, ContextData])
 }
 
 object HeimdalContextBuilder {

@@ -28,6 +28,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
+  def getAllByLastReminderSentAt(maxLastSentAt: DateTime, maxRemindersSent: Int, includeStates: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite]
 }
 
 @Singleton
@@ -51,7 +52,9 @@ class LibraryInviteRepoImpl @Inject() (
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
-    def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def remindersSent = column[Int]("reminders_sent", O.NotNull)
+    def lastReminderSentAt = column[Option[DateTime]]("last_reminder_sent_at", O.Nullable)
+    def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message, remindersSent, lastReminderSentAt) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   implicit val getLibraryInviteResult: GetResult[LibraryInvite] = GetResult { r: PositionedResult =>
@@ -66,7 +69,9 @@ class LibraryInviteRepoImpl @Inject() (
       updatedAt = r.<<[DateTime],
       state = r.<<[State[LibraryInvite]],
       authToken = r.<<[String],
-      message = r.<<[Option[String]]
+      message = r.<<[Option[String]],
+      remindersSent = r.<<[Int],
+      lastReminderSentAt = r.<<[Option[DateTime]]
     )
   }
 
@@ -195,4 +200,18 @@ class LibraryInviteRepoImpl @Inject() (
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
     getLastSentByLibraryIdAndUserIdCompiled(libraryId, userId, includeStates).firstOption
   }
+
+  def getAllByLastReminderSentAtCompiled(maxLastSentAt: DateTime, maxRemindersSent: Int, includeStates: Set[State[LibraryInvite]]) = Compiled {
+    rows.filter { row =>
+      (row.lastReminderSentAt.isDefined && row.lastReminderSentAt <= maxLastSentAt) ||
+        (row.lastReminderSentAt.isEmpty && row.createdAt <= maxLastSentAt) &&
+        row.state.inSet(includeStates) &&
+        row.remindersSent <= maxRemindersSent
+    }
+  }
+
+  def getAllByLastReminderSentAt(maxLastSentAt: DateTime, maxRemindersSent: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite] = {
+    getAllByLastReminderSentAtCompiled(maxLastSentAt, maxRemindersSent, includeStates).list
+  }
+
 }

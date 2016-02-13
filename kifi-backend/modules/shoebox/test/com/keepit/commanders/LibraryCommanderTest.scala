@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
@@ -17,6 +19,7 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryInviteFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
@@ -28,10 +31,11 @@ import com.keepit.social.BasicUser
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
+import org.joda.time.Duration.standardDays
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent._
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.util.Random
 
 class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -1518,6 +1522,59 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvitesAgain), Duration(10, "seconds"))
         eliza.inbox.size === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
+      }
+    }
+
+    "send library invitation email reminder" in {
+      "for a particular invite" in withDb(modules: _*) { implicit injector =>
+        val toEmail = EmailAddress("billy@thekid.com")
+        val invite = db.readWrite { implicit session =>
+          LibraryInviteFactory.invite().toEmail(toEmail).saved
+        }
+
+        val Some(reminderEmail) = Await.result(libraryInviteCommander.sendInviteReminder(invite), 5 seconds)
+
+        db.readOnlyMaster { implicit session =>
+          val Seq(updatedInvite) = libraryInviteRepo.all()
+          updatedInvite.id === invite.id
+          updatedInvite.lastReminderSentAt must beSome
+          updatedInvite.remindersSent === invite.remindersSent + 1
+
+          val Seq(email) = electronicMailRepo.all()
+          email === reminderEmail
+          email.fromName === Some("Kifi")
+          email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION_REMINDER)
+          email.to === Seq(toEmail)
+        }
+      }
+
+      "to emails/users of all old pending library invites" in withDb(modules: _*) { implicit injector =>
+        val idx = new AtomicInteger(0)
+        def nextEmail = EmailAddress(s"test+${idx.incrementAndGet()}@mail.com")
+        def daysAgo(n: Int) = fakeClock.now().minusDays(n)
+
+        val invite1 :: invite2 :: notSentInvites = db.readWrite { implicit session =>
+          Seq(
+            // these will get a reminder
+            LibraryInviteFactory.invite().toEmail(nextEmail).withCreatedAt(daysAgo(4)).saved,
+            LibraryInviteFactory.invite().toEmail(nextEmail).withLastReminderSentAt(daysAgo(3)).saved,
+            // these guys won't get a reminder; not old enough or in the wrong state
+            LibraryInviteFactory.invite().toEmail(nextEmail).withCreatedAt(daysAgo(2)).saved,
+            LibraryInviteFactory.invite().toEmail(nextEmail).withCreatedAt(daysAgo(4)).declined().saved,
+            LibraryInviteFactory.invite().toEmail(nextEmail).withCreatedAt(daysAgo(4)).inactive().saved,
+            LibraryInviteFactory.invite().toEmail(nextEmail).withCreatedAt(daysAgo(4)).accepted().saved
+          )
+        }
+
+        val remindersSent = Await.result(libraryInviteCommander.sendInviteReminders(standardDays(3), Int.MaxValue), 5 seconds)
+        remindersSent === 2
+
+        db.readOnlyMaster { implicit session =>
+          val emails = electronicMailRepo.all().sortBy(_.to.head.address)
+          emails.size === 2
+          emails(0).to === invite1.emailAddress.get :: Nil
+          emails(1).to === invite2.emailAddress.get :: Nil
+        }
       }
     }
 
