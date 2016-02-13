@@ -10,6 +10,7 @@ import play.api.libs.json._
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
   val Identify = SlackAuthScope("identify")
+  val Bot = SlackAuthScope("bot")
   val Commands = SlackAuthScope("commands")
   val ChannelsWrite = SlackAuthScope("channels:write")
   val ChannelsHistory = SlackAuthScope("channels:history")

@@ -113,7 +113,7 @@ class SlackCommanderImpl @Inject() (
     }
 
     futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes))
+      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ Some(SlackAuthScope.Bot).filter(_ => slackTeamIdOpt.safely.contains(KifiSlackApp.BrewstercorpTeamId)))
     }
   }
 }
