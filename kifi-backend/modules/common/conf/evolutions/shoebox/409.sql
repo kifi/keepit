@@ -65,6 +65,9 @@ CREATE TABLE library_to_slack_channel (
   status VARCHAR(32) NOT NULL,
   last_processed_at DATETIME DEFAULT NULL,
   last_processed_ktl BIGINT(20) DEFAULT NULL,
+  last_processed_msg BIGINT(20) DEFAULT NULL,
+  last_processed_keep_seq BIGINT(20) DEFAULT NULL,
+  last_processed_msg_seq BIGINT(20) DEFAULT NULL,
   last_processing_at DATETIME DEFAULT NULL,
   next_push_at DATETIME DEFAULT NULL,
 

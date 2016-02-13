@@ -48,6 +48,7 @@ class SlackCommanderImpl @Inject() (
   def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]] = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
+      slackTeamRepo.internSlackTeam(auth.teamId, auth.teamName, auth.botAuth)
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
       auth.incomingWebhook.map { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
@@ -62,7 +63,7 @@ class SlackCommanderImpl @Inject() (
   }
 
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
-    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName)
+    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName, botAuth = None)
     val (membership, isNewIdentityOwner) = slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = userIdOpt,
       slackUserId = identity.userId,
@@ -112,7 +113,7 @@ class SlackCommanderImpl @Inject() (
     }
 
     futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes))
+      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ Some(SlackAuthScope.Bot).filter(_ => slackTeamIdOpt.safely.contains(KifiSlackApp.BrewstercorpTeamId)))
     }
   }
 }

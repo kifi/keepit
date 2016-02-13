@@ -623,7 +623,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
       PersonalKeep(
         keep.externalId,
-        keep.userId.safeContains(userId),
+        keep.userId.safely.contains(userId),
         removable = true,
         keep.visibility,
         keep.libraryId.map(Library.publicId)

@@ -98,8 +98,8 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           }
           val newPlan1 = db.readWrite { implicit session =>
             val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            val newFeatureSet = oldPlan.defaultSettings.kvs.keySet -- Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
-            val newFeatureSettings = newFeatureSet.map { feature => feature -> oldPlan.defaultSettings.kvs(feature) }.toMap
+            val newFeatureSet = oldPlan.defaultSettings.selections.keySet -- Set(StaticFeature.CreateSlackIntegration, StaticFeature.EditOrganization)
+            val newFeatureSettings = newFeatureSet.map { feature => feature -> oldPlan.defaultSettings.selections(feature) }.toMap
             paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = OrganizationSettings(newFeatureSettings))) // mock db migration, remove features
           }
 
@@ -129,7 +129,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           val newConfig2 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
           newConfig2.settings === newPlan2.defaultSettings
 
-          newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
+          newConfig2.settings.selections.keySet.diff(newConfig1.settings.selections.keySet) === Set(StaticFeature.CreateSlackIntegration, StaticFeature.EditOrganization)
         }
       }
 
@@ -145,7 +145,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
 
           db.readWrite { implicit session =>
             val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            paidPlanRepo.save(oldPlan.copy(defaultSettings = oldPlan.defaultSettings.withFeatureSetTo((Feature.ViewMembers, FeatureSelection.DISABLED)))) // mock db migration, remove features
+            paidPlanRepo.save(oldPlan.copy(defaultSettings = oldPlan.defaultSettings.withFeatureSetTo((StaticFeature.ViewMembers, StaticFeatureSetting.DISABLED)))) // mock db migration, remove features
           }
 
           inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ADMIN))
@@ -157,7 +157,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           chunkedResultAsJson(response).value.map { jsv => (jsv \ "orgId").as[Id[Organization]] }.toSet === Set(org.id.get)
 
           val newConfig = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
-          newConfig.settings must equalTo(oldConfig.settings.withFeatureSetTo((Feature.ViewMembers, FeatureSelection.DISABLED)))
+          newConfig.settings must equalTo(oldConfig.settings.withFeatureSetTo((StaticFeature.ViewMembers, StaticFeatureSetting.DISABLED)))
         }
       }
     }

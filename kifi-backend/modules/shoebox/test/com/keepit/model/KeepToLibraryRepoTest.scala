@@ -1,11 +1,13 @@
 package com.keepit.model
 
 import com.google.inject.Injector
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
@@ -34,9 +36,9 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
     mainKeep +: nonprimaryKeeps
   }
 
-  def randomLibs(n: Int, owner: User)(implicit injector: Injector, session: RWSession): Seq[Library] = {
+  def randomLibs(n: Int, owner: User, orgId: Option[Id[Organization]] = None)(implicit injector: Injector, session: RWSession): Seq[Library] = {
     // Random libraries with random keeps at random times
-    val libs = LibraryFactory.libraries(10).map(_.published().withOwner(owner)).saved
+    val libs = LibraryFactory.libraries(10).map(_.published().withOwner(owner).withOrganizationIdOpt(orgId)).saved
     libs.foreach { lib =>
       val numKeeps = 20 + Random.nextInt(50)
       KeepFactory.keeps(numKeeps).map(_.withUser(owner).withLibrary(lib).withKeptAt(currentDateTime.minusDays(Random.nextInt(1000)))).saved
@@ -263,6 +265,20 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             expected === actual
           }
           1 === 1
+        }
+      }
+
+      "getSortedByKeepCountSince compiles" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit s =>
+            val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            val libs = randomLibs(20, user)
+            val orgLibs = randomLibs(20, user, Some(org.id.get))
+            val libIds = inject[KeepToLibraryRepo].getSortedByKeepCountSince(user.id.get, None, currentDateTime.minusDays(14), Offset(0), Limit(10))
+            val orgLibIds = inject[KeepToLibraryRepo].getSortedByKeepCountSince(user.id.get, Some(org.id.get), currentDateTime.minusDays(14), Offset(0), Limit(10))
+            1 === 1
+          }
         }
       }
     }

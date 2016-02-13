@@ -10,6 +10,7 @@ import play.api.libs.json._
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
   val Identify = SlackAuthScope("identify")
+  val Bot = SlackAuthScope("bot")
   val Commands = SlackAuthScope("commands")
   val ChannelsWrite = SlackAuthScope("channels:write")
   val ChannelsHistory = SlackAuthScope("channels:history")
@@ -74,19 +75,31 @@ case class SlackAuthorizationRequest(
   uniqueToken: String,
   redirectUri: Option[String])
 
+case class BotUserAuthorization(
+  userId: SlackUserId,
+  accessToken: SlackAccessToken)
+object BotUserAuthorization {
+  implicit val reads: Reads[BotUserAuthorization] = (
+    (__ \ 'bot_user_id).read[SlackUserId] and
+    (__ \ 'bot_access_token).read[SlackAccessToken]
+  )(BotUserAuthorization.apply _)
+}
+
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: SlackTeamName,
   teamId: SlackTeamId,
-  incomingWebhook: Option[SlackIncomingWebhook])
+  incomingWebhook: Option[SlackIncomingWebhook],
+  botAuth: Option[BotUserAuthorization])
 object SlackAuthorizationResponse {
   implicit val reads: Reads[SlackAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackAccessToken] and
     (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
     (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'team_id).read[SlackTeamId] and
-    (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook]
+    (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook] and
+    (__ \ 'bot).readNullable[BotUserAuthorization]
   )(SlackAuthorizationResponse.apply _)
 }
 

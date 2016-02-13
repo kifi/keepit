@@ -420,7 +420,7 @@ GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfile
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
 GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.UserProfileController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
-GET     /site/users/:id/basicLibraries   @com.keepit.controllers.website.LibraryController.getBasicLibrariesForUser(id: ExternalId[User], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int)
+GET     /site/users/:id/basicLibraries   @com.keepit.controllers.website.LibraryController.getLHRLibrariesForUser(id: ExternalId[User], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int, windowSize: Option[Int] ?= None)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 GET     /site/keepableLibraries     @com.keepit.controllers.website.LibraryController.getKeepableLibraries(includeOrgLibraries: Boolean ?= false)
@@ -492,7 +492,7 @@ GET     /site/user/networks         @com.keepit.controllers.website.UserControll
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
-GET     /site/user/leftHandRail     @com.keepit.controllers.website.UserProfileController.getLeftHandRail(numLibs: Int ?= 6, ordering: Option[String] ?= None, direction: Option[String] ?= None)
+GET     /site/user/leftHandRail     @com.keepit.controllers.website.UserProfileController.getLeftHandRail(numLibs: Int ?= 6, ordering: Option[String] ?= None, direction: Option[String] ?= None, windowSize: Option[Int] ?= None)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
@@ -547,7 +547,7 @@ POST          /site/organizations/:id/members/modify            @com.keepit.cont
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMember(id: PublicId[Organization])
 GET           /site/organizations/:id/members/suggest           @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
-GET           /site/organizations/:id/basicLibraries            @com.keepit.controllers.website.OrganizationController.getBasicLibrariesForOrg(id: PublicId[Organization], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int)
+GET           /site/organizations/:id/basicLibraries            @com.keepit.controllers.website.OrganizationController.getLHRLibrariesForOrg(id: PublicId[Organization], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int, windowSize: Option[Int] ?= None)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(id: PublicId[Organization])
 POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(id: PublicId[Organization])

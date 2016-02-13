@@ -1102,9 +1102,13 @@ api.port.on({
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
-        standardizeNotification(th);
-        updateIfJustRead(th);
-        notificationsById[th.thread] = th;
+        if (th) { 
+          standardizeNotification(th);
+          updateIfJustRead(th);
+          notificationsById[th.thread] = th;
+        } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
+          th = { thread: id };
+        }
         emitThreadInfoToTab(th, keep, tab);
       });
     }
@@ -1314,7 +1318,6 @@ api.port.on({
       if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
         appendUserResult(contacts, data.n, SUPPORT);
       }
-      //debugger;
       var results = contacts
         .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
         .slice(0, data.n)
@@ -1353,7 +1356,7 @@ api.port.on({
   },
   open_deep_link: function(link, _, tab) {
     var tabIdWithLink;
-    if (link.inThisTab || tab.nUri === link.nUri) {
+    if (link.inThisTab || tab.nUri === link.nUri || tab.url === link.nUri) {
       tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
       trackClick();
@@ -1789,7 +1792,8 @@ function awaitDeepLink(link, tabId, retrySec) {
     api.timers.clearTimeout(timeouts[tabId]);
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
-    if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
+    var linkUrl = link.url || link.nUri;
+    if (tab && (sameOrLikelyRedirected(linkUrl, tab.nUri) || sameOrLikelyRedirected(linkUrl, tab.url))) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);

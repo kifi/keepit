@@ -15,9 +15,15 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
+        var sortOpts = {
+          ordering: 'most_recent_keeps_by_user',
+          direction: 'desc',
+          windowSize: 14
+        };
 
         var mql = $window.matchMedia('(min-width: 480px)');
         $rootScope.leftHandNavIsOpen = mql.matches;
+        var isMobile = !mql.matches;
         mql.addListener(handleMatchMedia);
         scope.$on('$destroy', function () {
           mql.removeListener(handleMatchMedia);
@@ -29,7 +35,12 @@ angular.module('kifi')
               $rootScope.leftHandNavIsOpen = false;
             });
           }
+          isMobile = !mql.matches;
         }
+
+        var maybeClose = function() {
+            $rootScope.leftHandNavIsOpen = !isMobile;
+        };
 
 
         var appendPendingAndPotentialOrgs = function () {
@@ -50,13 +61,20 @@ angular.module('kifi')
           }
         };
 
-        var reloadData = function(me, hideReload) {
+        var initialLoadFailed = function () {
+          scope.showUserAndOrgContent = false;
+          scope.initialFetchFailed = true;
+        };
+
+        scope.reloadData = function(me, hideReload) {
           var futureMe = (me && $q.when(me)) || profileService.fetchMe();
           scope.showUserAndOrgContent = hideReload;
+          scope.initialFetchFailed = false;
           futureMe.then(function (me) {
             scope.me = me;
-            net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1).then(function(res) {
+            return net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
               var lhr = res.data.lhr;
+              scope.initialFetchFailed = false;
               scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
               lhr.userWithLibs.libs.splice(INITIAL_PAGE_SIZE);
               scope.libraries = lhr.userWithLibs.libs;
@@ -71,7 +89,7 @@ angular.module('kifi')
               appendPendingAndPotentialOrgs();
               scope.showUserAndOrgContent = true;
             });
-          });
+          })['catch'](initialLoadFailed);
         };
 
         // TODO: REMOVE THIS HACK
@@ -85,24 +103,25 @@ angular.module('kifi')
         scope.fetchLibraries = function (offset, limit) {
           scope.hasMoreUserLibaries = false;
           return userProfileActionService
-              .getBasicLibraries(scope.me.id, offset, limit + 1)
+              .getBasicLibraries(scope.me.id, offset, limit + 1, sortOpts)
               .then(function (data) {
-                scope.loaded = true;
-                return data;
-              }).then(function(data) {
                 scope.hasMoreUserLibaries = data.libs.length === limit + 1;
                 data.libs.splice(limit);
                 scope.libraries = (scope.libraries || []).concat(data.libs);
+              })['catch'](function () {
+                scope.hasMoreUserLibaries = true;
               });
         };
 
         scope.fetchOrgLibraries = function (org, offset, limit) {
           org.hasMoreLibraries = false;
-          return orgProfileService.getOrgLibraries(org.id, offset, limit + 1)
+          return orgProfileService.getOrgBasicLibraries(org.id, offset, limit + 1, sortOpts)
             .then(function (data) {
               org.hasMoreLibraries = data.libraries.length === limit + 1;
               data.libraries.splice(limit);
               org.libraries = (org.libraries || []).concat(data.libraries);
+            })['catch'](function () {
+              org.hasMoreLibraries = true;
             });
         };
 
@@ -243,7 +262,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action' : 'clickedCreateTeam'
           });
-
+          maybeClose();
           if (!profileService.prefs.hide_company_name) {
             profileService.savePrefs({ hide_company_name: true });
           }
@@ -257,6 +276,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action': 'learnMoreTeams'
           });
+          maybeClose();
 
           modalService.open({
             template: 'profile/learnMoreModal.tpl.html',
@@ -280,6 +300,7 @@ angular.module('kifi')
             'subType' : 'leftHandNav',
             'action' : 'clickedGoToMyProfile'
           });
+          maybeClose();
         };
 
         scope.onClickedMyLibrary = function(library) {
@@ -289,6 +310,7 @@ angular.module('kifi')
             'action' : 'clickedGoToMyProfile',
             'library': library.id
           });
+          maybeClose();
         };
 
 
@@ -299,6 +321,7 @@ angular.module('kifi')
             'action' : 'clickedGoToTeam',
             'team' : team.id
           });
+          maybeClose();
         };
 
         scope.onClickedTeamLibrary = function(team, library) {
@@ -309,12 +332,13 @@ angular.module('kifi')
             'team' : team.id,
             'library' : library.id
           });
+          maybeClose();
         };
 
-        reloadData(profileService.me);
+        scope.reloadData(profileService.me);
         [
           $rootScope.$on('refreshLeftHandNav', function() {
-            reloadData();
+            scope.reloadData();
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);

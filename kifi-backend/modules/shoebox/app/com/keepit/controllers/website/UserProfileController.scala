@@ -403,12 +403,12 @@ class UserProfileController @Inject() (
     }
   }
 
-  def getLeftHandRail(numLibs: Int, orderingOpt: Option[String], directionOpt: Option[String]) = UserAction { request =>
+  def getLeftHandRail(numLibs: Int, orderingOpt: Option[String], directionOpt: Option[String], windowSize: Option[Int]) = UserAction { request =>
     val arrangement = for {
       ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
       direction <- directionOpt.flatMap(SortDirection.fromStr)
     } yield LibraryQuery.Arrangement(ordering, direction)
-    val lhrResponse = userProfileCommander.getLeftHandRailResponse(request.userId, numLibs, arrangement)
+    val lhrResponse = userProfileCommander.getLeftHandRailResponse(request.userId, numLibs, arrangement, windowSize)
     Ok(Json.obj("lhr" -> lhrResponse))
   }
 }

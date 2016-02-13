@@ -8,13 +8,13 @@ class OrganizationSettingsTest extends Specification {
   "OrganizationSettings" should {
     "deserialize" in {
       "handle easy inputs" in {
-        val input = Json.obj(Feature.ViewMembers.value -> FeatureSelection.MEMBERS.value)
-        val expected = OrganizationSettings(Map(Feature.ViewMembers -> FeatureSelection.MEMBERS))
+        val input = Json.obj(StaticFeature.ViewMembers.value -> StaticFeatureSetting.MEMBERS.value)
+        val expected = OrganizationSettings(Map(StaticFeature.ViewMembers -> StaticFeatureSetting.MEMBERS))
         input.asOpt[OrganizationSettings] === Some(expected)
       }
       "handle broken inputs robustly" in {
-        val input = Json.obj(Feature.ViewMembers.value -> FeatureSelection.MEMBERS.value, "totally_garbage_feature" -> "disabled")
-        val expected = OrganizationSettings(Map(Feature.ViewMembers -> FeatureSelection.MEMBERS))
+        val input = Json.obj(StaticFeature.ViewMembers.value -> StaticFeatureSetting.MEMBERS.value, "totally_garbage_feature" -> "disabled")
+        val expected = OrganizationSettings(Map(StaticFeature.ViewMembers -> StaticFeatureSetting.MEMBERS))
         input.asOpt[OrganizationSettings] === Some(expected)
       }
     }

@@ -19,7 +19,7 @@ object ChunkedResponseHelper {
       }
     })
   }
-  def chunked[I](items: Seq[I])(process: I => String)(implicit exc: ScalaExecutionContext): Enumerator[String] = {
-    chunkedFuture(items)(x => Future.successful(process(x)))
+  def chunked[I](items: Seq[I])(process: I => String): Enumerator[String] = {
+    chunkedFuture(items)(x => Future.successful(process(x)))(ExecutionContext.immediate)
   }
 }

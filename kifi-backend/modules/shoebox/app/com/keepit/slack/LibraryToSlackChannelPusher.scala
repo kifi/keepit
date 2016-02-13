@@ -131,7 +131,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val addCommentOpt = {
-      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
+      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
       else None
     }
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
