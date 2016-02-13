@@ -160,7 +160,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
-          slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 2
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 4
           slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0 // TODO(ryan): write a test for the attachments-style
 
           // hella keeps => 1 msg, 1 line (a summary)
@@ -195,7 +195,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
           pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
-          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain(user.externalId.id)
 
           slackClient.sayInChannel(stm.slackUserId, stm.slackUsername, stm.slackTeamId, stm.token, ch)("I love sharing links like <http://www.google.com>")
           ingestFromSlackSurely()
