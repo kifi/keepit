@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.json.{ Json, JsNull }
+import play.api.libs.json.Json
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -98,4 +98,5 @@ class FakeSlackClientImpl extends SlackClient {
   })
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = ???
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
+  def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]] = ???
 }
