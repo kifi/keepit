@@ -1793,7 +1793,7 @@ function awaitDeepLink(link, tabId, retrySec) {
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     var linkUrl = link.url || link.nUri;
-    if (tab && (sameOrLikelyRedirected(linkUrl, tab.nUri) || sameOrLikelyRedirected(linkUrl, tab.url))) {
+    if (tab && ((tab.nUri && sameOrLikelyRedirected(linkUrl, tab.nUri)) || (tab.url && sameOrLikelyRedirected(linkUrl, tab.url)))) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);
