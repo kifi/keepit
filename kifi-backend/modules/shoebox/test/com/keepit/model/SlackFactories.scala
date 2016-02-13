@@ -53,13 +53,15 @@ object SlackTeamFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
       organizationId = None,
-      generalChannelId = None
+      generalChannelId = None,
+      botToken = None
     ))
   }
 
   case class PartialSlackTeam(team: SlackTeam) {
     def withName(newName: String) = this.copy(team = team.copy(slackTeamName = SlackTeamName(newName)))
     def withOrg(org: Organization) = this.copy(team = team.withOrganizationId(Some(org.id.get)))
+    def withBot(botToken: SlackAccessToken) = this.copy(team = team.withBotTokenIfDefined(Some(botToken)))
   }
 }
 
