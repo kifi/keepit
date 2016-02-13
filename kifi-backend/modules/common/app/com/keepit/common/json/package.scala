@@ -131,6 +131,7 @@ package object json {
 
   @inline private def canBeOmitted(value: JsValue): Boolean = value match {
     case JsNull | JsBoolean(false) | JsString("") | JsArray(Seq()) => true
+    case JsNumber(zero) if zero.isValidInt && zero.toInt == 0 => true
     case _ => false
   }
 
