@@ -52,12 +52,14 @@ class ShardedArticleIndexer(
     }
   }
 
+  private def shouldDelete(uri: IndexableUri): Boolean = ArticleIndexable.shouldDelete(uri) || indexShards.keys.forall(shard => !shard.contains(uri.id.get))
+
   @StatsdTimingAsync("ShardedArticleIndexer.fetchIndexables")
   private def fetchIndexables(fetchSize: Int): Future[Option[(Seq[ArticleIndexable], SequenceNumber[NormalizedURI])]] = {
     getIndexableUris(fetchSize).flatMap {
       case None => Future.successful(None)
-      case Some((uris, maxSeq)) => rover.getBestArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
-        val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get)) }
+      case Some((uris, maxSeq)) => rover.getBestArticlesByUris(uris.filterNot(shouldDelete).map(_.id.get).toSet).map { articlesByUriId =>
+        val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId.getOrElse(uri.id.get, Set.empty)) }
         Some((indexables, maxSeq))
       }
     }
