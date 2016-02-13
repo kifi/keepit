@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.logging.Logging
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.core._
 
 trait IndexDirectory extends Directory with BackedUpDirectory {
   def asFile(): Option[File]
@@ -32,7 +33,7 @@ class VolatileIndexDirectory extends RAMDirectory with IndexDirectory with Loggi
 case class IndexStoreInbox(dir: File) extends S3InboxDirectory
 
 class S3IndexStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val inbox: IndexStoreInbox) extends S3FileStore[ArchivedIndexDirectory] with IndexStore {
-  def idToKey(indexDirectory: ArchivedIndexDirectory): String = indexDirectory.getDirectory().getName + ".tar.gz"
+  def idToKey(indexDirectory: ArchivedIndexDirectory): String = { indexDirectory.getDirectory().getName + ".tar.gz" } tap { key => log.info(s"Store key for $indexDirectory: $key") }
 }
 
 class InMemoryIndexStoreImpl extends InMemoryFileStore[ArchivedIndexDirectory] with IndexStore
