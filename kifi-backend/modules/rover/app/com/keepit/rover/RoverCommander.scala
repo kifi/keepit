@@ -4,7 +4,6 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.performance.{StatsdTiming, StatsdTimingAsync}
 import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
@@ -12,7 +11,6 @@ import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolde
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
-import com.keepit.rover.rule.RoverHttpProxyCommander
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.rover.store.ContentSignatureCommander
 import com.keepit.common.time._
@@ -63,7 +61,6 @@ class RoverCommander @Inject() (
     )
   }
 
-  @StatsdTimingAsync("RoverCommander.getBestArticleSummaryByUris")
   def getBestArticleSummaryByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], RoverArticleSummary]] = {
     articleCommander.getBestArticleByUris[A](uriIds).imap { articleOptionByUriId =>
       articleOptionByUriId.collect {
@@ -73,7 +70,6 @@ class RoverCommander @Inject() (
     }
   }
 
-  @StatsdTiming("RoverCommander.getImagesByUris")
   def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], BasicImages] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
       BasicImages(imageInfos.map(BasicImage.fromBaseImage))
