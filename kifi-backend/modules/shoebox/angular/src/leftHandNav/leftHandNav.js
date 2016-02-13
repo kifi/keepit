@@ -72,7 +72,7 @@ angular.module('kifi')
           scope.initialFetchFailed = false;
           futureMe.then(function (me) {
             scope.me = me;
-            net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
+            return net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
               var lhr = res.data.lhr;
               scope.initialFetchFailed = false;
               scope.hasMoreUserLibaries = lhr.userWithLibs.libs.length === INITIAL_PAGE_SIZE + 1;
@@ -88,7 +88,7 @@ angular.module('kifi')
               scope.showCreateTeam = scope.orgs.length === 0;
               appendPendingAndPotentialOrgs();
               scope.showUserAndOrgContent = true;
-            })['catch'](initialLoadFailed);
+            });
           })['catch'](initialLoadFailed);
         };
 
