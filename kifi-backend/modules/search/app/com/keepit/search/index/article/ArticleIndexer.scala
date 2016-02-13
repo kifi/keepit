@@ -1,7 +1,7 @@
 package com.keepit.search.index.article
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.performance.StatsdTiming
+import com.keepit.common.performance.{StatsdTimingAsync, StatsdTiming}
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -41,9 +41,9 @@ class ShardedArticleIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  val fetchSize = 50
+  val fetchSize = 200
 
-  @StatsdTiming("ShardedArticleIndexer.asyncUpdate")
+  @StatsdTimingAsync("ShardedArticleIndexer.asyncUpdate")
   def asyncUpdate(): Future[Option[Int]] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     fetchIndexables(fetchSize).flatMap {
@@ -52,7 +52,7 @@ class ShardedArticleIndexer(
     }
   }
 
-  @StatsdTiming("ShardedArticleIndexer.fetchIndexables")
+  @StatsdTimingAsync("ShardedArticleIndexer.fetchIndexables")
   private def fetchIndexables(fetchSize: Int): Future[Option[(Seq[ArticleIndexable], SequenceNumber[NormalizedURI])]] = {
     getIndexableUris(fetchSize).flatMap {
       case None => Future.successful(None)
@@ -63,7 +63,7 @@ class ShardedArticleIndexer(
     }
   }
 
-  @StatsdTiming("ShardedArticleIndexer.getIndexableUris")
+  @StatsdTimingAsync("ShardedArticleIndexer.getIndexableUris")
   private def getIndexableUris(fetchSize: Int): Future[Option[(Seq[IndexableUri], SequenceNumber[NormalizedURI])]] = {
     if (sequenceNumber >= catchUpSeqNumber) {
       shoebox.getIndexableUris(sequenceNumber, fetchSize).map {
@@ -80,7 +80,7 @@ class ShardedArticleIndexer(
   }
 
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
-  @StatsdTiming("ShardedArticleIndexer.processIndexables")
+  @StatsdTimingAsync("ShardedArticleIndexer.processIndexables")
   private def processIndexables(indexables: Seq[ArticleIndexable], maxSeq: SequenceNumber[NormalizedURI]): Future[Int] = updateLock.synchronized {
     val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
     Future.sequence(futureCounts).map { counts =>
