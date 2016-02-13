@@ -125,12 +125,10 @@ class NotificationDeliveryCommander @Inject() (
           case (userId, permanentNotification) =>
             sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
         }
-        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.pubId, message.createdAt, "", message.source, message.auxData, "", "", None, participants)
-        messageWithBasicUser.map { augmentedMessage =>
-          thread.participants.allUsers.par.foreach { userId =>
-            sendToUser(userId, Json.arr("message", thread.pubKeepId, augmentedMessage))
-            sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
-          }
+        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message, thread, basicUsers)
+        thread.participants.allUsers.par.foreach { userId =>
+          sendToUser(userId, Json.arr("message", thread.pubKeepId, messageWithBasicUser))
+          sendToUser(userId, Json.arr("thread_participants", thread.pubKeepId, participants))
         }
         emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
       }

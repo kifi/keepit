@@ -3,8 +3,11 @@ package com.keepit.eliza.model
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.json._
+import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.notify.model.Recipient
+import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
@@ -101,6 +104,96 @@ object MessageSource {
   }
 }
 
+sealed abstract class SystemMessageData(val kind: String)
+object SystemMessageData {
+  val internalFormat = new Format[SystemMessageData] {
+    def reads(js: JsValue): JsResult[SystemMessageData] = {
+      js match {
+        case JsArray(Seq(JsString(AddParticipants.kind), _*)) => AddParticipants.internalFormat.reads(js)
+        case JsArray(Seq(JsString(StartWithEmails.kind), _*)) => StartWithEmails.internalFormat.reads(js)
+        case _ => JsError("can't parse SystemMessageData")
+      }
+    }
+    def writes(o: SystemMessageData): JsValue = {
+      o match {
+        case a: AddParticipants => AddParticipants.internalFormat.writes(a)
+        case s: StartWithEmails => StartWithEmails.internalFormat.writes(s)
+      }
+    }
+  }
+
+  def generateMessageText(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): String = data match {
+    case AddParticipants(addedById, addedUserIds, addedNonUsers) => generateParticipantsAddedText(AddParticipants.kind, addedById, addedUserIds, addedNonUsers, basicUserById)
+    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => generateParticipantsAddedText(StartWithEmails.kind, addedById, addedUserIds, addedNonUsers, basicUserById)
+    case _ => "" // maybe want to static airbrake here
+  }
+
+  private def generateParticipantsAddedText(kind: String, addedById: Id[User], addedUserIds: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant], basicUserById: Map[Id[User], BasicUser]): String = {
+    val addedBy = basicUserById.get(addedById)
+    val addedUsers = addedUserIds.flatMap(basicUserById.get)
+    val addedUsersString = (addedUsers.map(_.fullName) ++ addedNonUsers.map(_.shortName)).toList match {
+      case first :: Nil => first
+      case first :: second :: Nil => first + " and " + second
+      case many => many.take(many.length - 1).mkString(", ") + ", and" + many.last
+    }
+    val actionText = if (kind == StartWithEmails.kind) "started a discussion with" else "added"
+    addedBy.map(_.fullName) match {
+      case Some(name) => s"$name $actionText $addedUsersString"
+      case None => s"$addedUsersString joined this discussion."
+    }
+  }
+
+  def publish(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): JsArray = data match {
+    case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get), addedNonUsers.map(NonUserParticipant.toBasicNonUser))
+    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get), addedNonUsers.map(NonUserParticipant.toBasicNonUser))
+    case _ => Json.arr()
+  }
+
+  case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(AddParticipants.kind)
+  object AddParticipants {
+    val kind: String = "add_participants"
+    val internalFormat = new Format[AddParticipants] {
+      def writes(o: AddParticipants): JsArray = Json.arr(kind, o.addedBy.id.toString, o.addedUsers.map(Json.toJson(_)) ++ o.addedNonUsers.map(Json.toJson(_)))
+
+      def reads(js: JsValue): JsResult[AddParticipants] = {
+        js.asOpt[JsArray].map(_.value) match {
+          case Some(Seq(JsString(AddParticipants.kind), JsString(addedBy), jsAdded: JsArray)) =>
+            implicit val eitherReads = EitherFormat(Id.format[User], NonUserParticipant.format)
+            jsAdded.asOpt[Seq[Either[Id[User], NonUserParticipant]]] match {
+              case None => JsError("can't parse AddParticipants.added")
+              case Some(added) =>
+                val (users, nonUsers) = (added.collect { case user if user.isLeft => user.left.get }, added.collect { case nonUser if nonUser.isRight => nonUser.right.get })
+                JsSuccess(AddParticipants(Id[User](addedBy.toLong), users, nonUsers))
+            }
+          case _ => JsError("can't parse AddParticipants")
+        }
+      }
+    }
+  }
+
+  case class StartWithEmails(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(StartWithEmails.kind)
+  object StartWithEmails {
+    val kind: String = "start_with_emails"
+    val internalFormat = new Format[StartWithEmails] {
+      def writes(o: StartWithEmails): JsArray = Json.arr(kind, o.addedBy.id.toString, o.addedUsers.map(Json.toJson(_)) ++ o.addedNonUsers.map(Json.toJson(_)))
+
+      def reads(js: JsValue): JsResult[StartWithEmails] = {
+        js.asOpt[JsArray].map(_.value) match {
+          case Some(Seq(JsString(StartWithEmails.kind), JsString(addedBy), jsAdded: JsArray)) =>
+            implicit val eitherReads = EitherFormat(Id.format[User], NonUserParticipant.format)
+            jsAdded.asOpt[Seq[Either[Id[User], NonUserParticipant]]] match {
+              case None => JsError("can't parse StartWithEmails.added")
+              case Some(added) =>
+                val (users, nonUsers) = (added.collect { case user if user.isLeft => user.left.get }, added.collect { case nonUser if nonUser.isRight => nonUser.right.get })
+                JsSuccess(StartWithEmails(Id[User](addedBy.toLong), users, nonUsers))
+            }
+          case _ => JsError("can't parse StartWithEmails")
+        }
+      }
+    }
+  }
+}
+
 case class ElizaMessage(
   id: Option[Id[ElizaMessage]] = None,
   createdAt: DateTime = currentDateTime,
@@ -111,7 +204,7 @@ case class ElizaMessage(
   from: MessageSender,
   messageText: String,
   source: Option[MessageSource],
-  auxData: Option[JsArray] = None,
+  auxData: Option[SystemMessageData] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
     extends Model[ElizaMessage] with ModelWithState[ElizaMessage] with ModelWithSeqNumber[ElizaMessage] {
@@ -138,7 +231,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'from).format[MessageSender] and
     (__ \ 'messageText).format[String] and
     (__ \ 'source).formatNullable[MessageSource] and
-    (__ \ 'auxData).formatNullable[JsArray] and
+    (__ \ 'auxData).formatNullable(SystemMessageData.internalFormat) and
     (__ \ 'sentOnUrl).formatNullable[String] and
     (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
   )(ElizaMessage.apply, unlift(ElizaMessage.unapply))
@@ -153,7 +246,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     userSender: Option[Id[User]],
     messageText: String,
     source: Option[MessageSource],
-    auxData: Option[JsArray],
+    auxData: Option[SystemMessageData],
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]],
     nonUserSender: Option[JsValue]): ElizaMessage = {
@@ -173,7 +266,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], Option[Id[User]], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], Option[Id[User]], String, Option[MessageSource], Option[SystemMessageData], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,

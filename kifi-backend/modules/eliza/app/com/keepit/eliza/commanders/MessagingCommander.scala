@@ -17,6 +17,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.discussion.{ DiscussionKeep, Message }
 import com.keepit.eliza.model._
+import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -240,9 +241,7 @@ class MessagingCommander @Inject() (
             from = MessageSender.System,
             messageText = "",
             source = source,
-            auxData = Some(Json.arr("start_with_emails", from.id.toString,
-              userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
-            )),
+            auxData = Some(StartWithEmails(from, userRecipients, nonUserRecipients)),
             sentOnUrl = None,
             sentOnUriId = None
           ))
@@ -436,9 +435,7 @@ class MessagingCommander @Inject() (
             from = MessageSender.System,
             messageText = "",
             source = None,
-            auxData = Some(Json.arr("add_participants", adderUserId.id.toString,
-              actuallyNewUsers.map(u => Json.toJson(u.id)) ++ actuallyNewNonUsers.map(Json.toJson(_))
-            )),
+            auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
             sentOnUrl = None,
             sentOnUriId = None
           ))

@@ -134,6 +134,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   messageThreadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
   messageRepo: MessageRepo,
+  messageFetchingCommander: MessageFetchingCommander,
   shoebox: ShoeboxServiceClient,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
@@ -150,14 +151,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         messageThreadRepo.getByKeepIds(keepIds)
       }
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
-        keepIds.map { keepId =>
-          keepId -> messageRepo.getLatest(keepId, filterNonUser = true).orElse {
-            // if keep has no recent user message, but a message thread, it may be due to adding participants
-            messageRepo.getLatest(keepId, filterNonUser = false).filter { message =>
-              message.auxData.exists(data => data.value.headOption.exists(_.asOpt[String].contains("add_participants")))
-            }
-          }
-        }.toMap
+        keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
       }
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
@@ -191,23 +185,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
 
-        def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
-        val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-        val messageWithBasicUser = MessageWithBasicUser(
-          id = message.pubId,
-          createdAt = message.createdAt,
-          text = message.messageText,
-          source = message.source,
-          auxData = None,
-          url = message.sentOnUrl.getOrElse(thread.url),
-          nUrl = thread.nUrl,
-          message.from match {
-            case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
-            case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-            case _ => None
-          },
-          thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++ basicNonUserParticipants.toSeq
-        )
+        val messageWithBasicUser = messageFetchingCommander.getMessageWithBasicUser(message, thread, basicUserByIdMap)
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
