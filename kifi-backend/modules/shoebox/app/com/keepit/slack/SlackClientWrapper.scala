@@ -8,10 +8,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ Debouncing, Ord }
 import com.keepit.slack.models._
-import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try, Failure }
+import scala.concurrent.duration._
 
 sealed abstract class SlackChannelMagnet
 object SlackChannelMagnet {
@@ -221,7 +221,7 @@ class SlackClientWrapperImpl @Inject() (
         slackTeamMembershipRepo.deactivate(stm)
       }
     }
-    case Failure(otherFail) => debouncer.debounce("after-token", Period.seconds(5)) { airbrake.notify(otherFail) }
+    case Failure(otherFail) => debouncer.debounce("after-token", 5 seconds) { airbrake.notify(otherFail) }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
