@@ -1,8 +1,11 @@
 package com.keepit.model
 
+import com.keepit.common.db.Id
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
+import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json._
 
 sealed trait Feature {
@@ -11,7 +14,7 @@ sealed trait Feature {
   def settingReads: Reads[FeatureSetting]
 }
 object Feature {
-  val all: Set[Feature] = StaticFeature.ALL.toSet
+  val all: Set[Feature] = StaticFeature.ALL.toSet ++ ClassFeature.ALL.toSet
 
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
@@ -208,18 +211,33 @@ object StaticFeature extends Enumerator[StaticFeature] {
   }
 }
 
-case class TextFeatureSetting(val value: String) extends FeatureSetting
-sealed trait TextFeature extends Feature {
+sealed trait ClassFeatureSetting extends FeatureSetting
+sealed trait ClassFeature extends Feature {
+  type SettingType <: ClassFeatureSetting
   val value: String
   val editableWith: OrganizationPermission
-  protected def parse(x: String): Option[TextFeatureSetting]
+  protected def parse(x: JsValue): Option[SettingType]
 
   def settingReads: Reads[FeatureSetting] = Reads { j =>
-    j.validate[String].flatMap { r =>
-      parse(r) match {
-        case Some(valid) => JsSuccess(valid)
-        case None => JsError("invalid_setting_value")
-      }
+    parse(j) match {
+      case Some(valid) => JsSuccess(valid)
+      case None => JsError("invalid_setting_value")
     }
+  }
+}
+
+object ClassFeature extends Enumerator[ClassFeature] {
+
+  val ALL: Seq[ClassFeature] = _all
+
+  @json case class BlacklistEntry(userId: Id[User], createdAt: DateTime, path: String)
+  @json case class Blacklist(entries: Seq[BlacklistEntry]) extends ClassFeatureSetting {
+    def value = Json.toJson(entries).toString
+  }
+  case object SlackIngestionDomainBlacklist extends ClassFeature {
+    type SettingType = Blacklist
+    val value = "slack_ingestion_domain_blacklist"
+    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
+    def parse(x: JsValue) = Json.fromJson[Blacklist](x).asOpt
   }
 }
