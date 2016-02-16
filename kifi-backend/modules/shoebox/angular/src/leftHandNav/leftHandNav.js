@@ -206,14 +206,20 @@ angular.module('kifi')
         }
 
         // Code for showing potential company name and create team dialogs
+        var futureMe = (profileService.me && $q.when(profileService.me)) || profileService.fetchMe();
         var companyNameP;
         if (Object.keys(profileService.prefs).length === 0) {
-          companyNameP = profileService.fetchPrefs().then(function (prefs) {
+          companyNameP = futureMe.then(function () {
+            return profileService.fetchPrefs();
+          }).then(function (prefs) {
             return prefs.company_name;
           });
         } else {
-          companyNameP = $q.when(profileService.prefs.company_name);
+          companyNameP = futureMe.then(function () {
+            return profileService.prefs.company_name;
+          });
         }
+
         companyNameP.then(function (companyName) {
           if (profileService.prefs.hide_company_name) {
             scope.companyName = null;
@@ -224,7 +230,7 @@ angular.module('kifi')
               potentialName = emails && emails[0] && getEmailDomain(emails[0].address);
             }
             if (potentialName) {
-              if (!orgNameExists(potentialName) && scope.organizations.length === 0) {
+              if (!orgNameExists(potentialName) && scope.orgs.length === 0) {
                 if (potentialName.length > 28) {
                   scope.companyName = potentialName.substr(0, 26) + '…';
                 } else {

@@ -13,7 +13,7 @@ angular.module('kifi')
         var me = profileService.me;
 
         scope.me = me;
-        scope.organizations = me.orgs;
+        scope.organizations = me.orgs || [];
 
         if (me.pendingOrgs) {
           me.pendingOrgs.forEach(function (o) {
