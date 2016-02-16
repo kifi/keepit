@@ -187,9 +187,9 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs: Int, syncEvery
 
   private[this] val rnd = new Random
 
-  private[this] var inserts = new AtomicLong(0L)
-  private[this] var syncs = new AtomicLong(0L)
-  private[this] var dirtyChunks = new AtomicReference[List[IntBufferWrapper]](Nil)
+  private[this] val inserts = new AtomicLong(0L)
+  private[this] val syncs = new AtomicLong(0L)
+  private[this] val dirtyChunks = new AtomicReference[List[IntBufferWrapper]](Nil)
 
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
@@ -262,14 +262,6 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs: Int, syncEvery
         chunks = dirtyChunks.get
       }
     }
-  }
-
-  protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
-    getValueHashes(key, buffer.getChunk(key))
-  }
-
-  protected def getValueHashesFuture(key: Long): Future[(Array[Int], Array[Int])] = {
-    buffer.getChunkFuture(key).map { bufferChunk => getValueHashes(key, bufferChunk) }
   }
 
   protected def getValueHashes(key: Long, bufferChunk: IntBufferWrapper): (Array[Int], Array[Int]) = {
