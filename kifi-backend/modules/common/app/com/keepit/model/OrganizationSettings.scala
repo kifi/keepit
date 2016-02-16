@@ -14,7 +14,7 @@ sealed trait Feature {
   def settingReads: Reads[FeatureSetting]
 }
 object Feature {
-  val all: Set[Feature] = StaticFeature.ALL.toSet
+  val all: Set[Feature] = StaticFeature.ALL.toSet ++ ClassFeature.ALL.toSet
 
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
@@ -30,7 +30,7 @@ object Feature {
 
 }
 sealed trait FeatureSetting {
-  def value: String
+  def dump: JsValue
 }
 
 case class OrganizationSettings(selections: Map[Feature, FeatureSetting]) {
@@ -60,7 +60,7 @@ object OrganizationSettings {
   private val featureMapReads: Reads[Map[Feature, FeatureSetting]] = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting](Feature.reads, _.settingReads)
   private val featuresFormat: Format[OrganizationSettings] = Format(
     Reads { jsv => jsv.validate[Map[Feature, FeatureSetting]](featureMapReads).map(m => OrganizationSettings(m.map(c => c._1 -> c._2))) },
-    Writes { os => Json.toJson(os.selections.map { case (f, s) => f.value -> s.value }) }
+    Writes { os => Json.toJson(os.selections.map { case (f, s) => f.value -> s.dump }) }
   )
 
   val dbFormat = featuresFormat
@@ -71,7 +71,7 @@ case class OrganizationSettingsWithEditability(settings: OrganizationSettings, e
 object OrganizationSettingsWithEditability {
   implicit val writes: Writes[OrganizationSettingsWithEditability] = Writes { orgSWE =>
     JsObject(orgSWE.settings.selections.map {
-      case (feature, setting) => feature.value -> Json.obj("setting" -> setting.value, "editable" -> orgSWE.editableFeatures.contains(feature))
+      case (feature, setting) => feature.value -> Json.obj("setting" -> setting.dump, "editable" -> orgSWE.editableFeatures.contains(feature))
     }.toSeq)
   }
 }
@@ -99,7 +99,9 @@ sealed trait FeatureWithPermissions {
   }
 }
 
-sealed abstract class StaticFeatureSetting(val value: String) extends FeatureSetting
+sealed abstract class StaticFeatureSetting(val value: String) extends FeatureSetting {
+  def dump = JsString(value)
+}
 object StaticFeatureSetting {
   case object DISABLED extends StaticFeatureSetting("disabled")
   case object NONMEMBERS extends StaticFeatureSetting("nonmembers")
@@ -221,7 +223,8 @@ sealed trait ClassFeature extends Feature {
   def settingReads: Reads[FeatureSetting] = Reads { j =>
     parse(j) match {
       case Some(valid) => JsSuccess(valid)
-      case None => JsError("invalid_setting_value")
+      case None =>
+        JsError("invalid_setting_value")
     }
   }
 }
@@ -232,7 +235,7 @@ object ClassFeature extends Enumerator[ClassFeature] {
 
   @json case class BlacklistEntry(userId: Id[User], createdAt: DateTime, path: String)
   @json case class Blacklist(entries: Seq[BlacklistEntry]) extends ClassFeatureSetting {
-    def value = Json.toJson(entries).toString
+    def dump = Json.toJson(entries)
   }
   case object SlackIngestionDomainBlacklist extends ClassFeature {
     type SettingType = Blacklist
