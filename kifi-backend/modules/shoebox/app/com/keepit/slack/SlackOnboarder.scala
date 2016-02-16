@@ -15,10 +15,10 @@ import com.keepit.model._
 import com.keepit.slack.SlackOnboarder.TeamOnboardingAgent
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
+import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
@@ -75,7 +75,7 @@ class SlackOnboarderImpl @Inject() (
       generateOnboardingMessageForIntegration(integ)
     }.flatMap { welcomeMsg =>
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-      debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", Period.minutes(10)) {
+      debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
         slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
       }

@@ -11,10 +11,11 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.Debouncing
 import com.keepit.model._
-import org.joda.time.Period
+import org.joda.time.{ Period }
 import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.duration._
 import scala.util.Try
 
 @Singleton
@@ -98,13 +99,13 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        debouncer.debounce(ktu.userId.id.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
+        debouncer.debounce(ktu.userId.id.toString, 1 minute) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        debouncer.debounce(ktl.libraryId.toString, Period.minutes(1)) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
+        debouncer.debounce(ktl.libraryId.toString, 1 minute) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
         ktlCommander.deactivate(ktl)
       }
     }
