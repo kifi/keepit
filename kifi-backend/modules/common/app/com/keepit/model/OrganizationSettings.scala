@@ -11,7 +11,7 @@ sealed trait Feature {
   def settingReads: Reads[FeatureSetting]
 }
 object Feature {
-  val all: Set[Feature] = StaticFeature.ALL.toSet
+  val all: Set[Feature] = StaticFeature.ALL.toSet ++ TextFeature.ALL.toSet
 
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
@@ -221,5 +221,17 @@ sealed trait TextFeature extends Feature {
         case None => JsError("invalid_setting_value")
       }
     }
+  }
+}
+
+object TextFeature extends Enumerator[TextFeature] {
+
+  val ALL: Seq[TextFeature] = _all
+
+  case object SlackIngestionDomainBlacklist extends TextFeature {
+    val value = "slack_ingestion_domain_blacklist"
+    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
+    def parse(x: String) = // See SlackIngestingBlacklist.parseBlacklist for how this is parsed into paths
+      Some(TextFeatureSetting(x))
   }
 }
