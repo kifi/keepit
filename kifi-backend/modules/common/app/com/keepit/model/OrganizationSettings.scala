@@ -14,7 +14,7 @@ sealed trait Feature {
   def settingReads: Reads[FeatureSetting]
 }
 object Feature {
-  val all: Set[Feature] = StaticFeature.ALL.toSet ++ ClassFeature.ALL.toSet
+  val all: Set[Feature] = StaticFeature.ALL.toSet
 
   def get(str: String): Option[Feature] = all.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
