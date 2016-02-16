@@ -1,16 +1,12 @@
 package com.keepit.slack
 
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.time.FakeClockModule
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
 class SlackIngestingBlacklistTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
-  val blacklist = new SlackIngestingBlacklist()
+  val blacklist = SlackIngestingBlacklist
 
   "SlackIngestingBlacklist" should {
     "parse raw blacklist strings" in {

@@ -1,11 +1,9 @@
 package com.keepit.slack
 
-import com.google.inject.Inject
-
-class SlackIngestingBlacklist @Inject() () {
+object SlackIngestingBlacklist {
 
   def parseBlacklist(blacklistStr: String): Seq[String] = {
-    blacklistStr.split(",")
+    blacklistStr.split(',')
       .filter(_.length >= 4) // too short
       .filter(_.count(_ == '*') <= 3) // too many wildcards
       .filter(_.length < 50) // too long
