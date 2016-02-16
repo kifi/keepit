@@ -16,9 +16,8 @@ import com.keepit.model.StaticFeature.{ SlackNotifications, SlackIngestionReacti
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
-import com.keepit.slack.models.SlackTeamRepo
+import com.keepit.slack.models.{ LibraryToSlackChannelRepo, LibraryToSlackChannel, SlackTeamRepo, SlackChannelToLibraryRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.slack.models.SlackChannelToLibraryRepo
 import play.api.Play
 import scala.concurrent.duration._
 
@@ -45,7 +44,6 @@ class OrganizationCommanderImpl @Inject() (
   userRepo: UserRepo,
   paidPlanRepo: PaidPlanRepo,
   libraryRepo: LibraryRepo,
-  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
   organizationInfoCommander: OrganizationInfoCommander,
   planManagementCommander: PlanManagementCommander,
@@ -56,6 +54,8 @@ class OrganizationCommanderImpl @Inject() (
   creditRewardCommander: CreditRewardCommander,
   organizationAnalytics: OrganizationAnalytics,
   slackTeamRepo: SlackTeamRepo,
+  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+  libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
@@ -218,6 +218,8 @@ class OrganizationCommanderImpl @Inject() (
 
           slackTeamRepo.getByOrganizationId(org.id.get).foreach { slackTeam =>
             slackTeamRepo.save(slackTeam.withOrganizationId(None))
+            slackChannelToLibraryRepo.getBySlackTeam(slackTeam.slackTeamId).foreach(slackChannelToLibraryRepo.deactivate(_))
+            libraryToSlackChannelRepo.getBySlackTeam(slackTeam.slackTeamId).foreach(libraryToSlackChannelRepo.deactivate(_))
           }
 
           orgRepo.save(org.sanitizeForDelete)
@@ -229,8 +231,6 @@ class OrganizationCommanderImpl @Inject() (
 
           val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
           val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED).map(_.id.get)
-
-          libsToReturn.foreach(slackChannelToLibraryRepo.getActiveByLibrary(_).foreach(slackChannelToLibraryRepo.deactivate))
 
           (libsToReturn, libsToDelete)
         }

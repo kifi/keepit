@@ -71,6 +71,7 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): LibraryToSlackChannel
 
   def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[LibraryToSlackChannel]
+  def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[LibraryToSlackChannel]
 
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 
@@ -198,6 +199,10 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   }
   def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[LibraryToSlackChannel] = {
     activeRows.filter(row => row.organizationId === orgId).list
+  }
+
+  def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[LibraryToSlackChannel] = {
+    activeRows.filter(row => row.slackTeamId === teamId).list
   }
 
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): LibraryToSlackChannel = {
