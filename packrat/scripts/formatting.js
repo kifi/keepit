@@ -147,22 +147,40 @@ var formatKifiSelRangeText = (function () {
 var formatKifiSelRangeTextAsHtml = (function () {
   'use strict';
   var replaceRe = /([\u001e\u001f])/g;
-  function replace(replacements, ch) {
-    return replacements[ch];
+  var newlineRe = /\n/g;
+
+  function getPart(content, class1, class2) {
+    return {
+      content: content,
+      class1: class1,
+      class2: class2
+    };
   }
+
+  function pushLine(parts, class1, class2, c) {
+    parts.push(getPart(c, class1, class2));
+  }
+
   return function (selector, class1, class2) {
-    var pp = '<div class="' + class1 + ' ' + class2 + '">';
-    var p = '</div><div class="' + class1 + '">';
-    var parts = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
-    var html = [pp, Mustache.escape(parts[0]).replace(/\n/g, p)];
-    for (var i = 1; i < parts.length; i += 2) {
-      if (parts[i] === '\u001e') {
-        html.push('</div>', pp);
+    var lookHereTextItems = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
+    var parts = [ getPart(lookHereTextItems[0], class1, class2) ];
+    var lines;
+    var isPP;
+    var isP;
+
+    for (var i = 1; i < lookHereTextItems.length; i += 2) {
+      lines = lookHereTextItems[i + 1] && lookHereTextItems[i + 1].split(newlineRe);
+      isPP = (lookHereTextItems[i] === '\u001e');
+      isP = (lines.length > 1);
+
+      if (!isP && !isPP) {
+        parts[parts.length - 1].content += lines[0];
+      } else {
+        lines.forEach(pushLine.bind(null, parts, class1, isPP && class2));
       }
-      html.push(Mustache.escape(parts[i+1]).replace(/\n/g, p));
     }
-    html.push('</div>');
-    return html.join('');
+
+    return parts;
   };
 }());
 
