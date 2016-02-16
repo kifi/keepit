@@ -153,8 +153,8 @@ class KeepToLibraryRepoImpl @Inject() (
       case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active'"""
     }
     val idAndCount = orgIdOpt match {
-      case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""
-      case Some(orgId) => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where added_by = $userId and organization_id = $orgId and added_at >= '$since' group by library_id"""
+      case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""
+      case Some(orgId) => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id = $orgId and added_at >= '$since' group by library_id"""
     }
 
     sql"""
