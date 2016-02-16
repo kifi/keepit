@@ -209,18 +209,22 @@ angular.module('kifi')
         var futureMe = (profileService.me && $q.when(profileService.me)) || profileService.fetchMe();
         var companyNameP;
         if (Object.keys(profileService.prefs).length === 0) {
-          companyNameP = futureMe.then(function () {
-            return profileService.fetchPrefs();
-          }).then(function (prefs) {
+          companyNameP = profileService.fetchPrefs().then(function (prefs) {
             return prefs.company_name;
           });
         } else {
-          companyNameP = futureMe.then(function () {
-            return profileService.prefs.company_name;
-          });
+          companyNameP = $q.when(profileService.prefs.company_name);
         }
 
-        companyNameP.then(function (companyName) {
+        $q.all([
+          futureMe,
+          companyNameP
+        ])
+        .then(function (results) {
+          var me = results[0];
+          var companyName = results[1];
+          scope.me = me;
+
           if (profileService.prefs.hide_company_name) {
             scope.companyName = null;
           } else {
