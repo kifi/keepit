@@ -49,7 +49,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().toSet
             keeps.forall(id => shard.contains(Id[NormalizedURI](id))) === true
 
-            bookmarks.filter(_.userId.safeContains(userId)).foreach { bookmark =>
+            bookmarks.filter(_.userId.safely.contains(userId)).foreach { bookmark =>
               if (shard.contains(bookmark.uriId)) {
                 keeps.contains(bookmark.uriId.id) === true
                 keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, bookmark.id.get.id)(KeepRecord.fromByteArray) must beSome
@@ -59,7 +59,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             }
           }
 
-          val keeps = bookmarks.filter(_.userId.safeContains(userId)).map(_.uriId.id).toSet
+          val keeps = bookmarks.filter(_.userId.safely.contains(userId)).map(_.uriId.id).toSet
           val shardedKeeps = activeShards.local.map { shard =>
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
             keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.id.toString), KeepFields.uriIdField).toArray().toSet
@@ -84,7 +84,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
-        val originalBookmark = bookmarks.find(_.userId.safeContains(userId)).get
+        val originalBookmark = bookmarks.find(_.userId.safely.contains(userId)).get
         val sourceShard = activeShards.local.find(_.contains(originalBookmark.uriId)).get
         val targetShard = activeShards.local.find(!_.contains(originalBookmark.uriId)).get
         val targetUri = uris.filter(u => targetShard.contains(u.id.get)).find(u => !bookmarks.exists(k => k.uriId == u.id.get)).get

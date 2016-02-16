@@ -32,7 +32,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           }
           val slackUser = SlackUserFactory.user()
           val ident = SlackIdentifyResponse("http://www.rando.slack.com/", slackTeam.slackTeamName, slackUser.username, slackTeam.slackTeamId, slackUser.userId)
-          val auth = SlackAuthorizationResponse(SlackAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.newPush, slackTeam.slackTeamName, slackTeam.slackTeamId, None)
+          val auth = SlackAuthorizationResponse(SlackAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.newPush, slackTeam.slackTeamName, slackTeam.slackTeamId, None, botAuth = None)
 
           db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
           slackCommander.registerAuthorization(Some(user1.id.get), auth, ident)

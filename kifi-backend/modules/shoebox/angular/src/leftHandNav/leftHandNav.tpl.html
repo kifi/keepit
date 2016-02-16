@@ -5,13 +5,18 @@
         <svg class="kf-left-hand-nav-close-icon" kf-symbol-sprite icon="error" ng-if="$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = false"></svg>
     </div>
     <div class="kf-left-hand-nav-content" scrollable>
-        <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent">
+        <div class="kf-left-hand-nav-content-spinner-container" ng-if="!showUserAndOrgContent && !initialFetchFailed">
             <!--TODO: make a directive-->
             <div class="kf-left-hand-nav-spinner">
                 <div class="bounce1"></div>
                 <div class="bounce2"></div>
                 <div class="bounce3"></div>
             </div>
+        </div>
+
+        <div class="kf-left-hand-nav-load-error" ng-if="initialFetchFailed">
+            Woops there was an error
+            <div class="kf-left-hand-nav-load-error-reload" ng-click="reloadData()">Retry</div>
         </div>
 
         <div ng-if="showUserAndOrgContent" class="kf-left-hand-nav-inner-content">
@@ -34,7 +39,7 @@
                             <div class="bounce2"></div>
                             <div class="bounce3"></div>
                         </div>
-                        <div class="kf-left-hand-nav-action" ng-click="createOwnLibrary()"  ng-if="libraries.length < 5">create a library</div>
+                        <div class="kf-left-hand-nav-action" ng-click="createOwnLibrary()"  ng-if="libraries.length < 6">+ create a library</div>
                     </div>
 
                 </div>
@@ -60,7 +65,7 @@
                             <div class="bounce2"></div>
                             <div class="bounce3"></div>
                         </div>
-                        <div class="kf-left-hand-nav-action" ng-click="createOrgLibrary(org)" ng-if="org.libraries.length < 3">create a library</div>
+                        <div class="kf-left-hand-nav-action" ng-click="createOrgLibrary(org)" ng-if="org.libraries.length < 6">+ create a library</div>
                     </div>
                 </div>
                 <div class="kf-left-hand-nav-org-message" ng-if="org.pending">
@@ -85,7 +90,7 @@
             <div ng-if="showCreateTeam">
                 <span class="kf-left-hand-nav-create-team">+
                     <span ng-bind="'Create a team' + (companyName ? ' for ' + companyName : '')" ng-click="createTeam()"></span>
-                    [<span class="kf-left-hand-nav-create-team-learn-more" ng-click="openLearnMoreModal()">learn more</span>]
+                    <!--[<span class="kf-left-hand-nav-create-team-learn-more" ng-click="openLearnMoreModal()">learn more</span>]-->
                 </span>
             </div>
         </div>

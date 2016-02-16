@@ -92,7 +92,7 @@ class KeepExportCommanderImpl @Inject() (
         }
         val libIdsToExportFrom = libraryRepo.getActiveByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
         val ktlsByLibrary = ktlRepo.getAllByLibraryIds(libIdsToExportFrom)
-        ktlsByLibrary.values.flatten.filter(_.addedBy safeContains userId).map(_.keepId).toSet tap { keepIds =>
+        ktlsByLibrary.values.flatten.filter(_.addedBy.safely.contains(userId)).map(_.keepId).toSet tap { keepIds =>
           slackLog.info(s"Exporting ${keepIds.size} personal keeps from ${libIdsToExportFrom.size} libs for user $userId")
         }
 

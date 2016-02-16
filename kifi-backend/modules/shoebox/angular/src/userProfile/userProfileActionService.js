@@ -29,8 +29,13 @@ angular.module('kifi')
       return $http.get(routeService.getProfileFollowers(handle, limit)).then(getData);
     }, clutchParams);
 
-    var basicLibrariesClutch = new Clutch( function(id, offset, limit) {
-        return net.getBasicLibraries(id, offset, limit).then(getData);
+    // optArgs {
+    //  ordering: "alphabetical" | "most_recent_keeps_by_user"
+    //  direction: "asc" | "desc"
+    //  windowSize: #days (used for most_recent_keeps_by_user)
+    // }
+    var basicLibrariesClutch = new Clutch( function(id, offset, limit, optArgs) {
+        return net.getBasicLibraries(id, offset, limit, optArgs).then(getData);
     }, clutchParams);
 
     return {

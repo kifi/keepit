@@ -110,7 +110,8 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
           scopes = Set(),
           teamName = SlackTeamName("fake"),
           teamId = slackTeamId,
-          incomingWebhook = None
+          incomingWebhook = None,
+          botAuth = None
         ),
         SlackIdentifyResponse(
           url = "fake.slack.com",
