@@ -228,7 +228,7 @@ class OrganizationCommanderImpl @Inject() (
           organizationAnalytics.trackOrganizationEvent(org, requester, request)
 
           val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
-          val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED, excludeState = None).map(_.id.get)
+          val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED).map(_.id.get)
 
           libsToReturn.foreach(slackChannelToLibraryRepo.getActiveByLibrary(_).foreach(slackChannelToLibraryRepo.deactivate))
 
