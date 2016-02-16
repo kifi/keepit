@@ -278,7 +278,7 @@ object SlackChannelIntegrations {
 }
 
 case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_channel_integrations"
   def toKey(): String = s"${teamId.value}-${channelId.value}"
 }
