@@ -273,7 +273,7 @@ class UserProfileCommander @Inject() (
         }
       }
       val scoring = followersMap.toSeq.sortBy(_._2 * -1)
-      scoring.map(t => FollowerUserId(t._1, viewerOpt.exists(_ == t._1) || viewerConnections.contains(t._1)))
+      scoring.map(t => FollowerUserId(t._1, viewerOpt.contains(t._1) || viewerConnections.contains(t._1)))
     }
   }
 
@@ -282,15 +282,22 @@ class UserProfileCommander @Inject() (
     UserValueSettings.retrieveSetting(userVal, settingsJs)
   }
 
-  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement], windowSize: Option[Int]): LeftHandRailResponse = {
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement]): LeftHandRailResponse = {
     db.readOnlyMaster { implicit s =>
       import LibraryQuery._
 
-      val sortingArrangement = arrangement.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
       val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
 
-      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
-      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
+      val userLibs = libQueryCommander.getBasicLibraries(
+        requester = Some(userId),
+        query = LibraryQuery(target = ForUser(userId, Set(LibraryAccess.OWNER)), arrangement = arrangement, offset = Offset(0), limit = Limit(numLibs), fromId = None)
+      )
+      val orgLibs = orgIds.map { orgId =>
+        orgId -> libQueryCommander.getBasicLibraries(
+          requester = Some(userId),
+          query = LibraryQuery(target = ForOrg(orgId), arrangement = arrangement, offset = Offset(0), limit = Limit(numLibs), fromId = None)
+        )
+      }.toMap
 
       val basicOrgsWithTopLibs = organizationInfoCommander.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
         .map {

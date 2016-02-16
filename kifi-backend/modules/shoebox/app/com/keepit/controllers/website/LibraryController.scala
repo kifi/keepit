@@ -699,19 +699,6 @@ class LibraryController @Inject() (
       Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
     }
   }
-
-  def getLHRLibrariesForUser(userExtId: ExternalId[User], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = UserAction { request =>
-    val arrangement = for {
-      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
-      direction <- directionOpt.flatMap(SortDirection.fromStr)
-    } yield LibraryQuery.Arrangement(ordering, direction)
-
-    val basicLibs = db.readOnlyMaster { implicit s =>
-      libraryQueryCommander.getLHRLibrariesForUser(request.userId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize)
-    }
-    Ok(Json.obj("libs" -> basicLibs))
-  }
-
 }
 
 object LibraryController {
