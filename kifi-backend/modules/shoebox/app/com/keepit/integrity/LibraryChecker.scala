@@ -65,11 +65,19 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
               }
             }
           }
+        } else {
+          db.readWrite { implicit session =>
+            val ownerMembershipIsActive = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, library.ownerId).exists(_.state == LibraryMembershipStates.ACTIVE)
+            if (!ownerMembershipIsActive) {
+              log.error(s"[zombie-libs] found a library id=${library.id.get} where owner id=${library.ownerId} does not have an active membership, deactivating it")
+              libraryRepo.deactivate(library)
+            }
+          }
         }
       }
 
       db.readWrite { implicit session =>
-        systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, maxSeq)
+        systemValueRepo.setSequenceNumber(LIBRARY_DELETED_NAME, maxSeq)
       }
     }
   }
