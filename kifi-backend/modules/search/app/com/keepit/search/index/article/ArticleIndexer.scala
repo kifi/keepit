@@ -1,7 +1,7 @@
 package com.keepit.search.index.article
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.performance.{StatsdTimingAsync, StatsdTiming}
+import com.keepit.common.performance.{ StatsdTimingAsync, StatsdTiming }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
