@@ -1,7 +1,7 @@
 <div class="kf-org-profile-slack-keep">
-  <a ng-href="{{ user|profileUrl }}"><img class="kf-org-profile-slack-user-image kf-org-profile-slack-keep-user" ng-src="{{ user|pic:100 }}"></a>
-  <p ng-show="user" class="kf-org-profile-slack-keep-message">
-    <a class="kf-link kf-link-black kf-org-profile-slack-keep-username" ng-bind="user|name" ng-href="{{ user|profileUrl }}"></a>
+  <a ng-href="{{ author.url|pathOrUrl }}"><img class="kf-org-profile-slack-user-image kf-org-profile-slack-keep-user" ng-src="{{ author.picture }}"></a>
+  <p ng-show="author" class="kf-org-profile-slack-keep-message">
+    <a class="kf-link kf-link-black kf-org-profile-slack-keep-username" ng-bind="author.name" ng-href="{{ author.url|pathOrUrl }}"></a>
     has kept
     <span class="kf-org-profile-slack-keep-title" ng-bind="keep.title"></span>
     to the
