@@ -167,6 +167,7 @@ case class SlackUserInfo(
   id: SlackUserId,
   name: SlackUsername,
   profile: SlackUserProfile,
+  deleted: Boolean,
   originalJson: JsValue)
 
 object SlackUserInfo {
@@ -174,6 +175,7 @@ object SlackUserInfo {
     (__ \ 'id).read[SlackUserId] and
     (__ \ 'name).read[SlackUsername] and
     (__ \ 'profile).read[SlackUserProfile] and
+    (__ \ 'deleted).read[Boolean] and
     Reads(JsSuccess(_))
   )(SlackUserInfo.apply _)
 
