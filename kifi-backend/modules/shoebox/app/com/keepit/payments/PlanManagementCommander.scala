@@ -464,7 +464,6 @@ class PlanManagementCommanderImpl @Inject() (
       val newPlan = paidPlanRepo.get(newPlanId)
       val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM) + oldPlan.kind
       if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
-
         if (newPlan.editableFeatures != oldPlan.editableFeatures) {
           val oldConfig = orgConfigRepo.getByOrgId(orgId)
           val restrictedFeatures = oldPlan.editableFeatures -- newPlan.editableFeatures
