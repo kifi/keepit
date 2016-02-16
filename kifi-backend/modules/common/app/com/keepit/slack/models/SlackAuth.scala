@@ -1,11 +1,17 @@
 package com.keepit.slack.models
 
 import java.util.UUID
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
+import com.keepit.model.User
 import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
@@ -175,7 +181,7 @@ object SlackUserInfo {
     (__ \ 'id).read[SlackUserId] and
     (__ \ 'name).read[SlackUsername] and
     (__ \ 'profile).read[SlackUserProfile] and
-    (__ \ 'deleted).read[Boolean] and
+    (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
     Reads(JsSuccess(_))
   )(SlackUserInfo.apply _)
 
@@ -183,4 +189,22 @@ object SlackUserInfo {
 
   implicit val format: Format[SlackUserInfo] = Format(reads, writes)
 }
+
+case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
+  override val version = 1
+  val namespace = "slack_team_members"
+  def toKey(): String = slackTeamId.value
+}
+
+class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
+  override val version = 1
+  val namespace = "slack_team_members_count"
+  def toKey(): String = slackTeamId.value
+}
+
+class SlackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackTeamMembersKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
