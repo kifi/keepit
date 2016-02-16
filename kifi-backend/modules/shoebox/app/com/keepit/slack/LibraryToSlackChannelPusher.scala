@@ -16,6 +16,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
@@ -65,6 +66,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   keepDecorator: KeepDecorator,
+  eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
@@ -121,14 +123,17 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
 
-  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution])(implicit session: RSession): DescriptionElements = {
+  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], messageCount: Int)(implicit session: RSession): DescriptionElements = {
     import DescriptionElements._
 
     val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
 
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute)
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
-    val addComment = DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
+    val addComment = {
+      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 0) s"$messageCount comments" else "Reply")
+      DescriptionElements("\n", text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
+    }
 
     slackMessageOpt match {
       case Some(post) =>
@@ -163,12 +168,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     keeps match {
       case NoKeeps => None
       case SomeKeeps(ks, lib, slackTeamId, attribution) =>
-        val msgs = db.readOnlyMaster { implicit s =>
-          ks.map(k => keepAsDescriptionElements(k, lib, slackTeamId, attribution.get(k.id.get)))
+        val slackMsgFut = eliza.getMessageCountsForKeeps(ks.map(_.id.get).toSet).map { countByKeep =>
+          val msgs = db.readOnlyMaster { implicit s =>
+            ks.map(k => keepAsDescriptionElements(k, lib, slackTeamId, attribution.get(k.id.get), countByKeep.getOrElse(k.id.get, 0)))
+          }
+          SlackMessageRequest.fromKifi(
+            DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
+          )
         }
-        Some(Future.successful(SlackMessageRequest.fromKifi(
-          DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
-        )))
+        Some(slackMsgFut)
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
