@@ -46,11 +46,9 @@ class DebouncingTest extends Specification {
       quiet.count must beBetween(1, n / 5)
       quiet.value must beBetween(1, n / 5)
 
+      // The buffered one will always get to the correct value eventually
+      Thread.sleep(100)
       buffered.count must beBetween(1, n / 5)
-      buffered.value must beCloseTo(n, n / 5)
-
-      // The buffered one will always get to the correct value right after it actually triggers
-      Thread.sleep(5)
       buffered.value === n
     }
     "be thread-safe" in {
@@ -66,10 +64,8 @@ class DebouncingTest extends Specification {
       quiet.count must beBetween(1, n / 5)
       quiet.value must beBetween(1, n / 5)
 
+      Thread.sleep(100)
       buffered.count must beBetween(1, n / 5)
-      buffered.value must beCloseTo(n, n / 5)
-
-      Thread.sleep(5)
       buffered.value === n
     }
   }

@@ -12,6 +12,7 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 object Debouncing {
+  private val timer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS)
   class Dropper[T] {
     private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
     def debounce(key: String, cooldown: Duration)(fn: => T): Option[T] = {
@@ -24,10 +25,8 @@ object Debouncing {
       }
     }
   }
-
   class Buffer[T] {
     private val bufMap: mutable.Map[String, ListBuffer[T]] = mutable.Map.empty
-    private val timer = new HashedWheelTimer(1, TimeUnit.MILLISECONDS)
     private val lock = new Object
     def debounce(key: String, cooldown: Duration)(item: T)(action: List[T] => Unit): Unit = Try(lock.synchronized {
       if (!bufMap.isDefinedAt(key)) {
