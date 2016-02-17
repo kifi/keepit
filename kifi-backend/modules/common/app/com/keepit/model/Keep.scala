@@ -244,7 +244,7 @@ case class BasicKeep(
   attribution: Option[(SlackAttribution, Option[BasicUser])])
 
 object BasicKeep {
-  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
+  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-42424242424242424")
   implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
