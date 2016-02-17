@@ -17,7 +17,7 @@ import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import com.keepit.model._
 import com.keepit.slack.models._
-import org.joda.time.Period
+import org.joda.time.{ Duration, Period }
 import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.time._
@@ -26,20 +26,15 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
 object SlackPushingActor {
-  val pushTimeout = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  val pushTimeout = Duration.standardMinutes(10) // we will wait this long for a process to complete before we assume it is incompetent
   val minPushConcurrency = 5
   val maxPushConcurrency = 15
 
-  val delayFromPush = Period.minutes(30)
-  val delayFromPushFailure = Period.minutes(5)
-  val maxTitleDelayFromKept = Period.seconds(40)
-  val maxDelayFromKeptAt = Period.minutes(5)
-  val delayFromUpdatedAt = Period.seconds(15)
+  val delayFromSuccessfulPush = Duration.standardMinutes(30)
+  val delayFromFailedPush = Duration.standardMinutes(5)
   val MAX_KEEPS_TO_SEND = 7
-  val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackTeamId
+  def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
 
   sealed abstract class KeepsToPush
   case class NoKeeps(lastKtlIdOpt: Option[Id[KeepToLibrary]]) extends KeepsToPush
@@ -80,7 +75,8 @@ class SlackPushingActor(
 
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
     db.readWrite { implicit session =>
-      val integrationIds = integrationRepo.getRipeForPushing(limit, pushTimeout)
+      val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout)
+      log.info(s"[SLACK-PUSH-ACTOR] Grabbed $integrationIds when asked for $limit tasks")
       Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
     }
   }
@@ -111,6 +107,7 @@ class SlackPushingActor(
   }
 
   private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Option[Id[KeepToLibrary]]] = {
+    log.info(s"[SLACK-PUSH-ACTOR] Trying to push ${integration.id.get}")
     val futurePushMaybe = {
       if (isAllowed(integration.id.get)) doPush(integration, getSettings(integration.id.get))
       else Future.failed(ForbiddenSlackIntegration(integration))
@@ -121,8 +118,7 @@ class SlackPushingActor(
         val now = clock.now()
         val (nextPushAt, updatedStatus) = result match {
           case Success(_) =>
-            val delay = delayFromPush
-            (Some(now plus delay), None)
+            (Some(now plus delayFromSuccessfulPush), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
             slackLog.warn("Push Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelName.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
             (None, Some(SlackIntegrationStatus.Off))
@@ -142,8 +138,8 @@ class SlackPushingActor(
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            log.error(s"[SLACK-PUSH] Failed to push to Slack via integration ${integration.id.get}:" + error.getMessage)
-            (Some(now plus delayFromPushFailure), None)
+            log.error(s"[SLACK-PUSH-ACTOR] Failed to push to Slack via integration ${integration.id.get}:" + error.getMessage)
+            (Some(now plus delayFromFailedPush), None)
         }
 
         db.readWrite { implicit session =>
@@ -181,7 +177,7 @@ class SlackPushingActor(
       val recentKtls = ktlRepo.getByLibraryAddedAfter(lts.libraryId, lts.lastProcessedKeep)
       val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
       recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(_ -> ktl)) unzip match {
-        case (recentKeeps, recentKtls) => (recentKeeps, lib, recentKtls.lastOption.map(_.id.get))
+        case (newKeeps, newKtls) => (newKeeps, lib, newKtls.lastOption.map(_.id.get))
       }
     }
     val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
@@ -193,8 +189,8 @@ class SlackPushingActor(
     relevantKeeps match {
       case Seq() => NoKeeps(lastKtlIdOpt)
       case Seq(keep) => OneKeep(keep, lib, lts.slackTeamId, attributionByKeepId.get(keep.id.get), lastKtlIdOpt.get)
-      case keeps if keeps.length <= MAX_KEEPS_TO_SEND => SomeKeeps(keeps, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
-      case keeps => ManyKeeps(keeps, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
+      case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
+      case ks => ManyKeeps(ks, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
     }
   }
 

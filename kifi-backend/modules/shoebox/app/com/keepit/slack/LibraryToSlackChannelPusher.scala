@@ -20,19 +20,19 @@ import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.{ DateTime, Period }
+import org.joda.time.{ Duration, DateTime, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object LibraryToSlackChannelPusher {
-  val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  val delayFromFullPush = Period.minutes(30)
-  val delayFromPartialPush = Period.seconds(15)
-  val delayFromPushRequest = Period.seconds(20)
-  val maxTitleDelayFromKept = Period.seconds(40)
-  val maxDelayFromKeptAt = Period.minutes(5)
-  val delayFromUpdatedAt = Period.seconds(15)
+  val maxAcceptableProcessingDuration = Duration.standardMinutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  val delayFromFullPush = Duration.standardMinutes(30)
+  val delayFromPartialPush = Duration.standardSeconds(15)
+  val delayFromPushRequest = Duration.standardSeconds(20)
+  val maxTitleDelayFromKept = Duration.standardSeconds(40)
+  val maxDelayFromKeptAt = Duration.standardMinutes(5)
+  val delayFromUpdatedAt = Duration.standardSeconds(15)
   val MAX_KEEPS_TO_SEND = 7
   val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
@@ -204,7 +204,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, slackTeamId: SlackTeamId, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
 
   private def pushUpdatesForIntegration(lts: LibraryToSlackChannel): Future[Boolean] = {
-    val (keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }
+    val (keepsToPush, lastKtlOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }
 
     val hasBeenPushed = describeKeeps(keepsToPush) match {
       case None => Future.successful(true)
@@ -240,8 +240,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         // keeps saying we aren't succeeding even though the channel is getting messages
         libToChannelRepo.save(
           lts
-            .finishedProcessing
-            .withLastProcessedKeep(lastKtlIdOpt orElse lts.lastProcessedKeep)
+            .finishedProcessing(lastKtlOpt)
             .withNextPushAt(clock.now plus (if (mayHaveMore) delayFromPartialPush else delayFromFullPush))
         )
         maybeFail match {
@@ -252,8 +251,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): (KeepsToPush, Option[Id[KeepToLibrary]], Boolean) = {
-    val (keeps, lib, lastKtlIdOpt, mayHaveMore) = {
+  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): (KeepsToPush, Option[KeepToLibrary], Boolean) = {
+    val (keeps, lib, lastKtlOpt, mayHaveMore) = {
       val now = clock.now
       val lib = libRepo.get(lts.libraryId)
       val recentKtls = ktlRepo.getByLibraryAddedAfter(lts.libraryId, lts.lastProcessedKeep)
@@ -271,7 +270,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt)) || !KeepSource.manual.contains(keep.source)
       } unzip match {
         case (stableRecentKeeps, stableRecentKtls) =>
-          (stableRecentKeeps, lib, stableRecentKtls.lastOption.map(_.id.get), stableRecentKtls.length < recentKtls.length)
+          (stableRecentKeeps, lib, stableRecentKtls.lastOption, stableRecentKtls.length < recentKtls.length)
       }
     }
     val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
@@ -285,6 +284,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, lts.slackTeamId, attributionByKeepId)
       case ks => ManyKeeps(ks, lib, lts.slackTeamId, attributionByKeepId)
     }
-    (keepsToPush, lastKtlIdOpt, mayHaveMore)
+    (keepsToPush, lastKtlOpt, mayHaveMore)
   }
 }

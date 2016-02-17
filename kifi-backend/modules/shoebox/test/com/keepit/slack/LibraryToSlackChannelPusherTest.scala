@@ -40,7 +40,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
   }
 
   def pushUpdatesToSlackSurely(libraryId: Id[Library])(implicit injector: Injector): Map[Id[LibraryToSlackChannel], Boolean] = {
-    fakeClock += LibraryToSlackChannelPusher.maxDelayFromKeptAt
+    fakeClock += LibraryToSlackChannelPusher.maxDelayFromKeptAt.toPeriod
     Await.result(inject[LibraryToSlackChannelPusher].findAndPushUpdatesForRipestIntegrations(), Duration.Inf)
   }
 
