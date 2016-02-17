@@ -918,7 +918,7 @@ api.port.on({
     }
   },
   track_ftue: function (type) {
-    var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
+    var category = {e: 'extMsgFTUE', l: 'libFTUE', m: 'moveFtue'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,
@@ -1108,7 +1108,7 @@ api.port.on({
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
-        if (th) { 
+        if (th) {
           standardizeNotification(th);
           updateIfJustRead(th);
           notificationsById[th.thread] = th;

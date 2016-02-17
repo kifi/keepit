@@ -296,17 +296,26 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
     $(k.tile).triggerHandler('kifi:keeper:remove');
-
-    if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
-      extMsgIntroEligible = false;
-      api.port.emit('prefs', function (prefs) {
+    api.port.emit('prefs', function (prefs) {
+      if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
+        extMsgIntroEligible = false;
         if (prefs.showExtMsgIntro) {
           setTimeout(function () {
             api.require('scripts/external_messaging_intro.js', api.noop);
           }, 1000);
         }
-      });
-    }
+      } else if (prefs.showMoveKeeperIntro) {
+        setTimeout(function () {
+          if (k.moveKeeperIntro) {
+            k.moveKeeperIntro.show(prefs);
+          } else {
+            api.require('scripts/move_keeper_intro.js', function () {
+              k.moveKeeperIntro.show(prefs);
+            });
+          }
+        }, 1000);
+      }
+    });
   }
 
   function startDrag(data) {
