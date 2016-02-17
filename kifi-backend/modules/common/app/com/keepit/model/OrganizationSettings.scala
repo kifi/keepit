@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
@@ -232,7 +232,7 @@ object ClassFeature extends Enumerator[ClassFeature] {
 
   val ALL: Seq[ClassFeature] = _all
 
-  @json case class BlacklistEntry(userId: Id[User], createdAt: DateTime, path: String)
+  @json case class BlacklistEntry(userId: ExternalId[User], createdAt: DateTime, path: String)
   @json case class Blacklist(entries: Seq[BlacklistEntry]) extends ClassFeatureSetting {
     def json = Json.toJson(entries)
   }
