@@ -155,6 +155,6 @@ class SlackClientImpl(
   }
 
   def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]] = {
-    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token, userId))((__ \ 'members).read).map { _.filterNot(_.deleted) }
+    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token, userId))((__ \ 'members).read).map { _.filterNot(_.deleted).filterNot(_.bot) }
   }
 }
