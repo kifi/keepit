@@ -835,6 +835,7 @@ POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
 POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 POST    /admin/libraries/forceModify                    @com.keepit.controllers.admin.AdminLibraryController.unsafeModifyLibrary
+POST    /admin/libraries/deleteZombieLibraries          @com.keepit.controllers.admin.AdminLibraryController.deleteZombieLibraries
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
