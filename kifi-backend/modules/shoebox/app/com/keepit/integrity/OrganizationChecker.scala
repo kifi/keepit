@@ -163,10 +163,7 @@ class OrganizationChecker @Inject() (
         Set.empty[Future[Unit]]
       } else {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie libraries: ${zombieLibs.map(_.id.get)}")
-        zombieLibs.collect {
-          case lib if lib.canBeModified => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId))).keepChanges
-          case lib if lib.isSystemLibrary => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get)
-        }
+        zombieLibs.map(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
       }
       Future.sequence(libIntegrityFuts).map { _ => () }
     }
