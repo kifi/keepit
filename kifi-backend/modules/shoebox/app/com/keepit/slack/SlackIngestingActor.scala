@@ -185,29 +185,18 @@ class SlackIngestingActor @Inject() (
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     val slackUsers = messages.map(_.userId).toSet
-    val userBySlackId = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
+    val (library, userBySlackId) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(integration.libraryId)
+      val usersBySlackId = slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
+      (lib, usersBySlackId)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
-    val (integrationOwner, library) = db.readOnlyMaster { implicit session =>
-      val userId = slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).flatMap(_.userId).getOrElse {
-        val message = s"Could not find a valid SlackMembership for ${(integration.slackTeamId, integration.slackUserId)} for stl ${integration.id.get}"
-        airbrake.notify(message)
-        throw new IllegalStateException(message)
-      }
-      val library = libraryRepo.get(integration.libraryId)
-      (userId, library)
-    }
     val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.get(msg.userId)).map {
-      case (kifiUser, msgs) => kifiUser -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId)).distinctBy(_.url)
+      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
-      case (kifiUser, rawBookmarks) =>
-        // For now, only the Brewstercorp slack team is allowed to have user-less keeps
-        // For everyone else, if we can't figure out who the Kifi user is, we attribute it to the integration owner
-        val keepOwner = if (integration.slackTeamId == SlackTeamId("T0FUL04N4")) kifiUser else kifiUser orElse Some(integrationOwner)
-        if (keepOwner.isEmpty) log.info(s"[SLACK-INGEST] Found a few keeps (${rawBookmarks.length}) that we could not attribute, putting them in lib ${library.id.get}")
-        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, keepOwner, Some(library), KeepSource.slack)(HeimdalContext.empty)
+      case (kifiUserOpt, rawBookmarks) =>
+        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>

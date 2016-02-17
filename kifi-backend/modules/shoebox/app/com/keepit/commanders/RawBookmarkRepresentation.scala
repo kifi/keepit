@@ -13,7 +13,6 @@ import play.api.libs.json._
  * The standard use case is parsing the request JSON, then keeping it.
  * Looking for an output class to represent keeps? Try KeepInfo.
  *
- * Do not trust isPrivate here. It's provided for legacy reasons only. Privacy is the responsibility of the libraryId.
  * LibraryId is purposely not in this, it should be provided separately.
  */
 case class RawBookmarkRepresentation(

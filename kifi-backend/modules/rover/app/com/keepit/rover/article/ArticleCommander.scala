@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.fetcher.{ ArticleFetchRequest, ArticleFetcherProvider }
@@ -67,6 +68,7 @@ class ArticleCommander @Inject() (
     }
   }
 
+  @StatsdTimingAsync("ArticleCommander.getBestArticlesByUris")
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
     val futureUriIdWithArticles = getBestArticleFuturesByUris(uriIds).map {
       case (uriId, futureArticles) =>
