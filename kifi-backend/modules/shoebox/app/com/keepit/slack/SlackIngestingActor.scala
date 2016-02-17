@@ -163,10 +163,13 @@ class SlackIngestingActor @Inject() (
 
   private def doIngest(tokenWithScopes: SlackTokenWithScopes, settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
     val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
+    val blacklist = settings.flatMap { s =>
+      s.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk.entries.map(_.path) }
+    }.getOrElse(Seq.empty)
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
-          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
+          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages, blacklist)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
               slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
@@ -183,7 +186,7 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
+  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage], blacklist: Seq[String]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     val slackUsers = messages.map(_.userId).toSet
     val (library, userBySlackId) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
@@ -196,7 +199,8 @@ class SlackIngestingActor @Inject() (
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
-        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
+        val notBlacklisted = rawBookmarks.filter(b => !SlackIngestingBlacklist.blacklistedUrl(b.url, blacklist))
+        val interned = keepInterner.internRawBookmarksWithStatus(notBlacklisted, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>

@@ -36,6 +36,7 @@ object OrganizationFactory {
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
     def withDomain(domain: String): PartialOrganization = this.copy(domain = Some(NormalizedHostname.fromHostname(domain).get))
+    def withSettings(settings: Map[Feature, FeatureSetting]) = this.copy(nonstandardSettings = nonstandardSettings ++ settings)
 
     // This method makes it so an org's members cannot invite, useful for testing
     def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.InviteMembers -> StaticFeatureSetting.ADMINS))
