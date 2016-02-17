@@ -51,13 +51,16 @@ case class LibraryToSlackChannel(
     lastProcessedAt = lastKtl.map(_.addedAt) orElse lastProcessingAt orElse lastProcessedAt,
     lastProcessingAt = None
   )
-  def finishedProcessing(lastKtlAndKeep: Option[(Keep, KeepToLibrary)], lastMsg: Option[CrossServiceMessage]) = this.copy(
-    lastProcessedAt = lastProcessingAt orElse lastProcessedAt,
-    lastProcessedKeep = lastKtlAndKeep.map(_._2.id.get) orElse lastProcessedKeep,
-    lastProcessedKeepSeq = lastKtlAndKeep.map(_._1.seq) orElse lastProcessedKeepSeq,
-    lastProcessedMsg = lastMsg.map(_.id) orElse lastProcessedMsg,
-    lastProcessedMsgSeq = lastMsg.map(_.seq) orElse lastProcessedMsgSeq,
-    lastProcessingAt = None
+
+  def withLastProcessedKeep(lastKtlId: Option[Id[KeepToLibrary]]) = this.copy(
+    lastProcessedKeep = lastKtlId orElse lastProcessedKeep
+  )
+  def withLastProcessedMsg(lastMsgId: Option[Id[Message]]) = this.copy(
+    lastProcessedMsg = lastMsgId orElse lastProcessedMsg
+  )
+  def doneProcessing(lastKeepSeq: Option[SequenceNumber[Keep]], lastMsgSeq: Option[SequenceNumber[Message]]) = this.copy(
+    lastProcessedKeepSeq = lastKeepSeq.filter(newSeq => !lastProcessedKeepSeq.exists(oldSeq => oldSeq >= newSeq)) orElse lastProcessedKeepSeq,
+    lastProcessedMsgSeq = lastMsgSeq.filter(newSeq => !lastProcessedMsgSeq.exists(oldSeq => oldSeq >= newSeq)) orElse lastProcessedMsgSeq
   )
 
   def withModifications(mods: SlackIntegrationModification) = {

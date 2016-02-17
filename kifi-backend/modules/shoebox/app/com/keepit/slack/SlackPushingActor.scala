@@ -5,20 +5,21 @@ import com.keepit.commanders._
 import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
+import com.keepit.discussion.{ Message, CrossServiceMessage }
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.slack.models.SlackIntegration.{ ForbiddenSlackIntegration, BrokenSlackIntegration }
 import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import com.keepit.model._
 import com.keepit.slack.models._
-import org.joda.time.{ Duration, Period }
+import org.joda.time.{ DateTime, Duration, Period }
 import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.time._
@@ -37,11 +38,27 @@ object SlackPushingActor {
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
   def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
 
-  sealed abstract class KeepsToPush
-  case class NoKeeps(lastKtlIdOpt: Option[Id[KeepToLibrary]]) extends KeepsToPush
-  case class OneKeep(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], lastKtlId: Id[KeepToLibrary]) extends KeepsToPush
-  case class SomeKeeps(keeps: Seq[Keep], lib: Library, slackTeamId: SlackTeamId, attribution: Map[Id[Keep], SourceAttribution], lastKtlId: Id[KeepToLibrary]) extends KeepsToPush
-  case class ManyKeeps(keeps: Seq[Keep], lib: Library, slackTeamId: SlackTeamId, attribution: Map[Id[Keep], SourceAttribution], lastKtlId: Id[KeepToLibrary]) extends KeepsToPush
+  sealed abstract class PushItem(val time: DateTime)
+  object PushItem {
+    case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt)
+    case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt)
+  }
+  case class PushItems(
+      oldKeeps: Seq[(Keep, KeepToLibrary)],
+      newKeeps: Seq[(Keep, KeepToLibrary)],
+      oldMsgs: Map[Keep, Seq[CrossServiceMessage]],
+      newMsgs: Map[Keep, Seq[CrossServiceMessage]],
+      lib: Library,
+      slackTeamId: SlackTeamId,
+      attribution: Map[Id[Keep], SourceAttribution],
+      users: Map[Id[User], BasicUser]) {
+    def maxKeepSeq: Option[SequenceNumber[Keep]] = Seq(oldKeeps, newKeeps).flatMap(_.map(_._1.seq)).maxOpt
+    def maxMsgSeq: Option[SequenceNumber[Message]] = Seq(oldMsgs.values, newMsgs.values).flatMap(_.flatMap(_.map(_.seq))).maxOpt
+    def sortedNewItems: Seq[PushItem] = {
+      val items: Seq[PushItem] = newKeeps.map { case (k, ktl) => PushItem.KeepToPush(k, ktl) } ++ newMsgs.flatMap { case (k, msgs) => msgs.map(msg => PushItem.MessageToPush(k, msg)) }
+      items.sortBy(_.time)
+    }
+  }
 }
 
 class SlackPushingActor @Inject() (
@@ -107,7 +124,7 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Option[Id[KeepToLibrary]]] = {
+  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[LibraryToSlackChannel] = {
     log.info(s"[SLACK-PUSH-ACTOR] Trying to push ${integration.id.get}")
     val futurePushMaybe = {
       if (isAllowed(integration.id.get)) doPush(integration, getSettings(integration.id.get))
@@ -149,76 +166,87 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[Option[Id[KeepToLibrary]]] = {
-    val toBePushed = db.readOnlyReplica { implicit s =>
-      val keepsToPush = getKeepsToPushForIntegration(integration)
-      describeKeeps(keepsToPush)
+  private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[LibraryToSlackChannel] = {
+    implicit val pushItems = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(integration) }
+    // First update all the "old" shit
+    pushItems.oldKeeps.foreach {
+      case (k, ktl) =>
+        // lookup k in a cache to find a slack message timestamp
+        /* ... */
+        // regenerate the slack message
+        val updatedSlackMsg = keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+      // call the SlackClient to try and update the message
+      /* ... */
     }
-    FutureHelpers.foldLeft(toBePushed)(integration.lastProcessedKeep) {
-      case (lastProcessedKeep, (messageOpt, newLastProcessedKeep)) =>
-        val futureSentToSlack = messageOpt match {
-          case Some(message) => slackClient.sendToSlack(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet) recoverWith {
+    pushItems.oldMsgs.foreach {
+      case (kId, msgs) =>
+      // do something here
+    }
+
+    // Now push new things, updating the integration state as we go
+    FutureHelpers.foldLeft(pushItems.sortedNewItems)(integration) {
+      case (workingIntegration, item) =>
+        slackMessageForItem(item).fold(Future.successful(()))(message =>
+          slackClient.sendToSlack(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet) recoverWith {
             case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
           }
-          case None => Future.successful(())
-        }
-
-        futureSentToSlack map { _ =>
-          db.readWrite { implicit session =>
-            integrationRepo.updateLastProcessedKeep(integration.id.get, newLastProcessedKeep)
+        ).map { _: Unit =>
+          db.readWrite { implicit s =>
+            item match {
+              case PushItem.KeepToPush(_, ktl) => integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
+              case PushItem.MessageToPush(_, msg) => integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(msg.id)))
+            }
           }
-          Some(newLastProcessedKeep)
+        }
+    }.andThen {
+      case Success(finalIntegration) =>
+        db.readWrite { implicit s =>
+          integrationRepo.save(finalIntegration.doneProcessing(pushItems.maxKeepSeq, pushItems.maxMsgSeq))
         }
     }
   }
 
-  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): KeepsToPush = {
-    val (keeps, lib, lastKtlIdOpt) = {
-      val lib = libRepo.get(lts.libraryId)
-      val recentKtls = ktlRepo.getByLibraryAddedAfter(lts.libraryId, lts.lastProcessedKeep)
-      val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
-      recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(_ -> ktl)) unzip match {
-        case (newKeeps, newKtls) => (newKeeps, lib, newKtls.lastOption.map(_.id.get))
-      }
-    }
-    val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
+  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): PushItems = {
+    val lib = libRepo.get(lts.libraryId)
+    val changedKeepIds = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
+    val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds.toSet).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
+    val keepsById = keepRepo.getByIds(changedKeepIds.toSet)
+
+    val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
     def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
       case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
       case _ => false
     }
-    val relevantKeeps = keeps.filter(keep => !comesFromDestinationChannel(keep.id.get))
-    relevantKeeps match {
-      case Seq() => NoKeeps(lastKtlIdOpt)
-      case Seq(keep) => OneKeep(keep, lib, lts.slackTeamId, attributionByKeepId.get(keep.id.get), lastKtlIdOpt.get)
-      case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
-      case ks => ManyKeeps(ks, lib, lts.slackTeamId, attributionByKeepId, lastKtlIdOpt.get)
-    }
+
+    val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
+    def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists(last => last.addedAt isAfter ktl.addedAt)
+    val (oldKeeps, newKeeps) = changedKeepIds.flatMap { kId =>
+      for { k <- keepsById.get(kId); ktl <- ktlsByKeepId.get(kId) } yield (k, ktl)
+    }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+
+    PushItems(
+      oldKeeps = oldKeeps,
+      newKeeps = newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) },
+      oldMsgs = Map.empty,
+      newMsgs = Map.empty,
+      lib = lib,
+      slackTeamId = lts.slackTeamId,
+      attribution = attributionByKeepId,
+      users = basicUserRepo.loadAll(keepsById.values.flatMap(_.userId).toSet)
+    )
   }
 
-  private def describeKeeps(keeps: KeepsToPush)(implicit session: RSession): Seq[(Option[SlackMessageRequest], Id[KeepToLibrary])] = {
-    import DescriptionElements._
-    keeps match {
-      case NoKeeps(lastKtlIdOpt) => lastKtlIdOpt.toSeq.map((None, _))
-      case OneKeep(keep, lib, slackTeamId, attribution, lastKtlId) =>
-        val user = keep.userId.flatMap(basicUserRepo.loadActive)
-        val msg = keepAsDescriptionElements(keep, lib, slackTeamId, attribution, user)
-        val request = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(msg))
-        Seq((Some(request), lastKtlId))
-      case SomeKeeps(keeps, lib, slackTeamId, attribution, lastKtlId) =>
-        val basicUsersById = basicUserRepo.loadAllActive(keeps.flatMap(_.userId).toSet)
-        val msgs = keeps.map(keep => keepAsDescriptionElements(keep, lib, slackTeamId, attribution.get(keep.id.get), keep.userId.flatMap(basicUsersById.get)))
-        val request = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs)))
-        Seq((Some(request), lastKtlId))
-      case ManyKeeps(keeps, lib, slackTeamId, attribution, lastKtlId) =>
-        val msg = DescriptionElements(
-          keeps.length, "keeps have been added to",
-          lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId))
-        )
-        val request = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(msg))
-        Seq((Some(request), lastKtlId))
+  private def slackMessageForItem(item: PushItem)(implicit items: PushItems): Option[SlackMessageRequest] = {
+    if (items.newKeeps.length > MAX_KEEPS_TO_SEND) None
+    else item match {
+      case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), k.userId.flatMap(items.users.get))
+      )))
+      case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+        messageAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), k.userId.flatMap(items.users.get))
+      )))
     }
   }
-
   private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
     import DescriptionElements._
 
@@ -257,6 +285,27 @@ class SlackPushingActor @Inject() (
           addCommentOpt
         )
     }
+  }
+  private def messageAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+    airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
+    airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
+    import DescriptionElements._
+
+    val shouldSmartRoute = canSmartRoute(slackTeamId)
+    val userElement: Option[DescriptionElements] = {
+      if (lib.organizationId.isEmpty || !shouldSmartRoute) user.map(fromBasicUser)
+      else user.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    }
+    val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
+    val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
+    val addCommentOpt = {
+      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
+      else None
+    }
+    DescriptionElements(
+      userElement getOrElse DescriptionElements("Someone"), "commented on", keepElement,
+      "saying:", msg.text, addCommentOpt
+    )
   }
 }
 
