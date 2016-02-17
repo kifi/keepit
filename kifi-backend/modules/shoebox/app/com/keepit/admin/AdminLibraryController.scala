@@ -342,4 +342,11 @@ class AdminLibraryController @Inject() (
     val response = libraryCommander.unsafeModifyLibrary(lib, mods)
     Ok(Json.obj("lib" -> response.modifiedLibrary))
   }
+
+  def deleteZombieLibraries = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val libIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    FutureHelpers.sequentialExec(libIds) { libId =>
+      libraryCommander.unsafeAsyncDeleteLibrary(libId)
+    }.map { _ => Ok }
+  }
 }
