@@ -194,7 +194,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> MessageThreadNotification(
-          message = message,
+          message = message.withText(messageWithBasicUser.text),
           thread = thread,
           messageWithBasicUser = messageWithBasicUser,
           unread = !message.from.asUser.contains(userId),
