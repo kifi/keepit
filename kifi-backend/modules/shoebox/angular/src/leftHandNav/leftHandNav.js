@@ -254,6 +254,7 @@ angular.module('kifi')
         }
 
         function potentialCompanyEmails(emails) {
+          emails = emails || [];
           return emails.filter(function(email){
             return !email.isOwned && !email.isFreeMail;
           });
