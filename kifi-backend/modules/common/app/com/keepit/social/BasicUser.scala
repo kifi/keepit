@@ -4,8 +4,9 @@ import com.keepit.common.cache._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.Id.mapOfIdToObjectFormat
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.net.URI
 import com.keepit.common.path.Path
-import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.common.store.{ ImagePath, S3ImageConfig, S3UserPictureConfig }
 import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -38,6 +39,7 @@ case class BasicUser(
     pictureName: String,
     username: Username) extends BasicUserFields {
   def path: Path = Path(username.value)
+  def picturePath: ImagePath = UserPicture.toImagePath(Some(200), externalId, pictureName)
 }
 
 object BasicUser {
