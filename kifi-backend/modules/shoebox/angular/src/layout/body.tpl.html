@@ -4,7 +4,7 @@
                 ng-include="$root.userLoggedIn ? 'leftHandNav/loggedInNavHeader.tpl.html' : 'header/loggedOutHeader.tpl.html'"></header>
         <div class="kf-body-container-content-main" ng-include="'layout/main/main.tpl.html'"></div>
     </div>
-    <div kf-left-hand-nav></div>
+    <div kf-left-hand-nav ng-if="$root.userLoggedIn"></div>
 </div>
 
 
