@@ -221,6 +221,14 @@ angular.module('kifi')
           }
         };
 
+        scope.maybeOpenExt = function (event) {
+          var canAddComment = scope.keep.permissions && scope.keep.permissions.indexOf('add_message') !== -1;
+          if (canAddComment && installService.hasMinimumVersion('3.0.7')) {
+            event.preventDefault();
+            extensionLiaison.openDeepLink(scope.keep.url, '/messages/' + scope.keep.pubId);
+          }
+        };
+
         scope.trackTweet = function () {
           $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
         };

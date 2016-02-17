@@ -51,13 +51,13 @@
         <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
            ng-style="{'background': '#f7f7f7 url(\'' + image.url + '\') center / cover no-repeat', width: image.w ? image.w + 'px' : '', 'padding-top': image.h ? image.h + 'px' : ''}"
            ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
-           ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
+           ng-click="clickCallback({keep: keep, event: $event}); maybeOpenExt($event);" click-action="clickedArticleImage">
         </a>
 
         <div class="kf-keep-card-gallery-content">
           <div class="kf-keep-card-title">
             <a class="kf-keep-card-title-link" ng-href="{{::keep.url}}" target="_blank"
-               ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
+               ng-click="clickCallback({keep: keep, event: $event}); maybeOpenExt($event);" rel="nofollow"
                click-action="clickedArticleTitle" kf-ellipsis full-text="displayTitle"
                ng-bind="displayTitle" max-num-lines="2"></a>
           </div>
