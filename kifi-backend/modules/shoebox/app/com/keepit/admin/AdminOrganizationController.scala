@@ -15,6 +15,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.SlackTeamRepo
+import com.keepit.slack.SlackClient
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
 import play.twirl.api.HtmlFormat
@@ -42,6 +43,7 @@ class AdminOrganizationController @Inject() (
     libRepo: LibraryRepo,
     libCommander: LibraryCommander,
     slackTeamRepo: SlackTeamRepo,
+    slackClient: SlackClient,
     userEmailAddressRepo: UserEmailAddressRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgCommander: OrganizationCommander,

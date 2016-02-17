@@ -200,4 +200,12 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def slackStateCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 11 hours), (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamMembersCache(stats, accessLog, (innerRepo, 11 hours), (outerRepo, 1 day))
 }

@@ -7,7 +7,7 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.shoebox.model.KeepImagesCache
 import com.keepit.slack.SlackAuthStateCache
-import com.keepit.slack.models.{ SlackTeamIdCache, SlackTeamId, SlackChannelIntegrationsCache }
+import com.keepit.slack.models._
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -32,6 +32,16 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def basicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicUserUserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def slackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamMembersCache(stats, accessLog, (innerRepo, 1 days), (outerRepo, 1 days))
+
+  @Singleton
+  @Provides
+  def slackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 1 hour))
 
   @Singleton
   @Provides
