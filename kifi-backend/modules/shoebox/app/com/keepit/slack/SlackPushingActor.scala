@@ -1,5 +1,6 @@
 package com.keepit.slack
 
+import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.concurrent.FutureHelpers
@@ -43,7 +44,7 @@ object SlackPushingActor {
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, slackTeamId: SlackTeamId, attribution: Map[Id[Keep], SourceAttribution], lastKtlId: Id[KeepToLibrary]) extends KeepsToPush
 }
 
-class SlackPushingActor(
+class SlackPushingActor @Inject() (
   db: Database,
   organizationInfoCommander: OrganizationInfoCommander,
   slackTeamRepo: SlackTeamRepo,
