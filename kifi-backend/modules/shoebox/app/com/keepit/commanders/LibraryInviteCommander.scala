@@ -287,7 +287,7 @@ class LibraryInviteCommanderImpl @Inject() (
   }
 
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
-    val userImage = BasicUser.fromUser(inviter).avatarPath.getUrl
+    val userImage = BasicUser.fromUser(inviter).picturePath.getUrl
     val libLink = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(lib)}"""
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
 

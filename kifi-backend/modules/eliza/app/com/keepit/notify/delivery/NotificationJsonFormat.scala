@@ -29,7 +29,7 @@ class NotificationJsonFormat @Inject() (
   }
 
   private def resolveImage(image: NotificationImage): String = image match {
-    case UserImage(user) => user.avatarPath.getUrl
+    case UserImage(user) => user.picturePath.getUrl
     case OrganizationImage(org) => org.avatarPath.getUrl
     case PublicImage(url) => url
   }

@@ -37,7 +37,7 @@ case class UserPicture(
 object UserPicture {
   def generateNewFilename: String = RandomStringUtils.randomAlphanumeric(5)
 
-  def toS3Key(size: String, userId: ExternalId[User], pic: String): String = s"users/$userId/pics/$size/$pic"
+  def toS3Key(size: String, userId: ExternalId[User], pic: String): String = s"users/${userId.id}/pics/$size/$pic"
   def toImagePath(w: Option[Int], userId: ExternalId[User], picName: String): ImagePath = {
     val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
     val pic = if (picName.endsWith(".jpg")) picName else s"$picName.jpg"

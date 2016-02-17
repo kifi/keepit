@@ -27,7 +27,7 @@ class FriendConnectionNotifier @Inject() (
     //sending 'you are friends' email && Notification from auto-created connections from Facebook/LinkedIn
     val (respondingUser, respondingUserImage) = db.readOnlyMaster { implicit session =>
       val respondingUser = userRepo.get(myUserId)
-      val respondingUserImage = BasicUser.fromUser(respondingUser).avatarPath.getUrl
+      val respondingUserImage = BasicUser.fromUser(respondingUser).picturePath.getUrl
       (respondingUser, respondingUserImage)
     }
 

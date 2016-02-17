@@ -39,7 +39,7 @@ case class BasicUser(
     pictureName: String,
     username: Username) extends BasicUserFields {
   def path: Path = Path(username.value)
-  def avatarPath: ImagePath = UserPicture.toImagePath(Some(200), externalId, pictureName)
+  def picturePath: ImagePath = UserPicture.toImagePath(Some(200), externalId, pictureName)
 }
 
 object BasicUser {

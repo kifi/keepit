@@ -73,7 +73,7 @@ object BasicAuthor {
   def fromUser(user: BasicUser)(implicit imageConfig: S3ImageConfig): BasicAuthor = KifiUser(
     id = user.externalId.id,
     name = user.fullName,
-    picture = user.avatarPath.getUrl,
+    picture = user.picturePath.getUrl,
     url = user.path.absolute
   )
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
