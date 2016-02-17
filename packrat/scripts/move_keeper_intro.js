@@ -29,12 +29,6 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     };
 
     $intro = $(k.render('html/keeper/tile_tooltip', {
-      header: 'Moving the keeper',
-      text: 'Is the keeper in your way sometimes? Feel free to move it.',
-      actions: [
-        'Click and drag the keeper to change its location on the page',
-        'It\'ll stay put on all of ' + getWebsiteDomain() + '\'s pages.'
-      ],
       images: api.url('images')
     }, {
       'tip_partial': 'move_keeper_intro_demo'
@@ -42,7 +36,7 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     .insertAfter(k.tile)
     .on('click', '.kifi-tile-tooltip-x', onClickX)
     .each(function () { api.noop(this.offsetHeight); })  // force layout
-    .addClass('kifi-showing');
+    .addClass('kifi-showing kifi-move-keeper-intro')
 
     var pos = JSON.parse(k.tile.dataset.pos || '{}');
     pos.top = (typeof pos.top !== 'undefined' && pos.top - $intro.height() - 16) || 'auto';

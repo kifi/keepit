@@ -1,3 +1,15 @@
+.kifi-move-keeper-intro {
+  width: 350px;
+}
+
+.kifi-move-keeper-intro .kifi-tile-tooltip-tip {
+  text-align: center;
+}
+
+.kifi-move-keeper-intro .kifi-tile-tooltip-tip > * + * {
+  margin-top: 10px;
+}
+
 .kifi-move-keeper-intro-demo {
   height: 128px;
   border-radius: 12px;
