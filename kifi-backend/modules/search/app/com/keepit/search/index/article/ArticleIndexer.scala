@@ -41,7 +41,7 @@ class ShardedArticleIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  val fetchSize = 200
+  val fetchSize = ShardedIndexer.computeFetchSize(indexShards.keySet, localFetchSize = 100, maxFetchSize = 500)
 
   @StatsdTimingAsync("ShardedArticleIndexer.asyncUpdate")
   def asyncUpdate(): Future[Option[Int]] = updateLock.synchronized {
