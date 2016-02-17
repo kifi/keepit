@@ -218,10 +218,13 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership] = {
     // Sadly Slick does not currently support syntax like "SELECT * FROM table WHERE (v1, v2) IN ((a,b), (c,d), (e,f))
     // This is a hacky workaround (ref: https://github.com/slick/slick/pull/995#issuecomment-66271241)
-    activeRows.filter(stm => identities.map {
-      case (teamId, userId) => stm.slackTeamId === teamId && stm.slackUserId === userId
-    }.reduce(_ || _)).list.groupBy(stm => (stm.slackTeamId, stm.slackUserId)).map {
-      case (k, Seq(v)) => k -> v
+    if (identities.isEmpty) Map.empty // reduce throws exceptions on empty collections
+    else {
+      activeRows.filter(stm => identities.map {
+        case (teamId, userId) => stm.slackTeamId === teamId && stm.slackUserId === userId
+      }.reduce(_ || _)).list.groupBy(stm => (stm.slackTeamId, stm.slackUserId)).map {
+        case (k, Seq(v)) => k -> v
+      }
     }
   }
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
