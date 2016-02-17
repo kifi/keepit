@@ -1,7 +1,7 @@
 package com.keepit.slack.models
 
 import java.util.UUID
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
@@ -206,5 +206,5 @@ case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
 }
 
 class SlackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackTeamMembersKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends PrimitiveCacheImpl[SlackTeamMembersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

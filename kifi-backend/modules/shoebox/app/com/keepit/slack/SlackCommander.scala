@@ -36,8 +36,6 @@ class SlackCommanderImpl @Inject() (
   db: Database,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
-  slackTeamMembersCountCache: SlackTeamMembersCountCache,
-  slackTeamMembersCache: SlackTeamMembersCache,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -95,11 +93,6 @@ class SlackCommanderImpl @Inject() (
         }
       }
     }
-  }
-
-  def getTeamMembersCount(slackTeamId: SlackTeamId)(implicit session: RWSession): Int = {
-    val memberships = slackTeamMembershipRepo.getBySlackTeamId(slackTeamId)
-
   }
 
   def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
