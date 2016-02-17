@@ -25,10 +25,11 @@ angular.module('kifi')
       }
 
       var anchor = angular.element(hash)[0];
+      var header = angular.element('.kf-oph')[0];
       var scrollDestination;
 
       if (anchor) {
-        scrollDestination = anchor.getBoundingClientRect().top - angular.element('.kf-oph')[0].getBoundingClientRect().top;
+        scrollDestination = anchor.getBoundingClientRect().top - (header && header.getBoundingClientRect().top || 0);
         angular.element('#kf-body-container-content, html, body').animate({
           scrollTop: scrollDestination - 16 // the 16 provides padding from the site header
         });
