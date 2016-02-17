@@ -232,7 +232,7 @@ class S3ImageStoreImpl @Inject() (
     val key = S3ImageStore.toTempKey(token)
     uploadToS3(key, is, os.size(), "temporary user upload")
 
-    (token, s"${config.cdnBase}/$key")
+    (token, ImagePath(key).getUrl)
   }
 
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = {
