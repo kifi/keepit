@@ -67,9 +67,9 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
           }
         } else {
           db.readWrite { implicit session =>
-            val ownerMembershipIsActive = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, library.ownerId).exists(_.state == LibraryMembershipStates.ACTIVE)
+            val ownerMembershipIsActive = libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, library.ownerId).exists(_.isActive)
             if (!ownerMembershipIsActive) {
-              log.error(s"[zombie-libs] found a library id=${library.id.get} where owner id=${library.ownerId} does not have an active membership, deactivating it")
+              airbrake.notify(s"[zombie-libs] found a library id=${library.id.get} where owner id=${library.ownerId} does not have an active membership, deactivating it")
               libraryRepo.deactivate(library)
             }
           }
