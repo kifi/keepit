@@ -10,6 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.common.util.DollarAmount
@@ -180,7 +181,7 @@ class UserStatisticsCommander @Inject() (
     slackTeamMembersCache: SlackTeamMembersCache,
     abook: ABookServiceClient,
     airbrake: AirbrakeNotifier,
-    planManagementCommander: PlanManagementCommander) {
+    planManagementCommander: PlanManagementCommander) extends Logging {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -191,7 +192,12 @@ class UserStatisticsCommander @Inject() (
   def getTeamMembersCount(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Int = {
     slackTeamMembersCountCache.getOrElse(SlackTeamMembersCountKey(slackTeamMembership.slackTeamId)) {
       val members = slackTeamMembersCache.getOrElse(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
-        Await.result(slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId), Duration(10, SECONDS))
+        val allMembers = Await.result(slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId), Duration(10, SECONDS))
+        val deleted = allMembers.filter(_.deleted)
+        val bots = allMembers.filterNot(_.deleted).filter(_.bot)
+        log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
+          s"out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
+        allMembers.filterNot(_.deleted).filterNot(_.bot)
       }
       members.size
     }
@@ -202,7 +208,7 @@ class UserStatisticsCommander @Inject() (
     val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
     val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
     val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
-    val slackTeamMembersCount = slackMembers.filter { _.token.contains("users:read") }.map(getTeamMembersCount).sum
+    val slackTeamMembersCount = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount).sum
     val slacks = SlackStatistics(slackTeamMembersCount, slackToLibs)
     val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
     val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
