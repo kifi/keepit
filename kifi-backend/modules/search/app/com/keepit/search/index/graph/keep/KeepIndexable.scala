@@ -8,7 +8,7 @@ import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
-import com.keepit.slack.models.SlackChannelId
+import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
 import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
@@ -47,12 +47,12 @@ object KeepFields {
   val maxPrefixLength = 8
 
   object Source {
-    def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
+    def apply(teamId: SlackTeamId, channelId: SlackChannelId): String = s"slack|${channelId.value}" // TODO(Léo): this should be "slack|teamId_channelId"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
     def apply(source: RawSourceAttribution): String = Source(SourceAttribution.fromRawSourceAttribution(source))
     def apply(source: SourceAttribution): String = source match {
       case TwitterAttribution(tweet) => Source(tweet.user.screenName)
-      case SlackAttribution(message) => Source(message.channel.id)
+      case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)
     }
   }
 

@@ -87,10 +87,11 @@ class SlackIngestingActor @Inject() (
       }
 
       val getTokenWithScopes = {
-        val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrationsByIds.values.map(_.slackUserId).toSet)
+        val slackIdentities = integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackUserId)).toSet
+        val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
         integrationsByIds.map {
           case (integrationId, integration) =>
-            integrationId -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
+            integrationId -> slackMembershipsByIdentity.get((integration.slackTeamId, integration.slackUserId)).flatMap(_.tokenWithScopes)
         }
       }
 
@@ -187,14 +188,14 @@ class SlackIngestingActor @Inject() (
   }
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage], blacklist: Seq[String]): (Option[SlackTimestamp], Set[SlackMessage]) = {
-    val slackUsers = messages.map(_.userId).toSet
-    val (library, userBySlackId) = db.readOnlyMaster { implicit s =>
+    val slackIdentities = messages.map(_.userId).map(slackUserId => (integration.slackTeamId, slackUserId)).toSet
+    val (library, userBySlackIdentity) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
-      val usersBySlackId = slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
-      (lib, usersBySlackId)
+      val usersBySlackIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities).flatMap { case (slackIdentity, stm) => stm.userId.map(slackIdentity -> _) }
+      (lib, usersBySlackIdentity)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
-    val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.get(msg.userId)).map {
+    val rawBookmarksByUser = messages.groupBy(msg => userBySlackIdentity.get((integration.slackTeamId, msg.userId))).map {
       case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {

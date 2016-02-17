@@ -77,7 +77,7 @@ object BasicAuthor {
     url = user.path.absolute
   )
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
-    case SlackAttribution(msg) => SlackUser(
+    case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
       name = msg.username.value,
       picture = ImageUrls.SLACK_LOGO,
