@@ -5,7 +5,7 @@ import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.net.URISanitizer
 import com.keepit.heimdal._
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -87,15 +87,15 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
-    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, true)
+  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { implicit request =>
+    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, true)
   }
 
-  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
-    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, false)
+  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { implicit request =>
+    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, false)
   }
 
-  private def getKeepInfo(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean) = {
+  private def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean)(implicit request: UserRequest[_]) = {
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
     } match {
@@ -107,7 +107,7 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, sanitizeUrls = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(request.userId), false, Seq(keep), idealImageSize, sanitizeUrls = true).imap {
           case Seq(keepInfo) =>
             Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }

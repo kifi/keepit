@@ -27,7 +27,8 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
     "reattribute keeps" in {
       "from a slack author" in {
         withDb(modules: _*) { implicit injector =>
-          val slackId = SlackUserId("U4242424242")
+          val slackUserId = SlackUserId("U4242424242") // This is the only important part
+          val slackTeamId = SlackTeamId("T4242424242")
           def foreignMsgFrom(who: SlackUserId) = {
             SlackMessage(
               messageType = SlackMessageType("user"),
@@ -48,13 +49,13 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
 
             val foreignKeeps = KeepFactory.keeps(71).map(_.withNoUser().saved)
             foreignKeeps.foreach { keep =>
-              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(slackId)))
+              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(slackUserId), slackTeamId))
             }
 
             val randoSlackId = SlackUserId("URANDORANDO")
             val randoKeeps = KeepFactory.keeps(49).map(_.withNoUser().saved)
             randoKeeps.foreach { keep =>
-              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(randoSlackId)))
+              sourceAttributionRepo.intern(keep.id.get, RawSlackAttribution(foreignMsgFrom(randoSlackId), slackTeamId))
             }
 
             (user, domesticKeeps, foreignKeeps)
@@ -67,7 +68,7 @@ class KeepSourceCommanderTest extends TestKitSupport with SpecificationLike with
             ktuRepo.getAllByUserId(user.id.get).map(_.keepId).toSet === domesticIds
           }
           // Then we assign $slackId to that user
-          val reattributedKeeps = Await.result(sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackId), user.id.get), Duration.Inf)
+          val reattributedKeeps = sourceAttributionCommander.reattributeKeeps(Author.SlackUser(slackTeamId, slackUserId), user.id.get)
           reattributedKeeps === foreignIds
           db.readOnlyMaster { implicit s =>
             keepRepo.getByUser(user.id.get).map(_.id.get).toSet === domesticIds ++ foreignIds

@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -55,6 +55,7 @@ class KeepDecoratorImpl @Inject() (
   rover: RoverServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val imageConfig: S3ImageConfig,
+  implicit val s3: S3ImageStore,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -169,7 +170,7 @@ class KeepDecoratorImpl @Inject() (
             (for {
               author <- sourceAttrs.get(keep.id.get).map {
                 case (_, Some(kifiUser)) => BasicAuthor.fromUser(kifiUser)
-                case (attr, _) => BasicAuthor.fromAttribution(attr)
+                case (attr, _) => BasicAuthor.fromSource(attr)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
               KeepInfo(

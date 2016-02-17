@@ -12,11 +12,11 @@ import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.Feature.{ SlackNotifications, SlackIngestionReaction }
+import com.keepit.model.StaticFeature.{ SlackNotifications, SlackIngestionReaction }
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
-import com.keepit.slack.models.SlackTeamRepo
+import com.keepit.slack.models.{ LibraryToSlackChannelRepo, LibraryToSlackChannel, SlackTeamRepo, SlackChannelToLibraryRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.Play
 import scala.concurrent.duration._
@@ -54,6 +54,8 @@ class OrganizationCommanderImpl @Inject() (
   creditRewardCommander: CreditRewardCommander,
   organizationAnalytics: OrganizationAnalytics,
   slackTeamRepo: SlackTeamRepo,
+  slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+  libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
@@ -216,6 +218,8 @@ class OrganizationCommanderImpl @Inject() (
 
           slackTeamRepo.getByOrganizationId(org.id.get).foreach { slackTeam =>
             slackTeamRepo.save(slackTeam.withOrganizationId(None))
+            slackChannelToLibraryRepo.getBySlackTeam(slackTeam.slackTeamId).foreach(slackChannelToLibraryRepo.deactivate(_))
+            libraryToSlackChannelRepo.getBySlackTeam(slackTeam.slackTeamId).foreach(libraryToSlackChannelRepo.deactivate(_))
           }
 
           orgRepo.save(org.sanitizeForDelete)
@@ -226,7 +230,8 @@ class OrganizationCommanderImpl @Inject() (
           organizationAnalytics.trackOrganizationEvent(org, requester, request)
 
           val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
-          val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED, excludeState = None).map(_.id.get)
+          val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED).map(_.id.get)
+
           (libsToReturn, libsToDelete)
         }
 

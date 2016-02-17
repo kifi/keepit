@@ -77,7 +77,6 @@ trait TwitterSocialGraph extends SocialGraph {
 class TwitterSocialGraphImpl @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
-    s3ImageStore: S3ImageStore,
     clock: Clock,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
@@ -213,9 +212,6 @@ class TwitterSocialGraphImpl @Inject() (
             val library = libraryRepo.get(libraryId)
             val libOwner = basicUserRepo.load(library.ownerId)
             if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
-              val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
-              val libLink = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(library)}"""
-              val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
               log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
               libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
             }

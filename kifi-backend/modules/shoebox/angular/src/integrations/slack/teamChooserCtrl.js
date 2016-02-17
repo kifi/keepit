@@ -28,7 +28,7 @@ angular.module('kifi')
 
     $scope.onClickedDone = function() {
       slackService
-      .connectTeam($scope.selectedOrg.id, params.slackState)
+      .connectTeam($scope.selectedOrg.id, params.slackTeamId, params.slackState)
       .then(function (resp) {
         if (resp.redirect) {
           $window.location = resp.redirect;

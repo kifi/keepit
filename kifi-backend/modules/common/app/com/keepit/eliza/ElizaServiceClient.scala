@@ -127,6 +127,7 @@ trait ElizaServiceClient extends ServiceClient {
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
+  def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]]
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
@@ -352,6 +353,13 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].msgs
     }
   }
+  def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]] = {
+    import GetMessageCountsForKeeps._
+    val request = Request(keepIds)
+    call(Eliza.internal.getMessageCountsForKeeps, body = Json.toJson(request)).map {
+      _.json.as[Response].countByKeepId
+    }
+  }
   def editMessage(msgId: Id[Message], newText: String): Future[Message] = {
     import EditMessage._
     val request = Request(msgId, newText)
@@ -427,6 +435,12 @@ object ElizaServiceClient {
   object GetMessagesOnKeep {
     case class Request(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int)
     case class Response(msgs: Seq[Message])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetMessageCountsForKeeps {
+    case class Request(keepIds: Set[Id[Keep]])
+    case class Response(countByKeepId: Map[Id[Keep], Int])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }

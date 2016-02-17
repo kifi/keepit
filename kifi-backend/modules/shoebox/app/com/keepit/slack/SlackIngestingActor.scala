@@ -87,10 +87,11 @@ class SlackIngestingActor @Inject() (
       }
 
       val getTokenWithScopes = {
-        val slackMemberships = slackTeamMembershipRepo.getBySlackUserIds(integrationsByIds.values.map(_.slackUserId).toSet)
+        val slackIdentities = integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackUserId)).toSet
+        val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
         integrationsByIds.map {
           case (integrationId, integration) =>
-            integrationId -> slackMemberships.get(integration.slackUserId).flatMap(_.tokenWithScopes)
+            integrationId -> slackMembershipsByIdentity.get((integration.slackTeamId, integration.slackUserId)).flatMap(_.tokenWithScopes)
         }
       }
 
@@ -162,11 +163,14 @@ class SlackIngestingActor @Inject() (
   }
 
   private def doIngest(tokenWithScopes: SlackTokenWithScopes, settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
-    val shouldAddReactions = settings.exists(_.settingFor(Feature.SlackIngestionReaction).contains(FeatureSetting.ENABLED))
+    val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
+    val blacklist = settings.flatMap { s =>
+      s.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk.entries.map(_.path) }
+    }.getOrElse(Seq.empty)
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
-          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
+          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages, blacklist)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
               slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
@@ -183,31 +187,21 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
-    val slackUsers = messages.map(_.userId).toSet
-    val userBySlackId = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackUserIds(slackUsers).flatMap { case (slackUser, stm) => stm.userId.map(slackUser -> _) }
+  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage], blacklist: Seq[String]): (Option[SlackTimestamp], Set[SlackMessage]) = {
+    val slackIdentities = messages.map(_.userId).map(slackUserId => (integration.slackTeamId, slackUserId)).toSet
+    val (library, userBySlackIdentity) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(integration.libraryId)
+      val usersBySlackIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities).flatMap { case (slackIdentity, stm) => stm.userId.map(slackIdentity -> _) }
+      (lib, usersBySlackIdentity)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
-    val (integrationOwner, library) = db.readOnlyMaster { implicit session =>
-      val userId = slackTeamMembershipRepo.getBySlackTeamAndUser(integration.slackTeamId, integration.slackUserId).flatMap(_.userId).getOrElse {
-        val message = s"Could not find a valid SlackMembership for ${(integration.slackTeamId, integration.slackUserId)} for stl ${integration.id.get}"
-        airbrake.notify(message)
-        throw new IllegalStateException(message)
-      }
-      val library = libraryRepo.get(integration.libraryId)
-      (userId, library)
-    }
-    val rawBookmarksByUser = messages.groupBy(msg => userBySlackId.get(msg.userId)).map {
-      case (kifiUser, msgs) => kifiUser -> msgs.flatMap(toRawBookmarks).distinctBy(_.url)
+    val rawBookmarksByUser = messages.groupBy(msg => userBySlackIdentity.get((integration.slackTeamId, msg.userId))).map {
+      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
-      case (kifiUser, rawBookmarks) =>
-        // For now, only the Brewstercorp slack team is allowed to have user-less keeps
-        // For everyone else, if we can't figure out who the Kifi user is, we attribute it to the integration owner
-        val keepOwner = if (integration.slackTeamId == SlackTeamId("T0FUL04N4")) kifiUser else kifiUser orElse Some(integrationOwner)
-        if (keepOwner.isEmpty) log.info(s"[SLACK-INGEST] Found a few keeps (${rawBookmarks.length}) that we could not attribute, putting them in lib ${library.id.get}")
-        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, keepOwner, Some(library), KeepSource.slack)(HeimdalContext.empty)
+      case (kifiUserOpt, rawBookmarks) =>
+        val notBlacklisted = rawBookmarks.filter(b => !SlackIngestingBlacklist.blacklistedUrl(b.url, blacklist))
+        val interned = keepInterner.internRawBookmarksWithStatus(notBlacklisted, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>
@@ -222,11 +216,11 @@ class SlackIngestingActor @Inject() (
     (lastMessageTimestamp, ingestedMessages)
   }
 
-  private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
-  private def doNotIngest(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url)
+  private def ignoreMessage(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
+  private def ignoreUrl(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url) || urlClassifier.isSlackArchivedMessage(url)
 
-  private def toRawBookmarks(message: SlackMessage): Set[RawBookmarkRepresentation] = {
-    if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
+  private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId): Set[RawBookmarkRepresentation] = {
+    if (ignoreMessage(message)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
@@ -242,7 +236,7 @@ class SlackIngestingActor @Inject() (
       }.toMap
 
       (linksFromText.keySet ++ linksFromAttachments.keySet).collect {
-        case url if !doNotIngest(url) =>
+        case url if !ignoreUrl(url) =>
           val title = linksFromText.get(url).flatten orElse linksFromAttachments.get(url).flatMap(_.title.map(_.value))
           RawBookmarkRepresentation(
             title = title,
@@ -250,7 +244,7 @@ class SlackIngestingActor @Inject() (
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),
-            sourceAttribution = Some(RawSlackAttribution(message)),
+            sourceAttribution = Some(RawSlackAttribution(message, slackTeamId)),
             note = None
           )
       }

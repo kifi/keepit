@@ -1,14 +1,17 @@
-<div class="kf-logged-in-nav-header kf-left-hand-nav-container" ng-controller="LoggedInHeaderCtrl">
+<div class="kf-logged-in-nav-header" ng-controller="LoggedInHeaderCtrl" ng-class="{'kf-logged-in-nav-header-drawer-open': $root.leftHandNavIsOpen}">
   <div class="kf-lih-inner-flex">
     <div class="kf-lih-left-flex">
-      <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-white-text" ui-sref="home.feed"></a>
+      <div class="kf-logged-in-nav-header-left-menu-button" ng-if="!$root.leftHandNavIsOpen" ng-click="$root.leftHandNavIsOpen = true">
+        <svg class="kf-logged-in-nav-header-left-menu-icon" kf-symbol-sprite icon="nav-menu"></svg>
+      </div>
+      <a class="kf-logged-in-nav-header-logo kf-lih-logo svg-kifi-clover-dark-text" ui-sref="home.feed" ng-if="!$root.leftHandNavIsOpen"></a>
     </div>
     <div class="kf-lih-center-flex">
       <label class="kf-lih-search kf-lih-search-lhn kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
+    `      <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" ng-style="{ 'background-image': 'url(' + (library.owner|pic:100) + ')' }" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" ng-style="{ 'background-color': library.color }" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
@@ -27,46 +30,51 @@
         </div>
       </div>
     </div>
-    <div class="kf-lih-right-flex kifi-guide-target-3 kifi-guide-2">
-      <div class="kf-lih-dropdown-parent" kf-click-menu>
+    <div class="kf-lih-right-flex">
+      <div class="kf-logged-in-nav-header-guide-target-3 kifi-guide-target-3 kifi-guide-2"></div>
+      <div class="kf-lih-dropdown-parent" kf-click-menu toggle-open="true">
         <button class="kf-lih-add-link sprite sprite-add-link-2">Add a link</button>
         <!-- <button class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</button> -->
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="addKeeps()">
-            <span class="kf-lih-create-icon kf-lih-create-keep">&#10084;</span><!--
+            <span class="kf-lih-create-icon kf-lih-create-org">
+              <svg kf-symbol-sprite icon="hearts"></svg>
+            </span><!--
          -->Add a keep
           </button>
           <button class="kf-dropdown-menu-item" ng-click="createLibrary()">
-            <span class="kf-lih-create-icon kf-lih-create-lib">+</span><!--
+            <span class="kf-lih-create-icon kf-lih-create-org">
+              <svg kf-symbol-sprite icon="create-library"></svg>
+            </span><!--
          -->Create a library
           </button>
           <button class="kf-dropdown-menu-item" ng-click="createTeam()">
             <span class="kf-lih-create-icon kf-lih-create-org">
-              <svg kf-symbol-sprite icon="org"></svg>
+              <svg kf-symbol-sprite icon="team"></svg>
             </span><!--
          -->Create a team
           </button>
           <a class="kf-dropdown-menu-item" href="/invite">
             <span class="kf-lih-create-icon kf-lih-create-org">
-              <svg kf-symbol-sprite icon="plus"></svg>
+              <svg kf-symbol-sprite icon="invite-friend"></svg>
             </span><!--
          -->Invite someone to Kifi
           </a>
           <button class="kf-dropdown-menu-item" ng-click="importBookmarks()">
             <span class="kf-lih-create-icon kf-lih-create-org">
-              <svg kf-symbol-sprite icon="import-from-browser"></svg>
+              <svg kf-symbol-sprite icon="import-bookmarks"></svg>
             </span><!--
-         --> Import Browser Bookmarks
+         --> Import browser bookmarks
           </button>
           <button class="kf-dropdown-menu-item" ng-click="importBookmarkFile()">
             <span class="kf-lih-create-icon kf-lih-create-org">
-              <svg kf-symbol-sprite icon="import-third-party"></svg>
+              <svg kf-symbol-sprite icon="import"></svg>
             </span><!--
-         --> Import from 3rd Parties
+         --> Import from 3rd parties
           </button>
         </menu>
       </div>
-      <div class="kf-lih-dropdown-parent" kf-click-menu>
+      <div class="kf-lih-dropdown-parent" kf-click-menu toggle-open="true">
         <button class="kf-lih-profile" ng-style="{ 'background-image': 'url(' + (me|pic:100) + ')' }">Profile actions</button>
         <menu class="kf-dropdown-menu" ng-class="me.orgs.length ? 'kf-dropdown-menu_split' : ''">
           <nav class="kf-dropdown-menu-nav kf-lih-profiles" ng-if="me.orgs.length">
@@ -82,8 +90,10 @@
           <nav class="kf-dropdown-menu-nav">
             <a ng-if="!me.orgs.length" class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
             <a class="kf-dropdown-menu-item" href="/tags/manage">Manage Tags</a>
-            <a class="kf-dropdown-menu-item" href="//support.kifi.com/">Support</a>
+            <a class="kf-dropdown-menu-item" href="http://support.kifi.com/" target="_self">Support</a>
             <a class="kf-dropdown-menu-item" ui-sref="settings">Settings</a>
+            <a class="kf-dropdown-menu-item" ng-click="viewGuide()" href="#" ng-if="hasExtension">View Guide</a>
+            <a class="kf-dropdown-menu-item" href="//www.kifi.com/install" ng-if="!hasExtension">Get Extension</a>
             <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
           </nav>
         </menu>

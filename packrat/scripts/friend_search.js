@@ -5,6 +5,66 @@
 
 var initFriendSearch = (function () {
 
+  var isSafari = (navigator.userAgent.indexOf('Safari') !== -1 && navigator.userAgent.indexOf('Chrome') === -1);
+  if (isSafari) {
+    // We need to use this due to weirdness stemming from how Safari
+    // transitions the newly cloned elements being added to the document.
+    $.fn.safariHeight = function (height) {
+      return this.each(function () {
+        setHeight(this, height);
+      });
+    };
+  } else {
+    $.fn.safariHeight = function (height) {
+      return this.css('height', height);
+    };
+  }
+
+  function setHeight(element, height) {
+    element = (element instanceof Element ? element : element[0]);
+    var classList = Array.prototype.slice.call(element.classList);
+
+    var styleTag = document.getElementById('kifi-ti-style');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'kifi-ti-style';
+      document.body.appendChild(styleTag);
+    }
+
+    if (height === '') {
+      if (!document.documentElement.contains(element)) {
+        element.dataset.safariHeight = null;
+        document.documentElement.appendChild(element);
+        height = getComputedStyle(element).height.slice(0, -2);
+        document.documentElement.removeChild(element);
+      } else {
+        height = getComputedStyle(element).height.slice(0, -2);
+      }
+      if (height !== '') {
+        height = +height;
+        setHeight(element, height);
+      } else {
+        // We just can't get the height, so give up
+        return;
+      }
+    }
+
+    height = (typeof height === 'number' ? height + 'px' : height);
+    element.dataset.safariHeight = Math.random();
+    var sheet = styleTag.sheet;
+    var selector = classList.reduce(reduceClassList, '[data-safari-height="' + element.dataset.safariHeight + '"]');
+    var rule = selector + ' { height: ' + height + '!important; }';
+
+    sheet.insertRule(rule, sheet.rules.length);
+    if (sheet.rules.length > 2) {
+      sheet.deleteRule(0);
+    }
+  }
+
+  function reduceClassList(acc, d) {
+    return '.' + d + acc;
+  }
+
   return function ($in, source, participants, includeSelf, options) {
     $in.tokenInput(search.bind(null, participants.map(getId), includeSelf), $.extend({
       preventDuplicates: true,
@@ -109,26 +169,26 @@ var initFriendSearch = (function () {
   function showResults($dropdown, els, done) {
     if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
       if (els.length) {
-        $dropdown.css('height', 0).append(els);
+        $dropdown.safariHeight(0).append(els);
         $dropdown.off('transitionend').on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'height') {
-            $dropdown.off('transitionend').css('height', '');
+            $dropdown.off('transitionend').safariHeight('');
             done();
           }
-        }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
+        }).safariHeight(measureCloneHeight($dropdown[0], 'clientHeight'));
       } else {
         done();
       }
     } else if (els.length === 0) {  // hiding entire list
       var height = $dropdown[0].clientHeight;
       if (height > 0) {
-        $dropdown.css('height', height).layout();
+        $dropdown.safariHeight(height).layout();
         $dropdown.off('transitionend').on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'height') {
-            $dropdown.off('transitionend').empty().css('height', '');
+            $dropdown.off('transitionend').empty().safariHeight(0);
             done();
           }
-        }).css('height', 0);
+        }).safariHeight(0);
       } else {
         $dropdown.empty();
         done();
@@ -137,33 +197,45 @@ var initFriendSearch = (function () {
       // fade in overlaid as height adjusts and old fades out
       var heightInitial = $dropdown[0].clientHeight;
       var width = $dropdown[0].clientWidth;
-      $dropdown.css('height', heightInitial);
-      var $clone = $($dropdown[0].cloneNode(false)).addClass('kifi-ti-dropdown-clone kifi-instant').css('width', width)
-          .append(els)
-        .css({visibility: 'hidden', opacity: 0, height: ''})
+      $dropdown.safariHeight(heightInitial);
+      var $clone = $($dropdown[0].cloneNode(false))
+        .addClass('kifi-ti-dropdown-clone kifi-instant')
+        .css('width', width)
+        .append(els)
+        .css({visibility: 'hidden', opacity: 0})
+        .safariHeight('')
         .insertBefore($dropdown);
       var heightFinal = $clone[0].clientHeight;
       $dropdown.layout();
       $clone
-        .css({height: heightInitial, visibility: 'visible'})
+        .css({visibility: 'visible'})
+        .safariHeight(heightInitial)
         .layout()
         .on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'opacity') {
-            $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
+            $dropdown
+              .empty()
+              .append($clone.children())
+              .css({opacity: '', transition: 'none'})
+              .safariHeight('')
+              .layout()
+              .css('transition', '');
             $clone.remove();
             done();
           }
         })
         .removeClass('kifi-instant')
-        .css({height: heightFinal, opacity: 1});
+        .css({opacity: 1})
+        .safariHeight(heightFinal);
       $dropdown
-        .css({height: heightFinal, opacity: 0});
+        .css({opacity: 0})
+        .safariHeight(heightFinal);
     }
   }
 
   function measureCloneHeight(el, heightProp) {
     var clone = el.cloneNode(true);
-    $(clone).css({position: 'absolute', zIndex: -1, visibility: 'hidden', height: 'auto'}).insertBefore(el);
+    $(clone).css({position: 'absolute', zIndex: -1, visibility: 'hidden'}).safariHeight('auto').insertBefore(el);
     var val = clone[heightProp];
     clone.remove();
     return val;

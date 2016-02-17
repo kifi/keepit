@@ -24,6 +24,9 @@ trait PermissionCommander {
 
   def getKeepsPermissions(keepIds: Set[Id[Keep]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Keep], Set[KeepPermission]]
   def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission]
+
+  def partitionLibrariesUserCanJoinOrWriteTo(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): (Set[Id[Library]], Set[Id[Library]], Set[Id[Library]])
+  def canJoinOrWriteToLibrary(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Boolean]
 }
 
 @Singleton
@@ -272,13 +275,12 @@ class PermissionCommanderImpl @Inject() (
           }
           viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
         }
-        Option
         val canAddParticipants = canAddMessage
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
           val viewerOwnsTheKeep = userIdOpt containsTheSameValueAs k.userId
           // This seems like a pretty strange operational definition...
-          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.safeContains(lib.ownerId))
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.safely.contains(lib.ownerId))
           viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
         val canViewKeep = {
@@ -309,6 +311,25 @@ class PermissionCommanderImpl @Inject() (
 
   def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission] = {
     getKeepsPermissions(Set(keepId), userIdOpt).getOrElse(keepId, Set.empty)
+  }
+
+  def partitionLibrariesUserCanJoinOrWriteTo(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): (Set[Id[Library]], Set[Id[Library]], Set[Id[Library]]) = {
+    val permissionsByLibraryId = getLibrariesPermissions(libIds, Some(userId))
+    val (libsUserCanWriteTo, libsUserCannotWriteTo) = libIds.partition { libId => permissionsByLibraryId.get(libId).exists(_.contains(LibraryPermission.ADD_KEEPS)) }
+    val (libsUserCanJoin, libsUserCannotJoin) = libsUserCannotWriteTo.partition { libId =>
+      val lib = libraryRepo.get(libId)
+      val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
+      val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
+        lib.organizationId.exists(orgId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
+      userHasInvite || libHasOpenCollaboration
+    }
+    (libsUserCanWriteTo, libsUserCanJoin, libsUserCannotJoin)
+  }
+
+  def canJoinOrWriteToLibrary(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Boolean] = {
+    val (libsUserCanWriteTo, libsUserCanJoin, _) = partitionLibrariesUserCanJoinOrWriteTo(userId, libIds)
+    val libsUserCanJoinOrWriteTo = libsUserCanWriteTo ++ libsUserCanJoin
+    libIds.map(libId => libId -> libsUserCanJoinOrWriteTo.contains(libId)).toMap
   }
 }
 

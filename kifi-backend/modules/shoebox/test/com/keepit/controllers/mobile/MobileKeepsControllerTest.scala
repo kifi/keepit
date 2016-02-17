@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ S3ImageStore, S3ImageConfig, FakeShoeboxStoreModule }
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal._
@@ -22,7 +22,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.{ KeepToCollection, UserFactory, _ }
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -51,7 +51,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
   implicit val helperFormat = RawBookmarkRepresentation.helperFormat
 
-  implicit def pubIdConfig(implicit injetesctor: Injector) = inject[PublicIdConfiguration]
+  implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+  implicit def s3Config(implicit injector: Injector): S3ImageConfig = inject[S3ImageConfig]
 
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
@@ -122,6 +123,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       status(result) must equalTo(OK)
       contentType(result) must beSome("application/json")
 
+      val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
       val expected = Json.parse(s"""
         {
          "collection":null,
@@ -129,7 +131,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
          "after":null,
          "keeps":[
           {
-            "author":{"displayName":"Andrew C","picture":"0.jpg","url":"https://www.kifi.com/test1"},
+            "author":${Json.toJson(author)},
             "id":"${bookmark2.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark2.id.get).id}",
             "title":"A1",
@@ -156,7 +158,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "permissions": ${Json.toJson(keepPermissions)}
             },
           {
-            "author":{"displayName":"Andrew C","picture":"0.jpg","url":"https://www.kifi.com/test1"},
+            "author":${Json.toJson(author)},
             "id":"${bookmark1.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark1.id.get).id}",
             "title":"G1",

@@ -58,7 +58,7 @@ class UserFromKeepsScoreVectorSource(
     while (docId < NO_MORE_DOCS) {
       val keeperId = userIdDocValues.get(docId)
 
-      if (idFilter.findIndex(keeperId) < 0) { // use findIndex to avoid boxing
+      if (keeperId > 0 && idFilter.findIndex(keeperId) < 0) { // use findIndex to avoid boxing
         val visibility = keepVisibilityEvaluator(docId)
 
         if (visibility != Visibility.RESTRICTED) {

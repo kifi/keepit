@@ -29,9 +29,9 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
 
 case class UserStatistics(
   user: User,
+  paying: Boolean,
   emailAddress: Option[EmailAddress],
   connections: Int,
-  invitations: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
   slackMemberships: Seq[SlackTeamMembership],
@@ -61,11 +61,9 @@ case class OrganizationStatisticsOverview(
   libStats: LibCountStatistics,
   slackStats: SlackStatistics,
   numKeeps: Int,
-  members: Set[OrganizationMembership],
-  candidates: Set[OrganizationMembershipCandidate],
+  members: Int,
   domains: Set[NormalizedHostname],
-  internalMemberChatStats: Int,
-  allMemberChatStats: Int)
+  paying: Boolean)
 
 case class MemberStatistics(
   user: User,
@@ -134,6 +132,20 @@ case class OrganizationMemberRecommendationInfo(
   emailAddress: Option[EmailAddress],
   score: Double)
 
+case class FullUserStatistics(
+  libs: LibCountStatistics,
+  slacks: SlackStatistics,
+  keepCount: Int,
+  manualKeepsLastWeek: Int,
+  organizations: Seq[Organization],
+  candidateOrganizations: Seq[Organization],
+  socialUsers: Seq[SocialUserBasicInfo],
+  fortyTwoConnections: Seq[User],
+  kifiInstallations: Seq[KifiInstallation],
+  emails: Seq[UserEmailAddress],
+  invitedByUsers: Seq[User],
+  paying: Boolean)
+
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
@@ -151,6 +163,7 @@ class UserStatisticsCommander @Inject() (
     invitationRepo: InvitationRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -169,6 +182,27 @@ class UserStatisticsCommander @Inject() (
     userRepo.getAllUsers(inviters).values.toSeq
   }
 
+  def fullUserStatistics(userId: Id[User]) = db.readOnlyReplicaAsync { implicit s =>
+    val keepCount = keepRepo.getCountByUser(userId)
+    val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
+    val slacks = SlackStatistics(slackChannelToLibraryRepo.getAllBySlackUserIds(slackTeamMembershipRepo.getByUserId(userId).map(_.slackUserId).toSet))
+    val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
+    val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+    val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
+    val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
+    val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
+      userRepo.get(userId)
+    }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
+    val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
+    val emails = emailRepo.getAllByUser(userId)
+    val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
+    val paying = organizations.exists { org =>
+      val plan = planManagementCommander.currentPlan(org.id.get)
+      plan.pricePerCyclePerUser.cents > 0
+    }
+    FullUserStatistics(libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying)
+  }
+
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
@@ -179,16 +213,21 @@ class UserStatisticsCommander @Inject() (
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
     val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
+
     val orgsStats = orgs.map(o => organizationStatisticsMin(o))
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgCandidatesStats = orgCandidates.map(o => organizationStatisticsMin(o))
     val slackMemberships = slackTeamMembershipRepo.getByUserId(user.id.get)
+    val paying = orgs.exists { org =>
+      val plan = planManagementCommander.currentPlan(org.id.get)
+      plan.pricePerCyclePerUser.cents > 0
+    }
 
     UserStatistics(
       user,
+      paying = paying,
       emailAddress,
       userConnectionRepo.getConnectionCount(user.id.get),
-      invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
       slackMemberships,
@@ -346,39 +385,33 @@ class UserStatisticsCommander @Inject() (
 
   def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val (allUsers, libraries, slackStats, members, candidates, domains) = db.readOnlyReplica { implicit session =>
-      val members = orgMembershipRepo.getAllByOrgId(orgId)
-      val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
-      val allUsers = members.map(_.userId) | candidates.map(_.userId)
+    db.readOnlyReplicaAsync { implicit session =>
+      val members = orgMembershipRepo.countByOrgId(orgId)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackStats = SlackStatistics(slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get)))
-      (allUsers, libraries, slackStats, members, candidates, domains)
+      (libraries, slackStats, members, domains)
+    } map {
+      case (libraries, slackStats, members, domains) =>
+        val plan = planManagementCommander.currentPlan(orgId)
+        val paying = plan.pricePerCyclePerUser.cents > 0
+        val numKeeps = libraries.map(_.keepCount).sum
+        OrganizationStatisticsOverview(
+          org = org,
+          orgId = orgId,
+          pubId = Organization.publicId(orgId),
+          ownerId = org.ownerId,
+          handle = org.handle,
+          name = org.name,
+          description = org.description,
+          libStats = LibCountStatistics(libraries),
+          slackStats = slackStats,
+          numKeeps = numKeeps,
+          members = members,
+          domains = domains,
+          paying = paying
+        )
     }
-    val numKeeps = libraries.map(_.keepCount).sum
-
-    val (internalMemberChatStatsF, allMemberChatStatsF) = (orgChatStatsCommander.internalChats.summary(allUsers), orgChatStatsCommander.allChats.summary(allUsers))
-
-    for {
-      internalMemberChatStats <- internalMemberChatStatsF
-      allMemberChatStats <- allMemberChatStatsF
-    } yield OrganizationStatisticsOverview(
-      org = org,
-      orgId = orgId,
-      pubId = Organization.publicId(orgId),
-      ownerId = org.ownerId,
-      handle = org.handle,
-      name = org.name,
-      description = org.description,
-      libStats = LibCountStatistics(libraries),
-      slackStats = slackStats,
-      numKeeps = numKeeps,
-      members = members,
-      candidates = candidates,
-      domains = domains,
-      internalMemberChatStats = internalMemberChatStats,
-      allMemberChatStats = allMemberChatStats
-    )
   }
 
   def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {

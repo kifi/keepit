@@ -76,12 +76,12 @@ angular.module('kifi')
         .then(profileService.fetchMe);
       },
       removeOrgMember: function (orgId, removeFields) {
-
         return net
         .removeOrgMember(orgId, removeFields)
         .then(function () {
           invalidateOrgProfileCache();
-        });
+        })
+        .then(profileService.fetchMe);
       },
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
@@ -136,6 +136,14 @@ angular.module('kifi')
           limit: limit
         })
         .then(getResponseData);
+      },
+      // optArgs {
+      //  ordering: "alphabetical" | "most_recent_keeps_by_user"
+      //  direction: "asc" | "desc"
+      //  windowSize: #days (used for most_recent_keeps_by_user)
+      // }
+      getOrgBasicLibraries: function (orgId, offset, limit, optArgs) {
+          return net.getOrgBasicLibraries(orgId, offset, limit, optArgs).then(getResponseData);
       },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {

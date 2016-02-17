@@ -8,10 +8,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ Debouncing, Ord }
 import com.keepit.slack.models._
-import org.joda.time.Period
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try, Failure }
+import scala.concurrent.duration._
 
 sealed abstract class SlackChannelMagnet
 object SlackChannelMagnet {
@@ -45,8 +45,8 @@ trait SlackClientWrapper {
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
-  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]]
-  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo]
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPublicChannelInfo]]
+  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
   def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
@@ -169,14 +169,14 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   def validateToken(token: SlackAccessToken): Future[Boolean] = {
-    slackClient.validateToken(token)
+    slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
   }
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
 
-  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackChannelInfo]] = {
-    slackClient.getChannels(token, excludeArchived).andThen(onRevokedToken(token)).andThen {
+  def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPublicChannelInfo]] = {
+    slackClient.getPublicChannels(token, excludeArchived).andThen(onRevokedToken(token)).andThen {
       case Success(chs) => db.readWrite { implicit s =>
         slackTeamMembershipRepo.getByToken(token).map(_.slackTeamId).foreach { teamId =>
           chs.foreach { ch =>
@@ -186,8 +186,8 @@ class SlackClientWrapperImpl @Inject() (
       }
     }
   }
-  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackChannelInfo] = {
-    slackClient.getChannelInfo(token, channelId).andThen(onRevokedToken(token))
+  def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = {
+    slackClient.getPublicChannelInfo(token, channelId).andThen(onRevokedToken(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
@@ -221,7 +221,7 @@ class SlackClientWrapperImpl @Inject() (
         slackTeamMembershipRepo.deactivate(stm)
       }
     }
-    case Failure(otherFail) => debouncer.debounce("after-token", Period.seconds(5)) { airbrake.notify(otherFail) }
+    case Failure(otherFail) => debouncer.debounce("after-token", 5 seconds) { airbrake.notify(otherFail) }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {

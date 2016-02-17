@@ -7,6 +7,7 @@ CREATE TABLE slack_team_membership (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
+  seq bigint(20) NOT NULL,
   user_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_username VARCHAR(32) NOT NULL,
@@ -20,7 +21,14 @@ CREATE TABLE slack_team_membership (
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
   INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
   INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id),
+  INDEX slack_team_membership_i_seq (seq),
 );
+
+-- MySQL:
+-- CREATE TABLE slack_team_membership_sequence (id bigint(20) NOT NULL);
+-- INSERT INTO slack_team_membership_sequence VALUES (0);
+
+CREATE SEQUENCE slack_team_membership_sequence;
 
 CREATE TABLE slack_incoming_webhook_info (
   id BIGINT(20) NOT NULL AUTO_INCREMENT,
@@ -30,7 +38,7 @@ CREATE TABLE slack_incoming_webhook_info (
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) DEFAULT NULL,
-  slack_channel_name VARCHAR(32) NOT NULL,
+  slack_channel_name text NOT NULL,
   url varchar(2048) NOT NULL,
   config_url varchar(2048) NOT NULL,
   last_posted_at DATETIME DEFAULT NULL,
@@ -52,11 +60,14 @@ CREATE TABLE library_to_slack_channel (
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) DEFAULT NULL,
-  slack_channel_name VARCHAR(32) NOT NULL,
+  slack_channel_name text NOT NULL,
   library_id BIGINT(20) NOT NULL,
   status VARCHAR(32) NOT NULL,
   last_processed_at DATETIME DEFAULT NULL,
   last_processed_ktl BIGINT(20) DEFAULT NULL,
+  last_processed_msg BIGINT(20) DEFAULT NULL,
+  last_processed_keep_seq BIGINT(20) DEFAULT NULL,
+  last_processed_msg_seq BIGINT(20) DEFAULT NULL,
   last_processing_at DATETIME DEFAULT NULL,
   next_push_at DATETIME DEFAULT NULL,
 
@@ -75,7 +86,7 @@ CREATE TABLE slack_channel_to_library (
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) DEFAULT NULL,
-  slack_channel_name VARCHAR(32) NOT NULL,
+  slack_channel_name text NOT NULL,
   library_id BIGINT(20) NOT NULL,
   status VARCHAR(32) NOT NULL,
   next_ingestion_at DATETIME DEFAULT NULL,

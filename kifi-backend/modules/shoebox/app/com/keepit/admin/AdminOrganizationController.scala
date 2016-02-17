@@ -34,6 +34,7 @@ class AdminOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
+    keepRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     paidAccountRepo: PaidAccountRepo,
@@ -88,7 +89,7 @@ class AdminOrganizationController @Inject() (
 
   def liveOrganizationsView() = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit s =>
-      val orgIds = libRepo.orgsWithMostLibs().map(_._1)
+      val orgIds = keepRepo.orgsWithKeeps().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
@@ -437,8 +438,8 @@ class AdminOrganizationController @Inject() (
         val account = paidAccountRepo.getByOrgId(orgId)
         val plan = paidPlanRepo.get(account.planId)
         val config = orgConfigRepo.getByOrgId(orgId)
-        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.kvs.nonEmpty) {
-          val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
+        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.selections.nonEmpty) {
+          val newSettings = OrganizationSettings(plan.defaultSettings.selections.map {
             case (f, default) =>
               val updatedSetting =
                 if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default

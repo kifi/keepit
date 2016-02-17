@@ -5,3 +5,4 @@ tmp
 node_modules
 .packrat.sublime-workspace
 amo_secret.key
+certs

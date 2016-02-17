@@ -19,6 +19,9 @@ object KifiSlackApp {
   val SLACK_CLIENT_ID = "2348051170.15031499078"
   val SLACK_CLIENT_SECRET = "ad688ad730192eabe0bdc6675975f3fc"
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
+
+  val BrewstercorpTeamId = SlackTeamId("T0FUL04N4")
+  val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
 
 @json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
@@ -276,7 +279,7 @@ object SlackChannelIntegrations {
 }
 
 case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_channel_integrations"
   def toKey(): String = s"${teamId.value}-${channelId.value}"
 }

@@ -3,7 +3,7 @@
 angular.module('util', [])
 
 .constant('util', (function () {
-    var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
+    var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
     var emailAddrValidateRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
     var notOneSpaceWhitespaceRe = /(?: \s+|[\t\r\n\f]\s*)/g;
     var hyphensToMakeNonBreakingRe = /( \S{1,10})-(?=\S{1,10} )/g;

@@ -10,22 +10,23 @@ object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   // tests will fail when adding new Features, update 398.sql with new features and their default settings
-  val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
+  val testPlanEditableFeatures = Feature.all -- Set(StaticFeature.ViewOrganization, StaticFeature.ViewSettings)
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
-    Feature.PublishLibraries -> FeatureSetting.MEMBERS,
-    Feature.InviteMembers -> FeatureSetting.MEMBERS,
-    Feature.GroupMessaging -> FeatureSetting.MEMBERS,
-    Feature.ForceEditLibraries -> FeatureSetting.DISABLED,
-    Feature.ViewOrganization -> FeatureSetting.ANYONE,
-    Feature.ViewMembers -> FeatureSetting.ANYONE,
-    Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
-    Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS,
-    Feature.EditOrganization -> FeatureSetting.ADMINS,
-    Feature.ExportKeeps -> FeatureSetting.ADMINS,
-    Feature.ViewSettings -> FeatureSetting.MEMBERS,
-    Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS,
-    Feature.SlackIngestionReaction -> FeatureSetting.DISABLED,
-    Feature.SlackNotifications -> FeatureSetting.ENABLED
+    StaticFeature.PublishLibraries -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.InviteMembers -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.GroupMessaging -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.ForceEditLibraries -> StaticFeatureSetting.DISABLED,
+    StaticFeature.ViewOrganization -> StaticFeatureSetting.ANYONE,
+    StaticFeature.ViewMembers -> StaticFeatureSetting.ANYONE,
+    StaticFeature.RemoveLibraries -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.CreateSlackIntegration -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.EditOrganization -> StaticFeatureSetting.ADMINS,
+    StaticFeature.ExportKeeps -> StaticFeatureSetting.ADMINS,
+    StaticFeature.ViewSettings -> StaticFeatureSetting.MEMBERS,
+    StaticFeature.JoinByVerifying -> StaticFeatureSetting.NONMEMBERS,
+    StaticFeature.SlackIngestionReaction -> StaticFeatureSetting.DISABLED,
+    StaticFeature.SlackNotifications -> StaticFeatureSetting.ENABLED,
+    ClassFeature.SlackIngestionDomainBlacklist -> ClassFeature.Blacklist(Seq.empty)
   ))
 
   def paidPlan(): PartialPaidPlan = {

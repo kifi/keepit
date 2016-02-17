@@ -1,48 +1,41 @@
 package com.keepit.common.util
 
-import org.joda.time.{ DateTime, Period }
-import scala.collection.concurrent.TrieMap
-import scala.collection.mutable
-import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
+import java.util.concurrent.TimeUnit
 
+import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
+import org.jboss.netty.util.{ HashedWheelTimer, Timeout, TimerTask }
+import org.joda.time.DateTime
+
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.Duration
 import scala.util.Try
 
 object Debouncing {
+  private val timer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS)
   class Dropper[T] {
     private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
-    def debounce(key: String, cooldown: Period)(fn: => T): Option[T] = {
+    def debounce(key: String, cooldown: Duration)(fn: => T): Option[T] = {
       val now = currentDateTime
       onCooldownUntil.get(key) match {
         case Some(threshold) if now.isBefore(threshold) => None
         case _ =>
-          onCooldownUntil.put(key, now.plus(cooldown))
+          onCooldownUntil.put(key, now.plusMillis(cooldown.toMillis.toInt))
           Some(fn)
       }
     }
   }
-
   class Buffer[T] {
-    private val onCooldownUntil: mutable.Map[String, DateTime] = mutable.Map.empty
-    private val bufferMap: mutable.Map[String, ListBuffer[T]] = mutable.Map.empty
+    private val bufMap: mutable.Map[String, ListBuffer[T]] = mutable.Map.empty
     private val lock = new Object
-
-    def debounce(key: String, cooldown: Period)(item: T)(action: List[T] => Unit): Unit = lock.synchronized {
-      Try {
-        val now = currentDateTime
-        if (!bufferMap.isDefinedAt(key)) bufferMap.put(key, ListBuffer.empty)
-
-        val buffer = bufferMap(key)
-        buffer.prepend(item)
-        onCooldownUntil.get(key) match {
-          case Some(threshold) if now isBefore threshold =>
-          case _ =>
-            onCooldownUntil.put(key, now plus cooldown)
-            val input = buffer.toList
-            buffer.clear()
-            action(input)
-        }
+    def debounce(key: String, cooldown: Duration)(item: T)(action: List[T] => Unit): Unit = Try(lock.synchronized {
+      if (!bufMap.isDefinedAt(key)) {
+        bufMap.put(key, ListBuffer.empty)
+        timer.newTimeout(new TimerTask {
+          override def run(timeout: Timeout): Unit = lock.synchronized { bufMap.remove(key).foreach(buf => action(buf.toList)) }
+        }, cooldown.toMillis, TimeUnit.MILLISECONDS)
       }
-    }
+      bufMap(key).prepend(item)
+    })
   }
 }

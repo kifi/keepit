@@ -71,6 +71,7 @@ POST    /internal/eliza/getDiscussionsForKeeps   @com.keepit.eliza.controllers.i
 POST    /internal/eliza/markKeepsAsReadForUser   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.markKeepsAsReadForUser()
 POST    /internal/eliza/sendMessageOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.sendMessageOnKeep()
 POST    /internal/eliza/getMessagesOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesOnKeep
+POST    /internal/eliza/getMessageCountsForKeeps @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessageCountsForKeeps
 POST    /internal/eliza/editMessage              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
 POST    /internal/eliza/deleteMessage            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
 GET     /internal/eliza/keepHasAccessToken       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)

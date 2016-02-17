@@ -9,7 +9,7 @@ CREATE TABLE slack_channel (
   state VARCHAR(20) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) NOT NULL,
-  slack_channel_name VARCHAR(512) NOT NULL,
+  slack_channel_name text NOT NULL,
   last_notification_at DATETIME DEFAULT NULL,
 
   PRIMARY KEY(id),

@@ -15,6 +15,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.service.{ RequestConsolidator, IpAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
@@ -280,6 +281,7 @@ class UserCommanderImpl @Inject() (
     abookServiceClient.uploadContacts(userId, origin, payload)
   }
 
+  @StatsdTiming("UserCommander.getUserInfo")
   def getUserInfo(user: User): BasicUserInfo = {
     val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgs, userSlackInfo) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
@@ -333,7 +335,7 @@ class UserCommanderImpl @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs, userSlackInfo)
   }
 
-  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.JoinByVerifying).contains(StaticFeatureSetting.NONMEMBERS)
   private def isFreeMail(email: UserEmailAddress)(implicit session: RSession): Boolean = {
     NormalizedHostname.fromHostname(email.address.hostname) match {
       case None =>
