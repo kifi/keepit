@@ -22,6 +22,8 @@ orgStats: OrganizationStatistics
         </td></tr>
     <tr><td>Created At</td>
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Slack Team Size</td>
+        <td>@orgStats.slackStats.teamSize</td></tr>
     <tr><td>Slack Integrations</td>
         <td>@orgStats.slackStats.activeSlackLibs happy, @orgStats.slackStats.inactiveSlackLibs inactive libs, @orgStats.slackStats.closedSlackLibs user closed on kifi side, @orgStats.slackStats.brokenSlackLibs user broke on slack side</td></tr>
     <tr><td>Libs prv/org/pub</td>
