@@ -12,7 +12,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.TestHelper
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ S3ImageStore, FakeShoeboxStoreModule, ImagePath, ImageSize }
+import com.keepit.common.store._
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
@@ -58,7 +58,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   )
 
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
-  implicit def s3Config(implicit injector: Injector): S3ImageStore = inject[S3ImageStore]
+  implicit def s3Config(implicit injector: Injector): S3ImageConfig = inject[S3ImageConfig]
   private def controller(implicit injector: Injector) = inject[LibraryController]
   private def route = com.keepit.controllers.website.routes.LibraryController
   def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)

@@ -13,7 +13,6 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeWSResponse
 import com.keepit.common.oauth._
 import com.keepit.common.social._
-import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -42,7 +41,6 @@ class FakeTwitterSocialGraph @Inject() (
     libraryImageCommander: LibraryImageCommander,
     libPathCommander: PathCommander,
     elizaServiceClient: ElizaServiceClient,
-    s3ImageStore: S3ImageStore,
     socialRepo: SocialUserInfoRepo,
     userRepo: UserRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
@@ -53,7 +51,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, publicIdConfig, executionContext, userRepo) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, publicIdConfig, executionContext, userRepo) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterUserId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>

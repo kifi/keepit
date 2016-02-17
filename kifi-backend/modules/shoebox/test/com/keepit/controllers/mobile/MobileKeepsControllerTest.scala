@@ -52,7 +52,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   implicit val helperFormat = RawBookmarkRepresentation.helperFormat
 
   implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
-  implicit def s3Config(implicit injector: Injector): S3ImageStore = inject[S3ImageStore]
+  implicit def s3Config(implicit injector: Injector): S3ImageConfig = inject[S3ImageConfig]
 
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {

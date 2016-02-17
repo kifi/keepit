@@ -13,7 +13,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageStore
+import com.keepit.common.store.{ S3ImageConfig, S3ImageStore }
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
@@ -52,7 +52,6 @@ class LibraryInviteCommanderImpl @Inject() (
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
-    s3ImageStore: S3ImageStore,
     elizaClient: ElizaServiceClient,
     abookClient: ABookServiceClient,
     libraryAnalytics: LibraryAnalytics,
@@ -60,6 +59,7 @@ class LibraryInviteCommanderImpl @Inject() (
     libPathCommander: PathCommander,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
+    implicit val s3ImageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
 
@@ -287,7 +287,7 @@ class LibraryInviteCommanderImpl @Inject() (
   }
 
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
-    val userImage = s3ImageStore.avatarUrlByUser(inviter)
+    val userImage = BasicUser.fromUser(inviter).avatarPath.getUrl
     val libLink = s"""https://www.kifi.com${libPathCommander.getPathForLibrary(lib)}"""
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
 

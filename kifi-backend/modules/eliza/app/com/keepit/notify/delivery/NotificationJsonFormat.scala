@@ -3,24 +3,19 @@ package com.keepit.notify.delivery
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, NotificationJsonMaker }
+import com.keepit.eliza.commanders.NotificationJsonMaker
 import com.keepit.eliza.model._
 import com.keepit.model.{ Keep, NormalizedURI, NotificationCategory }
 import com.keepit.notify.info._
 import com.keepit.notify.model.event.{ LibraryNewKeep, LegacyNotification }
-import com.keepit.rover.RoverServiceClient
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.store.ElizaS3ExternalIdImageStore
 import play.api.libs.json.{ JsValue, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class NotificationJsonFormat @Inject() (
-    elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     notificationJsonMaker: NotificationJsonMaker,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val s3ImageConfig: S3ImageConfig,
@@ -34,7 +29,7 @@ class NotificationJsonFormat @Inject() (
   }
 
   private def resolveImage(image: NotificationImage): String = image match {
-    case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
+    case UserImage(user) => user.avatarPath.getUrl
     case OrganizationImage(org) => org.avatarPath.getUrl
     case PublicImage(url) => url
   }
