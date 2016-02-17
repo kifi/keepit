@@ -81,7 +81,6 @@ object UserExperimentType {
   val CUSTOM_LIBRARY_ORDERING = UserExperimentType("custom_library_ordering")
   val KEEP_NOLIB = UserExperimentType("keep_nolib")
   val FEED_LAST_ACTIVITY = UserExperimentType("feed_last_activity")
-  val NEW_SIDEBAR = UserExperimentType("new_sidebar")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
@@ -90,7 +89,7 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING :: KEEP_NOLIB ::
-    FEED_LAST_ACTIVITY :: NEW_SIDEBAR :: Nil
+    FEED_LAST_ACTIVITY :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)

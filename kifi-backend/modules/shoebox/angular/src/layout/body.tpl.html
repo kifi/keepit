@@ -1,2 +1,10 @@
-<header ng-if="!showSimpleHeader" ng-include="$root.userLoggedIn ? 'header/loggedInHeader.tpl.html' : 'header/loggedOutHeader.tpl.html'"></header>
-<div ng-include="'layout/main/main.tpl.html'"></div>
+<div class="kf-body-container">
+    <div id="kf-body-container-content" class="kf-body-container-content">
+        <header ng-if="!showSimpleHeader"
+                ng-include="$root.userLoggedIn ? 'leftHandNav/loggedInNavHeader.tpl.html' : 'header/loggedOutHeader.tpl.html'"></header>
+        <div class="kf-body-container-content-main" ng-include="'layout/main/main.tpl.html'"></div>
+    </div>
+    <div kf-left-hand-nav></div>
+</div>
+
+
