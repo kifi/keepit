@@ -57,7 +57,8 @@ class NotificationInfoGenerator @Inject() (
 
     val userIdByExternalIdFut = for {
       orgs <- orgsF
-      extIds = orgs.values.map(_.ownerId)
+      keeps <- keepsF
+      extIds = orgs.values.map(_.ownerId) ++ keeps.values.flatMap(_.ownerId)
       userIds <- shoeboxServiceClient.getUserIdsByExternalIds(extIds.toSet)
     } yield userIds
 
