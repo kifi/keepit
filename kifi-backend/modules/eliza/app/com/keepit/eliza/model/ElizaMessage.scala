@@ -134,7 +134,7 @@ object SystemMessageData {
     val addedUsersString = (addedUsers.map(_.fullName) ++ addedNonUsers.map(_.shortName)).toList match {
       case first :: Nil => first
       case first :: second :: Nil => first + " and " + second
-      case many => many.take(many.length - 1).mkString(", ") + ", and" + many.last
+      case many => many.take(many.length - 1).mkString(", ") + ", and " + many.last
     }
     val actionText = if (kind == StartWithEmails.kind) "started a discussion with" else "added"
     addedBy.map(_.fullName) match {
@@ -144,8 +144,8 @@ object SystemMessageData {
   }
 
   def publish(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): JsArray = data match {
-    case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get), addedNonUsers.map(NonUserParticipant.toBasicNonUser))
-    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get), addedNonUsers.map(NonUserParticipant.toBasicNonUser))
+    case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
+    case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
     case _ => Json.arr()
   }
 
