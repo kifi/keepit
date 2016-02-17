@@ -5,9 +5,12 @@ angular.module('kifi')
 .directive('kfFollowScroll', [
   '$window', '$timeout',
   function ($window, $timeout) {
+    var bodyContainer = angular.element('#kf-body-container-content')[0] || $window.document.documentElement;
+    var documentElement = $window.document.documentElement;
+    var desktopMq = $window.matchMedia(bodyContainer ? '(min-width: 710px)' : '(min-width: 480px)');
 
     function getAbsoluteBoundingRect(element) {
-      var documentRect = $window.document.documentElement.getBoundingClientRect();
+      var documentRect = documentElement.getBoundingClientRect();
       var elementRect = (element[0] || element).getBoundingClientRect();
 
       return {
@@ -20,13 +23,12 @@ angular.module('kifi')
       };
     }
 
-    var bodyContainer = angular.element('#kf-body-container-content')[0];
-    var documentElement = $window.document.documentElement;
-    var desktopMq = $window.matchMedia(bodyContainer ? '(min-width: 710px)' : '(min-width: 480px)');
-
     return {
       restrict: 'A',
       link: function ($scope, element, attrs) {
+        var $header = (attrs.kfFollowScrollHeader && angular.element(attrs.kfFollowScrollHeader)) || angular.element('.kf-lih');
+        var positionY;
+
         function moveFloatMenu() {
           var pageScroll = bodyContainer ? bodyContainer.scrollTop : -documentElement.getBoundingClientRect().top;
           var headerOffset = (bodyContainer ? bodyContainer.getBoundingClientRect().top : $header.height()) + 8;
@@ -58,12 +60,10 @@ angular.module('kifi')
           }
         }
 
-        var $header = (attrs.kfFollowScrollHeader && angular.element(attrs.kfFollowScrollHeader)) || angular.element('.kf-lih');
-        var positionY;
-
         // Wait for the page to fully render before calculating the position.
         $timeout(function () {
-          positionY = getAbsoluteBoundingRect(element).top;
+          var elementRect = getAbsoluteBoundingRect(element);
+          positionY = (bodyContainer ? elementRect.top + bodyContainer.scrollTop : elementRect.top);
 
           desktopMq.addListener(updateMq);
           updateMq();
