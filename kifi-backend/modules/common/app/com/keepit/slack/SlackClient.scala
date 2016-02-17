@@ -48,7 +48,7 @@ object SlackAPI {
     Route(GET, "https://slack.com/api/chat.postMessage", Seq[Param](token, channelId) ++ msg.asUrlParams: _*)
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
-  def UsersList(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.list", token, userId)
+  def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
 }
 
 trait SlackClient {
@@ -155,6 +155,6 @@ class SlackClientImpl(
   }
 
   def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]] = {
-    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token, userId))((__ \ 'members).read).map { _.filterNot(_.deleted).filterNot(_.bot) }
+    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token))((__ \ 'members).read)
   }
 }
