@@ -29,7 +29,7 @@ import com.keepit.common.db.{ Id }
 import com.keepit.common.core._
 import com.keepit.search.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ RestrictedKeepInfo, AugmentedItem, AugmentationCommander }
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.common.json
 
 object WebsiteSearchController {
@@ -156,9 +156,12 @@ class WebsiteSearchController @Inject() (
     val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
     val libraryIndexById = libraryIds.zipWithIndex.toMap
 
-    val futureBasicUsersAndLibraries = {
+    val futureUsers = {
       val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
-      val futureUsers = shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+      shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+    }
+
+    val futureBasicUsersAndLibraries = {
       val futureOrganizations = shoeboxClient.getBasicOrganizationsByIds(libraryRecordsAndVisibilityById.values.flatMap(_._1.orgId).toSet)
       for {
         usersById <- futureUsers
@@ -179,6 +182,7 @@ class WebsiteSearchController @Inject() (
       basicKeeps <- futureBasicKeeps
       librariesWithWriteAccess <- futureLibrariesWithWriteAccess
       sourceAttributionByKeepId <- futureKeepSources
+      usersById <- futureUsers
     } yield {
       val allBasicKeeps = augmentedItems.map(item => basicKeeps.getOrElse(item.uri, Set.empty))
       (augmentedItems, limitedAugmentationInfos, allBasicKeeps).zipped.map {
@@ -195,21 +199,26 @@ class WebsiteSearchController @Inject() (
             case (libraryId, keeperId, _) if doShowLibrary(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
           }.flatten
 
-          val (libraryIndex, keeperIndex, keptAt, note) = limitedInfo.keep match {
-            case Some(RestrictedKeepInfo(_, _, keptAt, library, Some(keeperId), note, _)) if !library.exists(!doShowLibrary(_)) =>
-              (library.map(libraryIndexById(_)), Some(userIndexById(keeperId)), Some(keptAt), note) // canonical keep
+          val (libraryId, keeperId, keptAt, note) = limitedInfo.keep match {
+            case Some(RestrictedKeepInfo(_, _, keptAt, library, keeper, note, _)) if !library.exists(!doShowLibrary(_)) =>
+              (library, keeper, Some(keptAt), note) // canonical keep
             case _ => limitedInfo.libraries.collectFirst {
-              case (libraryId, keeperId, keptAt) if doShowLibrary(libraryId) =>
-                (Some(libraryIndexById(libraryId)), Some(userIndexById(keeperId)), Some(keptAt), None) // first accessible keep
+              case (library, keeper, keptAt) if doShowLibrary(library) =>
+                (Some(library), Some(keeper), Some(keptAt), None) // first accessible keep
             } orElse {
-              limitedInfo.keepers.headOption.map { case (keeperId, keptAt) => (None, Some(userIndexById(keeperId)), Some(keptAt), None) } // first discoverable keep
+              limitedInfo.keepers.headOption.map { case (keeper, keptAt) => (None, Some(keeper), Some(keptAt), None) } // first discoverable keep
             } getOrElse (None, None, None, None)
           }
 
           val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
           val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
 
+          val libraryIndex = libraryId.map(libraryIndexById(_))
+          val keeperIndex = keeperId.map(userIndexById(_))
+          val author = keeperId.flatMap(id => usersById.get(id).map(BasicAuthor.fromUser(_))) orElse source.map(BasicAuthor.fromSource(_))
+
           Json.obj(
+            "author" -> author,
             "user" -> keeperIndex,
             "library" -> libraryIndex,
             "createdAt" -> keptAt, // field named createdAt for legacy reason
