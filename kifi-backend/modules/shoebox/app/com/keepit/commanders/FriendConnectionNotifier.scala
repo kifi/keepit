@@ -4,16 +4,14 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.emails.FriendConnectionMadeEmailSender
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.S3ImageStore
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewSocialConnection
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
-
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 
@@ -21,7 +19,7 @@ class FriendConnectionNotifier @Inject() (
     db: Database,
     userRepo: UserRepo,
     connectionMadeEmailSender: FriendConnectionMadeEmailSender,
-    s3ImageStore: S3ImageStore,
+    implicit val s3ImageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
     elizaServiceClient: ElizaServiceClient) {
 
@@ -29,7 +27,7 @@ class FriendConnectionNotifier @Inject() (
     //sending 'you are friends' email && Notification from auto-created connections from Facebook/LinkedIn
     val (respondingUser, respondingUserImage) = db.readOnlyMaster { implicit session =>
       val respondingUser = userRepo.get(myUserId)
-      val respondingUserImage = s3ImageStore.avatarUrlByUser(respondingUser)
+      val respondingUserImage = BasicUser.fromUser(respondingUser).picturePath.getUrl
       (respondingUser, respondingUserImage)
     }
 

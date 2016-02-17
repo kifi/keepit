@@ -2,7 +2,7 @@ package com.keepit.social
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.path.Path
-import com.keepit.common.store.{ S3ExternalIdImageStore, S3ImageConfig }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackMessage, SlackUsername, SlackUserId, SlackTeamId }
@@ -70,10 +70,10 @@ object BasicAuthor {
   case class SlackUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Slack)
   case class TwitterUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Twitter)
 
-  def fromUser(user: BasicUser)(implicit s3: S3ExternalIdImageStore): BasicAuthor = KifiUser(
+  def fromUser(user: BasicUser)(implicit imageConfig: S3ImageConfig): BasicAuthor = KifiUser(
     id = user.externalId.id,
     name = user.fullName,
-    picture = s3.avatarUrlByUser(user),
+    picture = user.picturePath.getUrl,
     url = user.path.absolute
   )
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
