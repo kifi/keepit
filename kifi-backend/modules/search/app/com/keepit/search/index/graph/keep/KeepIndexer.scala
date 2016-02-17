@@ -37,7 +37,7 @@ class ShardedKeepIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  val fetchSize = 200
+  val fetchSize = ShardedIndexer.computeFetchSize(indexShards.keySet, localFetchSize = 100, maxFetchSize = 500)
 
   def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
