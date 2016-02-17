@@ -2,7 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
@@ -15,8 +15,8 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
@@ -77,7 +77,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   @AlertingTimer(5 seconds)
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val integrationsToProcess = db.readWrite { implicit s =>
-      val integrations = libToChannelRepo.getIntegrationsRipeForProcessing(Limit(INTEGRATIONS_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
+      val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration)
       markLegalIntegrationsForProcessing(integrations)
     }
     processIntegrations(integrationsToProcess)
@@ -102,16 +102,26 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  private def markLegalIntegrationsForProcessing(integrations: Seq[LibraryToSlackChannel])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+  private def getIntegrations(integrationIds: Seq[Id[LibraryToSlackChannel]])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+    val integrationsById = libToChannelRepo.getByIds(integrationIds.toSet)
+    integrationIds.map(integrationsById(_))
+  }
+
+  private def markLegalIntegrationsForProcessing(integrationIds: Seq[Id[LibraryToSlackChannel]])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+
     def isLegal(lts: LibraryToSlackChannel) = {
       slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
-        permissionCommander.getLibraryPermissions(lts.libraryId, stm.userId).contains(LibraryPermission.VIEW_LIBRARY)
+        val permissions = permissionCommander.getLibraryPermissions(lts.libraryId, stm.userId)
+        permissions.contains(LibraryPermission.VIEW_LIBRARY)
       }
     }
-    val (legal, illegal) = integrations.partition(isLegal)
+
+    val (legal, illegal) = getIntegrations(integrationIds).partition(isLegal)
     illegal.foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
-    legal.flatMap(lts => libToChannelRepo.markAsProcessing(lts.id.get))
+    val processingIntegrationIds = legal.map(_.id.get).filter(libToChannelRepo.markAsPushing(_, maxAcceptableProcessingDuration))
+    val integrations = getIntegrations(processingIntegrationIds)
+    integrations
   }
 
   def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {

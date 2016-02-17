@@ -25,7 +25,8 @@ object PaidPlanFactory {
     StaticFeature.ViewSettings -> StaticFeatureSetting.MEMBERS,
     StaticFeature.JoinByVerifying -> StaticFeatureSetting.NONMEMBERS,
     StaticFeature.SlackIngestionReaction -> StaticFeatureSetting.DISABLED,
-    StaticFeature.SlackNotifications -> StaticFeatureSetting.ENABLED
+    StaticFeature.SlackNotifications -> StaticFeatureSetting.ENABLED,
+    ClassFeature.SlackIngestionDomainBlacklist -> ClassFeature.Blacklist(Seq.empty)
   ))
 
   def paidPlan(): PartialPaidPlan = {
