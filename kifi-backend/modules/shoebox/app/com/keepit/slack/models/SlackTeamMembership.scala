@@ -78,7 +78,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
-  def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
+  def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
 
@@ -215,8 +215,17 @@ class SlackTeamMembershipRepoImpl @Inject() (
     }
   }
 
-  def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership] = {
-    activeRows.filter(_.slackUserId.inSet(ids)).map(r => (r.slackUserId, r)).list.toMap
+  def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership] = {
+    // Sadly Slick does not currently support syntax like "SELECT * FROM table WHERE (v1, v2) IN ((a,b), (c,d), (e,f))
+    // This is a hacky workaround (ref: https://github.com/slick/slick/pull/995#issuecomment-66271241)
+    if (identities.isEmpty) Map.empty // reduce throws exceptions on empty collections
+    else {
+      activeRows.filter(stm => identities.map {
+        case (teamId, userId) => stm.slackTeamId === teamId && stm.slackUserId === userId
+      }.reduce(_ || _)).list.groupBy(stm => (stm.slackTeamId, stm.slackUserId)).map {
+        case (k, Seq(v)) => k -> v
+      }
+    }
   }
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
     activeRows.filter(_.token === token).firstOption

@@ -7,8 +7,9 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.core.mapExtensionOps
+import com.keepit.common.util.MapHelpers
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackUserId, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ SlackTeamId, SlackUserId, SlackTeamMembershipRepo }
 import com.keepit.social.{ Author, BasicUser, SocialNetworks, SocialId }
 import com.keepit.social.twitter.TwitterUserId
 
@@ -46,16 +47,16 @@ class KeepSourceCommanderImpl @Inject() (
       val twitterUserIds = attributions.collect { case TwitterAttribution(tweet) => tweet.user.id }.toSet
       getTwitterAccountOwners(twitterUserIds)
     }
-    val userBySlackId = {
-      val slackUserIds = attributions.collect { case SlackAttribution(message) => message.userId }.toSet
-      getSlackAccountOwners(slackUserIds)
+    val userBySlackIdentity = {
+      val slackIdentities = attributions.collect { case SlackAttribution(message, teamId) => (teamId, message.userId) }.toSet
+      getSlackAccountOwners(slackIdentities)
     }
-    val userIds = (userByTwitterId.values ++ userBySlackId.values).toSet
+    val userIds = (userByTwitterId.values ++ userBySlackIdentity.values).toSet
     val basicUserById = basicUserRepo.loadAll(userIds)
     sourcesByKeepId.mapValuesStrict { attr =>
       val userIdOpt = attr match {
         case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id)
-        case SlackAttribution(message) => userBySlackId.get(message.userId)
+        case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId))
       }
       (attr, userIdOpt.flatMap(basicUserById.get))
     }
@@ -67,8 +68,8 @@ class KeepSourceCommanderImpl @Inject() (
     }
   }
 
-  private def getSlackAccountOwners(userIds: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, Id[User]] = {
-    slackTeamMembershipRepo.getBySlackUserIds(userIds).flatMap { case (slackUserId, membership) => membership.userId.map(slackUserId -> _) }
+  private def getSlackAccountOwners(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), Id[User]] = {
+    slackTeamMembershipRepo.getBySlackIdentities(identities).flatMap { case (identity, membership) => membership.userId.map(identity -> _) }
   }
 
   def reattributeKeeps(author: Author, userId: Id[User]): Set[Id[Keep]] = {
