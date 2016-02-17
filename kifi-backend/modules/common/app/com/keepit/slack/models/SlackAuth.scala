@@ -174,6 +174,10 @@ case class SlackUserInfo(
   name: SlackUsername,
   profile: SlackUserProfile,
   deleted: Boolean,
+  admin: Boolean,
+  owner: Boolean,
+  bot: Boolean,
+  restricted: Boolean,
   originalJson: JsValue)
 
 object SlackUserInfo {
@@ -182,6 +186,10 @@ object SlackUserInfo {
     (__ \ 'name).read[SlackUsername] and
     (__ \ 'profile).read[SlackUserProfile] and
     (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
+    (__ \ 'is_admin).readNullable[Boolean].map(_.contains(true)) and
+    (__ \ 'is_owner).readNullable[Boolean].map(_.contains(true)) and
+    (__ \ 'bot).readNullable[Boolean].map(_.contains(true)) and
+    (__ \ 'is_restricted).readNullable[Boolean].map(_.contains(true)) and
     Reads(JsSuccess(_))
   )(SlackUserInfo.apply _)
 
