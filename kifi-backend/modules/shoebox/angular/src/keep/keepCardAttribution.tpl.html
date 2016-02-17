@@ -1,10 +1,10 @@
 <div class="kf-keep-card-attribution">
-  <a class="kf-keep-card-attribution-keeper-pic" ng-href="{{::keep.author.url|pathOrUrl}}"
+  <a class="kf-keep-card-attribution-keeper-pic" ng-href="{{::keep.author.url|pathFromUrl}}"
      ng-style="{ 'background-image' : 'url(' + (keep.author.picture) + ')' }"></a>
   <div class="kf-keep-card-attribution-message">
     <!--Add an empty span here to make safari render the whitespace in the following spans correctly-->
     <span></span>
-    <a class="kf-link" ng-href="{{::keep.author.url|pathOrUrl}}" ng-bind="::keep.author.name"></a>
+    <a class="kf-link" ng-href="{{::keep.author.url|pathFromUrl}}" ng-bind="::keep.author.name"></a>
     <span ng-if="::keep.sourceAttribution.slack && !showAsDiscussion">
       added this
     </span>
