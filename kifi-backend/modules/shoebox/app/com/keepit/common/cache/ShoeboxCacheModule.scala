@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.classify.DomainCache
 import com.keepit.commanders._
 import com.keepit.common.logging.AccessLog
@@ -11,15 +11,13 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
-import com.keepit.rover.model.{RoverArticleImagesCache, RoverArticleSummaryCache}
-import com.keepit.search.{ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache}
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
+import com.keepit.search.{ ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.models.{SlackChannelIntegrationsCache, SlackTeamIdCache, _}
-import com.keepit.slack.{SlackAuthStateCache, SlackKeepPushTimestampCache}
-import com.keepit.social.{BasicUserUserIdCache, IdentityUserIdCache}
-import com.keepit.typeahead.{KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache}
-import com.keepit.slack.{ SlackCommentPushTimestampCache, SlackKeepPushTimestampCache, SlackAuthStateCache }
-import com.keepit.slack.models.{ SlackTeamIdCache, SlackTeamId, SlackChannelIntegrationsCache }
+import com.keepit.slack.models.{ SlackChannelIntegrationsCache, SlackTeamIdCache, SlackTeamMembersCache, SlackTeamMembersCountCache }
+import com.keepit.slack.{ SlackAuthStateCache, SlackCommentPushTimestampCache, SlackKeepPushTimestampCache }
+import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
+import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
 
 import scala.concurrent.duration._
 
