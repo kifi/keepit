@@ -94,7 +94,7 @@ class MessageFetchingCommander @Inject() (
           discussionKeep <- futureDiscussionKeep
           nUrl <- futureNormalizedUrl
         } yield {
-          (BasicDiscussion(discussionKeep.url, nUrl, Set(BasicUserLikeEntity(discussionKeep.keptBy)), Seq.empty), Some(discussionKeep))
+          (BasicDiscussion(discussionKeep.url, nUrl, discussionKeep.keptBy.map(BasicUserLikeEntity(_)).toSet, Seq.empty), Some(discussionKeep))
         }
     }
   }

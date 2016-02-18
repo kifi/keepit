@@ -70,7 +70,7 @@ case class DiscussionKeep(
   title: Option[String],
   note: Option[String],
   tags: Set[Hashtag],
-  keptBy: BasicUser,
+  keptBy: Option[BasicUser],
   keptAt: DateTime,
   imagePath: Option[ImagePath],
   libraries: Set[LibraryCardInfo])
