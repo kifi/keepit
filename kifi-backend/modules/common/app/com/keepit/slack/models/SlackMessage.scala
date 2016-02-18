@@ -24,7 +24,7 @@ object KifiSlackApp {
   val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
 
-@json case class SlackTimestamp(value: String) extends AnyVal with Ordered[SlackTimestamp] { // channel-specific timestamp
+@json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
   def compare(that: SlackTimestamp) = value compare that.value
   def toDateTime: DateTime = Try {
     new DateTime(value.split('.').head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
