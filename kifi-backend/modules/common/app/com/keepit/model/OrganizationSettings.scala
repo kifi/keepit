@@ -232,7 +232,11 @@ object ClassFeature extends Enumerator[ClassFeature] {
 
   val ALL: Seq[ClassFeature] = _all
 
-  @json case class BlacklistEntry(userId: ExternalId[User], createdAt: DateTime, path: String)
+  // Optional fields below are to support default values (which we do need), and so the internal and client
+  // serialization is the same. Let it be known: I now have hesitations that settings — at least, how they're
+  // currently implemented — is the right way to do this now, because of this very issue (the original spec
+  // was just a list of domains, not this structured data). ↓ ¯\_(ツ)_/¯ ↓
+  @json case class BlacklistEntry(userId: Option[ExternalId[User]], createdAt: Option[DateTime], path: String)
   @json case class Blacklist(entries: Seq[BlacklistEntry]) extends ClassFeatureSetting {
     def json = Json.toJson(entries)
   }
