@@ -72,6 +72,15 @@ case class SlackKeepPushTimestampKey(integrationId: Id[LibraryToSlackChannel], k
 class SlackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ScalaDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ScalaDuration)*)
   extends JsonCacheImpl[SlackKeepPushTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class SlackCommentPushTimestampKey(integrationId: Id[LibraryToSlackChannel], msgId: Id[Message]) extends Key[SlackTimestamp] {
+  override val version = 1
+  val namespace = "slack_comment_push_timestamp"
+  def toKey(): String = s"${integrationId.id}_${msgId.id}"
+}
+
+class SlackCommentPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ScalaDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ScalaDuration)*)
+  extends JsonCacheImpl[SlackCommentPushTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 class SlackPushingActor @Inject() (
   db: Database,
   organizationInfoCommander: OrganizationInfoCommander,
@@ -92,6 +101,7 @@ class SlackPushingActor @Inject() (
   airbrake: AirbrakeNotifier,
   orgConfigRepo: OrganizationConfigurationRepo,
   slackKeepPushTimestampCache: SlackKeepPushTimestampCache,
+  slackCommentPushTimestampCache: SlackCommentPushTimestampCache,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[LibraryToSlackChannel]] {
@@ -200,23 +210,40 @@ class SlackPushingActor @Inject() (
           }
       }
       pushItems.oldMsgs.foreach {
-        case (kId, msgs) =>
-        // do something here
+        case (k, msgs) =>
+          msgs.foreach { msg =>
+            slackCommentPushTimestampCache.direct.get(SlackCommentPushTimestampKey(integration.id.get, msg.id)).foreach { oldCommentTimestamp =>
+              // regenerate the slack message
+              val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+                messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+              ))
+              // call the SlackClient to try and update the message
+              slackClient.updateMessage(botToken, oldCommentTimestamp, updatedCommentMessage)
+            }
+          }
       }
     }
 
     // Now push new things, updating the integration state as we go
     FutureHelpers.foldLeft(pushItems.sortedNewItems)(integration) {
       case (workingIntegration, item) =>
-        slackMessageForItem(item).fold(Future.successful(()))(message =>
-          slackClient.sendToSlack(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet) recoverWith {
+        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessage]))(message =>
+          slackClient.sendToSlackViaUser(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet).recoverWith {
             case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
           }
-        ).map { _: Unit =>
+        ).map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {
-              case PushItem.KeepToPush(k, ktl) => integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
-              case PushItem.MessageToPush(k, msg) => integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(msg.id)))
+              case PushItem.KeepToPush(k, ktl) =>
+                pushedMessageOpt.foreach { pushedMessage =>
+                  slackKeepPushTimestampCache.set(SlackKeepPushTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
+                }
+                integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
+              case PushItem.MessageToPush(k, kifiMsg) =>
+                pushedMessageOpt.foreach { pushedMessage =>
+                  slackCommentPushTimestampCache.set(SlackCommentPushTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
+                }
+                integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(kifiMsg.id)))
             }
           }
         }
@@ -249,6 +276,7 @@ class SlackPushingActor @Inject() (
     PushItems(
       oldKeeps = oldKeeps,
       newKeeps = newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) },
+      // TODO(ryan): I think this is basically the only thing that actually needs to be handled now
       oldMsgs = Map.empty,
       newMsgs = Map.empty,
       lib = lib,
@@ -300,7 +328,7 @@ class SlackPushingActor @Inject() (
           "to", lib.name --> libLink,
           keep.note.map(note => DescriptionElements(
             "— “",
-            // Slack breaks italics over newlines, so we have to split into lines and italicize each independently
+            // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
             DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
             "”"
           )),

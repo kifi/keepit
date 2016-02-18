@@ -18,6 +18,8 @@ import com.keepit.slack.models.{SlackChannelIntegrationsCache, SlackTeamIdCache,
 import com.keepit.slack.{SlackAuthStateCache, SlackKeepPushTimestampCache}
 import com.keepit.social.{BasicUserUserIdCache, IdentityUserIdCache}
 import com.keepit.typeahead.{KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache}
+import com.keepit.slack.{ SlackCommentPushTimestampCache, SlackKeepPushTimestampCache, SlackAuthStateCache }
+import com.keepit.slack.models.{ SlackTeamIdCache, SlackTeamId, SlackChannelIntegrationsCache }
 
 import scala.concurrent.duration._
 
@@ -470,4 +472,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def slackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackKeepPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackCommentPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackCommentPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
 }

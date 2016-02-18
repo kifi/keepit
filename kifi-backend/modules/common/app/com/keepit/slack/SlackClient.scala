@@ -56,7 +56,7 @@ object SlackAPI {
 
 trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
   def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
   def testToken(token: SlackAccessToken): Future[Unit]
@@ -94,8 +94,8 @@ class SlackClientImpl(
     }
   }
 
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
-    slackCall[Unit](SlackAPI.PostMessage(token, channelId, msg))(readUnit).andThen {
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
+    slackCall[SlackMessage](SlackAPI.PostMessage(token, channelId, msg)).andThen {
       case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to $channelId via token $token")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to $channelId via token $token because of ${f.getMessage}")
     }

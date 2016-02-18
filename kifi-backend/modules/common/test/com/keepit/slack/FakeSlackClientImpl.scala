@@ -41,7 +41,7 @@ class FakeSlackClientImpl extends SlackClient {
       pushedMessagesByWebhook.put(url, msg :: pushedMessagesByWebhook(url))
       Future.successful(())
   }
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = ???
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = ???
   def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, msg: SlackMessageRequest): Future[SlackMessage] = ???
 
   def sayInChannel(userId: SlackUserId, username: SlackUsername, teamId: SlackTeamId, token: Option[SlackAccessToken], ch: SlackChannelIdAndName)(str: String): Unit = {

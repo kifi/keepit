@@ -257,15 +257,15 @@ class SlackTeamDigestNotificationActor @Inject() (
         msg <- msgOpt
         generalChannel <- generalChannelOpt
       } yield {
-        slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
-          case Success(_: Unit) =>
+        slackClient.sendToSlackViaAnyUser(team.slackTeamId, generalChannel, msg).map(_ => ()).andThen {
+          case Success(_) =>
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
             slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
         }
       }
-      pushOpt.getOrElse { Future.successful(Unit) }
+      pushOpt.getOrElse { Future.successful(()) }
     }
   }
 }
