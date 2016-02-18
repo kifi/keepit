@@ -3,12 +3,13 @@ package com.keepit.slack
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
+import com.keepit.common.cache._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.SlackLog
+import com.keepit.common.logging.{ AccessLog, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
@@ -25,6 +26,7 @@ import com.keepit.common.strings._
 import com.keepit.common.time._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.duration.{ Duration => ScalaDuration }
 import scala.util.{ Failure, Success }
 
 object SlackPushingActor {
@@ -61,6 +63,15 @@ object SlackPushingActor {
   }
 }
 
+case class SlackKeepPushTimestampKey(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]) extends Key[SlackTimestamp] {
+  override val version = 1
+  val namespace = "slack_keep_push_timestamp"
+  def toKey(): String = s"${integrationId.id}_${keepId.id}"
+}
+
+class SlackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ScalaDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ScalaDuration)*)
+  extends JsonCacheImpl[SlackKeepPushTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 class SlackPushingActor @Inject() (
   db: Database,
   organizationInfoCommander: OrganizationInfoCommander,
@@ -80,6 +91,7 @@ class SlackPushingActor @Inject() (
   keepDecorator: KeepDecorator,
   airbrake: AirbrakeNotifier,
   orgConfigRepo: OrganizationConfigurationRepo,
+  slackKeepPushTimestampCache: SlackKeepPushTimestampCache,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[LibraryToSlackChannel]] {
@@ -94,7 +106,7 @@ class SlackPushingActor @Inject() (
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
     db.readWrite { implicit session =>
       val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout)
-      log.info(s"[SLACK-PUSH-ACTOR] Grabbed $integrationIds when asked for $limit tasks")
+      if (integrationIds.nonEmpty) log.info(s"[SLACK-PUSH-ACTOR] Grabbed $integrationIds when asked for $limit tasks")
       Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
     }
   }
@@ -120,7 +132,11 @@ class SlackPushingActor @Inject() (
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> pushMaybe(integration, isAllowed, getSettings).imap(_ => ())
+        integrationId -> pushMaybe(integration, isAllowed, getSettings).imap(_ => ()).recoverWith {
+          case fail =>
+            slackLog.warn(s"Failed to push to $integrationId because ${fail.getMessage}")
+            Future.failed(fail)
+        }
     }
   }
 
@@ -156,7 +172,7 @@ class SlackPushingActor @Inject() (
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            log.error(s"[SLACK-PUSH-ACTOR] Failed to push to Slack via integration ${integration.id.get}:" + error.getMessage)
+            slackLog.warn(s"Failed to push to Slack via integration ${integration.id.get}:" + error.getMessage)
             (Some(now plus delayFromFailedPush), None)
         }
 
@@ -168,19 +184,25 @@ class SlackPushingActor @Inject() (
 
   private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[LibraryToSlackChannel] = {
     implicit val pushItems = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(integration) }
-    // First update all the "old" shit
-    pushItems.oldKeeps.foreach {
-      case (k, ktl) =>
-        // lookup k in a cache to find a slack message timestamp
-        /* ... */
-        // regenerate the slack message
-        val updatedSlackMsg = keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-      // call the SlackClient to try and update the message
-      /* ... */
-    }
-    pushItems.oldMsgs.foreach {
-      case (kId, msgs) =>
-      // do something here
+    // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
+    // We do not keep track of whether this succeeds, we just assume that it does
+    db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.botToken) }.foreach { botToken =>
+      pushItems.oldKeeps.foreach {
+        case (k, ktl) =>
+          // lookup k in a cache to find a slack message timestamp
+          slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).foreach { oldKeepTimestamp =>
+            // regenerate the slack message
+            val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+              keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+            ))
+            // call the SlackClient to try and update the message
+            slackClient.updateMessage(botToken, oldKeepTimestamp, updatedKeepMessage)
+          }
+      }
+      pushItems.oldMsgs.foreach {
+        case (kId, msgs) =>
+        // do something here
+      }
     }
 
     // Now push new things, updating the integration state as we go
@@ -193,8 +215,8 @@ class SlackPushingActor @Inject() (
         ).map { _: Unit =>
           db.readWrite { implicit s =>
             item match {
-              case PushItem.KeepToPush(_, ktl) => integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
-              case PushItem.MessageToPush(_, msg) => integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(msg.id)))
+              case PushItem.KeepToPush(k, ktl) => integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
+              case PushItem.MessageToPush(k, msg) => integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(msg.id)))
             }
           }
         }

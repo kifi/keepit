@@ -27,6 +27,7 @@ object SlackAPI {
     implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
     implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
     implicit def fromChannelId(channelId: SlackChannelId): Param = Param("channel", channelId.value)
+    implicit def fromTimestamp(timestamp: SlackTimestamp): Param = Param("timestamp", timestamp.value) // TODO(ryan): definitely not "ts", right?
     implicit def fromUserId(userId: SlackUserId): Param = Param("user", userId.value)
     implicit def fromSearchParam(searchParam: SlackSearchRequest.Param): Param = Param(searchParam.name, searchParam.value)
   }
@@ -46,6 +47,8 @@ object SlackAPI {
   def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
   def PostMessage(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest) =
     Route(GET, "https://slack.com/api/chat.postMessage", Seq[Param](token, channelId) ++ msg.asUrlParams: _*)
+  def UpdateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, msg: SlackMessageRequest) =
+    Route(GET, "https://slack.com/api/chat.update", Seq[Param](token, timestamp) ++ msg.asUrlParams: _*) // TODO(ryan): definitely not "chat.updateMessage", right?
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
   def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
@@ -55,6 +58,7 @@ trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
+  def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
@@ -111,6 +115,10 @@ class SlackClientImpl(
   }
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
+  }
+
+  def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage] = {
+    slackCall[SlackMessage](SlackAPI.UpdateMessage(token, timestamp, newMsg))
   }
   def testToken(token: SlackAccessToken): Future[Unit] = {
     slackCall[Unit](SlackAPI.Test(token))(readUnit)

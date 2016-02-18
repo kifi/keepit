@@ -38,6 +38,8 @@ trait SlackClientWrapper {
   def sendToSlackChannel(slackTeamId: SlackTeamId, slackChannel: (SlackChannelId, SlackChannelName), msg: SlackMessageRequest): Future[Unit]
   def sendToSlack(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Unit]
 
+  def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
+
   // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
@@ -166,6 +168,10 @@ class SlackClientWrapperImpl @Inject() (
             }
         }
     }
+  }
+
+  def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage] = {
+    slackClient.updateMessage(token, timestamp, newMsg)
   }
 
   def validateToken(token: SlackAccessToken): Future[Boolean] = {
