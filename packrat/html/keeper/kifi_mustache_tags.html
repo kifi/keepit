@@ -1,0 +1,12 @@
+<{{tagName}}
+  {{#attributes}}
+    {{name}}="{{value}}"
+  {{/attributes}}
+>
+  {{^leaf}}
+    {{#children}}{{>kifi_mustache_tags}}{{/children}}
+  {{/leaf}}
+  {{#leaf}}
+    {{children}}
+  {{/leaf}}
+</{{tagName}}>

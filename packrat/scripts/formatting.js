@@ -1,6 +1,55 @@
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
+function mapDOM(element, json) {
+  var treeObject = {};
+  var parser;
+  var docNode;
+  // If string convert to document Node
+  if (typeof element === 'string') {
+    parser = new DOMParser();
+    docNode = parser.parseFromString(element, 'text/xml');
+    element = docNode.firstChild;
+  }
+
+  //Recursively loop through DOM elements and assign properties to object
+  function treeHTML(element, object) {
+    object.tagName = element.nodeName;
+    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+
+    if (nodeList.length) {
+      object.children = [];
+      nodeList.forEach(function (node) {
+        if (node.nodeType === 3) {
+          object.children.push({
+            tagName: 'span',
+            attributes: [],
+            children: node.nodeValue,
+            leaf: true
+          });
+        } else {
+          object.children.push({});
+          treeHTML(node, object.children[object.children.length - 1]);
+        }
+      });
+    } else {
+      object.leaf = true;
+      object.children = '';
+    }
+
+    object.attributes = attributeList.map(function (attribute) {
+      return {
+        name: attribute.nodeName,
+        value: attribute.nodeValue
+      };
+    });
+  }
+  treeHTML(element, treeObject);
+
+  return (json ? JSON.stringify(treeObject) : treeObject);
+}
+
 var formatMessage = (function () {
   'use strict';
   // tip: debuggex.com helps clarify regexes
@@ -26,13 +75,19 @@ var formatMessage = (function () {
         processEmoji);
 
   function renderAndFormatFull(text, render) {
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return formatAsHtml(render(text));
+    return formatAsHtml(text);
   }
 
   function renderAndFormatSnippet(text, render) {
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    var html = formatAsHtmlSnippet(render(text));
+    var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
     return html.length > 200 ? html.substring(0, 190) + '…' : html;
   }
@@ -47,7 +102,8 @@ var formatMessage = (function () {
         process(parts[i+1]));
     }
     html.push('</div>');
-    return html.join('');
+    html = html.join('');
+    return mapDOM(html);
   }
 
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
@@ -147,22 +203,40 @@ var formatKifiSelRangeText = (function () {
 var formatKifiSelRangeTextAsHtml = (function () {
   'use strict';
   var replaceRe = /([\u001e\u001f])/g;
-  function replace(replacements, ch) {
-    return replacements[ch];
+  var newlineRe = /\n/g;
+
+  function getPart(content, class1, class2) {
+    return {
+      content: content,
+      class1: class1,
+      class2: class2
+    };
   }
+
+  function pushLine(parts, class1, class2, c) {
+    parts.push(getPart(c, class1, class2));
+  }
+
   return function (selector, class1, class2) {
-    var pp = '<div class="' + class1 + ' ' + class2 + '">';
-    var p = '</div><div class="' + class1 + '">';
-    var parts = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
-    var html = [pp, Mustache.escape(parts[0]).replace(/\n/g, p)];
-    for (var i = 1; i < parts.length; i += 2) {
-      if (parts[i] === '\u001e') {
-        html.push('</div>', pp);
+    var lookHereTextItems = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
+    var parts = [ getPart(lookHereTextItems[0], class1, class2) ];
+    var lines;
+    var isPP;
+    var isP;
+
+    for (var i = 1; i < lookHereTextItems.length; i += 2) {
+      lines = lookHereTextItems[i + 1] && lookHereTextItems[i + 1].split(newlineRe);
+      isPP = (lookHereTextItems[i] === '\u001e');
+      isP = (lines.length > 1);
+
+      if (!isP && !isPP) {
+        parts[parts.length - 1].content += lines[0];
+      } else {
+        lines.forEach(pushLine.bind(null, parts, class1, isPP && class2));
       }
-      html.push(Mustache.escape(parts[i+1]).replace(/\n/g, p));
     }
-    html.push('</div>');
-    return html.join('');
+
+    return parts;
   };
 }());
 
@@ -252,7 +326,7 @@ var formatAuxData = (function () {
 
   return function () {
     var arr = this.auxData, formatter = formatters[arr[0]];
-    return formatter ? formatter.apply(null, arr.slice(1)) : '';
+    return mapDOM('<p>' + (formatter ? formatter.apply(null, arr.slice(1)) : '') + '</p>');
   };
 
   function isMe(user) {
