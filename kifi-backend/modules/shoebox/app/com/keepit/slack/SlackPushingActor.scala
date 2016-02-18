@@ -142,7 +142,7 @@ class SlackPushingActor @Inject() (
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> pushMaybe(integration, isAllowed, getSettings).imap(_ => ()).recoverWith {
+        integrationId -> pushMaybe(integration, isAllowed, getSettings).recoverWith {
           case fail =>
             slackLog.warn(s"Failed to push to $integrationId because ${fail.getMessage}")
             Future.failed(fail)
@@ -150,7 +150,7 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[LibraryToSlackChannel] = {
+  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Unit] = {
     log.info(s"[SLACK-PUSH-ACTOR] Trying to push ${integration.id.get}")
     val futurePushMaybe = {
       if (isAllowed(integration.id.get)) doPush(integration, getSettings(integration.id.get))
@@ -192,7 +192,7 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[LibraryToSlackChannel] = {
+  private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
     implicit val pushItems = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(integration) }
     // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
     // We do not keep track of whether this succeeds, we just assume that it does
@@ -230,32 +230,31 @@ class SlackPushingActor @Inject() (
     }
 
     // Now push new things, updating the integration state as we go
-    FutureHelpers.foldLeft(pushItems.sortedNewItems)(integration) {
-      case (workingIntegration, item) =>
-        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
-          slackClient.sendToSlackViaUser(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet).recoverWith {
-            case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
-          }
-        ).map { pushedMessageOpt =>
-          db.readWrite { implicit s =>
-            item match {
-              case PushItem.KeepToPush(k, ktl) =>
-                pushedMessageOpt.foreach { pushedMessage =>
-                  slackKeepPushTimestampCache.set(SlackKeepPushTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
-                }
-                integrationRepo.save(workingIntegration.withLastProcessedKeep(Some(ktl.id.get)))
-              case PushItem.MessageToPush(k, kifiMsg) =>
-                pushedMessageOpt.foreach { pushedMessage =>
-                  slackCommentPushTimestampCache.set(SlackCommentPushTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
-                }
-                integrationRepo.save(workingIntegration.withLastProcessedMsg(Some(kifiMsg.id)))
-            }
+    FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
+      slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
+        slackClient.sendToSlackViaUser(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet).recoverWith {
+          case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
+        }
+      ).map { pushedMessageOpt =>
+        db.readWrite { implicit s =>
+          item match {
+            case PushItem.KeepToPush(k, ktl) =>
+              pushedMessageOpt.foreach { pushedMessage =>
+                slackKeepPushTimestampCache.set(SlackKeepPushTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
+              }
+              integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
+            case PushItem.MessageToPush(k, kifiMsg) =>
+              pushedMessageOpt.foreach { pushedMessage =>
+                slackCommentPushTimestampCache.set(SlackCommentPushTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
+              }
+              integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
           }
         }
+      }
     }.andThen {
-      case Success(finalIntegration) =>
+      case Success(_) =>
         db.readWrite { implicit s =>
-          integrationRepo.save(finalIntegration.doneProcessing(pushItems.maxKeepSeq, pushItems.maxMsgSeq))
+          integrationRepo.updateLastProcessedSeqs(integration.id.get, pushItems.maxKeepSeq, pushItems.maxMsgSeq)
         }
     }
   }
