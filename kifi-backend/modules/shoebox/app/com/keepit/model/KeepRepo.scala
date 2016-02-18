@@ -647,7 +647,7 @@ class KeepRepoImpl @Inject() (
 
     val added_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
       case None => "true"
-      case Some((keepId, before)) => s"(added_at < '$before' OR (added_at = '$before' AND keep_id < $keepId))"
+      case Some((keepId, before)) => s"added_at <= '$before' AND keep_id < $keepId"
     }
 
     val added_at_AFTER = afterIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
