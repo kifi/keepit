@@ -65,3 +65,7 @@ object SlackMessageRequest {
     )
   }
 }
+
+case class SlackMessageResponse(
+  slackChannelId: SlackChannelId,
+  timestamp: SlackTimestamp)

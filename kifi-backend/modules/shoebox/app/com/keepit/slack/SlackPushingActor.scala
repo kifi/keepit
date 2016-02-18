@@ -206,19 +206,24 @@ class SlackPushingActor @Inject() (
               keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
             ))
             // call the SlackClient to try and update the message
-            slackClient.updateMessage(botToken, oldKeepTimestamp, updatedKeepMessage)
+            slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage)
           }
       }
       pushItems.oldMsgs.foreach {
         case (k, msgs) =>
           msgs.foreach { msg =>
             slackCommentPushTimestampCache.direct.get(SlackCommentPushTimestampKey(integration.id.get, msg.id)).foreach { oldCommentTimestamp =>
-              // regenerate the slack message
-              val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-              ))
-              // call the SlackClient to try and update the message
-              slackClient.updateMessage(botToken, oldCommentTimestamp, updatedCommentMessage)
+              if (msg.isDeleted) slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp,
+                SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack("This comment has been deleted."))
+              )
+              else {
+                // regenerate the slack message
+                val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+                  messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+                ))
+                // call the SlackClient to try and update the message
+                slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage)
+              }
             }
           }
       }
