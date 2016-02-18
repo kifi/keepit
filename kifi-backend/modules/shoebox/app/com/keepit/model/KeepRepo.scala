@@ -707,8 +707,8 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, before)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at < '$before' AND k.id < $keepId"
-          else s"last_activity_at < '$before' AND $tableName.keep_id < $keepId"
+          if (tableName == "k") s"last_activity_at < '$before' OR (last_activity_at = '$before' AND k.id < $keepId)"
+          else s"last_activity_at < '$before' OR (last_activity_at = '$before' AND $tableName.keep_id < $keepId)"
         }
     }
 
@@ -716,15 +716,15 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, after)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at > '$after' AND k.id > $keepId"
-          else s"last_activity_at > '$after' AND $tableName.keep_id > $keepId"
+          if (tableName == "k") s"last_activity_at > '$after' OR (last_activity_at = '$after' AND k.id > $keepId)"
+          else s"last_activity_at > '$after' OR (last_activity_at = '$after' AND $tableName.keep_id > $keepId)"
         }
     }
 
     val keepInOrgFilter = filterOpt.collect { case OrganizationKeeps(orgId) => s"""AND ktl.organization_id = $orgId""" }
 
-    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_lm_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} GROUP BY ktl.keep_id"""
-    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_om_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
+    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, max(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_lm_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} GROUP BY ktl.keep_id"""
+    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, max(ktl.last_activity_at) as most_recent_activity FROM $ktl_JOIN_om_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktl")} ${keepInOrgFilter.getOrElse("")} GROUP BY ktl.keep_id"""
     val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.last_activity_at as most_recent_activity FROM $ktu_WHERE_THIS_USER AND ${last_activity_at_BEFORE("ktu")}"""
 
     val fromQuery = filterOpt match {
