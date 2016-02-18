@@ -36,6 +36,7 @@ object SlackChannelMagnet {
 trait SlackClientWrapper {
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessage]]
   def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
+  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
 
   def updateMessage(token: SlackAccessToken, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
 
@@ -91,6 +92,16 @@ class SlackClientWrapperImpl @Inject() (
       pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel, msg).map(v => Some(v)).recover { case f => None }
     }.flatMap {
       case Some(v) => Future.successful(v)
+      case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
+    }
+  }
+
+  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
+    val botToken = db.readOnlyMaster { implicit s =>
+      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.botToken)
+    }
+    botToken match {
+      case Some(token) => slackClient.postToChannel(token, slackChannel, msg)
       case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
     }
   }
