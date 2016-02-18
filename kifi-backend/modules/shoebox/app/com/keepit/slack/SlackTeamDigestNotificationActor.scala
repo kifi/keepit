@@ -257,7 +257,7 @@ class SlackTeamDigestNotificationActor @Inject() (
         msg <- msgOpt
         generalChannel <- generalChannelOpt
       } yield {
-        slackClient.sendToSlackViaAnyUser(team.slackTeamId, generalChannel, msg).map(_ => ()).andThen {
+        slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))

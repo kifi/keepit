@@ -142,10 +142,11 @@ class SlackPushingActor @Inject() (
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> pushMaybe(integration, isAllowed, getSettings).recoverWith {
-          case fail =>
+        integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getSettings)).map {
+          case Success(_) => ()
+          case Failure(fail) =>
             slackLog.warn(s"Failed to push to $integrationId because ${fail.getMessage}")
-            Future.failed(fail)
+            ()
         }
     }
   }
@@ -232,7 +233,7 @@ class SlackPushingActor @Inject() (
     // Now push new things, updating the integration state as we go
     FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
       slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
-        slackClient.sendToSlackViaUser(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet).recoverWith {
+        slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, message.quiet).recoverWith {
           case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
         }
       ).map { pushedMessageOpt =>

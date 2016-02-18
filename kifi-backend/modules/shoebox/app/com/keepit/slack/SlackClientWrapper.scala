@@ -35,7 +35,7 @@ object SlackChannelMagnet {
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
-  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
+  def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
 
   def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse]
@@ -85,15 +85,18 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
-    val slackTeamMembers = db.readOnlyMaster { implicit s =>
-      slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
-    }
-    FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
-      pushToSlackUsingToken(slackUserId, slackTeamId, slackChannel, msg).map(v => Some(v)).recover { case f => None }
-    }.flatMap {
-      case Some(v) => Future.successful(v)
-      case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
+  def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
+    sendToSlackViaBot(slackTeamId, slackChannel, msg).map(v => Some(v)).recoverWith {
+      case SlackAPIFailure.NoValidBotToken =>
+        val slackTeamMembers = db.readOnlyMaster { implicit s =>
+          slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+        }
+        FutureHelpers.foldLeftUntil(slackTeamMembers)(Option.empty[SlackMessageResponse]) {
+          case (_, slackUserId) =>
+            sendToSlackViaUser(slackUserId, slackTeamId, slackChannel, msg).map(_ -> true).recover { case f => (None, false) }
+        }
+    }.recoverWith {
+      case SlackAPIFailure.NoValidBotToken | SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken => Future.failed(SlackAPIFailure.NoValidPushMethod)
     }
   }
 
@@ -103,7 +106,7 @@ class SlackClientWrapperImpl @Inject() (
     }
     botToken match {
       case Some(token) => slackClient.postToChannel(token, slackChannel, msg)
-      case None => Future.failed(SlackAPIFailure.NoValidWebhooks)
+      case None => Future.failed(SlackAPIFailure.NoValidBotToken)
     }
   }
 
