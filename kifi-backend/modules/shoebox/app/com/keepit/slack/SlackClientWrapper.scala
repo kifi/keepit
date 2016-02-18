@@ -91,9 +91,13 @@ class SlackClientWrapperImpl @Inject() (
         val slackTeamMembers = db.readOnlyMaster { implicit s =>
           slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
         }
-        FutureHelpers.foldLeftUntil(slackTeamMembers)(Option.empty[SlackMessageResponse]) {
-          case (_, slackUserId) =>
-            sendToSlackViaUser(slackUserId, slackTeamId, slackChannel, msg).map(_ -> true).recover { case f => (None, false) }
+        FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
+          sendToSlackViaUser(slackUserId, slackTeamId, slackChannel, msg).map(v => Some(v)).recover {
+            case SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken => None
+          }
+        }.flatMap {
+          case Some(v) => Future.successful(v)
+          case None => Future.failed(SlackAPIFailure.NoValidToken)
         }
     }.recoverWith {
       case SlackAPIFailure.NoValidBotToken | SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken => Future.failed(SlackAPIFailure.NoValidPushMethod)
