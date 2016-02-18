@@ -103,19 +103,17 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       val author = newKeep.author
       val slackAttributionOpt = newKeep.attribution
 
-      val image = author.picture.map(PublicImage) orElse slackAttributionOpt.map { _ => PublicImage(ImageUrls.SLACK_LOGO) } getOrElse PublicImage(ImageUrls.KIFI_LOGO)
-
       val body = {
         slackAttributionOpt.map { attr =>
-          s"${author.displayName} just added in #${attr.message.channel.name.value}" +
+          s"${author.name} just added in #${attr.message.channel.name.value}" +
             newKeep.title.map(title => s": $title").getOrElse("")
-        }.getOrElse(s"${author.displayName} just kept ${newKeep.title.getOrElse("a new keep")}")
+        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse("a new keep")}")
       }
 
       import com.keepit.common._
       StandardNotificationInfo(
         url = newKeep.url,
-        image = image,
+        image = PublicImage(author.picture),
         title = s"New keep in ${libraryKept.name}",
         body = body,
         linkText = "Go to page",

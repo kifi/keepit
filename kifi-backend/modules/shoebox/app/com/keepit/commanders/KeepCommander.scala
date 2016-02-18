@@ -17,6 +17,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
@@ -140,6 +141,7 @@ class KeepCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     userExperimentRepo: UserExperimentRepo,
+    implicit val imageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
@@ -155,7 +157,7 @@ class KeepCommanderImpl @Inject() (
       def getAuthor(keep: Keep): Option[BasicAuthor] = {
         attributions.get(keep.id.get).map {
           case (_, Some(user)) => BasicAuthor.fromUser(user)
-          case (attr, _) => BasicAuthor.fromAttribution(attr)
+          case (attr, _) => BasicAuthor.fromSource(attr)
         }.orElse {
           keep.userId.map { id =>
             val basicUser = basicUserRepo.load(id)

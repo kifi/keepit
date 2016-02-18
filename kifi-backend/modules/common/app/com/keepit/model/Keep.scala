@@ -245,7 +245,6 @@ case class BasicKeep(
 
 object BasicKeep {
   private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
-  implicit val authorFormat = Json.format[BasicAuthor]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'title).formatNullable[String] and
