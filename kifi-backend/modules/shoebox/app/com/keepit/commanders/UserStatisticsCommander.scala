@@ -323,7 +323,7 @@ class UserStatisticsCommander @Inject() (
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackTeamMembersCount = slackTeamRepo.getByOrganizationId(orgId) flatMap { slackTeam =>
         val slackMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
-        slackMembers.find { _.token.contains("users:read") }.map(getTeamMembersCount)
+        slackMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount)
       }
       val slackToLibs = slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get))
       val slacks = SlackStatistics(slackTeamMembersCount.getOrElse(0), slackToLibs)
@@ -428,7 +428,7 @@ class UserStatisticsCommander @Inject() (
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackTeamMembersCount = slackTeamRepo.getByOrganizationId(orgId) flatMap { slackTeam =>
         val slackMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
-        slackMembers.find { _.token.contains("users:read") }.map(getTeamMembersCount)
+        slackMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount)
       }
       val slackStats = SlackStatistics(slackTeamMembersCount.getOrElse(0), slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get)))
 
