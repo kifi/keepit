@@ -132,15 +132,11 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val user1 = user().saved
           val library = LibraryFactory.library().withOwner(user1).saved
           val keeps = KeepFactory.keeps(50).map(_.withUser(user1).withLibrary(library).saved)
-          inject[LibraryMembershipRepo]
-          keepRepo.getRecentKeeps(user1.id.get, 10, None, None, None)
-          keepRepo.getRecentKeeps(user1.id.get, 10, Some(keeps.head.externalId), None, None)
-          keepRepo.getRecentKeeps(user1.id.get, 10, None, Some(keeps.head.externalId), None)
 
-          val firstPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, None, None, None)
-          val secondPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(firstPage.last._1.externalId), None, None)
+          val firstPage = keepRepo.getRecentKeeps(user1.id.get, 10, None, None, None)
+          val secondPage = keepRepo.getRecentKeeps(user1.id.get, 10, Some(firstPage.last._1.externalId), None, None)
           secondPage.forall { case (_, time) => time.getMillis < firstPage.last._2.getMillis } === true
-          val thirdPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(secondPage.last._1.externalId), None, None)
+          val thirdPage = keepRepo.getRecentKeeps(user1.id.get, 10, Some(secondPage.last._1.externalId), None, None)
           thirdPage.forall { case (_, time) => time.getMillis < secondPage.last._2.getMillis } === true
           secondPage.forall { case (_, time) => time.getMillis > thirdPage.head._2.getMillis } === true
           1 === 1
