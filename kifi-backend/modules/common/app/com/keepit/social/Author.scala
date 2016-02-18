@@ -70,6 +70,10 @@ object BasicAuthor {
   case class SlackUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Slack)
   case class TwitterUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Twitter)
 
+  def apply(attr: SourceAttribution, basicUserOpt: Option[BasicUser])(implicit imageConfig: S3ImageConfig): BasicAuthor = {
+    basicUserOpt.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.fromSource(attr))
+  }
+
   def fromUser(user: BasicUser)(implicit imageConfig: S3ImageConfig): BasicAuthor = KifiUser(
     id = user.externalId.id,
     name = user.fullName,
