@@ -1,6 +1,55 @@
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
+function mapDOM(element, json) {
+  var treeObject = {};
+  var parser;
+  var docNode;
+  // If string convert to document Node
+  if (typeof element === 'string') {
+    parser = new DOMParser();
+    docNode = parser.parseFromString(element, 'text/xml');
+    element = docNode.firstChild;
+  }
+
+  //Recursively loop through DOM elements and assign properties to object
+  function treeHTML(element, object) {
+    object.tagName = element.nodeName;
+    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+
+    if (nodeList.length) {
+      object.children = [];
+      nodeList.forEach(function (node) {
+        if (node.nodeType === 3) {
+          object.children.push({
+            tagName: 'span',
+            attributes: [],
+            children: node.nodeValue,
+            leaf: true
+          });
+        } else {
+          object.children.push({});
+          treeHTML(node, object.children[object.children.length - 1]);
+        }
+      });
+    } else {
+      object.leaf = true;
+      object.children = '';
+    }
+
+    object.attributes = attributeList.map(function (attribute) {
+      return {
+        name: attribute.nodeName,
+        value: attribute.nodeValue
+      };
+    });
+  }
+  treeHTML(element, treeObject);
+
+  return (json ? JSON.stringify(treeObject) : treeObject);
+}
+
 var formatMessage = (function () {
   'use strict';
   // tip: debuggex.com helps clarify regexes
@@ -12,55 +61,6 @@ var formatMessage = (function () {
   var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
   var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
-
-  function mapDOM(element, json) {
-    var treeObject = {};
-    var parser;
-    var docNode;
-    // If string convert to document Node
-    if (typeof element === 'string') {
-      parser = new DOMParser();
-      docNode = parser.parseFromString(element, 'text/xml');
-      element = docNode.firstChild;
-    }
-
-    //Recursively loop through DOM elements and assign properties to object
-    function treeHTML(element, object) {
-      object.tagName = element.nodeName;
-      var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
-      var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
-
-      if (nodeList.length) {
-        object.children = [];
-        nodeList.forEach(function (node) {
-          if (node.nodeType === 3) {
-            object.children.push({
-              tagName: 'span',
-              attributes: [],
-              children: node.nodeValue,
-              leaf: true
-            });
-          } else {
-            object.children.push({});
-            treeHTML(node, object.children[object.children.length - 1]);
-          }
-        });
-      } else {
-        object.leaf = true;
-        object.children = '';
-      }
-
-      object.attributes = attributeList.map(function (attribute) {
-        return {
-          name: attribute.nodeName,
-          value: attribute.nodeValue
-        };
-      });
-    }
-    treeHTML(element, treeObject);
-
-    return (json ? JSON.stringify(treeObject) : treeObject);
-  }
 
   var formatAsHtml =
     processLineBreaksThen.bind(null,
@@ -326,7 +326,7 @@ var formatAuxData = (function () {
 
   return function () {
     var arr = this.auxData, formatter = formatters[arr[0]];
-    return formatter ? formatter.apply(null, arr.slice(1)) : '';
+    return mapDOM('<p>' + (formatter ? formatter.apply(null, arr.slice(1)) : '') + '</p>');
   };
 
   function isMe(user) {

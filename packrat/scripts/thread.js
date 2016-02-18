@@ -246,7 +246,9 @@ k.panes.thread = k.panes.thread || function () {
 
   function renderMessage(keep, m) {
     m.parts = formatMessage.full()(m.text);
-    m.formatAuxData = formatAuxData;
+    if (m.auxData) {
+      m.auxDataTags = formatAuxData.call(m);
+    }
     m.keep = keep;
     if (m.auxData && m.auxData.length >= 3 &&
       (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
