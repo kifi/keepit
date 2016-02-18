@@ -191,15 +191,24 @@ class UserStatisticsCommander @Inject() (
 
   def getTeamMembersCount(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Int = {
     slackTeamMembersCountCache.getOrElse(SlackTeamMembersCountKey(slackTeamMembership.slackTeamId)) {
-      val members = slackTeamMembersCache.getOrElse(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
-        val allMembers = Await.result(slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId), Duration(10, SECONDS))
-        val deleted = allMembers.filter(_.deleted)
-        val bots = allMembers.filterNot(_.deleted).filter(_.bot)
-        log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
-          s"out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
-        allMembers.filterNot(_.deleted).filterNot(_.bot)
-      }
-      members.size
+      val members = getTeamMembers(slackTeamMembership: SlackTeamMembership)
+      members.filterNot(_.bot).size
+    }
+  }
+
+  def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Seq[SlackUserInfo] = {
+    val members = getTeamMembers(slackTeamMembership)
+    members.filter(_.bot)
+  }
+
+  def getTeamMembers(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Seq[SlackUserInfo] = {
+    slackTeamMembersCache.getOrElse(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
+      val allMembers = Await.result(slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId), Duration(10, SECONDS))
+      val deleted = allMembers.filter(_.deleted)
+      val bots = allMembers.filterNot(_.deleted).filter(_.bot)
+      log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
+        s"out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
+      allMembers.filterNot(_.deleted)
     }
   }
 
