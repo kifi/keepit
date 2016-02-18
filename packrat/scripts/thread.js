@@ -5,6 +5,7 @@
 // @require scripts/html/keeper/message_aux.js
 // @require scripts/html/keeper/message_discussion.js
 // @require scripts/html/keeper/message_tip.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
@@ -244,7 +245,7 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function renderMessage(keep, m) {
-    m.formatMessage = formatMessage.full;
+    m.parts = formatMessage.full()(m.text);
     m.formatAuxData = formatAuxData;
     m.keep = keep;
     if (m.auxData && m.auxData.length >= 3 &&
@@ -259,7 +260,8 @@ k.panes.thread = k.panes.thread || function () {
     }
 
     var templates = {
-      messageTip: 'message_tip'
+      messageTip: 'message_tip',
+      'kifi_mustache_tags': 'kifi_mustache_tags'
     };
     var $rendered;
     if (m.auxData && m.auxData.length) {

@@ -13,6 +13,55 @@ var formatMessage = (function () {
   var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
   var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
 
+  function mapDOM(element, json) {
+    var treeObject = {};
+    var parser;
+    var docNode;
+    // If string convert to document Node
+    if (typeof element === 'string') {
+      parser = new DOMParser();
+      docNode = parser.parseFromString(element, 'text/xml');
+      element = docNode.firstChild;
+    }
+
+    //Recursively loop through DOM elements and assign properties to object
+    function treeHTML(element, object) {
+      object.tagName = element.nodeName;
+      var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+      var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+
+      if (nodeList.length) {
+        object.children = [];
+        nodeList.forEach(function (node) {
+          if (node.nodeType === 3) {
+            object.children.push({
+              tagName: 'span',
+              attributes: [],
+              children: node.nodeValue,
+              leaf: true
+            });
+          } else {
+            object.children.push({});
+            treeHTML(node, object.children[object.children.length - 1]);
+          }
+        });
+      } else {
+        object.leaf = true;
+        object.children = '';
+      }
+
+      object.attributes = attributeList.map(function (attribute) {
+        return {
+          name: attribute.nodeName,
+          value: attribute.nodeValue
+        };
+      });
+    }
+    treeHTML(element, treeObject);
+
+    return (json ? JSON.stringify(treeObject) : treeObject);
+  }
+
   var formatAsHtml =
     processLineBreaksThen.bind(null,
       processKifiSelMarkdownToLinksThen.bind(null,
@@ -26,13 +75,19 @@ var formatMessage = (function () {
         processEmoji);
 
   function renderAndFormatFull(text, render) {
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return formatAsHtml(render(text));
+    return formatAsHtml(text);
   }
 
   function renderAndFormatSnippet(text, render) {
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    var html = formatAsHtmlSnippet(render(text));
+    var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
     return html.length > 200 ? html.substring(0, 190) + '…' : html;
   }
@@ -47,7 +102,8 @@ var formatMessage = (function () {
         process(parts[i+1]));
     }
     html.push('</div>');
-    return html.join('');
+    html = html.join('');
+    return mapDOM(html);
   }
 
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
