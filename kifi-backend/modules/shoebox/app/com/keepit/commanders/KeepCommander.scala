@@ -473,7 +473,6 @@ class KeepCommanderImpl @Inject() (
   }
 
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep = {
-    require(keep.userId.isEmpty) // TODO(ryan): necessary?
     keepRepo.save(keep.withOwner(newOwner).withConnections(keep.connections.plusUser(newOwner))) tap { updatedKeep =>
       ktuCommander.internKeepInUser(updatedKeep, newOwner, None, addedAt = Some(keep.keptAt))
     }
