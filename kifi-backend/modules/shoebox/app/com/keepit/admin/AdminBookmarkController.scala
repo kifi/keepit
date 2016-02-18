@@ -333,17 +333,17 @@ class AdminBookmarksController @Inject() (
     Ok(keeps.length.toString)
   }
 
-  def reattributeKeeps(author: String, overwriteExistingOwner: Boolean, doIt: Boolean) = AdminUserAction { implicit request =>
+  def reattributeKeeps(author: String, userIdOpt: Option[Long], overwriteExistingOwner: Boolean, doIt: Boolean) = AdminUserAction { implicit request =>
     Try(Author.fromIndexableString(author)).toOption match {
       case Some(validAuthor) =>
-        val userIdOpt: Option[Id[User]] = db.readOnlyMaster { implicit session =>
+        val authorOwnerId: Option[Id[User]] = db.readOnlyMaster { implicit session =>
           validAuthor match {
-            case Author.KifiUser(userId) => Some(userId)
+            case Author.KifiUser(kifiUserId) => Some(kifiUserId)
             case Author.SlackUser(slackTeamId, slackUserId) => userIdentityHelper.getOwnerId(IdentityHelpers.toIdentityId(slackTeamId, slackUserId))
             case Author.TwitterUser(twitterUserId) => userIdentityHelper.getOwnerId(IdentityId(twitterUserId.id.toString, "twitter"))
           }
         }
-        userIdOpt match {
+        (authorOwnerId orElse userIdOpt.map(Id[User])) match {
           case None => BadRequest(s"No user found.")
           case Some(userId) =>
             if (doIt) SafeFuture { keepSourceCommander.reattributeKeeps(validAuthor, userId, overwriteExistingOwner) }
