@@ -77,7 +77,7 @@ class KeepSourceCommanderImpl @Inject() (
     keepIds.grouped(100).flatMap { batchedKeepIds =>
       db.readWrite { implicit s =>
         keepRepo.getByIds(batchedKeepIds).values.collect {
-          case keep if keep.userId.isEmpty || overwriteExistingOwner => keepCommander.setKeepOwner(keep, userId).id.get
+          case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepCommander.setKeepOwner(keep, userId).id.get
         }
       }
     }.toSet
