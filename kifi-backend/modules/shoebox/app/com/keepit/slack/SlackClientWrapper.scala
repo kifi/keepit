@@ -34,11 +34,11 @@ object SlackChannelMagnet {
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
-  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessage]]
-  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
-  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
+  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
+  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
+  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
 
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse]
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
 
   // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
@@ -72,7 +72,7 @@ class SlackClientWrapperImpl @Inject() (
 
   val debouncer = new Debouncing.Dropper[Unit]
 
-  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessage]] = {
+  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
     slackChannel match {
       case SlackChannelMagnet.Name(name) =>
         pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg).map(_ => None)
@@ -85,7 +85,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
+  def sendToSlackViaAnyUser(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val slackTeamMembers = db.readOnlyMaster { implicit s =>
       slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
     }
@@ -97,7 +97,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
+  def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val botToken = db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.botToken)
     }
@@ -141,7 +141,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
+  private def pushToSlackUsingToken(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val workingToken = db.readOnlyMaster { implicit s =>
       slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).collect {
         case SlackTokenWithScopes(token, scopes) if scopes.contains(SlackAuthScope.ChatWriteBot) => token
@@ -163,7 +163,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage] = {
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse] = {
     slackClient.updateMessage(token, channelId, timestamp, newMsg)
   }
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit] = {

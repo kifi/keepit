@@ -232,7 +232,7 @@ class SlackPushingActor @Inject() (
     // Now push new things, updating the integration state as we go
     FutureHelpers.foldLeft(pushItems.sortedNewItems)(integration) {
       case (workingIntegration, item) =>
-        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessage]))(message =>
+        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
           slackClient.sendToSlackViaUser(integration.slackUserId, integration.slackTeamId, integration.channel, message.quiet).recoverWith {
             case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
           }

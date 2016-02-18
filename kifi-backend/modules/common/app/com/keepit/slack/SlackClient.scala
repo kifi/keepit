@@ -27,7 +27,7 @@ object SlackAPI {
     implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
     implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
     implicit def fromChannelId(channelId: SlackChannelId): Param = Param("channel", channelId.value)
-    implicit def fromTimestamp(timestamp: SlackTimestamp): Param = Param("timestamp", timestamp.value) // TODO(ryan): definitely not "ts", right?
+    implicit def fromTimestamp(timestamp: SlackTimestamp): Param = Param("ts", timestamp.value)
     implicit def fromUserId(userId: SlackUserId): Param = Param("user", userId.value)
     implicit def fromSearchParam(searchParam: SlackSearchRequest.Param): Param = Param(searchParam.name, searchParam.value)
   }
@@ -58,9 +58,9 @@ object SlackAPI {
 
 trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage]
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage]
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse]
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
@@ -97,8 +97,8 @@ class SlackClientImpl(
     }
   }
 
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessage] = {
-    slackCall[SlackMessage](SlackAPI.PostMessage(token, channelId, msg)).andThen {
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
+    slackCall[SlackMessageResponse](SlackAPI.PostMessage(token, channelId, msg)).andThen {
       case Success(_) => log.info(s"[SLACK-CLIENT] Succeeded in pushing to $channelId via token $token")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to $channelId via token $token because of ${f.getMessage}")
     }
@@ -120,8 +120,8 @@ class SlackClientImpl(
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
   }
 
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessage] = {
-    slackCall[SlackMessage](SlackAPI.UpdateMessage(token, channelId, timestamp, newMsg))
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse] = {
+    slackCall[SlackMessageResponse](SlackAPI.UpdateMessage(token, channelId, timestamp, newMsg))
   }
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit] = {
     slackCall[Unit](SlackAPI.DeleteMessage(token, channelId, timestamp))(readUnit)
