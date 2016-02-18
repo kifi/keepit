@@ -154,7 +154,7 @@ case class SlackUserProfile(
   firstName: Option[String],
   lastName: Option[String],
   fullName: Option[String],
-  emailAddress: EmailAddress,
+  emailAddress: Option[EmailAddress],
   avatarUrl: Option[String],
   originalJson: JsValue)
 
@@ -163,7 +163,7 @@ object SlackUserProfile {
     (__ \ 'first_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'last_name).readNullable[String].map(_.filter(_.nonEmpty)) and
     (__ \ 'real_name).readNullable[String].map(_.filter(_.nonEmpty)) and
-    (__ \ 'email).read[EmailAddress] and
+    (__ \ 'email).readNullable[EmailAddress] and
     (__ \ "image_original").readNullable[String] and
     Reads(JsSuccess(_))
   )(SlackUserProfile.apply _)
@@ -199,7 +199,7 @@ object SlackUserInfo {
 }
 
 case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
-  override val version = 1
+  override val version = 2
   val namespace = "slack_team_members"
   def toKey(): String = slackTeamId.value
 }
@@ -208,7 +208,7 @@ class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerm
   extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
-  override val version = 1
+  override val version = 2
   val namespace = "slack_team_members_count"
   def toKey(): String = slackTeamId.value
 }
