@@ -19,6 +19,8 @@ sealed trait SyncList[T] {
   def find(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Option[T]] = dropUntil(pred).headOption
   def exists(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Boolean] = find(pred).map(_.isDefined)
   def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A]
+  def length(implicit exc: ScalaExecutionContext): Task[Int] = foldLeft(0) { case (acc, _) => acc + 1 }
+  def count(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Int] = filter(pred).length
 
   // Mutation methods
   def take(n: Int)(implicit exc: ScalaExecutionContext): SyncList[T]

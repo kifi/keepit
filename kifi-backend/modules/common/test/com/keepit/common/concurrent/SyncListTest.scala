@@ -26,9 +26,10 @@ class SyncListTest extends Specification with Logging {
       await(sl.takeWhile(_ < 3).seq) === input.takeWhile(_ < 3)
       await(sl.find(_ == 3)) === input.find(_ == 3)
       await(sl.find(_ == 42)) === input.find(_ == 42)
-
       await(sl.exists(_ == 3)) === input.exists(_ == 3)
       await(sl.exists(_ == 42)) === input.exists(_ == 42)
+      await(sl.count(_ < 3)) === input.count(_ < 3)
+      await(sl.length) === input.length
     }
     "do cool iterate things" in {
       def fast(n: Int) = if (n % 2 == 0) n / 2 else 3 * n + 1
