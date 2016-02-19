@@ -202,7 +202,7 @@ class SlackIngestingActor @Inject() (
       case (kifiUserOpt, rawBookmarks) =>
         val notBlacklisted = rawBookmarks.filter(b => !SlackIngestingBlacklist.blacklistedUrl(b.url, blacklist))
         val interned = keepInterner.internRawBookmarksWithStatus(notBlacklisted, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
-        (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
+        (notBlacklisted.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>
       db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
