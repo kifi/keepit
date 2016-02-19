@@ -43,8 +43,11 @@ angular.module('kifi')
       }, 3000);
     };
 
-    $rootScope.$emit('trackOrgProfileEvent', 'view', {
-      type: 'org_profile:settings:integration_confirmation_slack'
-    });
+    $timeout(function () {
+      $rootScope.$emit('trackOrgProfileEvent', 'view', {
+        type: 'org_profile:settings:integration_confirmation_slack',
+        extensionInstalled: !!installService.installedVersion
+      });
+    }, 1000);
   }
 ]);
