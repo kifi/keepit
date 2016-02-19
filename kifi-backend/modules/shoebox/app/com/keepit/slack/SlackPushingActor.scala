@@ -64,7 +64,7 @@ object SlackPushingActor {
 }
 
 case class SlackKeepPushTimestampKey(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]) extends Key[SlackTimestamp] {
-  override val version = 1
+  override val version = 2
   val namespace = "slack_keep_push_timestamp"
   def toKey(): String = s"${integrationId.id}_${keepId.id}"
 }
@@ -211,7 +211,11 @@ class SlackPushingActor @Inject() (
               slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).andThen {
                 case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                 case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
-              }.imap(_ => ())
+              }.imap(_ => ()).recover {
+                case fail: SlackAPIFailure =>
+                  slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
+                  ()
+              }
             }.getOrElse(Future.successful(()))
         }
         _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
