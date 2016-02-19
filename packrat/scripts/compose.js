@@ -281,7 +281,7 @@ k.compose = k.compose || (function() {
       var $a = $(this);
       k.render('html/keeper/titled_tip', {
         title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
-        html: k.formatting.jsonDom('<span>“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.</span>')
+        html: k.formatting.jsonDom('“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.')
       }, {
         'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {

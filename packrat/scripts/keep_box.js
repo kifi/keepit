@@ -553,7 +553,7 @@ k.keepBox = k.keepBox || (function () {
         dir: 'above',
         cssClass: 'kifi-pane-settings-tip',
         title: title,
-        html: k.formatting.jsonDom('<span>' + message + '</span>')
+        html: k.formatting.jsonDom(message)
       }, {
         'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {

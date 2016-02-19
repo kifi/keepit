@@ -912,16 +912,9 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
     hit.libraries.forEach(markKeeperAsDupeIn(users));
 
-    var titleHtml = (
-      '<span>' +
-      (hit.title ? boldSearchTerms(hit.title, hit.matches.title) : formatTitleFromUrl(hit.url, hit.matches.url, bolded)) +
-      '</span>'
-    );
-    var descHtml = (
-      '<span>' +
-      formatDesc(hit.url, hit.matches.url) +
-      '</span>'
-    );
+    var titleHtml = (hit.title ? boldSearchTerms(hit.title, hit.matches.title) : formatTitleFromUrl(hit.url, hit.matches.url, bolded));
+    var descHtml = formatDesc(hit.url, hit.matches.url);
+
     return {
       raw: hit,
       url: hit.url,

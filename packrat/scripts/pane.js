@@ -182,7 +182,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           dir: 'below',
           cssClass: 'kifi-pane-settings-tip',
           title: 'Settings',
-          html: k.formatting.jsonDom('<span>Customize your Kifi<br/>experience.</span>')
+          html: k.formatting.jsonDom('Customize your Kifi<br/>experience.')
         }, {
           'kifi_mustache_tags': 'kifi_mustache_tags'
         }, function (html) {

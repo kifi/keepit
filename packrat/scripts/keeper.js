@@ -171,7 +171,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         } else {
           k.render('html/keeper/titled_tip', {
             title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
-            html: k.formatting.jsonDom('<span>Keeping this page helps<br/>you easily find it later.</span>')
+            html: k.formatting.jsonDom('Keeping this page helps<br/>you easily find it later.')
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -192,7 +192,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       }[this.dataset.tip];
       k.render('html/keeper/titled_tip', {
         title: tip[0],
-        html: k.formatting.jsonDom('<span>' + tip[1] + '</span>')
+        html: k.formatting.jsonDom(tip[1])
       }, {
         'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
