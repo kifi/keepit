@@ -473,6 +473,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
 
   @Provides @Singleton
+  def inferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new InferredKeeperPositionCache(stats, accessLog, (innerRepo, 1 day), (outerRepo, 30 days))
+
+  @Provides @Singleton
   def slackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackKeepPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
 
