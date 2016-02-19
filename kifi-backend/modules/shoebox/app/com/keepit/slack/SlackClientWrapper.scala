@@ -107,7 +107,7 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.botToken)
     }
     botToken match {
-      case Some(token) => slackClient.postToChannel(token, slackChannel, msg)
+      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser)
       case None => Future.failed(SlackAPIFailure.NoValidBotToken)
     }
   }
