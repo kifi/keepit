@@ -77,16 +77,16 @@ case class MemberStatistics(
   numLibrariesFollowing: Int,
   dateLastManualKeep: Option[DateTime])
 
-case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int, teamSize: Int)
+case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int, teamSize: Int, bots: Set[String])
 
 object SlackStatistics {
-  def apply(teamSize: Int, slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
+  def apply(teamSize: Int, bots: Set[String], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
     SlackStatistics(
       slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.On },
       slacking.count { s => s.state == SlackChannelToLibraryStates.INACTIVE },
       slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Off },
       slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Broken },
-      teamSize
+      teamSize, bots
     )
   }
 }
@@ -200,12 +200,12 @@ class UserStatisticsCommander @Inject() (
     }
   }
 
-  def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
-    val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot))
+  def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Set[String]] = {
+    val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
     bots.recover {
       case error =>
         log.error("error fetching members", error)
-        Seq.empty
+        Set("ERROR")
     }
   }
 
@@ -229,9 +229,12 @@ class UserStatisticsCommander @Inject() (
       val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
       (keepCount, libs, slackMembers, slackToLibs)
     }
-    val slackTeamMembersCountF = db.readOnlyReplica { implicit s =>
-      val slackTeamMembersCounts = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount)
-      Future.sequence(slackTeamMembersCounts).map(_.sum)
+    val (countF, botsF) = db.readOnlyReplica { implicit s =>
+      val members = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }
+      val slackTeamMembersCounts = members.map(getTeamMembersCount)
+      val count = Future.sequence(slackTeamMembersCounts).map(_.sum)
+      val bots = Future.sequence(members.map(getSlackBots)).map(_.flatten.toSet)
+      (count, bots)
     }
     val infoF = db.readOnlyReplicaAsync { implicit s =>
       val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
@@ -251,10 +254,11 @@ class UserStatisticsCommander @Inject() (
       (manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying)
     }
     for {
-      slackTeamMembersCount <- slackTeamMembersCountF
+      slackTeamMembersCount <- countF
+      bots <- botsF
       (manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying) <- infoF
     } yield {
-      val slacks = SlackStatistics(slackTeamMembersCount, slackToLibs)
+      val slacks = SlackStatistics(slackTeamMembersCount, bots, slackToLibs)
       FullUserStatistics(libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying)
     }
   }
@@ -354,12 +358,16 @@ class UserStatisticsCommander @Inject() (
       (org, libraries, slackToLibs, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains)
     }
 
-    val slackTeamMembersCountF = db.readOnlyMaster { implicit s =>
-      val count = slackTeamRepo.getByOrganizationId(orgId) flatMap { slackTeam =>
-        val slackMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
-        slackMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount)
-      } getOrElse Future.successful(-1)
-      count
+    val (countF, botsF) = db.readOnlyReplica { implicit s =>
+      val teams = slackTeamRepo.getByOrganizationId(orgId)
+      teams flatMap { slackTeam =>
+        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
+        allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
+      } map { member =>
+        val count = getTeamMembersCount(member)
+        val bots = getSlackBots(member)
+        (count, bots)
+      } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
     }
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
@@ -416,7 +424,8 @@ class UserStatisticsCommander @Inject() (
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
-      slackTeamMembersCount <- slackTeamMembersCountF
+      slackTeamMembersCount <- countF
+      bots <- botsF
       (internalMemberChatStats, allMemberChatStats) <- statsF
     } yield OrganizationStatistics(
       org = org,
@@ -427,7 +436,7 @@ class UserStatisticsCommander @Inject() (
       name = org.name,
       description = org.description,
       libStats = LibCountStatistics(libraries),
-      slackStats = SlackStatistics(slackTeamMembersCount, slackToLibs),
+      slackStats = SlackStatistics(slackTeamMembersCount, bots, slackToLibs),
       numKeeps = numKeeps,
       numKeepsLastWeek = numKeepsLastWeek,
       members = members,
@@ -456,18 +465,23 @@ class UserStatisticsCommander @Inject() (
       val slackChannelToLibrary = slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get))
       (libraries, members, domains, slackChannelToLibrary)
     }
-    val slackTeamMembersCountF = db.readOnlyReplica { implicit s =>
-      slackTeamRepo.getByOrganizationId(orgId) flatMap { slackTeam =>
-        val slackMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
-        slackMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }.map(getTeamMembersCount)
-      } getOrElse Future.successful(-1)
+    val (countF, botsF) = db.readOnlyReplica { implicit s =>
+      val teams = slackTeamRepo.getByOrganizationId(orgId)
+      teams flatMap { slackTeam =>
+        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
+        allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
+      } map { member =>
+        val count = getTeamMembersCount(member)
+        val bots = getSlackBots(member)
+        (count, bots)
+      } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
     }
     for {
       (libraries, members, domains, slackChannelToLibrary) <- infoF
-      slackTeamMembersCount <- slackTeamMembersCountF
-
+      slackTeamMembersCount <- countF
+      bots <- botsF
     } yield {
-      val slackStats = SlackStatistics(slackTeamMembersCount, slackChannelToLibrary)
+      val slackStats = SlackStatistics(slackTeamMembersCount, bots, slackChannelToLibrary)
       val plan = planManagementCommander.currentPlan(orgId)
       val paying = plan.pricePerCyclePerUser.cents > 0
       val numKeeps = libraries.map(_.keepCount).sum
