@@ -47,7 +47,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
-  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Id[Keep]]
+  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
 
   // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -781,15 +781,15 @@ class KeepRepoImpl @Inject() (
     q.as[KeepSource].list
   }
 
-  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Id[Keep]] = {
+  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""
-            SELECT k.id
+            SELECT #$bookmarkColumnOrder
             FROM bookmark k INNER JOIN keep_to_library ktl ON (k.id = ktl.keep_id)
             WHERE k.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND k.seq > $seq
             ORDER BY k.seq ASC
             """
-    q.as[Id[Keep]].list
+    q.as[Keep].list
   }
 
 }
