@@ -116,7 +116,6 @@ class SlackPushingActor @Inject() (
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
     db.readWrite { implicit session =>
       val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout)
-      if (integrationIds.nonEmpty) log.info(s"[SLACK-PUSH-ACTOR] Grabbed $integrationIds when asked for $limit tasks")
       Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
     }
   }
@@ -152,7 +151,6 @@ class SlackPushingActor @Inject() (
   }
 
   private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Unit] = {
-    log.info(s"[SLACK-PUSH-ACTOR] Trying to push ${integration.id.get}")
     val futurePushMaybe = {
       if (isAllowed(integration.id.get)) doPush(integration, getSettings(integration.id.get))
       else Future.failed(ForbiddenSlackIntegration(integration))
@@ -202,15 +200,14 @@ class SlackPushingActor @Inject() (
       for {
         _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
           case (k, ktl) =>
-            log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, trying to update keep ${k.id.get}")
             // lookup k in a cache to find a slack message timestamp
             slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
-              log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}")
               // regenerate the slack message
               val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                 keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
               ))
               // call the SlackClient to try and update the message
+              log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
               slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).andThen {
                 case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                 case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
@@ -272,6 +269,7 @@ class SlackPushingActor @Inject() (
   private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): PushItems = {
     val lib = libRepo.get(lts.libraryId)
     val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
+    if (changedKeeps.nonEmpty) log.info(s"[SLACK-PUSH-ACTOR] Integration ${lts.id.get} has ${changedKeeps.length} changed keeps with seq >= ${lts.lastProcessedKeepSeq}")
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
     val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
     val keepsById = keepRepo.getByIds(changedKeepIds)
