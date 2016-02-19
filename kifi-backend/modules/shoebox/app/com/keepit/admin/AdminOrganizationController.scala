@@ -91,14 +91,14 @@ class AdminOrganizationController @Inject() (
 
   def liveOrganizationsView() = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit s =>
-      val orgIds = keepRepo.orgsWithKeeps().map(_._1)
+      val orgIds = keepRepo.orgsWithKeepsLastThreeDays().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
     Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
       Ok(html.admin.organizations(
         orgStats,
-        "Top Live Organizations",
+        "Three day active orgs",
         fakeOwnerId,
         (com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView _).andThen(asPlayHtml),
         1,
