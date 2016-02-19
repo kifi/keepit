@@ -55,7 +55,9 @@
     background-position: left center
     background-repeat: no-repeat
     background-size: auto appHeaderHeightWithNav - 10px
-    outline-color: #fff
+
+    &:focus
+      outline: none
 
   .kf-left-hand-nav-button-container
     display: flex
@@ -90,6 +92,12 @@
     margin-top: 0px
 
     .kf-left-hand-nav-item-header
+      &:hover
+      &:focus
+        outline: none
+        border-radius: 4px 0px 0px 4px
+        background: alpha(white, 0.1)
+
       img
         border-radius: 4px
         flex-shrink: 0
@@ -158,6 +166,12 @@
   .kf-left-hand-nav-item-header
     display: flex
     align-items: center
+
+    &:hover
+    &:focus
+      outline: none
+      background: alpha(white, 0.1)
+      border-radius: 20px 0px 0px 20px
 
     img
       width: 30px
@@ -236,7 +250,9 @@
         background: gray
         z-index: -1
 
+    .kf-left-hand-nav-library-container:focus
     .kf-left-hand-nav-library-container:hover
+      outline: none
       // .kf-left-hand-nav-library-color
       //   top: 0px
       //   bottom: 0px
