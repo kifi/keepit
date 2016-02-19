@@ -167,7 +167,7 @@ class SlackIngestingActor @Inject() (
     val blacklist = settings.flatMap { s =>
       s.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk.entries.map(_.path) }
     }.getOrElse(Seq.empty)
-    FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
+    FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages, blacklist)
@@ -202,7 +202,7 @@ class SlackIngestingActor @Inject() (
       case (kifiUserOpt, rawBookmarks) =>
         val notBlacklisted = rawBookmarks.filter(b => !SlackIngestingBlacklist.blacklistedUrl(b.url, blacklist))
         val interned = keepInterner.internRawBookmarksWithStatus(notBlacklisted, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
-        (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
+        (notBlacklisted.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     messages.headOption.foreach { msg =>
       db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }

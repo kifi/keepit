@@ -1,25 +1,25 @@
 package com.keepit.common.cache
 
+import com.google.inject.{ Provides, Singleton }
+import com.keepit.classify.DomainCache
 import com.keepit.commanders._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.seo.SiteMapCache
+import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.controllers.core.StateTokenCache
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
+import com.keepit.graph.model._
+import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
+import com.keepit.search.{ ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.SlackAuthStateCache
-import com.keepit.slack.models._
+import com.keepit.slack.models.{ SlackChannelIntegrationsCache, SlackTeamIdCache, SlackTeamMembersCache, SlackTeamMembersCountCache }
+import com.keepit.slack.{ SlackAuthStateCache, SlackCommentPushTimestampCache, SlackKeepPushTimestampCache }
+import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
+import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
 
 import scala.concurrent.duration._
-import com.google.inject.{ Provides, Singleton }
-import com.keepit.model._
-import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
-import com.keepit.social.{ IdentityUserIdCache, BasicUserUserIdCache }
-import com.keepit.classify.{ DomainCache }
-import com.keepit.common.logging.AccessLog
-import com.keepit.common.usersegment.UserSegmentCache
-import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.typeahead.{ UserHashtagTypeaheadCache, KifiUserTypeaheadCache, SocialUserTypeaheadCache }
-import com.keepit.graph.model._
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -470,4 +470,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def inferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new InferredKeeperPositionCache(stats, accessLog, (innerRepo, 1 day), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def slackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackKeepPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackCommentPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackCommentPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
 }

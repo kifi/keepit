@@ -51,14 +51,6 @@ case class LibraryToSlackChannel(
     lastProcessedAt = lastKtl.map(_.addedAt) orElse lastProcessingAt orElse lastProcessedAt,
     lastProcessingAt = None
   )
-  def finishedProcessing(lastKtlAndKeep: Option[(Keep, KeepToLibrary)], lastMsg: Option[CrossServiceMessage]) = this.copy(
-    lastProcessedAt = lastProcessingAt orElse lastProcessedAt,
-    lastProcessedKeep = lastKtlAndKeep.map(_._2.id.get) orElse lastProcessedKeep,
-    lastProcessedKeepSeq = lastKtlAndKeep.map(_._1.seq) orElse lastProcessedKeepSeq,
-    lastProcessedMsg = lastMsg.map(_.id) orElse lastProcessedMsg,
-    lastProcessedMsgSeq = lastMsg.map(_.seq) orElse lastProcessedMsgSeq,
-    lastProcessingAt = None
-  )
 
   def withModifications(mods: SlackIntegrationModification) = {
     this
@@ -94,6 +86,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getRipeForPushingViaNewActor(limit: Int, pushingForMoreThan: Duration)(implicit session: RSession): Seq[Id[LibraryToSlackChannel]]
   def markAsPushing(id: Id[LibraryToSlackChannel], pushingForMoreThan: Duration)(implicit session: RWSession): Boolean
   def updateLastProcessedKeep(id: Id[LibraryToSlackChannel], lastProcessedKeep: Id[KeepToLibrary])(implicit session: RWSession): Unit
+  def updateLastProcessedMsg(id: Id[LibraryToSlackChannel], lastProcessedMsg: Id[Message])(implicit session: RWSession): Unit
+  def updateLastProcessedSeqs(id: Id[LibraryToSlackChannel], keepSeqOpt: Option[SequenceNumber[Keep]], msgSeqOpt: Option[SequenceNumber[Message]])(implicit session: RWSession): Unit
   def updateAfterPush(id: Id[LibraryToSlackChannel], nextPushAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
 
   def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[LibraryToSlackChannel]
@@ -151,6 +145,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       status,
       lastProcessedAt = lastProcessedAt,
       lastProcessedKeep = lastProcessedKeep,
+      lastProcessedKeepSeq = lastProcessedKeepSeq,
       lastProcessedMsg = lastProcessedMsg,
       lastProcessedMsgSeq = lastProcessedMsgSeq,
       lastProcessingAt = startedProcessingAt,
@@ -288,8 +283,21 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   }
 
   def updateLastProcessedKeep(id: Id[LibraryToSlackChannel], lastProcessedKeep: Id[KeepToLibrary])(implicit session: RWSession): Unit = {
-    val now = clock.now()
-    (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastProcessedKeep)).update((now, Some(lastProcessedKeep)))
+    val now = clock.now
+    rows.filter(_.id === id).map(r => (r.updatedAt, r.lastProcessedKeep)).update((now, Some(lastProcessedKeep)))
+  }
+  def updateLastProcessedMsg(id: Id[LibraryToSlackChannel], lastProcessedMsg: Id[Message])(implicit session: RWSession): Unit = {
+    val now = clock.now
+    rows.filter(_.id === id).map(r => (r.updatedAt, r.lastProcessedMsg)).update((now, Some(lastProcessedMsg)))
+  }
+  def updateLastProcessedSeqs(id: Id[LibraryToSlackChannel], keepSeqOpt: Option[SequenceNumber[Keep]], msgSeqOpt: Option[SequenceNumber[Message]])(implicit session: RWSession): Unit = {
+    val now = clock.now
+    keepSeqOpt.foreach { keepSeq =>
+      rows.filter(r => r.id === id && (r.lastProcessedKeepSeq.isEmpty || r.lastProcessedKeepSeq < keepSeq)).map(r => (r.updatedAt, r.lastProcessedKeepSeq)).update((now, Some(keepSeq)))
+    }
+    msgSeqOpt.foreach { msgSeq =>
+      rows.filter(r => r.id === id && (r.lastProcessedMsgSeq.isEmpty || r.lastProcessedMsgSeq < msgSeq)).map(r => (r.updatedAt, r.lastProcessedMsgSeq)).update((now, Some(msgSeq)))
+    }
   }
 
   def updateAfterPush(id: Id[LibraryToSlackChannel], nextPushAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit = {

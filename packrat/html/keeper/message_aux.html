@@ -2,7 +2,7 @@
   <div class="kifi-message-status"></div>
   {{>messageTip}}
   <div class="kifi-aux-message">
-    <p>{{{formatAuxData}}}</p>
+    {{#auxDataTags}}{{>kifi_mustache_tags}}{{/auxDataTags}}
     {{#hasEmail}}
       <p>
         <a href="javascript:" class="kifi-message-email-learn">Learn more</a>

@@ -71,6 +71,10 @@ object UserPassFinalizeInfo {
       info.cropSize,
       companyName = None
     )
+
+  def toPostRegIntent(info: UserPassFinalizeInfo)(implicit config: PublicIdConfiguration): PostRegIntent = {
+    PostRegIntent.fromParams(info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken)
+  }
 }
 
 @json case class TokenFinalizeInfo(
@@ -106,6 +110,9 @@ object TokenFinalizeInfo {
       info.cropSize
     )
   }
+  def toPostRegIntent(info: TokenFinalizeInfo)(implicit config: PublicIdConfiguration): PostRegIntent = {
+    PostRegIntent.fromParams(info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken)
+  }
 }
 
 class AuthController @Inject() (
@@ -123,6 +130,7 @@ class AuthController @Inject() (
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
     userIdentityHelper: UserIdentityHelper,
+    pathCommander: PathCommander,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
@@ -278,7 +286,7 @@ class AuthController @Inject() (
                     )
                 )
               } else {
-                authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+                authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), UserPassFinalizeInfo.toPostRegIntent(info))(UserRequest(request, user.id.get, None, userActionsHelper))
               }
             }
           }
@@ -286,7 +294,7 @@ class AuthController @Inject() (
             val pInfo = hasher.hash(info.password)
             val (_, userId) = authCommander.saveUserPasswordIdentity(None, info.email, Some(pInfo), firstName = "", lastName = "", isComplete = false)
             val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-            authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+            authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), UserPassFinalizeInfo.toPostRegIntent(info))(UserRequest(request, user.id.get, None, userActionsHelper))
           }
         }
     }
@@ -362,13 +370,13 @@ class AuthController @Inject() (
         // ie, auto follow library, auto friend, etc
 
         val cookies = Seq(
-          publicLibraryId.map(libId => Cookie("publicLibraryId", libId)),
           intent.map(action => Cookie("intent", action)),
-          libAuthToken.map(at => Cookie("libAuthToken", at)),
-          publicOrgId.map(orgId => Cookie("publicOrgId", orgId)),
-          orgAuthToken.map(at => Cookie("orgAuthToken", at)),
-          publicKeepId.map(keepId => Cookie("publicKeepId", keepId)),
-          keepAuthToken.map(at => Cookie("keepAuthToken", at))
+          publicLibraryId.map(libId => Cookie(AutoFollowLibrary.libIdKey, libId)),
+          libAuthToken.map(at => Cookie(AutoFollowLibrary.authKey, at)),
+          publicOrgId.map(orgId => Cookie(AutoJoinOrganization.orgIdKey, orgId)),
+          orgAuthToken.map(at => Cookie(AutoJoinOrganization.authKey, at)),
+          publicKeepId.map(keepId => Cookie(AutoJoinKeep.keepIdKey, keepId)),
+          keepAuthToken.map(at => Cookie(AutoJoinKeep.authKey, at))
         ).flatten
         res.withCookies(cookies: _*)
       }
@@ -436,60 +444,17 @@ class AuthController @Inject() (
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported())
     } else {
-      val cookiePublicLibraryId = request.cookies.get("publicLibraryId")
-      val cookieIntent = request.cookies.get("intent") // make sure everywhere handles this right
-      val libAuthToken = request.cookies.get("libAuthToken")
-      val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
-      val publicOrgIdCookie = request.cookies.get("publicOrgId")
-      val orgAuthToken = request.cookies.get("orgAuthToken")
-      val publicKeepIdCookie = request.cookies.get("publicKeepId")
-      val pubKeepIdOpt = publicKeepIdCookie.map(cookie => PublicId[Keep](cookie.value))
-      val keepAuthToken = request.cookies.get("keepAuthToken")
-      val creditCodeCookie = request.cookies.get("creditCode")
-      val slackTeamIdCookie = request.cookies.get("slackTeamId")
-
-      val intentParams = PostRegIntentParams.fromCookies(request.cookies)
-
-      val pubOrgIdOpt = publicOrgIdCookie.map(cookie => PublicId[Organization](cookie.value))
-
-      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken, publicOrgIdCookie, orgAuthToken, creditCodeCookie).flatten.map(c => DiscardingCookie(c.name))
+      val intent = PostRegIntent.fromCookies(request.cookies)
+      val discardedCookies = Seq(PostRegIntent.intentKey, AutoFollowLibrary.libIdKey, AutoFollowLibrary.authKey, AutoJoinOrganization.orgIdKey, AutoJoinOrganization.authKey,
+        AutoJoinKeep.keepIdKey, AutoJoinKeep.authKey, Slack.slackTeamIdKey, ApplyCreditCode.creditCodeKey).map(name => DiscardingCookie(name))
 
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
             log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
-
-            val homeUrl = s"${com.keepit.controllers.website.HomeControllerRoutes.home}?m=0"
-
-            val redirect = cookieIntent.map(_.value).map {
-              case "follow" =>
-                pubLibIdOpt.flatMap(Library.decodePublicId(_).toOption).foreach { libId =>
-                  authCommander.autoJoinLib(ur.userId, libId, libAuthToken.map(_.value))
-                }
-                // todo redirect to library if `joinedSuccessfully`
-                Redirect(homeUrl)
-              case "joinOrg" =>
-                (pubOrgIdOpt.flatMap(Organization.decodePublicId(_).toOption), orgAuthToken.map(_.value)) match {
-                  case (Some(orgId), Some(authToken)) => authCommander.autoJoinOrg(ur.userId, orgId, authToken)
-                  case _ =>
-                }
-                Redirect(homeUrl)
-              case "joinKeep" =>
-                pubKeepIdOpt.flatMap(Keep.decodePublicId(_).toOption).foreach { keepId =>
-                  authCommander.autoJoinKeep(ur.userId, keepId, keepAuthToken.map(_.value))
-                }
-                Redirect(homeUrl)
-              case "waitlist" =>
-                Redirect("/twitter/thanks")
-              case "slack" =>
-                Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(intentParams.slackTeamid).url)
-              case _ =>
-                Redirect(homeUrl)
-            } getOrElse Redirect(homeUrl)
-
-            redirect.discardingCookies(discardedCookies: _*)
-
+            val uri = authHelper.processIntent(ur.userId, intent, maybeTakeToInstall = None)
+            Redirect(uri).discardingCookies(discardedCookies: _*)
           } else if (ur.identityId.exists(authCommander.getUserIdentity(_).isDefined)) {
             log.info(s"[doSignupPage] ${ur.identityId.get} has incomplete signup state")
             // User exists, is incomplete
@@ -507,7 +472,7 @@ class AuthController @Inject() (
             Redirect("/logout")
           }
         case requestNonUser: NonUserRequest[_] =>
-          val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity(_))
+          val identityOpt = requestNonUser.identityId.flatMap(authCommander.getUserIdentity)
           if (identityOpt.isDefined) {
             val identity = identityOpt.get
             if (identity.identityId.userId.trim.isEmpty) {
@@ -521,7 +486,7 @@ class AuthController @Inject() (
                 identity.identityId.providerId,
                 identity.email.getOrElse(loginAndLinkEmail.getOrElse(""))
               ))
-            } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
+            } else if (requestNonUser.flash.get("signin_error").contains("no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               log.info(s"[doSignupPage] ${identity} logged in with wrong network")
               // todo: Needs visual refresh
@@ -534,7 +499,7 @@ class AuthController @Inject() (
               // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
               if (requestNonUser.identityId.get.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
-                val purposeDrivenInstall = cookieIntent.isDefined && cookieIntent.get.value == "waitlist"
+                val purposeDrivenInstall = intent == JoinTwitterWaitlist
                 Ok(views.html.authMinimal.signupGetEmail(
                   firstName = User.sanitizeName(identity.firstName.trim),
                   lastName = User.sanitizeName(identity.lastName.trim),
@@ -551,10 +516,7 @@ class AuthController @Inject() (
                   password = None,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
-                val targetPubLibId = if (cookieIntent.exists(_.value == "follow")) pubLibIdOpt else None
-                val targetPubOrgId = if (cookieIntent.exists(_.value == "joinOrg")) pubOrgIdOpt else None
-                val targetPubKeepId = if (cookieIntent.exists(_.value == "joinKeep")) pubKeepIdOpt else None
-                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, libAuthToken.map(_.value), targetPubOrgId, orgAuthToken.map(_.value), targetPubKeepId, keepAuthToken.map(_.value), true)(request)
+                authHelper.handleSocialFinalizeInfo(sfi, intent, isFinalizedImmediately = true)(request)
               }
 
             }
@@ -652,8 +614,8 @@ class AuthController @Inject() (
   def startWithSlack(slackTeamId: Option[SlackTeamId]) = MaybeUserAction { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
-        val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(_.value).map(SlackTeamId(_))
-        val discardedCookie = DiscardingCookie("slackTeamId")
+        val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))
+        val discardedCookie = DiscardingCookie(Slack.slackTeamIdKey)
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
         Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie)
       case nonUserRequest: NonUserRequest[_] =>

@@ -1,26 +1,18 @@
 <div class="kf-keep-card-attribution">
-  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.user && !keep.sourceAttribution.slack" ng-href="{{::keep.user|profileUrl}}"
-     ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.sourceAttribution.slack && keep.sourceAttribution.kifi" ng-href="{{::keep.sourceAttribution.kifi|profileUrl}}"
-     ng-style="{ 'background-image' : 'url(' + (keep.sourceAttribution.kifi|pic:100) + ')' }"></a>
-  <span class="svg-slack kf-keep-card-attribution-keeper-pic kf-keep-card-attribution-no-border" ng-if="::keep.sourceAttribution.slack && !keep.sourceAttribution.kifi"></span>
+  <a class="kf-keep-card-attribution-keeper-pic" ng-href="{{::keep.author.url|pathFromUrl}}"
+     ng-style="{ 'background-image' : 'url(' + (keep.author.picture) + ')' }"></a>
   <div class="kf-keep-card-attribution-message">
     <!--Add an empty span here to make safari render the whitespace in the following spans correctly-->
     <span></span>
-    <a ng-if="::keep.user && !keep.sourceAttribution.slack" class="kf-link"
-       ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
-    </a>
+    <a class="kf-link" ng-href="{{::keep.author.url|pathFromUrl}}" ng-bind="::keep.author.name"></a>
     <span ng-if="::keep.sourceAttribution.slack && !showAsDiscussion">
-      <a class="kf-link" ng-href="{{keep.sourceAttribution.kifi | profileUrl}}" ng-if="keep.sourceAttribution.kifi"
-        ng-bind="keep.sourceAttribution.kifi.firstName + ' ' + keep.sourceAttribution.kifi.lastName"></a>
-      <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-if="!keep.sourceAttribution.kifi" ng-bind="'@' + keep.sourceAttribution.slack.message.username"></a>
       added this
     </span>
     <span ng-if="::!keep.sourceAttribution.slack && !showAsDiscussion">kept this</span>
     <span ng-if="::showAsDiscussion">started a discussion</span>
     <span ng-if="::showAsDiscussion && keep.participants.length > 1">with
       <span class="kf-keep-card-attribution-discussion-members-list-item"
-            ng-repeat="participant in keep.participants | filter:({id: '!'+keep.user.id}) | limitTo: (keep.participants.length > 4 ? 2 : 3)">
+            ng-repeat="participant in keep.participants | filter:({id: '!'+keep.author.id}) | limitTo: (keep.participants.length > 4 ? 2 : 3)">
         <a class="kf-link" ng-href="{{::participant|profileUrl}}" ng-bind="participant.firstName"></a>
       </span>
       <span class="kf-keep-card-attribution-discussion-members-list-item"
@@ -52,7 +44,7 @@
     <a ng-if="::showLibraryAttribution && keep.library"
        class="kf-feed-tooltip-target kf-link"
        ng-href="{{ keep.library.path }}"
-       kf-user-tooltip="::keep.user"
+       kf-user-tooltip="::keep.author"
        library="::keep.library"
        ng-bind="keep.library.name"
        ng-click="keepClick(null, $event)"

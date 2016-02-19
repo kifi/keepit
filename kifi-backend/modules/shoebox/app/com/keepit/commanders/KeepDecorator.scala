@@ -169,8 +169,7 @@ class KeepDecoratorImpl @Inject() (
 
             (for {
               author <- sourceAttrs.get(keep.id.get).map {
-                case (_, Some(kifiUser)) => BasicAuthor.fromUser(kifiUser)
-                case (attr, _) => BasicAuthor.fromSource(attr)
+                case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
               KeepInfo(

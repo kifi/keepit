@@ -31,5 +31,7 @@ object SlackAPIFailure {
   val InvalidAuthState = SlackAPIFailure(Status.BAD_REQUEST, SlackAPIFailure.Error.invalidAuthState, JsNull)
   val NoValidWebhooks = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_webhooks", JsNull)
   val NoValidToken = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_token", JsNull)
+  val NoValidBotToken = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_bot_token", JsNull)
+  val NoValidPushMethod = SlackAPIFailure(Status.BAD_REQUEST, "no_valid_push_method", JsNull)
 }
 
