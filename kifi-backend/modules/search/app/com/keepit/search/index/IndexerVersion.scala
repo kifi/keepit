@@ -20,19 +20,7 @@ object IndexerVersion {
 sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, backupVersion: IndexerVersion) {
   require(backupVersion >= activeVersion)
 
-  // todo(Léo): *temporary*, and next time we reshard no need to increment the version number
-  private def getNumShards(instance: ServiceInstance): Int = {
-    for {
-      specs <- instance.instanceInfo.tags.get("ShardSpec")
-      shards <- Try((new ShardSpecParser).parse[NormalizedURI](specs)).toOption
-      numShards <- shards.headOption.map(_.numShards)
-    } yield numShards
-  } getOrElse 1
-
-  def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = {
-    if (service.hasBackupCapability || service.thisInstance.exists(getNumShards(_) == 12)) backupVersion
-    else activeVersion
-  }
+  def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.hasBackupCapability) backupVersion else activeVersion
   def getVersionsForCleanup(): Seq[IndexerVersion] = (0 until activeVersion.value).map { v => IndexerVersion(v) }
   def active: IndexerVersion = activeVersion
 }
