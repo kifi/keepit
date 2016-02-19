@@ -145,6 +145,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       status,
       lastProcessedAt = lastProcessedAt,
       lastProcessedKeep = lastProcessedKeep,
+      lastProcessedKeepSeq = lastProcessedKeepSeq,
       lastProcessedMsg = lastProcessedMsg,
       lastProcessedMsgSeq = lastProcessedMsgSeq,
       lastProcessingAt = startedProcessingAt,
