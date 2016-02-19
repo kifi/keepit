@@ -40,9 +40,8 @@ object LibraryQuery {
 @ImplementedBy(classOf[LibraryQueryCommanderImpl])
 trait LibraryQueryCommander {
   def setPreferredArrangement(userId: Id[User], arrangement: LibraryQuery.Arrangement): Unit
-  def getLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]]
-  def getLHRLibrariesForUser(userId: Id[User], arrangement: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
-  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangementOpt: Option[Arrangement], fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary]
+  def getLibraryIds(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]]
+  def getBasicLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[BasicLibrary]
 }
 
 @Singleton
@@ -54,6 +53,7 @@ class LibraryQueryCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   orgRepo: OrganizationRepo,
   basicUserRepo: BasicUserRepo,
+  pathCommander: PathCommander,
   ktlRepo: KeepToLibraryRepo,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val airbrake: AirbrakeNotifier)
@@ -63,7 +63,7 @@ class LibraryQueryCommanderImpl @Inject() (
     userValueRepo.setValue(userId, UserValueName.DEFAULT_LIBRARY_ARRANGEMENT, Json.stringify(Json.toJson(arrangement)))
   }
 
-  def getLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]] = {
+  def getLibraryIds(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[Id[Library]] = {
     val preferredArrangement = query.arrangement.orElse {
       for {
         userId <- requester
@@ -81,33 +81,19 @@ class LibraryQueryCommanderImpl @Inject() (
     libRepo.getLibraryIdsForQuery(customizedQuery, extraInfo)
   }
 
-  def getLHRLibrariesForUser(userId: Id[User], arrangementOpt: Option[Arrangement] = None, fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
-    import LibraryQuery._
-    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
-    val sortedLibIds = arrangement.ordering match {
-      case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER => ktlRepo.getSortedByKeepCountSince(userId, orgIdOpt = None, currentDateTime.minusDays(windowSize.getOrElse(14)), offset, limit)
-      case _ => getLibraries(Some(userId), LibraryQuery(ForUser(userId, roles = Set(LibraryAccess.OWNER)), Some(arrangement), fromIdOpt, offset, limit))
+  def getBasicLibraries(requester: Option[Id[User]], query: LibraryQuery)(implicit session: RSession): Seq[BasicLibrary] = {
+    val libIds = getLibraryIds(requester, query)
+    val libsById = libRepo.getActiveByIds(libIds.toSet)
+
+    libIds.flatMap(libsById.get).map { lib =>
+      BasicLibrary(
+        id = Library.publicId(lib.id.get),
+        name = lib.name,
+        path = "/" + pathCommander.libraryPage(lib).relative, // I hate this
+        visibility = lib.visibility,
+        color = lib.color
+      )
     }
-    val libsById = libRepo.getActiveByIds(sortedLibIds.toSet)
-    val basicUser = basicUserRepo.load(userId)
-    sortedLibIds.flatMap(libsById.get).map(lib => BasicLibrary(lib, basicUser, None))
   }
-
-  def getLHRLibrariesForOrg(userId: Id[User], orgId: Id[Organization], arrangementOpt: Option[Arrangement], fromIdOpt: Option[Id[Library]], offset: Offset, limit: Limit, windowSize: Option[Int])(implicit session: RSession): Seq[BasicLibrary] = {
-    import LibraryQuery._
-
-    val arrangement = arrangementOpt.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
-    val sortedLibIds = arrangement.ordering match {
-      case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER => ktlRepo.getSortedByKeepCountSince(userId, Some(orgId), currentDateTime.minusDays(windowSize.getOrElse(14)), offset, limit)
-      case _ => getLibraries(Some(userId), LibraryQuery(ForOrg(orgId), Some(arrangement), fromIdOpt, offset, limit))
-    }
-
-    val libsById = libRepo.getActiveByIds(sortedLibIds.toSet)
-    val libs = sortedLibIds.flatMap(libsById.get)
-    val libOwners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-    val orgHandle = orgRepo.get(orgId).primaryHandle.get.normalized
-    libs.map(lib => BasicLibrary(lib, libOwners(lib.ownerId), Some(orgHandle)))
-  }
-
 }
 

@@ -109,15 +109,6 @@ class OrganizationController @Inject() (
     Ok(Json.obj("libraries" -> libCards))
   }
 
-  def getLHRLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val arrangement = for {
-      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
-      direction <- directionOpt.flatMap(SortDirection.fromStr)
-    } yield Arrangement(ordering, direction)
-    val basicLibs = db.readOnlyMaster(implicit s => libraryQueryCommander.getLHRLibrariesForOrg(request.request.userId, request.orgId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize))
-    Ok(Json.obj("libraries" -> basicLibs))
-  }
-
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalIds(Seq(extId)).values.head
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)

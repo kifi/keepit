@@ -551,7 +551,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def rpbGetUserLibraries(viewer: Option[Id[User]], userId: Id[User], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
     import LibraryQuery._
-    val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForUser(userId, LibraryAccess.collaborativePermissions), fromId = fromIdOpt, offset = Offset(offset), limit = Limit(limit)))
+    val libIds = libraryQueryCommander.getLibraryIds(viewer, LibraryQuery(target = ForUser(userId, LibraryAccess.collaborativePermissions), fromId = fromIdOpt, offset = Offset(offset), limit = Limit(limit)))
     val libsById = libraryRepo.getActiveByIds(libIds.toSet)
     val libs = libIds.flatMap(libsById.get)
     val basicOwnersById = basicUserRepo.loadAll(libs.map(_.ownerId).toSet) // god I hate that createLibraryCardInfos makes you precompute the basic users
@@ -559,7 +559,7 @@ class LibraryInfoCommanderImpl @Inject() (
   }
   def rpbGetOrgLibraries(viewer: Option[Id[User]], orgId: Id[Organization], fromIdOpt: Option[Id[Library]], offset: Int, limit: Int): Seq[LibraryCardInfo] = db.readOnlyReplica { implicit s =>
     import LibraryQuery._
-    val libIds = libraryQueryCommander.getLibraries(viewer, LibraryQuery(target = ForOrg(orgId), fromId = fromIdOpt, offset = Offset(offset), limit = Limit(limit)))
+    val libIds = libraryQueryCommander.getLibraryIds(viewer, LibraryQuery(target = ForOrg(orgId), fromId = fromIdOpt, offset = Offset(offset), limit = Limit(limit)))
     val libsById = libraryRepo.getActiveByIds(libIds.toSet)
     val libs = libIds.flatMap(libsById.get)
     val basicOwnersById = basicUserRepo.loadAll(libs.map(_.ownerId).toSet) // god I hate that createLibraryCardInfos makes you precompute the basic users

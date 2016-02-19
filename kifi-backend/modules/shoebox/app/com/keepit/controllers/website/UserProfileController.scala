@@ -2,10 +2,11 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
+import com.keepit.commanders.LibraryQuery.{ ForOrg, ForUser }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id }
@@ -72,6 +73,7 @@ class UserProfileController @Inject() (
     orgInviteRepo: OrganizationInviteRepo,
     libraryRepo: LibraryRepo,
     libInfoCommander: LibraryInfoCommander,
+    libQueryCommander: LibraryQueryCommander,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
@@ -403,12 +405,41 @@ class UserProfileController @Inject() (
     }
   }
 
-  def getLeftHandRail(numLibs: Int, orderingOpt: Option[String], directionOpt: Option[String], windowSize: Option[Int]) = UserAction { request =>
+  def getLeftHandRail(numLibs: Int, orderingOpt: Option[String], directionOpt: Option[String]) = UserAction { request =>
     val arrangement = for {
       ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
       direction <- directionOpt.flatMap(SortDirection.fromStr)
     } yield LibraryQuery.Arrangement(ordering, direction)
-    val lhrResponse = userProfileCommander.getLeftHandRailResponse(request.userId, numLibs, arrangement, windowSize)
+    val lhrResponse = userProfileCommander.getLeftHandRailResponse(request.userId, numLibs, arrangement)
     Ok(Json.obj("lhr" -> lhrResponse))
+  }
+
+  private def leftHandeRailPagingHelper(requester: Id[User], target: LibraryQuery.Target, orderingStr: Option[String], directionStr: Option[String], offset: Int, limit: Int): Seq[BasicLibrary] = {
+    val arrangement = for {
+      ordering <- orderingStr.map(ord => LibraryOrdering.fromStr(ord).get)
+      direction <- directionStr.map(dir => SortDirection.fromStr(dir).get)
+    } yield LibraryQuery.Arrangement(ordering, direction)
+    db.readOnlyMaster { implicit s =>
+      libQueryCommander.getBasicLibraries(
+        requester = Some(requester),
+        query = LibraryQuery(
+          target = target,
+          arrangement = arrangement,
+          offset = Offset(offset),
+          limit = Limit(limit),
+          fromId = None
+        )
+      )
+    }
+  }
+  def pageThroughLeftHandRailForUser(orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int) = UserAction { request =>
+    Ok(Json.obj(
+      "libraries" -> leftHandeRailPagingHelper(request.userId, ForUser(request.userId, roles = Set(LibraryAccess.OWNER)), orderingOpt, directionOpt, offset, limit)
+    ))
+  }
+  def pageThroughLeftHandRailForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int) = UserAction { request =>
+    Ok(Json.obj(
+      "libraries" -> leftHandeRailPagingHelper(request.userId, ForOrg(Organization.decodePublicId(pubId).get), orderingOpt, directionOpt, offset, limit)
+    ))
   }
 }
