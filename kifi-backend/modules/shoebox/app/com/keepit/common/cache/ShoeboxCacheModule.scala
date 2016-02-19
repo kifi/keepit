@@ -41,7 +41,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def slackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 1 hour))
+    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 11 hour), (outerRepo, 1 day))
+
+  @Singleton
+  @Provides
+  def slackTeamBotsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamBotsCache(stats, accessLog, (innerRepo, 11 hour), (outerRepo, 3 day))
 
   @Singleton
   @Provides

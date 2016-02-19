@@ -179,6 +179,7 @@ class UserStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     slackTeamMembersCountCache: SlackTeamMembersCountCache,
     slackTeamMembersCache: SlackTeamMembersCache,
+    slackTeamBotsCache: SlackTeamBotsCache,
     abook: ABookServiceClient,
     airbrake: AirbrakeNotifier,
     planManagementCommander: PlanManagementCommander) extends Logging {
@@ -201,11 +202,13 @@ class UserStatisticsCommander @Inject() (
   }
 
   def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Set[String]] = {
-    val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
-    bots.recover {
-      case error =>
-        log.error("error fetching members", error)
-        Set("ERROR")
+    slackTeamBotsCache.getOrElseFuture(SlackTeamBotsKey(slackTeamMembership.slackTeamId)) {
+      val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
+      bots.recover {
+        case error =>
+          log.error("error fetching members", error)
+          Set("ERROR")
+      }
     }
   }
 
