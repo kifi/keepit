@@ -81,15 +81,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
   def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] = {
     reportingLock.withLockFuture {
-      val fullMsg = SlackMessageRequest(
-        text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-        username = "Activity",
-        iconUrl = SlackMessageRequest.kifiIconUrl,
-        attachments = Seq.empty,
-        unfurlLinks = false,
-        unfurlMedia = false
-      )
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, fullMsg).imap(_ => ())
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(msg))).imap(_ => ())
     }
   }
 
