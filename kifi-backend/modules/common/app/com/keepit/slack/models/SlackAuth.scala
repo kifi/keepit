@@ -199,7 +199,7 @@ object SlackUserInfo {
 }
 
 case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_team_members"
   def toKey(): String = slackTeamId.value
 }
@@ -208,7 +208,7 @@ class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerm
   extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_team_members_count"
   def toKey(): String = slackTeamId.value
 }
