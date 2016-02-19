@@ -96,7 +96,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val result2 = authController.userPassFinalizeAccountAction()(request2)
         status(result2) === OK
         contentType(result2) must beSome("application/json")
-        contentAsString(result2) === Json.obj("uri" -> "/?m=0").toString
+        contentAsString(result2) === Json.obj("uri" -> "/").toString
         val session2 = session(result2)
         val cookies2 = cookies(result2)
         session2.getUserId.get === userId
@@ -142,7 +142,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val result = authController.emailSignup()(request)
         status(result) === OK
         contentType(result) must beSome("application/json")
-        contentAsString(result) === Json.obj("uri" -> "/?m=0").toString()
+        contentAsString(result) === Json.obj("uri" -> "/").toString()
         val sess = session(result)
         sess.getUserId.isDefined === true
         val userId = sess.getUserId.get
