@@ -499,7 +499,7 @@ class AuthController @Inject() (
               // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
               if (requestNonUser.identityId.get.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
-                val purposeDrivenInstall = intent match { case JoinTwitterWaitlist => true; case _ => false }
+                val purposeDrivenInstall = intent == JoinTwitterWaitlist
                 Ok(views.html.authMinimal.signupGetEmail(
                   firstName = User.sanitizeName(identity.firstName.trim),
                   lastName = User.sanitizeName(identity.lastName.trim),
