@@ -193,20 +193,18 @@ class UserStatisticsCommander @Inject() (
     val count = slackTeamMembersCountCache.getOrElseFuture(SlackTeamMembersCountKey(slackTeamMembership.slackTeamId)) {
       getTeamMembers(slackTeamMembership: SlackTeamMembership).map(_.filterNot(_.bot).size)
     }
-    count.recoverWith { case error =>
+    count.recover { case error =>
       log.error(s"error fetching members with $slackTeamMembership", error)
-      Future.successful(-2)
+      -2
     }
-    count
   }
 
   def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
     val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot))
-    bots.recoverWith { case error =>
+    bots.recover { case error =>
       log.error("error fetching members", error)
-      Future.successful(Seq.empty)
+      Seq.empty
     }
-    bots
   }
 
   def getTeamMembers(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
