@@ -78,13 +78,16 @@ class SyncListTest extends Specification with Logging {
       }.take(10)
 
       serverPings === 0
-      await(sl.seq) === ref
-      serverPings === 10
+      val fullPages = sl.seq
+      val sum = sl.foldLeft(0)(_ + _.sum)
+      serverPings === 0
 
-      await(sl.foldLeft(0)(_ + _.sum)) === ref.foldLeft(0)(_ + _.sum)
+      await(fullPages) === ref
       serverPings === 10
-      await(sl.foldLeft(0)(_ + _.sum)) === fakeDb.sum
-      serverPings === 10
+      await(sum) === ref.foldLeft(0)(_ + _.sum)
+      serverPings === 20 // TODO(ryan): I feel like it should be possible to get this to 10, but being smart is hard
+      await(sum) === fakeDb.sum
+      serverPings === 20
     }
   }
 }
