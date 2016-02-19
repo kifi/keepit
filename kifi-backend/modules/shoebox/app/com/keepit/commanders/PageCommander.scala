@@ -151,15 +151,18 @@ class PageCommander @Inject() (
 
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): JsObject = {
     inferredKeeperPositionCache.getOrElse(InferredKeeperPositionKey(domainId)) {
-      val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(currentDateTime.minusMonths(6)))
+      val since = currentDateTime.minusMonths(6)
+      val roundToNearest = 100 // return value will vary in roundToNearest intervals
+      val minSamples = 10
 
-      if (positions.size >= 10) {
+      val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(since))
+      if (positions.size >= minSamples) {
         // get mode of all positions rounded to the nearest 100 pixels, distances from "top" being negative
         val positionMode = positions.foldLeft(Map.empty[Long, Int]) {
           case (countByBucket, js) =>
             val bottomOpt = (js \ "bottom").asOpt[Double]
             val topOpt = (js \ "top").asOpt[Double]
-            val position = Math.round(bottomOpt.orElse(topOpt.map(_ * -1)).getOrElse(0.0) / 100.0) * 100
+            val position = Math.round(bottomOpt.orElse(topOpt.map(_ * -1)).getOrElse(0.0) / roundToNearest.toDouble) * roundToNearest
             countByBucket + (position -> (countByBucket.getOrElse(position, 0) + 1))
         }.maxBy(_._2)._1
 
