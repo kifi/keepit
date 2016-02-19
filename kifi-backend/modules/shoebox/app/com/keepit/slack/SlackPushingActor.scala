@@ -198,36 +198,38 @@ class SlackPushingActor @Inject() (
     // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
     // We do not keep track of whether this succeeds, we just assume that it does
     db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.botToken) }.foreach { botToken =>
-      pushItems.oldKeeps.foreach {
-        case (k, ktl) =>
-          // lookup k in a cache to find a slack message timestamp
-          slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).foreach { oldKeepTimestamp =>
-            // regenerate the slack message
-            val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-              keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-            ))
-            // call the SlackClient to try and update the message
-            slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage)
-          }
-      }
-      pushItems.oldMsgs.foreach {
-        case (k, msgs) =>
-          msgs.foreach { msg =>
-            slackCommentPushTimestampCache.direct.get(SlackCommentPushTimestampKey(integration.id.get, msg.id)).foreach { oldCommentTimestamp =>
-              if (msg.isDeleted) slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp,
-                SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack("This comment has been deleted."))
-              )
-              else {
-                // regenerate the slack message
-                val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                  messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                ))
-                // call the SlackClient to try and update the message
-                slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage)
-              }
+      for {
+        _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
+          case (k, ktl) =>
+            // lookup k in a cache to find a slack message timestamp
+            slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
+              // regenerate the slack message
+              val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+                keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+              ))
+              // call the SlackClient to try and update the message
+              slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).imap(_ => ())
+            }.getOrElse(Future.successful(()))
+        }
+        _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
+          case (k, msgs) =>
+            FutureHelpers.sequentialExec(msgs) { msg =>
+              slackCommentPushTimestampCache.direct.get(SlackCommentPushTimestampKey(integration.id.get, msg.id)).map { oldCommentTimestamp =>
+                if (msg.isDeleted) slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp,
+                  SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack("This comment has been deleted."))
+                )
+                else {
+                  // regenerate the slack message
+                  val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+                    messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+                  ))
+                  // call the SlackClient to try and update the message
+                  slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ())
+                }
+              }.getOrElse(Future.successful(()))
             }
-          }
-      }
+        }
+      } yield ()
     }
 
     // Now push new things, updating the integration state as we go
@@ -262,9 +264,10 @@ class SlackPushingActor @Inject() (
 
   private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): PushItems = {
     val lib = libRepo.get(lts.libraryId)
-    val changedKeepIds = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
-    val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds.toSet).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
-    val keepsById = keepRepo.getByIds(changedKeepIds.toSet)
+    val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
+    val changedKeepIds = changedKeeps.map(_.id.get).toSet
+    val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
+    val keepsById = keepRepo.getByIds(changedKeepIds)
 
     val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
     def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
@@ -273,9 +276,11 @@ class SlackPushingActor @Inject() (
     }
 
     val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
-    def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists(last => last.addedAt isAfter ktl.addedAt)
-    val (oldKeeps, newKeeps) = changedKeepIds.flatMap { kId =>
-      for { k <- keepsById.get(kId); ktl <- ktlsByKeepId.get(kId) } yield (k, ktl)
+    def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
+      ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
+    }
+    val (oldKeeps, newKeeps) = changedKeeps.flatMap { k =>
+      for { ktl <- ktlsByKeepId.get(k.id.get) } yield (k, ktl)
     }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
 
     PushItems(
