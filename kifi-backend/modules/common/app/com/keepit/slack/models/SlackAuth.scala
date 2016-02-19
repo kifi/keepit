@@ -188,7 +188,7 @@ object SlackUserInfo {
     (__ \ 'deleted).readNullable[Boolean].map(_.contains(true)) and
     (__ \ 'is_admin).readNullable[Boolean].map(_.contains(true)) and
     (__ \ 'is_owner).readNullable[Boolean].map(_.contains(true)) and
-    (__ \ 'bot).readNullable[Boolean].map(_.contains(true)) and
+    (__ \ 'is_bot).readNullable[Boolean].map(_.contains(true)) and
     (__ \ 'is_restricted).readNullable[Boolean].map(_.contains(true)) and
     Reads(JsSuccess(_))
   )(SlackUserInfo.apply _)
