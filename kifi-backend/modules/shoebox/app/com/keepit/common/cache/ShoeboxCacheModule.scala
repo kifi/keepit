@@ -14,7 +14,7 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.search.{ ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.models.{ SlackChannelIntegrationsCache, SlackTeamIdCache, SlackTeamMembersCache, SlackTeamMembersCountCache }
+import com.keepit.slack.models._
 import com.keepit.slack.{ SlackAuthStateCache, SlackCommentPushTimestampCache, SlackKeepPushTimestampCache }
 import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
 import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
