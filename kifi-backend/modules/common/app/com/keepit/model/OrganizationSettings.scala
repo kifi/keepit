@@ -1,9 +1,9 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.common.json.{ EnumFormat, TraversableFormat }
+import com.keepit.common.db.ExternalId
+import com.keepit.common.json.{EnumFormat, TraversableFormat}
 import com.keepit.common.reflection.Enumerator
-import com.keepit.model.Feature.{ FeatureNotFoundException, InvalidSettingForFeatureException }
+import com.keepit.model.Feature.InvalidSettingForFeatureException
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._

@@ -167,7 +167,7 @@ class SlackIngestingActor @Inject() (
     val blacklist = settings.flatMap { s =>
       s.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk.entries.map(_.path) }
     }.getOrElse(Seq.empty)
-    FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
+    FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages, blacklist)

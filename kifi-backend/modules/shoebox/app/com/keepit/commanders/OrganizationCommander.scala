@@ -299,7 +299,7 @@ class OrganizationCommanderImpl @Inject() (
     }
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
+      orgRepo.save(organizationWithModifications(org, modifications))
     }
   }
 }
