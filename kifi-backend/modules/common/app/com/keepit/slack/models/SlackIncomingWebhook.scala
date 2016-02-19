@@ -26,11 +26,12 @@ case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
     attachments: Seq[SlackAttachment],
     asUser: Boolean,
     unfurlLinks: Boolean,
-    unfurlMedia: Boolean) {
+    unfurlMedia: Boolean,
+    parseMode: String) {
   def quiet = this.copy(unfurlLinks = false, unfurlMedia = false)
   def fromUser = this.copy(asUser = true)
   def withAttachments(newAttachments: Seq[SlackAttachment]) = this.copy(attachments = newAttachments)
-  def asUrlParams: Seq[Param] = Seq("text" -> text, "attachments" -> Json.stringify(Json.toJson(attachments)), "username" -> username, "icon_url" -> iconUrl, "as_user" -> asUser, "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia)
+  def asUrlParams: Seq[Param] = Seq("text" -> text, "attachments" -> Json.stringify(Json.toJson(attachments)), "username" -> username, "icon_url" -> iconUrl, "as_user" -> asUser, "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia, "parse" -> parseMode)
 }
 
 object SlackMessageRequest {
@@ -45,7 +46,8 @@ object SlackMessageRequest {
     attachments = attachments,
     asUser = false,
     unfurlLinks = false,
-    unfurlMedia = false
+    unfurlMedia = false,
+    parseMode = "none"
   )
 
   def inhouse(txt: DescriptionElements, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
@@ -55,7 +57,8 @@ object SlackMessageRequest {
     attachments = attachments,
     asUser = false,
     unfurlLinks = false,
-    unfurlMedia = false
+    unfurlMedia = false,
+    parseMode = "none"
   )
 
   implicit val writes: Writes[SlackMessageRequest] = Writes { o =>
@@ -65,7 +68,8 @@ object SlackMessageRequest {
       "icon_url" -> o.iconUrl,
       "attachments" -> o.attachments,
       "unfurl_links" -> o.unfurlLinks,
-      "unfurl_media" -> o.unfurlMedia
+      "unfurl_media" -> o.unfurlMedia,
+      "parse" -> o.parseMode
     )
   }
 }
