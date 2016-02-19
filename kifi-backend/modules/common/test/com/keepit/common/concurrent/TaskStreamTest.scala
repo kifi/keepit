@@ -17,12 +17,9 @@ class TaskStreamTest extends Specification with Logging {
       "simple squaring" in {
         val processed = mutable.ArrayBuffer.empty[Int]
         def slowFut(x: Int) = Future {
-          println(s"Processing $x")
           Thread.sleep(10 * x)
-          val ans = x * x
-          println(s"Yielding $x -> $ans")
           processed.append(x)
-          ans
+          x * x
         }
         def fast(x: Int) = x * x
 
@@ -31,10 +28,10 @@ class TaskStreamTest extends Specification with Logging {
         Await.result(ts.head, Duration.Inf) === 5 * 5
         processed.toSeq === Seq(5)
 
-        Await.result(ts.take(5).seq, Duration.Inf) === inputs.map(fast)
+        Await.result(ts.seq, Duration.Inf) === inputs.map(fast)
         processed.toSeq === inputs
 
-        Await.result(ts.take(5).seq, Duration.Inf) === inputs.map(fast)
+        Await.result(ts.seq, Duration.Inf) === inputs.map(fast)
       }
     }
     "impersonate FutureHelpers" in {
@@ -56,16 +53,23 @@ class TaskStreamTest extends Specification with Logging {
         }
         Await.result(ts, Duration.Inf) === Await.result(fh, Duration.Inf)
       }
-      "collect first" in {
-        skipped("I am not smart enough to implement this yet")
+      "collect first #1" in {
         def sqFut(x: Int) = Future.successful(x * x)
         val inputs = Seq.range(1, 10)
         val ts = TaskStream(inputs)(sqFut)
 
         val fhFirst = Await.result(FutureHelpers.collectFirst(inputs) { x => sqFut(x).imap(v => Some(v).filter(_ > 20)) }, Duration.Inf)
-        // val tsFirst = Await.result(ts.dropWhile(_ < 20).headOption, Duration.Inf)
+        val tsFirst = Await.result(ts.find(_ >= 20), Duration.Inf)
         fhFirst === Some(25)
-        // fhFirst === tsFirst
+        fhFirst === tsFirst
+      }
+    }
+    "do cool things that might be hard with other methods" in {
+      "3n+1" in {
+        def collatz(n: Int) = Future.successful(if (n % 2 == 0) n / 2 else 3 * n + 1)
+        val ts = TaskStream.iterate(3)(collatz)
+        val firstCycle = Await.result(ts.take(8), Duration.Inf)
+        firstCycle === Seq(3, 10, 5, 16, 8, 4, 2, 1)
       }
     }
     "do cool memoized things" in {
