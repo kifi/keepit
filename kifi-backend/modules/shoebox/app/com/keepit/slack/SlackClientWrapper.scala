@@ -97,10 +97,8 @@ class SlackClientWrapperImpl @Inject() (
           }
         }.flatMap {
           case Some(v) => Future.successful(v)
-          case None => Future.failed(SlackAPIFailure.NoValidToken)
+          case None => Future.failed(SlackAPIFailure.NoValidPushMethod)
         }
-    }.recoverWith {
-      case SlackAPIFailure.NoValidBotToken | SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken => Future.failed(SlackAPIFailure.NoValidPushMethod)
     }
   }
 
