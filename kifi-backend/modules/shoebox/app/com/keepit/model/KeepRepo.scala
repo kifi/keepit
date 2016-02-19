@@ -785,9 +785,9 @@ class KeepRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""
             SELECT #$bookmarkColumnOrder
-            FROM bookmark k INNER JOIN keep_to_library ktl ON (k.id = ktl.keep_id)
-            WHERE k.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND k.seq > $seq
-            ORDER BY k.seq ASC
+            FROM bookmark bm INNER JOIN keep_to_library ktl ON (bm.id = ktl.keep_id)
+            WHERE bm.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND bm.seq > $seq
+            ORDER BY bm.seq ASC
             """
     q.as[Keep].list
   }
