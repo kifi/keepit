@@ -198,17 +198,23 @@ class SlackPushingActor @Inject() (
     // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
     // We do not keep track of whether this succeeds, we just assume that it does
     db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.botToken) }.foreach { botToken =>
+      log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found bot token $botToken")
       for {
         _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
           case (k, ktl) =>
+            log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, trying to update keep ${k.id.get}")
             // lookup k in a cache to find a slack message timestamp
             slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
+              log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}")
               // regenerate the slack message
               val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                 keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
               ))
               // call the SlackClient to try and update the message
-              slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).imap(_ => ())
+              slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).andThen {
+                case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
+                case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
+              }.imap(_ => ())
             }.getOrElse(Future.successful(()))
         }
         _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
@@ -242,6 +248,7 @@ class SlackPushingActor @Inject() (
         db.readWrite { implicit s =>
           item match {
             case PushItem.KeepToPush(k, ktl) =>
+              log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
               pushedMessageOpt.foreach { pushedMessage =>
                 slackKeepPushTimestampCache.set(SlackKeepPushTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
               }
