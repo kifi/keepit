@@ -1,5 +1,6 @@
 // @require styles/keeper/message_participants.css
 // @require styles/keeper/compose.css
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/message_participants.js
 // @require scripts/html/keeper/message_participant_email.js
 // @require scripts/html/keeper/message_participant_user.js
@@ -28,6 +29,13 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 	'use strict';
 
 	var OVERFLOW_LENGTH = 8;
+
+	var partials = {
+		'message_avatar_user': 'message_avatar_user',
+		'message_avatar_email': 'message_avatar_email',
+		'message_participant_user': 'message_participant_user',
+		'message_participant_email': 'message_participant_email'
+	};
 
 	var portHandlers = {
 		participants: function (participants) {
@@ -266,7 +274,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} participants html
 		 */
 		renderContent: function () {
-			return k.render('html/keeper/message_participants', this.getView());
+			return k.render('html/keeper/message_participants', this.getView(), partials);
 		},
 
 		/**
@@ -275,7 +283,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} Add participant icon html
 		 */
 		renderButton: function () {
-			return k.render('html/keeper/message_participant_icon', this.getView());
+			return k.render('html/keeper/message_participant_icon', this.getView(), partials);
 		},
 
 		/**
@@ -284,11 +292,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} html for a list of avatars
 		 */
 		renderAvatars: function () {
-			var participants = this.getParticipants();
-			if (this.isOverflowed()) {
-				participants = participants.slice(0, OVERFLOW_LENGTH);
-			}
-			return participants.map(this.renderAvatar).join('');
+			return this.getParticipants().slice(0, OVERFLOW_LENGTH).map(this.renderAvatar);
 		},
 
 		/**
@@ -298,11 +302,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 */
 		renderAvatar: function (user) {
 			formatParticipant(user);
-			if (user.kind === 'email') {
-				return k.render('html/keeper/message_avatar_email', user);
-			} else {
-				return k.render('html/keeper/message_avatar_user', user);
-			}
+			return {
+				email: user.kind === 'email' ? user : null,
+				user: user.kind !== 'email' ? user : null
+			};
 		},
 
 		/**
@@ -311,7 +314,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} html for a participant list
 		 */
 		renderParticipants: function () {
-			return this.getParticipants().map(this.renderParticipant).join('');
+			return this.getParticipants().map(this.renderParticipant);
 		},
 
 		/**
@@ -321,11 +324,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 */
 		renderParticipant: function (user) {
 			formatParticipant(user);
-			if (user.kind === 'email') {
-				return k.render('html/keeper/message_participant_email', user);
-			} else {
-				return k.render('html/keeper/message_participant_user', user);
-			}
+			return {
+				email: user.kind === 'email' ? user : null,
+				user: user.kind !== 'email' ? user : null
+			};
 		},
 
 		/**

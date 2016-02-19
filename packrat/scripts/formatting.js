@@ -1,54 +1,85 @@
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
-function mapDOM(element, json) {
-  var treeObject = {};
-  var parser;
-  var docNode;
-  // If string convert to document Node
-  if (typeof element === 'string') {
-    parser = new DOMParser();
-    docNode = parser.parseFromString(element, 'text/xml');
-    element = docNode.firstChild;
-  }
+// TODO(carlos): Turn this into a legit module instead
+// of just exposing globals all over the place
 
-  //Recursively loop through DOM elements and assign properties to object
-  function treeHTML(element, object) {
-    object.tagName = element.nodeName;
-    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
-    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+var k = k && k.kifi ? k : {kifi: true};
 
-    if (nodeList.length) {
-      object.children = [];
-      nodeList.forEach(function (node) {
-        if (node.nodeType === 3) {
-          object.children.push({
-            tagName: 'span',
-            attributes: [],
-            children: node.nodeValue,
-            leaf: true
-          });
-        } else {
-          object.children.push({});
-          treeHTML(node, object.children[object.children.length - 1]);
-        }
-      });
-    } else {
-      object.leaf = true;
-      object.children = '';
+k.formatting = k.formatting || (function () {
+  return {
+    jsonDom: jsonDom
+  };
+
+  // Adapted from http://stackoverflow.com/questions/12980648
+  function jsonDom(element) {
+    var treeObject = {};
+    var parser;
+    var docNode;
+
+    // If string convert to document Node
+    if (typeof element === 'string') {
+      parser = new DOMParser();
+      docNode = parser.parseFromString(element, 'text/html');
+      if (isParseError(docNode)) {
+        throw new Error('Error parsing HTML: ' + element + '\n' + docNode.firstChild.innerHTML);
+      }
+      element = docNode.firstChild;
     }
 
-    object.attributes = attributeList.map(function (attribute) {
-      return {
-        name: attribute.nodeName,
-        value: attribute.nodeValue
-      };
-    });
-  }
-  treeHTML(element, treeObject);
+    //Recursively loop through DOM elements and assign properties to object
+    function treeHTML(element, object) {
+      object.tagName = element.nodeName;
+      var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+      var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
 
-  return (json ? JSON.stringify(treeObject) : treeObject);
-}
+      if (nodeList.length) {
+        object.children = [];
+        nodeList.forEach(function (node) {
+          if (node.nodeType === 3) {
+            object.children.push({
+              tagName: 'span',
+              attributes: [],
+              children: node.nodeValue,
+              leaf: true
+            });
+          } else {
+            object.children.push({});
+            treeHTML(node, object.children[object.children.length - 1]);
+          }
+        });
+      } else {
+        object.leaf = true;
+        object.children = '';
+      }
+
+      object.attributes = attributeList.map(function (attribute) {
+        return {
+          name: attribute.nodeName,
+          value: attribute.nodeValue
+        };
+      });
+    }
+    treeHTML(element, treeObject);
+
+    return treeObject;
+  }
+
+  // Adapted from http://stackoverflow.com/questions/11563554
+  var PARSER_ERROR_NS = (function () {
+    var parser = new DOMParser();
+    var badParse = parser.parseFromString('<', 'text/html');
+    return badParse.getElementsByTagName('parsererror')[0].namespaceURI;
+  }());
+
+  function isParseError(parsedDocument) {
+    if (PARSER_ERROR_NS === 'http://www.w3.org/1999/xhtml') {
+      return parsedDocument.getElementsByTagName('parsererror').length > 0;
+    } else {
+      return parsedDocument.getElementsByTagNameNS(PARSER_ERROR_NS, 'parsererror').length > 0;
+    }
+  }
+}());
 
 var formatMessage = (function () {
   'use strict';
@@ -75,21 +106,26 @@ var formatMessage = (function () {
         processEmoji);
 
   function renderAndFormatFull(text, render) {
+    text = text || '';
+
     if (render) {
       text = render(text);
     }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return formatAsHtml(text);
+    return k.formatting.jsonDom(formatAsHtml(text));
   }
 
   function renderAndFormatSnippet(text, render) {
+    text = text || '';
+
     if (render) {
       text = render(text);
     }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
     var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
-    return html.length > 200 ? html.substring(0, 190) + '…' : html;
+    html = (html.length > 200 ? html.substring(0, 190) + '…' : html);
+    return k.formatting.jsonDom('<span>' + html + '</span>');
   }
 
   function processLineBreaksThen(process, text) {
@@ -102,8 +138,7 @@ var formatMessage = (function () {
         process(parts[i+1]));
     }
     html.push('</div>');
-    html = html.join('');
-    return mapDOM(html);
+    return html.join('');
   }
 
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
@@ -326,11 +361,11 @@ var formatAuxData = (function () {
 
   return function () {
     var arr = this.auxData, formatter = formatters[arr[0]];
-    return mapDOM('<p>' + (formatter ? formatter.apply(null, arr.slice(1)) : '') + '</p>');
+    return k.formatting.jsonDom('<p>' + (formatter ? formatter.apply(null, arr.slice(1)) : '') + '</p>');
   };
 
   function isMe(user) {
-    return user.id === k.me.id;
+    return user.id === ((k.me && k.me.id) || '');
   }
 
   function bold(html) {

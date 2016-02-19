@@ -1,9 +1,12 @@
 // @require styles/keeper/pane.css
 // @require scripts/lib/q.min.js
 // @require scripts/lib/jquery.js
+// @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/repair_transitionend.js
 // @require scripts/keeper.js
 // @require scripts/listen.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/pane.js
 // @require scripts/html/keeper/pane_top_menu.js
 // @require scripts/html/keeper/pane_settings.js
@@ -179,7 +182,9 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           dir: 'below',
           cssClass: 'kifi-pane-settings-tip',
           title: 'Settings',
-          html: 'Customize your Kifi<br/>experience.'
+          html: k.formatting.jsonDom('<span>Customize your Kifi<br/>experience.</span>')
+        }, {
+          'kifi_mustache_tags': 'kifi_mustache_tags'
         }, function (html) {
           configureHover(html, {
             mustHoverFor: 700, hideAfter: 3000, click: "hide",

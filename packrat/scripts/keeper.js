@@ -8,7 +8,9 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/repair_transitionend.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keeper.js
 
 $.fn.layout = function () {
@@ -169,7 +171,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         } else {
           k.render('html/keeper/titled_tip', {
             title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
-            html: 'Keeping this page helps<br/>you easily find it later.'
+            html: k.formatting.jsonDom('<span>Keeping this page helps<br/>you easily find it later.</span>')
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -188,7 +190,12 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         i: ['Inbox (' + MOD_KEYS.c + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
         c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi connection.']
       }[this.dataset.tip];
-      k.render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
+      k.render('html/keeper/titled_tip', {
+        title: tip[0],
+        html: k.formatting.jsonDom('<span>' + tip[1] + '</span>')
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
+      }, function (html) {
         configureHover(html, {
           suppressed: isSticky,
           mustHoverFor: 700,
