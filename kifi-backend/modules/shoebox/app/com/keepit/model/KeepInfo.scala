@@ -6,7 +6,8 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.discussion.{ DiscussionKeep, Discussion }
-import com.keepit.social.BasicUser
+import com.keepit.slack.models.{ SlackUserId, SlackUsername }
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, OWrites, Writes }
 
@@ -26,6 +27,7 @@ case class KeepInfo(
     path: String,
     isPrivate: Boolean, // deprecated
     user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
+    author: BasicAuthor,
     createdAt: Option[DateTime] = None,
     keeps: Option[Set[PersonalKeep]] = None,
     keepers: Option[Seq[BasicUser]] = None,
@@ -55,7 +57,7 @@ case class KeepInfo(
     title = title,
     note = note,
     tags = hashtags.getOrElse(Set.empty),
-    keptBy = user.getOrElse(throw new Exception("Got a KeepInfo without a user!")),
+    keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
     libraries = library.toSet
@@ -71,6 +73,7 @@ object KeepInfo {
     new Writes[KeepInfo] {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
+        "author" -> o.author,
         "id" -> o.id,
         "pubId" -> o.pubId,
         "title" -> o.title,
@@ -105,7 +108,7 @@ object KeepInfo {
 
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
-      bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId),
+      bookmark.path.relative, bookmark.isPrivate, user = None, author = BasicAuthor.Fake, libraryId = bookmark.libraryId.map(Library.publicId),
       sourceAttribution = None, discussion = None, participants = Seq.empty, permissions = Set.empty)
   }
 }

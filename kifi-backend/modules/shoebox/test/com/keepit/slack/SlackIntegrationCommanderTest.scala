@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
@@ -28,14 +29,14 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
     "create new integrations" in {
       "handle multiple integrations for a single library" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, lib, stm, siw1, siw2) = db.readWrite { implicit session =>
+          val (user, lib, slackTeam, stm, siw1, siw2) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
-
-            val slackTeam = SlackTeamFactory.team().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val Seq(siw1, siw2) = SlackIncomingWebhookFactory.webhooks(2).map(_.withMembership(stm).saved)
-            (user, lib, stm, siw1, siw2)
+            (user, lib, slackTeam, stm, siw1, siw2)
           }
           val ident = SlackIdentifyResponse(
             url = "https://www.whatever.com",
@@ -44,12 +45,17 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             teamId = stm.slackTeamId,
             userId = stm.slackUserId
           )
-          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw1.webhook, ident.teamId, ident.userId)
-          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.webhook, ident.teamId, ident.userId)
+          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw1.id.get)
+          slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.id.get)
 
           val slackInfo = db.readOnlyMaster { implicit s =>
             slackInfoCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
           }
+
+          val orgPubId = Organization.publicId(slackTeam.organizationId.get)(inject[PublicIdConfiguration])
+          slackInfo.get(lib.id.get).foreach(_.integrations.foreach { integration =>
+            integration.space === ExternalLibrarySpace.fromOrganizationId(orgPubId)
+          })
           slackInfo.get(lib.id.get).map(_.integrations.length) must beSome(2)
         }
       }

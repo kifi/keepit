@@ -11,6 +11,7 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
 import com.keepit.payments.{ PaidAccountRepo, PaidAccountStates, PlanManagementCommander }
+import com.keepit.slack.models.{ SlackChannelToLibraryStates, SlackChannelToLibraryRepo }
 
 import scala.concurrent.duration.{ Duration, SECONDS }
 import scala.concurrent.{ Await, ExecutionContext, Future }
@@ -33,6 +34,7 @@ class OrganizationChecker @Inject() (
     systemValueRepo: SystemValueRepo,
     handleOwnershipRepo: HandleOwnershipRepo,
     handleCommander: HandleCommander,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     organizationConfigurationRepo: OrganizationConfigurationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
@@ -85,9 +87,10 @@ class OrganizationChecker @Inject() (
       val zombieHandles = handleOwnershipRepo.getByOwnerId(Some(HandleOwner.fromOrganizationId(org.id.get)), excludeState = Some(HandleOwnershipStates.INACTIVE))
       val zombieConfig = Some(organizationConfigurationRepo.getByOrgId(org.id.get)).filter(_.state == OrganizationConfigurationStates.ACTIVE)
       val zombieKtls = keepToLibraryRepo.getAllByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+      val zombieSlackIngestions = slackChannelToLibraryRepo.getIntegrationsByOrg(org.id.get).filter(_.state == SlackChannelToLibraryStates.ACTIVE)
 
       zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined ||
-        zombieLibs.nonEmpty || zombieHandles.nonEmpty || zombieConfig.isDefined || zombieKtls.nonEmpty
+        zombieLibs.nonEmpty || zombieHandles.nonEmpty || zombieConfig.isDefined || zombieKtls.nonEmpty || zombieSlackIngestions.nonEmpty
     }
   }
   private def orgHasBrokenSystemLibraries(org: Organization)(implicit session: RSession): Boolean = {
@@ -145,6 +148,12 @@ class OrganizationChecker @Inject() (
           airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie ktls: ${zombieKtls.flatMap(_.id)}")
           zombieKtls.foreach(keepToLibraryRepo.deactivate)
         }
+
+        val zombieSlackIngestions = slackChannelToLibraryRepo.getIntegrationsByOrg(org.id.get)
+        if (zombieSlackIngestions.nonEmpty) {
+          log.warn(s"[ORG-STATE-MATCH] Dead org $orgId has zombie slack ingestions: ${zombieSlackIngestions.flatMap(_.id)}")
+          zombieSlackIngestions.foreach(slackChannelToLibraryRepo.deactivate)
+        }
       }
 
       val zombieLibs = db.readOnlyReplica { implicit session =>
@@ -154,10 +163,7 @@ class OrganizationChecker @Inject() (
         Set.empty[Future[Unit]]
       } else {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie libraries: ${zombieLibs.map(_.id.get)}")
-        zombieLibs.collect {
-          case lib if lib.canBeModified => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId))).keepChanges
-          case lib if lib.isSystemLibrary => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get)
-        }
+        zombieLibs.map(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
       }
       Future.sequence(libIntegrityFuts).map { _ => () }
     }

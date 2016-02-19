@@ -1,5 +1,12 @@
 searchMinWidth = 660px
 
+.kf-logged-in-nav-header-guide-target-3
+  width: 96px
+  height: 56px
+  margin-top: -12px
+  margin-left: -14px
+  position: absolute
+
 .kf-lih
   position: fixed
   top: 0
@@ -39,6 +46,42 @@ btn-opacity-active = .9
 
 left-logo-width = 76px
 
+testspacing = (btn-diam + btn-space) * 5 + 12px
+
+.kf-lih-inner-flex
+  display: flex
+  align-items: center
+  justify-content: space-between
+  width: 100%
+  height: 100%
+  //max-width: appMaxWidth
+  box-sizing: border-box
+  padding: 0 appSidePad1
+
+  @media (min-width: appSidePad2MinWidth)
+    padding: 0 appSidePad2
+
+.kf-lih-left-flex
+  display: flex
+  align-items: center
+  width: testspacing
+  font-size: 0
+
+.kf-lih-right-flex
+  justify-content: flex-end
+  display: flex
+  align-items: center
+  width: testspacing
+  font-size: 0
+
+.kf-lih-center-flex
+  display: none
+  vertical-align: middle
+  max-width: appMaxWidth
+
+  @media (min-width: searchMinWidth)
+    display: table-cell
+
 .kf-lih-left
   display: table-cell
   vertical-align: middle
@@ -62,6 +105,7 @@ left-logo-width = 76px
   left: -9999px
   width: 0
   height: 0
+
 
 .kf-lih-center
   display: none

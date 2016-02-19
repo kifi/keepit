@@ -94,7 +94,7 @@ class AdminLibraryController @Inject() (
             }
             keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
           }
-          keepRepo.save(keep.copy(userId = toUserId))
+          keepRepo.save(keep.withOwner(toUserId))
         }
         hasMore = chunk.size >= pageSize
         keeps + chunk.size
@@ -193,7 +193,7 @@ class AdminLibraryController @Inject() (
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
-        (keep, normalizedURIRepo.get(keep.uriId), userRepo.get(keep.userId), tagNames)
+        (keep, normalizedURIRepo.get(keep.uriId), keep.userId.map(userRepo.get), tagNames)
       }
       (lib, owner, keepCount, keepInfos)
     }
@@ -341,5 +341,12 @@ class AdminLibraryController @Inject() (
     val lib = db.readOnlyMaster { implicit session => libraryRepo.get(libId) }
     val response = libraryCommander.unsafeModifyLibrary(lib, mods)
     Ok(Json.obj("lib" -> response.modifiedLibrary))
+  }
+
+  def deleteZombieLibraries = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val libIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    FutureHelpers.sequentialExec(libIds) { libId =>
+      libraryCommander.unsafeAsyncDeleteLibrary(libId)
+    }.map { _ => Ok }
   }
 }

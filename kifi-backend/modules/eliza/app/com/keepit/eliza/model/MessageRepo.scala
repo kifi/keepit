@@ -9,10 +9,10 @@ import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, Sequenc
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ DbSequenceAssigner, Id }
-import com.keepit.model.{ Keep, SortDirection, User, NormalizedURI }
+import com.keepit.model.{ OrganizationSettings, Keep, SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
-import play.api.libs.json.{ JsArray, JsValue }
+import play.api.libs.json.{ Json, JsArray, JsValue }
 import scala.slick.jdbc.StaticQuery
 
 case class MessageCount(total: Int, unread: Int)
@@ -47,13 +47,18 @@ class MessageRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
+  implicit val systemMessageDataTypeMapper = MappedColumnType.base[SystemMessageData, String](
+    { obj => Json.stringify(Json.toJson(obj)(SystemMessageData.internalFormat)) },
+    { str => Json.parse(str).as[SystemMessageData](SystemMessageData.internalFormat) }
+  )
+
   type RepoImpl = MessageTable
   class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with SeqNumberColumn[ElizaMessage] {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def messageText = column[String]("message_text", O.NotNull)
     def source = column[Option[MessageSource]]("source", O.Nullable)
-    def auxData = column[Option[JsArray]]("aux_data", O.Nullable)
+    def auxData = column[Option[SystemMessageData]]("aux_data", O.Nullable)
     def sentOnUrl = column[Option[String]]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Option[Id[NormalizedURI]]]("sent_on_uri_id", O.Nullable)
     def nonUserSender = column[Option[JsValue]]("non_user_sender", O.Nullable)
@@ -142,7 +147,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getLatest(keepId: Id[Keep])(implicit session: RSession): Option[ElizaMessage] = {
-    activeRows.filter(row => row.keepId === keepId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
+    activeRows.filter(row => row.keepId === keepId).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
   private def getByThreadHelper(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection)(implicit session: RSession) = {

@@ -326,7 +326,7 @@ class LibraryCommanderImpl @Inject() (
 
       libraryRepo.save(library.copy(
         name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor,
-        whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt,
+        whoCanInvite = newInviteToCollab, organizationId = newOrgIdOpt,
         organizationMemberAccess = newOrgMemberAccessOpt, whoCanComment = newLibraryCommentPermissions)
       )
     }

@@ -54,6 +54,7 @@ GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.M
 # INTERNAL ROUTES/Eliza
 ##########################################
 
+GET   /internal/eliza/areUsersOnline                   @com.keepit.eliza.controllers.internal.ElizaController.areUsersOnline(users: String)
 POST  /internal/eliza/sendGeneralPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendGeneralPushNotification
 POST  /internal/eliza/sendLibraryPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendLibraryPushNotification
 POST  /internal/eliza/sendUserPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendUserPushNotification
@@ -70,6 +71,7 @@ POST    /internal/eliza/getDiscussionsForKeeps   @com.keepit.eliza.controllers.i
 POST    /internal/eliza/markKeepsAsReadForUser   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.markKeepsAsReadForUser()
 POST    /internal/eliza/sendMessageOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.sendMessageOnKeep()
 POST    /internal/eliza/getMessagesOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesOnKeep
+POST    /internal/eliza/getMessageCountsForKeeps @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessageCountsForKeeps
 POST    /internal/eliza/editMessage              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
 POST    /internal/eliza/deleteMessage            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
 GET     /internal/eliza/keepHasAccessToken       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)

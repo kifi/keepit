@@ -2,8 +2,10 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
+import com.keepit.common.net.URI
 import com.keepit.common.store.ImagePath
-import com.keepit.slack.OrganizationSlackInfo
+import com.keepit.model.OrganizationModifications.SiteModification
+import com.keepit.slack.{ OrganizationSlackTeamInfo, OrganizationSlackInfo }
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -20,7 +22,7 @@ case class OrganizationInfo(
     numMembers: Int,
     numLibraries: Int,
     config: Option[ExternalOrganizationConfiguration],
-    slack: Option[OrganizationSlackInfo]) {
+    slackTeam: Option[OrganizationSlackTeamInfo]) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
@@ -36,7 +38,7 @@ object OrganizationInfo {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
     (__ \ 'config).writeNullable[ExternalOrganizationConfiguration] and
-    (__ \ 'slack).writeNullable[OrganizationSlackInfo]
+    (__ \ 'slackTeam).writeNullable[OrganizationSlackTeamInfo]
   )(unlift(OrganizationInfo.unapply))
 }
 
@@ -79,10 +81,7 @@ case class OrganizationModifications(
     name: Option[String] = None,
     description: Option[String] = None,
     rawSite: Option[String] = None) {
-  def site = rawSite.map {
-    case validSite if validSite.matches("$https?://.*") => validSite
-    case noProtocolSite => "http://" + noProtocolSite
-  }
+  def site: Option[SiteModification] = rawSite.map(SiteModification(_))
 }
 object OrganizationModifications {
   private val defaultReads: Reads[OrganizationModifications] = (
@@ -94,4 +93,24 @@ object OrganizationModifications {
   val website = defaultReads
   val mobileV1 = defaultReads
 
+  trait SiteModification {
+    val value: Option[String]
+    def isValid: Boolean
+  }
+  object SiteModification {
+    case object Remove extends SiteModification {
+      val value = None
+      def isValid = true
+    }
+    case class Site(url: String) extends SiteModification {
+      val value = Some(url)
+      def isValid = URI.parse(url).isSuccess
+    }
+
+    def apply(str: String): SiteModification = str match {
+      case emptySite if emptySite.isEmpty => SiteModification.Remove
+      case validSite if validSite.matches("^https?://.*") => Site(validSite)
+      case noProtocolSite => Site("http://" + noProtocolSite)
+    }
+  }
 }

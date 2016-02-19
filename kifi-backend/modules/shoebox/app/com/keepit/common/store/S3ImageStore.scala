@@ -33,8 +33,15 @@ import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
 import play.api.Play.current
 
+object S3ImageStore {
+  def toTempKey(token: String): String = {
+    val pic = if (token.endsWith(".jpg")) token else s"$token.jpg"
+    s"temp/user/pics/$pic"
+  }
+}
+
 @ImplementedBy(classOf[S3ImageStoreImpl])
-trait S3ImageStore extends S3ExternalIdImageStore {
+trait S3ImageStore {
 
   def getPictureUrl(width: Int, userId: Id[User]): Future[String]
   def getPictureUrl(width: Option[Int], user: User, picName: String): Future[String]
@@ -62,7 +69,7 @@ class S3ImageStoreImpl @Inject() (
     userImageUrlCache: UserImageUrlCache,
     eliza: ElizaServiceClient,
     imageUtils: ImageUtils,
-    val config: S3ImageConfig) extends S3ImageStore with S3Helper with Logging {
+    implicit val config: S3ImageConfig) extends S3ImageStore with S3Helper with Logging {
 
   private val ExpirationTime = Weeks.ONE
 
@@ -93,7 +100,7 @@ class S3ImageStoreImpl @Inject() (
           if (suiOpt.exists(_.networkType != SocialNetworks.FORTYTWO)) {
             uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(suiOpt.get.networkType), None, setDefault = true)(suiOpt.get.getPictureUrl).map {
               case res =>
-                res.headOption.map { case (imageUrl, _) => avatarUrlByExternalId(width, user.externalId, imageUrl) }
+                res.headOption.map { case (pictureName, _) => UserPicture.toImagePath(width, user.externalId, pictureName).getUrl }
                   .getOrElse {
                     airbrake.notify(s"couldn't upload image for userId=${user.id.get} socialUserInfoId=${suiOpt.get.id.get}")
                     S3UserPictureConfig.defaultImage
@@ -118,7 +125,7 @@ class S3ImageStoreImpl @Inject() (
             }
           }
 
-          Promise.successful(avatarUrlByExternalId(width, user.externalId, pictureName)).future
+          Promise.successful(UserPicture.toImagePath(width, user.externalId, pictureName).getUrl).future
       }
     }
   }
@@ -139,7 +146,7 @@ class S3ImageStoreImpl @Inject() (
         getPictureUrl(size).map { originalImageUrl =>
           val future = WS.url(originalImageUrl).withRequestTimeout(120000).get().map {
             case response if response.status == 200 => Some {
-              val key = keyByExternalId(sizeName(size), externalId, actualPictureName)
+              val key = UserPicture.toS3Key(sizeName(size), externalId, actualPictureName)
               val putObj = uploadToS3(key, response.underlying[NettyResponse].getResponseBodyAsStream, label = originalImageUrl)
               if (putObj.isSuccess) {
                 updateUserPictureRecord(userId, actualPictureName, pictureSource, setDefault, None)
@@ -222,10 +229,10 @@ class S3ImageStoreImpl @Inject() (
     val is = new ByteArrayInputStream(os.toByteArray())
 
     val token = RandomStringUtils.randomAlphanumeric(10)
-    val key = tempPath(token)
+    val key = S3ImageStore.toTempKey(token)
     uploadToS3(key, is, os.size(), "temporary user upload")
 
-    (token, s"${config.cdnBase}/$key")
+    (token, ImagePath(key).getUrl)
   }
 
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = {
@@ -248,7 +255,7 @@ class S3ImageStoreImpl @Inject() (
           updateUserPictureRecord(userId, newFilename, UserPictureSource.USER_UPLOAD, true, cropAttributes)
           hadASuccess
         }.flatten.map { success =>
-          avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)
+          UserPicture.toImagePath(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename).getUrl
         }
       case Failure(ex) =>
         airbrake.notify(AirbrakeError(exception = ex, message = Some(s"Failed to upload original picture $newFilename ($origContentLength) from S3")))
@@ -256,11 +263,11 @@ class S3ImageStoreImpl @Inject() (
     }
   }
   private def getImage(token: String) = Try {
-    val obj = s3Client.getObject(config.bucketName, tempPath(token))
+    val obj = s3Client.getObject(config.bucketName, S3ImageStore.toTempKey(token))
     readImage(obj.getObjectContent)
   }
   private def uploadUserImage(userExtId: ExternalId[User], filename: String, imageSizeName: String, is: ByteArrayInputStream, contentLength: Int) = Try {
-    val key = keyByExternalId(imageSizeName, userExtId, filename)
+    val key = UserPicture.toS3Key(imageSizeName, userExtId, filename)
     uploadToS3(key, is, contentLength, "uploaded pic to user location")
     key
   }

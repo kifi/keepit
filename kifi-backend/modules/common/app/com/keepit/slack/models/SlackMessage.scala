@@ -19,6 +19,9 @@ object KifiSlackApp {
   val SLACK_CLIENT_ID = "2348051170.15031499078"
   val SLACK_CLIENT_SECRET = "ad688ad730192eabe0bdc6675975f3fc"
   val SLACK_COMMAND_TOKEN = SlackCommandToken("g4gyK5XEFCDm4RqgsyjGKPCD")
+
+  val BrewstercorpTeamId = SlackTeamId("T0FUL04N4")
+  val KifiSlackTeamId = SlackTeamId("T02A81H50")
 }
 
 @json case class SlackTimestamp(value: String) extends Ordered[SlackTimestamp] { // channel-specific timestamp
@@ -90,22 +93,23 @@ object SlackAttachment {
     attachment.markdownIn: Option[Set[String]]
   ))
 
+  import com.keepit.common.json.ReadIfPossible._
   implicit val format: Format[SlackAttachment] = (
-    (__ \ 'fallback).formatNullable[String] and
-    (__ \ 'color).formatNullable[String] and
-    (__ \ 'pretext).formatNullable[String] and
-    (__ \ 'service_name).formatNullable[String] and
-    (__ \ 'author_name).formatNullable[String] and
-    (__ \ 'author_link).formatNullable[String] and
-    (__ \ 'author_icon).formatNullable[String] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'title_link).formatNullable[String] and
-    (__ \ 'text).formatNullable[String] and
-    (__ \ 'fields).formatNullable[Seq[SlackAttachment.Field]] and
-    (__ \ 'from_url).formatNullable[String] and
-    (__ \ 'image_url).formatNullable[String] and
-    (__ \ 'thumb_url).formatNullable[String] and
-    (__ \ 'mrkdwn_in).formatNullable[Set[String]]
+    (__ \ 'fallback).formatIfPossible[String] and
+    (__ \ 'color).formatIfPossible[String] and
+    (__ \ 'pretext).formatIfPossible[String] and
+    (__ \ 'service_name).formatIfPossible[String] and
+    (__ \ 'author_name).formatIfPossible[String] and
+    (__ \ 'author_link).formatIfPossible[String] and
+    (__ \ 'author_icon).formatIfPossible[String] and
+    (__ \ 'title).formatIfPossible[String] and
+    (__ \ 'title_link).formatIfPossible[String] and
+    (__ \ 'text).formatIfPossible[String] and
+    (__ \ 'fields).formatIfPossible[Seq[SlackAttachment.Field]] and
+    (__ \ 'from_url).formatIfPossible[String] and
+    (__ \ 'image_url).formatIfPossible[String] and
+    (__ \ 'thumb_url).formatIfPossible[String] and
+    (__ \ 'mrkdwn_in).formatIfPossible[Set[String]]
   )(applyFromSlack, unlift(unapplyToSlack))
 }
 
@@ -135,6 +139,17 @@ object SlackMessage {
 
   private val writes: Writes[SlackMessage] = Writes(r => r.originalJson)
   implicit val format: Format[SlackMessage] = Format(reads, writes)
+
+  // Slack has a few isolated cases where they send total garbage instead of a valid message
+  // I do not know WHY or HOW this happens, only that it is repeatable
+  // We don't want to skip parse errors in general, but these get in the way
+  def weKnowWeCannotParse(jsv: JsValue): Boolean = {
+    jsv.asOpt[JsObject] exists { obj =>
+      (obj \ "username").asOpt[String].exists(_.isEmpty) &&
+        (obj \ "text").asOpt[String].exists(_.isEmpty) &&
+        (obj \ "ts").asOpt[SlackTimestamp].exists(_.value == "0000000000.000000")
+    }
+  }
 }
 
 @json
@@ -155,6 +170,7 @@ object SlackEmoji {
   val hourglass = SlackEmoji(":hourglass:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
   val rocket = SlackEmoji(":rocket:")
+  val speechBalloon = SlackEmoji(":speech_balloon:")
   val star = SlackEmoji(":star:")
   val sweatSmile = SlackEmoji(":sweat_smile:")
 }
@@ -263,7 +279,7 @@ object SlackChannelIntegrations {
 }
 
 case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {
-  override val version = 2
+  override val version = 3
   val namespace = "slack_channel_integrations"
   def toKey(): String = s"${teamId.value}-${channelId.value}"
 }

@@ -63,6 +63,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
   // Org Library methods
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int
+  def countOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int
+  def countSlackOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int
   def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
   def getOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Seq[Library]
 
@@ -73,7 +75,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
-  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // one-time admin cleanup endpoint
   def allActive()(implicit session: RSession): Seq[Library]
@@ -209,7 +210,7 @@ class LibraryRepoImpl @Inject() (
     import LibraryQuery._
     val published: LibraryVisibility = LibraryVisibility.PUBLISHED
     val orgVisible: LibraryVisibility = LibraryVisibility.ORGANIZATION
-    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT) // if we're going to do this, why not just set the default in the constructor?
 
     activeRows |> { rs =>
       // Actually perform the query
@@ -220,7 +221,9 @@ class LibraryRepoImpl @Inject() (
           for {
             lib <- rs
             lm <- libMemRows
-            if lm.libraryId === lib.id &&
+            if lib.ownerId === userId &&
+              lib.orgId.isEmpty &&
+              lm.libraryId === lib.id &&
               lm.userId === userId &&
               lm.access.inSet(roles) &&
               (lm.listed || lib.id.inSet(extraInfo.explicitlyAllowedLibraries))
@@ -236,7 +239,8 @@ class LibraryRepoImpl @Inject() (
       query.fromId.map { fromId =>
         val fromLib = get(fromId)
         arrangement.ordering match {
-          case LibraryOrdering.ALPHABETICAL =>
+          case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER | // use KeepToLibraryRepo.getSortedByKeepCountSince for this
+            LibraryOrdering.ALPHABETICAL =>
             val fromName = fromLib.name
             arrangement.direction match {
               case SortDirection.ASCENDING => rs.filter(_.name > fromName)
@@ -266,7 +270,7 @@ class LibraryRepoImpl @Inject() (
         case Arrangement(LibraryOrdering.MEMBER_COUNT, SortDirection.DESCENDING) => rs.sortBy(lib => (lib.memberCount desc, lib.id desc))
       }
     } |> { rs => // then page through the results
-      rs.map(_.id).drop(query.offset).take(query.limit).list
+      rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
     }
   }
 
@@ -398,7 +402,8 @@ class LibraryRepoImpl @Inject() (
   def getOrderBySql(tableName: String, membershipTable: String, orderingOpt: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true) = {
     val ordering = orderingOpt match {
       case Some(ordering) => ordering match {
-        case LibraryOrdering.ALPHABETICAL => s"$tableName.name ${direction.getOrElse(SortDirection.ASCENDING).value}, $tableName.id desc"
+        case LibraryOrdering.MOST_RECENT_KEEPS_BY_USER | // use KeepToLibrary.getSortedByKeepCountSince for this
+          LibraryOrdering.ALPHABETICAL => s"$tableName.name ${direction.getOrElse(SortDirection.ASCENDING).value}, $tableName.id desc"
         case LibraryOrdering.MEMBER_COUNT => s"$tableName.member_count ${direction.getOrElse(SortDirection.DESCENDING).value}"
         case LibraryOrdering.LAST_KEPT_INTO => s"$tableName.last_kept ${direction.getOrElse(SortDirection.DESCENDING).value}"
       }
@@ -506,8 +511,22 @@ class LibraryRepoImpl @Inject() (
       )
     } yield lib
   }
+
   def countVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]])(implicit session: RSession): Int = {
     visibleOrganizationLibrariesHelper(orgId, includeOrgVisibleLibraries, viewerLibraryMemberships).length.run
+  }
+
+  def countOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int = {
+    Query(
+      (for { t <- rows if t.orgId === orgId && t.state === LibraryStates.ACTIVE } yield t).length
+    ).first
+  }
+
+  def countSlackOrganizationLibraries(orgId: Id[Organization])(implicit session: RSession): Int = {
+    val libKind: LibraryKind = LibraryKind.SLACK_CHANNEL
+    Query(
+      (for { t <- rows if t.orgId === orgId && t.state === LibraryStates.ACTIVE && t.kind === libKind } yield t).length
+    ).first
   }
 
   def getVisibleOrganizationLibraries(orgId: Id[Organization], includeOrgVisibleLibraries: Boolean, viewerLibraryMemberships: Set[Id[Library]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
@@ -549,13 +568,6 @@ class LibraryRepoImpl @Inject() (
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
   }
 
-  def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select organization_id, count(*) from library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'active' and experiment_type = 'fake') and kind in ('user_created', 'slack_channel') group by organization_id order by count(*) desc"""
-    val res = q.as[(Long, Int)].list
-    res.map { case (orgId, count) => Id[Organization](orgId) -> count }
-  }
-
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (owners.isEmpty) {
@@ -594,6 +606,7 @@ object LibraryOrdering extends Enumerator[LibraryOrdering] {
   case object LAST_KEPT_INTO extends LibraryOrdering("last_kept_into")
   case object ALPHABETICAL extends LibraryOrdering("alphabetical")
   case object MEMBER_COUNT extends LibraryOrdering("member_count")
+  case object MOST_RECENT_KEEPS_BY_USER extends LibraryOrdering("most_recent_keeps_by_user")
 
   val all = _all
   def fromStr(str: String): Option[LibraryOrdering] = all.find(_.value == str)

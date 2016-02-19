@@ -23,7 +23,6 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.GetUserIdFromSlackUserId
 import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.ShoeboxServiceClient.GetSlackTeamInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -702,7 +701,7 @@ class ShoeboxServiceClientImpl @Inject() (
         "idealImageSize" -> idealImageSize,
         "viewerId" -> viewerId
       )
-      call(Shoebox.internal.getLibraryCardInfos, payload).map { r =>
+      call(Shoebox.internal.getLibraryCardInfos, payload, callTimeouts = longTimeout).map { r =>
         implicit val libraryCardInfoReads = LibraryCardInfo.internalReads
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], LibraryCardInfo]
         r.json.as[Seq[(Id[Library], LibraryCardInfo)]].toMap
@@ -881,10 +880,6 @@ object ShoeboxServiceClient {
   object InternKeep {
     case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
     implicit val requestFormat: Format[Request] = Json.format[Request]
-  }
-  object GetUserIdFromSlackUserId {
-    case class Response(userIdOpt: Option[Id[User]])
-    implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 
   object GetSlackTeamInfo {

@@ -9,6 +9,7 @@ var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
 var fs = require('fs');
+var plist = require('plist');
 var jsvalidate = require('gulp-jsvalidate');
 var jeditor = require('gulp-json-editor');
 var lazypipe = require('lazypipe');
@@ -20,15 +21,22 @@ var remember = require('gulp-remember');
 var livereload = require('gulp-livereload');
 var gutil = require('gulp-util');
 var map = require('./gulp/vinyl-map.js');
+var filenames = require('gulp-filenames');
+var sourcemaps = require('gulp-sourcemaps');
+var babel = require('gulp-babel');
+var explicitGlobals = require('explicit-globals');
 
 var target = 'local';
+var listed = false;
 
 var outDir = 'out';
 
 var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'];
 var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
+var safariAdapterFiles = ['adapters/safari/**', '!adapters/safari/*.plist.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var firefoxScriptModuleFiles = ['**/scripts/**/*.js', '!scripts/lib/jquery.js', '!scripts/lib/mustache.js', '!scripts/lib/underscore.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
   'main.js',
@@ -75,11 +83,55 @@ function removeMostJsComments(code) {
   return code.toString().replace(/^([^'"\/]*)\s*\/\/.*$/mg, '$1');
 }
 
-var chromeInjectionFooter = lazypipe()
+var webkitInjectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js'], map(function (code, filename) {
       var shortName = filename.replace(/^scripts\//, '');
-      return code.toString() + "api.injected['" + filename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
+      return code.toString() + "api.injected['" + filename + "']=1;\n//# sourceURL=http://kifi/" + shortName + '\n';
+    }));
+  });
+
+var firefoxExplicitGlobals = lazypipe()
+  .pipe(function () {
+    return gulpif(['**/scripts/**/*.js', '!**/lib/**'], map(function (code, filename) {
+      return explicitGlobals(code.toString());
+    }));
+  });
+
+function wrapWithModuleCode(code, filename, relative) {
+  if (relative) {
+    filename = path.relative(relative, filename);
+  }
+  var top = '\
+  \nvar init_module = init_module || {}; \
+  \ninit_module[\'' + filename + '\'] = function () { \
+  \ninit_module[\'' + filename + '\'] = function () {}; \
+  \n';
+  var bottom = '\n};\n'
+
+  return top + code.toString() + bottom;
+}
+
+var firefoxInjectionModule = lazypipe()
+  .pipe(function () {
+    return gulpif(firefoxScriptModuleFiles, map(function (code, filename) {
+      if (code.toString().indexOf('api.identify(') !== -1) {
+        return code;
+      } else {
+        return wrapWithModuleCode(code, filename);
+      }
+    }));
+  });
+
+var firefoxAdapterInjectionModule = lazypipe()
+  .pipe(function () {
+    return gulpif(firefoxScriptModuleFiles, map(function (code, filename) {
+      var codeString = code.toString();
+      if (codeString.indexOf('@module') !== -1) {
+        return wrapWithModuleCode(explicitGlobals(codeString), filename, 'adapters/firefox/data');
+      } else {
+        return code;
+      }
     }));
   });
 
@@ -101,33 +153,74 @@ gulp.task('copy', function () {
       path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
     }))
     .pipe(map(removeMostJsComments))
-    .pipe(chromeInjectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
+
+  var safariAdapters = gulp.src(safariAdapterFiles, {base: './'})
+    .pipe(cache('safari-adapters'))
+    .pipe(rename(function (path) {
+      // todo(martin): find a more elegant way to make all files move up two directories
+      if (path.dirname === 'adapters' && path.basename === 'safari') {
+        // This is necessary, otherwise an empty 'adapters/chrome' folder is created
+        path.dirname = '.';
+      }
+      path.dirname = path.dirname.replace(/^adapters\/safari\/?/, 'safari/kifi.safariextension/');
+    }))
+    .pipe(map(removeMostJsComments))
+    .pipe(webkitInjectionFooter())
+    .pipe(sourcemaps.init())
+    .pipe(gulpif(/.*[.]js/g, babel({ presets: ['ES2015'] })))
+    .pipe(sourcemaps.write())
+    .pipe(gulp.dest(outDir));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
     .pipe(cache('firefox-adapters'))
+    .pipe(rename(function () {}))
+    .pipe(firefoxAdapterInjectionModule())
     .pipe(map(removeMostJsComments))
-    .pipe(gulp.dest(outDir));
+    .pipe(gulp.dest(outDir))
+    .pipe(filenames('firefox-deps'));
 
   var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
     .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
   var resources = gulp.src(resourceFiles, { base: './' })
     .pipe(cache('resources'));
 
   var firefoxResources = resources.pipe(clone())
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+    .pipe(rename(function () {}))
+    .pipe(firefoxExplicitGlobals())
+    .pipe(firefoxInjectionModule())
+    .pipe(gulp.dest(outDir + '/firefox/data'))
+    .pipe(filenames('firefox-deps'));
 
   var chromeResources = resources.pipe(clone())
     .pipe(rename(function () {})) // very obscure way to make sure filenames use a relative path
-    .pipe(chromeInjectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
+
+  var safariResources = resources.pipe(clone())
+    .pipe(rename(function () {}))
+    .pipe(webkitInjectionFooter())
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   var chromeIcons = gulp.src('icons/kifi.{48,128,256}.png')
     .pipe(gulp.dest(outDir + '/chrome/icons'));
+
+  var safariIcons = gulp.src('icons/kifi.{128,256,monochrome*}.png')
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension/icons'));
+
+  var safariExtensionIcon = gulp.src('icons/kifi.{64,128}.png')
+    .pipe(rename(function (path) {
+      path.basename = path.basename.replace('kifi.','Icon-');
+      path.dirname = './';
+      return path;
+    }))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   var firefoxIcons = gulp.src('icons/kifi.{48,64}.png')
     .pipe(gulp.dest(outDir + '/firefox/data/icons'));
@@ -135,6 +228,7 @@ gulp.task('copy', function () {
   var rwsocket = gulp.src(rwsocketScript)
     .pipe(cache('rwsocket'))
     .pipe(gulp.dest(outDir + '/chrome'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
   var scripts = backgroundScripts.concat(target === 'local' ? localBackgroundScripts : []);
@@ -143,12 +237,14 @@ gulp.task('copy', function () {
     .pipe(cache('background'))
     .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/firefox/lib'));
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
+    .pipe(gulp.dest(outDir + '/firefox/lib'))
+    .pipe(filenames('firefox-deps'));
 
   return es.merge(
-    chromeAdapters, firefoxAdapters, sharedAdapters,
-    chromeResources, firefoxResources,
-    chromeIcons, firefoxIcons,
+    chromeAdapters, safariAdapters, firefoxAdapters, sharedAdapters,
+    chromeResources, safariResources, firefoxResources,
+    chromeIcons, safariIcons, safariExtensionIcon, firefoxIcons,
     rwsocket, background);
 });
 
@@ -169,16 +265,24 @@ gulp.task('html2js', function () {
     .pipe(rename(function (path) {
       path.extname = '.js';
       path.dirname = 'scripts/' + path.dirname;
-    }));
+    }))
+    .pipe(filenames('firefox-deps'));
 
   var firefox = common.pipe(clone())
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+    .pipe(firefoxExplicitGlobals())
+    .pipe(firefoxInjectionModule())
+    .pipe(gulp.dest(outDir + '/firefox/data'))
 
   var chrome = common.pipe(clone())
-    .pipe(chromeInjectionFooter())
+    .pipe(webkitInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
-  return es.merge(firefox, chrome);
+  var safari = common.pipe(clone())
+    .pipe(webkitInjectionFooter())
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
+
+
+  return es.merge(firefox, chrome, safari);
 });
 
 gulp.task('scripts', ['html2js', 'copy']);
@@ -211,21 +315,41 @@ gulp.task('styles', function () {
 
   var ffBaseUri = 'resource://kifi' + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/kifi/data/images/';
   function firefoxify(code) {
-    return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, ffBaseUri);
+    return code.toString().replace(/\/images\//g, ffBaseUri);
+  }
+
+  // We use a relative path here because Safari auto-generates some hash
+  // and appends it to the extension package baseURI
+  var safariBaseUri = '../../images/';
+  function safarify(code) {
+    return code.toString().replace(/\/images\//g, safariBaseUri);
   }
 
   function mainStylesOnly(pipefun) {
     return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.))'), map(pipefun));
   }
 
-  return gulp.src(styleFiles, {base: './'})
+  var stylePipe = gulp.src(styleFiles, {base: './'})
     .pipe(cache('styles'))
     .pipe(gulpif(/[.]less$/, less()))
-    .pipe(mainStylesOnly(insulate))
+    .pipe(mainStylesOnly(insulate));
+
+  stylePipe
+    .pipe(clone())
     .pipe(mainStylesOnly(chromify))
-    .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(mainStylesOnly(firefoxify)) // order is important! firefoxify operates on chromified styles (makes code simpler - one unique stream)
+    .pipe(gulp.dest(outDir + '/chrome'));
+
+  stylePipe
+    .pipe(clone())
+    .pipe(mainStylesOnly(firefoxify))
     .pipe(gulp.dest(outDir + '/firefox/data'));
+
+  stylePipe
+    .pipe(clone())
+    .pipe(mainStylesOnly(safarify))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
+
+  return stylePipe;
 });
 
 
@@ -290,7 +414,10 @@ gulp.task('meta', function () {
       if (type === 'contentScripts') {
         var payloadMatch = payload.match(contentScriptRe);
         var asap = payloadMatch[1], regex = payloadMatch[2];
-        contentScriptItems.push('["' + filename + '", ' + regex + ', ' + asap + ']');
+        contentScriptItems.push({
+          data: [ filename, regex, asap ],
+          string: '["' + filename + '", ' + regex + ', ' + asap + ']'
+        });
       } else {
         if (type === 'styleDeps') {
           styleDeps[filename] = styleDeps[filename] || [];
@@ -301,21 +428,39 @@ gulp.task('meta', function () {
         }
       }
     }
+
+    var flatScriptDeps = [
+      rwsocketScript
+    ].concat(filenames.get('firefox-deps')
+    .filter(function (dep) {
+      return (
+        dep.slice(-3) === '.js' && // only script files
+        ~dep.indexOf('scripts/') && // make sure it's in the scripts folder
+        !~dep.indexOf('firefox/lib/') && // but not in the backend-script lib folder
+        contentScriptItems.map(function (csi) { return csi.data[0]; }).indexOf(dep) === -1 // and don't add top-level scripts to the deps
+      );
+    })
+    .map(function (dep) {
+      return dep.replace(/firefox\/data\//g, '');
+    }));
+
     return JSON.stringify([
-      ' [\n  ' + contentScriptItems.join(',\n  ') + ']',
+      ' [\n  ' + contentScriptItems.map(function (csi) { return csi.string; }).join(',\n  ') + ']',
       JSON.stringify(styleDeps, undefined, 2),
-      JSON.stringify(scriptDeps, undefined, 2)
+      JSON.stringify(scriptDeps, undefined, 2),
+      JSON.stringify(flatScriptDeps, undefined, 2)
     ]);
   };
 
   var preMeta = gulp.src(tabScripts, {base: './'})
+    .pipe(filenames('firefox-deps'))
     .pipe(cache('meta'))
     .pipe(map(extractMetadata))
     .pipe(remember('meta'))
     .pipe(concat('meta.js'))
     .pipe(map(buildMetaScript));
 
-  var chromeMeta = preMeta.pipe(clone())
+  var webkitMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
       var data = JSON.parse(code.toString());
       return 'meta = {\n  contentScripts:' + data[0] +
@@ -323,7 +468,8 @@ gulp.task('meta', function () {
         ',\n  scriptDeps: ' + data[2] +
         "};\nif (/^Mac/.test(navigator.platform)) {\n  meta.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
-    .pipe(gulp.dest(outDir + '/chrome'));
+    .pipe(gulp.dest(outDir + '/chrome'))
+    .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'));
 
   var firefoxMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
@@ -331,11 +477,12 @@ gulp.task('meta', function () {
       return 'exports.contentScripts =' + data[0] +
         ';\nexports.styleDeps = ' + data[1] +
         ';\nexports.scriptDeps = ' + data[2] +
+        ';\nexports.flatScriptDeps = ' + data[3] +
         ";\nif (/^Mac/.test(require('sdk/system').platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  return es.merge(chromeMeta, firefoxMeta);
+  return es.merge(webkitMeta, firefoxMeta);
 });
 
 // Creates manifest.json (chrome) and package.json (firefox)
@@ -358,14 +505,45 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('firefox/package.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
-      json.updateURL = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf';
       json.updateLink = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi';
+
+      if (!listed) {
+        // updateURL is invalid for listed addons
+        json.updateURL = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf';
+        json.id = 'kifi-unlisted@42go.com';
+      }
 
       return json;
     }))
-    .pipe(gulp.dest(outDir))
+    .pipe(gulp.dest(outDir));
 
-  return es.merge(chromeConfig, firefoxConfig);
+  var safariConfig = gulp.src('adapters/safari/Info.plist.json')
+    .pipe(rename('safari/kifi.safariextension/Info.plist'))
+    .pipe(jeditor(function(json) {
+      json.CFBundleVersion = version;
+      json.CFBundleShortVersionString = version + (target === 'local' ? '-dev' : '');
+      return json;
+    }))
+    .pipe(map(function (jsonBuffer) {
+      var json = JSON.parse(jsonBuffer.toString());
+      return plist.build(json);
+    }))
+    .pipe(gulp.dest(outDir));
+
+  var safariUpdates = gulp.src('adapters/safari/KifiUpdates.plist.json')
+    .pipe(rename('safari/KifiUpdates.plist'))
+    .pipe(jeditor(function(json) {
+      var updateObj = json['Extension Updates'][0];
+      updateObj.CFBundleShortVersionString = updateObj.CFBundleVersion = version;
+      return json;
+    }))
+    .pipe(map(function (jsonBuffer) {
+      var json = JSON.parse(jsonBuffer.toString());
+      return plist.build(json);
+    }))
+    .pipe(gulp.dest(outDir));
+
+  return es.merge(chromeConfig, safariConfig, safariUpdates, firefoxConfig);
 });
 
 gulp.task('build', ['scripts', 'styles', 'meta', 'config']);
@@ -404,6 +582,9 @@ gulp.task('crx-chrome-dev', ['build', 'config-package-chrome'], shell.task([[
 ].join(' && ')]));
 
 gulp.task('xpi-firefox', ['build', 'config'], function () {
+
+  var glob = 'kifi*\@42go.com-*.*.*.*update.rdf';
+
   return gulp.src(outDir + '/firefox/package.json', {base: './'})
     .pipe(jeditor(function (json) {
       if (target === 'dev') {
@@ -422,18 +603,41 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
       cp icons/kifi.48.png out/firefox/icon.png && cp icons/kifi.64.png out/firefox/icon64.png && \
       cd ' + path.join(outDir + '/firefox') + ' && \
       jpm xpi && \
-      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi\@42go.com-*.*.*.update.rdf && \
+      sed -i ".bak" -e \'s/kifi.*\@42go.com/kifi\@42go.com/g\' ' + glob + ' && \
+      node ../../bin/duplicateRdfDescription.js ' + glob + ' kifi.update.rdf ' + (listed ? 'listed' : 'unlisted') + ' && \
+      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi.update.rdf && \
+      sed -i ".bak" -e \'s/<em:maxVersion>.*<\\/em:maxVersion>/<em:maxVersion>48.0<\\/em:maxVersion>/g\' kifi.update.rdf && \
       cp *.xpi ../kifi.xpi && \
-      cp *.update.rdf ../kifi.update.rdf && \
+      cp kifi.update.rdf ../kifi.update.rdf && \
       cd - > /dev/null'
     ]));
 });
+
+gulp.task('xar-safari', ['build', 'config'], shell.task([
+  'echo "Signing Safari extension..."',
+  'if [[ ! -f certs/privatekey.pem ]]; then \
+    echo "\n***ERROR***: need certs/*.pem for signing Safari extensions (ask Carlos or Andrew)." ; \
+    echo "Good instructions are here:" ; \
+    echo "https://github.com/robertknight/xar-js#building-a-safari-extension\n" ; \
+    exit 1 ; \
+  fi',
+  '( \
+    cd out/safari && \
+    exec ../../node_modules/xar-js/xarjs create ../kifi.safariextz \
+      --cert ../../certs/cert.pem \
+      --cert ../../certs/apple-intermediate.pem \
+      --cert ../../certs/apple-root.pem \
+      --private-key ../../certs/privatekey.pem \
+      kifi.safariextension \
+  )'
+]));
 
 gulp.task('watch', function () {
   livereload.listen(livereload.options.port);
   gulp.watch(
     [].concat(
       chromeAdapterFiles,
+      safariAdapterFiles,
       firefoxAdapterFiles,
       sharedAdapterFiles,
       resourceFiles,
@@ -449,8 +653,14 @@ gulp.task('watch', function () {
 
 gulp.task('package', function () {
   target = 'prod';
-  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
+  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox', 'xar-safari']);
 });
+
+gulp.task('package-listed', function () {
+  target = 'prod';
+  listed = true;
+  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
+})
 
 gulp.task('package-dev', function () {
   target = 'dev';

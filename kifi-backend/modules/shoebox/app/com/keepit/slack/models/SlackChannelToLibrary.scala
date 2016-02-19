@@ -56,13 +56,13 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Map[Id[SlackChannelToLibrary], SlackChannelToLibrary]
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
+  def getAllBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Set[SlackChannelToLibrary]
+  def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[SlackChannelToLibrary]
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
-  def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackTimestamp)(implicit session: RWSession): Unit
   def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
   def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[SlackChannelToLibrary]
@@ -177,8 +177,17 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary] = {
     activeRows.filter(_.id.inSet(ids)).list.toSet
   }
+
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary] = {
     activeRows.filter(_.libraryId === libraryId).list.toSet
+  }
+
+  def getAllBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Set[SlackChannelToLibrary] = {
+    (for (r <- rows if r.slackUserId inSet ids) yield r).list.toSet
+  }
+
+  def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary] = {
+    (for (r <- rows if r.libraryId inSet libIds) yield r).list.toSet
   }
 
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
@@ -190,15 +199,20 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     activeRows.filter(row => row.organizationId === orgId).list
   }
 
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {
-    rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelName === slackChannelName && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
+  def getBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest, excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {
+    rows.filter(row => row.slackTeamId === request.slackTeamId && (row.slackChannelId === request.slackChannelId || (row.slackUserId === request.slackUserId && row.slackChannelName === request.slackChannelName)) && row.libraryId === request.libraryId && row.state =!= excludeState.orNull).firstOption
   }
 
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary = {
-    getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
+    getBySlackTeamChannelAndLibrary(request, excludeState = None) match {
       case Some(integration) if integration.isActive =>
         val updatedStatus = if (integration.status == SlackIntegrationStatus.On) integration.status else request.status
-        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName).withStatus(updatedStatus)
+        val updated = integration.copy(
+          space = request.space,
+          slackUserId = request.slackUserId,
+          slackChannelName = request.slackChannelName,
+          slackChannelId = request.slackChannelId
+        ).withStatus(updatedStatus)
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>
@@ -223,13 +237,12 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     val q = sql"""
       SELECT id
       FROM `slack_channel_to_library`
-      WHERE `state` = 'active' AND `status` = 'on' AND `next_ingestion_at` < $now AND (`last_ingesting_at` IS NULL OR `last_ingesting_at` < $lastIngestingTooLongAgo) ORDER BY `last_ingested_at`, `next_ingestion_at` LIMIT $limit;
+      WHERE `state` = 'active' AND `status` = 'on' AND `next_ingestion_at` < $now AND (`last_ingesting_at` IS NULL OR `last_ingesting_at` < $lastIngestingTooLongAgo) ORDER BY `last_ingested_at` IS NULL DESC, `next_ingestion_at` ASC LIMIT $limit;
     """
     q.as[Id[SlackChannelToLibrary]].list
   }
 
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit = updateLastIngestingAt(ids.toSet, Some(clock.now()))
-  def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit = updateLastIngestingAt(ids.toSet, None)
 
   private def updateLastIngestingAt(ids: Set[Id[SlackChannelToLibrary]], lastIngestingAt: Option[DateTime])(implicit session: RWSession): Unit = {
     val now = clock.now()

@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.db.Id
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -23,6 +24,9 @@ trait PermissionCommander {
 
   def getKeepsPermissions(keepIds: Set[Id[Keep]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Keep], Set[KeepPermission]]
   def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission]
+
+  def partitionLibrariesUserCanJoinOrWriteTo(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): (Set[Id[Library]], Set[Id[Library]], Set[Id[Library]])
+  def canJoinOrWriteToLibrary(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Boolean]
 }
 
 @Singleton
@@ -84,16 +88,7 @@ class PermissionCommanderImpl @Inject() (
   }
 
   private def computeUserPermissions(userId: Id[User])(implicit session: RSession): Set[UserPermission] = {
-    val orgMemberships = orgMembershipRepo.getAllByUserId(userId).toSet
-    val permissionsViaOrgMembership = orgMemberships.flatMap { mem =>
-      userPermissionsFromOrganization(mem.organizationId)
-    }
-    val personalPermissions: Set[UserPermission] = Set.empty // Right now there is no way for a user to get their own UserPermissions
-
-    personalPermissions ++ permissionsViaOrgMembership
-  }
-  private def userPermissionsFromOrganization(orgId: Id[Organization])(implicit session: RSession): Set[UserPermission] = {
-    Set(UserPermission.CREATE_SLACK_INTEGRATION) // Right now, any org membership will grant a user permission to create Slack integrations
+    Set(UserPermission.CREATE_SLACK_INTEGRATION) // ALL users get this permission by default
   }
 
   @StatsdTiming("PermissionCommander.getLibraryPermissions")
@@ -283,14 +278,14 @@ class PermissionCommanderImpl @Inject() (
         val canAddParticipants = canAddMessage
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
-          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
+          val viewerOwnsTheKeep = userIdOpt containsTheSameValueAs k.userId
           // This seems like a pretty strange operational definition...
-          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.safely.contains(lib.ownerId))
           viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
         val canViewKeep = {
           // TODO(ryan): remove deprecated permissions when more confident they're unnecessary
-          val deprecatedPermissions = userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains)
+          val deprecatedPermissions = userIdOpt.containsTheSameValueAs(k.userId) || userIdOpt.containsTheSameValueAs(k.originalKeeperId)
 
           val viewerCanSeeKeepViaLibrary = keepLibraries.exists { libId =>
             libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
@@ -300,7 +295,7 @@ class PermissionCommanderImpl @Inject() (
         val canEditKeep = {
           userIdOpt.contains(k.userId) || keepLibraries.flatMap(libPermissions.getOrElse(_, Set.empty)).contains(LibraryPermission.EDIT_OTHER_KEEPS)
         }
-        val canDeleteKeep = userIdOpt.contains(k.userId)
+        val canDeleteKeep = userIdOpt.containsTheSameValueAs(k.userId)
 
         kId -> List(
           canAddParticipants -> KeepPermission.ADD_PARTICIPANTS,
@@ -316,6 +311,25 @@ class PermissionCommanderImpl @Inject() (
 
   def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission] = {
     getKeepsPermissions(Set(keepId), userIdOpt).getOrElse(keepId, Set.empty)
+  }
+
+  def partitionLibrariesUserCanJoinOrWriteTo(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): (Set[Id[Library]], Set[Id[Library]], Set[Id[Library]]) = {
+    val permissionsByLibraryId = getLibrariesPermissions(libIds, Some(userId))
+    val (libsUserCanWriteTo, libsUserCannotWriteTo) = libIds.partition { libId => permissionsByLibraryId.get(libId).exists(_.contains(LibraryPermission.ADD_KEEPS)) }
+    val (libsUserCanJoin, libsUserCannotJoin) = libsUserCannotWriteTo.partition { libId =>
+      val lib = libraryRepo.get(libId)
+      val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
+      val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
+        lib.organizationId.exists(orgId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
+      userHasInvite || libHasOpenCollaboration
+    }
+    (libsUserCanWriteTo, libsUserCanJoin, libsUserCannotJoin)
+  }
+
+  def canJoinOrWriteToLibrary(userId: Id[User], libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Boolean] = {
+    val (libsUserCanWriteTo, libsUserCanJoin, _) = partitionLibrariesUserCanJoinOrWriteTo(userId, libIds)
+    val libsUserCanJoinOrWriteTo = libsUserCanWriteTo ++ libsUserCanJoin
+    libIds.map(libId => libId -> libsUserCanJoinOrWriteTo.contains(libId)).toMap
   }
 }
 

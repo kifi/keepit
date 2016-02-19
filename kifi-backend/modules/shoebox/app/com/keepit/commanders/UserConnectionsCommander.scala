@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageStore
+import com.keepit.common.store.{ S3ImageConfig, S3ImageStore }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
@@ -39,7 +39,6 @@ class UserConnectionsCommander @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
-    s3ImageStore: S3ImageStore,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
@@ -159,11 +158,7 @@ class UserConnectionsCommander @Inject() (
 
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
-    val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>
-      val respondingUser = userRepo.get(myUserId)
-      val respondingUserImage = s3ImageStore.avatarUrlByUser(respondingUser)
-      (respondingUser, respondingUserImage)
-    }
+    val respondingUser = db.readOnlyMaster { implicit session => userRepo.get(myUserId) }
 
     val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
 
@@ -188,11 +183,6 @@ class UserConnectionsCommander @Inject() (
 
   def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUser: User, recipient: User): Unit = SafeFuture {
     val myUserId = myUser.id.get
-    val (requestingUser, requestingUserImage) = db.readWrite { implicit session =>
-      val requestingUser = userRepo.get(myUserId)
-      val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
-      (requestingUser, requestingUserImage)
-    }
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 

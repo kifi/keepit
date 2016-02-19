@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window', '$rootScope', 'messageTicker', '$analytics', 'slackService',
-  function ($window, $rootScope, messageTicker, $analytics, slackService) {
+  '$window', '$rootScope', 'messageTicker', '$analytics', 'orgProfileService', 'slackService',
+  function ($window, $rootScope, messageTicker, $analytics, orgProfileService, slackService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -14,23 +14,10 @@ angular.module('kifi')
       },
       templateUrl: 'orgProfile/orgProfileSlackUpsell.tpl.html',
       link: function ($scope, element, attrs, kfModalCtrl) {
-        $analytics.eventTrack('user_viewed_pane', { type: 'orgProfileSlackUpsell'});
         $scope.userLoggedIn = $rootScope.userLoggedIn;
 
-        $scope.onClickedSynOnlyGeneral = function() {
-          $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncGeneral' });
-          slackService.getAddIntegrationLink($scope.getLibrary().id).then(function (resp) {
-            if (resp.redirect) {
-              $window.location = resp.redirect;
-              kfModalCtrl.close();
-            } else {
-              messageTicker({ text: 'Oops, that didn’t work. Try again?', type: 'red' });
-            }
-          });
-        };
-
         $scope.onClickedSyncAllSlackChannels = function() {
-          $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileSlackUpsell', action: 'syncAllChannels' });
+          orgProfileService.trackEvent('user_clicked_page', $scope.getOrg(), { type: 'orgProfileSlackUpsell', action: 'clickedSlackSync' });
           slackService.publicSync($scope.getOrg().id).then(function (resp) {
             if (resp.redirect) {
               $window.location = resp.redirect;
@@ -42,9 +29,11 @@ angular.module('kifi')
           kfModalCtrl.close();
         };
 
-        $scope.close = function() {
-          kfModalCtrl.close();
+        $scope.cancel = function() {
+          orgProfileService.trackEvent('user_clicked_page', $scope.getOrg(), { type: 'orgProfileSlackUpsell', action: 'clickedClose' });
         };
+
+        orgProfileService.trackEvent('user_viewed_page', $scope.getOrg(), { type: 'orgProfileSlackUpsell' });
       }
     };
   }

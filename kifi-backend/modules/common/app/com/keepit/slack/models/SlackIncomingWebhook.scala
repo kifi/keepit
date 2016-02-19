@@ -24,11 +24,13 @@ case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
     username: String,
     iconUrl: String,
     attachments: Seq[SlackAttachment],
+    asUser: Boolean,
     unfurlLinks: Boolean,
     unfurlMedia: Boolean) {
   def quiet = this.copy(unfurlLinks = false, unfurlMedia = false)
+  def fromUser = this.copy(asUser = true)
   def withAttachments(newAttachments: Seq[SlackAttachment]) = this.copy(attachments = newAttachments)
-  def asUrlParams: Seq[Param] = Seq("text" -> text, "attachments" -> Json.stringify(Json.toJson(attachments)), "username" -> username, "icon_url" -> iconUrl, "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia)
+  def asUrlParams: Seq[Param] = Seq("text" -> text, "attachments" -> Json.stringify(Json.toJson(attachments)), "username" -> username, "icon_url" -> iconUrl, "as_user" -> asUser, "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia)
 }
 
 object SlackMessageRequest {
@@ -41,6 +43,7 @@ object SlackMessageRequest {
     username = "Kifi",
     iconUrl = kifiIconUrl,
     attachments = attachments,
+    asUser = false,
     unfurlLinks = false,
     unfurlMedia = false
   )
@@ -50,6 +53,7 @@ object SlackMessageRequest {
     username = "inhouse-kifi-bot",
     iconUrl = pandaIconUrl,
     attachments = attachments,
+    asUser = false,
     unfurlLinks = false,
     unfurlMedia = false
   )
@@ -64,4 +68,16 @@ object SlackMessageRequest {
       "unfurl_media" -> o.unfurlMedia
     )
   }
+}
+
+case class SlackMessageResponse(
+  slackChannelId: SlackChannelId,
+  timestamp: SlackTimestamp,
+  text: String)
+object SlackMessageResponse {
+  implicit val reads: Reads[SlackMessageResponse] = (
+    (__ \ 'channel).read[SlackChannelId] and
+    (__ \ 'ts).read[SlackTimestamp] and
+    (__ \ 'message \ 'text).read[String]
+  )(SlackMessageResponse.apply _)
 }

@@ -3,13 +3,17 @@
   "version": "0.0.1",
   "private": true,
   "devDependencies": {
+    "babel-preset-es2015": "^6.3.13",
     "bl": "~0.9.0",
     "css": "~2.0.0",
     "event-stream": "~3.1.5",
+    "explicit-globals": "cvializ/explicit-globals",
     "gulp": "~3.8.6",
+    "gulp-babel": "^6.1.2",
     "gulp-cached": "~1.0.1",
     "gulp-clone": "~1.0.0",
     "gulp-concat": "~2.3.4",
+    "gulp-filenames": "^2.0.0",
     "gulp-if": "~1.2.2",
     "gulp-json-editor": "~2.0.2",
     "gulp-jsvalidate": "^2.1.0",
@@ -19,6 +23,7 @@
     "gulp-rename": "~1.2.0",
     "gulp-rimraf": "~0.1.0",
     "gulp-shell": "~0.2.8",
+    "gulp-sourcemaps": "^1.6.0",
     "gulp-util": "~3.0.0",
     "gulp-zip": "~0.4.0",
     "json": "^9.0.3",
@@ -28,8 +33,11 @@
     "karma-jasmine": "~0.1.5",
     "lazypipe": "~0.2.2",
     "new-from": "0.0.3",
+    "plist": "^1.2.0",
     "run-sequence": "~0.3.6",
     "through2": "~0.5.1",
-    "vinyl-map": "~1.0.1"
+    "vinyl-map": "~1.0.1",
+    "xml2js": "^0.4.16",
+    "xar-js": "^0.2.0"
   }
 }

@@ -30,8 +30,8 @@ angular.module('kifi')
 })
 
 .factory('orgProfileService', [
-  '$analytics', 'net', 'profileService',
-  function ($analytics, net, profileService) {
+  '$analytics', '$rootScope', 'net', 'profileService',
+  function ($analytics, $rootScope, net, profileService) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
@@ -53,6 +53,7 @@ angular.module('kifi')
         return net
         .createOrg({ name: name })
         .then(function(response) {
+          $rootScope.$emit('orgCreated', response);
           return response.data.organization;
         });
       },
@@ -65,7 +66,8 @@ angular.module('kifi')
         return net
         .acceptOrgMemberInvite(orgId, authToken)
         .then(invalidateOrgProfileCache)
-        .then(profileService.fetchMe);
+        .then(profileService.fetchMe)
+        .then(function (res) { $rootScope.$emit('orgMemberInviteAccepted', orgId, res); return res;});
       },
       cancelOrgMemberInvite: function (orgId, cancelFields) {
         return net.cancelOrgMemberInvite(orgId, cancelFields);
@@ -73,18 +75,21 @@ angular.module('kifi')
       declineOrgMemberInvite: function (orgId) {
         return net
         .declineOrgMemberInvite(orgId)
-        .then(profileService.fetchMe);
+        .then(profileService.fetchMe)
+        .then(function (res) { $rootScope.$emit('orgMemberInviteDeclined', orgId); return res;});
       },
       removeOrgMember: function (orgId, removeFields) {
-
         return net
         .removeOrgMember(orgId, removeFields)
         .then(function () {
           invalidateOrgProfileCache();
-        });
+        })
+        .then(profileService.fetchMe)
+        .then(function (res) { $rootScope.$emit('orgMemberRemoved', orgId, removeFields); return res;});
       },
       transferOrgMemberOwnership: function (orgId, newOwner) {
-        return net.transferOrgMemberOwnership(orgId, newOwner);
+        return net.transferOrgMemberOwnership(orgId, newOwner)
+        .then(function (res) { $rootScope.$emit('orgOwnershipTransferred', orgId, newOwner); return res;});
       },
       getOrgSettings: function(orgId) {
         return net
@@ -130,12 +135,20 @@ angular.module('kifi')
           return getResponseData(response);
         });
       },
-      getOrgLibraries: function (orgId, page, size) {
+      getOrgLibraries: function (orgId, offset, limit) {
         return net.getOrgLibraries(orgId, {
-          offset: page,
-          limit: size
+          offset: offset,
+          limit: limit
         })
         .then(getResponseData);
+      },
+      // optArgs {
+      //  ordering: "alphabetical" | "most_recent_keeps_by_user"
+      //  direction: "asc" | "desc"
+      //  windowSize: #days (used for most_recent_keeps_by_user)
+      // }
+      getOrgBasicLibraries: function (orgId, offset, limit, optArgs) {
+          return net.getOrgBasicLibraries(orgId, offset, limit, optArgs).then(getResponseData);
       },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {
@@ -159,7 +172,8 @@ angular.module('kifi')
         });
       },
       updateOrgProfile: function (orgId, modifiedFields) {
-        return net.updateOrgProfile(orgId, modifiedFields);
+        return net.updateOrgProfile(orgId, modifiedFields)
+        .then(function (res) { $rootScope.$emit('orgProfileUpdated', orgId, modifiedFields); return res;});
       },
       userOrOrg: function (handle, authToken) {
         return net
@@ -169,7 +183,8 @@ angular.module('kifi')
       uploadOrgAvatar: function (handle, x, y, sideLength, image) {
         return net
         .uploadOrgAvatar(handle, x, y, sideLength, image)
-        .then(invalidateOrgProfileCache);
+        .then(invalidateOrgProfileCache)
+        .then(function (res) { $rootScope.$emit('orgAvatarUploaded'); return res;});
       },
       exportOrgKeeps: function (format, orgIds) {
         return net

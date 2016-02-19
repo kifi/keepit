@@ -30,6 +30,7 @@ object Message extends PublicIdGenerator[Message] {
 
 case class CrossServiceMessage(
   id: Id[Message],
+  isDeleted: Boolean,
   seq: SequenceNumber[Message],
   keep: Id[Keep],
   sentAt: DateTime,
@@ -38,6 +39,7 @@ case class CrossServiceMessage(
 object CrossServiceMessage {
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
+    (__ \ 'isDeleted).format[Boolean] and
     (__ \ 'seq).format[SequenceNumber[Message]] and
     (__ \ 'keep).format[Id[Keep]] and
     (__ \ 'sentAt).format[DateTime] and
@@ -70,7 +72,7 @@ case class DiscussionKeep(
   title: Option[String],
   note: Option[String],
   tags: Set[Hashtag],
-  keptBy: BasicUser,
+  keptBy: Option[BasicUser],
   keptAt: DateTime,
   imagePath: Option[ImagePath],
   libraries: Set[LibraryCardInfo])

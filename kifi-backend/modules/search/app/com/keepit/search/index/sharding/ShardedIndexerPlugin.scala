@@ -8,11 +8,11 @@ import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 
-trait ShardedIndexerPlugin[K, S, I <: Indexer[_, S, I]] extends IndexerPlugin[S, I] {
+trait ShardedIndexerPlugin[K, S, I <: Indexer[_, S, _, I]] extends IndexerPlugin[S, I] {
   def getIndexerFor(id: Id[K]): I
 }
 
-abstract class ShardedIndexerPluginImpl[K, S, I <: Indexer[_, S, I], A <: BasicIndexerActor[S, I]](
+abstract class ShardedIndexerPluginImpl[K, S, I <: Indexer[_, S, _, I], A <: BasicIndexerActor[S, I]](
     indexer: ShardedIndexer[K, S, I],
     actor: ActorInstance[A],
     serviceDiscovery: ServiceDiscovery) extends IndexerPluginImpl[S, I, A](indexer, actor, serviceDiscovery) {

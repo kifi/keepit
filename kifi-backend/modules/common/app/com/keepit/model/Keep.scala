@@ -12,7 +12,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -34,8 +34,8 @@ case class Keep(
   note: Option[String] = None,
   uriId: Id[NormalizedURI],
   url: String, // denormalized for efficiency
-  userId: Id[User],
-  originalKeeperId: Option[Id[User]] = None,
+  userId: Option[Id[User]], // userId is None iff the message was imported from a foreign source (Slack, etc) and we don't have a Kifi user to attribute it to
+  originalKeeperId: Option[Id[User]],
   source: KeepSource,
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
@@ -56,12 +56,13 @@ case class Keep(
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
   def withState(state: State[Keep]) = copy(state = state)
   def withUriId(normUriId: Id[NormalizedURI]) = copy(uriId = normUriId)
 
+  def withOwner(newOwner: Id[User]) = this.copy(userId = Some(newOwner))
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
+  def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
@@ -118,7 +119,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'note).formatNullable[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
-    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'userId).formatNullable[Id[User]] and
     (__ \ 'originalKeeperId).formatNullable[Id[User]] and
     (__ \ 'source).format[KeepSource] and
     (__ \ 'keptAt).format[DateTime] and
@@ -134,7 +135,7 @@ object Keep extends PublicIdGenerator[Keep] {
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
   override val version = 4
   val namespace = "bookmark_count"
-  def toKey(): String = userId.toString
+  def toKey(): String = userId.id.toString
 }
 
 class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
@@ -150,7 +151,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 14
+  override val version = 15
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -168,7 +169,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 5
+  override val version = 6
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -239,19 +240,19 @@ case class BasicKeep(
   url: String,
   visibility: LibraryVisibility,
   libraryId: Option[PublicId[Library]],
-  ownerId: ExternalId[User],
-  attribution: Option[(SlackAttribution, Option[BasicUser])])
+  author: BasicAuthor,
+  attribution: Option[SlackAttribution])
 
 object BasicKeep {
-  implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
+  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
-    (__ \ 'slackAttribution).formatNullable[(SlackAttribution, Option[BasicUser])]
+    (__ \ 'author).format[BasicAuthor] and
+    (__ \ 'slackAttribution).formatNullable[SlackAttribution]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
@@ -264,7 +265,7 @@ object BasicKeep {
 //     3. Indirectly, via an organization (keep -> library -> organization -> organization-membership -> user)
 case class CrossServiceKeep(
   id: Id[Keep],
-  owner: Id[User], // the person who created the keep
+  owner: Option[Id[User]], // the person who "owns" the keep, if any
   users: Set[Id[User]], // all the users directly connected to the keep
   libraries: Set[Id[Library]], // all the libraries directly connected to the keep
   url: String,
@@ -275,7 +276,7 @@ case class CrossServiceKeep(
 object CrossServiceKeep {
   implicit val format: Format[CrossServiceKeep] = (
     (__ \ 'id).format[Id[Keep]] and
-    (__ \ 'owner).format[Id[User]] and
+    (__ \ 'owner).formatNullable[Id[User]] and
     (__ \ 'users).format[Set[Id[User]]] and
     (__ \ 'libraries).format[Set[Id[Library]]] and
     (__ \ 'url).format[String] and
@@ -304,7 +305,7 @@ object PersonalKeep {
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 1
+  override val version = 3
   val namespace = "basic_keep_by_id"
   def toKey(): String = id.id.toString
 }

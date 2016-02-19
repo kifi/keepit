@@ -16,7 +16,8 @@ angular.module('kifi', [
   'stripe.checkout',
   'ui.slider',
   'angulartics',
-  'kifi.templates'
+  'kifi.templates',
+  'sun.scrollable'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -168,6 +169,7 @@ angular.module('kifi', [
         $timeout(function () {
           profileService.fetchMe().then(function () {
             if ($rootScope.userLoggedIn) {
+              $rootScope.navBarEnabled = profileService.hasExperiment('new_sidebar');
               profileService.fetchPrefs();
               libraryService.fetchLibraryInfos(true);
             }

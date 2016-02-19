@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.time._
 import com.keepit.model.{ User, Organization }
 import org.joda.time.DateTime
@@ -26,7 +27,8 @@ case class SlackTeam(
   generalChannelId: Option[SlackChannelId],
   lastDigestNotificationAt: Option[DateTime] = None,
   publicChannelsLastSyncedAt: Option[DateTime] = None,
-  channelsSynced: Set[SlackChannelId] = Set.empty)
+  channelsSynced: Set[SlackChannelId] = Set.empty,
+  botToken: Option[SlackAccessToken])
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -39,6 +41,12 @@ case class SlackTeam(
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
   }
   def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
+
+  def withNoBotToken = this.copy(botToken = None)
+  def withBotTokenIfDefined(botTokenOpt: Option[SlackAccessToken]) = botTokenOpt match {
+    case Some(newBotToken) => this.copy(botToken = Some(newBotToken))
+    case None => this
+  }
 
   def withOrganizationId(newOrgId: Option[Id[Organization]]): SlackTeam = organizationId match {
     case Some(orgId) if newOrgId.contains(orgId) => this
@@ -63,7 +71,8 @@ object SlackTeam {
     (__ \ 'generalChannelId).formatNullable[SlackChannelId] and
     (__ \ 'lastDigestNotificationAt).formatNullable[DateTime] and
     (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime] and
-    (__ \ 'channelsSynced).format[Set[SlackChannelId]]
+    (__ \ 'channelsSynced).format[Set[SlackChannelId]] and
+    (__ \ 'botToken).formatNullable[SlackAccessToken]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -72,11 +81,11 @@ object SlackTeamStates extends States[SlackTeam]
 @ImplementedBy(classOf[SlackTeamRepoImpl])
 trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam]
-  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam]
-  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]]
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam]
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
-  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam
+  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[BotUserAuthorization])(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
 }
@@ -95,6 +104,7 @@ class SlackTeamRepoImpl @Inject() (
   implicit val slackTimestampColumnType = SlackDbColumnTypes.timestamp(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val slackChannelIdSetColumnType = SlackDbColumnTypes.channelIdSet(db)
+  implicit val tokenColumnType = MappedColumnType.base[SlackAccessToken, String](_.token, SlackAccessToken(_))
 
   private def teamFromDbRow(id: Option[Id[SlackTeam]] = None,
     createdAt: DateTime = currentDateTime,
@@ -107,7 +117,8 @@ class SlackTeamRepoImpl @Inject() (
     generalChannelId: Option[SlackChannelId],
     lastDigestNotificationAt: Option[DateTime],
     publicChannelsLastSyncedAt: Option[DateTime],
-    channelsSynced: Set[SlackChannelId]) = {
+    channelsSynced: Set[SlackChannelId],
+    botToken: Option[SlackAccessToken]) = {
     SlackTeam(
       id,
       createdAt,
@@ -120,7 +131,8 @@ class SlackTeamRepoImpl @Inject() (
       generalChannelId,
       lastDigestNotificationAt,
       publicChannelsLastSyncedAt,
-      channelsSynced
+      channelsSynced,
+      botToken
     )
   }
 
@@ -136,7 +148,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.generalChannelId,
     slackTeam.lastDigestNotificationAt,
     slackTeam.publicChannelsLastSyncedAt,
-    slackTeam.channelsSynced
+    slackTeam.channelsSynced,
+    slackTeam.botToken
   ))
 
   type RepoImpl = SlackTeamTable
@@ -150,7 +163,8 @@ class SlackTeamRepoImpl @Inject() (
     def lastDigestNotificationAt = column[Option[DateTime]]("last_digest_notification_at", O.Nullable)
     def publicChannelsLastSyncedAt = column[Option[DateTime]]("public_channels_last_synced_at", O.Nullable)
     def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsSynced) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def botToken = column[Option[SlackAccessToken]]("bot_token", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsSynced, botToken) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
@@ -167,13 +181,13 @@ class SlackTeamRepoImpl @Inject() (
     activeRows.filter(_.id.inSet(ids)).list.map { model => model.id.get -> model }.toMap
   }
 
-  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Set[SlackTeam] = {
+  def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam] = {
     getByOrganizationIds(Set(orgId)).apply(orgId)
   }
 
-  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Set[SlackTeam]] = {
-    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list.toSet[SlackTeam].groupBy(_.organizationId.get)
-    orgIds.map(orgId => orgId -> existing.getOrElse(orgId, Set.empty)).toMap
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]] = {
+    val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list
+    orgIds.map(orgId => orgId -> existing.find(_.organizationId.contains(orgId))).toMap
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
@@ -186,24 +200,24 @@ class SlackTeamRepoImpl @Inject() (
     }.map { case (SlackTeamIdKey(slackTeamId), team) => slackTeamId -> team }
   }
 
-  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName)(implicit session: RWSession): SlackTeam = {
+  def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[BotUserAuthorization])(implicit session: RWSession): SlackTeam = {
     getBySlackTeamId(teamId, excludeState = None) match {
       case Some(team) if team.isActive =>
-        val updatedTeam = team.withName(teamName)
+        val updatedTeam = team.withName(teamName).withBotTokenIfDefined(botAuth.map(_.accessToken))
         if (team == updatedTeam) team else save(updatedTeam)
       case inactiveTeamOpt =>
-        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = teamId, slackTeamName = teamName, organizationId = None, generalChannelId = None)
+        val newTeam = SlackTeam(id = inactiveTeamOpt.flatMap(_.id), slackTeamId = teamId, slackTeamName = teamName, organizationId = None, generalChannelId = None, botToken = botAuth.map(_.accessToken))
         save(newTeam)
     }
   }
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]] = {
-    activeRows.filter(row => (row.createdAt < lastPushOlderThan && row.lastDigestNotificationAt.isEmpty) || (row.lastDigestNotificationAt < lastPushOlderThan)).map(_.id).list
+    activeRows.filter(row => row.lastDigestNotificationAt.isEmpty || row.lastDigestNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 8
+  override val version = 9
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }

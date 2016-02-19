@@ -22,7 +22,7 @@ import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.models.{ SlackTeamMembershipStates, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ SlackChannelToLibraryRepo, SlackTeamMembershipStates, SlackTeamMembershipRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -39,6 +39,7 @@ case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[I
 case class UserStatisticsPage(
     userViewType: UserViewType,
     users: Seq[UserStatistics],
+    usersOnline: Map[Id[User], Boolean],
     userThreadStats: Map[Id[User], Future[UserThreadStats]],
     page: Int,
     userCount: Int,
@@ -65,6 +66,7 @@ import com.keepit.controllers.admin.UserViewTypes._
 class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
@@ -172,31 +174,34 @@ class AdminUserController @Inject() (
   }
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminUserPage { implicit request =>
-    request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
-      val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
-      val collections = db.readWrite { implicit s =>
+    request.request.body.asFormUrlEncoded.map { _.map(r => r._1 -> r._2.head) }.map { map =>
+      val collectionNames = map.getOrElse("collections", "").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
+      db.readWrite { implicit s =>
         val bookmark = keepRepo.get(id)
-        val userId = bookmark.userId
-        val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
-        val colls = collectionNames.map { name =>
-          val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
-            case Some(coll) if coll.isActive => coll
-            case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
-            case None => collectionRepo.save(Collection(userId = userId, name = name))
-          }
-          existing.get(collection.id.get) match {
-            case Some(ktc) if ktc.isActive => ktc
-            case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-            case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
-          }
-          collection
+        bookmark.userId match {
+          case None => BadRequest(Json.obj("err" -> "keep has no user"))
+          case Some(userId) =>
+            val existing = keepToCollectionRepo.getByKeep(id, excludeState = None).map(k => k.collectionId -> k).toMap
+            val colls = collectionNames.map { name =>
+              val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
+                case Some(coll) if coll.isActive => coll
+                case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
+                case None => collectionRepo.save(Collection(userId = userId, name = name))
+              }
+              existing.get(collection.id.get) match {
+                case Some(ktc) if ktc.isActive => ktc
+                case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+                case None => keepToCollectionRepo.save(KeepToCollection(keepId = id, collectionId = collection.id.get))
+              }
+              collection
+            }
+            (existing -- colls.map(_.id.get)).values.foreach { ktc =>
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+            }
+
+            Ok(Json.obj("collections" -> colls.map(_.name)))
         }
-        (existing -- colls.map(_.id.get)).values.foreach { ktc =>
-          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-        }
-        colls.map(_.name)
       }
-      Ok(Json.obj("collections" -> collections))
     } getOrElse BadRequest
   }
 
@@ -235,7 +240,6 @@ class AdminUserController @Inject() (
     val chatStatsF = eliza.getUserThreadStats(userId)
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (experiments, potentialOrganizations, ignoreForPotentialOrganizations) = db.readOnlyReplica { implicit s =>
       val ignore4orgs = userValueRepo.getValue(userId, UserValues.ignoreForPotentialOrganizations)
@@ -252,39 +256,25 @@ class AdminUserController @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationUserMayKnow])
     }
 
-    val (libs, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
-      val keepCount = keepRepo.getCountByUser(userId)
-      val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
-      val manualKeepsLastWeek = keepRepo.getCountManualByUserInLastDays(userId, 7) //last seven days
-      val organizations = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
-      val candidateOrganizations = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toList.filter(_.state == OrganizationStates.ACTIVE)
-      val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
-      val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
-        userRepo.get(userId)
-      }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
-      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
-      val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
-      val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = userStatisticsCommander.invitedBy(socialUsers.map(_.id), emails)
-      (libs, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
-    }
+    val fullUserStatisticsF = userStatisticsCommander.fullUserStatistics(userId)
 
     val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
       slackTeamMembershipRepo.getByUserId(userId)
     }
+    val usersOnlineF = eliza.areUsersOnline(Seq(userId))
 
     for {
+      fullUserStatistics <- fullUserStatisticsF
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
-      contacts <- contactsF
       orgRecos <- fOrgRecos
       chatStats <- chatStatsF
       slackInfo <- slackInfoF
+      usersOnline <- usersOnlineF
     } yield {
       val recommendedOrgs = db.readOnlyReplica { implicit session => orgRecos.map(reco => (orgRepo.get(reco.orgId), reco.score * 10000)).filter(_._1.state == OrganizationStates.ACTIVE) }
-      Ok(html.admin.user(user, chatStats, keepCount, libs, manualKeepsLastWeek, organizations, candidateOrganizations, experiments, socialUsers,
-        fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        contacts, invitedByUsers, potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
+      Ok(html.admin.user(user, chatStats, usersOnline(userId), fullUserStatistics, experiments, abookInfos, econtactCount,
+        potentialOrganizations, ignoreForPotentialOrganizations, recommendedOrgs, slackInfo))
     }
   }
 
@@ -365,7 +355,7 @@ class AdminUserController @Inject() (
   def allUsersPotentialOrgsView = usersPotentialOrgsView(0)
   def allLinkedInUsersWithoutOrgsView = linkedInUsersWithoutOrgsView(0)
 
-  def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
+  def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 60): Future[UserStatisticsPage] = {
     val usersF = Future {
       db.readOnlyReplica { implicit s =>
         userViewType match {
@@ -406,6 +396,10 @@ class AdminUserController @Inject() (
       case (users, _) => (users.map(u => (u.id.get -> eliza.getUserThreadStats(u.id.get)))).seq.toMap
     }
 
+    val usersOnlineF = usersF.map {
+      case (users, _) => eliza.areUsersOnline(users.map(_.id.get))
+    }
+
     val (newUsers, recentUsers, inviteInfo) = userViewType match {
       case Registered =>
         db.readOnlyReplica { implicit s =>
@@ -420,7 +414,8 @@ class AdminUserController @Inject() (
 
     (userStatsF zip userThreadStatsF).map {
       case ((users, userCount), userThreadStats) =>
-        UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, pageSize, newUsers, recentUsers, inviteInfo)
+        val usersOnline = Await.result(Await.result(usersOnlineF, Duration.Inf), Duration.Inf)
+        UserStatisticsPage(userViewType, users, usersOnline, userThreadStats, page, userCount, pageSize, newUsers, recentUsers, inviteInfo)
     }
   }
 
@@ -486,7 +481,9 @@ class AdminUserController @Inject() (
           val userId = u.user.id.get
           (userId -> eliza.getUserThreadStats(u.user.id.get))
         }).seq.toMap
-        Ok(html.admin.users(UserStatisticsPage(All, users, userThreadStats, 0, users.size, users.size, None), searchTerm))
+        val usersOnlineF = eliza.areUsersOnline(userIds)
+        val usersOnline = Await.result(usersOnlineF, Duration.Inf)
+        Ok(html.admin.users(UserStatisticsPage(All, users, usersOnline, userThreadStats, 0, users.size, users.size, None), searchTerm))
     }
   }
 
@@ -504,26 +501,18 @@ class AdminUserController @Inject() (
 
       // Intern required emails
       emailList map { address =>
-        log.info("Interning email address %s to userId %s".format(address, userId.toString))
+        log.info("Interning email address %s to userId %s".format(address, userId.id.toString))
         userEmailAddressCommander.intern(userId, address).get
       }
 
       // Deactivate other emails
       oldEmails.filterNot(email => emailList.contains(email.address)) foreach { removedEmail =>
-        log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.toString))
+        log.info("Removing email address %s from userId %s".format(removedEmail.address, userId.id.toString))
         userEmailAddressCommander.deactivate(removedEmail, force = true).get
       }
     }
 
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
-  }
-
-  def setInvitesCount(userId: Id[User]) = AdminUserPage { implicit request =>
-    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
-    db.readWrite { implicit session =>
-      userValueRepo.setValue(userId, UserValues.availableInvites.name, count)
-    }
-    Redirect(routes.AdminUserController.userView(userId))
   }
 
   //todo: this code may become hard to maintain, should be unified with the production path

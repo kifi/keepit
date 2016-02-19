@@ -193,16 +193,8 @@ class ShoeboxDataPipeController @Inject() (
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
         val attributionById = sourceRepo.getByKeepIds(changedKeeps.flatMap(_.id).toSet)
         changedKeeps.map { keep =>
-          val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
-          val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
-          if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
-            // Auto-fixes bad data. Hijacking the data ingestion since it'll help catch remaining problems, and let me know if it's still happening.
-            log.info(s"[getKeepsAndTagsChanged] Tag mismatch for ${keep.id.get}: $tagsFromHashtags vs $tagsFromCollections. Autofixing.")
-            keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, uses max 1 thread
-          }
-
-          val allTags = (tagsFromHashtags ++ tagsFromCollections).distinctBy(_.normalized)
-          val (source, tags) = if (keep.isActive) (attributionById.get(keep.id.get), allTags) else (None, Set.empty[Hashtag])
+          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+          val source = attributionById.get(keep.id.get)
           KeepAndTags(keep, source, tags)
         }
       }

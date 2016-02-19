@@ -160,12 +160,22 @@ angular.module('kifi')
       return scope.lib.permissions.indexOf(permission) !== -1;
     }
 
+    function isMutable() {
+      var scope = this;
+      var kind = scope.lib.kind;
+      return (kind === 'user_created' || kind === 'slack_channel');
+    }
+
     function getMeOrg() {
       var scope = this;
       var me = profileService.me;
+      var org = scope.lib.org;
 
-      var meOrg = (me.orgs || []).filter(function (o) { return o.id === scope.lib.org.id; })[0];
-      return meOrg;
+      if (!org) {
+        return {};
+      } else {
+        return (me.orgs || []).filter(function (o) { return o.id === org.id; })[0];
+      }
     }
 
     function onClickUpsellEditLibrary(organization) {
@@ -231,6 +241,7 @@ angular.module('kifi')
         scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
         scope.hasPermission = hasPermission;
+        scope.isMutable = isMutable;
         scope.getMeOrg = getMeOrg;
         scope.onClickUpsellEditLibrary = onClickUpsellEditLibrary;
         scope.onHoverUpsellEditLibrary = onHoverUpsellEditLibrary;

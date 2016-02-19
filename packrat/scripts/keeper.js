@@ -8,6 +8,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/repair_transitionend.js
 // @require scripts/html/keeper/keeper.js
 
 $.fn.layout = function () {
@@ -256,7 +257,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       $slider
       .off('transitionend')
       .on('transitionend', function (e) {
-        if (e.target === this) {
+        if (e.target === this && e.originalEvent.propertyName === 'opacity') {
           hideSlider2();
         }
       })

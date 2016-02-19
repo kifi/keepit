@@ -8,7 +8,7 @@ import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
-import com.keepit.slack.models.SlackChannelId
+import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
 import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
@@ -47,11 +47,12 @@ object KeepFields {
   val maxPrefixLength = 8
 
   object Source {
-    def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
+    def apply(teamId: SlackTeamId, channelId: SlackChannelId): String = s"slack|${channelId.value}" // TODO(Léo): this should be "slack|teamId_channelId"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
+    def apply(source: RawSourceAttribution): String = Source(SourceAttribution.fromRawSourceAttribution(source))
     def apply(source: SourceAttribution): String = source match {
-      case twitter: TwitterAttribution => Source(twitter.tweet.user.screenName)
-      case slack: SlackAttribution => Source(slack.message.channel.id)
+      case TwitterAttribution(tweet) => Source(tweet.user.screenName)
+      case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)
     }
   }
 
@@ -63,10 +64,10 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
-  val isDeleted = !keep.isActive || !shard.contains(keep.uriId)
+  val isDeleted = !keep.isActive
 
   override def buildDocument = {
     import KeepFields._
@@ -103,18 +104,22 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
-    doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    doc.add(buildKeywordField(userField, keep.userId.toString))
+    doc.add(buildKeywordField(uriField, keep.uriId.id.toString))
+    keep.userId.foreach { userId =>
+      doc.add(buildKeywordField(userField, userId.id.toString))
+    }
 
     if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
-      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
-      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString))
+      keep.userId.foreach { userId =>
+        doc.add(buildKeywordField(userDiscoverableField, userId.id.toString))
+      }
     }
 
     keep.organizationId.foreach { orgId =>
-      doc.add(buildKeywordField(orgField, orgId.toString))
+      doc.add(buildKeywordField(orgField, orgId.id.toString))
       if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
-        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
+        doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
       }
     }
 
@@ -123,7 +128,7 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
-    doc.add(buildIdValueField(userIdField, keep.userId))
+    doc.add(buildIdValueField(userIdField, keep.userId.getOrElse(Id[User](-1))))
     doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
     doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 

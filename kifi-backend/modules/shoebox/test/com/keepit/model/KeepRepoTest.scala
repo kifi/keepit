@@ -23,7 +23,8 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             uriId = Id[NormalizedURI](1),
             url = "http://www.kifi.com",
             visibility = LibraryVisibility.ORGANIZATION,
-            userId = Id[User](3),
+            userId = Some(Id[User](3)),
+            originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
             libraryId = Some(Id[Library](4)),
             connections = KeepConnections(Set(Id(4)), Set(Id(3)))
@@ -126,13 +127,22 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
     "most recent from followed libraries" in { //tests only that the query interpolates correctly
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
+          import com.keepit.common.core._
+          val keepRepo = inject[KeepRepo]
           val user1 = user().saved
           val library = LibraryFactory.library().withOwner(user1).saved
-          val keep = KeepFactory.keep().withUser(user1).withLibrary(library).saved
+          val keeps = KeepFactory.keeps(50).map(_.withUser(user1).withLibrary(library).saved)
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None, None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, Some(keep.externalId), None, None)
-          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, Some(keep.externalId), None)
+          keepRepo.getRecentKeeps(user1.id.get, 10, None, None, None)
+          keepRepo.getRecentKeeps(user1.id.get, 10, Some(keeps.head.externalId), None, None)
+          keepRepo.getRecentKeeps(user1.id.get, 10, None, Some(keeps.head.externalId), None)
+
+          val firstPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, None, None, None)
+          val secondPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(firstPage.last._1.externalId), None, None)
+          secondPage.forall { case (_, time) => time.getMillis < firstPage.last._2.getMillis } === true
+          val thirdPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(secondPage.last._1.externalId), None, None)
+          thirdPage.forall { case (_, time) => time.getMillis < secondPage.last._2.getMillis } === true
+          secondPage.forall { case (_, time) => time.getMillis > thirdPage.head._2.getMillis } === true
           1 === 1
         }
       }
@@ -191,7 +201,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OwnKeeps)).length must equalTo(22)
           keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OrganizationKeeps(org.id.get))).length must equalTo(18)
         }
-        1 === 1
       }
     }
 

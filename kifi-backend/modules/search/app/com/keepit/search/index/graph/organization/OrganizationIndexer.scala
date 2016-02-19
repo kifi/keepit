@@ -13,7 +13,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.Future
 
-class OrganizationIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Organization, Organization, OrganizationIndexer](indexDirectory, OrganizationFields.maxPrefixLength) {
+class OrganizationIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Organization, Organization, OrganizationIndexable, OrganizationIndexer](indexDirectory, OrganizationFields.maxPrefixLength) {
   val name = "OrganizationIndexer"
 
   def update(): Int = throw new UnsupportedOperationException()
@@ -39,11 +39,7 @@ class OrganizationIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServic
   }
 
   private def processIndexables(indexables: Seq[OrganizationIndexable]): Int = updateLock.synchronized {
-    doUpdate(name)(indexables.iterator)
-  }
-
-  override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos(this.name)
+    doUpdate(indexables.iterator)
   }
 }
 

@@ -1,3 +1,5 @@
+
+
 package com.keepit.model.helprank
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }

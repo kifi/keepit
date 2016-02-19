@@ -1,0 +1,305 @@
+.kf-left-hand-nav
+  font-smoothing: antialiased
+  width: leftHandNavWidth
+  background-color: #3e4954
+  display: flex
+  flex-direction: column
+  height: 100vh
+  flex-shrink: 0
+  user-select: none
+
+  .nano
+    flex-grow: 1
+    .nano-pane
+      background: alpha(#000, 0.0)
+
+    .nano-slider
+      background: alpha(#FFF, 0.2)
+
+  @media (max-width: appMobileWidth)
+    position: absolute
+    width: 100%
+    z-index: 99999
+
+  .kf-left-hand-nav-load-error
+    padding-left: 0px
+    font-size: 15px
+    font-weight: bold
+    color: #DDD
+    margin-right: 10px
+    margin-top: 20px
+    text-align: center
+
+  .kf-left-hand-nav-load-error-reload
+    text-decoration: underline
+    margin-top: 10px
+    &:hover
+      color: #FFF
+      cursor: pointer
+
+  .kf-left-hand-nav-close-icon
+    width: 18px
+    height: 18px
+    margin-right: 8px
+    cursor: pointer
+    fill: alpha(white, 0.8)
+
+    &:hover
+      fill: white
+
+  .kf-left-hand-nav-logo
+    display: inline-block
+    vertical-align: middle
+    width: 100%
+    height: appHeaderHeightWithNav
+    background-position: left center
+    background-repeat: no-repeat
+    background-size: auto appHeaderHeightWithNav - 10px
+
+    &:focus
+      outline: none
+
+  .kf-left-hand-nav-button-container
+    display: flex
+    width: 100%
+    justify-content: center
+    margin-top: 6px
+
+    > * + *
+      margin-left: 5px
+
+  .kf-left-hand-nav-button-accept
+  .kf-left-hand-nav-button-decline
+    font-size: 13px
+    color: #FFF
+    border-radius: 2px
+    padding: 2px 10px
+    cursor: pointer
+
+  .kf-left-hand-nav-button-accept
+    background: accentGreen
+
+  .kf-left-hand-nav-button-decline
+    background: gray
+    opacity: 0.6
+
+  .kf-left-hand-nav-org-container
+    flex-shrink: 0
+    display: flex
+    flex-direction: column
+    width: 100%
+    margin-bottom: 20px
+    margin-top: 0px
+
+    .kf-left-hand-nav-item-header
+      &:hover
+      &:focus
+        outline: none
+        border-radius: 4px 0px 0px 4px
+        background: alpha(white, 0.1)
+
+      img
+        border-radius: 4px
+        flex-shrink: 0
+
+    .kf-left-hand-nav-org-message
+      color: #DDD
+      margin-top: 4px
+      margin-left: 4px
+      font-size: 13px
+
+    .kf-left-hand-nav-org-email
+      margin: 5px 0px
+      text-align: center
+
+  .kf-left-hand-nav-header
+    height: appHeaderHeightWithNav
+    display: flex
+    align-items: center
+    padding-left: 10px
+    margin-left: 0px
+    flex-shrink: 0
+    z-index: 2
+    background-color: #3e4954
+
+  .kf-left-hand-nav-create-team
+    padding-left: 0px
+    font-size: 14px
+    font-weight: bold
+    color: #DDD
+    padding-bottom: 20px
+
+    &:hover
+      color: #FFF
+      cursor: pointer
+
+  .kf-left-hand-nav-create-team-learn-more
+      font-size: 13px
+      font-weight: bold
+      color: #DDD
+
+      &:hover
+        color: #FFF
+        cursor: pointer
+        text-decoration: underline
+
+.kf-left-hand-nav-content
+  overflow-y: hidden
+  overflow-x: hidden
+  padding-left: 10px
+  height: 100%
+  z-index: 1
+  display: flex
+  flex-direction: column
+
+  .kf-left-hand-nav-inner-content
+    padding-right: 10px
+
+  .kf-left-hand-nav-user-container
+    flex-shrink: 0
+    display: flex
+    flex-direction: column
+    width: 100%
+    margin-bottom: 20px
+    margin-top: 8px
+
+  .kf-left-hand-nav-item-header
+    display: flex
+    align-items: center
+
+    &:hover
+    &:focus
+      outline: none
+      background: alpha(white, 0.1)
+      border-radius: 20px 0px 0px 20px
+
+    img
+      width: 30px
+      height: 30px
+      border-radius 20px
+      margin-right: 10px
+      flex-shrink: 0
+
+    span
+      font-size: 16px
+      color: white
+      font-weight: bold
+      white-space: nowrap
+      overflow: hidden
+      text-overflow: ellipsis
+
+  .kf-left-hand-nav-libraries-container
+    margin-top: 6px
+    padding-left: 5px
+
+    .kf-left-hand-nav-actions-container
+      display: flex
+      flex-direction: column
+      min-height: 12px
+
+
+
+    .kf-left-hand-nav-action
+      padding-left: 11px
+      font-size: 14px
+      font-weight: bold
+      color: #DDD
+
+      &:hover
+        color: #FFF
+        cursor: pointer
+
+
+    .kf-left-hand-nav-library-header
+      font-size: 14px
+      color: #F5F5F5
+      font-weight: bold
+      margin-bottom: 2px
+
+
+    .kf-left-hand-nav-library-container
+      display: block
+      position: relative
+      margin-left: 1px
+
+      .kf-left-hand-nav-library
+        font-size: 14px
+        color: #DDD
+        padding: 2px 0
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        margin-left: 9px
+        height: 100%
+
+      .kf-left-hand-nav-library-color
+        width: 3px
+        margin: auto
+        top: 2px
+        bottom: 2px
+        position: absolute
+        background: gray
+
+      .kf-left-hand-nav-library-container-bg
+        position: absolute
+        width: 50%
+        opacity: 0.0
+        margin: auto
+        top: 2px
+        bottom: 2px
+        background: gray
+        z-index: -1
+
+    .kf-left-hand-nav-library-container:focus
+    .kf-left-hand-nav-library-container:hover
+      outline: none
+      // .kf-left-hand-nav-library-color
+      //   top: 0px
+      //   bottom: 0px
+
+      .kf-left-hand-nav-library
+        color: #FFF
+        cursor: pointer
+
+      .kf-left-hand-nav-library-container-bg
+        transition: width 0.15s ease-in
+        opacity: 0.5
+        width: 100%
+
+
+
+.kf-left-hand-nav-content-spinner-container
+  display: flex
+  width: 100%
+  justify-content: center
+
+.kf-left-hand-nav-spinner
+  vertical-align: center
+  text-align: left
+  display: inline-block
+
+.kf-left-hand-nav-spinner > div
+  width: 8px
+  height: 8px
+  margin-left: 2px
+  margin-right: 2px
+  background-color: #f9f9f9
+
+  border-radius: 100%
+  display: inline-block
+  animation: sk-bouncedelay 1.4s infinite ease-in-out both
+
+.kf-left-hand-nav-spinner .bounce1
+  animation-delay: -0.32s
+
+.kf-left-hand-nav-spinner .bounce2
+  animation-delay: -0.16s
+
+@keyframes sk-bouncedelay
+  0%, 80%, 100%
+    transform: scale(0)
+  40%
+    transform: scale(1.0)
+
+.kf-left-hand-nav-spinner-scale
+  transform: scale(.5)

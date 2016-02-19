@@ -4,14 +4,11 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
 import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
-import com.keepit.model.{Keep, LibraryAccess, NotificationCategory}
+import com.keepit.model.{SourceAttribution, SlackAttribution, Keep, LibraryAccess, NotificationCategory}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
+import com.keepit.social.ImageUrls
 import play.api.libs.json.Json
-
-object ImageUrls {
-  val SLACK_LOGO: String = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
-}
 
 @Singleton
 class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {
@@ -102,39 +99,32 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       RequestLibrary(event.libraryId), RequestKeep(event.keepId)
     )) { batched =>
       val newKeep = RequestKeep(event.keepId).lookup(batched)
-      val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
+      val author = newKeep.author
+      val slackAttributionOpt = newKeep.attribution
 
-      val attributionOpt = newKeep.attribution
-      val image = {
-        val slackImage: Option[NotificationImage] = attributionOpt.map { case (_, userOpt) =>
-          userOpt.map(UserImage).getOrElse(PublicImage(ImageUrls.SLACK_LOGO))
-        }
-        slackImage.getOrElse(UserImage(keeper))
-      }
       val body = {
-        val kifiBody = s"${keeper.firstName} just kept ${newKeep.title.getOrElse("a new item")}"
-        val slackBody = attributionOpt.map { case (slackAttr, userOpt) =>
-          s"${userOpt.map(_.firstName).getOrElse(s"@${slackAttr.message.username.value}")} just added in #${slackAttr.message.channel.name.value}" +
+        slackAttributionOpt.map { attr =>
+          s"${author.name} just added in #${attr.message.channel.name.value}" +
             newKeep.title.map(title => s": $title").getOrElse("")
-        }
-        slackBody.getOrElse(kifiBody)
+        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse("a new keep")}")
       }
-      import com.keepit.common.json.TupleFormat.tuple2Writes
+
+      import com.keepit.common._
       StandardNotificationInfo(
         url = newKeep.url,
-        image = image,
+        image = PublicImage(author.picture),
         title = s"New keep in ${libraryKept.name}",
         body = body,
         linkText = "Go to page",
         locator = Some(MessageThread.locator(Keep.publicId(event.keepId))),
         extraJson = Some(Json.obj(
-          "keeper" -> keeper,
+          "keeper" -> author,
           "library" -> Json.toJson(libraryKept),
           "keep" -> Json.obj(
             "id" -> newKeep.id,
             "url" -> newKeep.url,
-            "attr" -> Json.toJson(newKeep.attribution)
+            "attr" -> newKeep.attribution
           )
         )),
         category = NotificationCategory.User.NEW_KEEP

@@ -16,10 +16,12 @@ import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.social.{ IdentityHelpers, UserIdentityHelper, Author }
 import com.keepit.social.twitter.RawTweet
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
+import securesocial.core.IdentityId
 import views.html
 import com.keepit.common.core._
 
@@ -48,6 +50,8 @@ class AdminBookmarksController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
+  keepSourceCommander: KeepSourceCommander,
+  userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
@@ -55,7 +59,7 @@ class AdminBookmarksController @Inject() (
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
-      val user = userRepo.get(bookmark.userId)
+      val user = bookmark.userId.map(userRepo.get)
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
       val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
@@ -111,7 +115,7 @@ class AdminBookmarksController @Inject() (
         val usersFuture = Future {
           timing("load user") {
             db.readOnlyMaster { implicit s =>
-              bookmarks map (_.userId) map { id =>
+              bookmarks flatMap (_.userId) map { id =>
                 userMap.getOrElseUpdate(id, userRepo.get(id))
               }
             }
@@ -256,7 +260,7 @@ class AdminBookmarksController @Inject() (
       } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
       (userIds ++ rangeIds).flatMap { u =>
         keepRepo.getByUser(u)
-      }.sortBy(_.userId.id).map(_.id.get)
+      }.sortBy(_.userId).map(_.id.get)
     }
 
     keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
@@ -327,5 +331,26 @@ class AdminBookmarksController @Inject() (
     }
 
     Ok(keeps.length.toString)
+  }
+
+  def reattributeKeeps(author: String, userIdOpt: Option[Long], overwriteExistingOwner: Boolean, doIt: Boolean) = AdminUserAction { implicit request =>
+    Try(Author.fromIndexableString(author)).toOption match {
+      case Some(validAuthor) =>
+        val authorOwnerId: Option[Id[User]] = db.readOnlyMaster { implicit session =>
+          validAuthor match {
+            case Author.KifiUser(kifiUserId) => Some(kifiUserId)
+            case Author.SlackUser(slackTeamId, slackUserId) => userIdentityHelper.getOwnerId(IdentityHelpers.toIdentityId(slackTeamId, slackUserId))
+            case Author.TwitterUser(twitterUserId) => userIdentityHelper.getOwnerId(IdentityId(twitterUserId.id.toString, "twitter"))
+          }
+        }
+        (authorOwnerId orElse userIdOpt.map(Id[User])) match {
+          case None => BadRequest(s"No user found.")
+          case Some(userId) =>
+            if (doIt) SafeFuture { keepSourceCommander.reattributeKeeps(validAuthor, userId, overwriteExistingOwner) }
+            Ok(s"Reattribute keeps from $author to user $userId. Overwriting existing keep owner? $overwriteExistingOwner. Doing it? $doIt. ")
+        }
+      case None => BadRequest("invalid_author")
+    }
+
   }
 }

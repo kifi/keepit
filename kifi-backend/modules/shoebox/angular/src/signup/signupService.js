@@ -134,6 +134,7 @@ angular.module('kifi')
       });
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
+      $scope.slackSignupPath = routeService.socialSignup('slack', params);
 
       $scope.emailSubmitted = false;
 
@@ -166,6 +167,10 @@ angular.module('kifi')
 
     $scope.fbAuth = function () {
       emitTracking('click', 'signup', {action: 'clickedAuthFacebook'});
+    };
+
+    $scope.slackAuth = function () {
+      emitTracking('click', 'signup', {action: 'clickedAuthSlack'});
     };
 
     // 2nd Register modal

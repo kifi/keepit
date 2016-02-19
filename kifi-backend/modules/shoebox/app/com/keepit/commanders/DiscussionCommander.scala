@@ -45,7 +45,7 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.addUsersToKeep(keepId, userId, Set(userId))
+        keepCommander.addUsersToKeep(keepId, Some(userId), Set(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId)
     }
@@ -99,9 +99,7 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        val oldKeep = keepRepo.get(keepId)
-        val allUsers = oldKeep.connections.users ++ newUsers + userId
-        keepCommander.addUsersToKeep(keepId, addedBy = userId, allUsers)
+        keepCommander.addUsersToKeep(keepId, addedBy = Some(userId), newUsers)
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers)
       elizaEdit.onSuccess {

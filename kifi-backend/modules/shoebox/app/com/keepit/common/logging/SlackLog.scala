@@ -4,7 +4,8 @@ import com.keepit.common.util.{ Debouncing, DescriptionElements }
 import com.keepit.macros.Location
 import com.keepit.slack.models.{ SlackAttachment, SlackMessageRequest }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import org.joda.time.Period
+
+import scala.concurrent.duration._
 
 class SlackLog(loggingDestination: InhouseSlackChannel)(implicit inhouseSlackClient: InhouseSlackClient) {
   private val debouncer = new Debouncing.Buffer[SlackAttachment]
@@ -14,7 +15,7 @@ class SlackLog(loggingDestination: InhouseSlackChannel)(implicit inhouseSlackCli
   def error(elements: DescriptionElements*)(implicit sourceCodeLocation: Location): Unit = sendLog(sourceCodeLocation, elements, "danger")
 
   private def sendLog(fromLine: Location, text: DescriptionElements, color: String): Unit = {
-    debouncer.debounce(fromLine.location, Period.seconds(5))(
+    debouncer.debounce(fromLine.location, 5 seconds)(
       item = SlackAttachment(color = Some(color), text = Some(DescriptionElements.formatForSlack(text)))
     ) { attachments =>
         val msg = SlackMessageRequest.inhouse(

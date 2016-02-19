@@ -10,7 +10,7 @@ angular.module('kifi')
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
     $scope.me = profileService.me;
-    $scope.params = $state.params;
+    var params = $state.params;
 
     $scope.selectedOrg = null;
     $scope.orgs = [];
@@ -28,7 +28,7 @@ angular.module('kifi')
 
     $scope.onClickedDone = function() {
       slackService
-      .connectTeam($scope.selectedOrg.id)
+      .connectTeam($scope.selectedOrg.id, params.slackTeamId, params.slackState)
       .then(function (resp) {
         if (resp.redirect) {
           $window.location = resp.redirect;
@@ -44,7 +44,15 @@ angular.module('kifi')
     };
 
     $scope.onClickedCreateTeam = function() {
-      $window.location = 'https://www.kifi.com/site/organizations/create/slack?slackTeamId=' + $scope.params.slackTeamId;
+      slackService
+      .createTeam(params.slackTeamId, params.slackState)
+      .then(function (resp) {
+        if (resp.redirect) {
+          $window.location = resp.redirect;
+        } else {
+          return;
+        }
+      });
     };
 
   }

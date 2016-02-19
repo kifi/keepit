@@ -19,20 +19,22 @@ object KeepFactory {
       visibility = LibraryVisibility.SECRET,
       title = None,
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
-      userId = userId,
+      userId = Some(userId),
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
       connections = KeepConnections(Set.empty, Set(userId)),
-      originalKeeperId = Some(userId)
+      originalKeeperId = Some(userId),
+      lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
     ))
   }
 
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
   case class PartialKeep private[KeepFactory] (keep: Keep) {
-    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = id, connections = keep.connections.withUsers(Set(id))))
-    def withUser(user: User) = this.copy(keep = keep.copy(userId = user.id.get, connections = keep.connections.withUsers(Set(user.id.get))))
+    def withNoUser() = this.copy(keep = keep.copy(userId = None, connections = keep.connections.copy(users = Set.empty)))
+    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
+    def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
     def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
     def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))
@@ -55,6 +57,7 @@ object KeepFactory {
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
     def withUri(uri: NormalizedURI) = this.copy(keep = keep.copy(uriId = uri.id.get, url = uri.url))
     def withUrl(url: String) = this.copy(keep = keep.copy(url = url))
+    def withLastActivityAt(time: DateTime) = this.copy(keep = keep.copy(lastActivityAt = time))
     def get: Keep = keep
   }
 

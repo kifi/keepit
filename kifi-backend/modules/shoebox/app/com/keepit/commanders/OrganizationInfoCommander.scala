@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -31,7 +32,7 @@ trait OrganizationInfoCommander {
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
   def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
-  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
+  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization]
   def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
 
 }
@@ -87,17 +88,15 @@ class OrganizationInfoCommanderImpl @Inject() (
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
 
-  def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
-    val cacheFormattedMap = db.readOnlyReplica { implicit session =>
-      basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
-        missing.map(_.id).map {
-          orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
-        }.collect {
-          case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
-        }.map {
-          case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
-        }.toMap
-      }
+  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization] = {
+    val cacheFormattedMap = basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
+      missing.map(_.id).map {
+        orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
+      }.collect {
+        case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
+      }.map {
+        case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
+      }.toMap
     }
     cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }
@@ -146,6 +145,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
+  @StatsdTiming("OrganizationInfoCommander.getOrganizationInfo")
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
@@ -170,7 +170,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-    val slackInfo = Try(viewerIdOpt.map(slackInfoCommander.getOrganizationSlackInfo(orgId, _))).recover {
+    val slackTeamOpt = Try(viewerIdOpt.flatMap(slackInfoCommander.getOrganizationSlackTeam(orgId, _))).recover {
       case fail =>
         airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
         None
@@ -188,7 +188,7 @@ class OrganizationInfoCommanderImpl @Inject() (
       numMembers = memberCount,
       numLibraries = numLibraries,
       config = config,
-      slack = slackInfo)
+      slackTeam = slackTeamOpt)
   }
 
   private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {

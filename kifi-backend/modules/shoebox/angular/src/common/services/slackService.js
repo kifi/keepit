@@ -28,8 +28,18 @@ angular.module('kifi')
         return net.publicSyncSlack(teamId).then(dataLens);
       },
       // Returns a link that we should send the client to if they want to connect Slack to a team
-      connectTeam: function (teamId, optSlackTeamId) {
-        return net.connectSlack(teamId, optSlackTeamId).then(dataLens);
+      connectTeam: function (teamId, optSlackTeamId, optSlackState) {
+        return net.connectSlack(teamId, optSlackTeamId, optSlackState).then(dataLens);
+      },
+      // Returns a link that we should send the client to if they want to create a Kifi team from a Slack team
+      createTeam: function (optSlackTeamId, optSlackState) {
+        return net.createTeamFromSlack(optSlackTeamId, optSlackState).then(dataLens);
+      },
+      modifyLibraryPushIntegration: function (libraryId, syncId, turnOn) {
+        return net.modifyLibraryPushSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
+      },
+      modifyLibraryIngestIntegration: function (libraryId, syncId, turnOn) {
+        return net.modifyLibraryIngestSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
       }
     };
     return api;

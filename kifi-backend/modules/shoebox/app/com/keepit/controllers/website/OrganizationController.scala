@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -23,6 +24,7 @@ class OrganizationController @Inject() (
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryInfoCommander: LibraryInfoCommander,
+    libraryQueryCommander: LibraryQueryCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -95,7 +97,25 @@ class OrganizationController @Inject() (
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("libraries" -> Json.toJson(libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+    val useCustomLibraryOrderingLogic = request.request match {
+      case ur: UserRequest[_] if ur.experiments.contains(UserExperimentType.CUSTOM_LIBRARY_ORDERING) => true
+      case _ => false
+    }
+    val libCards = if (useCustomLibraryOrderingLogic) {
+      libraryInfoCommander.rpbGetOrgLibraries(request.request.userIdOpt, request.orgId, None, offset = offset, limit = limit)
+    } else {
+      libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit))
+    }
+    Ok(Json.obj("libraries" -> libCards))
+  }
+
+  def getLHRLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    val arrangement = for {
+      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
+      direction <- directionOpt.flatMap(SortDirection.fromStr)
+    } yield Arrangement(ordering, direction)
+    val basicLibs = db.readOnlyMaster(implicit s => libraryQueryCommander.getLHRLibrariesForOrg(request.request.userId, request.orgId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize))
+    Ok(Json.obj("libraries" -> basicLibs))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>

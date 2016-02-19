@@ -3,26 +3,34 @@
 // @require scripts/formatting.js
 // @require scripts/render.js
 // @require scripts/prevent_ancestor_scroll.js
+// @require scripts/html/keeper/kifi_sel_range.js
 // @require scripts/html/keeper/look_link_broken.js
 
 var showBrokenLookLinkDialog = (function () {
   var $dialog;
 
   return function (a, authorName, arg) {
+    var ranges;
+    var imageUrl;
+    var boxWidth;
+
     if (typeof arg === 'string') {
-      var rangeHtml = formatKifiSelRangeTextAsHtml(arg, 'kifi-llb-dialog-p', 'kifi-llb-dialog-pp');
+      ranges = formatKifiSelRangeTextAsHtml(arg, 'kifi-llb-dialog-p', 'kifi-llb-dialog-pp');
     } else if (this instanceof HTMLImageElement) {
-      var imageUrl = this.src;
-      var boxWidth = Math.min(400, Math.max(190, 200 * this.naturalWidth / this.naturalHeight));
+      imageUrl = this.src;
+      boxWidth = Math.min(400, Math.max(190, 200 * this.naturalWidth / this.naturalHeight));
     }
 
     $dialog = $(k.render('html/keeper/look_link_broken', {
       authorName: authorName,
-      rangeHtml: rangeHtml,
+      ranges: ranges,
       imageUrl: imageUrl,
       boxWidth: boxWidth
+    },{
+      'kifi_sel_range': 'kifi_sel_range'
     }));
-    if (rangeHtml) {
+
+    if (ranges) {
       $dialog.find('.kifi-llb-dialog-quote').preventAncestorScroll();
     } else if (imageUrl) {
       this.className = 'kifi-llb-dialog-img';

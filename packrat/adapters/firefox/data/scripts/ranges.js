@@ -1,3 +1,5 @@
+// @module
+
 var ranges = {
   getClientRects: function (r) {
     return r.getClientRects();

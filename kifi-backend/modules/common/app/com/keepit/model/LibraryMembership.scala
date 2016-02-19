@@ -40,6 +40,7 @@ case class LibraryMembership(
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
+  def isActive: Boolean = state == LibraryMembershipStates.ACTIVE
   def canWrite: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE
   def isOwner: Boolean = access == LibraryAccess.OWNER
   def isCollaborator: Boolean = access == LibraryAccess.READ_WRITE

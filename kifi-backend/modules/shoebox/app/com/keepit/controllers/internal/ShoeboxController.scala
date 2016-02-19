@@ -561,7 +561,7 @@ class ShoeboxController @Inject() (
 
   def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Set[Id[Organization]]]
-    val basicOrgs = organizationInfoCommander.getBasicOrganizations(orgIds)
+    val basicOrgs = db.readOnlyMaster(implicit s => organizationInfoCommander.getBasicOrganizations(orgIds))
     Ok(Json.toJson(basicOrgs))
   }
 
@@ -603,7 +603,7 @@ class ShoeboxController @Inject() (
   def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
     val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
     val attributions = db.readOnlyMaster { implicit session =>
-      keepSourceAttributionRepo.getByKeepIdsNoCache(keepIds)
+      keepSourceAttributionRepo.getByKeepIds(keepIds)
     }
     implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
@@ -622,7 +622,7 @@ class ShoeboxController @Inject() (
     val input = request.body.as[Request]
     val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
     implicit val context = HeimdalContext.empty
-    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), input.creator, libraryOpt = None, source = KeepSource.discussion)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, source = KeepSource.discussion)
     val keep = internResponse.newKeeps.head
     db.readWrite { implicit s =>
       keepCommander.persistKeep(keep.withParticipants(input.users))
@@ -634,7 +634,7 @@ class ShoeboxController @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
     val users = (request.body \ "users").as[Set[Id[User]]]
     db.readWrite { implicit s =>
-      keepCommander.addUsersToKeep(keepId, adderId, users)
+      keepCommander.addUsersToKeep(keepId, Some(adderId), users)
     }
     Ok
   }

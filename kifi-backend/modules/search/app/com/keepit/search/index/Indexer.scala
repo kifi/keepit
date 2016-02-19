@@ -59,11 +59,13 @@ trait IndexingEventHandler[T, S] {
   }
 }
 
-abstract class Indexer[T, S, I <: Indexer[T, S, I]](
+abstract class Indexer[T, S, D <: Indexable[T, S], I <: Indexer[T, S, D, I]](
   indexDirectory: IndexDirectory,
   maxPrefixLength: Int = Int.MaxValue,
   minPrefixLength: Int = 1)
     extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
+
+  def name: String
 
   val commitBatchSize = 1000
 
@@ -143,7 +145,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     }
   }
 
-  def doUpdate(name: String)(changedIndexables: => Iterator[Indexable[T, S]]): Int = {
+  protected def shouldDelete(indexable: D): Boolean = indexable.isDeleted
+
+  def doUpdate(changedIndexables: => Iterator[D]): Int = {
     try {
       log.info(s"updating $name")
       val indexables = changedIndexables
@@ -177,9 +181,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     indexWriterLock.synchronized { indexWriter.close() }
   }
 
-  def getIndexerFor(id: Long): Indexer[T, S, I] = this
-
-  def indexInfos(name: String): Seq[IndexInfo] = {
+  def indexInfos: Seq[IndexInfo] = {
     Seq(IndexInfo(
       name = name,
       numDocs = numDocs,
@@ -196,11 +198,11 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     }.sum
   }
 
-  def indexDocuments(indexables: Iterator[Indexable[T, S]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
+  def indexDocuments(indexables: Iterator[D], commitBatchSize: Int, refresh: Boolean = true): Unit = {
     doWithIndexWriter { indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach { indexableBatch =>
-        var successful = new ArrayBuffer[Indexable[T, S]]
+        var successful = new ArrayBuffer[D]
         onStart(indexableBatch)
 
         // create a map from id to its highest seqNum in the batch
@@ -215,7 +217,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
           }
         }.map { indexable =>
           try {
-            if (indexable.isDeleted) {
+            if (shouldDelete(indexable)) {
               indexWriter.deleteDocuments(indexable.idTerm)
             } else {
               val document = try {

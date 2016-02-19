@@ -8,17 +8,18 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
-import com.keepit.social.BasicUser
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 
@@ -34,30 +35,34 @@ trait KeepDecorator {
 
 @Singleton
 class KeepDecoratorImpl @Inject() (
-    db: Database,
-    basicUserRepo: BasicUserRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    libraryRepo: LibraryRepo,
-    collectionCommander: CollectionCommander,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    keepRepo: KeepRepo,
-    ktlRepo: KeepToLibraryRepo,
-    ktuRepo: KeepToUserRepo,
-    keepImageCommander: KeepImageCommander,
-    libraryCardCommander: LibraryCardCommander,
-    userCommander: Provider[UserCommander],
-    organizationInfoCommander: OrganizationInfoCommander,
-    searchClient: SearchServiceClient,
-    keepSourceCommander: KeepSourceCommander,
-    permissionCommander: PermissionCommander,
-    eliza: ElizaServiceClient,
-    rover: RoverServiceClient,
-    airbrake: AirbrakeNotifier,
-    implicit val imageConfig: S3ImageConfig,
-    implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends KeepDecorator with Logging {
+  db: Database,
+  basicUserRepo: BasicUserRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
+  libraryRepo: LibraryRepo,
+  collectionCommander: CollectionCommander,
+  libraryMembershipRepo: LibraryMembershipRepo,
+  keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
+  ktuRepo: KeepToUserRepo,
+  keepImageCommander: KeepImageCommander,
+  libraryCardCommander: LibraryCardCommander,
+  userCommander: UserCommander,
+  organizationInfoCommander: OrganizationInfoCommander,
+  searchClient: SearchServiceClient,
+  keepSourceCommander: KeepSourceCommander,
+  permissionCommander: PermissionCommander,
+  eliza: ElizaServiceClient,
+  rover: RoverServiceClient,
+  airbrake: AirbrakeNotifier,
+  implicit val imageConfig: S3ImageConfig,
+  implicit val s3: S3ImageStore,
+  implicit val executionContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends KeepDecorator with Logging {
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(viewerIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
       case k: List[Keep] => k
       case other =>
@@ -65,11 +70,13 @@ class KeepDecoratorImpl @Inject() (
         airbrake.notify("[decorateKeepsIntoKeepInfos] Found it! Grab Léo, Yingjie, and Andrew", new Exception())
         other.toList
     }
+    val keepIds = keeps.map(_.id.get).toSet
+
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
+        searchClient.augment(viewerIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val ktusByKeep = db.readOnlyMaster(implicit s => ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet))
       val entitiesFutures = augmentationFuture.map { augmentationInfos =>
@@ -81,7 +88,7 @@ class KeepDecoratorImpl @Inject() (
         val basicOrgByLibId = {
           val orgIdByLibId = idToLibrary.collect { case (libId, lib) if lib.organizationId.isDefined => libId -> lib.organizationId.get }
           val orgIds = orgIdByLibId.values.toSet
-          val basicOrgById = organizationInfoCommander.getBasicOrganizations(orgIds)
+          val basicOrgById = db.readOnlyMaster(implicit s => organizationInfoCommander.getBasicOrganizations(orgIds))
           orgIdByLibId.mapValues(basicOrgById(_))
         }
 
@@ -89,7 +96,7 @@ class KeepDecoratorImpl @Inject() (
           val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
+          val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers) } //cached
         }
@@ -102,7 +109,7 @@ class KeepDecoratorImpl @Inject() (
         val libraryCardByLibId = {
           val libraries = keeps.flatMap(_.libraryId.map(idToLibrary(_)))
           val cards = db.readOnlyMaster { implicit s =>
-            libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, perspectiveUserIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
+            libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, viewerIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
           }
           (libraries.map(_.id.get) zip cards).toMap
         }
@@ -115,18 +122,14 @@ class KeepDecoratorImpl @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = db.readOnlyMaster { implicit s =>
-        val attributionById = keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(keeps.flatMap(_.id).toSet)
-        keeps.map { keep => attributionById.get(keep.id.get) }
-      }
+      val sourceAttrsFut = db.readOnlyReplicaAsync { implicit s => keepSourceCommander.getSourceAttributionForKeeps(keepIds) }
 
-      val allMyKeeps = perspectiveUserIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
+      val allMyKeeps = viewerIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
 
-      val librariesWithWriteAccess = perspectiveUserIdOpt.map { userId =>
+      val librariesWithWriteAccess = viewerIdOpt.map { userId =>
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
-      val keepIds = keeps.map(_.id.get).toSet
       val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds).recover {
         case fail =>
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
@@ -137,18 +140,18 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, perspectiveUserIdOpt))
+      val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
+        sourceAttrs <- sourceAttrsFut
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
       } yield {
-
-        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
-          case ((keep, collsForKeep), augmentationInfoForKeep, (pageInfoForKeep, sourceAttrOpt)) =>
-            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
+        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.flatMap {
+          case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+            val keepers = viewerIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.getOrElse(keep.uriId, Set.empty)
             val libraries = {
               def doShowLibrary(libraryId: Id[Library]): Boolean = {
@@ -164,36 +167,46 @@ class KeepDecoratorImpl @Inject() (
               case _ => keep.path.relative
             }
 
-            KeepInfo(
-              id = Some(keep.externalId),
-              pubId = Some(Keep.publicId(keep.id.get)),
-              title = keep.title,
-              url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
-              path = bestEffortPath,
-              isPrivate = keep.isPrivate,
-              user = idToBasicUser.get(keep.userId),
-              createdAt = Some(getTimestamp(keep)),
-              keeps = Some(keeps),
-              keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),
-              keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
-              keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-              libraries = Some(libraries),
-              librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
-              librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
-              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
-              tags = Some(collsForKeep.toSet), // Used by site
-              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
-              summary = Some(pageInfoForKeep),
-              siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              libraryId = keep.libraryId.map(Library.publicId),
-              library = keep.libraryId.map(idToLibraryCard(_)),
-              organization = keep.libraryId.flatMap(idToBasicOrg.get),
-              sourceAttribution = sourceAttrOpt,
-              note = keep.note,
-              discussion = discussionsByKeep.get(keep.id.get),
-              participants = ktusByKeep(keep.id.get).map(ktu => idToBasicUser(ktu.userId)),
-              permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
-            )
+            (for {
+              author <- sourceAttrs.get(keep.id.get).map {
+                case (attr, userOpt) => BasicAuthor(attr, userOpt)
+              } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
+            } yield {
+              KeepInfo(
+                id = Some(keep.externalId),
+                pubId = Some(Keep.publicId(keep.id.get)),
+                title = keep.title,
+                url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
+                path = bestEffortPath,
+                isPrivate = keep.isPrivate,
+                user = keep.userId.flatMap(idToBasicUser.get),
+                author = author,
+                createdAt = Some(getTimestamp(keep)),
+                keeps = Some(keeps),
+                keepers = Some(keepers.flatMap { case (keeperId, _) => idToBasicUser.get(keeperId) }),
+                keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
+                keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
+                libraries = Some(libraries),
+                librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
+                librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
+                collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
+                tags = Some(collsForKeep.toSet), // Used by site
+                hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
+                summary = Some(pageInfoForKeep),
+                siteName = DomainToNameMapper.getNameFromUrl(keep.url),
+                libraryId = keep.libraryId.map(Library.publicId),
+                library = keep.libraryId.flatMap(idToLibraryCard.get),
+                organization = keep.libraryId.flatMap(idToBasicOrg.get),
+                sourceAttribution = sourceAttrs.get(keep.id.get),
+                note = keep.note,
+                discussion = discussionsByKeep.get(keep.id.get),
+                participants = ktusByKeep.getOrElse(keep.id.get, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
+                permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
+              )
+            }) tap {
+              case None => slackLog.warn(s"Could not generate an author for keep ${keep.id.get}")
+              case _ =>
+            }
         }
         keepsInfo
       }
@@ -204,11 +217,11 @@ class KeepDecoratorImpl @Inject() (
     val allUsers = (infos flatMap { info =>
       val keepers = info.keepers
       val libs = info.libraries
-      (libs.map(_._2) ++ keepers.map(_._1))
+      libs.map(_._2) ++ keepers.map(_._1)
     }).toSet
     if (allUsers.isEmpty) infos
     else {
-      val fakeUsers = userCommander.get.getAllFakeUsers().intersect(allUsers)
+      val fakeUsers = userCommander.getAllFakeUsers().intersect(allUsers)
       if (fakeUsers.isEmpty) infos
       else {
         infos map { info =>
@@ -254,7 +267,7 @@ class KeepDecoratorImpl @Inject() (
       grouped.get(uriId) match {
         case Some(keeps) =>
           val userKeeps = keeps.map { keep =>
-            val mine = userId == keep.userId
+            val mine = keep.userId.contains(userId)
             val removable = true // all keeps here are writeable
             PersonalKeep(
               id = keep.externalId,

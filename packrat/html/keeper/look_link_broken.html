@@ -1,25 +1,29 @@
 <kifi class="kifi-root kifi-llb-dialog">
-  <div class="kifi-llb-dialog-box{{#rangeHtml}} kifi-range{{/rangeHtml}}{{#imageUrl}} kifi-image{{/imageUrl}}"{{#boxWidth}} style="width:{{boxWidth}}px"{{/boxWidth}}>
+  <div class="kifi-llb-dialog-box{{#ranges.length}} kifi-range{{/ranges.length}}{{#imageUrl}} kifi-image{{/imageUrl}}"{{#boxWidth}} style="width:{{boxWidth}}px"{{/boxWidth}}>
     <a class="kifi-llb-dialog-x" href="javascript:"></a>
-    {{#rangeHtml}}
+    {{#ranges.length}}
       <div class="kifi-llb-dialog-body">
         We had trouble locating what {{authorName}} highlighted on this page, but here’s what it said:
       </div>
       <div class="kifi-llb-dialog-quote-mark">“</div>
-      <div class="kifi-llb-dialog-quote">{{{rangeHtml}}}</div>
-    {{/rangeHtml}}
+      <div class="kifi-llb-dialog-quote">
+      {{#ranges}}
+        {{>kifi_sel_range}}
+      {{/ranges}}
+      </div>
+    {{/ranges.length}}
     {{#imageUrl}}
       <div class="kifi-llb-dialog-body">
         We had trouble locating the image {{authorName}} highlighted on this page, but here’s what it looks like:
       </div>
       <a class="kifi-llb-dialog-img-a" href="{{imageUrl}}" target="_blank"></a>
     {{/imageUrl}}
-    {{^rangeHtml}}{{^imageUrl}}
+    {{^ranges.length}}{{^imageUrl}}
       <div class="kifi-llb-dialog-body">
         {{authorName}} highlighted something on this page, but we had trouble locating it just now.
         The page may have changed. For more information, please visit
         <a href="http://support.kifi.com/customer/portal/articles/1405604" target="_blank">our support center</a>.
       </div>
-    {{/imageUrl}}{{/rangeHtml}}
+    {{/imageUrl}}{{/ranges.length}}
   </div>
 </kifi>

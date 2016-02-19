@@ -4,11 +4,12 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$rootElement', '$analytics', '$rootScope', '$document', 'profileService', 'libraryService',
-  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS',
+  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS', '$window', 'extensionLiaison',
   function (
     $scope, $rootElement, $analytics, $rootScope, $document, profileService, libraryService,
-    $location, util, KEY, modalService, $timeout, $state, mobileOS) {
+    $location, util, KEY, modalService, $timeout, $state, mobileOS, $window, extensionLiaison) {
 
+    $scope.hasExtension = !!$window.document.documentElement.getAttribute('data-kifi-ext');
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
 
@@ -21,6 +22,10 @@ angular.module('kifi')
       $scope.calloutVisible = false;
       profileService.prefs.site_notify_libraries_in_search = false;
       profileService.savePrefs({site_notify_libraries_in_search: false});
+    };
+
+    $scope.viewGuide = function() {
+      extensionLiaison.triggerGuide();
     };
 
     $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');
@@ -174,6 +179,33 @@ angular.module('kifi')
       });
       $state.go('teams.new');
     };
+
+    $scope.importBookmarks = function () {
+      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
+
+      if (!kifiVersion) {
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
+        return;
+      }
+
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+      $analytics.eventTrack('user_clicked_page', {
+        'type': 'yourKeeps',
+        'action': 'clickedImportBrowserSideNav'
+      });
+    };
+
+    $scope.importBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+      $analytics.eventTrack('user_clicked_page', {
+        'type': 'yourKeeps',
+        'action': 'clicked3rdPartySideNav'
+      });
+    };
+
 
     function onDocKeyDown(e) {
       if (!e.isDefaultPrevented()) {

@@ -25,16 +25,13 @@ angular.module('kifi')
       }
 
       var anchor = angular.element(hash)[0];
-      var headerHeightIsh = 70; // TODO(carlos): find an elegant way to compute this
-      var headingTop;
+      var header = angular.element('.kf-oph')[0];
       var scrollDestination;
 
       if (anchor) {
-        headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
-        scrollDestination = headingTop - headerHeightIsh; // make room for header
-
-        angular.element('html, body').animate({
-          scrollTop: scrollDestination
+        scrollDestination = anchor.getBoundingClientRect().top - (header && header.getBoundingClientRect().top || 0);
+        angular.element('#kf-body-container-content, html, body').animate({
+          scrollTop: scrollDestination - 16 // the 16 provides padding from the site header
         });
       }
     }

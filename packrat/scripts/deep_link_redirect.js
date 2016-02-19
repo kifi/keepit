@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:9\d{3}|www\.kifi\.com)\/(r\/|redir).*/
+// @match /^https?:\/\/(dev\.ezkeep\.com:9\d{3}|www\.kifi\.com)\/(r\/|redir|s\/).*/
 // @require scripts/api.js
 // @asap
 

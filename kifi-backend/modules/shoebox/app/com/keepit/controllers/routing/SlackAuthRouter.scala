@@ -83,7 +83,7 @@ class SlackAuthRouter @Inject() (
   def fromSlackToOrgIntegrations(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
-        val target = pathCommander.orgIntegrationsPage(org).absolute
+        val target = pathCommander.orgIntegrationsPage(org).absolute + "#slack-settings-" // Carlos magic to smooth-scroll to the settings part
         weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId) match {
           case true => redirectThroughSlackAuth(org, slackTeamId, target)
           case false => Redirect(target)
@@ -107,22 +107,17 @@ class SlackAuthRouter @Inject() (
   }
 
   def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = MaybeUserAction { implicit request =>
-    val (deepLinkRedirect, isLoggedIn) = request match {
-      case ur: UserRequest[_] => (ur.kifiInstallationId.isDefined && ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate), true)
-      case _ => (false, false)
-    }
-
     // show 3rd party url with ext if possible, otherwise go to keep page (with proper upsells) or 3rd party url
     val redirOpt = db.readOnlyMaster { implicit s =>
       Keep.decodePublicId(pubId)
         .map(keepId => keepRepo.get(keepId)).filter(_.isActive)
         .map { keep =>
+          val isLoggedIn = request.userIdOpt.isDefined
           val keepPageUrl = pathCommander.pathForKeep(keep).absolute
-          if (deepLinkRedirect) {
-            val deepRedirect = DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")) // open ext
-            Ok(html.mobile.deepLinkRedirect(deepRedirect, DeepLinkRouter.keepLink(pubId, None)))
+          if (!onKifi) {
+            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
           } else if (onKifi && isLoggedIn) {
-            Redirect(keepPageUrl)
+            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keepPageUrl))
           } else if (onKifi && !isLoggedIn) {
             val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
             val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))

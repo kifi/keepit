@@ -30,6 +30,8 @@ angular.module('kifi')
         scope.inviter = profileService.me;
         scope.organization = scope.modalData.organization;
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
+        var slackTeamId = _.get(scope, 'organization.slack.slackTeam.id');
+        scope.slackLink = slackTeamId && ('https://www.kifi.com/s/' + slackTeamId + '/o/' + scope.organization.id);
 
         function inviteMember(opts) {
           if (scope.invitation.message) {
@@ -184,6 +186,17 @@ angular.module('kifi')
 
         scope.onResultUnhover = function (result) {
           result.selected = false;
+        };
+
+        scope.clickedSlackCopy = function () {
+          trackInviteEvent('click', {
+            action: 'clicked_copy_invite_url'
+          });
+
+          scope.showCopiedConfirm = true;
+          $timeout(function () {
+            scope.showCopiedConfirm = false;
+          }, 3000);
         };
 
         scope.processKeyEvent = function ($event) {

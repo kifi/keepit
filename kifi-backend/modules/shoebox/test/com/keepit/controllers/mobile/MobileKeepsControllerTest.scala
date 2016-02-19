@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ S3ImageStore, S3ImageConfig, FakeShoeboxStoreModule }
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal._
@@ -22,7 +22,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.{ KeepToCollection, UserFactory, _ }
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -51,7 +51,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
   implicit val helperFormat = RawBookmarkRepresentation.helperFormat
 
-  implicit def pubIdConfig(implicit injetesctor: Injector) = inject[PublicIdConfiguration]
+  implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+  implicit def s3Config(implicit injector: Injector): S3ImageConfig = inject[S3ImageConfig]
 
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
@@ -107,7 +108,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = None, after = None, collection = None, helprank = None).url
       path === "/m/1/keeps/all"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-      inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId, user2.id.get), 3), (Seq(bookmark2.userId), 1))
+      inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId.get, user2.id.get), 3), (Seq(bookmark2.userId.get), 1))
 
       inject[FakeUserActionsHelper].setUser(user1)
       val request = FakeRequest("GET", path)
@@ -119,15 +120,18 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         count = Integer.MAX_VALUE,
         withPageInfo = false
       )(request)
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
+      val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
       val expected = Json.parse(s"""
-        {"collection":null,
+        {
+         "collection":null,
          "before":null,
          "after":null,
          "keeps":[
           {
+            "author":${Json.toJson(author)},
             "id":"${bookmark2.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark2.id.get).id}",
             "title":"A1",
@@ -154,6 +158,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "permissions": ${Json.toJson(keepPermissions)}
             },
           {
+            "author":${Json.toJson(author)},
             "id":"${bookmark1.externalId.toString}",
             "pubId":"${Keep.publicId(bookmark1.id.get).id}",
             "title":"G1",
@@ -204,7 +209,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = None, after = None, collection = None, helprank = Some("click")).url
       path === "/m/1/keeps/all?helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-      inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3), (Seq(keeps1(0).userId), 1))
+      inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId.get, u2.id.get), 3), (Seq(keeps1(0).userId.get), 1))
 
       inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
@@ -242,7 +247,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
       path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-      inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3))
+      inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId.get, u2.id.get), 3))
       inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
       val result = inject[MobileKeepsController].allKeepsV1(
@@ -300,7 +305,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       keeps.size === 2
 
       inject[FakeUserActionsHelper].setUser(user)
-      inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId), 1), (Seq(bookmark2.userId), 1))
+      inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId.get), 1), (Seq(bookmark2.userId.get), 1))
 
       val request = FakeRequest("GET", s"/m/1/keeps/all?after=${bookmark1.externalId.toString}")
       val result = inject[MobileKeepsController].allKeepsV1(

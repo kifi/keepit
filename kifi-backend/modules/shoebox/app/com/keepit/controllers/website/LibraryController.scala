@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.commanders.{ RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserRequest, _ }
@@ -55,6 +56,7 @@ class LibraryController @Inject() (
   keepImageCommander: KeepImageCommander,
   permissionCommander: PermissionCommander,
   libraryCardCommander: LibraryCardCommander,
+  libraryQueryCommander: LibraryQueryCommander,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryMembershipCommander: LibraryMembershipCommander,
@@ -696,6 +698,18 @@ class LibraryController @Inject() (
     } getOrElse {
       Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
     }
+  }
+
+  def getLHRLibrariesForUser(userExtId: ExternalId[User], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = UserAction { request =>
+    val arrangement = for {
+      ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
+      direction <- directionOpt.flatMap(SortDirection.fromStr)
+    } yield LibraryQuery.Arrangement(ordering, direction)
+
+    val basicLibs = db.readOnlyMaster { implicit s =>
+      libraryQueryCommander.getLHRLibrariesForUser(request.userId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize)
+    }
+    Ok(Json.obj("libs" -> basicLibs))
   }
 
 }

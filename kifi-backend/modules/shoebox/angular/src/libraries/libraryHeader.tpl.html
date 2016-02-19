@@ -24,9 +24,40 @@
           icon="org"
         ></svg>
       </div>
-
-      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="!library.isSystem && hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"></button>
-
+      <span
+        ng-if="((!!library.org && library.org.viewer.membership.role === 'admin') || hasPermission(LIB_PERMISSION.EDIT_LIBRARY)) && isMutable()"
+        ng-class="{
+          'kf-tooltip-parent kf-tooltip-parent-noclose': library.org.viewer.membership.role === 'admin' && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)
+        }"
+        data-kf-tooltip-position="bottom"
+      >
+        <span
+          class="kf-tooltip-body"
+          ng-if="library.org.viewer.membership.role === 'admin' && !hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+          ng-click="onClickUpsellEditLibrary(library)"
+          ng-hover="onHoverUpsellEditLibrary(library)"
+        >
+          <span ng-if="!getMeOrg().config.showUpsells">
+            <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+              Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: library.org.handle })">settings</a>
+            </span>
+            <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+              Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: library.org.handle })">settings</a>
+            </span>
+            <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+              All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: library.org.handle })">settings</a>
+            </span>
+          </span>
+          <span ng-if="getMeOrg().config.showUpsells">
+            Enable admins or all team members to edit library settings by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: library.org.handle, upgrade: true })">upgrading your plan</a>.
+          </span>
+        </span>
+        <button
+          class="kf-lh-manage-btn svg-settings-gear-filled"
+          ng-click="manageLibrary()"
+          ng-disabled="!hasPermission(LIB_PERMISSION.EDIT_LIBRARY)"
+        ></button>
+      </span>
       <div class="kf-lh-cover-menu-parent" kf-click-menu ng-if="isOwner() && !library.isSystem">
         <button class="kf-lh-cover-menu-btn svg-camera-filled" ng-mouseup="onCameraCoverImageMouseUp($event)"></button>
         <menu class="kf-dropdown-menu kf-lh-cover-menu">

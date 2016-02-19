@@ -110,7 +110,8 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
           scopes = Set(),
           teamName = SlackTeamName("fake"),
           teamId = slackTeamId,
-          incomingWebhook = None
+          incomingWebhook = None,
+          botAuth = None
         ),
         SlackIdentifyResponse(
           url = "fake.slack.com",
@@ -122,7 +123,6 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
       )
 
       val res1 = authCommander.loginWithTrustedSocialIdentity(identityId)
-      println(res1)
       res1.header.status === OK
       res1.session.getUserId.isDefined === true
       res1.session.getUserId.get === user.id.get

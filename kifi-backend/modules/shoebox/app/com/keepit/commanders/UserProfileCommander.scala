@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.commanders.LibraryQuery.Arrangement
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
@@ -11,6 +12,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.util.Paginator
 import com.keepit.common.performance.StatsdTiming
+import com.keepit.controllers.website.{ BasicUserWithTopLibraries, BasicOrgWithTopLibraries, LeftHandRailResponse }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -40,6 +42,9 @@ class UserProfileCommander @Inject() (
     userValueRepo: UserValueRepo,
     libraryCardCommander: LibraryCardCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
+    libQueryCommander: LibraryQueryCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
+    orgMembershipRepo: OrganizationMembershipRepo,
     graphServiceClient: GraphServiceClient,
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
@@ -275,6 +280,30 @@ class UserProfileCommander @Inject() (
   private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
     UserValueSettings.retrieveSetting(userVal, settingsJs)
+  }
+
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement], windowSize: Option[Int]): LeftHandRailResponse = {
+    db.readOnlyMaster { implicit s =>
+      import LibraryQuery._
+
+      val sortingArrangement = arrangement.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+      val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+
+      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
+      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
+
+      val basicOrgsWithTopLibs = organizationInfoCommander.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
+        .map {
+          case (id, org) =>
+            val basicLibs = orgLibs.getOrElse(id, Seq.empty)
+            BasicOrgWithTopLibraries(org, basicLibs)
+        }
+
+      LeftHandRailResponse(
+        BasicUserWithTopLibraries(basicUserRepo.load(userId), userLibs),
+        basicOrgsWithTopLibs
+      )
+    }
   }
 
 }

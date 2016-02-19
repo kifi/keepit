@@ -27,7 +27,7 @@ object IndexerPluginMessages {
   case object Close
 }
 
-trait IndexManager[S, I <: Indexer[_, S, I]] {
+trait IndexManager[S, I <: Indexer[_, S, _, I]] {
   def update(): Int
   def backup(): Unit
   def numDocs: Int
@@ -39,7 +39,7 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def warmUpIndexDirectory(): Unit
   def reindex(): Unit
   def close(): Unit
-  def indexInfos(name: String): Seq[IndexInfo]
+  def indexInfos: Seq[IndexInfo]
   def lastBackup: Long
 
   val airbrake: AirbrakeNotifier
@@ -47,7 +47,7 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
   def updateAsync(): Unit = updateTaskManager.request()
 }
 
-class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]](indexer: IndexManager[S, I], airbrake: AirbrakeNotifier) extends RecurringTaskManager {
+class IndexUpdateTaskManager[S, I <: Indexer[_, S, _, I]](indexer: IndexManager[S, I], airbrake: AirbrakeNotifier) extends RecurringTaskManager {
   private[this] val errorCount = new AtomicInteger(0)
 
   override def doTask(): Unit = {
@@ -62,7 +62,7 @@ class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]](indexer: IndexManager[S, 
   }
 }
 
-trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
+trait IndexerPlugin[S, I <: Indexer[_, S, _, I]] extends SchedulerPlugin {
   def update()
   def reindex()
   def refreshSearcher()
@@ -75,7 +75,7 @@ trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
   def indexInfos: Seq[IndexInfo]
 }
 
-abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, I]](
+abstract class IndexerPluginImpl[S, I <: Indexer[_, S, _, I], A <: IndexerActor[S, I]](
     indexer: IndexManager[S, I],
     actor: ActorInstance[A],
     serviceDiscovery: ServiceDiscovery) extends IndexerPlugin[S, I] {
@@ -96,7 +96,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
 
     scheduleTaskOnAllMachines(actor.system, (60 + rnd.nextInt(60)) seconds, indexingInterval, actor.ref, UpdateIndex)
 
-    if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+    if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 1 hour, 4 hours, actor.ref, BackUpIndex)
     else {
       // regular search instance
       actor.ref ! WarmUpIndexDirectory
@@ -140,12 +140,12 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
 
   override def committedAt: Option[String] = indexer.committedAt
 
-  def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
+  def indexInfos: Seq[IndexInfo] = indexer.indexInfos
 }
 
-sealed abstract class IndexerActor[S, I <: Indexer[_, S, I]](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake)
+sealed abstract class IndexerActor[S, I <: Indexer[_, S, _, I]](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake)
 
-class BasicIndexerActor[S, I <: Indexer[_, S, I]](
+class BasicIndexerActor[S, I <: Indexer[_, S, _, I]](
     airbrake: AirbrakeNotifier,
     indexer: IndexManager[S, I]) extends IndexerActor[S, I](airbrake) {
 
@@ -171,7 +171,7 @@ class BasicIndexerActor[S, I <: Indexer[_, S, I]](
 // todo(Léo): Switch all indexers to using a coordinating actor *internally* to manage their state
 // todo(Léo): Expose indexers instead of multiple plugins for API calls, have a single plugin that schedules all of them
 
-abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
+abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, _, I]](
     airbrake: AirbrakeNotifier,
     indexer: IndexManager[S, I]) extends IndexerActor[S, I](airbrake) {
 

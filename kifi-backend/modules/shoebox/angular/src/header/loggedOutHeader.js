@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
-  '$scope', '$rootScope', '$state', '$timeout', '$location', '$document',
-  'signupService', 'platformService', 'libraryService', 'util',
-  function ($scope, $rootScope, $state, $timeout, $location, $document,
-            signupService, platformService, libraryService, util) {
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$location', '$document',
+  'signupService', 'platformService', 'libraryService', 'orgProfileService', 'util',
+  function ($scope, $rootScope, $state, $stateParams, $timeout, $location, $document,
+            signupService, platformService, libraryService, orgProfileService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
 
@@ -123,6 +123,12 @@ angular.module('kifi')
         if (isMobile) {
           platformService.goToAppOrStore();
         }
+      } else if ($state.includes('orgProfile.slack')) {
+        orgProfileService.userOrOrg($stateParams.handle).then(function (resData) {
+          if (resData.result) {
+            orgProfileService.trackEvent('visitor_clicked_page', resData.result.organization, { type: 'orgLanding', action: 'clickedSignupHeader' });
+          }
+        });
       }
     };
 
@@ -132,7 +138,7 @@ angular.module('kifi')
         $event.preventDefault();
       }
 
-      if (util.startsWith($state.current.name, 'library')) {
+      if ($state.includes('library')) {
         $scope.$emit('getCurrentLibrary', {
           callback: function (lib) {
             if (lib && lib.id) {
@@ -147,7 +153,7 @@ angular.module('kifi')
             }
           }
         });
-      } else if (util.startsWith($state.current.name, 'userProfile')) {
+      } else if ($state.includes('userProfile')) {
         $rootScope.$emit('trackUserProfileEvent', 'click', {
           action: 'clickedLoginHeader'
         });
@@ -155,6 +161,12 @@ angular.module('kifi')
         if (isMobile) {
           platformService.goToAppOrStore();
         }
+      } else if ($state.includes('orgProfile.slack')) {
+        orgProfileService.userOrOrg($stateParams.handle).then(function (resData) {
+          if (resData.result) {
+            orgProfileService.trackEvent('visitor_clicked_page', resData.result.organization, { type: 'orgLanding', action: 'clickedLoginHeader' });
+          }
+        });
       }
     };
 

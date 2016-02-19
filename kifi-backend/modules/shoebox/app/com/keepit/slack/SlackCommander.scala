@@ -11,6 +11,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.oauth.SlackIdentity
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.keepit.social.Author
 import play.api.libs.json._
 import com.keepit.common.json.{ TraversableFormat, formatNone }
 import com.keepit.common.core._
@@ -25,7 +26,7 @@ object SlackCommander {
 
 @ImplementedBy(classOf[SlackCommanderImpl])
 trait SlackCommander {
-  def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
+  def registerAuthorization(userId: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]]
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean
   def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
 }
@@ -39,27 +40,30 @@ class SlackCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   slackClient: SlackClientWrapper,
+  keepSourceCommander: KeepSourceCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander with Logging {
 
-  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
+  def registerAuthorization(userIdOpt: Option[Id[User]], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Option[Id[SlackIncomingWebhookInfo]] = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
+      slackTeamRepo.internSlackTeam(auth.teamId, auth.teamName, auth.botAuth)
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
-      auth.incomingWebhook.foreach { webhook =>
+      auth.incomingWebhook.map { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
           slackChannelId = webhook.channelId,
           webhook = webhook,
           lastPostedAt = None
-        ))
+        )).id.get
       }
     }
   }
 
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
+    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName, botAuth = None)
     val (membership, isNewIdentityOwner) = slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = userIdOpt,
       slackUserId = identity.userId,
@@ -70,8 +74,12 @@ class SlackCommanderImpl @Inject() (
       scopes = identity.scopes,
       slackUser = identity.user
     ))
-    slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName)
     autojoinOrganization(membership)
+    userIdOpt.foreach { userId =>
+      session.onTransactionSuccess {
+        keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.teamId, identity.userId), userId)
+      }
+    }
     isNewIdentityOwner
   }
 
@@ -105,7 +113,7 @@ class SlackCommanderImpl @Inject() (
     }
 
     futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes))
+      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ Some(SlackAuthScope.Bot).filter(_ => slackTeamIdOpt.safely.contains(KifiSlackApp.BrewstercorpTeamId)))
     }
   }
 }

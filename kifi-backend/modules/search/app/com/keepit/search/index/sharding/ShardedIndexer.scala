@@ -7,7 +7,19 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.index.IndexInfo
 import com.keepit.common.logging.Logging
 
-trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging {
+object ShardedIndexer {
+  def computeFetchSize[K](localShards: Set[Shard[K]], localFetchSize: Int, maxFetchSize: Int): Int = {
+    for {
+      numShards <- localShards.headOption.map(_.numShards) if numShards > 0
+      numLocalShards <- Some(localShards.size) if numLocalShards > 0
+    } yield {
+      val localCoverage = (numLocalShards.toFloat / numShards)
+      (localFetchSize / localCoverage).toInt min maxFetchSize
+    }
+  } getOrElse 0
+}
+
+trait ShardedIndexer[K, S, I <: Indexer[_, S, _, I]] extends IndexManager[S, I] with Logging {
   val indexShards: Map[Shard[K], I]
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
@@ -49,8 +61,8 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
   def getIndexerFor(id: Id[K]): I = getIndexer(indexShards.keysIterator.find(_.contains(id)).get)
   def getIndexer(shard: Shard[K]): I = indexShards(shard)
 
-  def indexInfos(name: String): Seq[IndexInfo] = {
-    indexShards.flatMap { case (shard, indexer) => indexer.indexInfos(shard.indexNameSuffix) }.toSeq
+  def indexInfos: Seq[IndexInfo] = {
+    indexShards.flatMap { case (shard, indexer) => indexer.indexInfos }.toSeq
   }
 
   def numDocs: Int = indexShards.valuesIterator.map(_.numDocs).sum

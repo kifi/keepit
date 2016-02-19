@@ -56,18 +56,22 @@ angular.module('kifi')
 
     $scope.onKifiToSlackChanged = function(integration) {
       integration.integration.toSlack.status = integration.kifiToSlack ? 'on' : 'off';
-      libraryService.modifySlackIntegrations(integration.library.id, [integration.integration.fromSlack, integration.integration.toSlack])
+      slackService.modifyLibraryPushIntegration(integration.library.id, integration.integration.toSlack.id, integration.kifiToSlack)
       .then(onSave, onError);
     };
 
     $scope.onSlackToKifiChanged = function(integration) {
       integration.integration.fromSlack.status = integration.slackToKifi ? 'on' : 'off';
-      libraryService.modifySlackIntegrations(integration.library.id, [integration.integration.fromSlack, integration.integration.toSlack])
+      slackService.modifyLibraryIngestIntegration(integration.library.id, integration.integration.fromSlack.id, integration.slackToKifi)
       .then(onSave, onError);
     };
 
-    function onSave() {
-      messageTicker({ text: 'Saved!', type: 'green' });
+    function onSave(resp) {
+      if (resp.success) {
+        messageTicker({ text: 'Saved!', type: 'green' });
+      } else if (resp.redirect) {
+        $window.location = resp.redirect;
+      }
     }
 
     function onError() {
@@ -75,7 +79,7 @@ angular.module('kifi')
     }
 
     $scope.onClickedSyncAllSlackChannels = function() {
-      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
+      $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
       slackService.publicSync($scope.profile.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
@@ -86,7 +90,7 @@ angular.module('kifi')
     };
 
     $scope.onClickedConnectSlack = function() {
-      $analytics.eventTrack('user_clicked_pane', { type: 'orgProfileIntegrations', action: 'connectSlack' });
+      $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'connectSlack' });
       slackService.connectTeam($scope.profile.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Slack connected!', type: 'green' });

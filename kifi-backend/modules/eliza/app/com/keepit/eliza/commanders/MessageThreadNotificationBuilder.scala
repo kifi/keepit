@@ -134,6 +134,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   messageThreadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
   messageRepo: MessageRepo,
+  messageFetchingCommander: MessageFetchingCommander,
   shoebox: ShoeboxServiceClient,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
@@ -184,23 +185,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
 
-        def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
-        val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-        val messageWithBasicUser = MessageWithBasicUser(
-          id = message.pubId,
-          createdAt = message.createdAt,
-          text = message.messageText,
-          source = message.source,
-          auxData = None,
-          url = message.sentOnUrl.getOrElse(thread.url),
-          nUrl = thread.nUrl,
-          message.from match {
-            case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
-            case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-            case _ => None
-          },
-          thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++ basicNonUserParticipants.toSeq
-        )
+        val messageWithBasicUser = messageFetchingCommander.getMessageWithBasicUser(message, thread, basicUserByIdMap)
         val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
 
         val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
@@ -209,7 +194,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
           case None => authorActivityInfos.count(_.userId != userId)
         }
         keepId -> MessageThreadNotification(
-          message = message,
+          message = message.withText(messageWithBasicUser.text),
           thread = thread,
           messageWithBasicUser = messageWithBasicUser,
           unread = !message.from.asUser.contains(userId),

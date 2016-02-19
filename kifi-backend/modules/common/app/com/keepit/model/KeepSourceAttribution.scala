@@ -1,18 +1,15 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.db._
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
-import com.keepit.slack.models.SlackMessage
-import com.keepit.social.BasicUser
-import com.keepit.social.twitter.{ RawTweet, TwitterHandle }
-import com.kifi.macros.json
+import com.keepit.slack.models.{ SlackTeamName, SlackTeamId, SlackMessage }
+import com.keepit.social.Author
+import com.keepit.social.twitter.RawTweet
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 case class KeepSourceAttribution(
@@ -20,7 +17,8 @@ case class KeepSourceAttribution(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     keepId: Id[Keep],
-    attribution: SourceAttribution,
+    author: Author,
+    attribution: RawSourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 
   def withId(id: Id[KeepSourceAttribution]) = this.copy(id = Some(id))
@@ -36,38 +34,31 @@ sealed abstract class KeepAttributionType(val name: String)
 object KeepAttributionType extends Enumerator[KeepAttributionType] {
   case object Twitter extends KeepAttributionType("twitter")
   case object Slack extends KeepAttributionType("slack")
-  def all = _all
-  def fromString(name: String): Try[KeepAttributionType] = {
-    all.collectFirst {
-      case attrType if attrType.name equalsIgnoreCase name => Success(attrType)
-    } getOrElse Failure(UnknownAttributionTypeException(name))
-  }
+  private def all = _all
+  def fromString(name: String): Option[KeepAttributionType] = all.find(_.name equalsIgnoreCase name)
 
-  implicit val format = Format[KeepAttributionType](
-    Reads(_.validate[String].flatMap(name => KeepAttributionType.fromString(name).map(JsSuccess(_)).recover { case error => JsError(error.getMessage) }.get)),
-    Writes(attrType => JsString(attrType.name))
-  )
+  implicit val format: Format[KeepAttributionType] = EnumFormat.format(fromString, _.name, all.map(_.name).toSet)
 }
 
-sealed trait SourceAttribution
-object SourceAttribution {
+sealed trait RawSourceAttribution
+object RawSourceAttribution {
   import KeepAttributionType._
-  def toJson(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
+  def toJson(attr: RawSourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
-      case t: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(t))
-      case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
+      case t: RawTwitterAttribution => (Twitter, RawTwitterAttribution.format.writes(t))
+      case s: RawSlackAttribution => (Slack, RawSlackAttribution.format.writes(s))
     }
   }
 
-  def fromJson(attrType: KeepAttributionType, attrJson: JsValue): JsResult[SourceAttribution] = {
+  def fromJson(attrType: KeepAttributionType, attrJson: JsValue): JsResult[RawSourceAttribution] = {
     attrType match {
-      case Twitter => TwitterAttribution.format.reads(attrJson)
-      case Slack => SlackAttribution.format.reads(attrJson)
+      case Twitter => RawTwitterAttribution.format.reads(attrJson)
+      case Slack => RawSlackAttribution.format.reads(attrJson)
     }
   }
 
-  val internalFormat = new OFormat[SourceAttribution] {
-    def writes(source: SourceAttribution) = {
+  val internalFormat = new OFormat[RawSourceAttribution] {
+    def writes(source: RawSourceAttribution) = {
       val (attrType, attrJs) = toJson(source)
       Json.obj(
         "type" -> attrType,
@@ -75,50 +66,21 @@ object SourceAttribution {
       )
     }
 
-    def reads(value: JsValue): JsResult[SourceAttribution] = {
+    def reads(value: JsValue): JsResult[RawSourceAttribution] = {
       for {
         attrType <- (value \ "type").validate[KeepAttributionType]
         attr <- fromJson(attrType, value \ "source")
       } yield attr
     }
   }
-
-  val externalWrites: OWrites[SourceAttribution] = OWrites { source =>
-    val (attrType, attrJs) = toJson(source)
-    Json.obj(attrType.name -> attrJs)
-  }
-
-  val externalWritesWithBasicUser: OWrites[(SourceAttribution, Option[BasicUser])] = OWrites {
-    case (source, userOpt) => externalWrites.writes(source) + ("kifi" -> Json.toJson(userOpt))
-  }
-
-  val deprecatedWrites = externalWritesWithBasicUser.transform { value =>
-    val updatedValue = for {
-      obj <- value.validate[JsObject]
-      tweeterObj <- (value \ "twitter").validate[JsObject]
-      tweet <- (tweeterObj \ "tweet").validate[RawTweet]
-    } yield {
-      (obj - "twitter") + ("twitter" -> (tweeterObj ++ Json.obj("idString" -> tweet.id.id.toString, "screenName" -> tweet.user.screenName.value)))
-    }
-    updatedValue getOrElse value
-  }
 }
 
-case class SlackAttribution(message: SlackMessage) extends SourceAttribution
-object SlackAttribution {
-  implicit val format = Json.format[SlackAttribution]
+case class RawTwitterAttribution(tweet: RawTweet) extends RawSourceAttribution
+object RawTwitterAttribution {
+  implicit val format = Json.format[RawTwitterAttribution]
 }
 
-case class TwitterAttribution(tweet: RawTweet) extends SourceAttribution
-object TwitterAttribution {
-  implicit val format = Json.format[TwitterAttribution]
+case class RawSlackAttribution(message: SlackMessage, teamId: SlackTeamId) extends RawSourceAttribution
+object RawSlackAttribution {
+  implicit val format = Json.format[RawSlackAttribution]
 }
-
-case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
-  override val version = 1
-  val namespace = "source_attribution_by_keep_id"
-  def toKey(): String = keepId.id.toString
-}
-
-class SourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SourceAttributionKeepIdKey, SourceAttribution](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SourceAttribution.internalFormat)

@@ -43,6 +43,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
   def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
+  def orgExperimentRepo(implicit injector: Injector) = inject[OrganizationExperimentRepo]
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
@@ -87,6 +88,8 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def creditRewardCommander(implicit injector: Injector) = inject[CreditRewardCommander]
   def creditRewardInfoCommander(implicit injector: Injector) = inject[CreditRewardInfoCommander].asInstanceOf[CreditRewardInfoCommanderImpl]
   def activityLogCommander(implicit injector: Injector) = inject[ActivityLogCommander]
+  def sourceAttributionRepo(implicit injector: Injector) = inject[KeepSourceAttributionRepo]
+  def sourceAttributionCommander(implicit injector: Injector) = inject[KeepSourceCommander]
 
   def slackCommander(implicit injector: Injector) = inject[SlackCommander].asInstanceOf[SlackCommanderImpl]
   def slackIntegrationCommander(implicit injector: Injector) = inject[SlackIntegrationCommander].asInstanceOf[SlackIntegrationCommanderImpl]

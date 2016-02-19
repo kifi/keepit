@@ -23,6 +23,10 @@ cardBorderRadius = 16px
     // is temporarily empty during sub-tab navigations
     min-height: 100vh
 
+.kf-nav-bar-enabled
+  .kf-up-tab-container
+    background: userAndTeamHeaderColor
+
 .kf-up-tab-container
   background: pageHeaderColor
   color: #fff
@@ -155,22 +159,43 @@ cardBorderRadius = 16px
 
 .kf-upl-card-setting
   position: absolute
-  top: 5px
-  right: 5px
-  width: 20px
-  height: 20px
-  z-index: 2
-  background-position: center
-  background-size: 15px 15px
-  background-repeat: no-repeat
+  top: 0
+  right: 0
+  width: 35px
   z-index: 10
 
   :not(:hover) > &
     display: none
 
-  &:not(:hover):not(:focus)
+.kf-upl-card-setting-icon
+  position: absolute
+  top: 10px
+  right: 10px
+  display: inline-block
+  width: 15px
+  height: 15px
+  padding: 0
+  border: 0
+  opacity: .8
+  background-color: transparent
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+
+  &:not([disabled])
+    &:hover
+    &:focus
+      opacity: .9
+
+    &:hover:active
+      opacity: 1
+
   &:active
     opacity: .7
+
+.kf-upl-card-setting-icon[disabled]
+  cursor: no-drop
+  opacity: .45
 
 name-line-height = 22px
 

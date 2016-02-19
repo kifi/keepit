@@ -13,7 +13,10 @@ GET     /contacts/import/failure    @com.keepit.controllers.website.ContactsImpo
 GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controller.refreshContacts(abookId:ExternalId[ABookInfo], provider:Option[String])
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
-GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
+GET     /oauth2/slack               @com.keepit.controllers.website.SlackOAuthController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
+
+# These really need to be non-site endpoints
+GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -417,6 +420,7 @@ GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfile
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
 GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.UserProfileController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
+GET     /site/users/:id/basicLibraries   @com.keepit.controllers.website.LibraryController.getLHRLibrariesForUser(id: ExternalId[User], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int, windowSize: Option[Int] ?= None)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 GET     /site/keepableLibraries     @com.keepit.controllers.website.LibraryController.getKeepableLibraries(includeOrgLibraries: Boolean ?= false)
@@ -468,11 +472,10 @@ GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserC
 GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
-POST  /site/libraries/:id/slack/push        @com.keepit.controllers.website.SlackController.turnOnLibraryPush(id: PublicId[Library], integrationId: String)
-POST  /site/libraries/:id/slack/ingest      @com.keepit.controllers.website.SlackController.turnOnChannelIngestion(id: PublicId[Library], integrationId: String)
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/push/:ltsId        @com.keepit.controllers.website.SlackController.pushLibrary(id: PublicId[Library], ltsId: String, turnOn: Boolean)
+POST  /site/libraries/:id/slack/ingest/:stlId      @com.keepit.controllers.website.SlackController.ingestChannel(id: PublicId[Library], stlId: String, turnOn: Boolean)
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
-
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -489,6 +492,7 @@ GET     /site/user/networks         @com.keepit.controllers.website.UserControll
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
+GET     /site/user/leftHandRail     @com.keepit.controllers.website.UserProfileController.getLeftHandRail(numLibs: Int ?= 6, ordering: Option[String] ?= None, direction: Option[String] ?= None, windowSize: Option[Int] ?= None)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
@@ -543,6 +547,7 @@ POST          /site/organizations/:id/members/modify            @com.keepit.cont
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMember(id: PublicId[Organization])
 GET           /site/organizations/:id/members/suggest           @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
+GET           /site/organizations/:id/basicLibraries            @com.keepit.controllers.website.OrganizationController.getLHRLibrariesForOrg(id: PublicId[Organization], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int, windowSize: Option[Int] ?= None)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(id: PublicId[Organization])
 POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(id: PublicId[Organization])
@@ -557,12 +562,11 @@ POST          /site/organizations/:id/redeemCode                @com.keepit.cont
 GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
 # ↓ Take out of /site/
-GET           /site/slack/add                                   @com.keepit.controllers.website.SlackController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+
 GET           /site/slack/add/organizations                     @com.keepit.controllers.website.SlackController.getOrganizationsToConnectToSlackTeam()
-# ↓ Take out of /site/
-GET           /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+POST          /site/organizations/create/slack                  @com.keepit.controllers.website.SlackController.createSlackTeam(slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
+POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization])
-POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None)
 POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
 
 
@@ -632,6 +636,7 @@ GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmar
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
+POST    /admin/bookmarks/reattributeKeeps             @com.keepit.controllers.admin.AdminBookmarksController.reattributeKeeps(author: String, userId: Option[Long] ?= None, overwriteExistingOwner: Boolean ?= false, doIt: Boolean ?= false)
 
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
@@ -723,7 +728,6 @@ POST    /admin/user/:id/pic         @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/user/:id/picUpdate   @com.keepit.controllers.admin.AdminUserController.updateUserPicture(id: Id[User])
 POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
 POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
-POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
@@ -832,6 +836,7 @@ POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
 POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 POST    /admin/libraries/forceModify                    @com.keepit.controllers.admin.AdminLibraryController.unsafeModifyLibrary
+POST    /admin/libraries/deleteZombieLibraries          @com.keepit.controllers.admin.AdminLibraryController.deleteZombieLibraries
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
@@ -902,6 +907,7 @@ GET           /admin/goodies/testRegexFilled                                    
 POST          /admin/goodies/performRegexTest                                        @com.keepit.controllers.admin.AdminGoodiesController.performRegexTest
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
+POST          /admin/goodies/fixAuthors                                              @com.keepit.controllers.admin.AdminGoodiesController.fixAuthors()
 
 POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])

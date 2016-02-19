@@ -11,9 +11,12 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.Debouncing
 import com.keepit.model._
-import org.joda.time.Period
+import org.joda.time.{ Period }
+import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.duration._
+import scala.util.Try
 
 @Singleton
 class KeepChecker @Inject() (
@@ -33,19 +36,29 @@ class KeepChecker @Inject() (
 
   private val debouncer = new Debouncing.Dropper[Unit]
   private[this] val lock = new AnyRef
-  private val timeSlicer = new TimeSlicer(clock)
 
-  private[integrity] val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
-  private val KEEP_FETCH_SIZE = 100
+  private val KEEP_INTEGRITY_SEQ = Name[SequenceNumber[Keep]]("keep_integrity_plugin")
+  private val KEEP_INTEGRITY_COUNT = Name[SystemValue]("keep_integrity_plugin_id")
+  private val BATCH_SIZE = 250
 
-  @AlertingTimer(30 seconds)
+  @AlertingTimer(120 seconds)
   @StatsdTiming("keepChecker.check")
   def check(): Unit = lock.synchronized {
+    // There are two data sources:.
+    // • By seq num will catch issues that arise from updates to existing keeps
+    // • By keep id will catch issues on new keeps
     db.readWrite { implicit s =>
+      val lastKeepId = Id[Keep](systemValueRepo.getValue(KEEP_INTEGRITY_COUNT).flatMap(p => Try(p.toLong).toOption).getOrElse(0L))
       val lastSeq = systemValueRepo.getSequenceNumber(KEEP_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Keep])
-      val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
+
+      val recentKeeps = keepRepo.getByIdGreaterThan(lastKeepId, BATCH_SIZE).filter(_.createdAt.isBefore(clock.now.minusSeconds(20)))
+      val seqNumKeeps = keepRepo.getBySequenceNumber(lastSeq, BATCH_SIZE - recentKeeps.length)
+      val keeps = (recentKeeps ++ seqNumKeeps).distinctBy(_.id.get)
+
+      log.info(s"[KeepChecker] Running keep checker. Recent: ${recentKeeps.length} (${recentKeeps.flatMap(_.id).maxOpt}), seq: ${seqNumKeeps.length} (${seqNumKeeps.map(_.seq).maxOpt}")
+
       if (keeps.nonEmpty) {
-        keeps.foreach { keep =>
+        keeps.foreach { keep => // Best not to use this object directly, because the underlying row gets updated
           ensureStateIntegrity(keep.id.get)
           ensureUriIntegrity(keep.id.get)
           ensureLibrariesIntegrity(keep.id.get)
@@ -53,7 +66,12 @@ class KeepChecker @Inject() (
           ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
-        systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, keeps.map(_.seq).max)
+        recentKeeps.map(_.id.get.id).maxOpt.foreach { maxId =>
+          systemValueRepo.setValue(KEEP_INTEGRITY_COUNT, maxId.toString)
+        }
+        seqNumKeeps.map(_.seq).maxOpt.foreach { hwm =>
+          systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, hwm)
+        }
       }
     }
   }
@@ -81,13 +99,13 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        debouncer.debounce(ktu.userId.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
+        debouncer.debounce(ktu.userId.id.toString, 1 minute) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        debouncer.debounce(ktl.libraryId.toString, Period.minutes(1)) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
+        debouncer.debounce(ktl.libraryId.toString, 1 minute) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
         ktlCommander.deactivate(ktl)
       }
     }
@@ -119,19 +137,15 @@ class KeepChecker @Inject() (
     }
   }
 
+  // Do this last
   private def ensureNoteAndTagsAreInSync(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
 
     val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
     val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
     if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
-      // todo: Change to airbrake.notify after we're sure this won't wake people up at night
       log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
-      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide
+      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide. i.e., this does not fix it immediately
     }
-
-    // We don't want later checkers to overwrite the eventual note, so change the note they see when they load from db
-    val newNote = Option(Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)).filter(_.nonEmpty)
-    keepRepo.save(keep.withNote(newNote))
   }
 }

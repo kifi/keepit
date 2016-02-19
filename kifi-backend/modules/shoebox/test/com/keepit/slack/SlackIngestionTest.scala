@@ -7,6 +7,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackTeamFactoryHelper._
@@ -70,11 +71,15 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
           var now = inject[FakeClock].now.minusMinutes(1)
           val (user, lib, stm, integration) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(user).saved
-            val lib = LibraryFactory.library().withOwner(user).saved
+            val blacklist = ClassFeature.Blacklist(Seq(
+              ClassFeature.BlacklistEntry(Some(user.externalId), Some(now), "github.com/kifi"),
+              ClassFeature.BlacklistEntry(Some(user.externalId), Some(now), "*.corp.google.com")
+            ))
+            val org = OrganizationFactory.organization().withOwner(user).withSettings(Map(ClassFeature.SlackIngestionDomainBlacklist -> blacklist)).saved
+            val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextIngestionAt(now).on().saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel("#eng").withNextIngestionAt(now).on().saved
             (user, lib, stm, stl)
           }
 
@@ -83,7 +88,8 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             "slack chooses the links: http://www.kifi.com" -> 0,
             "and those links look like this: <http://www.google.com/>" -> 1,
             "or like this: <http://www.yahoo.com|Yahoo>" -> 1,
-            "and there can be multiple: <http://www.microsoft.com|Microsoft> <http://www.kifi.com|Kifi>" -> 2
+            "and there can be multiple: <http://www.microsoft.com|Microsoft> <http://www.kifi.com|Kifi>" -> 2,
+            "and even blacklisted links: <https://www.github.com/kifi/commits|Kifi commits> <https://secure.corp.google.com/page.html> <http://notblacklisted.com>" -> 1
           )
 
           val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
