@@ -294,6 +294,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
   def toCrossServiceMessage(message: ElizaMessage): CrossServiceMessage = {
     CrossServiceMessage(
       id = ElizaMessage.toCommonId(message.id.get),
+      isDeleted = !message.isActive,
       seq = ElizaMessage.toCommonSeq(message.seq),
       keep = message.keepId,
       sentAt = message.createdAt,

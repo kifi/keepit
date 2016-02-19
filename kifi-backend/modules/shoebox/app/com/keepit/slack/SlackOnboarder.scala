@@ -77,11 +77,11 @@ class SlackOnboarderImpl @Inject() (
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
       debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
-        slackClient.sendToSlack(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg)
+        slackClient.sendToSlackViaUser(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg).map(_ => ())
       }
     }.getOrElse {
       log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")
-      Future.successful(Unit)
+      Future.successful(())
     }
   }
 
@@ -193,7 +193,7 @@ class SlackOnboarderImpl @Inject() (
           }
         )))).filter(_ => agent.isWorking)
       } yield {
-        slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+        slackClient.sendToSlackViaUser(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
       }) getOrElse {
         slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
         Future.successful(Unit)
@@ -256,15 +256,15 @@ class SlackOnboarderImpl @Inject() (
           ))).filter(_ => agent.isWorking)
         } yield {
           agent.dieIf(channels.isEmpty)
-          slackClient.sendToSlack(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg))
+          slackClient.sendToSlackViaUser(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
         }) getOrElse {
           slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
           Future.successful(Unit)
         }
       }
     }
-    private def logFTUI(agent: TeamOnboardingAgent, msg: SlackMessageRequest): PartialFunction[Try[Unit], Unit] = {
-      case Success(_: Unit) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
+    private def logFTUI(agent: TeamOnboardingAgent, msg: SlackMessageRequest): PartialFunction[Try[_], Unit] = {
+      case Success(_) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
       case Failure(fail) => slackLog.warn("Failed to push team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "because:", fail.getMessage)
     }
   }
