@@ -36,7 +36,10 @@ var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
+var path = require('path');
 var sourcemaps = require('gulp-sourcemaps');
+var cheerio = require('gulp-cheerio');
+var svgstore = require('gulp-svgstore');
 
 require('shelljs/global');
 
@@ -279,11 +282,35 @@ gulp.task('sprite-classes', function () {
   return es.merge(img, css);
 });
 
-gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
+gulp.task('sprite', ['symbol-sprites-svgstore', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
 
 gulp.task('symbol-sprites', function() {
   exec('./build-svgs.rb');
   return gulp.src(['./img/symbol-sprites/dist/*.svg'])
+    .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('symbol-sprites-svgstore', function () {
+  return gulp.src('img/symbol-sprites/lib/*.svg')
+    .pipe(svgmin(function (file) {
+      var prefix = path.basename(file.relative, path.extname(file.relative));
+      return {
+        plugins: [{
+          cleanupIDs: {
+            prefix: prefix + '-',
+            minify: true
+          }
+        }]
+      }
+    }))
+    .pipe(cheerio({
+      run: function ($) {
+        $('[fill]').removeAttr('fill');
+      },
+      parserOptions: {xmlMode: true}
+    }))
+    .pipe(svgstore({inlineSvg: true}))
+    .pipe(rename('symbol-sprite.svg'))
     .pipe(gulp.dest('./dist'));
 });
 
@@ -517,3 +544,5 @@ gulp.task('release', ['build-prod', 'karma', 'assets:release'/*, 'protractor:rel
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);
+
+
