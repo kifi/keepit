@@ -14,6 +14,10 @@
 // @require scripts/html/search/google.js
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
+// ***
+// Heads up: If you need to add a dependency,
+// make sure you add it in the manifest.json too
+// ***
 
 api.identify('googleInject');
 
@@ -24,19 +28,6 @@ var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[
 
 var pageSession = Math.random().toString(16).slice(2);
 
-api.require([
-  'scripts/api.js',
-  'scripts/lib/jquery.js',
-  'scripts/lib/jquery-ui-position.min.js',
-  'scripts/lib/jquery-hoverfu.js',
-  'scripts/lib/mustache.js',
-  'scripts/formatting.js',
-  'scripts/render.js',
-  'scripts/title_from_url.js',
-  'scripts/html/search/google.js',
-  'scripts/html/search/google_hits.js',
-  'scripts/html/search/google_hit.js'
-], function () {
 
 $.fn.layout = function () {
   return this.each(function () {this.clientHeight});  // forces layout
@@ -1211,5 +1202,3 @@ if (searchUrlRe.test(document.URL)) !function () {
     return String(n).replace(insertCommasRe, '$1,');
   }
 }();
-
-});
