@@ -54,6 +54,11 @@ case class UserProfileInfo(
     pictureUrl: Option[String],
     profileUrl: Option[String])
 
+case class OAuthTokenIdentityProvider[T, I <: RichIdentity](provider: OAuthProvider[T, I], token: T) {
+  def getIdentityId: Future[IdentityId] = provider.getIdentityId(token)
+  def getRichIdentity: Future[I] = provider.getRichIdentity(token)
+}
+
 trait OAuthProvider[T, I <: RichIdentity] {
   def providerId: ProviderId
   def getIdentityId(token: T): Future[IdentityId]
