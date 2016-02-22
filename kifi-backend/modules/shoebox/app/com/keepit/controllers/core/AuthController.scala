@@ -194,14 +194,15 @@ class AuthController @Inject() (
 
   private def completeAuthentication(socialUser: Identity, session: Session)(implicit request: RequestHeader): Result = {
     log.info(s"[completeAuthentication] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
-    val sess = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
+    val redirectUrl = ProviderController.toUrl(session)
+    val newSession = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
     Authenticator.create(socialUser) match {
       case Right(authenticator) => {
         val userId = db.readOnlyMaster { implicit session =>
           userIdentityHelper.getOwnerId(authenticator.identityId).get
         }
-        Redirect(ProviderController.toUrl(sess))
-          .withSession(sess.setUserId(userId))
+        Redirect(redirectUrl)
+          .withSession(newSession.setUserId(userId))
           .withCookies(authenticator.toCookie)
       }
       case Left(error) => {
