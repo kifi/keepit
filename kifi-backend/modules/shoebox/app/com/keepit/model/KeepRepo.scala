@@ -710,8 +710,8 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, before)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at < '$before' AND k.id < $keepId"
-          else s"last_activity_at < '$before' AND $tableName.keep_id < $keepId"
+          if (tableName == "k") s"last_activity_at is not null and last_activity_at < '$before' or (last_activity_at = '$before' and k.id < $keepId)"
+          else s"last_activity_at is not null and last_activity_at < '$before' or (last_activity_at = '$before' and $tableName.keep_id < $keepId)"
         }
     }
 
@@ -719,8 +719,8 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, after)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at > '$after' AND k.id > $keepId"
-          else s"last_activity_at > '$after' AND $tableName.keep_id > $keepId"
+          if (tableName == "k") s"last_activity-at is not null and last_activity_at > '$after' or (last_activity_at = '$after' and k.id > $keepId)"
+          else s"last_activity_at is not null and last_activity_at > '$after' or (last_activity_at = '$after' and $tableName.keep_id > $keepId)"
         }
     }
 
