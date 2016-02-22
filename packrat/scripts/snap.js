@@ -380,7 +380,7 @@ k.snap = k.snap || (function () {
     info.bounds = toJson(ranges.getBoundingClientRect(r, info.rects));
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      $(img).on('load', finalizeLookHereLink.bind(img, info.bounds, href, title));
+      $(img).on('load error', finalizeLookHereLink.bind(img, info.bounds, href, title));
       img.src = dataUrl;
     });
     var href = 'x-kifi-sel:' + k.snapshot.ofRange(r);
