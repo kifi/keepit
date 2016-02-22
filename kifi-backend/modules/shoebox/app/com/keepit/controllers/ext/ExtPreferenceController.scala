@@ -80,7 +80,7 @@ class ExtPreferenceController @Inject() (
 
   def getShowExtMoveIntro(domain: String) = UserAction { request =>
     val shouldShow = {
-      ExtensionUnfriendlyDomains.containsMatch(domain) ||
+      ExtensionUnfriendlyDomains.containsMatch(domain) &&
         db.readOnlyMaster(implicit s => userValueRepo.getValue(request.userId, UserValues.showExtMoveIntro))
     }
     Ok(Json.obj("show" -> shouldShow))
