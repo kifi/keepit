@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ DbSequenceAssigner, Id }
+import com.keepit.common.db.{ SequenceNumber, DbSequenceAssigner, Id }
 import com.keepit.model.{ OrganizationSettings, Keep, SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
@@ -36,6 +36,8 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
+
+  def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -177,6 +179,10 @@ class MessageRepoImpl @Inject() (
   }
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage] = {
     activeRows.filter(_.keepId === keepId).list
+  }
+
+  def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage] = {
+    rows.filter(msg => msg.keepId.inSet(keepIds) && msg.seq > seq).sortBy(_.seq).list
   }
 
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
