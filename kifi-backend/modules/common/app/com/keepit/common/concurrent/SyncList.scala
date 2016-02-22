@@ -6,17 +6,17 @@ import com.keepit.common.core.futureExtensionOps
 import scala.util.{ Failure, Success }
 
 class Task[T](f: () => Future[T]) {
-  def run: Future[T] = f()
+  lazy val run: Future[T] = f()
   def map[S](g: T => S) = new Task(() => f().imap(g))
 }
 
 sealed trait SyncList[T] {
   // Actual extraction method
-  protected def foldLeftUntil[A](x0: A, p: Promise[A] = Promise[A]())(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A]
+  protected def foldLeftUntil[A](x0: A, p: Promise[A])(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A]
 
   // Derived extraction methods
-  def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A] = foldLeftUntil[A](x0) { case (x, v) => (op(x, v), false) }
-  def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]] = foldLeftUntil[Option[T]](None) { case (_, v) => (Some(v), true) }
+  def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A] = foldLeftUntil[A](x0, Promise()) { case (x, v) => (op(x, v), false) }
+  def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]] = foldLeftUntil[Option[T]](None, Promise()) { case (_, v) => (Some(v), true) }
   def head(implicit exc: ScalaExecutionContext): Task[T] = headOption.map(_.getOrElse(throw new scala.NoSuchElementException("head of empty list")))
   def seq(implicit exc: ScalaExecutionContext): Task[Seq[T]] = foldLeft(Seq.empty[T]) { case (acc, v) => v +: acc }.map(_.reverse)
   def find(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Option[T]] = dropUntil(pred).headOption
@@ -67,11 +67,12 @@ object SyncList {
     override def foldLeftUntil[A](x0: A, p: Promise[A])(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A] = new Task(() => {
       task.run.onComplete {
         case Failure(fail) => p.failure(fail)
-        case Success((None, next)) => next.foldLeftUntil(x0, p)(op)
+        case Success((None, next)) =>
+          next.foldLeftUntil(x0, p)(op).run
         case Success((Some(v), next)) =>
           val (x1, done) = op(x0, v)
           if (done) p.success(x1)
-          else next.foldLeftUntil(x1, p)(op)
+          else next.foldLeftUntil(x1, p)(op).run
       }
       p.future
     })

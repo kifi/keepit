@@ -86,9 +86,9 @@ class SyncListTest extends Specification with Logging {
       await(fullPages) === ref
       serverPings === 10
       await(sum) === ref.foldLeft(0)(_ + _.sum)
-      serverPings === 20 // TODO(ryan): I feel like it should be possible to get this to 10, but being smart is hard
+      serverPings === 10
       await(sum) === fakeDb.sum
-      serverPings === 20
+      serverPings === 10
     }
   }
 }
