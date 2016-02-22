@@ -6,10 +6,10 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth.{ SlackIdentity, OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.oauth._
 import com.keepit.common.service.IpAddress
 import com.keepit.payments.CreditCode
-import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamId }
+import com.keepit.slack.models.{SlackAuthorizationResponse, SlackTeamMembershipRepo, SlackTeamId}
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -142,6 +142,7 @@ class AuthHelper @Inject() (
     airbrake: AirbrakeNotifier,
     oauth1ProviderRegistry: OAuth1ProviderRegistry,
     oauth2ProviderRegistry: OAuth2ProviderRegistry,
+    slackOAuthProvider: SlackOAuthProvider,
     authCommander: AuthCommander,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
@@ -602,71 +603,52 @@ class AuthHelper @Inject() (
 
   val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
-  def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
+  private def getOAuthTokenIdentityProvider(providerName: String, body: JsValue): Option[OAuthTokenIdentityProvider[_, _ <: RichIdentity]] = {
+    Try(ProviderIds.toProviderId(providerName)).toOption.flatMap {
+      case providerId @ (ProviderIds.Facebook | ProviderIds.LinkedIn) => for {
+        oauth2InfoOrig <- body.asOpt[OAuth2TokenInfo]
+        provider <- oauth2ProviderRegistry.get(providerId)
+      } yield OAuthTokenIdentityProvider(provider, oauth2InfoOrig)
+      case providerId @ ProviderIds.Twitter => for {
+        oauth1InfoOrig <- body.asOpt[OAuth1TokenInfo]
+        provider <- oauth1ProviderRegistry.get(providerId)
+      } yield OAuthTokenIdentityProvider(provider, oauth1InfoOrig)
+      case providerId @ ProviderIds.Slack => body.asOpt[SlackAuthorizationResponse].map { authToken => OAuthTokenIdentityProvider(slackOAuthProvider, authToken) }
+      case _ => None
+    }
+  }
+
+  def doAccessTokenSignup(providerName: String)(implicit request: Request[JsValue]): Future[Result] = {
+    getOAuthTokenIdentityProvider(providerName, request.body) match {
       case None =>
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getRichIdentity(oauth2InfoOrig) map { identity =>
-          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
-        } recover {
-          case t: Throwable =>
-            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
-            log.error(message)
-            airbrake.notify(message)
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
+
+      case Some(tokenIdentityProvider) => tokenIdentityProvider.getRichIdentity.map { identity =>
+        authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
+      } recover {
+        case t: Throwable =>
+          val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${tokenIdentityProvider.token}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+          log.error(message)
+          airbrake.notify(message)
+          BadRequest(Json.obj("error" -> "invalid_token"))
+      }
     }
   }
 
-  def doOAuth1TokenSignup(providerName: String, oauth1Info: OAuth1Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth1ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
+  def doAccessTokenLogin(providerName: String)(implicit request: Request[JsValue]): Future[Result] = {
+    getOAuthTokenIdentityProvider(providerName, request.body) match {
       case None =>
-        log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
+        log.error(s"[accessTokenLogin($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getRichIdentity(oauth1Info) map { identity =>
-          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
-        } recover {
-          case t: Throwable =>
-            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
-            log.error(message)
-            airbrake.notify(message)
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
-    }
-  }
-
-  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
-      case None =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getIdentityId(oAuth2Info) map { identityId =>
+      case Some(tokenIdentityProvider) =>
+        tokenIdentityProvider.getIdentityId map { identityId =>
           authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oAuth2Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${tokenIdentityProvider.token}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
   }
-
-  def doOAuth1TokenLogin(providerName: String, oauth1Info: OAuth1Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth1ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
-      case None =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getIdentityId(oauth1Info) map { identityId =>
-          authCommander.loginWithTrustedSocialIdentity(identityId)
-        } recover {
-          case t: Throwable =>
-            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
-
-    }
-  }
-
 }

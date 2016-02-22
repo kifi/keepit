@@ -202,14 +202,15 @@ class AuthController @Inject() (
 
   private def completeAuthentication(socialUser: Identity, session: Session)(implicit request: RequestHeader): Result = {
     log.info(s"[completeAuthentication] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
-    val sess = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
+    val redirectUrl = ProviderController.toUrl(session)
+    val newSession = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
     Authenticator.create(socialUser) match {
       case Right(authenticator) => {
         val userId = db.readOnlyMaster { implicit session =>
           userIdentityHelper.getOwnerId(authenticator.identityId).get
         }
-        Redirect(ProviderController.toUrl(sess))
-          .withSession(sess.setUserId(userId))
+        Redirect(redirectUrl)
+          .withSession(newSession.setUserId(userId))
           .withCookies(authenticator.toCookie)
       }
       case Left(error) => {
@@ -220,43 +221,19 @@ class AuthController @Inject() (
   }
 
   def accessTokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2TokenInfo] match {
-      case None =>
-        log.error(s"[accessTokenLogin] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth2Info) =>
-        authHelper.doAccessTokenLogin(providerName, oauth2Info)
-    }
+    authHelper.doAccessTokenLogin(providerName)
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2TokenInfo] match {
-      case None =>
-        log.error(s"[accessTokenSignup] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth2Info) =>
-        authHelper.doAccessTokenSignup(providerName, oauth2Info)
-    }
+    authHelper.doAccessTokenSignup(providerName)
   }
 
   def oauth1TokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth1TokenInfo] match {
-      case None =>
-        log.error(s"[oauth1TokenSignup] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth1Info) =>
-        authHelper.doOAuth1TokenSignup(providerName, oauth1Info)
-    }
+    authHelper.doAccessTokenSignup(providerName)
   }
 
   def oauth1TokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth1TokenInfo] match {
-      case None =>
-        log.error(s"[oauth1TokenLogin] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth1Info) =>
-        authHelper.doOAuth1TokenLogin(providerName, oauth1Info)
-    }
+    authHelper.doAccessTokenLogin(providerName)
   }
 
   // one-step sign-up
