@@ -4,7 +4,7 @@
 // @require scripts/render.js
 // @require scripts/formatting.js
 // @require scripts/html/keeper/tile_tooltip.js
-// @require scripts/html/keeper/kifi_mustache_tags.js
+// @require scripts/html/keeper/external_messaging_intro_tip.js
 
 api.port.emit('prefs', function (prefs) {
   if (prefs.showExtMsgIntro && document.hasFocus()) {
@@ -14,9 +14,12 @@ api.port.emit('prefs', function (prefs) {
     var $intro = $(k.render('html/keeper/tile_tooltip', {
       header: 'Email this page to anyone',
       text: 'Did you know you can share this page in a beautiful way?',
-      actions: ['Send a summary of the page to any email address',
-        'Recipients can join the discussion by replying via email'],
-      tip: k.formatting.jsonDom('Make life easier – <a class="kifi-tile-tooltip-import-contacts" href="javascript:">import your Gmail contacts</a>')
+      actions: [
+        'Send a summary of the page to any email address',
+        'Recipients can join the discussion by replying via email'
+      ],
+    }, {
+      'tip_partial': 'external_messaging_intro_tip'
     }))
       .insertAfter(k.tile)
       .on('click', '.kifi-tile-tooltip-x', onClickX)
