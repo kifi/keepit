@@ -983,7 +983,13 @@ api.port.on({
             rect.height);
         }
       }
-      respond(canvas.toDataURL('image/png'));
+      var dataUrl = 'data:,';
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        log('[screenshot] failed to render screenshot area %O', e);
+      }
+      respond(dataUrl);
     });
   },
   load_draft: function (data, respond, tab) {
