@@ -2,7 +2,7 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-api.identify('keeperScout');
+api.identify('keeper_scout');
 
 var k = k && k.kifi ? k : {kifi: true};
 

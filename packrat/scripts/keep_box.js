@@ -1,4 +1,5 @@
 // @require styles/keeper/keep_box.css
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keep_box.js
 // @require scripts/html/keeper/keep_box_keep.js
 // @require scripts/html/keeper/name_parts.js
@@ -13,6 +14,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
 // @require scripts/send_chooser.js
@@ -551,7 +553,9 @@ k.keepBox = k.keepBox || (function () {
         dir: 'above',
         cssClass: 'kifi-pane-settings-tip',
         title: title,
-        html: message
+        html: k.formatting.jsonDom(message)
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
         configureHover(html, {
           mustHoverFor: 300, hideAfter: 0,
