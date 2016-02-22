@@ -90,6 +90,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     FutureHelpers.accumulateRobustly(integrationsToProcess)(pushUpdatesForIntegration).imap { results =>
+      log.info(s"[SLACK-PUSH] Processed ${integrationsToProcess.map(_.id.get)}")
       results.collect {
         // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
         // and that swallows the stack trace. This hack will manually expose the stack trace

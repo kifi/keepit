@@ -124,6 +124,7 @@ class SlackPushingActor @Inject() (
   }
 
   protected def processTasks(integrationIds: Seq[Id[LibraryToSlackChannel]]): Map[Id[LibraryToSlackChannel], Future[Unit]] = {
+    log.info(s"[SLACK-PUSH-ACTOR] Processing $integrationIds")
     val (integrationsByIds, isAllowed, getSettings) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
