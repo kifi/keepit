@@ -13,6 +13,7 @@ import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.time._
+import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -131,6 +132,7 @@ class AuthController @Inject() (
     config: FortyTwoConfig,
     userIdentityHelper: UserIdentityHelper,
     pathCommander: PathCommander,
+    deepLinkRouter: DeepLinkRouter,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
@@ -293,7 +295,8 @@ class AuthController @Inject() (
           userRequest.session.get(SecureSocial.OriginalUrlKey) map { url =>
             Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
           } getOrElse {
-            Redirect("/")
+            if (req.agent.isMobile) Ok(views.html.mobile.deepLinkRedirect(deepLinkRouter.generateRedirect(DeepLinkRouter.viewHomepage).get, DeepLinkRouter.viewHomepage))
+            else Redirect("/")
           }
         }
       case nonUserRequest: NonUserRequest[_] => {
@@ -387,13 +390,9 @@ class AuthController @Inject() (
       case ur: UserRequest[_] =>
         Redirect("/")
       case request: NonUserRequest[_] =>
-        request.request.headers.get(USER_AGENT).flatMap { agentString =>
-          val agent = UserAgent(agentString)
-          log.info(s"trying to log in via $agent. orig string: $agentString")
-          if (agent.isOldIE) {
-            Some(Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported()))
-          } else None
-        }.getOrElse(Ok(views.html.authMinimal.loginToKifi()))
+        log.info(s"trying to log in via ${request.agent}.")
+        if (request.agent.isOldIE) Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported())
+        else Ok(views.html.authMinimal.loginToKifi())
     }
   }
 

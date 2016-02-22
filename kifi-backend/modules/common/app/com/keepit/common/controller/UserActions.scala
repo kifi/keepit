@@ -5,16 +5,15 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
-import com.keepit.common.net.URI
+import com.keepit.common.net.UserAgent
 import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
 import play.api.Play
-import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
+import securesocial.core.{ IdentityId, SecureSocial }
 import scala.concurrent.duration._
-import scala.concurrent.{ Promise, Await, Future }
+import scala.concurrent.{ Await, Future }
 import scala.util.{ Failure, Success, Try }
 
 sealed trait MaybeUserRequest[T] extends Request[T] {
@@ -28,6 +27,8 @@ sealed trait MaybeUserRequest[T] extends Request[T] {
     case _ => None
   }
   def identityId: Option[IdentityId]
+
+  def agent: UserAgent = UserAgent(this)
 }
 
 case class NonUserRequest[T](request: Request[T], private val getIdentityId: () => Option[IdentityId]) extends WrappedRequest[T](request) with MaybeUserRequest[T] {
