@@ -82,8 +82,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
 
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 
-  def getRipeForPushing(limit: Int, pushingForMoreThan: Duration)(implicit session: RSession): Seq[Id[LibraryToSlackChannel]]
-  def getRipeForPushingViaNewActor(limit: Int, pushingForMoreThan: Duration)(implicit session: RSession): Seq[Id[LibraryToSlackChannel]]
+  def getRipeForPushing(limit: Int, pushingForMoreThan: Duration, newActorTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[LibraryToSlackChannel]]
+  def getRipeForPushingViaNewActor(limit: Int, pushingForMoreThan: Duration, newActorTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[LibraryToSlackChannel]]
   def markAsPushing(id: Id[LibraryToSlackChannel], pushingForMoreThan: Duration)(implicit session: RWSession): Boolean
   def updateLastProcessedKeep(id: Id[LibraryToSlackChannel], lastProcessedKeep: Id[KeepToLibrary])(implicit session: RWSession): Unit
   def updateLastProcessedMsg(id: Id[LibraryToSlackChannel], lastProcessedMsg: Id[Message])(implicit session: RWSession): Unit
@@ -264,16 +264,16 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     save(model.sanitizeForDelete)
   }
 
-  def getRipeForPushing(limit: Int, pushingForMoreThan: Duration)(implicit session: RSession): Seq[Id[LibraryToSlackChannel]] = {
+  def getRipeForPushing(limit: Int, pushingForMoreThan: Duration, newActorTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[LibraryToSlackChannel]] = {
     val now = clock.now
     val lastPushingTooLongAgo = now minus pushingForMoreThan
-    workingRows.filter(row => row.slackTeamId =!= KifiSlackApp.BrewstercorpTeamId && row.nextPushAt <= now && row.availableForProcessing(lastPushingTooLongAgo)).sortBy(row => (row.lastProcessedAt.isDefined, row.nextPushAt)).map(_.id).take(limit).list
+    workingRows.filter(row => !row.slackTeamId.inSet(newActorTeams) && row.nextPushAt <= now && row.availableForProcessing(lastPushingTooLongAgo)).sortBy(row => (row.lastProcessedAt.isDefined, row.nextPushAt)).map(_.id).take(limit).list
   }
   // TODO(ryan): once the new actor works, unify these two methods. They differ only in which slack teams are chosen
-  def getRipeForPushingViaNewActor(limit: Int, pushingForMoreThan: Duration)(implicit session: RSession): Seq[Id[LibraryToSlackChannel]] = {
+  def getRipeForPushingViaNewActor(limit: Int, pushingForMoreThan: Duration, newActorTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[LibraryToSlackChannel]] = {
     val now = clock.now
     val lastPushingTooLongAgo = now minus pushingForMoreThan
-    workingRows.filter(row => row.slackTeamId === KifiSlackApp.BrewstercorpTeamId && row.nextPushAt <= now && row.availableForProcessing(lastPushingTooLongAgo)).sortBy(row => (row.lastProcessedAt.isDefined, row.nextPushAt)).map(_.id).take(limit).list
+    workingRows.filter(row => row.slackTeamId.inSet(newActorTeams) && row.nextPushAt <= now && row.availableForProcessing(lastPushingTooLongAgo)).sortBy(row => (row.lastProcessedAt.isDefined, row.nextPushAt)).map(_.id).take(limit).list
   }
 
   def markAsPushing(id: Id[LibraryToSlackChannel], pushingForMoreThan: Duration)(implicit session: RWSession): Boolean = {

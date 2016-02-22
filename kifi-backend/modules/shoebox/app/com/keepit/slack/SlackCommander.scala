@@ -41,6 +41,7 @@ class SlackCommanderImpl @Inject() (
   orgMembershipCommander: OrganizationMembershipCommander,
   slackClient: SlackClientWrapper,
   keepSourceCommander: KeepSourceCommander,
+  orgExperimentRepo: OrganizationExperimentRepo,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander with Logging {
@@ -112,8 +113,18 @@ class SlackCommanderImpl @Inject() (
       case None => Future.successful((None, Set.empty[SlackAuthScope]))
     }
 
+    val extraScopesByExperiment = slackTeamIdOpt.flatMap { slackTeamId =>
+      db.readOnlyMaster { implicit s =>
+        slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map { orgId =>
+          orgExperimentRepo.getOrganizationExperiments(orgId).collect {
+            case OrganizationExperimentType.SLACK_COMMENT_MIRRORING => SlackAuthScope.Bot
+          }
+        }
+      }
+    }.getOrElse(Set.empty)
+
     futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ Some(SlackAuthScope.Bot).filter(_ => slackTeamIdOpt.safely.contains(KifiSlackApp.BrewstercorpTeamId)))
+      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ (extraScopesByExperiment -- existingScopes))
     }
   }
 }
