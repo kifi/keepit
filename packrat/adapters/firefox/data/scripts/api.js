@@ -14,6 +14,8 @@ window.api = window.api || (function () {
   }
 
   function onApiInject(styles, scripts, callbackId) {
+    styles = styles || [];
+    scripts = scripts || [];
     styles.forEach(function (path) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';

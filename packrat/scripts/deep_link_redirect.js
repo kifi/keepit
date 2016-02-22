@@ -2,7 +2,7 @@
 // @require scripts/api.js
 // @asap
 
-api.identify('deepLinkRedirect');
+api.identify('deep_link_redirect');
 
 !function run(json, e) {
   'use strict';

@@ -19,7 +19,7 @@
 // make sure you add it in the manifest.json too
 // ***
 
-api.identify('googleInject');
+api.identify('google_inject');
 
 // Google inject regex accurate as of 2015-08-21. This is helpful: https://en.wikipedia.org/wiki/List_of_Google_domains
 // (same as match pattern above)
