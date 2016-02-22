@@ -65,6 +65,14 @@ class ElizaDiscussionController @Inject() (
     val countByKeepId = db.readOnlyMaster(implicit s => messageRepo.getAllMessageCounts(input.keepIds))
     Ok(Json.toJson(Response(countByKeepId)))
   }
+  def getChangedMessagesFromKeeps = Action(parse.tolerantJson) { request =>
+    import GetChangedMessagesFromKeeps._
+    val input = request.body.as[Request]
+    val changedMessages = db.readOnlyMaster { implicit session =>
+      messageRepo.getForKeepsBySequenceNumber(input.keepIds, ElizaMessage.fromCommonSeq(input.seq))
+    }.map(ElizaMessage.toCrossServiceMessage)
+    Ok(Json.toJson(Response(changedMessages)))
+  }
 
   def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>
     import SendMessageOnKeep._

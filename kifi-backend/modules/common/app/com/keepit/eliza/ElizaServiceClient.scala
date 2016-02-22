@@ -127,6 +127,7 @@ trait ElizaServiceClient extends ServiceClient {
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
+  def getChangedMessagesFromKeeps(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message]): Future[Seq[CrossServiceMessage]]
   def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]]
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
@@ -353,6 +354,14 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].msgs
     }
   }
+  def getChangedMessagesFromKeeps(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message]): Future[Seq[CrossServiceMessage]] = {
+    import GetChangedMessagesFromKeeps._
+    val request = Request(keepIds, seq)
+    if (request.keepIds.isEmpty) Future.successful(Seq.empty)
+    else call(Eliza.internal.getChangedMessagesFromKeeps, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msgs
+    }
+  }
   def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]] = {
     import GetMessageCountsForKeeps._
     val request = Request(keepIds)
@@ -441,6 +450,13 @@ object ElizaServiceClient {
   object GetMessageCountsForKeeps {
     case class Request(keepIds: Set[Id[Keep]])
     case class Response(countByKeepId: Map[Id[Keep], Int])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetChangedMessagesFromKeeps {
+    // TODO(ryan): consider adding a `limit` or `fetchSize` here to prevent us from crashing Eliza
+    case class Request(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message])
+    case class Response(msgs: Seq[CrossServiceMessage])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
