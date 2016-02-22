@@ -18,8 +18,7 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     hide: hide
   };
 
-  function show(prefs) {
-    prefs.showMoveKeeperIntro = false;
+  function show() {
     if ($intro) {
       hide();
     }
@@ -50,10 +49,6 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     api.onEnd.push(hide);
     k.hideKeeperCallout = hide;
     api.port.emit('track_ftue', 'm');
-  }
-
-  function getWebsiteDomain() {
-    return window.location.hostname;
   }
 
   function onClickX(e) {
@@ -87,6 +82,4 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
       }
     }
   }
-
-
 }());

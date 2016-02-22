@@ -296,26 +296,31 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
     $(k.tile).triggerHandler('kifi:keeper:remove');
-    api.port.emit('prefs', function (prefs) {
-      if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
-        extMsgIntroEligible = false;
+
+    if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
+      extMsgIntroEligible = false;
+      api.port.emit('prefs', function (prefs) {
         if (prefs.showExtMsgIntro) {
           setTimeout(function () {
             api.require('scripts/external_messaging_intro.js', api.noop);
           }, 1000);
         }
-      } else if (prefs.showMoveKeeperIntro) {
-        setTimeout(function () {
-          if (k.moveKeeperIntro) {
-            k.moveKeeperIntro.show(prefs);
-          } else {
-            api.require('scripts/move_keeper_intro.js', function () {
-              k.moveKeeperIntro.show(prefs);
-            });
-          }
-        }, 1000);
-      }
-    });
+      });
+    } else {
+      api.port.emit('get_show_move_intro', { domain: window.location.hostname }, function (data) {
+        if (data.show === true) {
+          setTimeout(function () {
+            if (k.moveKeeperIntro) {
+              k.moveKeeperIntro.show();
+            } else {
+              api.require('scripts/move_keeper_intro.js', function () {
+                k.moveKeeperIntro.show();
+              });
+            }
+          }, 1000);
+        }
+      });
+    }
   }
 
   function startDrag(data) {
