@@ -107,6 +107,7 @@ object DeepLinkRouter {
   def libraryLink(libId: PublicId[Library], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id) ++ authTokenField(authToken)
   def organizationLink(orgId: PublicId[Organization], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.OrganizationView, DeepLinkField.OrganizationId -> orgId.id) ++ authTokenField(authToken)
   def keepLink(keepId: PublicId[Keep], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.DiscussionView, DeepLinkField.KeepId -> keepId.id) ++ authTokenField(authToken)
+  val viewHomepage: JsObject = Json.obj("t" -> DeepLinkType.ViewHomepage)
 }
 
 object DeepLinkType {
