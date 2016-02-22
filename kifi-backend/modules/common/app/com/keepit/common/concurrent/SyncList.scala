@@ -2,13 +2,15 @@ package com.keepit.common.concurrent
 
 import java.util.NoSuchElementException
 
-import scala.concurrent.{ Future, ExecutionContext => ScalaExecutionContext }
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Promise, Future }
 import com.keepit.common.core.futureExtensionOps
 
+import scala.util.{ Failure, Success }
+
 class Task[T](f: () => Future[T]) {
-  lazy val run: Future[T] = f()
-  def map[S](g: T => S): Task[S] = new Task(() => f().imap(g))
-  def flatMap[S](g: T => Future[S])(implicit exc: ScalaExecutionContext): Task[S] = new Task(() => f().flatMap(g))
+  def run: Future[T] = f()
+  def map[S](g: T => S): Task[S] = new Task(() => f().imap(g), p)
+  def flatMap[S](g: T => Future[S]): Task[S] = new Task(() => f().flatMap(g))
 }
 
 sealed trait SyncList[T] {
