@@ -1,7 +1,5 @@
 package com.keepit.common.concurrent
 
-import java.util.NoSuchElementException
-
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Promise, Future }
 import com.keepit.common.core.futureExtensionOps
 
@@ -9,18 +7,20 @@ import scala.util.{ Failure, Success }
 
 class Task[T](f: () => Future[T]) {
   def run: Future[T] = f()
-  def map[S](g: T => S): Task[S] = new Task(() => f().imap(g), p)
-  def flatMap[S](g: T => Future[S]): Task[S] = new Task(() => f().flatMap(g))
+  def map[S](g: T => S) = new Task(() => f().imap(g))
 }
 
 sealed trait SyncList[T] {
-  // Actual extraction methods
+  // Actual extraction method
+  protected def foldLeftUntil[A](x0: A, p: Promise[A] = Promise[A]())(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A]
+
+  // Derived extraction methods
+  def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A] = foldLeftUntil[A](x0) { case (x, v) => (op(x, v), false) }
+  def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]] = foldLeftUntil[Option[T]](None) { case (_, v) => (Some(v), true) }
   def head(implicit exc: ScalaExecutionContext): Task[T] = headOption.map(_.getOrElse(throw new scala.NoSuchElementException("head of empty list")))
-  def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]]
-  def seq(implicit exc: ScalaExecutionContext): Task[Seq[T]]
+  def seq(implicit exc: ScalaExecutionContext): Task[Seq[T]] = foldLeft(Seq.empty[T]) { case (acc, v) => v +: acc }.map(_.reverse)
   def find(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Option[T]] = dropUntil(pred).headOption
   def exists(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Boolean] = find(pred).map(_.isDefined)
-  def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A]
   def length(implicit exc: ScalaExecutionContext): Task[Int] = foldLeft(0) { case (acc, _) => acc + 1 }
   def count(pred: T => Boolean)(implicit exc: ScalaExecutionContext): Task[Int] = filter(pred).length
 
@@ -30,9 +30,11 @@ sealed trait SyncList[T] {
   def tail(implicit exc: ScalaExecutionContext): SyncList[T]
   def takeWhile(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T]
   def dropWhile(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T]
-  def dropUntil(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T] = dropWhile(v => !pred(v))
   def filter(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T]
   def map[S](fn: T => S)(implicit exc: ScalaExecutionContext): SyncList[S]
+
+  // Derived mutation methods
+  def dropUntil(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T] = dropWhile(v => !pred(v))
 }
 object SyncList {
   def empty[T]: SyncList[T] = End[T]()
@@ -47,13 +49,14 @@ object SyncList {
   }))
 
   private case class End[T]() extends SyncList[T] {
-    def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]] = new Task(() => Future.successful(None))
-    def seq(implicit exc: ScalaExecutionContext): Task[Seq[T]] = new Task(() => Future.successful(Seq.empty))
-    def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A] = new Task(() => Future.successful(x0))
+    override def foldLeftUntil[A](x0: A, p: Promise[A])(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A] = new Task(() => {
+      p.success(x0)
+      p.future
+    })
 
     def take(n: Int)(implicit exc: ScalaExecutionContext): SyncList[T] = empty
     def drop(n: Int)(implicit exc: ScalaExecutionContext): SyncList[T] = empty
-    def tail(implicit exc: ScalaExecutionContext): SyncList[T] = throw new UnsupportedOperationException("tail of empty list")
+    def tail(implicit exc: ScalaExecutionContext): SyncList[T] = empty
     def takeWhile(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T] = empty
     def dropWhile(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T] = empty
     def filter(pred: T => Boolean)(implicit exc: ScalaExecutionContext): SyncList[T] = empty
@@ -61,18 +64,17 @@ object SyncList {
   }
 
   private case class Node[T](task: Task[(Option[T], SyncList[T])]) extends SyncList[T] {
-    def headOption(implicit exc: ScalaExecutionContext): Task[Option[T]] = task.flatMap {
-      case (Some(v), next) => Future.successful(Some(v))
-      case (None, next) => next.headOption.run
-    }
-    def seq(implicit exc: ScalaExecutionContext) = task.flatMap {
-      case (Some(v), next) => next.seq.run.imap(v +: _)
-      case (None, next) => next.seq.run
-    }
-    def foldLeft[A](x0: A)(op: (A, T) => A)(implicit exc: ScalaExecutionContext): Task[A] = task.flatMap {
-      case (Some(v), next) => next.foldLeft(op(x0, v))(op).run
-      case (None, next) => next.foldLeft(x0)(op).run
-    }
+    override def foldLeftUntil[A](x0: A, p: Promise[A])(op: (A, T) => (A, Boolean))(implicit exc: ScalaExecutionContext): Task[A] = new Task(() => {
+      task.run.onComplete {
+        case Failure(fail) => p.failure(fail)
+        case Success((None, next)) => next.foldLeftUntil(x0, p)(op)
+        case Success((Some(v), next)) =>
+          val (x1, done) = op(x0, v)
+          if (done) p.success(x1)
+          else next.foldLeftUntil(x1, p)(op)
+      }
+      p.future
+    })
 
     def take(n: Int)(implicit exc: ScalaExecutionContext) = if (n <= 0) empty else Node(task.map {
       case (firstOpt, next) => (firstOpt, next.take(if (firstOpt.isEmpty) n else n - 1))
