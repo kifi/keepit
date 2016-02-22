@@ -60,8 +60,11 @@ object OrganizationExperimentType {
   }
 
   val FAKE = OrganizationExperimentType("fake")
+  val SLACK_COMMENT_MIRRORING = OrganizationExperimentType("slack_comment_mirroring")
 
-  val _ALL = FAKE :: Nil
+  val _ALL = List(
+    FAKE, SLACK_COMMENT_MIRRORING
+  )
 
   def get(str: String): OrganizationExperimentType = OrganizationExperimentType(str.toLowerCase.trim)
 }

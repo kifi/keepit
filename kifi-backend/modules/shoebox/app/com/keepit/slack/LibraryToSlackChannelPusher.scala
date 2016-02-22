@@ -52,6 +52,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   inhouseSlackClient: InhouseSlackClient,
   organizationInfoCommander: OrganizationInfoCommander,
+  orgExperimentRepo: OrganizationExperimentRepo,
   slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
@@ -77,7 +78,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   @AlertingTimer(5 seconds)
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val integrationsToProcess = db.readWrite { implicit s =>
-      val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration)
+      val newActorTeams = {
+        val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+        slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
+      }
+      val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration, newActorTeams)
       markLegalIntegrationsForProcessing(integrations)
     }
     processIntegrations(integrationsToProcess)

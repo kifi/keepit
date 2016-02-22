@@ -306,6 +306,20 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           }, 1000);
         }
       });
+    } else {
+      api.port.emit('get_show_move_intro', { domain: window.location.hostname }, function (data) {
+        if (data.show === true) {
+          setTimeout(function () {
+            if (k.moveKeeperIntro) {
+              k.moveKeeperIntro.show();
+            } else {
+              api.require('scripts/move_keeper_intro.js', function () {
+                k.moveKeeperIntro.show();
+              });
+            }
+          }, 1000);
+        }
+      });
     }
   }
 

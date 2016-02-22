@@ -104,6 +104,7 @@ class SlackPushingActor @Inject() (
   orgConfigRepo: OrganizationConfigurationRepo,
   slackKeepPushTimestampCache: SlackKeepPushTimestampCache,
   slackCommentPushTimestampCache: SlackCommentPushTimestampCache,
+  orgExperimentRepo: OrganizationExperimentRepo,
   eliza: ElizaServiceClient,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -118,7 +119,12 @@ class SlackPushingActor @Inject() (
 
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
     db.readWrite { implicit session =>
-      val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout)
+      val newActorTeams = {
+        val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+        slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
+      }
+
+      val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout, newActorTeams)
       Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
     }
   }
