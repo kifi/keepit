@@ -146,21 +146,26 @@ class KeepInternerImpl @Inject() (
 
     val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.title), uri.title).flatten.headOption
     val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.note)).flatten.headOption
+    val kConnections = {
+      val libraries = existingKeepOpt.map(_.connections.libraries).getOrElse(Set.empty[Id[Library]]) ++ libraryOpt.map(_.id.get).toSet
+      val users = existingKeepOpt.map(_.connections.users).getOrElse(Set.empty[Id[User]]) ++ userIdOpt.toSet
+      KeepConnections(libraries, users)
+    }
     val keep = Keep(
       id = existingKeepOpt.map(_.id.get),
       externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
       title = kTitle,
-      userId = userIdOpt,
+      userId = existingKeepOpt.flatMap(_.userId).orElse(userIdOpt),
       uriId = uri.id.get,
       url = url,
-      source = source,
+      source = existingKeepOpt.map(_.source).getOrElse(source),
       visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
-      libraryId = libraryOpt.map(_.id.get),
-      keptAt = keptAt,
+      libraryId = existingKeepOpt.flatMap(_.libraryId).orElse(libraryOpt.map(_.id.get)),
+      keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet)
+      connections = kConnections
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
