@@ -684,19 +684,19 @@ class KeepCommanderImpl @Inject() (
       libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
     }
 
-    val updatedKeepOpt = if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
+    if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
       val newUsers = oldKeepOpt.map(oldKeep => newKeep.connections.users -- oldKeep.connections.users).getOrElse(newKeep.connections.users)
-      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers))
-    } else None
+      addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers)
+    }
 
-    updatedKeepOpt.getOrElse(newKeep)
+    newKeep
   }
   def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
     val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
 
     newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
-    updateLastActivityAtIfLater(keepId, currentDateTime)
+    newKeep
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
