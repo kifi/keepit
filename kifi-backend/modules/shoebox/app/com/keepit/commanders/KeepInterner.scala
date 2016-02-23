@@ -156,7 +156,7 @@ class KeepInternerImpl @Inject() (
       source = source,
       visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
       libraryId = libraryOpt.map(_.id.get),
-      keptAt = keptAt,
+      keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
