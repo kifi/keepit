@@ -16,7 +16,7 @@ angular.module('kifi')
     var context;
     var renderTimeout;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
-
+    var orderBy;
 
     //
     // Scope data.
@@ -54,6 +54,7 @@ angular.module('kifi')
       queryCount++;
       query = $stateParams.q || '';
       filter = $stateParams.f || 'a';
+      orderBy = $stateParams.o || (_.startsWith(query, 'tag:') ? 'recency' : 'relevancy');
 
       if (!query) {
         $state.go(library ? 'library.keeps' : 'home.feed');
@@ -137,7 +138,7 @@ angular.module('kifi')
 
       $scope.loading = true;
       var firstBatch = !context;
-      searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
+      searchActionService.find(query, filter, orderBy, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
         if (queryNumber !== queryCount) {  // results are for an old query
           return;
         }
@@ -235,12 +236,20 @@ angular.module('kifi')
       $location.search('f', newSearchFilter);
     };
 
+    $scope.isOrderBySelected = function (type) {
+      return orderBy === type;
+    };
+
+    $scope.setOrderBy = function (newOrderBy) {
+      $location.search('o', newOrderBy).replace();
+    };
+
 
     //
     // Watches and event listeners.
     //
     function newSearch() {
-      _.assign($stateParams, _.pick($location.search(), 'q', 'f'));
+      _.assign($stateParams, _.pick($location.search(), 'q', 'f', 'o'));
       init();
     }
 

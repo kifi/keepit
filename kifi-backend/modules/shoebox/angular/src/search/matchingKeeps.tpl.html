@@ -7,8 +7,17 @@
     </div>
     <div class="kf-smk-top">
       <span class="kf-smk-heading" ng-if="loading">Searching...</span>
-      <span class="kf-smk-heading" ng-if="!loading" ng-pluralize count="resultKeeps.length" when="{0: 'No matching keeps', 1: '1 matching keep', other: 'Top {} results'}"></span>
-
+      <span class="kf-smk-heading" ng-if="!loading">
+        <span ng-pluralize count="resultKeeps.length" when="{0: 'No matching keeps', 1: '1 matching keep', other: 'Top {} results'}"></span>
+        <span ng-if="resultKeeps.length">ordered by</span>
+        <span class="kf-smk-dropdown-parent" kf-click-menu toggle-open="true" ng-if="resultKeeps.length">
+          <span class="kf-link" ng-bind="isOrderBySelected('recency') ? 'more recent' : 'most relevant'"></span>
+          <menu class="kf-dropdown-menu">
+            <span class="kf-link kf-smk-order-by-option" ng-click="setOrderBy('relevancy')">most relevant</span>
+            <span class="kf-link kf-smk-order-by-option" ng-click="setOrderBy('recency')">more recent</span>
+          </menu>
+        </span>
+      </span>
       <div class="kf-smk-bulk-add kf-flex-row" ng-click="edit.enabled = !edit.enabled" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
         <svg kf-symbol-sprite
              icon="pencil"
