@@ -24,7 +24,13 @@ var MOD_KEYS = /^Mac/.test(navigator.platform) ? {c: '⌘', alt: 'Option'} : {c:
 
 k.keeper = k.keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt, extMsgIntroEligible = !k.tile.dataset.kept;
+  var $slider;
+  var lastCreatedAt;
+  var extMsgIntroEligible = !k.tile.dataset.kept;
+  var extMoveIntroEligible = (function () {
+    var pos = JSON.parse(k.tile.dataset.pos || '{}');
+    return !!(pos.top || pos.bottom);
+  }());
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -296,31 +302,21 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
     $(k.tile).triggerHandler('kifi:keeper:remove');
-
-    if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
-      extMsgIntroEligible = false;
-      api.port.emit('prefs', function (prefs) {
-        if (prefs.showExtMsgIntro) {
-          setTimeout(function () {
-            api.require('scripts/external_messaging_intro.js', api.noop);
-          }, 1000);
-        }
-      });
-    } else {
-      api.port.emit('get_show_move_intro', { domain: window.location.hostname }, function (data) {
-        if (data.show === true) {
-          setTimeout(function () {
-            if (k.moveKeeperIntro) {
-              k.moveKeeperIntro.show();
-            } else {
-              api.require('scripts/move_keeper_intro.js', function () {
-                k.moveKeeperIntro.show();
-              });
-            }
-          }, 1000);
-        }
-      });
-    }
+    api.port.emit('prefs', function (prefs) {
+      if (prefs.showExtMsgIntro && extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
+        extMsgIntroEligible = false;
+        setTimeout(function () {
+          api.require('scripts/external_messaging_intro.js', api.noop);
+        }, 1000);
+      } else if(prefs.showExtMoveIntro && extMoveIntroEligible) {
+        extMoveIntroEligible = false;
+        setTimeout(function () {
+          api.require('scripts/move_keeper_intro.js', function () {
+            k.moveKeeperIntro.show();
+          });
+        }, 1000);
+      }
+    });
   }
 
   function startDrag(data) {
