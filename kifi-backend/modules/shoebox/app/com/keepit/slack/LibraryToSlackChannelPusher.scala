@@ -226,7 +226,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case Some(futureMessage) => futureMessage.flatMap { message =>
         slackClient.sendToSlackViaUser(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
           .recover {
-            case f: SlackAPIFailure =>
+            case f: SlackAPIErrorResponse =>
               log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
               SafeFuture {
                 val team = db.readOnlyReplica { implicit s =>
