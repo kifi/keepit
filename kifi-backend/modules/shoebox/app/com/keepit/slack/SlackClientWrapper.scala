@@ -22,12 +22,12 @@ object SlackChannelMagnet {
   implicit def fromName(name: SlackChannelName): SlackChannelMagnet = Name(name)
 
   case class NameAndId(name: SlackChannelName, id: SlackChannelId) extends SlackChannelMagnet
-  implicit def fromBoth(nameAndId: (SlackChannelName, SlackChannelId)): SlackChannelMagnet =
-    NameAndId(nameAndId._1, nameAndId._2)
+  implicit def fromBoth(idAndName: (SlackChannelId, SlackChannelName)): SlackChannelMagnet =
+    NameAndId(idAndName._2, idAndName._1)
 
   implicit def fromNameAndMaybeId(nameAndMaybeId: (SlackChannelName, Option[SlackChannelId])): SlackChannelMagnet =
     nameAndMaybeId match {
-      case (name, Some(id)) => fromBoth(name, id)
+      case (name, Some(id)) => fromBoth(id, name)
       case (name, None) => fromName(name)
     }
 }
@@ -85,14 +85,16 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
-    sendToSlackViaBot(slackTeamId, slackChannel, msg).map(v => Some(v)).recoverWith {
+  def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
+    sendToSlackViaBot(slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
       case SlackAPIFailure.NoValidBotToken | SlackAPIFailure(_, SlackAPIFailure.Error.channelNotFound, _) =>
-        val slackTeamMembers = db.readOnlyMaster { implicit s =>
-          slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+        val (slackChannel, slackTeamMembers) = db.readOnlyMaster { implicit s =>
+          val slackChannel = slackChannelRepo.getByChannelId(slackTeamId, slackChannelId)
+          val memberships = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
+          (slackChannel, memberships)
         }
         FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
-          sendToSlackViaUser(slackUserId, slackTeamId, slackChannel, msg).map(v => Some(v)).recover {
+          sendToSlackViaUser(slackUserId, slackTeamId, slackChannel.map(ch => SlackChannelMagnet.fromBoth(ch.idAndName)) getOrElse slackChannelId, msg).map(v => Some(v)).recover {
             case SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken | SlackAPIFailure(_, SlackAPIFailure.Error.channelNotFound, _) => None
           }
         }.flatMap {
