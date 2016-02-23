@@ -178,6 +178,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           k.render('html/keeper/titled_tip', {
             title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
             html: k.formatting.jsonDom('Keeping this page helps<br/>you easily find it later.')
+          }, {
+            'kifi_mustache_tags': 'kifi_mustache_tags'
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
