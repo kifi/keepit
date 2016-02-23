@@ -75,12 +75,13 @@ testspacing = (btn-diam + btn-space) * 5 + 12px
   font-size: 0
 
 .kf-lih-center-flex
-  display: none
+  display: table-cell
   vertical-align: middle
   max-width: appMaxWidth
+  width: searchMinWidth
 
-  @media (min-width: searchMinWidth)
-    display: table-cell
+  @media (max-width: searchMinWidth)
+    display: none
 
 .kf-lih-left
   display: table-cell
