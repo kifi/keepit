@@ -4,12 +4,12 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
+  'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService',
   'libraryImageLoaded', 'slackService',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
+    env, util, URI, AB, initParams, library, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, signupService,
     libraryImageLoaded, slackService) {
 
@@ -53,12 +53,6 @@ angular.module('kifi')
       }
 
       $analytics.pageTrack(url, attributes);
-    }
-
-    function trackShareEvent(action) {
-      $timeout(function () {
-        $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
-      });
     }
 
     function setTitle() {
@@ -369,37 +363,6 @@ angular.module('kifi')
         modalService.open({
           template: 'common/modal/installExtensionErrorModal.tpl.html'
         });
-      });
-    };
-
-    $scope.preloadFB = function () {
-      $FB.init();
-    };
-
-    $scope.shareFB = function () {
-      trackShareEvent('clickedShareFacebook');
-      $FB.ui({
-        method: 'share',
-        href: env.origin + (library.path || library.url) +
-          '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
-          '&kcid=na-vf_facebook-library_share-lid_' + library.id
-      });
-    };
-
-    $scope.preloadTwitter = function () {
-      $twitter.load();
-    };
-
-    $scope.shareTwitter = function (event) {
-      trackShareEvent('clickedShareTwitter');
-      var absUrl = env.origin + (library.path || library.url);
-      event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
-        original_referer: absUrl,
-        text: 'Check out this @Kifi library about ' + library.name + '!',
-        tw_p: 'tweetbutton',
-        url: absUrl +
-          '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +
-          '&kcid=na-vf_twitter-library_share-lid_' + library.id
       });
     };
 
