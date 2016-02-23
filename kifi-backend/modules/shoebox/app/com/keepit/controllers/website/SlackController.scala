@@ -127,9 +127,9 @@ class SlackController @Inject() (
     Ok(Json.obj("orgs" -> orgs))
   }
 
-  def getOrgIntegrations(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>
+  def getOrgIntegrations(pubId: PublicId[Organization], max: Int = 100) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>
     val result = db.readOnlyReplica { implicit s =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId)
+      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId, Some(max))
     }
     Ok(Json.toJson(result))
   }
