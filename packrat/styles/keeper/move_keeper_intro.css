@@ -9,6 +9,5 @@
 .kifi-move-keeper-intro-demo {
   height: 128px;
   border-radius: 12px;
-  border: 2px solid #ccc;
-  box-shadow: rgba(0,40,90,.2) 3px 3px 0 0px;
+  border: 1px solid #ccc;
 }
