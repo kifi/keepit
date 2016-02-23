@@ -266,18 +266,25 @@ class PageMetaTagsCommander @Inject() (
     val imageFut = db.readOnlyMasterAsync { implicit s =>
       keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ProcessedImageSize.XLarge.idealSize)).flatten
     }
+    val summaryFut = rover.getArticleSummaryByUris(Set(keep.uriId))
     for {
       authorOpt <- authorFut
       libraries <- librariesFut
       imageOpt <- imageFut
+      summary <- summaryFut
     } yield {
       val splitName = authorOpt.map(_.name.split(" "))
+      val description = {
+        val shoeboxDescription = keep.note.map(Hashtags.format)
+        val roverDescription = summary.values.headOption.flatMap(_.description)
+        Seq(shoeboxDescription, roverDescription).flatten.mkString(". ")
+      }
       PublicPageMetaFullTags(
         unsafeTitle = keep.title.getOrElse(""),
         url = url,
         urlPathOnly = urlPath,
         feedName = None,
-        unsafeDescription = keep.note.orElse(keep.title).getOrElse(""),
+        unsafeDescription = description,
         images = imageOpt.map(imageUrl).toSeq,
         facebookId = None,
         createdAt = keep.createdAt,
