@@ -77,7 +77,7 @@ trait SlackInfoCommander {
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
 
   // For generating OrganizationInfo
-  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int] = None)(implicit session: RSession): OrganizationSlackInfo
 
   // For generating UserProfileStats
   def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo
@@ -212,11 +212,15 @@ class SlackInfoCommanderImpl @Inject() (
     }
   }
 
-  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): OrganizationSlackInfo = {
+  def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int])(implicit session: RSession): OrganizationSlackInfo = {
     val (libIds, basicLibsById, integrationInfosByLib, slackTeam) = {
       val slackToLibs = channelToLibRepo.getIntegrationsByOrg(orgId)
       val libToSlacks = libToChannelRepo.getIntegrationsByOrg(orgId)
-      val libIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).toSet
+      val allLibIds = (slackToLibs.map(_.libraryId) ++ libToSlacks.map(_.libraryId)).distinct.sortBy(_.id * -1)
+      val libIds = max match {
+        case Some(cutoff) => allLibIds.take(cutoff).toSet
+        case None => allLibIds.toSet
+      }
 
       val basicLibsById = {
         val libs = libRepo.getActiveByIds(libIds).values.toList
