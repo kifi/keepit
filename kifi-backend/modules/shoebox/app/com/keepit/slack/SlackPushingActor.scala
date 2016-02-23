@@ -38,12 +38,13 @@ object SlackPushingActor {
 
   val delayFromSuccessfulPush = Duration.standardMinutes(30)
   val delayFromFailedPush = Duration.standardMinutes(5)
-  val MAX_KEEPS_TO_SEND = 7
+  val MAX_ITEMS_TO_PUSH = 7
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
   def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
 
   sealed abstract class PushItem(val time: DateTime)
   object PushItem {
+    case class Digest(since: DateTime) extends PushItem(since)
     case class KeepToPush(k: Keep, ktl: KeepToLibrary) extends PushItem(ktl.addedAt)
     case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt)
   }
@@ -60,7 +61,8 @@ object SlackPushingActor {
     def maxMsgSeq: Option[SequenceNumber[Message]] = Seq(oldMsgs.values, newMsgs.values).flatMap(_.flatMap(_.map(_.seq))).maxOpt
     def sortedNewItems: Seq[PushItem] = {
       val items: Seq[PushItem] = newKeeps.map { case (k, ktl) => PushItem.KeepToPush(k, ktl) } ++ newMsgs.flatMap { case (k, msgs) => msgs.map(msg => PushItem.MessageToPush(k, msg)) }
-      items.sortBy(_.time)
+      if (items.length > MAX_ITEMS_TO_PUSH) Seq(PushItem.Digest(newKeeps.map(_._2.addedAt).minOpt getOrElse newMsgs.values.flatten.map(_.sentAt).min))
+      else items.sortBy(_.time)
     }
   }
 }
@@ -130,6 +132,7 @@ class SlackPushingActor @Inject() (
   }
 
   protected def processTasks(integrationIds: Seq[Id[LibraryToSlackChannel]]): Map[Id[LibraryToSlackChannel], Future[Unit]] = {
+    log.info(s"[SLACK-PUSH-ACTOR] Processing $integrationIds")
     val (integrationsByIds, isAllowed, getSettings) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
@@ -257,6 +260,9 @@ class SlackPushingActor @Inject() (
         ).map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {
+              case PushItem.Digest(_) =>
+                pushItems.newKeeps.map(_._2.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
+                pushItems.newMsgs.values.flatten.map(_.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { pushedMessage =>
@@ -339,8 +345,14 @@ class SlackPushingActor @Inject() (
   }
 
   private def slackMessageForItem(item: PushItem)(implicit items: PushItems): Option[SlackMessageRequest] = {
-    if (items.newKeeps.length > MAX_KEEPS_TO_SEND) None
-    else item match {
+    import DescriptionElements._
+    item match {
+      case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+        items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
+          case (m, n) => DescriptionElements(m, "new keeps and", n, "new comments since", since, ".")
+        },
+        "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
+      ))))
       case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get))
       )))
