@@ -224,7 +224,7 @@ class SlackPushingActor @Inject() (
                   case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                   case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
                 }.imap(_ => ()).recover {
-                  case fail: SlackAPIErrorResponse =>
+                  case fail: SlackAPIFailure =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
                     ()
                 }
@@ -255,7 +255,7 @@ class SlackPushingActor @Inject() (
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
         slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
           slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, message.quiet).recoverWith {
-            case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+            case failure @ SlackAPIFailure.NoValidWebhooks => Future.failed(BrokenSlackIntegration(integration, None, Some(failure)))
           }
         ).map { pushedMessageOpt =>
           db.readWrite { implicit s =>

@@ -29,8 +29,8 @@ class SlackOAuthController @Inject() (
     implicit val scopesFormat = SlackAuthScope.dbFormat
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
-      code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackFail.NoAuthCode))
-      action <- slackStateCommander.getSlackAction(SlackAuthState(state)).map(Future.successful).getOrElse(Future.failed(SlackFail.InvalidAuthState))
+      code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.NoAuthCode))
+      action <- slackStateCommander.getSlackAction(SlackAuthState(state)).map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.InvalidAuthState))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), SlackOAuthController.REDIRECT_URI)
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
