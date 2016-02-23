@@ -124,7 +124,6 @@ POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
-GET     /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.getShowExtMoveIntro(domain: String)
 POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 

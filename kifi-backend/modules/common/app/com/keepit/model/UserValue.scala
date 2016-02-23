@@ -161,7 +161,7 @@ object UserValues {
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
   val showExtMoveIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_MOVE_INTRO, true)
 
-  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
+  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showExtMoveIntro).map(_.name)
 
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)
   val welcomeEmailSent = UserValueBooleanHandler(UserValueName.WELCOME_EMAIL_SENT, false)

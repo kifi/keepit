@@ -37,6 +37,7 @@ class ExtPreferenceController @Inject() (
     enterToSend: Boolean,
     maxResults: Int,
     showExtMsgIntro: Boolean,
+    showExtMoveIntro: Boolean,
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
@@ -44,6 +45,7 @@ class ExtPreferenceController @Inject() (
     (__ \ 'enterToSend).write[Boolean] and
     (__ \ 'maxResults).write[Int] and
     (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'showExtMoveIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
   )(unlift(UserPrefs.unapply))
 
@@ -76,14 +78,6 @@ class ExtPreferenceController @Inject() (
   def setShowExtMsgIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
     Ok(JsNumber(0))
-  }
-
-  def getShowExtMoveIntro(domain: String) = UserAction { request =>
-    val shouldShow = {
-      ExtensionUnfriendlyDomains.containsMatch(domain) &&
-        db.readOnlyMaster(implicit s => userValueRepo.getValue(request.userId, UserValues.showExtMoveIntro))
-    }
-    Ok(Json.obj("show" -> shouldShow))
   }
 
   def setShowExtMoveIntro(show: Boolean) = UserAction { request =>
@@ -180,6 +174,7 @@ class ExtPreferenceController @Inject() (
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
+        showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals) && experiments.contains(UserExperimentType.INFER_KEEPER_POSITION),
         messagingEmails = messagingEmails)
     }
   }
