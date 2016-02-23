@@ -76,7 +76,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(team: SlackTeam) = {
         val teamHasDigestsEnabled = team.organizationId.flatMap(orgConfigById.get).exists { config =>
-          config.settings.settingFor(Feature.SlackNotifications).contains(FeatureSetting.ENABLED)
+          config.settings.settingFor(StaticFeature.SlackNotifications).contains(StaticFeatureSetting.ENABLED)
         }
         val teamHasValidTokens = slackMembershipRepo.getBySlackTeam(team.slackTeamId).flatMap(_.tokenWithScopes).exists(_.scopes.contains(SlackAuthScope.ChatWriteBot))
         val creatorHadTimeToTurnUsOff = team.lastDigestNotificationAt.isDefined || team.publicChannelsLastSyncedAt.exists(_ isBefore now.minus(initialDelayForWelcomeMessage))
@@ -114,13 +114,13 @@ class SlackTeamDigestNotificationActor @Inject() (
       org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
     } yield {
       val txt = DescriptionElements.formatForSlack(DescriptionElements(
-        owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", slackTeam.slackTeamName.value, "with", s"${org.name} on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(org, slackTeam.slackTeamId).absolute),
+        owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId)), "connected", slackTeam.slackTeamName.value, "with", s"${org.name} on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(org, slackTeam.slackTeamId)),
         "to auto-magically manage links", SlackEmoji.fireworks
       ))
       val attachments = List(
         SlackAttachment(color = Some("#7DBB70"), text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
           DescriptionElements(
-            SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute),
+            SlackEmoji.clipboard, s"Get on", "Kifi" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId)),
             "to access your automatically organized lists of links."
           ),
           DescriptionElements("Libraries have been created for each of your public channels. Join Kifi to access your archived links from Slack")
@@ -133,7 +133,7 @@ class SlackTeamDigestNotificationActor @Inject() (
           DescriptionElements(SlackEmoji.magnifyingGlass, "Searching: Find your links in Slack and Google"),
           DescriptionElements(
             "Everyone can use the slash command `[/kifi <search term>]` to search on Slack. Install our Chrome and Firefox extensions to",
-            "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId).absolute), "."
+            "get keeps in your Google Search results" --> LinkElement(pathCommander.browserExtensionViaSlack(slackTeam.slackTeamId)), "."
           )
         ))))).withFullMarkdown
       )
@@ -162,7 +162,8 @@ class SlackTeamDigestNotificationActor @Inject() (
           val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), slackTeam.unnotifiedSince).map(_.keepId).toSet
           val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
           val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
-            case (kId, SlackAttribution(msg)) if msg.channel.id == channelId => newSlackKeepsById.get(kId).map(_.url)
+            case (kId, SlackAttribution(msg, teamId)) if teamId == slackTeam.slackTeamId && msg.channel.id == channelId =>
+              newSlackKeepsById.get(kId).map(_.url)
           }.flatten.toSet
           channelId -> ingestedLinks
       }
@@ -229,15 +230,15 @@ class SlackTeamDigestNotificationActor @Inject() (
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
-      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).absolute),
+      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)),
         "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod),
-        SlackEmoji.gear --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(digest.org, slackTeamId)))
+        SlackEmoji.gear, "Edit", "settings" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(digest.org, slackTeamId)), ".")
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         "Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
         DescriptionElements.unwordsPretty {
-          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId).absolute)))
+          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId))))
         }
       )))).withFullMarkdown
     ) ++ prng.choice(kifiSlackTipAttachments(digest.slackTeam.slackTeamId))
@@ -256,15 +257,15 @@ class SlackTeamDigestNotificationActor @Inject() (
         msg <- msgOpt
         generalChannel <- generalChannelOpt
       } yield {
-        slackClient.sendToSlackTeam(team.slackTeamId, generalChannel, msg).andThen {
-          case Success(_: Unit) =>
+        slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map(_ => ()).andThen {
+          case Success(_) =>
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
             slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
         }
       }
-      pushOpt.getOrElse { Future.successful(Unit) }
+      pushOpt.getOrElse { Future.successful(()) }
     }
   }
 }

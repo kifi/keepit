@@ -12,7 +12,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -35,7 +35,7 @@ case class Keep(
   uriId: Id[NormalizedURI],
   url: String, // denormalized for efficiency
   userId: Option[Id[User]], // userId is None iff the message was imported from a foreign source (Slack, etc) and we don't have a Kifi user to attribute it to
-  originalKeeperId: Option[Id[User]] = None,
+  originalKeeperId: Option[Id[User]],
   source: KeepSource,
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
@@ -240,20 +240,19 @@ case class BasicKeep(
   url: String,
   visibility: LibraryVisibility,
   libraryId: Option[PublicId[Library]],
-  ownerId: Option[ExternalId[User]],
-  attribution: Option[(SlackAttribution, Option[BasicUser])])
+  author: BasicAuthor,
+  attribution: Option[SlackAttribution])
 
 object BasicKeep {
   private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
-  implicit val tupleFormat = TupleFormat.tuple2Format[SlackAttribution, Option[BasicUser]]
   implicit val format: Format[BasicKeep] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'ownerId).format[ExternalId[User]].inmap[Option[ExternalId[User]]](Some(_), _.getOrElse(GARBAGE_UUID)) and
-    (__ \ 'slackAttribution).formatNullable[(SlackAttribution, Option[BasicUser])]
+    (__ \ 'author).format[BasicAuthor] and
+    (__ \ 'slackAttribution).formatNullable[SlackAttribution]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
@@ -306,7 +305,7 @@ object PersonalKeep {
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 2
+  override val version = 3
   val namespace = "basic_keep_by_id"
   def toKey(): String = id.id.toString
 }

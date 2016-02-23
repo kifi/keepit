@@ -3,7 +3,7 @@
        ng-class="{
         'editing': $parent.edit.enabled,
         'compact': !galleryView,
-        'mine': (keep.user.id === me.id)}">
+        'mine': (keep.author.id === me.id)}">
 
     <div class="kf-keep-card kf-flex-column">
       <div class="kf-keep-card-activity-attribution-container" ng-if="::showActivityAttribution">
@@ -37,7 +37,7 @@
         <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
              ng-if="::keep.note || canEditKeep"></div>
         <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
-                ng-if="canEditKeep && galleryView && !keep.note && keep.user.id === me.id">Add a note
+                ng-if="canEditKeep && galleryView && !keep.note && keep.author.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>
@@ -51,13 +51,13 @@
         <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
            ng-style="{'background': '#f7f7f7 url(\'' + image.url + '\') center / cover no-repeat', width: image.w ? image.w + 'px' : '', 'padding-top': image.h ? image.h + 'px' : ''}"
            ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
-           ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
+           ng-click="clickCallback({keep: keep, event: $event}); maybeOpenExt($event);" click-action="clickedArticleImage">
         </a>
 
         <div class="kf-keep-card-gallery-content">
           <div class="kf-keep-card-title">
             <a class="kf-keep-card-title-link" ng-href="{{::keep.url}}" target="_blank"
-               ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
+               ng-click="clickCallback({keep: keep, event: $event}); maybeOpenExt($event);" rel="nofollow"
                click-action="clickedArticleTitle" kf-ellipsis full-text="displayTitle"
                ng-bind="displayTitle" max-num-lines="2"></a>
           </div>
@@ -89,7 +89,7 @@
             </button>
           </div>
           <div class="kf-keep-who"
-               ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
+               ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
           <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                 library="::keeper.library" desc="Your Kifi connection">
             <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
@@ -144,7 +144,7 @@
               <span>Share</span>
             </button>
             <div class="kf-keep-who"
-                 ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
+                 ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
               <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                     library="::keeper.library" desc="Your Kifi connection">
                 <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"

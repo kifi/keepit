@@ -8,7 +8,7 @@ import scala.collection.mutable
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[KeepToLibraryRepoImpl])
@@ -30,12 +30,13 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
   def getByLibrariesAddedSince(libraryIds: Set[Id[Library]], time: DateTime)(implicit session: RSession): Seq[KeepToLibrary]
+  def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], daysSince: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
   def allActive(implicit session: RSession): Seq[KeepToLibrary]
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)]
+  def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // For backwards compatibility with KeepRepo
   def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
@@ -108,9 +109,9 @@ class KeepToLibraryRepoImpl @Inject() (
     val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).groupBy(_.keepId).map { case (keepId, ktls) => (keepId, ktls.length) }.list.toMap
     keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, 0) }.toMap
   }
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
+  def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 1 DAY)  group by organization_id order by count(*) desc"""
+    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 3 DAY)  group by organization_id order by count(*) desc"""
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
@@ -143,6 +144,24 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
     getByLibraryIdsHelper(libraryIds, excludeStateOpt).list.groupBy(_.libraryId)
+  }
+
+  def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], since: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val idAndLastKept = orgIdOpt match {
+      case None => s"""select id, last_kept from library where owner_id = $userId and organization_id is null and state = 'active'"""
+      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active' and visibility != 'secret'"""
+    }
+    val idAndCount = orgIdOpt match {
+      case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""
+      case Some(orgId) => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id = $orgId and added_at >= '$since' group by library_id"""
+    }
+
+    sql"""
+    select idAndLastKept.id
+    from (#$idAndLastKept) as idAndLastKept left join (#$idAndCount) as idAndCount on idAndLastKept.id = idAndCount.id
+    order by idAndCount.num_keeps desc, idAndLastKept.last_kept desc
+    limit ${limit.value} offset ${offset.value};""".as[Id[Library]].list
   }
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]] = {

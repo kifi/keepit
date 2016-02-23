@@ -83,6 +83,7 @@ angular.module('kifi')
     }
 
     function getPrimaryEmail(emails) {
+      emails = emails || [];
       var actualPrimary = _.find(emails, 'isPrimary');
       if (actualPrimary) {
         return actualPrimary;
@@ -100,7 +101,7 @@ angular.module('kifi')
     }
 
     function removeEmailInfo(emails, addr) {
-      emails = emails || me.emails;
+      emails = emails || me.emails || [];
       for (var i = emails.length - 1; i >= 0; i--) {
         if (emails[i].address === addr) {
           emails.splice(i, 1);

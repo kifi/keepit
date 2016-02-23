@@ -221,6 +221,14 @@ angular.module('kifi')
           }
         };
 
+        scope.maybeOpenExt = function (event) {
+          var canAddComment = scope.keep.permissions && scope.keep.permissions.indexOf('add_message') !== -1;
+          if (canAddComment && installService.hasMinimumVersion('3.0.7')) {
+            event.preventDefault();
+            extensionLiaison.openDeepLink(scope.keep.url, '/messages/' + scope.keep.pubId);
+          }
+        };
+
         scope.trackTweet = function () {
           $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
         };
@@ -285,7 +293,7 @@ angular.module('kifi')
 
           var libraryPermissions = (keep.library && keep.library.permissions) || [];
           var keepPermissions = keep.permissions || [];
-          var keepUserId = keep.user && keep.user.id;
+          var keepUserId = keep.author && keep.author.kind === 'kifi' && keep.author.id;
           scope.canRemoveKeepFromLibrary = (
             (keepUserId === scope.me.id && libraryPermissions.indexOf('remove_own_keeps') !== -1) ||
             libraryPermissions.indexOf('remove_other_keeps') !== -1
@@ -299,9 +307,9 @@ angular.module('kifi')
           setImage(scope.galleryView);
           scope.$watch('galleryView', setImage);
 
-          if (keep.user) {
+          if (keepUserId) {
             // don't repeat the user at the top of the keep card in the keeper list
-            _.remove(keep.keepers, {id: keep.user.id});
+            _.remove(keep.keepers, {id: keepUserId});
           }
           if (keep.libraryId && $state.includes('libraries')) {
             // if on a library page, don't show the library

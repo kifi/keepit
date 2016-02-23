@@ -7,7 +7,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ FeedFilter, ElizaFeedFilter, User, Keep }
+import com.keepit.model.{ ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
@@ -57,6 +57,21 @@ class ElizaDiscussionController @Inject() (
       val output = Response(msgs)
       Ok(Json.toJson(output))
     }
+  }
+
+  def getMessageCountsForKeeps = Action(parse.tolerantJson) { request =>
+    import GetMessageCountsForKeeps._
+    val input = request.body.as[Request]
+    val countByKeepId = db.readOnlyMaster(implicit s => messageRepo.getAllMessageCounts(input.keepIds))
+    Ok(Json.toJson(Response(countByKeepId)))
+  }
+  def getChangedMessagesFromKeeps = Action(parse.tolerantJson) { request =>
+    import GetChangedMessagesFromKeeps._
+    val input = request.body.as[Request]
+    val changedMessages = db.readOnlyMaster { implicit session =>
+      messageRepo.getForKeepsBySequenceNumber(input.keepIds, ElizaMessage.fromCommonSeq(input.seq))
+    }.map(ElizaMessage.toCrossServiceMessage)
+    Ok(Json.toJson(Response(changedMessages)))
   }
 
   def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>

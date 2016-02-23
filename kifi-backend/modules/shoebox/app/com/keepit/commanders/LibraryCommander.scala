@@ -326,7 +326,7 @@ class LibraryCommanderImpl @Inject() (
 
       libraryRepo.save(library.copy(
         name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor,
-        whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt,
+        whoCanInvite = newInviteToCollab, organizationId = newOrgIdOpt,
         organizationMemberAccess = newOrgMemberAccessOpt, whoCanComment = newLibraryCommentPermissions)
       )
     }
@@ -412,7 +412,7 @@ class LibraryCommanderImpl @Inject() (
       //we would want to be able to get back to the library and clean it again
       log.info(s"[zombieLibrary] Deleting lib: $oldLibrary")
       db.readWrite(attempts = 2) { implicit s =>
-        libraryRepo.save(oldLibrary.sanitizeForDelete)
+        libraryRepo.deactivate(oldLibrary)
           .tap { l => log.info(s"[zombieLibrary] Should have deleted lib: $l") }
       }
       db.readOnlyMaster { implicit s =>

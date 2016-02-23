@@ -78,7 +78,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
-  def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
+  def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
 
@@ -185,10 +185,15 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean) = {
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
+        membership.userId.foreach { ownerId =>
+          request.userId.foreach { requesterId =>
+            if (requesterId != ownerId) throw new IllegalStateException(s"SlackMembership requested by user $requesterId is already owned by user $ownerId: $membership")
+          }
+        }
         val updated = membership.copy(
-          userId = request.userId orElse membership.userId, // let a Kifi user steal a slack membership
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
+          userId = request.userId orElse membership.userId,
           token = request.token orElse membership.token,
           scopes = request.scopes,
           slackUser = request.slackUser orElse membership.slackUser
@@ -210,8 +215,13 @@ class SlackTeamMembershipRepoImpl @Inject() (
     }
   }
 
-  def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership] = {
-    activeRows.filter(_.slackUserId.inSet(ids)).map(r => (r.slackUserId, r)).list.toMap
+  def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership] = {
+    // This query looks up memberships from the db by slack user id only (so we could get some extra values back).
+    // We then pare down to the correct values in-memory
+    val slackUserIds = identities.map(_._2)
+    activeRows.filter(stm => stm.slackUserId.inSet(slackUserIds)).list.groupBy(stm => (stm.slackTeamId, stm.slackUserId)).collect {
+      case (k, Seq(v)) if identities.contains(k) => k -> v
+    }
   }
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
     activeRows.filter(_.token === token).firstOption

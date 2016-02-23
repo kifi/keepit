@@ -27,6 +27,7 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount]
 
   // admin/integrity methods
+  def getPayingTeams()(implicit session: RSession): Set[Id[Organization]]
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
   def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment]
 
@@ -105,10 +106,13 @@ class PaidAccountRepoImpl @Inject() (
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
     (for (row <- rows if row.state === PaidAccountStates.ACTIVE && !row.frozen && row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) && (row.credit < -maxBalance || row.paymentDueAt <= clock.now())) yield row).sortBy(_.paymentDueAt).list
   }
-
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
+  }
+  def getPayingTeams()(implicit session: RSession): Set[Id[Organization]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select * from paid_account where state = 'active' and plan_id in (select id from paid_plan where price_per_user_per_cycle > 0)""".as[Id[Organization]].list.toSet
   }
   def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment] = {
     activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {

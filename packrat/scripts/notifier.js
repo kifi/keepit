@@ -8,6 +8,7 @@
 // @require scripts/title_from_url.js
 // @require scripts/render.js
 // @require scripts/html/notify_box.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 
 var notifier = function () {
   'use strict';
@@ -72,14 +73,15 @@ var notifier = function () {
       $wrap = $('<kifi id="kifi-notify-notice-wrapper" class="kifi-root">').appendTo($('body')[0] || 'html');
     }
     var $item = $(k.render('html/notify_box', {
-      formatSnippet: formatMessage.snippet,
+      bodyHtmlTree: formatMessage.snippet()(params.contentHtml),
       title: params.title,
       subtitle: params.subtitle,
-      contentHtml: params.contentHtml,
-      image: params.imageHtml,
+      image: k.formatting.jsonDom(params.imageHtml),
       popupClass: 'kifi-notify-' + category,
       pageTitle: params.link,
       threadId: params.threadId
+    }, {
+      'kifi_mustache_tags': 'keeper/kifi_mustache_tags'
     }))
     .appendTo($wrap)
     .fadeIn(params.fadeInMs || 500)

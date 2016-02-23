@@ -96,7 +96,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, _, I], A <: IndexerActor[
 
     scheduleTaskOnAllMachines(actor.system, (60 + rnd.nextInt(60)) seconds, indexingInterval, actor.ref, UpdateIndex)
 
-    if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+    if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 1 hour, 4 hours, actor.ref, BackUpIndex)
     else {
       // regular search instance
       actor.ref ! WarmUpIndexDirectory

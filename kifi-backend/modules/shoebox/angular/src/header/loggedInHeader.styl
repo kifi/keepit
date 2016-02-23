@@ -1,5 +1,12 @@
 searchMinWidth = 660px
 
+.kf-logged-in-nav-header-guide-target-3
+  width: 96px
+  height: 56px
+  margin-top: -12px
+  margin-left: -14px
+  position: absolute
+
 .kf-lih
   position: fixed
   top: 0
@@ -68,12 +75,13 @@ testspacing = (btn-diam + btn-space) * 5 + 12px
   font-size: 0
 
 .kf-lih-center-flex
-  display: none
+  display: table-cell
   vertical-align: middle
   max-width: appMaxWidth
+  width: searchMinWidth
 
-  @media (min-width: searchMinWidth)
-    display: table-cell
+  @media (max-width: searchMinWidth)
+    display: none
 
 .kf-lih-left
   display: table-cell

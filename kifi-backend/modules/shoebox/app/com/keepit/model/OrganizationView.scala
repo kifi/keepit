@@ -5,7 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.net.URI
 import com.keepit.common.store.ImagePath
 import com.keepit.model.OrganizationModifications.SiteModification
-import com.keepit.slack.OrganizationSlackInfo
+import com.keepit.slack.{ OrganizationSlackTeamInfo, OrganizationSlackInfo }
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -22,7 +22,7 @@ case class OrganizationInfo(
     numMembers: Int,
     numLibraries: Int,
     config: Option[ExternalOrganizationConfiguration],
-    slack: Option[OrganizationSlackInfo]) {
+    slackTeam: Option[OrganizationSlackTeamInfo]) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
@@ -38,7 +38,7 @@ object OrganizationInfo {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
     (__ \ 'config).writeNullable[ExternalOrganizationConfiguration] and
-    (__ \ 'slack).writeNullable[OrganizationSlackInfo]
+    (__ \ 'slackTeam).writeNullable[OrganizationSlackTeamInfo]
   )(unlift(OrganizationInfo.unapply))
 }
 

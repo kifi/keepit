@@ -1,8 +1,10 @@
 package com.keepit.slack
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
@@ -15,28 +17,29 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.{ DateTime, Period }
+import org.joda.time.{ Duration, DateTime, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object LibraryToSlackChannelPusher {
-  val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  val delayFromFullPush = Period.minutes(30)
-  val delayFromPartialPush = Period.seconds(15)
-  val delayFromPushRequest = Period.seconds(20)
-  val maxTitleDelayFromKept = Period.seconds(40)
-  val maxDelayFromKeptAt = Period.minutes(5)
-  val delayFromUpdatedAt = Period.seconds(15)
+  val maxAcceptableProcessingDuration = Duration.standardMinutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  val delayFromFullPush = Duration.standardMinutes(30)
+  val delayFromPartialPush = Duration.standardSeconds(15)
+  val delayFromPushRequest = Duration.standardSeconds(20)
+  val maxTitleDelayFromKept = Duration.standardSeconds(40)
+  val maxDelayFromKeptAt = Duration.standardMinutes(5)
+  val delayFromUpdatedAt = Duration.standardSeconds(15)
   val MAX_KEEPS_TO_SEND = 7
   val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
-  private val KifiSlackTeamId = SlackTeamId("T02A81H50")
-  def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackTeamId
+
+  val pushing = new AtomicBoolean()
 }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -45,7 +48,7 @@ trait LibraryToSlackChannelPusher {
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 
   // Method to be called if something happens in a library
-  def schedule(libId: Id[Library]): Unit
+  def schedule(libIds: Set[Id[Library]]): Unit
 }
 
 @Singleton
@@ -53,6 +56,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   inhouseSlackClient: InhouseSlackClient,
   organizationInfoCommander: OrganizationInfoCommander,
+  orgExperimentRepo: OrganizationExperimentRepo,
   slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
@@ -67,6 +71,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   keepDecorator: KeepDecorator,
+  eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
@@ -74,22 +79,32 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   import LibraryToSlackChannelPusher._
 
   @StatsdTimingAsync("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
-  @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    val integrationsToProcess = db.readWrite { implicit s =>
-      val integrations = libToChannelRepo.getIntegrationsRipeForProcessing(Limit(INTEGRATIONS_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
-      markLegalIntegrationsForProcessing(integrations)
+  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = if (pushing.getAndSet(true)) Future.successful(Map.empty) else {
+    val futurePushed = FutureHelpers.foldLeftUntil(Stream.continually(()))(Map.empty[Id[LibraryToSlackChannel], Boolean]) {
+      case (pushedSoFar, _) =>
+        val integrationsToProcess = db.readWrite { implicit s =>
+          val newActorTeams = {
+            val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+            slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
+          }
+          val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration, newActorTeams)
+          markLegalIntegrationsForProcessing(integrations)
+        }
+        processIntegrations(integrationsToProcess).map { pushedBatch =>
+          (pushedSoFar ++ pushedBatch, pushedBatch.isEmpty)
+        }
     }
-    processIntegrations(integrationsToProcess)
+    futurePushed andThen { case _ => pushing.set(false) }
   }
 
-  def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
+  def schedule(libIds: Set[Id[Library]]): Unit = db.readWrite { implicit session =>
     val nextPushAt = clock.now plus delayFromPushRequest
-    pushLibraryAtLatest(libId, nextPushAt)
+    libIds.foreach { libId => pushLibraryAtLatest(libId, nextPushAt) }
   }
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     FutureHelpers.accumulateRobustly(integrationsToProcess)(pushUpdatesForIntegration).imap { results =>
+      log.info(s"[SLACK-PUSH] Processed ${integrationsToProcess.map(_.id.get)}")
       results.collect {
         // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
         // and that swallows the stack trace. This hack will manually expose the stack trace
@@ -102,16 +117,26 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  private def markLegalIntegrationsForProcessing(integrations: Seq[LibraryToSlackChannel])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+  private def getIntegrations(integrationIds: Seq[Id[LibraryToSlackChannel]])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+    val integrationsById = libToChannelRepo.getByIds(integrationIds.toSet)
+    integrationIds.map(integrationsById(_))
+  }
+
+  private def markLegalIntegrationsForProcessing(integrationIds: Seq[Id[LibraryToSlackChannel]])(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+
     def isLegal(lts: LibraryToSlackChannel) = {
       slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
-        permissionCommander.getLibraryPermissions(lts.libraryId, stm.userId).contains(LibraryPermission.VIEW_LIBRARY)
+        val permissions = permissionCommander.getLibraryPermissions(lts.libraryId, stm.userId)
+        permissions.contains(LibraryPermission.VIEW_LIBRARY)
       }
     }
-    val (legal, illegal) = integrations.partition(isLegal)
+
+    val (legal, illegal) = getIntegrations(integrationIds).partition(isLegal)
     illegal.foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
-    legal.flatMap(lts => libToChannelRepo.markAsProcessing(lts.id.get))
+    val processingIntegrationIds = legal.map(_.id.get).filter(libToChannelRepo.markAsPushing(_, maxAcceptableProcessingDuration))
+    val integrations = getIntegrations(processingIntegrationIds)
+    integrations
   }
 
   def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
@@ -123,31 +148,30 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
 
-  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution])(implicit session: RSession): DescriptionElements = {
+  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], messageCount: Int)(implicit session: RSession): DescriptionElements = {
     import DescriptionElements._
 
     val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
-    val shouldSmartRoute = canSmartRoute(slackTeamId)
 
-    val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-    val addCommentOpt = {
-      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
-      else None
-    }
+    val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute)
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
+    val addComment = {
+      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 0) s"$messageCount comments" else "Reply")
+      DescriptionElements("\n", text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
+    }
 
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
           "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> libLink, addCommentOpt
+          "was added to", lib.name --> libLink,
+          addComment
         )
       case None =>
         val userElement: Option[DescriptionElements] = {
           val basicUserOpt = keep.userId.map(getUser)
-          if (lib.organizationId.isEmpty || !shouldSmartRoute) basicUserOpt.map(fromBasicUser)
-          else basicUserOpt.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+          basicUserOpt.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
         }
         val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
         DescriptionElements(
@@ -159,7 +183,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
             "”"
           )),
-          addCommentOpt
+          addComment
         )
     }
   }
@@ -169,12 +193,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     keeps match {
       case NoKeeps => None
       case SomeKeeps(ks, lib, slackTeamId, attribution) =>
-        val msgs = db.readOnlyMaster { implicit s =>
-          ks.map(k => keepAsDescriptionElements(k, lib, slackTeamId, attribution.get(k.id.get)))
+        val slackMsgFut = eliza.getMessageCountsForKeeps(ks.map(_.id.get).toSet).map { countByKeep =>
+          val msgs = db.readOnlyMaster { implicit s =>
+            ks.map(k => keepAsDescriptionElements(k, lib, slackTeamId, attribution.get(k.id.get), countByKeep.getOrElse(k.id.get, 0)))
+          }
+          SlackMessageRequest.fromKifi(
+            DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
+          )
         }
-        Some(Future.successful(SlackMessageRequest.fromKifi(
-          DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
-        )))
+        Some(slackMsgFut)
       case ManyKeeps(ks, lib, slackTeamId, attribution) =>
         val msg = DescriptionElements(
           ks.length, "keeps have been added to",
@@ -192,14 +219,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, slackTeamId: SlackTeamId, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
 
   private def pushUpdatesForIntegration(lts: LibraryToSlackChannel): Future[Boolean] = {
-    val (keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }
+    val (keepsToPush, lastKtlOpt, mayHaveMore) = db.readOnlyReplica { implicit s => getKeepsToPushForIntegration(lts) }
 
     val hasBeenPushed = describeKeeps(keepsToPush) match {
       case None => Future.successful(true)
       case Some(futureMessage) => futureMessage.flatMap { message =>
-        slackClient.sendToSlack(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
+        slackClient.sendToSlackViaUser(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
           .recover {
-            case f: SlackAPIFailure =>
+            case f: SlackFail =>
               log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
               SafeFuture {
                 val team = db.readOnlyReplica { implicit s =>
@@ -228,8 +255,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         // keeps saying we aren't succeeding even though the channel is getting messages
         libToChannelRepo.save(
           lts
-            .finishedProcessing
-            .withLastProcessedKeep(lastKtlIdOpt orElse lts.lastProcessedKeep)
+            .finishedProcessing(lastKtlOpt)
             .withNextPushAt(clock.now plus (if (mayHaveMore) delayFromPartialPush else delayFromFullPush))
         )
         maybeFail match {
@@ -240,8 +266,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): (KeepsToPush, Option[Id[KeepToLibrary]], Boolean) = {
-    val (keeps, lib, lastKtlIdOpt, mayHaveMore) = {
+  private def getKeepsToPushForIntegration(lts: LibraryToSlackChannel)(implicit session: RSession): (KeepsToPush, Option[KeepToLibrary], Boolean) = {
+    val (keeps, lib, lastKtlOpt, mayHaveMore) = {
       val now = clock.now
       val lib = libRepo.get(lts.libraryId)
       val recentKtls = ktlRepo.getByLibraryAddedAfter(lts.libraryId, lts.lastProcessedKeep)
@@ -259,7 +285,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt)) || !KeepSource.manual.contains(keep.source)
       } unzip match {
         case (stableRecentKeeps, stableRecentKtls) =>
-          (stableRecentKeeps, lib, stableRecentKtls.lastOption.map(_.id.get), stableRecentKtls.length < recentKtls.length)
+          (stableRecentKeeps, lib, stableRecentKtls.lastOption, stableRecentKtls.length < recentKtls.length)
       }
     }
     val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
@@ -273,6 +299,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, lts.slackTeamId, attributionByKeepId)
       case ks => ManyKeeps(ks, lib, lts.slackTeamId, attributionByKeepId)
     }
-    (keepsToPush, lastKtlIdOpt, mayHaveMore)
+    (keepsToPush, lastKtlOpt, mayHaveMore)
   }
 }

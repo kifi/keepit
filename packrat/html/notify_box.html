@@ -1,7 +1,7 @@
 <div class="kifi-notify-item-wrapper {{popupClass}}" style="display:none" data-thread-id="{{threadId}}">
   <div class="kifi-notify-item">
     <div class="kifi-notify-close">×</div>
-    {{{image}}}
+    {{#image}}{{>kifi_mustache_tags}}{{/image}}
     <div class="{{#image}}kifi-notify-with-image{{/image}}{{^image}}kifi-notify-without-image{{/image}}">
       <div class="kifi-notify-title">{{title}}</div>
       {{#subtitle}}
@@ -9,9 +9,8 @@
       <div class="kifi-on-page">On this page:</div>
       {{/subtitle}}
       {{#pageTitle}}<div class="kifi-notify-link">{{pageTitle}}</div>{{/pageTitle}}
-      <div class="kifi-notify-text">{{#formatSnippet}}{{{contentHtml}}}{{/formatSnippet}}</div>
+      <div class="kifi-notify-text">{{#bodyHtmlTree}}{{>kifi_mustache_tags}}{{/bodyHtmlTree}}</div>
       <div class="kifi-notify-footer">Kifi</div>
     </div>
   </div>
 </div>
-

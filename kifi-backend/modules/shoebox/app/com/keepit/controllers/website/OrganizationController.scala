@@ -24,6 +24,7 @@ class OrganizationController @Inject() (
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryInfoCommander: LibraryInfoCommander,
+    libraryQueryCommander: LibraryQueryCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -108,12 +109,12 @@ class OrganizationController @Inject() (
     Ok(Json.obj("libraries" -> libCards))
   }
 
-  def getBasicLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+  def getLHRLibrariesForOrg(pubId: PublicId[Organization], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_ORGANIZATION) { request =>
     val arrangement = for {
       ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
       direction <- directionOpt.flatMap(SortDirection.fromStr)
     } yield Arrangement(ordering, direction)
-    val basicLibs = db.readOnlyMaster(implicit s => libraryInfoCommander.getBasicLibrariesForOrg(request.orgId, request.request.userIdOpt, arrangement, fromIdOpt = None, offset, limit))
+    val basicLibs = db.readOnlyMaster(implicit s => libraryQueryCommander.getLHRLibrariesForOrg(request.request.userId, request.orgId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize))
     Ok(Json.obj("libraries" -> basicLibs))
   }
 

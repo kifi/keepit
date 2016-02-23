@@ -16,6 +16,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
@@ -24,6 +26,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
+import com.keepit.social.{ BasicAuthor, Author }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import org.joda.time.DateTime
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -129,6 +132,7 @@ class KeepCommanderImpl @Inject() (
     clock: Clock,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
     keepDecorator: KeepDecorator,
@@ -137,6 +141,7 @@ class KeepCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     userExperimentRepo: UserExperimentRepo,
+    implicit val imageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
 
@@ -148,23 +153,31 @@ class KeepCommanderImpl @Inject() (
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     db.readOnlyReplica { implicit session =>
       val keeps = keepRepo.getByIds(ids)
-      val users = userRepo.getAllUsers(keeps.flatMap {
-        case (id, keep) => keep.userId
-      }.toSeq)
-      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet).collect {
-        case (keepId, (attr: SlackAttribution, userOpt)) => keepId -> (attr, userOpt)
+      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
+      def getAuthor(keep: Keep): Option[BasicAuthor] = {
+        attributions.get(keep.id.get).map {
+          case (_, Some(user)) => BasicAuthor.fromUser(user)
+          case (attr, _) => BasicAuthor.fromSource(attr)
+        }.orElse {
+          keep.userId.map { id =>
+            val basicUser = basicUserRepo.load(id)
+            BasicAuthor.fromUser(basicUser)
+          }
+        }
       }
-      keeps.map {
-        case (kId, keep) =>
-          kId -> BasicKeep(
-            keep.externalId,
-            keep.title,
-            keep.url,
-            keep.visibility,
-            keep.libraryId.map(Library.publicId),
-            keep.userId.flatMap(uId => users.get(uId).map(_.externalId)),
-            attributions.get(kId)
-          )
+      for {
+        (kId, keep) <- keeps
+        author <- getAuthor(keep)
+      } yield {
+        kId -> BasicKeep(
+          keep.externalId,
+          keep.title,
+          keep.url,
+          keep.visibility,
+          keep.libraryId.map(Library.publicId),
+          author,
+          attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
+        )
       }
     }
   }
@@ -473,9 +486,8 @@ class KeepCommanderImpl @Inject() (
   }
 
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep = {
-    require(keep.userId.isEmpty) // TODO(ryan): necessary?
     keepRepo.save(keep.withOwner(newOwner).withConnections(keep.connections.plusUser(newOwner))) tap { updatedKeep =>
-      ktuCommander.internKeepInUser(updatedKeep, newOwner, None)
+      ktuCommander.internKeepInUser(updatedKeep, newOwner, None, addedAt = Some(keep.keptAt))
     }
   }
 
@@ -673,7 +685,8 @@ class KeepCommanderImpl @Inject() (
     }
 
     val updatedKeepOpt = if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
-      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newKeep.connections.users))
+      val newUsers = oldKeepOpt.map(oldKeep => newKeep.connections.users -- oldKeep.connections.users).getOrElse(newKeep.connections.users)
+      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers))
     } else None
 
     updatedKeepOpt.getOrElse(newKeep)

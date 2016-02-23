@@ -1,6 +1,7 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.db._
+import com.keepit.common.store.{ S3UserPictureConfig, ImagePath }
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -35,6 +36,15 @@ case class UserPicture(
 
 object UserPicture {
   def generateNewFilename: String = RandomStringUtils.randomAlphanumeric(5)
+
+  def toS3Key(size: String, userId: ExternalId[User], picName: String): String = {
+    val pic = if (picName.endsWith(".jpg")) picName else s"$picName.jpg"
+    s"users/${userId.id}/pics/$size/$pic"
+  }
+  def toImagePath(w: Option[Int], userId: ExternalId[User], picName: String): ImagePath = {
+    val size = S3UserPictureConfig.ImageSizes.find(size => w.exists(size >= _)).map(_.toString).getOrElse(S3UserPictureConfig.OriginalImageSize)
+    ImagePath(toS3Key(size, userId, picName))
+  }
 }
 
 object UserPictureStates extends States[UserPicture]

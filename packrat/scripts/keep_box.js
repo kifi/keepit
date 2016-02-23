@@ -1,6 +1,8 @@
 // @require styles/keeper/keep_box.css
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keep_box.js
 // @require scripts/html/keeper/keep_box_keep.js
+// @require scripts/html/keeper/name_parts.js
 // @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/html/keeper/keep_box_libs.js
 // @require scripts/html/keeper/keep_box_libs_list.js
@@ -12,6 +14,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
 // @require scripts/send_chooser.js
@@ -121,6 +124,7 @@ k.keepBox = k.keepBox || (function () {
 
     $box = $(k.render('html/keeper/keep_box', params, {
       view: 'keep_box_libs',
+      name_parts: 'name_parts',
       keep_box_lib: 'keep_box_lib',
       keep_box_libs_list: 'keep_box_libs_list'
     }))
@@ -265,6 +269,7 @@ k.keepBox = k.keepBox || (function () {
       selectDefaultLocationAndPrivacy($view);
     } else {
       $view = $(k.render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
+        name_parts: 'name_parts',
         keep_box_lib: 'keep_box_lib',
         keep_box_libs_list: 'keep_box_libs_list'
       }));
@@ -320,7 +325,8 @@ k.keepBox = k.keepBox || (function () {
               libs.forEach(setExtraInfo);
               $box.data('filter_libraries', libs);
               (libs[0] || {}).highlighted = true;
-              showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
+              showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(annotateNameParts)}, {
+                name_parts: 'name_parts',
                 keep_box_lib: 'keep_box_lib'
               })));
             }
@@ -331,6 +337,7 @@ k.keepBox = k.keepBox || (function () {
           }
         } else {
           showLibs($(k.render('html/keeper/keep_box_libs_list', partitionLibs($box.data('libraries')), {
+            name_parts: 'name_parts',
             keep_box_lib: 'keep_box_lib'
           })));
         }
@@ -546,7 +553,9 @@ k.keepBox = k.keepBox || (function () {
         dir: 'above',
         cssClass: 'kifi-pane-settings-tip',
         title: title,
-        html: message
+        html: k.formatting.jsonDom(message)
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
         configureHover(html, {
           mustHoverFor: 300, hideAfter: 0,
@@ -838,6 +847,7 @@ k.keepBox = k.keepBox || (function () {
       hasImages: images.length > 0,
       autoClose: autoClose
     }, {
+      name_parts: 'name_parts',
       keep_box_lib: 'keep_box_lib'
     }));
     $view.find('.kifi-keep-box-keep-image-cart').append(canvases[0] || newNoImage());
@@ -1315,20 +1325,14 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
-  function addNameHtml(lib) {
-    lib.nameHtml = appendParts([], lib.nameParts).join('');
+  function annotateNameParts(lib) {
+    lib.nameParts = lib.nameParts.map(function (part, i) {
+      return {
+        highlight: i % 2,
+        part: part
+      };
+    });
     return lib;
-  }
-
-  function appendParts(html, parts) {
-    for (var i = 0; i < parts.length; i++) {
-      if (i % 2) {
-        html.push('<b>', Mustache.escape(parts[i]), '</b>');
-      } else {
-        html.push(Mustache.escape(parts[i]));
-      }
-    }
-    return html;
   }
 
   function idIs(id) {

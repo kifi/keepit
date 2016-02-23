@@ -56,6 +56,7 @@ class LibraryController @Inject() (
   keepImageCommander: KeepImageCommander,
   permissionCommander: PermissionCommander,
   libraryCardCommander: LibraryCardCommander,
+  libraryQueryCommander: LibraryQueryCommander,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryMembershipCommander: LibraryMembershipCommander,
@@ -699,15 +700,14 @@ class LibraryController @Inject() (
     }
   }
 
-  def getBasicLibrariesForUser(userExtId: ExternalId[User], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int) = UserAction { request =>
+  def getLHRLibrariesForUser(userExtId: ExternalId[User], orderingOpt: Option[String], directionOpt: Option[String], offset: Int, limit: Int, windowSize: Option[Int]) = UserAction { request =>
     val arrangement = for {
       ordering <- orderingOpt.flatMap(LibraryOrdering.fromStr)
       direction <- directionOpt.flatMap(SortDirection.fromStr)
     } yield LibraryQuery.Arrangement(ordering, direction)
 
     val basicLibs = db.readOnlyMaster { implicit s =>
-      val userId = userRepo.convertExternalId(userExtId)
-      libraryInfoCommander.getBasicLibrariesForUser(userId, request.userIdOpt, arrangement, fromIdOpt = None, offset, limit)
+      libraryQueryCommander.getLHRLibrariesForUser(request.userId, arrangement, fromIdOpt = None, Offset(offset), Limit(limit), windowSize)
     }
     Ok(Json.obj("libs" -> basicLibs))
   }

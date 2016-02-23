@@ -5,6 +5,7 @@
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_triggered.js
 // @require scripts/html/keeper/notice_message.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-canscroll.js
 // @require scripts/lib/jquery-hoverfu.js
@@ -192,10 +193,12 @@ k.panes.notices = k.panes.notices || function () {
   }
 
   function renderOne(notice) {
+    var partials = { 'kifi_mustache_tags': 'kifi_mustache_tags' };
+
     notice.isVisited = !notice.unread;
-    notice.formatMessage = formatMessage.snippet;
     notice.formatLocalDate = formatLocalDate;
     notice.cdnBase = k.cdnBase;
+
     switch (notice.category) {
     case 'message':
       notice.title = notice.title || formatTitleFromUrl(notice.url);
@@ -252,11 +255,14 @@ k.panes.notices = k.panes.notices || function () {
         notice.authorShortName = notice.author.firstName;
       }
       notice.picturedParticipants.map(formatParticipant);
-      return k.render('html/keeper/notice_message', notice);
+      notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
+      return k.render('html/keeper/notice_message', notice, partials);
     case 'triggered':
-      return k.render('html/keeper/notice_triggered', notice);
+      notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml);
+      return k.render('html/keeper/notice_triggered', notice, partials);
     case 'global':
-      return k.render('html/keeper/notice_global', notice);
+      notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
+      return k.render('html/keeper/notice_global', notice, partials);
     default:
       log('#a00', '[renderOne] unrecognized category', notice.category);
       return '';

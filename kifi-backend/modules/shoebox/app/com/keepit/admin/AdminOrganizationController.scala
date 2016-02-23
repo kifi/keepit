@@ -15,6 +15,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.SlackTeamRepo
+import com.keepit.slack.SlackClient
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
 import play.twirl.api.HtmlFormat
@@ -42,6 +43,7 @@ class AdminOrganizationController @Inject() (
     libRepo: LibraryRepo,
     libCommander: LibraryCommander,
     slackTeamRepo: SlackTeamRepo,
+    slackClient: SlackClient,
     userEmailAddressRepo: UserEmailAddressRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgCommander: OrganizationCommander,
@@ -89,14 +91,14 @@ class AdminOrganizationController @Inject() (
 
   def liveOrganizationsView() = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit s =>
-      val orgIds = keepRepo.orgsWithKeeps().map(_._1)
+      val orgIds = keepRepo.orgsWithKeepsLastThreeDays().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
     Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
       Ok(html.admin.organizations(
         orgStats,
-        "Top Live Organizations",
+        "Three day active orgs",
         fakeOwnerId,
         (com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView _).andThen(asPlayHtml),
         1,
@@ -438,8 +440,8 @@ class AdminOrganizationController @Inject() (
         val account = paidAccountRepo.getByOrgId(orgId)
         val plan = paidPlanRepo.get(account.planId)
         val config = orgConfigRepo.getByOrgId(orgId)
-        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.kvs.nonEmpty) {
-          val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
+        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.selections.nonEmpty) {
+          val newSettings = OrganizationSettings(plan.defaultSettings.selections.map {
             case (f, default) =>
               val updatedSetting =
                 if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default

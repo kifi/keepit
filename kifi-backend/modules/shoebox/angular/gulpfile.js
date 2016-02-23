@@ -36,7 +36,10 @@ var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
 var svgmin = require('gulp-svgmin');
+var path = require('path');
 var sourcemaps = require('gulp-sourcemaps');
+var cheerio = require('gulp-cheerio');
+var svgstore = require('gulp-svgstore');
 
 require('shelljs/global');
 
@@ -85,7 +88,8 @@ var libCssFiles = [
   'lib/normalize-css/normalize.css',
   ['managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css', 'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'],
   'managed-lib/select-css/src/select.css',
-  'managed-lib/pace/pace.css'
+  'managed-lib/pace/pace.css',
+  'lib/nanoscroller/bin/css/nanoscroller.css'
 ];
 var libJsFiles = [
   ['lib/lodash/lodash.js', 'lib/lodash/lodash.min.js'],
@@ -110,7 +114,9 @@ var libJsFiles = [
   'managed-lib/angular-smart-scroll/src/angular-smart-scroll.js',
   'lib/angulartics/dist/angulartics.min.js',
   ['lib/fuse.js/src/fuse.js', 'lib/fuse.js/src/fuse.min.js'],
-  'lib/angular-clipboard/angular-clipboard.js'
+  'lib/angular-clipboard/angular-clipboard.js',
+  ['lib/nanoscroller/bin/javascripts/jquery.nanoscroller.js', 'lib/nanoscroller/bin/javascripts/jquery.nanoscroller.min.js'],
+  'lib/angular-nanoscroller/scrollable.js'
 ];
 
 var devFiles = function (files) {
@@ -276,11 +282,35 @@ gulp.task('sprite-classes', function () {
   return es.merge(img, css);
 });
 
-gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
+gulp.task('sprite', ['symbol-sprites-svgstore', 'sprite-imports', 'sprite-classes', 'svg-sprite']);
 
 gulp.task('symbol-sprites', function() {
   exec('./build-svgs.rb');
   return gulp.src(['./img/symbol-sprites/dist/*.svg'])
+    .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('symbol-sprites-svgstore', function () {
+  return gulp.src('img/symbol-sprites/lib/*.svg')
+    .pipe(svgmin(function (file) {
+      var prefix = path.basename(file.relative, path.extname(file.relative));
+      return {
+        plugins: [{
+          cleanupIDs: {
+            prefix: prefix + '-',
+            minify: true
+          }
+        }]
+      }
+    }))
+    .pipe(cheerio({
+      run: function ($) {
+        $('[fill]').removeAttr('fill');
+      },
+      parserOptions: {xmlMode: true}
+    }))
+    .pipe(svgstore({inlineSvg: true}))
+    .pipe(rename('symbol-sprite.svg'))
     .pipe(gulp.dest('./dist'));
 });
 
@@ -514,3 +544,5 @@ gulp.task('release', ['build-prod', 'karma', 'assets:release'/*, 'protractor:rel
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);
+
+

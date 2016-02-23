@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.json.TraversableFormat
 import com.keepit.common.time.Clock
 import com.keepit.common.util.DollarAmount
-import com.keepit.model.{ OrganizationSettings, Name, Feature }
+import com.keepit.model._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import play.api.libs.json.{ JsArray, Json }

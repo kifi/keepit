@@ -54,13 +54,6 @@
 .kifi-tile-tooltip-li {
   display: list-item;
 }
-.kifi-tile-tooltip-tip::before {
-  content: 'Tip: ';
-  font-size: 13px;
-  font-weight: bold;
-  margin-right: 2px;
-}
-
 .kifi-tile-tooltip-x {
   position: absolute;
   top: 7px;

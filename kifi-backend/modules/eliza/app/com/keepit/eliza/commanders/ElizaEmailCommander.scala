@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
+import com.keepit.eliza.model.SystemMessageData.StartWithEmails
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 
@@ -253,16 +254,11 @@ class ElizaEmailCommander @Inject() (
       (msg, thread)
     }
     val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None) }
-    if (msg.auxData.isDefined) {
-      if (msg.auxData.get.value(0) == JsString("start_with_emails")) {
-        protoEmailFuture.map(_.initialHtml)
-      } else {
-        protoEmailFuture.map(_.addedHtml)
-      }
-    } else {
-      protoEmailFuture.map(_.digestHtml)
+    msg.auxData match {
+      case Some(_: StartWithEmails) => protoEmailFuture.map(_.initialHtml)
+      case Some(_) => protoEmailFuture.map(_.addedHtml)
+      case None => protoEmailFuture.map(_.digestHtml)
     }
-
   }
 }
 

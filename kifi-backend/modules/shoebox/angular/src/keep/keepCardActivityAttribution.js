@@ -14,11 +14,10 @@ angular.module('kifi')
       link: function (scope) {
         var keep = scope.keep;
         var messages = keep && keep.discussion && keep.discussion.messages;
-        var attribution = keep && keep.sourceAttribution;
-        var keeper = (attribution && attribution.kifi) || (keep && keep.user);
-        if (keeper && messages) {
+        var author = keep && keep.author;
+        if (author && messages) {
           scope.lastComment = messages.filter(function (message) {
-            return message.sentBy && message.sentBy.id !== keeper.id;
+            return message.sentBy && message.sentBy.id !== author.id;
           })[0];
         }
       }

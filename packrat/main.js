@@ -901,12 +901,26 @@ api.port.on({
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
+  get_show_move_intro: function (data, respond) {
+    data = data || {};
+    data.domain = data.domain;
+    if (data.domain) {
+      ajax('GET', '/ext/pref/showExtMoveIntro', data, respond);
+    } else {
+      log('[get_show_move_intro] warning: client supplied empty domain');
+      respond({ show: false });
+    }
+  },
   terminate_ftue: function (data) {
-    var prefName = {e: 'showExtMsgIntro'}[data.type];
-    if (!prefName) return;
+    var prefName = {e: 'showExtMsgIntro', m: 'showExtMoveIntro'}[data.type];
+    var handlerName = {e: 'hide_ext_msg_intro', m: 'hide_move_keeper_intro'}[data.type];
+    if (!prefName) {
+      return;
+    }
+
     ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, {e: 'hide_ext_msg_intro'}[data.type]);
+      api.tabs.emit(tab, handlerName);
     });
     (prefs || {})[prefName] = false;
     if (data.action) {
@@ -918,7 +932,7 @@ api.port.on({
     }
   },
   track_ftue: function (type) {
-    var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
+    var category = {e: 'extMsgFTUE', l: 'libFTUE', m: 'moveKeepFtue'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,
@@ -983,7 +997,13 @@ api.port.on({
             rect.height);
         }
       }
-      respond(canvas.toDataURL('image/png'));
+      var dataUrl = 'data:,';
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        log('[screenshot] failed to render screenshot area %O', e);
+      }
+      respond(dataUrl);
     });
   },
   load_draft: function (data, respond, tab) {
@@ -1102,9 +1122,13 @@ api.port.on({
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
-        standardizeNotification(th);
-        updateIfJustRead(th);
-        notificationsById[th.thread] = th;
+        if (th) {
+          standardizeNotification(th);
+          updateIfJustRead(th);
+          notificationsById[th.thread] = th;
+        } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
+          th = { thread: id };
+        }
         emitThreadInfoToTab(th, keep, tab);
       });
     }
@@ -1314,7 +1338,6 @@ api.port.on({
       if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
         appendUserResult(contacts, data.n, SUPPORT);
       }
-      //debugger;
       var results = contacts
         .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
         .slice(0, data.n)
@@ -1322,7 +1345,7 @@ api.port.on({
       if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
         results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
       }
-      respond(results);
+      return results;
     }
   },
   delete_contact: function (email, respond) {
@@ -1353,7 +1376,7 @@ api.port.on({
   },
   open_deep_link: function(link, _, tab) {
     var tabIdWithLink;
-    if (link.inThisTab || tab.nUri === link.nUri) {
+    if (link.inThisTab || tab.nUri === link.nUri || tab.url === link.nUri) {
       tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
       trackClick();
@@ -1789,7 +1812,8 @@ function awaitDeepLink(link, tabId, retrySec) {
     api.timers.clearTimeout(timeouts[tabId]);
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
-    if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
+    var linkUrl = link.url || link.nUri;
+    if (tab && ((tab.nUri && sameOrLikelyRedirected(linkUrl, tab.nUri)) || (tab.url && sameOrLikelyRedirected(linkUrl, tab.url)))) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);

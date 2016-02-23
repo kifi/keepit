@@ -28,17 +28,17 @@ class PlanManagementCommanderTest extends SpecificationLike with ShoeboxTestInje
       }
 
       val (restrictedPlan, currentConfig) = db.readWrite { implicit session =>
-        val restrictedPlan = PaidPlanFactory.paidPlan().withEditableFeatures(Set(Feature.EditOrganization)).saved
+        val restrictedPlan = PaidPlanFactory.paidPlan().withEditableFeatures(Set(StaticFeature.EditOrganization)).saved
         val currentConfig = orgConfigRepo.getByOrgId(org.id.get)
         (restrictedPlan, currentConfig)
       }
 
       val featureSettingsToReset: Map[Feature, FeatureSetting] = Map( // random features with hopefully altered settings
-        Feature.PublishLibraries -> FeatureSetting.DISABLED,
-        Feature.InviteMembers -> FeatureSetting.ADMINS,
-        Feature.ForceEditLibraries -> FeatureSetting.ADMINS
+        StaticFeature.PublishLibraries -> StaticFeatureSetting.DISABLED,
+        StaticFeature.InviteMembers -> StaticFeatureSetting.ADMINS,
+        StaticFeature.ForceEditLibraries -> StaticFeatureSetting.ADMINS
       )
-      val featureSettingsToMaintain = Map(Feature.EditOrganization -> FeatureSetting.DISABLED)
+      val featureSettingsToMaintain = Map(StaticFeature.EditOrganization -> StaticFeatureSetting.DISABLED)
       val alteredSettings = currentConfig.settings.setAll(featureSettingsToReset ++ featureSettingsToMaintain)
       currentConfig.settings !== alteredSettings // assert settings will actually change from old default
       restrictedPlan.defaultSettings !== alteredSettings // assert settings will actually change to new default

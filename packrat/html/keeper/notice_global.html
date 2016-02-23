@@ -3,6 +3,6 @@
   <div class="kifi-notice-kicker">Announcement</div>
   <div class="kifi-notice-title">{{title}}</div>
   <img class="kifi-notice-global-img" src="{{image}}"/>
-  <div class="kifi-notice-announcement">{{{bodyHtml}}}</div>
+  <div class="kifi-notice-announcement">{{#bodyHtmlTree}}{{>kifi_mustache_tags}}{{/bodyHtmlTree}}</div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

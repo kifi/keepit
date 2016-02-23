@@ -170,13 +170,15 @@ class NetscapeBookmarkParser @Inject() () extends ImportParser with ZipParser {
         val lists = Option(elem.attr("list")).getOrElse("")
         val tags = Option(elem.attr("tags")).getOrElse("")
 
-        val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList.distinct
+        val tagList = List(lists, tags).flatMap(_.split(',').toList.map(_.trim).filter(_.nonEmpty)).distinct
         val createdDate = Option(elem.attr("add_date"))
           .orElse(Option(elem.attr("last_visit")))
           .orElse(Option(elem.attr("last_modified")))
           .flatMap(bookmarkDateStrToDateTime)
 
-        Bookmark(Some(title), href, tagList, createdDate, Some(Json.obj("href" -> elem.html())))
+        val note = Option(elem.attr("note"))
+
+        Bookmark(Some(title), href, tagList, createdDate, Some(Json.obj("href" -> elem.html(), "note" -> note)))
       }
     }.toList.flatten
     (source, extracted)

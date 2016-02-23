@@ -1,10 +1,9 @@
 package com.keepit.common.util
 
-import org.joda.time.Period
 import org.specs2.mutable.Specification
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration._
 
 class DebouncingTest extends Specification {
   private class LoudYapper {
@@ -19,7 +18,7 @@ class DebouncingTest extends Specification {
     var count = 0
     var value = 0
     val debouncer = new Debouncing.Dropper[Unit]
-    def trigger() = debouncer.debounce("trigger", Period.millis(1)) {
+    def trigger() = debouncer.debounce("trigger", 1 milli) {
       value += 1
       count += 1
     }
@@ -28,7 +27,7 @@ class DebouncingTest extends Specification {
     var count = 0
     var value = 0
     val debouncer = new Debouncing.Buffer[Int]
-    def trigger() = debouncer.debounce("trigger", Period.millis(1))(1) { buf =>
+    def trigger() = debouncer.debounce("trigger", 1 milli)(1) { buf =>
       value += buf.sum
       count += 1
     }
@@ -47,13 +46,10 @@ class DebouncingTest extends Specification {
       quiet.count must beBetween(1, n / 5)
       quiet.value must beBetween(1, n / 5)
 
+      // The buffered one will always get to the correct value eventually
+      Thread.sleep(100)
       buffered.count must beBetween(1, n / 5)
-      buffered.value must beCloseTo(n, n / 5)
-
-      // The buffered one will always get to the correct value right after it actually triggers
-      Thread.sleep(5)
-      buffered.trigger()
-      buffered.value === n + 1
+      buffered.value === n
     }
     "be thread-safe" in {
       val n = 1000
@@ -68,12 +64,9 @@ class DebouncingTest extends Specification {
       quiet.count must beBetween(1, n / 5)
       quiet.value must beBetween(1, n / 5)
 
+      Thread.sleep(100)
       buffered.count must beBetween(1, n / 5)
-      buffered.value must beCloseTo(n, n / 5)
-
-      Thread.sleep(5)
-      buffered.trigger()
-      buffered.value === n + 1
+      buffered.value === n
     }
   }
 }

@@ -704,7 +704,7 @@ meta.contentScripts.forEach(function (arr) {
     contentStyleFile: o.styles.map(self.data.url),
     contentScriptFile: unique(o.scripts.concat(meta.flatScriptDeps)).map(self.data.url),
     contentScriptWhen: arr[2] ? 'start' : 'ready',
-    contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version},
+    contentScriptOptions: {dataUriPrefix: self.data.url(''), dev: exports.mode.isDev(), version: self.version, meta: meta},
     attachTo: ['existing', 'top'],
     onAttach: errors.wrap(function onAttachPageMod(worker) { // called before location:change for pages that are images
       const tab = worker.tab;

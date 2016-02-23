@@ -36,13 +36,14 @@ object OrganizationFactory {
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
     def withDomain(domain: String): PartialOrganization = this.copy(domain = Some(NormalizedHostname.fromHostname(domain).get))
+    def withSettings(settings: Map[Feature, FeatureSetting]) = this.copy(nonstandardSettings = nonstandardSettings ++ settings)
 
     // This method makes it so an org's members cannot invite, useful for testing
-    def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.InviteMembers -> FeatureSetting.ADMINS))
+    def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.InviteMembers -> StaticFeatureSetting.ADMINS))
     // admins can force-edit
-    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ForceEditLibraries -> FeatureSetting.ADMINS))
-    def withSlackProhibited() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.CreateSlackIntegration -> FeatureSetting.DISABLED))
-    def secret() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ViewOrganization -> FeatureSetting.MEMBERS) + (Feature.ViewMembers -> FeatureSetting.MEMBERS))
+    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.ForceEditLibraries -> StaticFeatureSetting.ADMINS))
+    def withSlackProhibited() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.CreateSlackIntegration -> StaticFeatureSetting.DISABLED))
+    def secret() = this.copy(nonstandardSettings = nonstandardSettings + (StaticFeature.ViewOrganization -> StaticFeatureSetting.MEMBERS) + (StaticFeature.ViewMembers -> StaticFeatureSetting.MEMBERS))
 
     def withPlan(planId: Long) = this.copy(planOpt = Some(planId))
   }

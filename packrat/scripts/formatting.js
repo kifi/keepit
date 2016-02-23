@@ -1,6 +1,103 @@
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
+// TODO(carlos): Turn this into a legit module instead
+// of just exposing globals all over the place
+
+var k = k && k.kifi ? k : {kifi: true};
+
+k.formatting = k.formatting || (function () {
+  return {
+    jsonDom: jsonDom
+  };
+
+  // Inspired by http://stackoverflow.com/questions/12980648
+  function jsonDom(element, wrapper) {
+    if (typeof element === 'string') {
+      element = parseStringToElement(element, wrapper);
+    }
+    return treeHTML(element);
+  }
+
+  function parseStringToElement(htmlString, wrapper) {
+    wrapper = wrapper || 'span';
+
+    var parser = new DOMParser();
+    var docNode = parser.parseFromString(htmlString, 'text/html'); // wraps input in <html><body> tags
+    var element;
+
+    if (isParseError(docNode)) {
+      throw new Error('Error parsing HTML: ' + element + '\n' + docNode.firstChild.innerHTML);
+    }
+
+    var body = docNode.body;
+    var hasRootElement = (body.childNodes.length === 1 && body.firstChild.nodeType !== 3);
+    if (hasRootElement) {
+      element = body.firstChild;
+    } else {
+      element = document.createElement(wrapper);
+      Array.prototype.slice.apply(docNode.body.childNodes).forEach(function (n) {
+        element.appendChild(n);
+      });
+    }
+
+    return element;
+  }
+
+  // Recursively loop through DOM elements and assign properties to object
+  function treeHTML(element) {
+    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+    var isLeaf = (nodeList.length === 0 || (nodeList.length === 1 && nodeList[0].nodeType === 3));
+
+    return {
+      tagName: element.nodeName,
+      children: (nodeList.length > 0 ? nodeList.map(mapNode) : ''),
+      attributes: attributeList.map(mapAttribute),
+      leaf: isLeaf
+    };
+  }
+
+  function mapNode(node, i, arr) {
+    if (node.nodeType === 3) { // text node
+      if (arr.length === 1) {
+        return node.nodeValue;
+      } else {
+        return {
+          tagName: 'span',
+          children: node.nodeValue,
+          attributes: [],
+          leaf: true
+        };
+      }
+    } else {
+      return treeHTML(node);
+    }
+  }
+
+  function mapAttribute(attribute) {
+    return {
+      name: attribute.nodeName,
+      value: attribute.nodeValue
+    };
+  }
+
+  // Inspired by http://stackoverflow.com/questions/11563554
+  var PARSER_ERROR_NS = (function () {
+    var parser = new DOMParser();
+    var badParse = parser.parseFromString('<', 'text/html');
+    return badParse.getElementsByTagName('parsererror')[0].namespaceURI;
+  }());
+
+  function isParseError(parsedDocument) {
+    if (PARSER_ERROR_NS === 'http://www.w3.org/1999/xhtml') {
+      return parsedDocument.getElementsByTagName('parsererror').length > 0;
+    } else {
+      return parsedDocument.getElementsByTagNameNS(PARSER_ERROR_NS, 'parsererror').length > 0;
+    }
+  }
+}());
+
 var formatMessage = (function () {
   'use strict';
   // tip: debuggex.com helps clarify regexes
@@ -26,15 +123,26 @@ var formatMessage = (function () {
         processEmoji);
 
   function renderAndFormatFull(text, render) {
+    text = text || '';
+
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return formatAsHtml(render(text));
+    return k.formatting.jsonDom(formatAsHtml(text));
   }
 
   function renderAndFormatSnippet(text, render) {
+    text = text || '';
+
+    if (render) {
+      text = render(text);
+    }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    var html = formatAsHtmlSnippet(render(text));
+    var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
-    return html.length > 200 ? html.substring(0, 190) + '…' : html;
+    html = (html.length > 200 ? html.substring(0, 190) + '…' : html);
+    return k.formatting.jsonDom(html);
   }
 
   function processLineBreaksThen(process, text) {
@@ -147,22 +255,40 @@ var formatKifiSelRangeText = (function () {
 var formatKifiSelRangeTextAsHtml = (function () {
   'use strict';
   var replaceRe = /([\u001e\u001f])/g;
-  function replace(replacements, ch) {
-    return replacements[ch];
+  var newlineRe = /\n/g;
+
+  function getPart(content, class1, class2) {
+    return {
+      content: content,
+      class1: class1,
+      class2: class2
+    };
   }
+
+  function pushLine(parts, class1, class2, c) {
+    parts.push(getPart(c, class1, class2));
+  }
+
   return function (selector, class1, class2) {
-    var pp = '<div class="' + class1 + ' ' + class2 + '">';
-    var p = '</div><div class="' + class1 + '">';
-    var parts = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
-    var html = [pp, Mustache.escape(parts[0]).replace(/\n/g, p)];
-    for (var i = 1; i < parts.length; i += 2) {
-      if (parts[i] === '\u001e') {
-        html.push('</div>', pp);
+    var lookHereTextItems = decodeURIComponent(selector.split('|')[6]).split(replaceRe);
+    var parts = [ getPart(lookHereTextItems[0], class1, class2) ];
+    var lines;
+    var isPP;
+    var isP;
+
+    for (var i = 1; i < lookHereTextItems.length; i += 2) {
+      lines = lookHereTextItems[i + 1] && lookHereTextItems[i + 1].split(newlineRe);
+      isPP = (lookHereTextItems[i] === '\u001e');
+      isP = (lines.length > 1);
+
+      if (!isP && !isPP) {
+        parts[parts.length - 1].content += lines[0];
+      } else {
+        lines.forEach(pushLine.bind(null, parts, class1, isPP && class2));
       }
-      html.push(Mustache.escape(parts[i+1]).replace(/\n/g, p));
     }
-    html.push('</div>');
-    return html.join('');
+
+    return parts;
   };
 }());
 
@@ -252,11 +378,11 @@ var formatAuxData = (function () {
 
   return function () {
     var arr = this.auxData, formatter = formatters[arr[0]];
-    return formatter ? formatter.apply(null, arr.slice(1)) : '';
+    return k.formatting.jsonDom(formatter ? formatter.apply(null, arr.slice(1)) : '');
   };
 
   function isMe(user) {
-    return user.id === k.me.id;
+    return user.id === ((k.me && k.me.id) || '');
   }
 
   function bold(html) {

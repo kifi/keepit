@@ -244,7 +244,7 @@ class ExtLibraryController @Inject() (
             case (tags, image) =>
               val keepData = KeepData(
                 keep.externalId,
-                mine = keep.userId.safeContains(request.userId),
+                mine = keep.userId.safely.contains(request.userId),
                 removable = mem.canWrite,
                 secret = keep.visibility == LibraryVisibility.SECRET,
                 visibility = keep.visibility,

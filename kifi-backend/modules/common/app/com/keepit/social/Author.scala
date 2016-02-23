@@ -2,12 +2,12 @@ package com.keepit.social
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.path.Path
-import com.keepit.common.store.{ S3ExternalIdImageStore, S3ImageConfig }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackMessage, SlackUsername, SlackUserId, SlackTeamId }
 import com.keepit.social.twitter.{ RawTweet, TwitterUserId }
-import play.api.libs.json.{ OWrites, Json, Writes }
+import play.api.libs.json.{ JsValue, Reads, Format, OWrites, Json, Writes }
 import com.keepit.common.core.jsObjectExtensionOps
 
 object ImageUrls {
@@ -70,14 +70,18 @@ object BasicAuthor {
   case class SlackUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Slack)
   case class TwitterUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Twitter)
 
-  def fromUser(user: BasicUser)(implicit s3: S3ExternalIdImageStore): BasicAuthor = KifiUser(
+  def apply(attr: SourceAttribution, basicUserOpt: Option[BasicUser])(implicit imageConfig: S3ImageConfig): BasicAuthor = {
+    basicUserOpt.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.fromSource(attr))
+  }
+
+  def fromUser(user: BasicUser)(implicit imageConfig: S3ImageConfig): BasicAuthor = KifiUser(
     id = user.externalId.id,
     name = user.fullName,
-    picture = s3.avatarUrlByUser(user),
+    picture = user.picturePath.getUrl,
     url = user.path.absolute
   )
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
-    case SlackAttribution(msg) => SlackUser(
+    case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
       name = msg.username.value,
       picture = ImageUrls.SLACK_LOGO,
@@ -91,14 +95,23 @@ object BasicAuthor {
     )
   }
 
-  private val kifiWrites = Json.writes[KifiUser]
-  private val slackWrites = Json.writes[SlackUser]
-  private val twitterWrites = Json.writes[TwitterUser]
-  implicit val writes: Writes[BasicAuthor] = Writes { obj =>
-    (obj match {
-      case ba: KifiUser => kifiWrites.writes(ba)
-      case ba: SlackUser => slackWrites.writes(ba)
-      case ba: TwitterUser => twitterWrites.writes(ba)
-    }) ++ Json.obj("kind" -> obj.kind.value)
-  }
+  private val kifiFormat = Json.format[KifiUser]
+  private val slackFormat = Json.format[SlackUser]
+  private val twitterFormat = Json.format[TwitterUser]
+  implicit val format: Format[BasicAuthor] = Format(
+    Reads[BasicAuthor] { js: JsValue =>
+      (js \ "kind").as[String] match {
+        case AuthorKind.Kifi.value => kifiFormat.reads(js)
+        case AuthorKind.Slack.value => slackFormat.reads(js)
+        case AuthorKind.Twitter.value => twitterFormat.reads(js)
+      }
+    },
+    Writes[BasicAuthor] { author =>
+      (author match {
+        case ba: KifiUser => kifiFormat.writes(ba)
+        case ba: SlackUser => slackFormat.writes(ba)
+        case ba: TwitterUser => twitterFormat.writes(ba)
+      }) ++ Json.obj("kind" -> author.kind.value)
+    }
+  )
 }

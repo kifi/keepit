@@ -1,18 +1,15 @@
+.kf-logged-in-nav-header-drawer-open
+  width: 'calc(100vw - %s)' % leftHandNavWidth !important
+
 .kf-logged-in-nav-header
   position: fixed
   top: 0
-  width: 'calc(100vw - %s)' % leftHandNavWidth
-  height: appHeaderHeightWithNav
+  width: 100%
+  height: appHeaderHeightWithNav !important
   background-color: white
   z-index: 500
   user-select: none
   box-shadow: 0px 0px 5px 2px rgba(0, 0, 0, 0.05)
-
-  @media (max-width: appMobileWidth)
-    width: 100%
-
-  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-    height: appHeaderHeight1
 
   [kifi-pane-parent] &
     transition: width .25s ease-in
@@ -21,11 +18,15 @@
     width: calc(100% - 322px)
 
   .kf-logged-in-nav-header-logo
-    display: none
-    @media (max-width: appMobileWidth)
-      display: block
+    display: block
 
-.kf-left-hand-nav-container
+  .kf-logged-in-nav-header-left-menu-icon
+    width: 23px
+    height: 23px
+    margin-left: -5px
+    margin-right: 15px
+    cursor: pointer
+    fill: #AAA
 
   .kf-lih-search-lhn
     border-style: solid
@@ -40,3 +41,7 @@
   .kf-lih-center-flex
     padding-left: 15%
     padding-right: 15%
+
+  .kf-logged-in-nav-header-left-menu-button:hover
+    .kf-logged-in-nav-header-left-menu-icon
+      fill: #777

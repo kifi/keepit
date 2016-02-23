@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('userProfileActionService', [
-  '$http', '$q', 'routeService', 'Clutch',
-  function ($http, $q, routeService, Clutch) {
+  '$http', '$q', 'routeService', 'Clutch', 'net',
+  function ($http, $q, routeService, Clutch, net) {
     var clutchParams = {
       cacheDuration: 10000
     };
@@ -29,11 +29,21 @@ angular.module('kifi')
       return $http.get(routeService.getProfileFollowers(handle, limit)).then(getData);
     }, clutchParams);
 
+    // optArgs {
+    //  ordering: "alphabetical" | "most_recent_keeps_by_user"
+    //  direction: "asc" | "desc"
+    //  windowSize: #days (used for most_recent_keeps_by_user)
+    // }
+    var basicLibrariesClutch = new Clutch( function(id, offset, limit, optArgs) {
+        return net.getBasicLibraries(id, offset, limit, optArgs).then(getData);
+    }, clutchParams);
+
     return {
       getProfile: angular.bind(profileClutch, profileClutch.get),
       getLibraries: angular.bind(librariesClutch, librariesClutch.get),
       getConnections: angular.bind(connectionsClutch, connectionsClutch.get),
       getFollowers: angular.bind(followersClutch, followersClutch.get),
+      getBasicLibraries: angular.bind(basicLibrariesClutch, basicLibrariesClutch.get),
       expireAllPeople: function () {
         connectionsClutch.expireAll();
         followersClutch.expireAll();

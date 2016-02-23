@@ -1,8 +1,11 @@
 package com.keepit.slack.models
 
+import java.io.File
+
+import com.keepit.common.strings._
 import com.keepit.model.OrganizationSettings
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsSuccess, Json }
+import play.api.libs.json.{ JsError, JsSuccess, Json }
 
 class SlackModelsTest extends Specification {
   implicit val format = OrganizationSettings.dbFormat
@@ -20,6 +23,18 @@ class SlackModelsTest extends Specification {
             |  "user_id": "U054D149J"
             |}
           """.stripMargin).validate[SlackIdentifyResponse] must haveClass[JsSuccess[_]]
+      }
+      "users.list" in {
+        val raw = io.Source.fromFile(new File("test/data/slack_kifi.json"), UTF8).mkString
+        val res = (Json.parse(raw) \ "members").validate[Seq[SlackUserInfo]]
+        res match {
+          case e: JsError => throw new Exception(e.errors.mkString)
+          case JsSuccess(users, _) =>
+            users.size === 69
+            users.filter(_.bot).size === 8
+            users.filter(_.deleted).size === 44
+        }
+        res must haveClass[JsSuccess[_]]
       }
       "auth.access" in {
         Json.parse( // In principle, posting my personal Slack access token is a bad idea, but I like to live dangerously

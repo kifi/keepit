@@ -1,7 +1,7 @@
 // @match /^https?:\/\/[^\/]*\/.*$/
 // @require scripts/api.js
 
-api.identify('notifierScout');
+api.identify('notifier_scout');
 
 var k = k && k.kifi ? k : {kifi: true};
 

@@ -47,6 +47,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getKeepSourcesByUser(userId: Id[User])(implicit session: RSession): Seq[KeepSource]
 
+  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
+
   // TODO(ryan): All of these methods are going to have to migrate to KeepToLibraryRepo
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
@@ -228,6 +230,7 @@ class KeepRepoImpl @Inject() (
 
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
+  implicit val setSeqParameter = setParameterFromMapper[SequenceNumber[Keep]]
 
   implicit val getConnectionsResult = getResultFromMapper[KeepConnections]
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
@@ -647,7 +650,7 @@ class KeepRepoImpl @Inject() (
 
     val added_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
       case None => "true"
-      case Some((keepId, before)) => s"added_at <= '$before' AND keep_id < $keepId"
+      case Some((keepId, before)) => s"(added_at < '$before' OR (added_at = '$before' AND keep_id < $keepId))"
     }
 
     val added_at_AFTER = afterIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
@@ -707,8 +710,8 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, before)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at < '$before' AND k.id < $keepId"
-          else s"last_activity_at < '$before' AND $tableName.keep_id < $keepId"
+          if (tableName == "k") s"(last_activity_at < '$before' or (last_activity_at = '$before' and k.id < $keepId))"
+          else s"(last_activity_at < '$before' or (last_activity_at = '$before' and $tableName.keep_id < $keepId))"
         }
     }
 
@@ -716,8 +719,8 @@ class KeepRepoImpl @Inject() (
       case None => (tableName: String) => "true"
       case Some((keepId, after)) =>
         (tableName: String) => {
-          if (tableName == "k") s"last_activity_at > '$after' AND k.id > $keepId"
-          else s"last_activity_at > '$after' AND $tableName.keep_id > $keepId"
+          if (tableName == "k") s"(last_activity_at > '$after' or (last_activity_at = '$after' and k.id > $keepId))"
+          else s"(last_activity_at > '$after' or (last_activity_at = '$after' and $tableName.keep_id > $keepId))"
         }
     }
 
@@ -776,6 +779,17 @@ class KeepRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select distinct source from bookmark where user_id=$userId and state='active'"""
     q.as[KeepSource].list
+  }
+
+  def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""
+            SELECT #$bookmarkColumnOrder
+            FROM bookmark bm INNER JOIN keep_to_library ktl ON (bm.id = ktl.keep_id)
+            WHERE bm.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND bm.seq > $seq
+            ORDER BY bm.seq ASC
+            """
+    q.as[Keep].list
   }
 
 }

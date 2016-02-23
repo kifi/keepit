@@ -306,8 +306,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
 
         invitations.foreach { invite =>
-          organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
-          if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
+          val acceptedInvite = if (!invite.isAnonymous) invite else invite.copy(id = None, userId = Some(userId))
+          organizationInviteRepo.save(acceptedInvite.accepted.withState(OrganizationInviteStates.INACTIVE))
+          if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, acceptedInvite.inviterId, acceptedInvite.userId, acceptedInvite.emailAddress)
         }
       }
       success

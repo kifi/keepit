@@ -66,18 +66,20 @@ GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.controllers.in
 GET   /internal/eliza/getUserThreadStats        @com.keepit.eliza.controllers.internal.ElizaController.getUserThreadStats(userId: Id[User])
 GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controllers.internal.ElizaController.getRenormalizationSequenceNumber()
 
-POST    /internal/eliza/getCrossServiceMessages  @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceMessages
-POST    /internal/eliza/getDiscussionsForKeeps   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getDiscussionsForKeeps
-POST    /internal/eliza/markKeepsAsReadForUser   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.markKeepsAsReadForUser()
-POST    /internal/eliza/sendMessageOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.sendMessageOnKeep()
-POST    /internal/eliza/getMessagesOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesOnKeep
-POST    /internal/eliza/editMessage              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
-POST    /internal/eliza/deleteMessage            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
-GET     /internal/eliza/keepHasAccessToken       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)
-POST    /internal/eliza/editParticipantsOnKeep   @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editParticipantsOnKeep()
-POST    /internal/eliza/deleteThreadsForKeeps    @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteThreadsForKeeps()
-GET     /internal/eliza/getMessagesChanged       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)
-GET     /internal/eliza/getElizaKeepStream       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long] ?= None, filter: ElizaFeedFilter)
+POST    /internal/eliza/getCrossServiceMessages     @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceMessages
+POST    /internal/eliza/getDiscussionsForKeeps      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getDiscussionsForKeeps
+POST    /internal/eliza/markKeepsAsReadForUser      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.markKeepsAsReadForUser()
+POST    /internal/eliza/sendMessageOnKeep           @com.keepit.eliza.controllers.internal.ElizaDiscussionController.sendMessageOnKeep()
+POST    /internal/eliza/getMessagesOnKeep           @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesOnKeep
+POST    /internal/eliza/getMessageCountsForKeeps    @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessageCountsForKeeps
+POST    /internal/eliza/getChangedMessagesFromKeeps @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getChangedMessagesFromKeeps
+POST    /internal/eliza/editMessage                 @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
+POST    /internal/eliza/deleteMessage               @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
+GET     /internal/eliza/keepHasAccessToken          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.keepHasAccessToken(keepId: Id[Keep], accessToken: String)
+POST    /internal/eliza/editParticipantsOnKeep      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editParticipantsOnKeep()
+POST    /internal/eliza/deleteThreadsForKeeps       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteThreadsForKeeps()
+GET     /internal/eliza/getMessagesChanged          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)
+GET     /internal/eliza/getElizaKeepStream          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long] ?= None, filter: ElizaFeedFilter)
 
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 

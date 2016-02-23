@@ -5,7 +5,7 @@ import play.api.Logger
 
 import scala.util.Random
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ FiniteDuration, Duration }
 
 import scala.reflect.macros._
 import scala.language.experimental.macros
@@ -149,11 +149,11 @@ package object performance {
   object alertingMacroInstance extends AlertingMacro(false)
   object alertingMacroAsyncInstance extends AlertingMacro(true)
 
-  class AlertingTimer(limit: Duration) extends StaticAnnotation {
+  class AlertingTimer(limit: FiniteDuration) extends StaticAnnotation {
     def macroTransform(annottees: Any*): Any = macro alertingMacroInstance.impl
   }
 
-  class AlertingTimerAsync(limit: Duration) extends StaticAnnotation {
+  class AlertingTimerAsync(limit: FiniteDuration) extends StaticAnnotation {
     def macroTransform(annottees: Any*): Any = macro alertingMacroAsyncInstance.impl
   }
 
@@ -201,7 +201,7 @@ package object performance {
               lastAlertAt = Some(System.nanoTime)
               total = total + sample
               val mean = total/samples
-              Duration.fromNanos(mean)
+              scala.concurrent.duration.Duration.fromNanos(mean)
             }
 
             private def monitor(t: Long): Unit = {

@@ -7,8 +7,9 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
+import com.keepit.common.domain.ExtensionUnfriendlyDomains
 import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ URIParser, URI }
 import com.keepit.common.service.IpAddress
 import com.keepit.social.BasicUser
 import com.keepit.model._
@@ -74,6 +75,19 @@ class ExtPreferenceController @Inject() (
 
   def setShowExtMsgIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
+    Ok(JsNumber(0))
+  }
+
+  def getShowExtMoveIntro(domain: String) = UserAction { request =>
+    val shouldShow = {
+      ExtensionUnfriendlyDomains.containsMatch(domain) &&
+        db.readOnlyMaster(implicit s => userValueRepo.getValue(request.userId, UserValues.showExtMoveIntro))
+    }
+    Ok(Json.obj("show" -> shouldShow))
+  }
+
+  def setShowExtMoveIntro(show: Boolean) = UserAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.userId, UserValues.showExtMoveIntro.name, show))
     Ok(JsNumber(0))
   }
 

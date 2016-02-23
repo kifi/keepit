@@ -6,6 +6,11 @@ orgStats: OrganizationStatistics
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Organization: " + orgStats.name, stylesheets = List("admin_user"), scripts = List("Chart.min")) {
+@if(orgStats.plan.pricePerCyclePerUser.cents > 0){
+  <div style="float: right">
+    <div style="display:inline-block"><img src="https://marketing-assets-b-prod.s3.amazonaws.com/img/money.gif" width="448" height="306"></div>
+  </div>
+}
 <table class="org-summary table table-bordered" style="width:600px">
     <tr><td>Id</td><td>@orgStats.orgId, @orgStats.pubId, @adminHelper.orgDisplay(orgStats.org)</td></tr>
     <tr><td>Name</td>
@@ -17,8 +22,12 @@ orgStats: OrganizationStatistics
         </td></tr>
     <tr><td>Created At</td>
         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td></tr>
+    <tr><td>Slack Team Size</td>
+        <td>@orgStats.slackStats.teamSize</td></tr>
     <tr><td>Slack Integrations</td>
         <td>@orgStats.slackStats.activeSlackLibs happy, @orgStats.slackStats.inactiveSlackLibs inactive libs, @orgStats.slackStats.closedSlackLibs user closed on kifi side, @orgStats.slackStats.brokenSlackLibs user broke on slack side</td></tr>
+    <tr><td>Slack bots</td>
+        <td>@orgStats.slackStats.bots.mkString(", ")</td></tr>
     <tr><td>Libs prv/org/pub</td>
         <td>@orgStats.libStats.privateLibCount / @orgStats.libStats.protectedLibCount / @orgStats.libStats.publicLibCount</td></tr>
     <tr><td>Num Keeps ever/last week</td>

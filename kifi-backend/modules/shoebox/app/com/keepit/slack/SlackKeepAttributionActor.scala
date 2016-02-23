@@ -6,6 +6,7 @@ import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.SlackLog
 
 import com.keepit.model.{ Name, SystemValueRepo }
 import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamMembership }
@@ -20,13 +21,16 @@ object SlackKeepAttributionActor {
 }
 
 class SlackKeepAttributionActor @Inject() (
-    db: Database,
-    keepSourceCommander: KeepSourceCommander,
-    slackTeamMembershipRepo: SlackTeamMembershipRepo,
-    systemValueRepo: SystemValueRepo,
-    airbrake: AirbrakeNotifier,
-    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[SlackTeamMembership] {
+  db: Database,
+  keepSourceCommander: KeepSourceCommander,
+  slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  systemValueRepo: SystemValueRepo,
+  airbrake: AirbrakeNotifier,
+  implicit val inhouseSlackClient: InhouseSlackClient,
+  implicit val executionContext: ExecutionContext)
+    extends FortyTwoActor(airbrake) with BatchProcessingActor[SlackTeamMembership] {
 
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
   import SlackKeepAttributionActor._
 
   protected def nextBatch: Future[Seq[SlackTeamMembership]] = {
@@ -43,7 +47,8 @@ class SlackKeepAttributionActor @Inject() (
     if (memberships.nonEmpty) {
       memberships.foreach { membership =>
         membership.userId.foreach { userId =>
-          keepSourceCommander.reattributeKeeps(Author.SlackUser(membership.slackTeamId, membership.slackUserId), userId)
+          val reattributedKeeps = keepSourceCommander.reattributeKeeps(Author.SlackUser(membership.slackTeamId, membership.slackUserId), userId)
+          if (reattributedKeeps.nonEmpty) slackLog.info(s"Reattributed ${reattributedKeeps.size} keeps from ${membership.slackUsername} in ${membership.slackTeamName} to user $userId")
         }
       }
       val maxSeq = memberships.map(_.seq).max

@@ -88,7 +88,7 @@ object RichIdentity {
       firstName = slackIdentity.user.flatMap(_.profile.firstName).getOrElse(slackIdentity.username.value),
       lastName = slackIdentity.user.flatMap(_.profile.lastName).getOrElse(""),
       fullName = slackIdentity.user.flatMap(_.profile.fullName).orElse(slackIdentity.user.flatMap(_.profile.firstName)).getOrElse(slackIdentity.username.value),
-      email = slackIdentity.user.map(_.profile.emailAddress.address),
+      email = slackIdentity.user.map(_.profile.emailAddress.get.address),
       avatarUrl = slackIdentity.user.flatMap(_.profile.avatarUrl),
       authMethod = AuthenticationMethod.OAuth2,
       oAuth2Info = slackIdentity.token.map(t => (OAuth2Info(t.token, None, None, None)))

@@ -8,12 +8,12 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.social.SocialNetworks
+import com.keepit.social.{ BasicAuthor, SocialNetworks }
 import com.keepit.common.core._
 import org.apache.commons.lang3.RandomStringUtils
 
@@ -43,6 +43,7 @@ class PageMetaTagsCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     pathCommander: PathCommander,
     keepImageCommander: KeepImageCommander,
+    keepSourceCommander: KeepSourceCommander,
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
@@ -51,6 +52,7 @@ class PageMetaTagsCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -58,7 +60,11 @@ class PageMetaTagsCommander @Inject() (
 
   private def imageUrl(image: KeepImage): String = addProtocol(keepImageCommander.getUrl(image))
 
-  private def addProtocol(url: String): String = if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
+  private def addProtocol(url: String): String = {
+    if (url.startsWith("https:")) url
+    else if (url.startsWith("http:")) url.replaceFirst("http", "https")
+    else s"https:$url"
+  }
 
   private def relatedLibrariesLinks(library: Library): Future[Seq[String]] = relatedLibraryCommander.suggestedLibraries(library.id.get, None) map { relatedLibs =>
     val libs = relatedLibs.filterNot(_.kind == RelatedLibraryKind.POPULAR).take(6).map(_.library)
@@ -185,10 +191,7 @@ class PageMetaTagsCommander @Inject() (
 
   private def userPathOnly(username: Username): String = s"/${username.value}"
   private def orgPathOnly(primaryHandle: PrimaryOrganizationHandle): String = s"/${primaryHandle.original.value}"
-  private def keepPathOnly(keep: Keep): String = {
-    val pubId = Keep.publicId(keep.id.get)
-    s"/${keep.titlePathString}/k/${pubId.id}"
-  }
+  private def keepPathOnly(keep: Keep): String = s"/${keep.path.relative}"
 
   def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
     val urlPath = userPathOnly(user.username)
@@ -255,24 +258,34 @@ class PageMetaTagsCommander @Inject() (
   def keepMetaTags(keep: Keep): Future[PublicPageMetaTags] = {
     val urlPath = keepPathOnly(keep)
     val url = getKeepProfileUrl(keep)
-    val keeperFut = db.readOnlyMasterAsync { implicit s =>
-      keep.userId.map(basicUserRepo.load)
+    val authorFut = db.readOnlyMasterAsync { implicit s =>
+      val source = keepSourceCommander.getSourceAttributionForKeeps(Set(keep.id.get)).get(keep.id.get)
+      source.map { case (attr, userOpt) => BasicAuthor(attr, userOpt) }
     }
-    keeperFut.map { keeperOpt =>
-      PublicPageMetaFullTags( // todo(cam): see with Eishay if we can have more fun below
+    val librariesFut = db.readOnlyMasterAsync(implicit s => libraryRepo.getActiveByIds(keep.connections.libraries))
+    val imageFut = db.readOnlyMasterAsync { implicit s =>
+      keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ProcessedImageSize.XLarge.idealSize)).flatten
+    }
+    for {
+      authorOpt <- authorFut
+      libraries <- librariesFut
+      imageOpt <- imageFut
+    } yield {
+      val splitName = authorOpt.map(_.name.split(" "))
+      PublicPageMetaFullTags(
         unsafeTitle = keep.title.getOrElse(""),
         url = url,
         urlPathOnly = urlPath,
         feedName = None,
         unsafeDescription = keep.note.orElse(keep.title).getOrElse(""),
-        images = Seq(), // todo(cam): get this from embeddly
+        images = imageOpt.map(imageUrl).toSeq,
         facebookId = None,
         createdAt = keep.createdAt,
         updatedAt = keep.updatedAt,
-        unsafeFirstName = keeperOpt.map(_.firstName).getOrElse("unknown"),
-        unsafeLastName = keeperOpt.map(_.lastName).getOrElse("unknown"),
+        unsafeFirstName = splitName.flatMap(_.headOption).getOrElse(""),
+        unsafeLastName = splitName.flatMap(_.lastOption).getOrElse(""),
         profileUrl = url,
-        noIndex = true, // not sure if this is okay
+        noIndex = libraries.values.count(_.visibility == PUBLISHED) == 0,
         related = Seq.empty
       )
     }
