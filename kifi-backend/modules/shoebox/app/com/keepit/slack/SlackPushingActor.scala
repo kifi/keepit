@@ -6,6 +6,7 @@ import com.keepit.common.db.Id.ord
 import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.cache._
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
@@ -224,6 +225,9 @@ class SlackPushingActor @Inject() (
                   case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                   case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
                 }.imap(_ => ()).recover {
+                  case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+                    slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
+                    slackKeepPushTimestampCache.direct.remove(SlackKeepPushTimestampKey(integration.id.get, k.id.get))
                   case fail: SlackAPIErrorResponse =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
                     ()
@@ -243,7 +247,14 @@ class SlackPushingActor @Inject() (
                       messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                     ))
                     // call the SlackClient to try and update the message
-                    slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ())
+                    slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
+                      case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+                        slackLog.warn(s"Failed to update comment ${msg.id} because the edit window closed, remove it from the cache")
+                        slackCommentPushTimestampCache.direct.remove(SlackCommentPushTimestampKey(integration.id.get, msg.id))
+                      case fail: SlackAPIErrorResponse =>
+                        slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
+                        ()
+                    }
                   }
                 }.getOrElse(Future.successful(()))
               }
@@ -412,13 +423,8 @@ class SlackPushingActor @Inject() (
     }
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
-    val addCommentOpt = {
-      if (shouldSmartRoute) Some(DescriptionElements(SlackEmoji.speechBalloon --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
-      else None
-    }
     DescriptionElements(
-      userElement getOrElse DescriptionElements("Someone"), "commented on", keepElement,
-      "saying:", msg.text, addCommentOpt
+      SlackEmoji.speechBalloon, userElement getOrElse DescriptionElements("Someone"), "said:", msg.text, "---", keepElement
     )
   }
 }
