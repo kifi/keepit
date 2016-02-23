@@ -28,6 +28,7 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     };
 
     $intro = $(k.render('html/keeper/tile_tooltip', {
+      currentDomain: window.location.hostname,
       images: api.url('images')
     }, {
       'tip_partial': 'move_keeper_intro_demo'

@@ -12,3 +12,13 @@
   border: 1px solid #ccc;
   margin-top: 15px;
 }
+
+.kifi-move-keeper-intro-demo-wave-emoji:before {
+  content: '\01F44B';
+  font-size: 20px;
+}
+
+.kifi-move-keeper-intro-demo-arrow-emoji:before {
+  content: '\002195';
+  font-size: 20px;
+}
