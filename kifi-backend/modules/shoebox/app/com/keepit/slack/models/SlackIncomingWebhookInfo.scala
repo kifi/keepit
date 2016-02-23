@@ -23,10 +23,10 @@ case class SlackIncomingWebhookInfo(
     webhook: SlackIncomingWebhook,
     lastPostedAt: Option[DateTime],
     lastFailedAt: Option[DateTime] = None,
-    lastFailure: Option[SlackAPIErrorResponse] = None) extends ModelWithState[SlackIncomingWebhookInfo] {
+    lastFailure: Option[SlackAPIFailure] = None) extends ModelWithState[SlackIncomingWebhookInfo] {
   def withId(id: Id[SlackIncomingWebhookInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withLastFailure(f: SlackAPIErrorResponse) = this.copy(lastFailure = Some(f))
+  def withLastFailure(f: SlackAPIFailure) = this.copy(lastFailure = Some(f))
   def withLastFailedAt(time: DateTime) = this.copy(lastFailedAt = Some(time))
   def withCleanSlate = this.copy(lastFailure = None, lastFailedAt = None)
   def withLastPostedAt(time: DateTime) = this.copy(lastPostedAt = Some(time))
@@ -82,7 +82,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       SlackIncomingWebhook(channelName = slackChannelName, channelId = slackChannelId, url = url, configUrl = configUrl),
       lastPostedAt,
       lastFailedAt,
-      lastFailure.map(_.as[SlackAPIErrorResponse])
+      lastFailure.map(_.as[SlackAPIFailure])
     )
   }
 

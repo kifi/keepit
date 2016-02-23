@@ -40,7 +40,7 @@ trait SlackIntegration {
 }
 
 object SlackIntegration {
-  case class BrokenSlackIntegration(integration: SlackIntegration, token: Option[SlackAccessToken], cause: Option[SlackFail]) extends Exception(s"Found a broken Slack integration: token->$token, integration->$integration, cause->$cause")
+  case class BrokenSlackIntegration(integration: SlackIntegration, token: Option[SlackAccessToken], cause: Option[SlackAPIFailure]) extends Exception(s"Found a broken Slack integration: token->$token, integration->$integration, cause->$cause")
   case class ForbiddenSlackIntegration(integration: SlackIntegration) extends Exception(s"Found a forbidden Slack integration: $integration")
 }
 

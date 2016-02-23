@@ -1,7 +1,6 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
-import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.commanders.{ OrganizationInfoCommander, KeepInterner, PermissionCommander, RawBookmarkRepresentation }
 import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
 import com.keepit.common.concurrent.FutureHelpers
@@ -172,7 +171,7 @@ class SlackIngestingActor @Inject() (
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
               slackClient.addReaction(tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
-                case SlackErrorCode(ALREADY_REACTED) => ()
+                case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
               }
             }
           } else Future.successful(Unit)
@@ -180,7 +179,7 @@ class SlackIngestingActor @Inject() (
             (newLastMessageTimestamp orElse lastMessageTimestamp, newLastMessageTimestamp.isEmpty)
           }
         } recoverWith {
-          case failure @ SlackErrorCode(INVALID_AUTH) => Future.failed(BrokenSlackIntegration(integration, Some(tokenWithScopes.token), Some(SlackFail.SlackResponse(failure))))
+          case failure @ SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => Future.failed(BrokenSlackIntegration(integration, Some(tokenWithScopes.token), Some(failure)))
         }
     }
   }
@@ -271,16 +270,16 @@ class SlackIngestingActor @Inject() (
           val messages = allMessages.take(messagesPerIngestion)
           (messages, done)
         }.recover {
-          case SlackFail.MalformedPayload(payload) if skipFailures &&
+          case SlackAPIFailure(_, SlackAPIFailure.Error.parse, payload) if skipFailures &&
             (payload \ "messages" \ "matches").asOpt[Seq[JsValue]].exists(_.forall(SlackMessage.weKnowWeCannotParse)) =>
             slackLog.info("Skipping known unparseable messages")
             (previousMessages, false)
         }
     }
     getBatchedMessages(bigPages, skipFailures = false).recoverWith {
-      case SlackFail.MalformedPayload(payload) =>
+      case fail @ SlackAPIFailure(_, SlackAPIFailure.Error.parse, _) =>
         val key = RandomStringUtils.randomAlphabetic(5).toUpperCase
-        slackLog.warn(s"[$key] Failed ingesting from $channelName with $bigPages because of malformed payload ${Json.stringify(payload).take(100)},retrying with $tinyPages")
+        slackLog.warn(s"[$key] Failed ingesting from $channelName with $bigPages because ${fail.getMessage.take(100)},retrying with $tinyPages")
         getBatchedMessages(tinyPages, skipFailures = true).andThen {
           case Success(_) => slackLog.info(s"[$key] That fixed it :+1:")
           case Failure(fail2) => slackLog.error(s"[$key] :scream: Failed with $tinyPages too, with error ${fail2.getMessage.take(100)}.")
