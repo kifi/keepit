@@ -48,7 +48,7 @@ trait LibraryToSlackChannelPusher {
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 
   // Method to be called if something happens in a library
-  def schedule(libId: Id[Library]): Unit
+  def schedule(libIds: Set[Id[Library]]): Unit
 }
 
 @Singleton
@@ -97,9 +97,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     futurePushed andThen { case _ => pushing.set(false) }
   }
 
-  def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
+  def schedule(libIds: Set[Id[Library]]): Unit = db.readWrite { implicit session =>
     val nextPushAt = clock.now plus delayFromPushRequest
-    pushLibraryAtLatest(libId, nextPushAt)
+    libIds.foreach { libId => pushLibraryAtLatest(libId, nextPushAt) }
   }
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {

@@ -214,7 +214,7 @@ class KeepInternerImpl @Inject() (
         SafeFuture {
           libraryOpt.foreach { lib =>
             libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
-            libToSlackProcessor.schedule(lib.id.get)
+            libToSlackProcessor.schedule(Set(lib.id.get))
           }
         }
         FutureHelpers.sequentialExec(keeps) { keep =>
