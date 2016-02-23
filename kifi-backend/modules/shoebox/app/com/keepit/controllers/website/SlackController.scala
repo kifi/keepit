@@ -113,7 +113,7 @@ class SlackController @Inject() (
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId).slackTeam.map(_.id)
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
     }
     val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels()))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
