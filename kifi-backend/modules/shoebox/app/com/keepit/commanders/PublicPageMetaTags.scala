@@ -37,7 +37,7 @@ class OrgMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[OrgMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepMetadataKey(id: Id[Keep]) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "keep_metadata_by_id"
   def toKey(): String = s"${id.id.toString}"
 }
@@ -170,7 +170,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   }
 
   def formatOpenGraphForKeep: String = {
-    titleAndMetaTags("profile")
+    titleAndMetaTags("article")
   }
 
   //  verify with https://developers.facebook.com/tools/debug/og/object/
