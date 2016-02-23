@@ -93,7 +93,7 @@ class SlackClientWrapperImpl @Inject() (
         }
         FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
           sendToSlackViaUser(slackUserId, slackTeamId, slackChannel, msg).map(v => Some(v)).recover {
-            case SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken => None
+            case SlackAPIFailure.NoValidWebhooks | SlackAPIFailure.NoValidToken | SlackAPIFailure(_, SlackAPIFailure.Error.channelNotFound, _) => None
           }
         }.flatMap {
           case Some(v) => Future.successful(v)
