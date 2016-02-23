@@ -217,6 +217,7 @@ class SlackInfoCommanderImpl @Inject() (
     slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
   }
 
+  @StatsdTiming("SlackInfoCommander.getOrganizationSlackInfo")
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int])(implicit session: RSession): OrganizationSlackInfo = {
     val (libIds, basicLibsById, integrationInfosByLib, slackTeam) = {
       val slackToLibs = channelToLibRepo.getIntegrationsByOrg(orgId)
