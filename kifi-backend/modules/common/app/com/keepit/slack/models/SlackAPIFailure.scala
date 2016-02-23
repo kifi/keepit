@@ -16,6 +16,7 @@ object SlackAPIFailure {
     val state = "broken_state"
     val invalidAuth = "invalid_auth"
     val webhookRevoked = "webhook_revoked"
+    val channelNotFound = "channel_not_found"
     val tokenRevoked = "token_revoked"
     val accountInactive = "account_inactive"
     val alreadyReacted = "already_reacted"

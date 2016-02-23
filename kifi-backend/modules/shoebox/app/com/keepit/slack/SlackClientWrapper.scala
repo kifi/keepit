@@ -87,7 +87,7 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
     sendToSlackViaBot(slackTeamId, slackChannel, msg).map(v => Some(v)).recoverWith {
-      case SlackAPIFailure.NoValidBotToken =>
+      case SlackAPIFailure.NoValidBotToken | SlackAPIFailure(_, SlackAPIFailure.Error.channelNotFound, _) =>
         val slackTeamMembers = db.readOnlyMaster { implicit s =>
           slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
         }
