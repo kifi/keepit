@@ -170,7 +170,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   }
 
   def formatOpenGraphForKeep: String = {
-    titleAndMetaTags("profile")
+    titleAndMetaTags("article")
   }
 
   //  verify with https://developers.facebook.com/tools/debug/og/object/
