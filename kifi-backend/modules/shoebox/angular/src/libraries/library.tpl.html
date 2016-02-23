@@ -11,12 +11,6 @@
 <div class="kf-lib-content">
   <div class="kf-lib-content-1" ui-view></div>
   <section class="kf-lib-content-2">
-    <a class="kf-lib-tweet" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank" ng-if="library.visibility === 'published'">
-      <span class="kf-lib-tweet-icon svg-twitter-white"></span>
-    </a>
-    <button class="kf-lib-fpost" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()" ng-if="library.visibility === 'published'">
-      <span class="kf-lib-fpost-icon svg-facebook-white"></span>
-    </button>
     <button class="kf-lib-rss" ng-click="showFeedModal()" ng-if="library.visibility === 'published'">
       <span class="kf-lib-rss-icon svg-rss-feed"></span>
     </button>
