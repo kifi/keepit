@@ -225,7 +225,7 @@ class LibraryAnalytics @Inject() (
     contextBuilder.build
   }
 
-  def keptPages(userId: Id[User], keeps: Seq[Keep], library: Library, existingContext: HeimdalContext): Unit = SafeFuture {
+  def keptPages(keeps: Seq[Keep], library: Library, existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
     keeps.collect {
@@ -239,9 +239,11 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
         val context = contextBuilder.build
-        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-        if (!KeepSource.imports.contains(bookmark.source)) {
-          heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+        bookmark.userId.foreach { uid =>
+          heimdal.trackEvent(UserEvent(uid, context, UserEventTypes.KEPT, keptAt))
+          if (!KeepSource.imports.contains(bookmark.source)) {
+            heimdal.trackEvent(UserEvent(uid, context, UserEventTypes.USED_KIFI, keptAt))
+          }
         }
 
         // Anonymized event with page information
@@ -249,8 +251,12 @@ class LibraryAnalytics @Inject() (
         contextBuilder.addUrlInfo(bookmark.url)
         heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
     }
-    userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
-    heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
+
+    keeps.groupBy(_.userId).collect {
+      case (Some(userId), _) =>
+        userPropertyUpdateActor.ref ! (userId, UserPropertyUpdateInstruction.KeepCounts)
+        heimdal.setUserProperties(userId, "lastKept" -> ContextDate(keptAt))
+    }
   }
 
   def keepImport(userId: Id[User], keptAt: DateTime, existingContext: HeimdalContext, countImported: Int, source: KeepSource): Unit = {
