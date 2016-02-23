@@ -8,7 +8,8 @@ var k = k && k.kifi ? k : {kifi: true};
 
 k.formatting = k.formatting || (function () {
   return {
-    jsonDom: jsonDom
+    jsonDom: jsonDom,
+    parseStringToElement: parseStringToElement
   };
 
   // Inspired by http://stackoverflow.com/questions/12980648
@@ -345,7 +346,9 @@ function convertHtmlDraftToMarkdown(html) {
       return '[' + $2.replace(/([\]\\])/g, '\\$1') + '](x-kifi-sel:' + $1.replace(/([\)\\])/g, '\\$1') + ')';
     });
   html2 = emoji.encode(html2);
-  return $('<div>').html(html2).text().trim();
+
+  var elem = k.formatting.parseStringToElement(html2, 'div');
+  return elem.textContent.trim();
 }
 
 function convertTextDraftToMarkdown(text) {
