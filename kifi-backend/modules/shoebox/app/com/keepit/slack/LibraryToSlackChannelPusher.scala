@@ -1,5 +1,7 @@
 package com.keepit.slack
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
@@ -36,6 +38,8 @@ object LibraryToSlackChannelPusher {
   val MAX_KEEPS_TO_SEND = 7
   val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+
+  val pushing = new AtomicBoolean()
 }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -75,17 +79,22 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   import LibraryToSlackChannelPusher._
 
   @StatsdTimingAsync("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
-  @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    val integrationsToProcess = db.readWrite { implicit s =>
-      val newActorTeams = {
-        val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
-        slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
-      }
-      val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration, newActorTeams)
-      markLegalIntegrationsForProcessing(integrations)
+  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = if (pushing.getAndSet(true)) Future.successful(Map.empty) else {
+    val futurePushed = FutureHelpers.foldLeftUntil(Stream.continually(()))(Map.empty[Id[LibraryToSlackChannel], Boolean]) {
+      case (pushedSoFar, _) =>
+        val integrationsToProcess = db.readWrite { implicit s =>
+          val newActorTeams = {
+            val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+            slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
+          }
+          val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration, newActorTeams)
+          markLegalIntegrationsForProcessing(integrations)
+        }
+        processIntegrations(integrationsToProcess).map { pushedBatch =>
+          (pushedSoFar ++ pushedBatch, pushedBatch.isEmpty)
+        }
     }
-    processIntegrations(integrationsToProcess)
+    futurePushed andThen { case _ => pushing.set(false) }
   }
 
   def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
