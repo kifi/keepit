@@ -51,7 +51,7 @@ class SlackOAuthProviderImpl @Inject() (
         case Some(code) => {
           getParameter("state").flatMap(state => slackStateCommander.getSlackAction(SlackAuthState(state))) match {
             case Some(Authenticate()) => slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), REDIRECT_URI).imap(Right(_))
-            case _ => Future.successful(Left(SlackAPIFailure.InvalidAuthState.asResponse))
+            case _ => Future.successful(Left(SlackFail.InvalidAuthState.asResponse))
           }
         }
       }
