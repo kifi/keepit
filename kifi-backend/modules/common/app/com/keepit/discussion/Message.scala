@@ -37,6 +37,9 @@ case class CrossServiceMessage(
   sentBy: Option[Id[User]],
   text: String)
 object CrossServiceMessage {
+  private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
+  def stripLookHeres(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
     (__ \ 'isDeleted).format[Boolean] and

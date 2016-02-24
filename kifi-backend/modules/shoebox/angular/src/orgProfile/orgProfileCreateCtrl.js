@@ -60,6 +60,11 @@ angular.module('kifi')
         return;
       }
 
+      $scope.$emit('trackOrgProfileEvent', 'click', {
+        type: 'createTeam',
+        action: 'clickedSubmitTeam'
+      });
+
       $scope.disableCreate = true;
       profileService.savePrefs({ hide_company_name: true });
 
