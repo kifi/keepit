@@ -355,7 +355,7 @@ class AdminUserController @Inject() (
   def allUsersPotentialOrgsView = usersPotentialOrgsView(0)
   def allLinkedInUsersWithoutOrgsView = linkedInUsersWithoutOrgsView(0)
 
-  def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 60): Future[UserStatisticsPage] = {
+  def userStatisticsPage(userViewType: UserViewType, page: Int = 0, pageSize: Int = 30): Future[UserStatisticsPage] = {
     val usersF = Future {
       db.readOnlyReplica { implicit s =>
         userViewType match {

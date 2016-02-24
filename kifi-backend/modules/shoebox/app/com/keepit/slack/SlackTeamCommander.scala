@@ -157,9 +157,11 @@ class SlackTeamCommanderImpl @Inject() (
         }
       } flatMap {
         case (user, org) =>
-          inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-            user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
-          )))
+          SafeFuture {
+            inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+              user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
+            )))
+          }
       }
 
       case Failure(fail) =>
