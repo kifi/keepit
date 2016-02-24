@@ -86,7 +86,7 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
           .attr('target','_blank');
         }
 
-        html = $rendered.prop('outerHTML');
+        html = $rendered;
       }
 
       return html;

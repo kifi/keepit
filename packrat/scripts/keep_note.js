@@ -1,4 +1,6 @@
 // @require scripts/lib/mustache.js
+// @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/selectionchange.js
 
 k.keepNote = k.keepNote || (function () {
@@ -46,7 +48,7 @@ k.keepNote = k.keepNote || (function () {
       .replace(hashTagInHtmlRe, function($0, $1) {
         return '[' + $1.replace(backslashEscapeRe, '\\$1') + ']';
       });
-    return $('<div>').html(html2).text().trim();
+    return k.formatting.parseStringToElement(html2, 'div').textContent.trim();
   }
 
   function isHashTag(node) {
@@ -398,7 +400,8 @@ k.keepNote = k.keepNote || (function () {
             $(document).on('selectionchange', data, onDocSelectionChange);
           }
           data.$suggestions
-            .html(results.map(formatTagSuggestion).join(''))
+            .empty()
+            .append($(k.render('html/keeper/kifi_mustache_tags', k.formatting.jsonDom(results.map(formatTagSuggestion).join('')))))
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
@@ -595,7 +598,10 @@ k.keepNote = k.keepNote || (function () {
 
   return {
     init: function ($note, $bounds, libraryId, keepId, noteText) {
-      $note.html(noteTextToHtml(noteText))
+      $note
+      .empty()
+      .append($(k.render('html/keeper/kifi_mustache_tags', k.formatting.jsonDom(noteTextToHtml(noteText)))));
+
       var data = $note.data({
         libraryId: libraryId,
         keepId: keepId,
