@@ -12,5 +12,9 @@
   "icon64": "icon64.png",
   "permissions": {
     "cross-domain-content": ["https://www.kifi.com"]
+  },
+  "engines": {
+    "firefox": ">=38.0a1 <=48",
+    "fennec": ">=38.0a1 <=48"
   }
 }
