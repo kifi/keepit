@@ -710,5 +710,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = Future.successful(())
-  def ingestElizaMessagesASAP(): Future[Unit] = Future.successful(())
+  def registerMessageOnKeep(keepId: Id[Keep]): Future[Unit] = Future.successful(())
 }
