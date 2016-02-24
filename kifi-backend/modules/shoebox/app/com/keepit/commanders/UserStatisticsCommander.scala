@@ -29,6 +29,25 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
   def all = secret + published + organization + discoverable
 }
 
+case class KifiInstallations(firefox: Boolean, chrome: Boolean, safari: Boolean, iphone: Boolean, android: Boolean, windows: Boolean, mac: Boolean, linux: Boolean) {
+  def isEmpty: Boolean = firefox && chrome && safari && iphone && android && windows && mac && linux
+}
+object KifiInstallations {
+  def apply(all: Seq[KifiInstallation]): KifiInstallations = {
+    val agents = all.map(_.userAgent)
+    KifiInstallations(
+      firefox = agents.exists(_.name.toLowerCase.contains("firefox")),
+      chrome = agents.exists(_.name.toLowerCase.contains("chrome")),
+      safari = agents.exists(_.name.toLowerCase.contains("safari")),
+      iphone = agents.exists(_.isIphone),
+      android = agents.exists(_.isAndroid),
+      windows = agents.exists(_.operatingSystemFamily.toLowerCase.contains("window")),
+      mac = agents.exists(_.operatingSystemFamily.toLowerCase.contains("os x")),
+      linux = agents.exists(_.operatingSystemFamily.toLowerCase.contains("linux"))
+    )
+  }
+}
+
 case class UserStatistics(
   user: User,
   paying: Boolean,
@@ -39,7 +58,7 @@ case class UserStatistics(
   slackMemberships: Seq[SlackTeamMembership],
   keepVisibilityCount: KeepVisibilityCount,
   experiments: Set[UserExperimentType],
-  kifiInstallations: Seq[KifiInstallation],
+  kifiInstallations: KifiInstallations,
   librariesCreated: Int,
   librariesFollowed: Int,
   dateLastManualKeep: Option[DateTime],
@@ -274,7 +293,7 @@ class UserStatisticsCommander @Inject() (
   }
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
-    val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    val kifiInstallations = KifiInstallations(kifiInstallationRepo.all(user.id.get))
     val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
     val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
