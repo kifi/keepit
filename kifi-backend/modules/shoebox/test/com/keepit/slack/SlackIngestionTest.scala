@@ -119,7 +119,7 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val slackTeam = SlackTeamFactory.team().saved
             val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").saved
             val botMembership = SlackTeamMembershipFactory.membership().withTeam(slackTeam).withUsername("KIFIBOT_THE_DESTROYER").saved
-            slackTeamRepo.save(slackTeam.withNewBotUsers(Set(botMembership.slackUserId)))
+            slackTeamRepo.save(slackTeam.withKifiBotIfDefined(Some((botMembership.slackUserId, botMembership.token.get))))
             val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel("#eng").withNextIngestionAt(fakeClock.now).on().saved
             (userMembership, botMembership, lib, stl)
           }

@@ -54,8 +54,8 @@ object SlackTeamFactory {
       slackTeamName = SlackTeamName(ran(10)),
       organizationId = None,
       generalChannelId = None,
-      botToken = None,
-      botUsers = Set.empty
+      kifiBotUserId = None,
+      kifiBotToken = None
     ))
   }
 

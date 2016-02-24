@@ -228,7 +228,7 @@ class SlackIngestingActor @Inject() (
   }
 
   private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId, slackTeam: Option[SlackTeam], blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
-    if (ignoreMessage(message, slackTeam.map(_.botUsers).getOrElse(Set.empty))) Set.empty[RawBookmarkRepresentation]
+    if (ignoreMessage(message, slackTeam.map(_.kifiBotUserId.toSet).getOrElse(Set.empty))) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {

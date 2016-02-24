@@ -109,7 +109,7 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val botToken = db.readOnlyMaster { implicit s =>
-      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.botToken)
+      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
     }
     botToken match {
       case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser)
