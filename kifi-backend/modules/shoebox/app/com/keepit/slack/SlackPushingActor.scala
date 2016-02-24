@@ -217,7 +217,7 @@ class SlackPushingActor @Inject() (
               slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
                 // regenerate the slack message
                 val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
                 ))
                 // call the SlackClient to try and update the message
                 log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
@@ -360,23 +360,23 @@ class SlackPushingActor @Inject() (
         "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
       ))))
       case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get))
+        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get), items.newMsgs.getOrElse(k, Seq.empty).size + items.oldMsgs.getOrElse(k, Seq.empty).size)
       )))
       case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         messageAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
       )))
     }
   }
-  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser], msgCount: Int): DescriptionElements = {
     import DescriptionElements._
 
     val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
     val shouldSmartRoute = canSmartRoute(slackTeamId)
 
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-    val addCommentOpt = {
-      if (shouldSmartRoute) Some(DescriptionElements("\n", s"${SlackEmoji.speechBalloon.value} Add a comment" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))))
-      else None
+    val addComment = {
+      val text = s"${SlackEmoji.speechBalloon.value} " + (if (msgCount > 1) s"$msgCount comments" else if (msgCount == 1) s"$msgCount comment" else "Reply")
+      DescriptionElements(text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
     }
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
 
@@ -385,7 +385,7 @@ class SlackPushingActor @Inject() (
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
           "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
-          "was added to", lib.name --> libLink, addCommentOpt
+          "was added to", lib.name --> libLink, addComment
         )
       case None =>
         val userElement: Option[DescriptionElements] = {
@@ -401,8 +401,7 @@ class SlackPushingActor @Inject() (
             // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
             DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
             "”"
-          )),
-          addCommentOpt
+          )), addComment
         )
     }
   }
