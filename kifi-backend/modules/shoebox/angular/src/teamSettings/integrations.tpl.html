@@ -61,6 +61,31 @@
         </div>
       </div>
 
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && isAdmin">
+        <div class="kf-container-header"><h2 id="blacklist">Link Ingestion Blacklist</h2></div>
+        <span class="kf-ts-integrations-marketing-text">
+          Control which domains are pulled into Kifi from Slack. Links matching the patterns below will be ignored.
+        </span>
+        <table class="kf-ts-integrations-table" ng-if="blacklist.existing.length > 0">
+          <thead>
+            <tr><th>URL path</th><th>Added at</th><th></th></tr>
+          </thead>
+          <tr ng-repeat="entry in blacklist.existing">
+            <td ng-bind="::entry.path"></td>
+            <td><time am-time-ago="::entry.createdAt"></time></td>
+            <td><button class="kf-link" ng-click="removeBlacklistEntry(entry.path)" ng-show="blacklist.editable">×</button></td>
+          </tr>
+        </table>
+        <div>
+          <h3>Blacklist custom URLs</h3>
+          <div>
+            <input type="text" class="kf-textbox kf-textbox-auto kf-ts-integations-blacklist-input" placeholder="URL path to blacklist" ng-model="blacklist.newPath">
+            <button class="kf-button kf-button-large kf-button-cta-green" ng-click="addBlacklistEntry()">Add to Blacklist</button>
+          </div>
+          <span class="kf-ts-integrations-marketing-text kf-ts-integrations-blacklist-ex">Example: <code>github.com</code>, <code>*.acme-corp.com/internal</code>.</span>
+        </div>
+      </div>
+
       <div ng-if="integrations.length" class="kf-container kf-container-toppad">
         <div class="kf-container-header"><h2 id="slack-integrations">Library Integrations</h2></div>
         <!--scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()"-->
