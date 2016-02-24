@@ -876,16 +876,10 @@ class KeepCommanderImpl @Inject() (
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
         Future.successful {
           db.readOnlyReplica { implicit session =>
-            val (sortByLastActivity, hasNoLibExperiment) = {
-              val experiments = userExperimentRepo.getUserExperiments(userId)
-              (experiments.contains(UserExperimentType.FEED_LAST_ACTIVITY), experiments.contains(UserExperimentType.KEEP_NOLIB))
-            }
+            val hasNoLibExperiment = userExperimentRepo.getUserExperiments(userId).contains(UserExperimentType.KEEP_NOLIB)
 
-            val keepsAndAddedAt = {
-              // Grab 3x the required number because we're going to be dropping some (downgrade to 2x if the filtering lessens e.g. library-less keeps are released)
-              if (sortByLastActivity) keepRepo.getRecentKeepsByActivity(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
-              else keepRepo.getRecentKeeps(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
-            }
+            // Grab 3x the required number because we're going to be dropping some (downgrade to 2x if the filtering lessens e.g. library-less keeps are released)
+            val keepsAndAddedAt = keepRepo.getRecentKeepsByActivity(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
 
             keepsAndAddedAt.filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
           }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)

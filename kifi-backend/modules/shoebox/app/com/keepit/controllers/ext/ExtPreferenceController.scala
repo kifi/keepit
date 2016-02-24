@@ -173,7 +173,7 @@ class ExtPreferenceController @Inject() (
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
-        showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals) && experiments.contains(UserExperimentType.INFER_KEEPER_POSITION),
+        showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }

@@ -4,8 +4,8 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService) {
+  'slackService', 'profileService',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
@@ -66,8 +66,36 @@ angular.module('kifi')
       .then(onSave, onError);
     };
 
+    $scope.isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
+
+    $scope.blacklist = {
+      newPath: '',
+      existing: (settings.slack_ingestion_domain_blacklist || {}).setting || [],
+      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable
+    };
+
+    $scope.removeBlacklistEntry = function (path) {
+      _.remove($scope.blacklist.existing, {path: path});
+      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      .then(function (data) {
+        $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
+      }, onError);
+    };
+
+    $scope.addBlacklistEntry = function () {
+      $scope.blacklist.existing.push({
+        path: $scope.blacklist.newPath,
+        createdAt: +new Date()
+      });
+      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      .then(function (data) {
+        $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
+      }, onError);
+      $scope.blacklist.newPath = '';
+    };
+
     function onSave(resp) {
-      if (resp.success) {
+      if (!resp || resp.success) {
         messageTicker({ text: 'Saved!', type: 'green' });
       } else if (resp.redirect) {
         $window.location = resp.redirect;

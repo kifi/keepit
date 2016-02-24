@@ -80,8 +80,6 @@ object UserExperimentType {
   val SLACK = UserExperimentType("slack")
   val CUSTOM_LIBRARY_ORDERING = UserExperimentType("custom_library_ordering")
   val KEEP_NOLIB = UserExperimentType("keep_nolib")
-  val FEED_LAST_ACTIVITY = UserExperimentType("feed_last_activity")
-  val INFER_KEEPER_POSITION = UserExperimentType("infer_keeper_position")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
@@ -89,8 +87,7 @@ object UserExperimentType {
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
-    NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING :: KEEP_NOLIB ::
-    FEED_LAST_ACTIVITY :: INFER_KEEPER_POSITION :: Nil
+    NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING :: KEEP_NOLIB :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)

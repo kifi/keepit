@@ -156,7 +156,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute)
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
     val addComment = {
-      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 0) s"$messageCount comments" else "Reply")
+      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 1) s"$messageCount comments" else if (messageCount == 1) s"$messageCount comment" else "Reply")
       DescriptionElements("\n", text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
     }
 
