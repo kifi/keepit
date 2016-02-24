@@ -26,14 +26,6 @@
     }
 }
 
-@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
-  <ul>
-    @for(installation <- kifiInstallations) {
-      <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
-    }
-  </ul>
-}
-
 @networkLogoLink(sui: SocialUserInfo) = {
   <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
     @sui.networkType.name.take(2)
@@ -112,7 +104,6 @@
               <th>Network</th>
               <th>Keeps PRV/PUB/ORG/DISC</th>
               <th>Email Address</th>
-              <th>Version</th>
               <th class="sorter-mmddyy">Date Joined</th>
               <th>Experiment</th>
             </tr>
@@ -131,6 +122,30 @@
                     <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
                   }
                 }
+                @if(userStatistics.kifiInstallations.firefox) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/firefox.png" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.chrome) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/chrome.png" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.safari) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/safari.png" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.iphone) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/iphone.jpg" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.android) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/android.png" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.windows) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/icon_win.gif" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.mac) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/osx.png" width="24" height="24">
+                }
+                @if(userStatistics.kifiInstallations.linux) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/linux.png" width="24" height="24">
+                }
               </td>
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
               <td>@if(userStatistics.paying) { &#36;&#36;&#36; }</td>
@@ -143,7 +158,6 @@
               <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) } @if( userStatistics.slackMemberships.nonEmpty ) { sl }</td>
               <td>@userStatistics.keepVisibilityCount.secret / @userStatistics.keepVisibilityCount.published / @userStatistics.keepVisibilityCount.organization / @userStatistics.keepVisibilityCount.discoverable</td>
               <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
-              <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
               <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
               <td>@userStatistics.experiments.mkString(", ")</td>
             </tr>
