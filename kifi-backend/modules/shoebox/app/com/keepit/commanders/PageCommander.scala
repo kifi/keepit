@@ -148,7 +148,7 @@ class PageCommander @Inject() (
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {
     inferredKeeperPositionCache.getOrElseOpt(InferredKeeperPositionKey(domainId)) {
       val since = currentDateTime.minusMonths(6)
-      val roundToNearest = 100 // return value will vary in roundToNearest intervals
+      val roundToNearest = 50 // return value will vary in roundToNearest intervals
       val minSamples = 10
 
       val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(since))
