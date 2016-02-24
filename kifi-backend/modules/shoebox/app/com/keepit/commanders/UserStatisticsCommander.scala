@@ -30,7 +30,8 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
 }
 
 case class KifiInstallations(firefox: Boolean, chrome: Boolean, safari: Boolean, iphone: Boolean, android: Boolean, windows: Boolean, mac: Boolean, linux: Boolean) {
-  def isEmpty: Boolean = firefox && chrome && safari && iphone && android && windows && mac && linux
+  def exist: Boolean = firefox || chrome || safari || iphone || android
+  def isEmpty: Boolean = !exist
 }
 object KifiInstallations {
   def apply(all: Seq[KifiInstallation]): KifiInstallations = {
