@@ -113,10 +113,11 @@ class SlackAuthRouter @Inject() (
         .map(keepId => keepRepo.get(keepId)).filter(_.isActive)
         .map { keep =>
           val isLoggedIn = request.userIdOpt.isDefined
+          val hasPermission = permissionCommander.getKeepPermissions(keep.id.get, request.userIdOpt).contains(KeepPermission.VIEW_KEEP)
           val keepPageUrl = pathCommander.pathForKeep(keep).absolute
-          if (!onKifi) {
+          if (!onKifi && hasPermission) {
             Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
-          } else if (onKifi && isLoggedIn) {
+          } else if (onKifi && isLoggedIn && hasPermission) {
             Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keepPageUrl))
           } else if (onKifi && !isLoggedIn) {
             val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
