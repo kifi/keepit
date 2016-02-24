@@ -444,7 +444,22 @@ var api = api || (function () {
     isPackaged: function() {
       return isPackaged;
     },
-    loadReason: 'enable',  // by elimination
+    loadReason: (function () {
+      var extension = safari.extension;
+      var settings = safari.extension.settings;
+      var hasRun = settings.hasRun;
+      var lastVersion = !!settings.lastVersion;
+
+      if (!hasRun && !lastVersion) {
+        return 'install';
+      } else if (lastVersion === extension.bundleVersion) {
+        return 'startup';
+      } else if (lastVersion){
+        return 'update';
+      }
+      settings.hasRun = true;
+      settings.lastVersion = extension.bundleVersion;
+    }()),
     mode: {
       isDev: function () {
         return localStorage[':mode'] === 'dev';
@@ -487,6 +502,34 @@ var api = api || (function () {
     browser: {
       name: 'Safari',
       userAgent: navigator.userAgent
+    },
+    requestUpdateCheck: function () {
+      var versionXPath = '//key[text()="CFBundleVersion"]/following-sibling::string/text()';
+      var request = new XMLHttpRequest();
+      request.open('GET', 'https://www.kifi.com/extensions/safari/KifiUpdates.plist', true);
+      request.onload = function() {
+        if (this.status >= 200 && this.status < 400) {
+          var xml = this.responseXML;
+          var xPathResult = xml.evaluate(versionXPath, xml, null, XPathResult.STRING_TYPE, null);
+          var updateVersion;
+          if (!xPathResult.invalidIteratorState) {
+            updateVersion = xPathResult.stringValue
+            if (bundleVersion !== updateVersion) {
+              // we have an update. show tooltip?
+            }
+          } else {
+            onError.call(this, xPathResult);
+          }
+        } else {
+          onError.call(this);
+        }
+      };
+      request.onerror = onError;
+      request.send();
+
+      function onError(extra) {
+        l`${CRED}[requestUpdateCheck] an error occurred in the response %O${this} %s${this.response} %s${extra}`;
+      }
     },
     screenshot: function (callback) {
       var activeTab = safari.application.activeBrowserWindow.activeTab;
