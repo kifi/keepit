@@ -420,7 +420,7 @@ class SlackPushingActor @Inject() (
     val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
     DescriptionElements(
       SlackEmoji.speechBalloon,
-      if (msg.isDeleted) DescriptionElements("[deleted]") else DescriptionElements(userElement getOrElse DescriptionElements("Someone"), "said:", msg.text),
+      if (msg.isDeleted) DescriptionElements("[deleted]") else DescriptionElements(userElement getOrElse DescriptionElements("Someone"), "said:", CrossServiceMessage.stripLookHeres(msg.text)),
       "---", keepElement
     )
   }
