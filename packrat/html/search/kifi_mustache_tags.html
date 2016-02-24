@@ -1,0 +1,8 @@
+<{{tagName}}
+  {{#attributes}}
+    {{name}}="{{value}}"
+  {{/attributes}}
+{{^children.length}}/{{/children.length}}>{{!
+}}{{^leaf}}{{#children}}{{>kifi_mustache_tags}}{{/children}}{{/leaf}}{{!
+}}{{#leaf}}{{children}}{{/leaf}}{{!
+}}{{#children.length}}</{{tagName}}>{{/children.length}}

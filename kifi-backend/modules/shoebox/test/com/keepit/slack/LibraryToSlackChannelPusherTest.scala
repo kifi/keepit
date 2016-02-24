@@ -127,7 +127,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }
 
           db.readWrite { implicit s => inject[LibraryToSlackChannelRepo].save(lts.withStatus(SlackIntegrationStatus.Off)) }
-          libToSlackPusher.schedule(lib.id.get)
+          libToSlackPusher.schedule(Set(lib.id.get))
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(lts.id.get).status === SlackIntegrationStatus.Off }
         }
       }

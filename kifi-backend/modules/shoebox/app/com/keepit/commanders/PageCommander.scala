@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.cache.{ PrimitiveCacheImpl, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
 
@@ -11,12 +12,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social._
+import com.keepit.common.time._
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
 
 import play.api.libs.json._
@@ -41,6 +43,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
+    inferredKeeperPositionCache: InferredKeeperPositionCache,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
@@ -80,8 +83,12 @@ class PageCommander @Inject() (
       val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => NormalizedHostname.fromHostname(name))
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
-        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-          userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE))
+        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse {
+          if (experiments.contains(UserExperimentType.INFER_KEEPER_POSITION)) Some(inferKeeperPosition(dom.id.get))
+          else None
+        }
+        val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
+        (position, neverShow)
       }.getOrElse((None, false))
       (nUriStr, nUri, getKeepersFutureOpt, keep, tags, position, neverOnSite, host)
     }
@@ -106,8 +113,12 @@ class PageCommander @Inject() (
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
       domainOpt.map { dom =>
-        (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-          userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE))
+        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse {
+          if (experiments.contains(UserExperimentType.INFER_KEEPER_POSITION)) Some(inferKeeperPosition(dom.id.get))
+          else None
+        }
+        val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
+        (position, neverShow)
       }.getOrElse((None, false))
     }
     val uriInfoF = db.readOnlyMasterAsync { implicit session =>
@@ -136,6 +147,29 @@ class PageCommander @Inject() (
       }
     }
     infoF.flatten
+  }
+
+  private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): JsObject = {
+    inferredKeeperPositionCache.getOrElse(InferredKeeperPositionKey(domainId)) {
+      val since = currentDateTime.minusMonths(6)
+      val roundToNearest = 100 // return value will vary in roundToNearest intervals
+      val minSamples = 10
+
+      val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(since))
+      if (positions.size >= minSamples) {
+        // get mode of all positions rounded to the nearest 100 pixels, distances from "top" being negative
+        val positionMode = positions.foldLeft(Map.empty[Long, Int]) {
+          case (countByBucket, js) =>
+            val bottomOpt = (js \ "bottom").asOpt[Double]
+            val topOpt = (js \ "top").asOpt[Double]
+            val position = Math.round(bottomOpt.orElse(topOpt.map(_ * -1)).getOrElse(0.0) / roundToNearest.toDouble) * roundToNearest
+            countByBucket + (position -> (countByBucket.getOrElse(position, 0) + 1))
+        }.maxBy(_._2)._1
+
+        if (positionMode < 0) Json.obj("top" -> positionMode)
+        else Json.obj("bottom" -> positionMode)
+      } else Json.obj("bottom" -> 0)
+    }
   }
 
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
@@ -231,6 +265,15 @@ class PageCommander @Inject() (
     }
   }
 }
+
+case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {
+  override val version = 1
+  val namespace = "inferred_keeper_position"
+  def toKey(): String = id.id.toString
+}
+
+class InferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[InferredKeeperPositionKey, JsObject](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeeperPagePartialInfo(
   keepers: Seq[BasicUser],

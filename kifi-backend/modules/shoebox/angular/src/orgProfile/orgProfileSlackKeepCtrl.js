@@ -6,14 +6,14 @@ angular.module('kifi')
   '$scope', '$state', '$stateParams', 'keepActionService',
   function ($scope, $state, $stateParams, keepActionService) {
     $scope.keep = null;
-    $scope.user = null;
+    $scope.author = null;
     $scope.library = null;
 
     keepActionService
     .getFullKeepInfo($stateParams.keepId, $stateParams.authToken)
     .then(function (keep) {
       $scope.keep = keep;
-      $scope.user = keep.user;
+      $scope.author = keep.author;
       $scope.library = keep.library;
     })
     ['catch'](function () {

@@ -2,25 +2,24 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.controller.UserRequest
-import com.keepit.common.db.Id
 import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ SlackLog, Logging }
-import com.keepit.common.net.URI
-import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
+import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
+import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.StaticFeature.{ SlackNotifications, SlackIngestionReaction }
-import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
+import com.keepit.model.OrganizationPermission.EDIT_ORGANIZATION
 import com.keepit.model._
-import com.keepit.payments.{ CreditRewardCommander, RewardTrigger, ActionAttribution, PaidPlan, PaidPlanRepo, PlanManagementCommander }
-import com.keepit.slack.models.{ LibraryToSlackChannelRepo, LibraryToSlackChannel, SlackTeamRepo, SlackChannelToLibraryRepo }
+import com.keepit.payments.{ ActionAttribution, CreditRewardCommander, PaidPlan, PaidPlanRepo, PlanManagementCommander, RewardTrigger }
+import com.keepit.slack.models.{ LibraryToSlackChannelRepo, SlackChannelToLibraryRepo, SlackTeamRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.Play
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
@@ -29,7 +28,7 @@ trait OrganizationCommander {
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
   def setAccountFeatureSettings(req: OrganizationSettingsRequest): Either[OrganizationFail, OrganizationSettingsResponse]
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings, requesterIdOpt: Option[Id[User]])(implicit session: RWSession): OrganizationSettingsResponse
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
 }
@@ -58,6 +57,7 @@ class OrganizationCommanderImpl @Inject() (
   libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
+  clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends OrganizationCommander with Logging {
@@ -175,15 +175,16 @@ class OrganizationCommanderImpl @Inject() (
       getValidationError(req) match {
         case Some(fail) => Left(fail)
         case None =>
-          val response = unsafeSetAccountFeatureSettings(req.orgId, req.settings)
+          val response = unsafeSetAccountFeatureSettings(req.orgId, req.settings, Some(req.requesterId))
           Right(response)
       }
     }
   }
 
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings, requesterIdOpt: Option[Id[User]])(implicit session: RWSession): OrganizationSettingsResponse = {
     val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.updateSettings(settings))
+    val augmentedSettings = augmentSettings(requesterIdOpt, settings, currentConfig.settings)
+    val newConfig = orgConfigRepo.save(currentConfig.updateSettings(augmentedSettings))
 
     val members = orgMembershipRepo.getAllByOrgId(orgId)
     if (currentConfig.settings != settings) {
@@ -192,6 +193,26 @@ class OrganizationCommanderImpl @Inject() (
       }
     }
     OrganizationSettingsResponse(newConfig)
+  }
+
+  private def augmentSettings(requesterIdOpt: Option[Id[User]], newSettings: OrganizationSettings, existingSettings: OrganizationSettings)(implicit session: RWSession) = {
+    // If we ever do tranformations on settings before persisting
+    def augmentBlacklist(blacklist: ClassFeature.Blacklist) = {
+      import ClassFeature.{ Blacklist, BlacklistEntry, SlackIngestionDomainBlacklist }
+      val existingList = existingSettings.settingFor(SlackIngestionDomainBlacklist).collect { case blk: Blacklist => blk.entries }.getOrElse(Seq.empty)
+      val userOpt = requesterIdOpt.map(userRepo.get)
+      Blacklist(blacklist.entries.map { entry =>
+        if (!existingList.exists(_.path == entry.path)) { // New record
+          BlacklistEntry(userOpt.map(_.externalId), Some(clock.now), entry.path)
+        } else entry
+      })
+    }
+
+    OrganizationSettings(newSettings.selections.map {
+      case (ClassFeature.SlackIngestionDomainBlacklist, blacklist: ClassFeature.Blacklist) =>
+        ClassFeature.SlackIngestionDomainBlacklist -> augmentBlacklist(blacklist)
+      case setting => setting
+    })
   }
 
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse] = {
@@ -278,7 +299,7 @@ class OrganizationCommanderImpl @Inject() (
     }
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
-      val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
+      orgRepo.save(organizationWithModifications(org, modifications))
     }
   }
 }

@@ -116,43 +116,19 @@ class MobileAuthController @Inject() (
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2TokenInfo] match {
-      case None =>
-        log.error(s"[accessTokenSignup] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth2Info) =>
-        authHelper.doAccessTokenSignup(providerName, oauth2Info)
-    }
+    authHelper.doAccessTokenSignup(providerName)
   }
 
   def accessTokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2TokenInfo] match {
-      case None =>
-        log.error(s"[accessTokenLogin] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth2Info) =>
-        authHelper.doAccessTokenLogin(providerName, oauth2Info)
-    }
+    authHelper.doAccessTokenLogin(providerName)
   }
 
   def oauth1TokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth1TokenInfo] match {
-      case None =>
-        log.error(s"[oauth1TokenSignup] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth1Info) =>
-        authHelper.doOAuth1TokenSignup(providerName, oauth1Info)
-    }
+    authHelper.doAccessTokenSignup(providerName)
   }
 
   def oauth1TokenLogin(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth1TokenInfo] match {
-      case None =>
-        log.error(s"[oauth1TokenLogin] Failed to parse token. body=${request.body}")
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
-      case Some(oauth1Info) =>
-        authHelper.doOAuth1TokenLogin(providerName, oauth1Info)
-    }
+    authHelper.doAccessTokenLogin(providerName)
   }
 
   def socialFinalizeAccountAction() = MaybeUserAction(parse.tolerantJson) { implicit request =>

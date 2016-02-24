@@ -139,7 +139,6 @@ angular.module('kifi')
           click: function () {
             orgProfileService.declineOrgMemberInvite(scope.profile.id);
             scope.acknowledgedInvite = true;
-            scope.$emit('refreshLeftHandNav');
           }
         },
         {
@@ -150,7 +149,6 @@ angular.module('kifi')
               .acceptOrgMemberInvite(scope.profile.id, $location.search().authToken)
               .then(function () {
                 scope.acknowledgedInvite = true;
-                scope.$emit('refreshLeftHandNav');
                 $state.reload('orgProfile');
               });
           }

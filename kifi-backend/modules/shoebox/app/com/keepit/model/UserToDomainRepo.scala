@@ -1,17 +1,23 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ State, Id }
 import com.keepit.classify.Domain
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 import scala.Some
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ JsObject, JsValue }
+
+import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[UserToDomainRepoImpl])
 trait UserToDomainRepo extends Repo[UserToDomain] {
   def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind)(implicit session: RSession): Option[UserToDomain]
+  def getPositionsForDomain(domainId: Id[Domain], sinceOpt: Option[DateTime])(implicit session: RSession): Seq[JsValue]
 }
 
 @Singleton
@@ -46,6 +52,15 @@ class UserToDomainRepoImpl @Inject() (
     userToDomainCache.getOrElse(UserToDomainKey(userId, domainId, kind)) {
       (for (t <- rows if t.userId === userId && t.domainId === domainId && t.kind === kind) yield t).firstOption
     }
+  }
+
+  def getPositionsForDomain(domainId: Id[Domain], sinceOpt: Option[DateTime])(implicit session: RSession): Seq[JsValue] = {
+    val domains = rows.filter(r => r.domainId === domainId && r.kind === UserToDomainKinds.KEEPER_POSITION)
+    val domainsSince = sinceOpt match {
+      case None => domains
+      case Some(since) => domains.filter(_.updatedAt >= since)
+    }
+    domainsSince.map(_.value).list.flatten
   }
 
 }

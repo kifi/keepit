@@ -7,8 +7,9 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
+import com.keepit.common.domain.ExtensionUnfriendlyDomains
 import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ URIParser, URI }
 import com.keepit.common.service.IpAddress
 import com.keepit.social.BasicUser
 import com.keepit.model._
@@ -36,6 +37,7 @@ class ExtPreferenceController @Inject() (
     enterToSend: Boolean,
     maxResults: Int,
     showExtMsgIntro: Boolean,
+    showExtMoveIntro: Boolean,
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
@@ -43,6 +45,7 @@ class ExtPreferenceController @Inject() (
     (__ \ 'enterToSend).write[Boolean] and
     (__ \ 'maxResults).write[Int] and
     (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'showExtMoveIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
   )(unlift(UserPrefs.unapply))
 
@@ -74,6 +77,11 @@ class ExtPreferenceController @Inject() (
 
   def setShowExtMsgIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
+    Ok(JsNumber(0))
+  }
+
+  def setShowExtMoveIntro(show: Boolean) = UserAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.userId, UserValues.showExtMoveIntro.name, show))
     Ok(JsNumber(0))
   }
 
@@ -166,6 +174,7 @@ class ExtPreferenceController @Inject() (
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
+        showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals) && experiments.contains(UserExperimentType.INFER_KEEPER_POSITION),
         messagingEmails = messagingEmails)
     }
   }

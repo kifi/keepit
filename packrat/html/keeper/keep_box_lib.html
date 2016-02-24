@@ -13,10 +13,10 @@
     {{/orgAvatar}}
     {{#extraInfo}}
       <span class="kifi-keep-box-lib-1">
-        <span class="kifi-keep-box-lib-icon"></span><!-- HTML comments to prevent unwanted extra space
-       -->{{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}<!--
-       -->{{^nameHtml}}{{name}}{{/nameHtml}}<!--
-  --></span>
+        <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
+        }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
+        }}{{^nameParts}}{{name}}{{/nameParts}}{{!
+    }}</span>
       <span class="kifi-keep-box-lib-2">
         {{^isOpenCollaborationCandidate}}
           {{#hasCollaborators}}
@@ -32,9 +32,9 @@
       </span>
     {{/extraInfo}}
     {{^extraInfo}}
-      <span class="kifi-keep-box-lib-icon"></span><!-- HTML comments to prevent unwanted extra space
-   -->{{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}<!--
-   -->{{^nameHtml}}{{name}}{{/nameHtml}}
+      <span class="kifi-keep-box-lib-icon"></span>{{! Mustache comments to prevent unwanted extra space
+    }}{{#nameParts}}{{>name_parts}}{{/nameParts}}{{!
+    }}{{^nameParts}}{{name}}{{/nameParts}}
     {{/extraInfo}}
   </a>
 {{#keep.removable}}

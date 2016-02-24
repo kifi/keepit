@@ -3,17 +3,23 @@
 // @require styles/google_inject.css
 // @require styles/friend_card.css
 // @require scripts/api.js
+// @require scripts/formatting.js
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/title_from_url.js
+// @require scripts/html/search/kifi_mustache_tags.js
 // @require scripts/html/search/google.js
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
+// ***
+// Heads up: If you need to add a dependency,
+// make sure you add it in the manifest.json too
+// ***
 
-api.identify('googleInject');
+api.identify('google_inject');
 
 // Google inject regex accurate as of 2015-08-21. This is helpful: https://en.wikipedia.org/wiki/List_of_Google_domains
 // (same as match pattern above)
@@ -22,18 +28,6 @@ var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[
 
 var pageSession = Math.random().toString(16).slice(2);
 
-api.require([
-  'scripts/api.js',
-  'scripts/lib/jquery.js',
-  'scripts/lib/jquery-ui-position.min.js',
-  'scripts/lib/jquery-hoverfu.js',
-  'scripts/lib/mustache.js',
-  'scripts/render.js',
-  'scripts/title_from_url.js',
-  'scripts/html/search/google.js',
-  'scripts/html/search/google_hits.js',
-  'scripts/html/search/google_hit.js'
-], function () {
 
 $.fn.layout = function () {
   return this.each(function () {this.clientHeight});  // forces layout
@@ -755,7 +749,8 @@ if (searchUrlRe.test(document.URL)) !function () {
         mayHaveMore: response.mayHaveMore,
         fixedColor: ~(response.experiments || []).indexOf('visited_fixed')
       }, {
-        google_hit: 'google_hit'
+        google_hit: 'google_hit',
+        'kifi_mustache_tags': 'kifi_mustache_tags'
       }));
     $res.find('.kifi-res-box').append($hits);
     $hits.find('.kifi-res-why').get().forEach(stashHitData, [response.hits, hitsData]);
@@ -838,7 +833,9 @@ if (searchUrlRe.test(document.URL)) !function () {
 
     var hitsData = [];
     for (var i = 0; i < hits.length; i++) {
-      hitHtml.push(k.render('html/search/google_hit', hitsData[i] = renderDataForHit(hits[i])));
+      hitHtml.push(k.render('html/search/google_hit', hitsData[i] = renderDataForHit(hits[i]), {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
+      }));
     }
     var $hits = $(hitHtml.join(''))
     .css({visibility: 'hidden', height: 0, margin: 0})
@@ -905,13 +902,15 @@ if (searchUrlRe.test(document.URL)) !function () {
       users[0] = $.extend({secret: true}, users[0]);
     }
     hit.libraries.forEach(markKeeperAsDupeIn(users));
+
+    var titleHtml = (hit.title ? boldSearchTerms(hit.title, hit.matches.title) : formatTitleFromUrl(hit.url, hit.matches.url, bolded));
+    var descHtml = formatDesc(hit.url, hit.matches.url);
+
     return {
       raw: hit,
       url: hit.url,
-      titleHtml: hit.title ?
-        boldSearchTerms(hit.title, hit.matches.title) :
-        formatTitleFromUrl(hit.url, hit.matches.url, bolded),
-      descHtml: formatDesc(hit.url, hit.matches.url),
+      titleHtml: k.formatting.jsonDom(titleHtml),
+      descHtml: k.formatting.jsonDom(descHtml),
       score: ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '',
       users: users,
       usersMore: hit.keepersTotal - users.filter(isNotDuplicate).length || '',
@@ -1203,5 +1202,3 @@ if (searchUrlRe.test(document.URL)) !function () {
     return String(n).replace(insertCommasRe, '$1,');
   }
 }();
-
-});

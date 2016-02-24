@@ -176,7 +176,8 @@ angular.module('kifi')
           }
         }
 
-        return net.createLibrary(opts);
+        return net.createLibrary(opts)
+        .then(function (res) { $rootScope.$emit('libraryCreated', res); return res;});
       },
 
       modifyLibrary: function (opts, checkMissingFields) {
@@ -189,7 +190,8 @@ angular.module('kifi')
             return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
           }
         }
-        return net.modifyLibrary(opts.id, opts);
+        return net.modifyLibrary(opts.id, opts)
+        .then(function (res) { $rootScope.$emit('libraryModified', opts.id, res); return res;});
       },
 
       getLibraryShareContacts: function (libId, query) {

@@ -2,6 +2,7 @@
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/underscore.js
+// @require scripts/formatting.js
 // @require scripts/friend_search.js
 // @require scripts/send_chooser.js
 // @require scripts/look.js
@@ -280,7 +281,9 @@ k.compose = k.compose || (function() {
       var $a = $(this);
       k.render('html/keeper/titled_tip', {
         title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
-        html: '“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.'
+        html: k.formatting.jsonDom('“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.')
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
         configureHover(html, {
           mustHoverFor: 500,

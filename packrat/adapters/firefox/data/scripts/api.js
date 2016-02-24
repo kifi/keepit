@@ -14,6 +14,8 @@ window.api = window.api || (function () {
   }
 
   function onApiInject(styles, scripts, callbackId) {
+    styles = styles || [];
+    scripts = scripts || [];
     styles.forEach(function (path) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
@@ -94,6 +96,8 @@ window.api = window.api || (function () {
       identity = {name: name, bornAt: now};
       window.postMessage({kifi: 'identity', name: name, bornAt: now}, location.origin);
       window.addEventListener('message', onWinMessage);
+      var scriptDeps = self.options.meta.scriptDeps;
+      onApiInject([], scriptDeps['scripts/' + name + '.js']);
     },
     noop: function() {},
     onEnd: [],

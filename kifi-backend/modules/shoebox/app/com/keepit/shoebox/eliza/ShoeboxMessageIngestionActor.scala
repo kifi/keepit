@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.discussion.{ Message, CrossServiceMessage }
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.slack.LibraryToSlackChannelPusher
 import com.kifi.juggle.BatchProcessingActor
 import com.keepit.model._
 import com.keepit.common.core._
@@ -27,6 +28,7 @@ class ShoeboxMessageIngestionActor @Inject() (
     keepCommander: KeepCommander,
     eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
+    slackPusher: LibraryToSlackChannelPusher,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
 
   import ShoeboxMessageIngestionActor._
@@ -48,7 +50,8 @@ class ShoeboxMessageIngestionActor @Inject() (
     messages.map(_.seq).maxOpt.foreach { maxSeq =>
       val messagesByKeep = messages.groupBy(_.keep)
       db.readWrite { implicit session =>
-        keepRepo.getByIds(messagesByKeep.keySet).values.foreach { keep =>
+        val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
+        keeps.foreach { keep =>
           messagesByKeep.get(keep.id.get).foreach { msgs =>
             val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
             if (updatedKeep.messageSeq != keep.messageSeq) keepRepo.save(updatedKeep)
@@ -56,6 +59,9 @@ class ShoeboxMessageIngestionActor @Inject() (
             val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
             keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
           }
+        }
+        session.onTransactionSuccess {
+          slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
       }

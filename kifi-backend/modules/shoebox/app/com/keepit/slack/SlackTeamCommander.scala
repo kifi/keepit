@@ -9,6 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.DescriptionElements
 import com.keepit.heimdal.HeimdalContext
@@ -52,6 +53,7 @@ class SlackTeamCommanderImpl @Inject() (
   libraryCommander: LibraryCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
   organizationInfoCommander: OrganizationInfoCommander,
+  basicUserRepo: BasicUserRepo,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
@@ -149,10 +151,17 @@ class SlackTeamCommanderImpl @Inject() (
         }
       }
     } tap {
-      case Success(team) =>
-        SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-          "Connected Slack team", team.slackTeamName.value, "to Kifi org", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId) }
-        ))))
+      case Success(team) => SafeFuture {
+        db.readOnlyMaster { implicit session =>
+          (basicUserRepo.load(userId), organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId))
+        }
+      } flatMap {
+        case (user, org) =>
+          inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+            user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
+          )))
+      }
+
       case Failure(fail) =>
         slackLog.warn(s"Failed to connect $slackTeamId to org $newOrganizationId for user $userId because:", fail.getMessage)
     }

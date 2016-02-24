@@ -156,11 +156,12 @@ class KeepInternerImpl @Inject() (
       source = source,
       visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
       libraryId = libraryOpt.map(_.id.get),
-      keptAt = keptAt,
+      keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet)
+      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet),
+      lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
@@ -214,7 +215,7 @@ class KeepInternerImpl @Inject() (
         SafeFuture {
           libraryOpt.foreach { lib =>
             libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
-            libToSlackProcessor.schedule(lib.id.get)
+            libToSlackProcessor.schedule(Set(lib.id.get))
           }
         }
         FutureHelpers.sequentialExec(keeps) { keep =>

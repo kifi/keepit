@@ -1,9 +1,9 @@
 <li class="g">
   <div class="vsc">
-    <h3 class="r"><a class="kifi-res-title" href="{{url}}">{{{titleHtml}}}</a></h3>
+    <h3 class="r"><a class="kifi-res-title" href="{{url}}">{{#titleHtml}}{{>kifi_mustache_tags}}{{/titleHtml}}</a></h3>
     <div class="s">
       <div class="f kv">
-        <cite class="kifi-res-desc">{{{descHtml}}}</cite>
+        <cite class="kifi-res-desc">{{#descHtml}}{{>kifi_mustache_tags}}{{/descHtml}}</cite>
       </div>
     </div>
     {{#score}}

@@ -72,8 +72,8 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
           val (user, lib, stm, integration) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val blacklist = ClassFeature.Blacklist(Seq(
-              ClassFeature.BlacklistEntry(user.externalId, now, "github.com/kifi"),
-              ClassFeature.BlacklistEntry(user.externalId, now, "*.corp.google.com")
+              ClassFeature.BlacklistEntry(Some(user.externalId), Some(now), "github.com/kifi"),
+              ClassFeature.BlacklistEntry(Some(user.externalId), Some(now), "*.corp.google.com")
             ))
             val org = OrganizationFactory.organization().withOwner(user).withSettings(Map(ClassFeature.SlackIngestionDomainBlacklist -> blacklist)).saved
             val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved

@@ -346,11 +346,22 @@ angular.module('kifi')
           maybeClose();
         };
 
+        var reload = function () { scope.reloadData(); };
         scope.reloadData(profileService.me);
         [
-          $rootScope.$on('refreshLeftHandNav', function() {
-            scope.reloadData();
-          })
+          $rootScope.$on('refreshLeftHandNav', reload),
+          $rootScope.$on('libraryCreated', reload),
+          $rootScope.$on('libraryModified', reload),
+          $rootScope.$on('libraryJoined', reload),
+          $rootScope.$on('libraryLeft', reload),
+          $rootScope.$on('libraryDeleted', reload),
+          $rootScope.$on('orgCreated', reload),
+          $rootScope.$on('orgMemberInviteAccepted', reload),
+          $rootScope.$on('orgMemberInviteDeclined', reload),
+          $rootScope.$on('orgMemberRemoved', reload),
+          $rootScope.$on('orgProfileUpdated', reload),
+          $rootScope.$on('orgAvatarUploaded', reload),
+          $rootScope.$on('orgOwnershipTransferred', reload)
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
         });

@@ -6,13 +6,14 @@ import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
-import com.keepit.common.oauth.{ SlackIdentity, OAuth1ProviderRegistry, ProviderIds, OAuth2ProviderRegistry }
+import com.keepit.common.oauth._
 import com.keepit.common.service.IpAddress
 import com.keepit.payments.CreditCode
-import com.keepit.slack.models.{ SlackTeamMembershipRepo, SlackTeamId }
+import com.keepit.slack.models.{SlackAuthorizationResponse, SlackTeamMembershipRepo, SlackTeamId}
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
+import play.mvc.Results.Redirect
 import securesocial.core._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
@@ -48,27 +49,90 @@ object AuthHelper {
   def validatePwd(pwd: String) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
 }
 
-case class PostRegIntentParams(
-  intent: Option[String],
-  publicLibraryId: Option[PublicId[Library]],
-  libAuthToken: Option[String],
-  orgPubId: Option[PublicId[Organization]],
-  orgAuthToken: Option[String],
-  keepPubId: Option[PublicId[Keep]],
-  keepAuthToken: Option[String],
-  slackTeamid: Option[SlackTeamId])
-object PostRegIntentParams {
-  def fromCookies(cookies: Cookies) = {
-    PostRegIntentParams(
-      cookies.get("intent").map(_.value),
-      cookies.get("publicLibraryId").map(c => PublicId[Library](c.value)),
-      cookies.get("libAuthToken").map(_.value),
-      cookies.get("publicOrgId").map(c => PublicId[Organization](c.value)),
-      cookies.get("orgAuthToken").map(_.value),
-      cookies.get("publicKeepId").map(c => PublicId[Keep](c.value)),
-      cookies.get("keepAuthToken").map(_.value),
-      cookies.get("slackTeamId").map(c => SlackTeamId(c.value))
-    )
+sealed abstract class PostRegIntent
+case class AutoFollowLibrary(libraryId: Id[Library], authToken: Option[String]) extends PostRegIntent
+object AutoFollowLibrary {
+  // strings that represent Cookie keys and values
+  val intentValue = "follow"
+  val libIdKey = "publicLibraryId"
+  val authKey = "libAuthToken"
+}
+case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
+object AutoJoinOrganization {
+  val intentValue = "joinOrg"
+  val orgIdKey = "publicOrgId"
+  val authKey = "orgAuthToken"
+}
+case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
+object AutoJoinKeep {
+  val intentValue = "joinKeep"
+  val keepIdKey = "publicKeepId"
+  val authKey = "keepAuthToken"
+}
+case class Slack(slackTeamId: Option[SlackTeamId]) extends PostRegIntent
+object Slack {
+  val intentValue = "slack"
+  val slackTeamIdKey = "slackTeamId"
+}
+case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
+object ApplyCreditCode {
+  val intentValue = "applyCredit"
+  val creditCodeKey = "creditCode"
+}
+case object JoinTwitterWaitlist extends PostRegIntent { val intentValue = "waitlist" }
+case object NoIntent extends PostRegIntent
+
+object PostRegIntent {
+  val intentKey = "intent"
+  def fromCookies(cookies: Cookies)(implicit config: PublicIdConfiguration): PostRegIntent = {
+    cookies.get(intentKey).map(_.value).collect {
+      case AutoFollowLibrary.intentValue => {
+        import AutoFollowLibrary._
+        val libId = cookies.get(libIdKey)
+          .map(c => PublicId[Library](c.value))
+          .flatMap(Library.decodePublicId(_).toOption)
+        val authTokenOpt = cookies.get(authKey).map(_.value)
+        libId.map(AutoFollowLibrary(_, authTokenOpt))
+      }
+      case AutoJoinOrganization.intentValue => {
+        import AutoJoinOrganization._
+        val orgIdOpt = cookies.get(orgIdKey)
+          .map(c => PublicId[Organization](c.value))
+          .flatMap(Organization.decodePublicId(_).toOption)
+        val authTokenOpt = cookies.get(authKey).map(_.value)
+        (orgIdOpt, authTokenOpt) match {
+          case (Some(orgId), Some(authToken)) => Some(AutoJoinOrganization(orgId, authToken))
+          case _ => None
+        }
+      }
+      case AutoJoinKeep.intentValue => {
+        import AutoJoinKeep._
+        val keepIdOpt = cookies.get(keepIdKey)
+          .map(c => PublicId[Keep](c.value))
+          .flatMap(Keep.decodePublicId(_).toOption)
+        val authTokenOpt = cookies.get(authKey).map(_.value)
+        keepIdOpt.map(AutoJoinKeep(_, authTokenOpt))
+      }
+      case Slack.intentValue => {
+        val slackTeamIdOpt = cookies.get(Slack.slackTeamIdKey).map(c => SlackTeamId(c.value))
+        Some(Slack(slackTeamIdOpt))
+      }
+      case ApplyCreditCode.intentValue => cookies.get(ApplyCreditCode.creditCodeKey).map(c => ApplyCreditCode(CreditCode(c.value)))
+      case JoinTwitterWaitlist.intentValue => Some(JoinTwitterWaitlist)
+    }.flatten.getOrElse(NoIntent)
+  }
+  def fromParams(
+    libPubId: Option[PublicId[Library]], libAuthToken: Option[String],
+    orgPubId: Option[PublicId[Organization]], orgAuthToken: Option[String],
+    keepPubId: Option[PublicId[Keep]], keepAuthToken: Option[String])(implicit config: PublicIdConfiguration): PostRegIntent = {
+
+    val libIntent = libPubId.flatMap(Library.decodePublicId(_).toOption).map(AutoFollowLibrary(_, libAuthToken))
+    def orgIntent = (orgPubId.flatMap(Organization.decodePublicId(_).toOption), orgAuthToken) match {
+      case (Some(orgId), Some(authToken)) => Some(AutoJoinOrganization(orgId, authToken))
+      case _ => None
+    }
+    def keepIntent = keepPubId.flatMap(Keep.decodePublicId(_).toOption).map(AutoJoinKeep(_, keepAuthToken))
+    Stream(libIntent, orgIntent, keepIntent).flatten.headOption.getOrElse(NoIntent)
   }
 }
 
@@ -78,6 +142,7 @@ class AuthHelper @Inject() (
     airbrake: AirbrakeNotifier,
     oauth1ProviderRegistry: OAuth1ProviderRegistry,
     oauth2ProviderRegistry: OAuth2ProviderRegistry,
+    slackOAuthProvider: SlackOAuthProvider,
     authCommander: AuthCommander,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
@@ -87,6 +152,7 @@ class AuthHelper @Inject() (
     userValueRepo: UserValueRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
     orgRepo: OrganizationRepo,
+    orgInviteRepo: OrganizationInviteRepo,
     slackMembershipRepo: SlackTeamMembershipRepo,
     ktlRepo: KeepToLibraryRepo,
     s3ImageStore: S3ImageStore,
@@ -96,6 +162,7 @@ class AuthHelper @Inject() (
     orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     permissionCommander: PermissionCommander,
+    pathCommander: PathCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     implicit val secureSocialClientIds: SecureSocialClientIds,
@@ -181,8 +248,6 @@ class AuthHelper @Inject() (
     }
   )
 
-  private val url = fortytwoConfig.applicationBaseUrl
-
   private def saveKifiCampaignId(userId: Id[User], kcid: String): Unit = try {
     db.readWrite(attempts = 2) { implicit session =>
       userValueRepo.save(UserValue(userId = userId, name = UserValueName.KIFI_CAMPAIGN_ID, value = kcid))
@@ -191,81 +256,44 @@ class AuthHelper @Inject() (
     case t: Throwable => airbrake.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
-  trait PostRegIntent
-  case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
-  case class AutoFollowLibrary(libraryId: Id[Library], authToken: Option[String]) extends PostRegIntent
-  case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
-  case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
-  case object JoinTwitterWaitlist extends PostRegIntent
-  case class Slack(slackTeamId: Option[SlackTeamId]) extends PostRegIntent
-  case object NoIntent extends PostRegIntent
+  def processIntent(userId: Id[User], intent: PostRegIntent, maybeTakeToInstall: Option[MaybeUserRequest[_]]): String = {
+    val homeOrInstall = maybeTakeToInstall.flatMap { request =>
+      request.session.get(SecureSocial.OriginalUrlKey).orElse {
+        request.headers.get(USER_AGENT).collect {
+          case agentString if UserAgent(agentString).canRunExtensionIfUpToDate => "/install"
+        }
+      }
+    }.getOrElse(com.keepit.controllers.website.HomeControllerRoutes.home)
+
+    intent match {
+      case AutoFollowLibrary(libId, authTokenOpt) =>
+        val joined = authCommander.autoJoinLib(userId, libId, authTokenOpt)
+        if (joined) db.readOnlyMaster(implicit s => pathCommander.libraryPageById(libId).relative) else homeOrInstall
+      case AutoJoinOrganization(orgId, authToken) =>
+        val joined = authCommander.autoJoinOrg(userId, orgId, authToken)
+        if (joined) db.readOnlyMaster(implicit s => pathCommander.orgPageById(orgId).relative) else homeOrInstall
+      case AutoJoinKeep(keepId, authTokenOpt) =>
+        authCommander.autoJoinKeep(userId, keepId, authTokenOpt)
+        homeOrInstall
+      case Slack(slackTeamIdOpt) =>
+        com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamIdOpt).url
+      case ApplyCreditCode(creditCode) =>
+        db.readWrite(attempts = 3) { implicit session =>
+          userValueRepo.setValue(userId, UserValueName.STORED_CREDIT_CODE, creditCode.value)
+        }
+        "/teams/new"
+      case JoinTwitterWaitlist =>
+        "/twitter/thanks"
+      case NoIntent => homeOrInstall
+    }
+  }
 
   def finishSignup(user: User,
     emailAddress: EmailAddress,
     newIdentity: Identity,
     emailConfirmedAlready: Boolean,
-    libraryPublicId: Option[PublicId[Library]],
-    libAuthToken: Option[String],
-    orgPublicId: Option[PublicId[Organization]],
-    orgAuthToken: Option[String],
-    keepPublicId: Option[PublicId[Keep]],
-    keepAuthToken: Option[String],
+    intent: PostRegIntent,
     isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_], context: HeimdalContext): Result = {
-
-    // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
-    // This function does some end-of-the-line wiring after registration. We support registrations directly from an API,
-    // oauth tokens from social networks, and a several-step HTTP flow.
-    // Right now, we need to automatically do tasks based on an `intent` (ie, auto-follow library, auto-friend a user, etc)
-
-    // You'll notice that the signature of this function is weird. Sigh. Some callers don't have cookies, so we can't read
-    // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
-    // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
-
-    val slackTeamIdFromCookie = request.cookies.get("slackTeamId").map(cookie => SlackTeamId(cookie.value))
-    val intent: PostRegIntent = {
-      val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
-        case "applyCredit" =>
-          request.cookies.get("creditCode").map(_.value).map {
-            case code if code.nonEmpty =>
-              ApplyCreditCode(CreditCode.normalize(code))
-          }
-        case "follow" =>
-          request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).flatMap { libPubId =>
-            val authToken = request.cookies.get("libraryAuthToken").map(_.value)
-            Library.decodePublicId(libPubId).map(id => AutoFollowLibrary(id, authToken)).toOption
-          }
-        case "joinOrg" =>
-          request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
-            request.cookies.get("orgAuthToken").map(_.value).flatMap { authToken =>
-              Organization.decodePublicId(orgPubId).map(id => AutoJoinOrganization(id, authToken)).toOption
-            }
-          }
-        case "joinKeep" =>
-          request.cookies.get("publicKeepId").map(i => PublicId[Keep](i.value)).flatMap { keepPubId =>
-            val authToken = request.cookies.get("keepAuthToken").map(_.value)
-            Keep.decodePublicId(keepPubId).map(id => AutoJoinKeep(id, authToken)).toOption
-          }
-        case "waitlist" =>
-          Some(JoinTwitterWaitlist)
-        case "slack" =>
-          Some(Slack(slackTeamIdFromCookie))
-        case _ => None
-      }
-
-      val intentFromParams: Option[PostRegIntent] = Stream(
-        libraryPublicId.flatMap(pubId => Library.decodePublicId(pubId).map(id => AutoFollowLibrary(id, libAuthToken)).toOption),
-        (orgPublicId, orgAuthToken) |> {
-          case (Some(pubId), Some(authToken)) =>
-            Organization.decodePublicId(pubId).map(id => AutoJoinOrganization(id, authToken)).toOption
-          case _ => None
-        },
-        keepPublicId.flatMap(pubId => Keep.decodePublicId(pubId).map(id => AutoJoinKeep(id, keepAuthToken)).toOption)
-      ).flatten.headOption
-
-      intentFromCookie orElse intentFromParams getOrElse NoIntent
-    }
-
-    // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
     intent match {
       case JoinTwitterWaitlist => // Nothing for now
@@ -280,66 +308,16 @@ class AuthHelper @Inject() (
               userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress))
             }
           }
-          if (slackMembershipRepo.getByUserId(user.id.get).nonEmpty) userValueRepo.setValue(user.id.get, UserValueName.SHOW_SLACK_CREATE_TEAM_POPUP, true)
           val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
           heimdal.trackEvent(completedSignupEvent)
         }
     }
 
-    type IntentAction = PostRegIntent ?=> Unit
-
-    val createUserValues: IntentAction = {
-      case o: AutoJoinOrganization =>
-      case l: AutoFollowLibrary =>
-      case _ =>
-      // This enables the FTUI for new users
-      //        db.readWrite { implicit session =>
-      //          userValueRepo.setValue(user.id.get, UserValueName.HAS_SEEN_FTUE, false)
-      //        }
-    }
-
-    val performPrimaryIntentAction: IntentAction = {
-      case ApplyCreditCode(creditCode) =>
-        db.readWrite(attempts = 3) { implicit session =>
-          userValueRepo.setValue(user.id.get, UserValueName.STORED_CREDIT_CODE, creditCode.value)
-        }
-      case AutoFollowLibrary(libId, authTokenOpt) =>
-        authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
-      case AutoJoinOrganization(orgPubId, authToken) =>
-        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
-      case AutoJoinKeep(keepId, authTokenOpt) =>
-        authCommander.autoJoinKeep(user.id.get, keepId, authTokenOpt)
-    }
-
-    Seq(createUserValues, performPrimaryIntentAction)
-      .map(_.lift)
-      .foreach(i => i(intent))
-
-    val uri = intent match {
-      case Slack(slackTeamId) =>
-        com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId).url
-      case ApplyCreditCode(creditCode) =>
-        "/teams/new"
-      case AutoFollowLibrary(libId, authTokenOpt) =>
-        val library = db.readOnlyMaster { implicit session => libraryRepo.get(libId) }
-        libPathCommander.getPathForLibrary(library)
-      case AutoJoinOrganization(orgId, authToken) =>
-        val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
-        s"/${handle.value}"
-      case JoinTwitterWaitlist =>
-        // Waitlist joining happens on this page, so nothing to do:
-        "/twitter/thanks"
-      case AutoJoinKeep(_, _) | NoIntent =>
-        request.session.get(SecureSocial.OriginalUrlKey).getOrElse {
-          request.headers.get(USER_AGENT).flatMap { agentString =>
-            val agent = UserAgent(agentString)
-            if (agent.canRunExtensionIfUpToDate) Some("/install") else None
-          } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
-        }
-    }
-
+    val uri = processIntent(user.id.get, intent, Some(request))
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken", "creditCode").map(n => DiscardingCookie(n))
+    log.info(s"[authCookies] remaining cookies=${request.cookies}")
+    val discardedCookies = Seq("inv", PostRegIntent.intentKey, AutoFollowLibrary.libIdKey, AutoFollowLibrary.authKey, AutoJoinOrganization.orgIdKey, AutoJoinOrganization.authKey,
+      AutoJoinKeep.keepIdKey, AutoJoinKeep.authKey, Slack.slackTeamIdKey, ApplyCreditCode.creditCodeKey).map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -391,26 +369,19 @@ class AuthHelper @Inject() (
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, None, None, None, None, None, None, isFinalizedImmediately = false)
+          handleSocialFinalizeInfo(sfi, NoIntent, isFinalizedImmediately = false)
       })
   }
 
   def doTokenFinalizeAccountAction(implicit request: MaybeUserRequest[JsValue]): Result = {
     request.body.asOpt[TokenFinalizeInfo] match {
       case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
-      case Some(info) => handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), info.libraryPublicId, info.libAuthToken,
-        info.orgPublicId, info.orgAuthToken, info.keepPublicId, info.keepAuthToken, isFinalizedImmediately = false)
+      case Some(info) =>
+        handleSocialFinalizeInfo(TokenFinalizeInfo.toSocialFinalizeInfo(info), TokenFinalizeInfo.toPostRegIntent(info), isFinalizedImmediately = false)
     }
   }
 
-  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo,
-    libraryPublicId: Option[PublicId[Library]],
-    libAuthToken: Option[String],
-    orgPublicId: Option[PublicId[Organization]],
-    orgAuthToken: Option[String],
-    keepPublicId: Option[PublicId[Keep]],
-    keepAuthToken: Option[String],
-    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, intent: PostRegIntent, isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
     val identityOpt = request.identityId.flatMap(authCommander.getUserIdentity)
     require(identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
@@ -418,14 +389,13 @@ class AuthHelper @Inject() (
 
     val identity = identityOpt.get
     if (identity.identityId.userId.trim.isEmpty) {
-      throw new Exception(s"empty social id for $identity joining library $libraryPublicId with $sfi")
+      throw new Exception(s"empty social id for $identity with $sfi")
     }
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
     val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
-    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken,
-      orgPublicId = orgPublicId, orgAuthToken = orgAuthToken, keepPublicId = keepPublicId, keepAuthToken = keepAuthToken, isFinalizedImmediately = isFinalizedImmediately)
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, intent, isFinalizedImmediately = isFinalizedImmediately)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -446,34 +416,45 @@ class AuthHelper @Inject() (
         Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
       }, {
         case efi: EmailPassFinalizeInfo =>
-          handleEmailPassFinalizeInfo(efi, None, None, None, None, None, None)
+          handleEmailPassFinalizeInfo(efi, NoIntent)
       }
     )
   }
 
-  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String], orgPublicId: Option[PublicId[Organization]], orgAuthToken: Option[String], keepPublicId: Option[PublicId[Keep]], keepAuthToken: Option[String])(implicit request: UserRequest[JsValue]): Future[Result] = {
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, intent: PostRegIntent)(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityId, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
-        val verifiedEmail = verifySignupEmail(request.userId, email, libraryPublicId, libAuthToken)
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, orgPublicId, orgAuthToken, keepPublicId, keepAuthToken, isFinalizedImmediately = false)
+        val verifiedEmail = intent match {
+          case AutoFollowLibrary(libId, Some(authToken)) => verifySignupEmailFromLibInvite(request.userId, email, libId, authToken)
+          case AutoJoinOrganization(orgId, authToken) => verifySignupEmailFromOrgInvite(request.userId, email, orgId, authToken)
+          case _ => false
+        }
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, intent, isFinalizedImmediately = false)
     }
   }
 
-  private def verifySignupEmail(userId: Id[User], email: EmailAddress, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String]): Boolean = {
-    libAuthToken.exists { authToken =>
-      libraryPublicId.exists { publicLibId =>
-        Library.decodePublicId(publicLibId).toOption.exists { libId =>
-          db.readWrite(attempts = 3) { implicit session =>
-            libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
-              libraryInvite.emailAddress.exists { sentTo =>
-                (sentTo == email) && userEmailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
-                  userEmailAddressCommander.saveAsVerified(emailRecord)
-                  true
-                }
-              }
-            }
+  private def verifySignupEmailFromLibInvite(userId: Id[User], email: EmailAddress, libId: Id[Library], authToken: String): Boolean = {
+    db.readWrite(attempts = 3) { implicit session =>
+      libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
+        libraryInvite.emailAddress.exists { sentTo =>
+          (sentTo == email) && userEmailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
+            userEmailAddressCommander.saveAsVerified(emailRecord)
+            true
+          }
+        }
+      }
+    }
+  }
+
+  private def verifySignupEmailFromOrgInvite(userId: Id[User], email: EmailAddress, orgId: Id[Organization], authToken: String): Boolean = {
+    db.readWrite(attempts = 3) { implicit session =>
+      orgInviteRepo.getByOrgIdAndAuthToken(orgId, authToken).exists { orgInvite =>
+        orgInvite.emailAddress.exists { sentTo =>
+          (sentTo == email) && userEmailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
+            userEmailAddressCommander.saveAsVerified(emailRecord)
+            true
           }
         }
       }
@@ -622,71 +603,52 @@ class AuthHelper @Inject() (
 
   val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
-  def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
+  private def getOAuthTokenIdentityProvider(providerName: String, body: JsValue): Option[OAuthTokenIdentityProvider[_, _ <: RichIdentity]] = {
+    Try(ProviderIds.toProviderId(providerName)).toOption.flatMap {
+      case providerId @ (ProviderIds.Facebook | ProviderIds.LinkedIn) => for {
+        oauth2InfoOrig <- body.asOpt[OAuth2TokenInfo]
+        provider <- oauth2ProviderRegistry.get(providerId)
+      } yield OAuthTokenIdentityProvider(provider, oauth2InfoOrig)
+      case providerId @ ProviderIds.Twitter => for {
+        oauth1InfoOrig <- body.asOpt[OAuth1TokenInfo]
+        provider <- oauth1ProviderRegistry.get(providerId)
+      } yield OAuthTokenIdentityProvider(provider, oauth1InfoOrig)
+      case providerId @ ProviderIds.Slack => body.asOpt[SlackAuthorizationResponse].map { authToken => OAuthTokenIdentityProvider(slackOAuthProvider, authToken) }
+      case _ => None
+    }
+  }
+
+  def doAccessTokenSignup(providerName: String)(implicit request: Request[JsValue]): Future[Result] = {
+    getOAuthTokenIdentityProvider(providerName, request.body) match {
       case None =>
         log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getRichIdentity(oauth2InfoOrig) map { identity =>
-          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
-        } recover {
-          case t: Throwable =>
-            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
-            log.error(message)
-            airbrake.notify(message)
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
+
+      case Some(tokenIdentityProvider) => tokenIdentityProvider.getRichIdentity.map { identity =>
+        authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
+      } recover {
+        case t: Throwable =>
+          val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${tokenIdentityProvider.token}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
+          log.error(message)
+          airbrake.notify(message)
+          BadRequest(Json.obj("error" -> "invalid_token"))
+      }
     }
   }
 
-  def doOAuth1TokenSignup(providerName: String, oauth1Info: OAuth1Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth1ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
+  def doAccessTokenLogin(providerName: String)(implicit request: Request[JsValue]): Future[Result] = {
+    getOAuthTokenIdentityProvider(providerName, request.body) match {
       case None =>
-        log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
+        log.error(s"[accessTokenLogin($providerName)] Failed to retrieve provider; request=${request.body}")
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getRichIdentity(oauth1Info) map { identity =>
-          authCommander.signupWithTrustedSocialUser(UserIdentity(identity), signUpUrl)
-        } recover {
-          case t: Throwable =>
-            val message = s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}"
-            log.error(message)
-            airbrake.notify(message)
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
-    }
-  }
-
-  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth2ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
-      case None =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getIdentityId(oAuth2Info) map { identityId =>
+      case Some(tokenIdentityProvider) =>
+        tokenIdentityProvider.getIdentityId map { identityId =>
           authCommander.loginWithTrustedSocialIdentity(identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oAuth2Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${tokenIdentityProvider.token}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
   }
-
-  def doOAuth1TokenLogin(providerName: String, oauth1Info: OAuth1Info)(implicit request: Request[JsValue]): Future[Result] = {
-    oauth1ProviderRegistry.get(ProviderIds.toProviderId(providerName)) match {
-      case None =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
-      case Some(provider) =>
-        provider.getIdentityId(oauth1Info) map { identityId =>
-          authCommander.loginWithTrustedSocialIdentity(identityId)
-        } recover {
-          case t: Throwable =>
-            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
-            BadRequest(Json.obj("error" -> "invalid_token"))
-        }
-
-    }
-  }
-
 }

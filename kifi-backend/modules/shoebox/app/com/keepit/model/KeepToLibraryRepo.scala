@@ -36,7 +36,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 
   def allActive(implicit session: RSession): Seq[KeepToLibrary]
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)]
+  def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // For backwards compatibility with KeepRepo
   def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
@@ -109,9 +109,9 @@ class KeepToLibraryRepoImpl @Inject() (
     val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).groupBy(_.keepId).map { case (keepId, ktls) => (keepId, ktls.length) }.list.toMap
     keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, 0) }.toMap
   }
-  def orgsWithKeeps()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
+  def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 1 DAY)  group by organization_id order by count(*) desc"""
+    val q = sql"""select organization_id, count(*) from bookmark where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 3 DAY)  group by organization_id order by count(*) desc"""
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
@@ -150,7 +150,7 @@ class KeepToLibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val idAndLastKept = orgIdOpt match {
       case None => s"""select id, last_kept from library where owner_id = $userId and organization_id is null and state = 'active'"""
-      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active'"""
+      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active' and visibility != 'secret'"""
     }
     val idAndCount = orgIdOpt match {
       case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""

@@ -36,12 +36,14 @@ class FakeSlackClientImpl extends SlackClient {
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = ???
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
-    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.WebhookRevoked)
+    case _ if isSlackThrowingAFit => Future.failed(SlackAPIErrorResponse.WebhookRevoked)
     case _ =>
       pushedMessagesByWebhook.put(url, msg :: pushedMessagesByWebhook(url))
       Future.successful(())
   }
-  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = ???
+  def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = ???
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, msg: SlackMessageRequest): Future[SlackMessageResponse] = ???
+  def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit] = ???
 
   def sayInChannel(userId: SlackUserId, username: SlackUsername, teamId: SlackTeamId, token: Option[SlackAccessToken], ch: SlackChannelIdAndName)(str: String): Unit = {
     val key = (teamId, ch.name)
@@ -62,7 +64,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
-    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.TokenRevoked)
+    case _ if isSlackThrowingAFit => Future.failed(SlackAPIErrorResponse.TokenRevoked)
     case _ =>
       val bestGuessChannel = inChannelQuery.findAllMatchIn(request.query.query).toList.headOption.map(_.subgroups.head)
       val matches = (for {

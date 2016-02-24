@@ -57,7 +57,7 @@ case class KeepInfo(
     title = title,
     note = note,
     tags = hashtags.getOrElse(Set.empty),
-    keptBy = user.getOrElse(throw new Exception("Got a KeepInfo without a user!")),
+    keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
     libraries = library.toSet

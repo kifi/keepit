@@ -18,6 +18,8 @@
    In the @orgs.size orgs below there are:
    <ul>
        <li>Members: @orgs.map(_.members).sum</li>
+       <li>Slack team members (potential): @orgs.map(_.slackStats.teamSize).sum</li>
+       <li>Slack bots: @orgs.map(_.slackStats.bots).flatten.groupBy(identity).mapValues(_.size).toSeq.sortBy(-1 * _._2).mkString(":")</li>
        <li>Active Slack Libraries: @orgs.map(_.slackStats.activeSlackLibs).sum</li>
        <li>Inactive Slack Libraries: @orgs.map(_.slackStats.inactiveSlackLibs).sum</li>
        <li>Closed Slack Libraries: @orgs.map(_.slackStats.closedSlackLibs).sum</li>
@@ -38,6 +40,8 @@
                     <th>Name</th>
                     <th>Members</th>
                     <th>Paying</th>
+                    <th>Slack Team</th>
+                    <th>Bots</th>
                     <th>Active Slacks</th>
                     <th>InActive Slacks</th>
                     <th>Closed Slacks</th>
@@ -55,6 +59,8 @@
                         <td>@views.html.admin.adminHelper.orgDisplay(orgStats.org)</td>
                         <td>@orgStats.members</td>
                         <td>@if(orgStats.paying) { &#36;&#36;&#36; }</td>
+                        <td>@orgStats.slackStats.teamSize</td>
+                        <td>@orgStats.slackStats.bots.mkString(", ")</td>
                         <td>@orgStats.slackStats.activeSlackLibs</td>
                         <td>@orgStats.slackStats.inactiveSlackLibs</td>
                         <td>@orgStats.slackStats.closedSlackLibs</td>

@@ -20,6 +20,12 @@ angular.module('kifi')
   };
 })
 
+.filter('pathFromUrl', function () {
+  return function (url) {
+    return url && url.replace(/^https:\/\/www.kifi.com/,'');
+  };
+})
+
 .filter('pic', [
   'routeService',
   function (routeService) {

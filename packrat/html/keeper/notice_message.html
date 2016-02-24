@@ -28,7 +28,7 @@
     {{#authorShortName}}
     <span class="kifi-notice-author">{{authorShortName}}:</span>
     {{/authorShortName}}
-    {{#formatMessage}}{{{text}}}{{/formatMessage}}
+    {{#bodyHtmlTree}}{{>kifi_mustache_tags}}{{/bodyHtmlTree}}
   </div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>

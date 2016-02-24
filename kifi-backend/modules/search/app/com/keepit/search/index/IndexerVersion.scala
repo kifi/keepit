@@ -1,6 +1,11 @@
 package com.keepit.search.index
 
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.zookeeper.{ ServiceInstance, ServiceDiscovery }
+import com.keepit.model.NormalizedURI
+import com.keepit.search.index.sharding.ShardSpecParser
+
+import scala.util.Try
 
 case class IndexerVersion(value: Int) {
   require(value >= 0)
@@ -14,6 +19,7 @@ object IndexerVersion {
 
 sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, backupVersion: IndexerVersion) {
   require(backupVersion >= activeVersion)
+
   def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.hasBackupCapability) backupVersion else activeVersion
   def getVersionsForCleanup(): Seq[IndexerVersion] = (0 until activeVersion.value).map { v => IndexerVersion(v) }
   def active: IndexerVersion = activeVersion
