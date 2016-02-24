@@ -288,7 +288,11 @@ k.panes.thread = k.panes.thread || function () {
     }
     $reply.find('.kifi-message-body').css({opacity: 0.3});
     $reply.find('time').css({display:'none'});
-    $error.html(errorText + ' <a href="javascript:">retry?</a>').css({cursor: 'pointer', color: '#a00'})
+
+    $error
+    .empty()
+    .append($(k.render('html/keeper/message_error', {errorText: errorText})))
+    .css({cursor: 'pointer', color: '#a00'})
     .fadeIn(300).off('click').click(function() {
       $(this).fadeOut(100);
       $reply.find('time').css({display:''});

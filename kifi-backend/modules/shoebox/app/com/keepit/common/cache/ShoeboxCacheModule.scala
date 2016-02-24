@@ -14,7 +14,7 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.search.{ ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.models.{ SlackChannelIntegrationsCache, SlackTeamIdCache, SlackTeamMembersCache, SlackTeamMembersCountCache }
+import com.keepit.slack.models._
 import com.keepit.slack.{ SlackAuthStateCache, SlackCommentPushTimestampCache, SlackKeepPushTimestampCache }
 import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
 import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
@@ -36,12 +36,17 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def slackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackTeamMembersCache(stats, accessLog, (innerRepo, 1 days), (outerRepo, 1 days))
+    new SlackTeamMembersCache(stats, accessLog, (innerRepo, 1 days), (outerRepo, 8 days))
 
   @Singleton
   @Provides
   def slackTeamMembersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 1 hour), (outerRepo, 1 hour))
+    new SlackTeamMembersCountCache(stats, accessLog, (innerRepo, 1 days), (outerRepo, 9 day))
+
+  @Singleton
+  @Provides
+  def slackTeamBotsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamBotsCache(stats, accessLog, (innerRepo, 1 days), (outerRepo, 9 day))
 
   @Singleton
   @Provides
@@ -466,6 +471,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def slackStateCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def inferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new InferredKeeperPositionCache(stats, accessLog, (innerRepo, 1 day), (outerRepo, 30 days))
 
   @Provides @Singleton
   def slackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

@@ -88,7 +88,7 @@ class KeepInternerImpl @Inject() (
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    ownerIdOpt.foreach { ownerId => reportNewKeeps(ownerId, newKeeps, libraryOpt, context, notifyExternalSources = true) }
+    reportNewKeeps(newKeeps, libraryOpt, context, notifyExternalSources = true)
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
@@ -156,11 +156,12 @@ class KeepInternerImpl @Inject() (
       source = source,
       visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
       libraryId = libraryOpt.map(_.id.get),
-      keptAt = keptAt,
+      keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       organizationId = libraryOpt.flatMap(_.organizationId),
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet)
+      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet),
+      lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
@@ -202,11 +203,11 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
+  private def reportNewKeeps(keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Analytics
-      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeperUserId, keeps, lib, ctx) }
-      heimdalClient.processKeepAttribution(keeperUserId, keeps)
+      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
+      keeps.groupBy(_.userId).collect { case (Some(userId), keeps) => heimdalClient.processKeepAttribution(userId, keeps) }
       searchClient.updateKeepIndex()
 
       // Make external notifications & fetch
@@ -214,7 +215,7 @@ class KeepInternerImpl @Inject() (
         SafeFuture {
           libraryOpt.foreach { lib =>
             libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
-            libToSlackProcessor.schedule(lib.id.get)
+            libToSlackProcessor.schedule(Set(lib.id.get))
           }
         }
         FutureHelpers.sequentialExec(keeps) { keep =>

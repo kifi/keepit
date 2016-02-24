@@ -213,15 +213,15 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 
 		render: function () {
 			this.$el.addClass(this.renderStatusClasses());
-			this.$el.find('.kifi-message-header-options').html(this.renderPlugins('option'));
-			this.$el.find('.kifi-message-header-buttons').html(this.renderPlugins('button'));
-			this.$el.find('.kifi-message-header-content').html(this.renderPlugins('content'));
+			this.$el.find('.kifi-message-header-options').empty().append(this.renderPlugins('option'));
+			this.$el.find('.kifi-message-header-buttons').empty().append(this.renderPlugins('button'));
+			this.$el.find('.kifi-message-header-content').empty().append(this.renderPlugins('content'));
 		},
 
 		renderPlugins: function (compName) {
 			return this.plugins.map(function (plugin) {
 				return plugin.render(compName) || '';
-			}).join('');
+			});
 		}
 	};
 })(jQuery, this);

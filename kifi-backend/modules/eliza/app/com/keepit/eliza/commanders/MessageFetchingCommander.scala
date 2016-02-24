@@ -3,7 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.discussion.{ Message, DiscussionKeep }
+import com.keepit.discussion.{ DiscussionFail, Message, DiscussionKeep }
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
 import scala.concurrent.{ Promise, Future }
@@ -13,11 +13,13 @@ import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.{ Json, JsArray, JsString, JsNumber, JsBoolean, JsValue }
-import com.keepit.model.{ Keep, Username, User }
+import com.keepit.model.{ KeepPermission, Keep, Username, User }
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.core._
+
+import scala.util.control.NoStackTrace
 
 // todo(Léo): revisit this with full keepscussions
 case class BasicDiscussion(
@@ -72,7 +74,7 @@ class MessageFetchingCommander @Inject() (
     messagesFut
   }
 
-  def getDiscussionAndKeep(userId: Id[User], keepId: Id[Keep]): Future[(BasicDiscussion, Option[DiscussionKeep])] = {
+  def getDiscussionAndKeep(userId: Id[User], keepId: Id[Keep]): Future[(BasicDiscussion, DiscussionKeep)] = {
     db.readOnlyMaster(threadRepo.getByKeepId(keepId)(_)) match {
       case Some(thread) =>
         val futureMessages = getThreadMessagesWithBasicUser(thread)
@@ -80,22 +82,22 @@ class MessageFetchingCommander @Inject() (
         for {
           messages <- futureMessages
           discussionKeepOpt <- futureKeep
-        } yield {
-          (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeepOpt)
-        }
+          discussionKeep <- discussionKeepOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+        } yield (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeep)
       case None =>
-        val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.apply(keepId))
+        val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))
         val futureNormalizedUrl = for {
           keep <- shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap(_.apply(keepId))
           uri <- shoebox.getNormalizedURI(keep.uriId)
         } yield uri.url
 
         for {
-          discussionKeep <- futureDiscussionKeep
+          discussionKeepOpt <- futureDiscussionKeep
+          discussionKeep <- discussionKeepOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
           nUrl <- futureNormalizedUrl
-        } yield {
-          (BasicDiscussion(discussionKeep.url, nUrl, discussionKeep.keptBy.map(BasicUserLikeEntity(_)).toSet, Seq.empty), Some(discussionKeep))
-        }
+        } yield (BasicDiscussion(discussionKeep.url, nUrl, discussionKeep.keptBy.map(BasicUserLikeEntity(_)).toSet, Seq.empty), discussionKeep)
     }
   }
 }

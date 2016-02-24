@@ -182,6 +182,7 @@ object Shoebox extends Service {
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
     def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
+    def registerMessageOnKeep() = ServiceRoute(POST, "/internal/shoebox/database/registerMessageOnKeep")
   }
 }
 
@@ -268,6 +269,7 @@ object Eliza extends Service {
     def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
     def getMessageCountsForKeeps = ServiceRoute(POST, "/internal/eliza/getMessageCountsForKeeps")
+    def getChangedMessagesFromKeeps = ServiceRoute(POST, "/internal/eliza/getChangedMessagesFromKeeps")
     def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter) = ServiceRoute(GET, "/internal/eliza/getElizaKeepStream", Param("userId", userId), Param("limit", limit), Param("beforeId", beforeId.map(_.id)), Param("filter", filter.kind))
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")

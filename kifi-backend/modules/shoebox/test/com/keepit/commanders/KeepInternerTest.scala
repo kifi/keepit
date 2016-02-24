@@ -49,7 +49,8 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
           keepRepo.get(bookmarks.head.id.get).copy(
-            updatedAt = bookmarks.head.updatedAt
+            updatedAt = bookmarks.head.updatedAt,
+            seq = bookmarks.head.seq
           ) === bookmarks.head
           keepRepo.all.size === 1
         }

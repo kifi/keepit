@@ -9,11 +9,12 @@ import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserAc
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
 import com.keepit.common.json.TestHelper
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.net.{ URISanitizer, FakeHttpClientModule }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.commanders.{ MessageWithBasicUser, ElizaThreadInfo }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, UserFactory, User }
@@ -21,7 +22,9 @@ import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.social.BasicUser
 import com.keepit.test.ElizaTestInjector
+import org.joda.time.DateTime
 import org.specs2.mutable._
 import play.api.libs.json.{ JsArray, Json }
 import play.api.test.FakeRequest
@@ -195,61 +198,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         threads.size === 1
         val thread = threads.head
 
-        val expected = Json.parse(s"""
-          {
-            "id": "${message.pubId.id}",
-            "parentId": "${thread.pubKeepId.id}",
-            "createdAt": "${message.createdAt.toStandardTimeString}",
-            "threadInfo":{
-              "id": "${thread.pubKeepId.id}",
-              "participants":
-              [
-                {
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
-                  "firstName":"Shanee",
-                  "lastName":"Smith",
-                  "pictureName":"0.jpg","username":"test"
-                },{
-                  "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
-                  "firstName":"Shachaf",
-                  "lastName":"Smith",
-                  "pictureName":"0.jpg","username":"test"
-                }
-              ],
-              "digest": "test me out",
-              "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
-              "messageCount":1,
-              "messageTimes": {
-                "${message.pubId.id}": "${message.createdAt.toStandardTimeString}"
-              },
-              "createdAt": "${thread.createdAt.toStandardTimeString}",
-              "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
-              "lastMessageRead": "${message.createdAt.toStandardTimeString}",
-              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-              "url": "https://admin.kifi.com/admin/searchExperiments",
-              "muted":false
-            },
-            "messages":[
-              {
-                "id": "${message.pubId.id}",
-                "createdAt": "${message.createdAt.toStandardTimeString}",
-                "text": "test me out",
-                "url": "https://admin.kifi.com/admin/searchExperiments",
-                "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-                "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"
-                },
-                "participants":
-                  [
-                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
-                    {"id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484","firstName":"Shachaf","lastName":"Smith","pictureName":"0.jpg","username":"test"}
-                  ]
-              }]
-          }
-          """)
         val actual = contentAsJson(result)
-        TestHelper.deepCompare(actual, expected) must beNone
-
+        (actual \ "id").as[PublicId[Message]] === message.pubId
+        (actual \ "parentId").as[PublicId[Keep]] === Keep.publicId(thread.keepId)
+        val threadJson = actual \ "threadInfo"
+        (threadJson \ "id").as[PublicId[Keep]] === Keep.publicId(thread.keepId)
+        (threadJson \ "lastCommentedAt").as[DateTime] === message.createdAt
+        (actual \ "messages").as[Seq[MessageWithBasicUser]].length === 1
       }
     }
 
@@ -291,36 +246,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 5
 
-        val expected = Json.parse(s"""
-          {
-            "id": "${thread.pubKeepId.id}",
-            "uri": "https://admin.kifi.com/admin/searchExperiments",
-            "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-            "keep":null,
-            "participants": [
-              {
-                "id": "${shanee.externalId.id}",
-                "firstName": "Shanee",
-                "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
-              },{
-                "id": "${shachaf.externalId.id}",
-                "firstName": "Shachaf",
-                "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
-              }
-            ],
-            "messages": [
-              { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
-            ]
-          }
-        """)
-
         val res = Json.parse(contentAsString(result))
+
+        (res \ "id").as[PublicId[Keep]] === thread.pubKeepId
+        (res \ "uri").as[String] === "https://admin.kifi.com/admin/searchExperiments"
+        (res \ "uri").as[String] === (res \ "nUrl").as[String]
+        (res \ "participants").as[Seq[BasicUser]] === Seq(shanee, shachaf).map(BasicUser.fromUser)
+
         val jsMessages = (res \ "messages").as[JsArray].value
         (messages map (_.pubId)) === (jsMessages map { m => (m \ "id").as[PublicId[Message]] })
         jsMessages.size === 5
@@ -334,7 +266,6 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         (jsMessages(3) \ "time").as[Long] === messages(3).createdAt.getMillis
         (jsMessages(4) \ "id").as[PublicId[Message]] === messages(4).pubId
         (jsMessages(4) \ "time").as[Long] === messages(4).createdAt.getMillis
-        res must equalTo(expected)
       }
     }
 
@@ -378,38 +309,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
           contentType(result) must beSome("application/json")
 
-          val expectedMessages = s"""[
-                { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
-              ]"""
-
-          val expected = Json.parse(s"""
-            {
-              "id": "${thread.pubKeepId.id}",
-              "uri": "https://admin.kifi.com/admin/searchExperiments",
-              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-              "keep":null,
-              "participants": [
-                {
-                  "id": "${shanee.externalId.id}",
-                  "firstName": "Shanee",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                },{
-                  "id": "${shachaf.externalId.id}",
-                  "firstName": "Shachaf",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                }
-              ],
-              "messages": $expectedMessages
-            }
-          """)
-
           val res = Json.parse(contentAsString(result))
+          (res \ "id").as[PublicId[Keep]] === thread.pubKeepId
+          (res \ "uri").as[String] === "https://admin.kifi.com/admin/searchExperiments"
+          (res \ "uri").as[String] === (res \ "nUrl").as[String]
+          (res \ "participants").as[Seq[BasicUser]] === Seq(shanee, shachaf).map(BasicUser.fromUser)
+
           val jsMessages = (res \ "messages").as[JsArray].value
           (messages.reverse map (_.pubId)) === (jsMessages map { m => (m \ "id").as[PublicId[Message]] })
           jsMessages.size === 5
@@ -423,7 +328,6 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
           (jsMessages(4) \ "id").as[PublicId[Message]] === messages(0).pubId
           (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
-          res must equalTo(expected)
         }
         {
           val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, None).toString
@@ -432,38 +336,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val action2 = controller.getPagedThread(thread.pubKeepId, 3, None)
           val res2 = Json.parse(contentAsString(action2(FakeRequest("GET", path2))))
 
-          val expectedMessages2 = s"""[
-                { "id": "${messages(4).pubId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).pubId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).pubId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
-              ]"""
-
-          val expected2 = Json.parse(s"""
-            {
-              "id": "${thread.pubKeepId.id}",
-              "uri": "https://admin.kifi.com/admin/searchExperiments",
-              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-              "keep":null,
-              "participants": [
-                {
-                  "id": "${shanee.externalId.id}",
-                  "firstName": "Shanee",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                },{
-                  "id": "${shachaf.externalId.id}",
-                  "firstName": "Shachaf",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                }
-              ],
-              "messages": $expectedMessages2
-            }
-          """)
+          (res2 \ "id").as[PublicId[Keep]] === thread.pubKeepId
+          (res2 \ "uri").as[String] === "https://admin.kifi.com/admin/searchExperiments"
+          (res2 \ "uri").as[String] === (res2 \ "nUrl").as[String]
+          (res2 \ "participants").as[Seq[BasicUser]] === Seq(shanee, shachaf).map(BasicUser.fromUser)
 
           (res2 \ "messages").as[JsArray].value.size === 3
           (messages.reverse.take(3) map (_.pubId)) === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Message]] })
-          res2 must equalTo(expected2)
         }
         {
           val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id)).toString
@@ -472,37 +351,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val action3 = controller.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id))
           val res3 = Json.parse(contentAsString(action3(FakeRequest())))
 
-          val expectedMessages3 = s"""[
-                { "id": "${messages(1).pubId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).pubId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
-              ]"""
-
-          val expected3 = Json.parse(s"""
-            {
-              "id": "${thread.pubKeepId.id}",
-              "uri": "https://admin.kifi.com/admin/searchExperiments",
-              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-              "keep":null,
-              "participants": [
-                {
-                  "id": "${shanee.externalId.id}",
-                  "firstName": "Shanee",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                },{
-                  "id": "${shachaf.externalId.id}",
-                  "firstName": "Shachaf",
-                  "lastName": "Smith",
-                  "pictureName": "0.jpg","username":"test"
-                }
-              ],
-              "messages": $expectedMessages3
-            }
-          """)
+          (res3 \ "id").as[PublicId[Keep]] === thread.pubKeepId
+          (res3 \ "uri").as[String] === "https://admin.kifi.com/admin/searchExperiments"
+          (res3 \ "uri").as[String] === (res3 \ "nUrl").as[String]
+          (res3 \ "participants").as[Seq[BasicUser]] === Seq(shanee, shachaf).map(BasicUser.fromUser)
 
           (res3 \ "messages").as[JsArray].value.size === 2
           (messages.reverse.drop(3) map (_.pubId)) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Message]] })
-          res3 must equalTo(expected3)
         }
       }
     }
@@ -575,44 +430,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         contentType(result2) must beSome("application/json")
 
-        val expected2 = Json.parse(s"""
-          {
-            "id": "${thread.pubKeepId.id}",
-            "uri": "https://admin.kifi.com/admin/searchExperiments",
-            "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-            "keep":null,
-            "participants": [
-              {
-                "id": "${shanee.externalId.id}",
-                "firstName": "Shanee",
-                "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
-              },{
-                "id": "${shachaf.externalId.id}",
-                "firstName": "Shachaf",
-                "lastName": "Smith",
-                "pictureName": "0.jpg","username":"test"
-              }
-            ],
-            "messages": [
-              {
-                "id": "${messages(0).pubId.id}",
-                "time": ${messages(0).createdAt.getMillis},
-                "text": "test me out",
-                "userId": "${shanee.externalId.id}"
-              },
-              {
-                "id": "${messages(1).pubId.id}",
-                "time": ${messages(1).createdAt.getMillis},
-                "text": "cool man!",
-                "userId": "${shanee.externalId.id}"
-              }
-            ]
-          }
-        """)
+        val jsRes2 = contentAsJson(result2)
 
-        Json.parse(contentAsString(result2)) must equalTo(expected2)
-
+        (jsRes2 \ "id").as[PublicId[Keep]] === thread.pubKeepId
+        (jsRes2 \ "uri").as[String] === "https://admin.kifi.com/admin/searchExperiments"
+        (jsRes2 \ "uri").as[String] === (jsRes2 \ "nUrl").as[String]
+        (jsRes2 \ "participants").as[Seq[BasicUser]] === Seq(shanee, shachaf).map(BasicUser.fromUser)
       }
     }
 

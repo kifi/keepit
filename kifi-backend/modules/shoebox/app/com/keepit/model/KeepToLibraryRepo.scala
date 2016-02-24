@@ -150,7 +150,7 @@ class KeepToLibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val idAndLastKept = orgIdOpt match {
       case None => s"""select id, last_kept from library where owner_id = $userId and organization_id is null and state = 'active'"""
-      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active'"""
+      case Some(orgId) => s"""select id, last_kept from library where organization_id = $orgId and state = 'active' and visibility != 'secret'"""
     }
     val idAndCount = orgIdOpt match {
       case None => s"""select library_id as id, count(*) as num_keeps from keep_to_library ktl where state = 'active' and added_by = $userId and organization_id is null and added_at >= '$since' group by library_id"""

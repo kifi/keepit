@@ -37,6 +37,9 @@ case class CrossServiceMessage(
   sentBy: Option[Id[User]],
   text: String)
 object CrossServiceMessage {
+  private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
+  def stripLookHeres(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
     (__ \ 'isDeleted).format[Boolean] and
@@ -75,7 +78,8 @@ case class DiscussionKeep(
   keptBy: Option[BasicUser],
   keptAt: DateTime,
   imagePath: Option[ImagePath],
-  libraries: Set[LibraryCardInfo])
+  libraries: Set[LibraryCardInfo],
+  permissions: Set[KeepPermission])
 object DiscussionKeep {
   private implicit val libCardFormat = LibraryCardInfo.internalFormat
   implicit val format = Json.format[DiscussionKeep]

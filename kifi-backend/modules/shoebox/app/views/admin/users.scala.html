@@ -26,14 +26,6 @@
     }
 }
 
-@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
-  <ul>
-    @for(installation <- kifiInstallations) {
-      <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
-    }
-  </ul>
-}
-
 @networkLogoLink(sui: SocialUserInfo) = {
   <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
     @sui.networkType.name.take(2)
@@ -105,16 +97,12 @@
               <th>Paying</th>
               <th class="sorter-mmddyy">Last Kept</th>
               <th>org mem/cand</th>
-              <th>kifi Conns</th>
-              <th>Invited By</th>
+              <th>Invite By</th>
               <th>Messages all/active/started</th>
               <th>Lib create/follow</th>
-              <th>Network</th>
+              <th>Email & Network</th>
               <th>Keeps PRV/PUB/ORG/DISC</th>
-              <th>Email Address</th>
-              <th>Version</th>
               <th class="sorter-mmddyy">Date Joined</th>
-              <th>Experiment</th>
             </tr>
         </thead>
         <tbody>
@@ -131,21 +119,44 @@
                     <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
                   }
                 }
+                @if(userStatistics.kifiInstallations.firefox) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/firefox.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.chrome) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/chrome.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.safari) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/safari.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.yandex) {
+                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/yandex.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.windows) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/icon_win.gif" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.mac) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/osx.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.linux) {
+                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/linux.png" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.iphone) {
+                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/iphone.jpg" width="16" height="16">
+                }
+                @if(userStatistics.kifiInstallations.android) {
+                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/android.png" width="16" height="16">
+                }
               </td>
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
               <td>@if(userStatistics.paying) { &#36;&#36;&#36; }</td>
               <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
-              <td>@adminHelper.orgsStatisticsMinDisplay(userStatistics.orgs) / @adminHelper.orgsStatisticsMinDisplay(userStatistics.orgCandidates)</td>
-              <td>@userStatistics.connections</td>
+              <td>@adminHelper.orgsStatisticsMinDisplay(userStatistics.orgs) @adminHelper.orgsStatisticsMinDisplayCandidates(userStatistics.orgCandidates)</td>
               <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
               <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
               <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
-              <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) } @if( userStatistics.slackMemberships.nonEmpty ) { sl }</td>
+              <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a") <br> @for(u <- userStatistics.socialUsers){ @networkLogoLink(u) } @if( userStatistics.slackMemberships.nonEmpty ) { sl }</td>
               <td>@userStatistics.keepVisibilityCount.secret / @userStatistics.keepVisibilityCount.published / @userStatistics.keepVisibilityCount.organization / @userStatistics.keepVisibilityCount.discoverable</td>
-              <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
-              <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
               <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
-              <td>@userStatistics.experiments.mkString(", ")</td>
             </tr>
           }
         </tbody>

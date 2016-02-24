@@ -29,28 +29,42 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
   def all = secret + published + organization + discoverable
 }
 
+case class KifiInstallations(firefox: Boolean, chrome: Boolean, safari: Boolean, yandex: Boolean, iphone: Boolean, android: Boolean, windows: Boolean, mac: Boolean, linux: Boolean) {
+  def exist: Boolean = firefox || chrome || safari || yandex || iphone || android
+  def isEmpty: Boolean = !exist
+}
+
+object KifiInstallations {
+  def apply(all: Seq[KifiInstallation]): KifiInstallations = {
+    val agents = all.map(_.userAgent)
+    KifiInstallations(
+      firefox = agents.exists(_.name.toLowerCase.contains("firefox")),
+      chrome = agents.exists(_.name.toLowerCase.contains("chrome")),
+      safari = agents.exists(_.name.toLowerCase.contains("safari")),
+      yandex = agents.exists(_.name.toLowerCase.contains("yabrowser")),
+      iphone = agents.exists(_.isIphone),
+      android = agents.exists(_.isAndroid),
+      windows = agents.exists(_.operatingSystemFamily.toLowerCase.contains("window")),
+      mac = agents.exists(_.operatingSystemFamily.toLowerCase.contains("os x")),
+      linux = agents.exists(_.operatingSystemFamily.toLowerCase.contains("linux"))
+    )
+  }
+}
+
 case class UserStatistics(
   user: User,
   paying: Boolean,
   emailAddress: Option[EmailAddress],
-  connections: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
   slackMemberships: Seq[SlackTeamMembership],
   keepVisibilityCount: KeepVisibilityCount,
-  experiments: Set[UserExperimentType],
-  kifiInstallations: Seq[KifiInstallation],
+  kifiInstallations: KifiInstallations,
   librariesCreated: Int,
   librariesFollowed: Int,
   dateLastManualKeep: Option[DateTime],
   orgs: Seq[OrganizationStatisticsMin],
   orgCandidates: Seq[OrganizationStatisticsMin])
-
-case class OrganizationStatisticsMin(
-  org: Organization,
-  memberCount: Int,
-  libCount: Int,
-  slackLibs: Int)
 
 case class OrganizationStatisticsOverview(
   org: Organization,
@@ -77,7 +91,20 @@ case class MemberStatistics(
   numLibrariesFollowing: Int,
   dateLastManualKeep: Option[DateTime])
 
-case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int, teamSize: Int, bots: Set[String])
+case class SlackStatistics(
+  activeSlackLibs: Int,
+  inactiveSlackLibs: Int,
+  closedSlackLibs: Int,
+  brokenSlackLibs: Int,
+  teamSize: Int,
+  bots: Set[String])
+
+case class OrganizationStatisticsMin(
+  org: Organization,
+  memberCount: Int,
+  libCount: Int,
+  slackLibs: Int,
+  slackTeamSize: Int)
 
 object SlackStatistics {
   def apply(teamSize: Int, bots: Set[String], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
@@ -179,6 +206,7 @@ class UserStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     slackTeamMembersCountCache: SlackTeamMembersCountCache,
     slackTeamMembersCache: SlackTeamMembersCache,
+    slackTeamBotsCache: SlackTeamBotsCache,
     abook: ABookServiceClient,
     airbrake: AirbrakeNotifier,
     planManagementCommander: PlanManagementCommander) extends Logging {
@@ -201,11 +229,13 @@ class UserStatisticsCommander @Inject() (
   }
 
   def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Set[String]] = {
-    val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
-    bots.recover {
-      case error =>
-        log.error("error fetching members", error)
-        Set("ERROR")
+    slackTeamBotsCache.getOrElseFuture(SlackTeamBotsKey(slackTeamMembership.slackTeamId)) {
+      val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
+      bots.recover {
+        case error =>
+          log.error("error fetching members", error)
+          Set("ERROR")
+      }
     }
   }
 
@@ -264,7 +294,7 @@ class UserStatisticsCommander @Inject() (
   }
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
-    val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    val kifiInstallations = KifiInstallations(kifiInstallationRepo.all(user.id.get))
     val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
     val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
@@ -286,12 +316,10 @@ class UserStatisticsCommander @Inject() (
       user,
       paying = paying,
       emailAddress,
-      userConnectionRepo.getConnectionCount(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
       slackMemberships,
       keepVisibilityCount,
-      userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations,
       librariesCreated,
       librariesFollowed,
@@ -505,6 +533,18 @@ class UserStatisticsCommander @Inject() (
 
   def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {
     val orgId = org.id.get
+    val slackTeamSizeF = db.readOnlyReplica { implicit s =>
+      val teams = slackTeamRepo.getByOrganizationId(orgId)
+      teams flatMap { slackTeam =>
+        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
+        allMembers.find {
+          _.scopes.contains(SlackAuthScope.UsersRead)
+        }
+      } map { member =>
+        getTeamMembersCount(member)
+      } getOrElse Future.successful(if (teams.isEmpty) 0 else -1)
+    }
+
     val (mamberCount, libCount, slackLibs) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.countByOrgId(orgId)
       val libraries = libraryRepo.countOrganizationLibraries(orgId)
@@ -516,7 +556,8 @@ class UserStatisticsCommander @Inject() (
       org = org,
       memberCount = mamberCount,
       libCount = libCount,
-      slackLibs = slackLibs
+      slackLibs = slackLibs,
+      slackTeamSize = Await.result(slackTeamSizeF, Duration.Inf)
     )
   }
 

@@ -684,19 +684,19 @@ class KeepCommanderImpl @Inject() (
       libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
     }
 
-    val updatedKeepOpt = if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
+    if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
       val newUsers = oldKeepOpt.map(oldKeep => newKeep.connections.users -- oldKeep.connections.users).getOrElse(newKeep.connections.users)
-      Some(addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers))
-    } else None
+      addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers)
+    }
 
-    updatedKeepOpt.getOrElse(newKeep)
+    newKeep
   }
   def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
     val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
 
     newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
-    updateLastActivityAtIfLater(keepId, currentDateTime)
+    newKeep
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
@@ -876,16 +876,10 @@ class KeepCommanderImpl @Inject() (
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
         Future.successful {
           db.readOnlyReplica { implicit session =>
-            val (sortByLastActivity, hasNoLibExperiment) = {
-              val experiments = userExperimentRepo.getUserExperiments(userId)
-              (experiments.contains(UserExperimentType.FEED_LAST_ACTIVITY), experiments.contains(UserExperimentType.KEEP_NOLIB))
-            }
+            val hasNoLibExperiment = userExperimentRepo.getUserExperiments(userId).contains(UserExperimentType.KEEP_NOLIB)
 
-            val keepsAndAddedAt = {
-              // Grab 3x the required number because we're going to be dropping some (downgrade to 2x if the filtering lessens e.g. library-less keeps are released)
-              if (sortByLastActivity) keepRepo.getRecentKeepsByActivity(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
-              else keepRepo.getRecentKeeps(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
-            }
+            // Grab 3x the required number because we're going to be dropping some (downgrade to 2x if the filtering lessens e.g. library-less keeps are released)
+            val keepsAndAddedAt = keepRepo.getRecentKeepsByActivity(userId, 3 * limit, beforeExtId, afterExtId, shoeboxFilterOpt)
 
             keepsAndAddedAt.filter { case (k, _) => k.libraryId.isDefined || (k.connections.libraries.isEmpty && hasNoLibExperiment) }
           }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)

@@ -348,6 +348,11 @@ var api = (function createApi() {
       }
     },
     'api:require': function (data, respond, page) {
+      if (!(page.id in normalTab)) {
+        log('[api:require] %s preloading page attempted to require %O', page.id, data.paths);
+        respond([]);
+        return;
+      }
       injectWithDeps(page.id, data.paths, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(errors.wrap(function (port) {

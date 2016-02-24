@@ -5,6 +5,7 @@ import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
+import com.keepit.common.util.RandomChoice
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibrarySpace.OrganizationSpace
@@ -16,8 +17,12 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.lang3.RandomStringUtils
+import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
 import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
+
+import scala.util.Random
 
 class SlackIngestionTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -101,6 +106,35 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             ingestFromSlackSurely()
             val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             (postIngestCount === preIngestCount + expectedLinkCount).setMessage(s"got ${postIngestCount - preIngestCount} links out of $msg")
+          }
+          1 === 1
+        }
+      }
+      "ignore links from bot users" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, bot, lib, integration) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
+            val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved
+            val slackTeam = SlackTeamFactory.team().saved
+            val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").saved
+            val botMembership = SlackTeamMembershipFactory.membership().withTeam(slackTeam).withUsername("KIFIBOT_THE_DESTROYER").saved
+            slackTeamRepo.save(slackTeam.withKifiBotIfDefined(Some((botMembership.slackUserId, botMembership.token.get))))
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel("#eng").withNextIngestionAt(fakeClock.now).on().saved
+            (userMembership, botMembership, lib, stl)
+          }
+
+          val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
+          val msgs = Iterator.continually(s"I love <https://www.${RandomStringUtils.randomAlphabetic(10)}.com|this random link>!")
+          for (sender <- Random.shuffle(Seq.fill(10)(user) ++ Seq.fill(10)(bot)).take(10)) {
+            fakeClock += Period.hours(2)
+            val preIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
+            val msg = msgs.next()
+            slackClient.sayInChannel(sender.slackUserId, sender.slackUsername, sender.slackTeamId, sender.token, ch)(msg)
+            ingestFromSlackSurely()
+            val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
+            val expectedLinkCount = if (sender == user) 1 else 0
+            (postIngestCount - preIngestCount === expectedLinkCount).setMessage(s"got ${postIngestCount - preIngestCount} links out of $msg")
           }
           1 === 1
         }

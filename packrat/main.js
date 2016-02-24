@@ -901,12 +901,26 @@ api.port.on({
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
+  get_show_move_intro: function (data, respond) {
+    data = data || {};
+    data.domain = data.domain;
+    if (data.domain) {
+      ajax('GET', '/ext/pref/showExtMoveIntro', data, respond);
+    } else {
+      log('[get_show_move_intro] warning: client supplied empty domain');
+      respond({ show: false });
+    }
+  },
   terminate_ftue: function (data) {
-    var prefName = {e: 'showExtMsgIntro'}[data.type];
-    if (!prefName) return;
+    var prefName = {e: 'showExtMsgIntro', m: 'showExtMoveIntro'}[data.type];
+    var handlerName = {e: 'hide_ext_msg_intro', m: 'hide_move_keeper_intro'}[data.type];
+    if (!prefName) {
+      return;
+    }
+
     ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, {e: 'hide_ext_msg_intro'}[data.type]);
+      api.tabs.emit(tab, handlerName);
     });
     (prefs || {})[prefName] = false;
     if (data.action) {
@@ -918,7 +932,7 @@ api.port.on({
     }
   },
   track_ftue: function (type) {
-    var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
+    var category = {e: 'extMsgFTUE', l: 'libFTUE', m: 'moveKeepFtue'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,
@@ -983,7 +997,13 @@ api.port.on({
             rect.height);
         }
       }
-      respond(canvas.toDataURL('image/png'));
+      var dataUrl = 'data:,';
+      try {
+        dataUrl = canvas.toDataURL('image/png');
+      } catch (e) {
+        log('[screenshot] failed to render screenshot area %O', e);
+      }
+      respond(dataUrl);
     });
   },
   load_draft: function (data, respond, tab) {
@@ -1102,7 +1122,7 @@ api.port.on({
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
-        if (th) { 
+        if (th) {
           standardizeNotification(th);
           updateIfJustRead(th);
           notificationsById[th.thread] = th;

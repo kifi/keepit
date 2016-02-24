@@ -112,7 +112,6 @@ object DescriptionElements {
     }.map(BasicElement(_, None, None))
     intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
   }
-
   def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
 
   private def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp;")

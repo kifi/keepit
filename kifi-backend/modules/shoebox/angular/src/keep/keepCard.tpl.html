@@ -3,7 +3,7 @@
        ng-class="{
         'editing': $parent.edit.enabled,
         'compact': !galleryView,
-        'mine': (keep.user.id === me.id)}">
+        'mine': (keep.author.id === me.id)}">
 
     <div class="kf-keep-card kf-flex-column">
       <div class="kf-keep-card-activity-attribution-container" ng-if="::showActivityAttribution">
@@ -37,7 +37,7 @@
         <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
              ng-if="::keep.note || canEditKeep"></div>
         <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
-                ng-if="canEditKeep && galleryView && !keep.note && keep.user.id === me.id">Add a note
+                ng-if="canEditKeep && galleryView && !keep.note && keep.author.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>
@@ -89,7 +89,7 @@
             </button>
           </div>
           <div class="kf-keep-who"
-               ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
+               ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
           <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                 library="::keeper.library" desc="Your Kifi connection">
             <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
@@ -144,7 +144,7 @@
               <span>Share</span>
             </button>
             <div class="kf-keep-who"
-                 ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
+                 ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
               <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                     library="::keeper.library" desc="Your Kifi connection">
                 <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"

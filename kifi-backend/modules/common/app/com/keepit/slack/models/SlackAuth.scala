@@ -207,6 +207,15 @@ case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUs
 class SlackTeamMembersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SlackTeamMembersKey, Seq[SlackUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class SlackTeamBotsKey(slackTeamId: SlackTeamId) extends Key[Set[String]] {
+  override val version = 1
+  val namespace = "slack_team_bots"
+  def toKey(): String = slackTeamId.value
+}
+
+class SlackTeamBotsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackTeamBotsKey, Set[String]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 case class SlackTeamMembersCountKey(slackTeamId: SlackTeamId) extends Key[Int] {
   override val version = 3
   val namespace = "slack_team_members_count"

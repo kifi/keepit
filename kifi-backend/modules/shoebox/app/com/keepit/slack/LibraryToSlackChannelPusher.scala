@@ -1,8 +1,11 @@
 package com.keepit.slack
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
@@ -10,17 +13,17 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.path.Path
-import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
+import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.{ Duration, DateTime, Period }
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
+import org.joda.time.{ DateTime, Duration }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -36,6 +39,8 @@ object LibraryToSlackChannelPusher {
   val MAX_KEEPS_TO_SEND = 7
   val INTEGRATIONS_BATCH_SIZE = 100
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+
+  val pushing = new AtomicBoolean()
 }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -44,7 +49,7 @@ trait LibraryToSlackChannelPusher {
   def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 
   // Method to be called if something happens in a library
-  def schedule(libId: Id[Library]): Unit
+  def schedule(libIds: Set[Id[Library]]): Unit
 }
 
 @Singleton
@@ -52,6 +57,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   inhouseSlackClient: InhouseSlackClient,
   organizationInfoCommander: OrganizationInfoCommander,
+  orgExperimentRepo: OrganizationExperimentRepo,
   slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
@@ -68,28 +74,50 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   keepDecorator: KeepDecorator,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
+  pushingActor: ActorInstance[SlackPushingActor],
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
   import LibraryToSlackChannelPusher._
 
   @StatsdTimingAsync("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
-  @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    val integrationsToProcess = db.readWrite { implicit s =>
-      val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration)
-      markLegalIntegrationsForProcessing(integrations)
+  def findAndPushUpdatesForRipestIntegrations(): Future[Map[Id[LibraryToSlackChannel], Boolean]] = if (pushing.getAndSet(true)) Future.successful(Map.empty) else {
+    val futurePushed = FutureHelpers.foldLeftUntil(Stream.continually(()))(Map.empty[Id[LibraryToSlackChannel], Boolean]) {
+      case (pushedSoFar, _) =>
+        val integrationsToProcess = db.readWrite { implicit s =>
+          val newActorTeams = {
+            val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+            slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
+          }
+          val integrations = libToChannelRepo.getRipeForPushing(INTEGRATIONS_BATCH_SIZE, maxAcceptableProcessingDuration, newActorTeams)
+          markLegalIntegrationsForProcessing(integrations)
+        }
+        processIntegrations(integrationsToProcess).map { pushedBatch =>
+          (pushedSoFar ++ pushedBatch, pushedBatch.isEmpty)
+        }
     }
-    processIntegrations(integrationsToProcess)
+    futurePushed andThen { case _ => pushing.set(false) }
   }
 
-  def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
-    val nextPushAt = clock.now plus delayFromPushRequest
-    pushLibraryAtLatest(libId, nextPushAt)
+  def schedule(libIds: Set[Id[Library]]): Unit = {
+    val weShouldPushImmediately = db.readWrite { implicit session =>
+      val now = clock.now
+      val libsById = libRepo.getActiveByIds(libIds)
+      val superFastOrgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+      val (libsToPushImmediately, libsToPushSoon) = libIds.partition { libId =>
+        libsById.get(libId).exists(_.organizationId.exists(superFastOrgs.contains))
+      }
+      libsToPushImmediately.foreach { libId => pushLibraryAtLatest(libId, now) }
+      libsToPushSoon.foreach { libId => pushLibraryAtLatest(libId, now plus delayFromPushRequest) }
+
+      libsToPushImmediately.nonEmpty
+    }
+    if (weShouldPushImmediately) pushingActor.ref ! IfYouCouldJustGoAhead
   }
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     FutureHelpers.accumulateRobustly(integrationsToProcess)(pushUpdatesForIntegration).imap { results =>
+      log.info(s"[SLACK-PUSH] Processed ${integrationsToProcess.map(_.id.get)}")
       results.collect {
         // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
         // and that swallows the stack trace. This hack will manually expose the stack trace
@@ -141,7 +169,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute)
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
     val addComment = {
-      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 0) s"$messageCount comments" else "Reply")
+      val text = s"${SlackEmoji.speechBalloon.value} " + (if (messageCount > 1) s"$messageCount comments" else if (messageCount == 1) s"$messageCount comment" else "Reply")
       DescriptionElements("\n", text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
     }
 
@@ -211,7 +239,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case Some(futureMessage) => futureMessage.flatMap { message =>
         slackClient.sendToSlackViaUser(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
           .recover {
-            case f: SlackAPIFailure =>
+            case f: SlackFail =>
               log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
               SafeFuture {
                 val team = db.readOnlyReplica { implicit s =>

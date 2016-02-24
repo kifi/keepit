@@ -250,7 +250,7 @@ class OrganizationCommanderImpl @Inject() (
           val requester = userRepo.get(request.requesterId)
           organizationAnalytics.trackOrganizationEvent(org, requester, request)
 
-          val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
+          val libsToDelete = libraryRepo.getBySpaceAndKinds(org.id.get, Set(LibraryKind.SYSTEM_ORG_GENERAL, LibraryKind.SLACK_CHANNEL)).map(_.id.get)
           val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED).map(_.id.get)
 
           (libsToReturn, libsToDelete)

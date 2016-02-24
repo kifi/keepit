@@ -15,7 +15,8 @@ CREATE TABLE slack_team (
   last_digest_notification_at DATETIME DEFAULT NULL,
   public_channels_last_synced_at DATETIME DEFAULT NULL,
   channels_synced MEDIUMTEXT NOT NULL DEFAULT '',
-  bot_token VARCHAR(512) DEFAULT NULL,
+  kifi_bot_user_id VARCHAR(32) DEFAULT NULL,
+  kifi_bot_token VARCHAR(512) DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_u_slack_team_id (slack_team_id),

@@ -1,54 +1,107 @@
+// @require scripts/lib/purify.js
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
-function mapDOM(element, json) {
-  var treeObject = {};
-  var parser;
-  var docNode;
-  // If string convert to document Node
-  if (typeof element === 'string') {
-    parser = new DOMParser();
-    docNode = parser.parseFromString(element, 'text/xml');
-    element = docNode.firstChild;
+// TODO(carlos): Turn this into a legit module instead
+// of just exposing globals all over the place
+
+var k = k && k.kifi ? k : {kifi: true};
+
+k.formatting = k.formatting || (function () {
+  return {
+    jsonDom: jsonDom,
+    parseStringToElement: parseStringToElement
+  };
+
+  // Inspired by http://stackoverflow.com/questions/12980648
+  function jsonDom(element, wrapper) {
+    if (typeof element === 'string') {
+      element = parseStringToElement(element, wrapper);
+    }
+    return treeHTML(element);
   }
 
-  //Recursively loop through DOM elements and assign properties to object
-  function treeHTML(element, object) {
-    object.tagName = element.nodeName;
-    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
-    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+  function parseStringToElement(htmlString, wrapper) {
+    wrapper = wrapper || 'span';
+    htmlString = DOMPurify.sanitize(htmlString, {
+      ALLOW_UNKNOWN_PROTOCOLS: true // for x-kifi-sel "look here"s
+    });
 
-    if (nodeList.length) {
-      object.children = [];
-      nodeList.forEach(function (node) {
-        if (node.nodeType === 3) {
-          object.children.push({
-            tagName: 'span',
-            attributes: [],
-            children: node.nodeValue,
-            leaf: true
-          });
-        } else {
-          object.children.push({});
-          treeHTML(node, object.children[object.children.length - 1]);
-        }
-      });
-    } else {
-      object.leaf = true;
-      object.children = '';
+    var parser = new DOMParser();
+    var docNode = parser.parseFromString(htmlString, 'text/html'); // wraps input in <html><body> tags
+    var element;
+
+    if (isParseError(docNode)) {
+      throw new Error('Error parsing HTML: ' + element + '\n' + docNode.firstChild.innerHTML);
     }
 
-    object.attributes = attributeList.map(function (attribute) {
-      return {
-        name: attribute.nodeName,
-        value: attribute.nodeValue
-      };
-    });
-  }
-  treeHTML(element, treeObject);
+    var body = docNode.body;
+    var hasRootElement = (body.childNodes.length === 1 && body.firstChild.nodeType !== 3);
+    if (hasRootElement) {
+      element = body.firstChild;
+    } else {
+      element = document.createElement(wrapper);
+      Array.prototype.slice.apply(docNode.body.childNodes).forEach(function (n) {
+        element.appendChild(n);
+      });
+    }
 
-  return (json ? JSON.stringify(treeObject) : treeObject);
-}
+    return element;
+  }
+
+  // Recursively loop through DOM elements and assign properties to object
+  function treeHTML(element) {
+    var nodeList = (element.childNodes ? Array.prototype.slice.call(element.childNodes) : []);
+    var attributeList = (element.attributes ? Array.prototype.slice.call(element.attributes) : []);
+    var isLeaf = (nodeList.length === 0 || (nodeList.length === 1 && nodeList[0].nodeType === 3));
+
+    return {
+      tagName: element.nodeName,
+      children: (nodeList.length > 0 ? nodeList.map(mapNode) : ''),
+      attributes: attributeList.map(mapAttribute),
+      leaf: isLeaf
+    };
+  }
+
+  function mapNode(node, i, arr) {
+    if (node.nodeType === 3) { // text node
+      if (arr.length === 1) {
+        return node.nodeValue;
+      } else {
+        return {
+          tagName: 'span',
+          children: node.nodeValue,
+          attributes: [],
+          leaf: true
+        };
+      }
+    } else {
+      return treeHTML(node);
+    }
+  }
+
+  function mapAttribute(attribute) {
+    return {
+      name: attribute.nodeName,
+      value: attribute.nodeValue
+    };
+  }
+
+  // Inspired by http://stackoverflow.com/questions/11563554
+  var PARSER_ERROR_NS = (function () {
+    var parser = new DOMParser();
+    var badParse = parser.parseFromString('<', 'text/xml');
+    return badParse.getElementsByTagName('parsererror')[0].namespaceURI;
+  }());
+
+  function isParseError(parsedDocument) {
+    if (PARSER_ERROR_NS === 'http://www.w3.org/1999/xhtml') {
+      return parsedDocument.getElementsByTagName('parsererror').length > 0;
+    } else {
+      return parsedDocument.getElementsByTagNameNS(PARSER_ERROR_NS, 'parsererror').length > 0;
+    }
+  }
+}());
 
 var formatMessage = (function () {
   'use strict';
@@ -75,21 +128,26 @@ var formatMessage = (function () {
         processEmoji);
 
   function renderAndFormatFull(text, render) {
+    text = text || '';
+
     if (render) {
       text = render(text);
     }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
-    return formatAsHtml(text);
+    return k.formatting.jsonDom(formatAsHtml(text));
   }
 
   function renderAndFormatSnippet(text, render) {
+    text = text || '';
+
     if (render) {
       text = render(text);
     }
     // Careful... this is raw text with some markdown. Be sure to HTML-escape untrusted portions!
     var html = formatAsHtmlSnippet(text);
     // TODO: avoid truncating inside a multi-code-point emoji sequence or inside an HTML tag or entity
-    return html.length > 200 ? html.substring(0, 190) + '…' : html;
+    html = (html.length > 200 ? html.substring(0, 190) + '…' : html);
+    return k.formatting.jsonDom(html);
   }
 
   function processLineBreaksThen(process, text) {
@@ -102,8 +160,7 @@ var formatMessage = (function () {
         process(parts[i+1]));
     }
     html.push('</div>');
-    html = html.join('');
-    return mapDOM(html);
+    return html.join('');
   }
 
   function processKifiSelMarkdownToLinksThen(processBetween, processInside, text) {
@@ -293,7 +350,9 @@ function convertHtmlDraftToMarkdown(html) {
       return '[' + $2.replace(/([\]\\])/g, '\\$1') + '](x-kifi-sel:' + $1.replace(/([\)\\])/g, '\\$1') + ')';
     });
   html2 = emoji.encode(html2);
-  return $('<div>').html(html2).text().trim();
+
+  var elem = k.formatting.parseStringToElement(html2, 'div');
+  return elem.textContent.trim();
 }
 
 function convertTextDraftToMarkdown(text) {
@@ -326,11 +385,11 @@ var formatAuxData = (function () {
 
   return function () {
     var arr = this.auxData, formatter = formatters[arr[0]];
-    return mapDOM('<p>' + (formatter ? formatter.apply(null, arr.slice(1)) : '') + '</p>');
+    return k.formatting.jsonDom(formatter ? formatter.apply(null, arr.slice(1)) : '');
   };
 
   function isMe(user) {
-    return user.id === k.me.id;
+    return user.id === ((k.me && k.me.id) || '');
   }
 
   function bold(html) {

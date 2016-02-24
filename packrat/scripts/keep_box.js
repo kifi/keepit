@@ -1,4 +1,5 @@
 // @require styles/keeper/keep_box.css
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keep_box.js
 // @require scripts/html/keeper/keep_box_keep.js
 // @require scripts/html/keeper/name_parts.js
@@ -13,6 +14,7 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
 // @require scripts/send_chooser.js
@@ -551,7 +553,9 @@ k.keepBox = k.keepBox || (function () {
         dir: 'above',
         cssClass: 'kifi-pane-settings-tip',
         title: title,
-        html: message
+        html: k.formatting.jsonDom(message)
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
         configureHover(html, {
           mustHoverFor: 300, hideAfter: 0,
@@ -600,7 +604,7 @@ k.keepBox = k.keepBox || (function () {
         toggleVisibilityItem($orgVisiblility, false);
         $orgVisiblility.focus().click();
       }
-      $box.find('.kifi-organization-name').html(matches[0].name);
+      $box.find('.kifi-organization-name').empty().append(document.createTextNode(matches[0].name));
     } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }

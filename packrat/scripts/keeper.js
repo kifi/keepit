@@ -8,7 +8,9 @@
 // @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
+// @require scripts/formatting.js
 // @require scripts/repair_transitionend.js
+// @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keeper.js
 
 $.fn.layout = function () {
@@ -22,7 +24,13 @@ var MOD_KEYS = /^Mac/.test(navigator.platform) ? {c: '⌘', alt: 'Option'} : {c:
 
 k.keeper = k.keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt, extMsgIntroEligible = !k.tile.dataset.kept;
+  var $slider;
+  var lastCreatedAt;
+  var extMsgIntroEligible = !k.tile.dataset.kept;
+  var extMoveIntroEligible = (function () {
+    var pos = JSON.parse(k.tile.dataset.pos || '{}');
+    return !!(pos.top || pos.bottom);
+  }());
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -169,7 +177,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         } else {
           k.render('html/keeper/titled_tip', {
             title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
-            html: 'Keeping this page helps<br/>you easily find it later.'
+            html: k.formatting.jsonDom('Keeping this page helps<br/>you easily find it later.')
+          }, {
+            'kifi_mustache_tags': 'kifi_mustache_tags'
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -188,7 +198,12 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         i: ['Inbox (' + MOD_KEYS.c + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
         c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi connection.']
       }[this.dataset.tip];
-      k.render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
+      k.render('html/keeper/titled_tip', {
+        title: tip[0],
+        html: k.formatting.jsonDom(tip[1])
+      }, {
+        'kifi_mustache_tags': 'kifi_mustache_tags'
+      }, function (html) {
         configureHover(html, {
           suppressed: isSticky,
           mustHoverFor: 700,
@@ -289,17 +304,21 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
     $(k.tile).triggerHandler('kifi:keeper:remove');
-
-    if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
-      extMsgIntroEligible = false;
-      api.port.emit('prefs', function (prefs) {
-        if (prefs.showExtMsgIntro) {
-          setTimeout(function () {
-            api.require('scripts/external_messaging_intro.js', api.noop);
-          }, 1000);
-        }
-      });
-    }
+    api.port.emit('prefs', function (prefs) {
+      if (prefs.showExtMsgIntro && extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
+        extMsgIntroEligible = false;
+        setTimeout(function () {
+          api.require('scripts/external_messaging_intro.js', api.noop);
+        }, 1000);
+      } else if(prefs.showExtMoveIntro && extMoveIntroEligible) {
+        extMoveIntroEligible = false;
+        setTimeout(function () {
+          api.require('scripts/move_keeper_intro.js', function () {
+            k.moveKeeperIntro.show();
+          });
+        }, 1000);
+      }
+    });
   }
 
   function startDrag(data) {

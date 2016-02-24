@@ -6,12 +6,13 @@ import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.commanders.MessageWithBasicUser
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, UserFactory, User }
@@ -20,6 +21,7 @@ import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test.{ DbInjectionHelper, ElizaTestInjector }
+import org.joda.time.DateTime
 import org.specs2.mutable._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -81,76 +83,13 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val threads = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all }
         threads.size === 1
         val thread = threads.head
-
-        val expected = Json.parse(s"""
-          {
-            "id": "${message.pubId.id}",
-            "parentId": "${thread.pubKeepId.id}",
-            "createdAt": "${message.createdAt.toStandardTimeString}",
-            "threadInfo":{
-              "id": "${thread.pubKeepId.id}",
-              "participants":
-              [
-                {
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
-                  "firstName":"Shanee",
-                  "lastName":"Smith",
-                  "pictureName":"0.jpg",
-                  "username": "test"
-                },
-                {
-                  "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
-                  "firstName":"Shachaf",
-                  "lastName":"Smith",
-                  "pictureName":"0.jpg",
-                  "username": "test"
-                }
-              ],
-              "digest": "test me out",
-              "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
-              "messageCount":1,
-              "messageTimes": {
-                "${message.pubId.id}": "${message.createdAt.toStandardTimeString}"
-              },
-              "createdAt": "${thread.createdAt.toStandardTimeString}",
-              "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
-              "lastMessageRead": "${message.createdAt.toStandardTimeString}",
-              "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-              "url": "https://admin.kifi.com/admin/searchExperiments",
-              "muted":false
-            },
-            "messages":[
-              {
-                "id": "${message.pubId.id}",
-                "createdAt": "${message.createdAt.toStandardTimeString}",
-                "text": "test me out",
-                "url": "https://admin.kifi.com/admin/searchExperiments",
-                "nUrl": "https://admin.kifi.com/admin/searchExperiments",
-                "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username": "test"
-                },
-                "participants":
-                [
-                  {
-                    "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
-                    "firstName":"Shanee",
-                    "lastName":"Smith",
-                    "pictureName":"0.jpg",
-                    "username": "test"
-                  },
-                  {
-                    "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
-                    "firstName":"Shachaf",
-                    "lastName":"Smith",
-                    "pictureName":"0.jpg",
-                    "username": "test"
-                  }
-                ]
-              }]
-            }
-          """)
-        inject[WatchableExecutionContext].drain()
-        contentAsJson(result) === expected
+        val actual = contentAsJson(result)
+        (actual \ "id").as[PublicId[Message]] === message.pubId
+        (actual \ "parentId").as[PublicId[Keep]] === Keep.publicId(thread.keepId)
+        val threadJson = actual \ "threadInfo"
+        (threadJson \ "id").as[PublicId[Keep]] === Keep.publicId(thread.keepId)
+        (threadJson \ "lastCommentedAt").as[DateTime] === message.createdAt
+        (actual \ "messages").as[Seq[MessageWithBasicUser]].length === 1
       }
     }
 
