@@ -99,20 +99,20 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     futurePushed andThen { case _ => pushing.set(false) }
   }
 
-  def schedule(libIds: Set[Id[Library]]): Unit = db.readWrite { implicit session =>
-    val now = clock.now
-    val libsById = libRepo.getActiveByIds(libIds)
-    val superFastOrgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
-    val (libsToPushImmediately, libsToPushSoon) = libIds.partition { libId =>
-      libsById.get(libId).exists(_.organizationId.exists(superFastOrgs.contains))
-    }
-    if (libsToPushImmediately.nonEmpty) {
+  def schedule(libIds: Set[Id[Library]]): Unit = {
+    val weShouldPushImmediately = db.readWrite { implicit session =>
+      val now = clock.now
+      val libsById = libRepo.getActiveByIds(libIds)
+      val superFastOrgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+      val (libsToPushImmediately, libsToPushSoon) = libIds.partition { libId =>
+        libsById.get(libId).exists(_.organizationId.exists(superFastOrgs.contains))
+      }
       libsToPushImmediately.foreach { libId => pushLibraryAtLatest(libId, now) }
-      session.onTransactionSuccess { pushingActor.ref ! IfYouCouldJustGoAhead }
+      libsToPushSoon.foreach { libId => pushLibraryAtLatest(libId, now plus delayFromPushRequest) }
+
+      libsToPushImmediately.nonEmpty
     }
-    libsToPushSoon.foreach { libId =>
-      pushLibraryAtLatest(libId, now plus delayFromPushRequest)
-    }
+    if (weShouldPushImmediately) pushingActor.ref ! IfYouCouldJustGoAhead
   }
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
