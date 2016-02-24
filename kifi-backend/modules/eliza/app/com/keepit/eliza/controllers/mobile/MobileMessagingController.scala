@@ -5,10 +5,11 @@ import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserA
 import com.keepit.common.core.eitherExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionKeep, DiscussionFail, Message }
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.MessageSource
 import scala.collection._
@@ -36,6 +37,7 @@ class MobileMessagingController @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,
     shoebox: ShoeboxServiceClient,
+    airbrake: AirbrakeNotifier,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
@@ -197,7 +199,7 @@ class MobileMessagingController @Inject() (
   def getPagedThread(pubKeepId: PublicId[Keep], pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
     Keep.decodePublicId(pubKeepId) match {
       case Success(keepId) =>
-        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId) map {
+        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId).map {
           case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
@@ -241,6 +243,13 @@ class MobileMessagingController @Inject() (
                 }
               })
             ))
+        }.recover {
+          case fail: DiscussionFail =>
+            airbrake.notify(fail)
+            fail.asErrorResponse
+          case fail: Throwable =>
+            airbrake.notify(fail)
+            InternalServerError(fail.getMessage)
         }
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
@@ -250,7 +259,7 @@ class MobileMessagingController @Inject() (
   def getCompactThread(pubKeepId: PublicId[Keep]) = UserAction.async { request =>
     Keep.decodePublicId(pubKeepId) match {
       case Success(keepId) =>
-        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId) map {
+        basicMessageCommander.getDiscussionAndKeep(request.userId, keepId).map {
           case (discussion, keep) =>
             val url = URISanitizer.sanitize(discussion.url)
             val nUrl = URISanitizer.sanitize(discussion.nUrl)
@@ -286,6 +295,13 @@ class MobileMessagingController @Inject() (
                 }
               })
             ))
+        }.recover {
+          case fail: DiscussionFail =>
+            airbrake.notify(fail)
+            fail.asErrorResponse
+          case fail: Throwable =>
+            airbrake.notify(fail)
+            InternalServerError(fail.getMessage)
         }
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
