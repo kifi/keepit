@@ -32,6 +32,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
+  def getBySpaceAndKinds(space: LibrarySpace, kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
 
   // PSA: Please use this function going forward, it's nonsense to have a million single-purpose queries
@@ -287,19 +288,21 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  private def getByUserIdAndKind(userId: Id[User], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
-    for (b <- rows if b.kind === kind && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b
+  private def getByUserIdAndKinds(userId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind.inSet(kinds) && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b
   }
-  private def getByOrgIdAndKind(orgId: Id[Organization], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
-    for (b <- rows if b.kind === kind && b.orgId === orgId && b.state =!= excludeState.orNull) yield b
+  private def getByOrgIdAndKinds(orgId: Id[Organization], kinds: Set[LibraryKind], excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind.inSet(kinds) && b.orgId === orgId && b.state =!= excludeState.orNull) yield b
   }
-  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
+  def getBySpaceAndKinds(space: LibrarySpace, kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
     val q = space match {
-      case UserSpace(userId) => getByUserIdAndKind(userId, kind, excludeState)
-      case OrganizationSpace(orgId) => getByOrgIdAndKind(orgId, kind, excludeState)
+      case UserSpace(userId) => getByUserIdAndKinds(userId, kinds, excludeState)
+      case OrganizationSpace(orgId) => getByOrgIdAndKinds(orgId, kinds, excludeState)
     }
     q.list.toSet
   }
+
+  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = getBySpaceAndKinds(space, Set(kind), excludeState)
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {
     val q = for {
