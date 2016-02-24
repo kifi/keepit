@@ -15,6 +15,7 @@ import scala.slick.jdbc.{ GetResult, PositionedResult }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
+  def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
   def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
@@ -273,6 +274,10 @@ class KeepRepoImpl @Inject() (
       model.copy(seq = sequence.incrementAndGet())
     }
     super.save(newModel.clean())
+  }
+
+  def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep = {
+    super.save(model.copy(seq = sequence.incrementAndGet()))
   }
 
   def deactivate(model: Keep)(implicit session: RWSession) = {

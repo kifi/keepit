@@ -641,7 +641,7 @@ class ShoeboxController @Inject() (
     import RegisterMessageOnKeep._
     val input = request.body.as[Request]
     val keep = db.readWrite { implicit s =>
-      keepRepo.save(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
+      keepRepo.saveAndIncrementSequenceNumber(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
     }
     libToSlackPusher.schedule(keep.connections.libraries)
     NoContent
