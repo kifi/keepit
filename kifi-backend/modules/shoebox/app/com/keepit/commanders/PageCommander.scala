@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.curator.LibraryQualityHelper
@@ -83,10 +84,7 @@ class PageCommander @Inject() (
       val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => NormalizedHostname.fromHostname(name))
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
-        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse {
-          if (experiments.contains(UserExperimentType.INFER_KEEPER_POSITION)) Some(inferKeeperPosition(dom.id.get))
-          else None
-        }
+        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse(inferKeeperPosition(dom.id.get))
         val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
         (position, neverShow)
       }.getOrElse((None, false))
@@ -113,10 +111,7 @@ class PageCommander @Inject() (
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
       domainOpt.map { dom =>
-        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse {
-          if (experiments.contains(UserExperimentType.INFER_KEEPER_POSITION)) Some(inferKeeperPosition(dom.id.get))
-          else None
-        }
+        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse(inferKeeperPosition(dom.id.get))
         val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
         (position, neverShow)
       }.getOrElse((None, false))
@@ -149,8 +144,9 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
-  private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): JsObject = {
-    inferredKeeperPositionCache.getOrElse(InferredKeeperPositionKey(domainId)) {
+  @StatsdTiming("PageCommander.inferKeeperPosition")
+  private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {
+    inferredKeeperPositionCache.getOrElseOpt(InferredKeeperPositionKey(domainId)) {
       val since = currentDateTime.minusMonths(6)
       val roundToNearest = 100 // return value will vary in roundToNearest intervals
       val minSamples = 10
@@ -166,9 +162,11 @@ class PageCommander @Inject() (
             countByBucket + (position -> (countByBucket.getOrElse(position, 0) + 1))
         }.maxBy(_._2)._1
 
-        if (positionMode < 0) Json.obj("top" -> positionMode)
-        else Json.obj("bottom" -> positionMode)
-      } else Json.obj("bottom" -> 0)
+        if (positionMode != 0) log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=$positionMode")
+
+        if (positionMode < 0) Some(Json.obj("top" -> positionMode))
+        else Some(Json.obj("bottom" -> positionMode))
+      } else None
     }
   }
 
