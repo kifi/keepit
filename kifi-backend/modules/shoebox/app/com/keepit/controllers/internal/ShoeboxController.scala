@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
-import com.keepit.common.logging.{ Logging, SlackLog }
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
 import com.keepit.common.net.URI
@@ -23,10 +23,10 @@ import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
+import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
-import com.keepit.slack.{ InhouseSlackChannel, SlackInfoCommander, SlackIntegrationCommander }
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackInfoCommander, SlackIntegrationCommander }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -92,6 +92,7 @@ class ShoeboxController @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
+  libToSlackPusher: LibraryToSlackChannelPusher,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
 
@@ -636,8 +637,13 @@ class ShoeboxController @Inject() (
     NoContent
   }
 
-  def registerMessageOnKeep(keepId: Id[Keep]) = Action { request =>
-    db.readWrite { implicit s => keepRepo.save(keepRepo.get(keepId)) } // bump sequence number on that keep
+  def registerMessageOnKeep() = Action(parse.tolerantJson) { request =>
+    import RegisterMessageOnKeep._
+    val input = request.body.as[Request]
+    val keep = db.readWrite { implicit s =>
+      keepRepo.save(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
+    }
+    libToSlackPusher.schedule(keep.connections.libraries)
     NoContent
   }
 }
