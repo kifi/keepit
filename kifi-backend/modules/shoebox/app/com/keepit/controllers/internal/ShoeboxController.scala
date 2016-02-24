@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
-import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.logging.{ SlackLog, AccessLog, Logging }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
 import com.keepit.common.net.URI
@@ -30,7 +30,7 @@ import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
-import com.keepit.slack.{ SlackIntegrationCommander, SlackInfoCommander }
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackIntegrationCommander, SlackInfoCommander }
 import com.keepit.social._
 import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.DateTime
@@ -99,8 +99,11 @@ class ShoeboxController @Inject() (
   slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
   shoeboxMessageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
-  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
+  implicit val config: PublicIdConfiguration,
+  implicit val inhouseSlackClient: InhouseSlackClient)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
+
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   val MaxContentLength = 6000
 
@@ -644,6 +647,7 @@ class ShoeboxController @Inject() (
   }
 
   def ingestElizaMessagesASAP() = Action { request =>
+    slackLog.info("Telling the message ingesting actor to go ahead", System.currentTimeMillis().toString)
     shoeboxMessageIngestionActor.ref ! IfYouCouldJustGoAhead
     NoContent
   }

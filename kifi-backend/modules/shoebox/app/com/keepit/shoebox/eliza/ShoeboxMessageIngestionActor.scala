@@ -15,7 +15,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, LibraryToSlac
 import com.kifi.juggle.BatchProcessingActor
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
+import scala.util.{ Success, Failure }
 
 object ShoeboxMessageIngestionActor {
   val shoeboxMessageSeq = Name[SequenceNumber[Message]]("shoebox_message")
@@ -35,6 +35,7 @@ class ShoeboxMessageIngestionActor @Inject() (
     extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
+  val slackLogRyan = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import ShoeboxMessageIngestionActor._
 
   protected def nextBatch: Future[Seq[CrossServiceMessage]] = {
@@ -47,6 +48,8 @@ class ShoeboxMessageIngestionActor @Inject() (
       eliza.getMessagesChanged(seqNum, fetchSize)
     }
   } andThen {
+    case Success(msgs) =>
+      slackLogRyan.info("Ingested", msgs.length, "messages from Eliza", System.currentTimeMillis().toString)
     case Failure(error) =>
       log.error("Could not fetch new messages from Eliza", error)
       slackLog.error("Could not fetch new messages from Eliza:", error.getMessage)
