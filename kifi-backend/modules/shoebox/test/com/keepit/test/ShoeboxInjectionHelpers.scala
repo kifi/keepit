@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationService, NormalizedURIInterner }
 import com.keepit.payments._
 import com.keepit.slack._
+import com.keepit.slack.models.SlackTeamRepo
 
 trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
@@ -91,6 +92,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def sourceAttributionRepo(implicit injector: Injector) = inject[KeepSourceAttributionRepo]
   def sourceAttributionCommander(implicit injector: Injector) = inject[KeepSourceCommander]
 
+  def slackTeamRepo(implicit injector: Injector) = inject[SlackTeamRepo]
   def slackCommander(implicit injector: Injector) = inject[SlackCommander].asInstanceOf[SlackCommanderImpl]
   def slackIntegrationCommander(implicit injector: Injector) = inject[SlackIntegrationCommander].asInstanceOf[SlackIntegrationCommanderImpl]
   def slackTeamCommander(implicit injector: Injector) = inject[SlackTeamCommander].asInstanceOf[SlackTeamCommanderImpl]
