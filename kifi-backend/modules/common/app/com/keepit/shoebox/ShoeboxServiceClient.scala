@@ -137,6 +137,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
+  def ingestElizaMessagesASAP(): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -873,6 +874,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = {
     call(Shoebox.internal.addUsersToKeep(adderId, keepId), body = Json.obj("users" -> newUsers)).map(_ => ())
+  }
+  def ingestElizaMessagesASAP(): Future[Unit] = {
+    call(Shoebox.internal.ingestElizaMessagesASAP()).map(_ => ())
   }
 }
 

@@ -1044,6 +1044,7 @@ GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.c
 
 POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
 POST     /internal/shoebox/database/addUsersToKeep   @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
+POST     /internal/shoebox/database/ingestElizaMessagesASAP   @com.keepit.controllers.internal.ShoeboxController.ingestElizaMessagesASAP()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
