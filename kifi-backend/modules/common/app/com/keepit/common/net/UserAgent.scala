@@ -15,7 +15,7 @@ case class UserAgent(
     version: String) {
   lazy val isKifiIphoneApp: Boolean = (isIphone && userAgent.contains(UserAgent.KifiMarker)) || userAgent.contains("kifiext") || userAgent.contains("Kifi/com.fortytwo.kifi")
   lazy val isKifiAndroidApp: Boolean = isAndroid && userAgent.contains(UserAgent.KifiMarker)
-  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || userAgent.contains("CFNetwork")
+  lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || userAgent.contains("CFNetwork") || userAgent.startsWith("Kifi/com.fortytwo.kifi")
   lazy val isAndroid: Boolean = operatingSystemFamily == "Android"
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
   lazy val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)

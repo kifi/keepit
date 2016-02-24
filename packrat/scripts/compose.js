@@ -123,10 +123,13 @@ k.compose = k.compose || (function() {
         return convertHtmlDraftToMarkdown($d.html());
       },
       getRaw: function () {
-        return $d.html();
+        return k.formatting.jsonDom($d.html());
       },
       setRaw: function (html) {
-        $d.html(html);
+        if (typeof html === 'string') {
+          html = k.formatting.jsonDom(html);
+        }
+        $d.empty().append($(k.render('html/keeper/kifi_mustache_tags', html)));
         notifyEmpty(!html);
       },
       clear: function () {

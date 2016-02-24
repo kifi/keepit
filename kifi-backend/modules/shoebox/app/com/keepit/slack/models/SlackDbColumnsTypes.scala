@@ -8,6 +8,13 @@ object SlackDbColumnTypes {
     import db.Driver.simple._
     MappedColumnType.base[SlackUserId, String](_.value, SlackUserId(_))
   }
+  def userIdSet(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[Set[SlackUserId], String](
+      ids => Json.stringify(Json.toJson(ids)),
+      str => if (str.isEmpty) Set.empty else Json.parse(str).as[Set[SlackUserId]]
+    )
+  }
   def username(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[SlackUsername, String](_.value, SlackUsername(_))
@@ -28,7 +35,7 @@ object SlackDbColumnTypes {
     import db.Driver.simple._
     MappedColumnType.base[Set[SlackChannelId], String](
       ids => Json.stringify(Json.toJson(ids)),
-      j => Json.parse(j).as[Set[SlackChannelId]]
+      str => Json.parse(str).as[Set[SlackChannelId]]
     )
   }
 

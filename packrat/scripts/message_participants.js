@@ -274,7 +274,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} participants html
 		 */
 		renderContent: function () {
-			return k.render('html/keeper/message_participants', this.getView(), partials);
+			return $(k.render('html/keeper/message_participants', this.getView(), partials));
 		},
 
 		/**
@@ -283,7 +283,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 * @return {string} Add participant icon html
 		 */
 		renderButton: function () {
-			return k.render('html/keeper/message_participant_icon', this.getView(), partials);
+			return $(k.render('html/keeper/message_participant_icon', this.getView(), partials));
 		},
 
 		/**
@@ -509,8 +509,18 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 			$el.toggleClass('kifi-overflow', view.isOverflowed);
 			$el.find('.kifi-message-participant-name').text(view.participantName);
 			$el.find('.kifi-participant-count').text(view.participantCount);
-			$el.find('.kifi-message-participants-avatars').html(view.avatars);
-			$el.find('.kifi-message-participant-list-inner').html(view.participants);
+			var renderedAvatars = view.avatars.map(function (a) {
+				var template = (a.email ? 'html/keeper/message_avatar_email' : 'html/keeper/message_avatar_user');
+				a = a.email || a.user;
+				return $(k.render(template, a));
+			});
+			var renderedParticipants = view.participants.map(function (p) {
+				var template = (p.email ? 'html/keeper/message_participant_email' : 'html/keeper/message_participant_user');
+				p = p.email || p.user;
+				return $(k.render(template, p));
+			});
+			$el.find('.kifi-message-participants-avatars').empty().append(renderedAvatars);
+			$el.find('.kifi-message-participant-list-inner').empty().append(renderedParticipants);
 			this.updateParticipantsHeight();
 			this.$list.data('antiscroll').refresh();
 		},

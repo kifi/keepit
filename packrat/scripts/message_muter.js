@@ -148,7 +148,7 @@ k.messageMuter = k.messageMuter || (function ($, win) {
 		 * @return {string} Mute option html
 		 */
 		renderOption: function () {
-			return k.render('html/keeper/message_mute_option', this.getView());
+			return $(k.render('html/keeper/message_mute_option', this.getView()));
 		},
 
 		/**
@@ -157,7 +157,7 @@ k.messageMuter = k.messageMuter || (function ($, win) {
 		 * @return {string} muted status box html
 		 */
 		renderContent: function () {
-			return k.render('html/keeper/message_muted', this.getView());
+			return $(k.render('html/keeper/message_muted', this.getView()));
 		},
 
 		/**

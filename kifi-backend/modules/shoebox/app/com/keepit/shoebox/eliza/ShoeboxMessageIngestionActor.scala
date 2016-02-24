@@ -1,20 +1,21 @@
 package com.keepit.shoebox.eliza
 
-import com.google.inject.{ Inject }
+import com.google.inject.Inject
 import com.keepit.commanders.KeepCommander
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
-import com.keepit.common.db.{ SequenceNumber }
+import com.keepit.common.core._
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.discussion.{ Message, CrossServiceMessage }
+import com.keepit.common.logging.SlackLog
+import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.slack.LibraryToSlackChannelPusher
-import com.kifi.juggle.BatchProcessingActor
 import com.keepit.model._
-import com.keepit.common.core._
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, LibraryToSlackChannelPusher }
+import com.kifi.juggle.BatchProcessingActor
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.Failure
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Success, Failure }
 
 object ShoeboxMessageIngestionActor {
   val shoeboxMessageSeq = Name[SequenceNumber[Message]]("shoebox_message")
@@ -22,15 +23,19 @@ object ShoeboxMessageIngestionActor {
 }
 
 class ShoeboxMessageIngestionActor @Inject() (
-    db: Database,
-    systemValueRepo: SystemValueRepo,
-    keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
-    eliza: ElizaServiceClient,
-    airbrake: AirbrakeNotifier,
-    slackPusher: LibraryToSlackChannelPusher,
-    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
+  db: Database,
+  systemValueRepo: SystemValueRepo,
+  keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
+  eliza: ElizaServiceClient,
+  airbrake: AirbrakeNotifier,
+  slackPusher: LibraryToSlackChannelPusher,
+  implicit val executionContext: ExecutionContext,
+  implicit val inhouseSlackClient: InhouseSlackClient)
+    extends FortyTwoActor(airbrake) with BatchProcessingActor[CrossServiceMessage] {
 
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
+  val slackLogRyan = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import ShoeboxMessageIngestionActor._
 
   protected def nextBatch: Future[Seq[CrossServiceMessage]] = {
@@ -43,7 +48,11 @@ class ShoeboxMessageIngestionActor @Inject() (
       eliza.getMessagesChanged(seqNum, fetchSize)
     }
   } andThen {
-    case Failure(error) => log.error("Could not fetch new messages from Eliza", error)
+    case Success(msgs) =>
+      slackLogRyan.info("Ingested", msgs.length, "messages from Eliza", System.currentTimeMillis().toString)
+    case Failure(error) =>
+      log.error("Could not fetch new messages from Eliza", error)
+      slackLog.error("Could not fetch new messages from Eliza:", error.getMessage)
   }
 
   protected def processBatch(messages: Seq[CrossServiceMessage]): Future[Unit] = SafeFuture {
@@ -51,6 +60,9 @@ class ShoeboxMessageIngestionActor @Inject() (
       val messagesByKeep = messages.groupBy(_.keep)
       db.readWrite { implicit session =>
         val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
+        session.onTransactionSuccess {
+          slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
+        }
         keeps.foreach { keep =>
           messagesByKeep.get(keep.id.get).foreach { msgs =>
             val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
@@ -59,9 +71,6 @@ class ShoeboxMessageIngestionActor @Inject() (
             val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
             keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
           }
-        }
-        session.onTransactionSuccess {
-          slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
       }

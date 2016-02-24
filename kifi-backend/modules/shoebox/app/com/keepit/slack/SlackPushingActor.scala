@@ -208,7 +208,7 @@ class SlackPushingActor @Inject() (
     getPushItems(integration).flatMap { implicit pushItems =>
       // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
       // We do not keep track of whether this succeeds, we just assume that it does
-      db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.botToken) }.foreach { botToken =>
+      db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBotToken) }.foreach { botToken =>
         log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found bot token $botToken")
         for {
           _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {

@@ -7,7 +7,6 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.common.domain.ExtensionUnfriendlyDomains
 import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.net.{ URIParser, URI }
 import com.keepit.common.service.IpAddress

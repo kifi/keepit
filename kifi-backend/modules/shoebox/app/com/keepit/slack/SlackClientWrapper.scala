@@ -109,10 +109,18 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val botToken = db.readOnlyMaster { implicit s =>
-      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.botToken)
+      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
     }
     botToken match {
-      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser)
+      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen {
+        case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
+          db.readWrite { implicit s =>
+            slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { slackTeam =>
+              slackTeamRepo.save(slackTeam.withNoKifiBot)
+              log.warn(s"[SLACK-CLIENT-WRAPPER] Kifi-bot was killed in ${slackTeam.slackTeamName.value} ${slackTeam.slackTeamId}")
+            }
+          }
+      }
       case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }

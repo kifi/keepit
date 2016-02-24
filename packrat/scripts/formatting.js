@@ -1,3 +1,4 @@
+// @require scripts/lib/purify.js
 // @require scripts/emoji.js
 // @require scripts/lib/mustache.js
 
@@ -8,7 +9,8 @@ var k = k && k.kifi ? k : {kifi: true};
 
 k.formatting = k.formatting || (function () {
   return {
-    jsonDom: jsonDom
+    jsonDom: jsonDom,
+    parseStringToElement: parseStringToElement
   };
 
   // Inspired by http://stackoverflow.com/questions/12980648
@@ -21,6 +23,9 @@ k.formatting = k.formatting || (function () {
 
   function parseStringToElement(htmlString, wrapper) {
     wrapper = wrapper || 'span';
+    htmlString = DOMPurify.sanitize(htmlString, {
+      ALLOW_UNKNOWN_PROTOCOLS: true // for x-kifi-sel "look here"s
+    });
 
     var parser = new DOMParser();
     var docNode = parser.parseFromString(htmlString, 'text/html'); // wraps input in <html><body> tags
@@ -85,7 +90,7 @@ k.formatting = k.formatting || (function () {
   // Inspired by http://stackoverflow.com/questions/11563554
   var PARSER_ERROR_NS = (function () {
     var parser = new DOMParser();
-    var badParse = parser.parseFromString('<', 'text/html');
+    var badParse = parser.parseFromString('<', 'text/xml');
     return badParse.getElementsByTagName('parsererror')[0].namespaceURI;
   }());
 
@@ -345,7 +350,9 @@ function convertHtmlDraftToMarkdown(html) {
       return '[' + $2.replace(/([\]\\])/g, '\\$1') + '](x-kifi-sel:' + $1.replace(/([\)\\])/g, '\\$1') + ')';
     });
   html2 = emoji.encode(html2);
-  return $('<div>').html(html2).text().trim();
+
+  var elem = k.formatting.parseStringToElement(html2, 'div');
+  return elem.textContent.trim();
 }
 
 function convertTextDraftToMarkdown(text) {

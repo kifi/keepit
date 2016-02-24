@@ -604,7 +604,7 @@ k.keepBox = k.keepBox || (function () {
         toggleVisibilityItem($orgVisiblility, false);
         $orgVisiblility.focus().click();
       }
-      $box.find('.kifi-organization-name').html(matches[0].name);
+      $box.find('.kifi-organization-name').empty().append(document.createTextNode(matches[0].name));
     } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
