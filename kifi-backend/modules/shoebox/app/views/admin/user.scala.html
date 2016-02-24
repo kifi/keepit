@@ -14,7 +14,7 @@
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
 <ul>
     @for(installation: KifiInstallation <- kifiInstallations.toSet) {
-    <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
+    <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}; @{installation.userAgent.userAgent}</li>
     }
 </ul>
 }

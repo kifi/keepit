@@ -29,10 +29,11 @@ case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, d
   def all = secret + published + organization + discoverable
 }
 
-case class KifiInstallations(firefox: Boolean, chrome: Boolean, safari: Boolean, iphone: Boolean, android: Boolean, windows: Boolean, mac: Boolean, linux: Boolean) {
-  def exist: Boolean = firefox || chrome || safari || iphone || android
+case class KifiInstallations(firefox: Boolean, chrome: Boolean, safari: Boolean, yandex: Boolean, iphone: Boolean, android: Boolean, windows: Boolean, mac: Boolean, linux: Boolean) {
+  def exist: Boolean = firefox || chrome || safari || yandex || iphone || android
   def isEmpty: Boolean = !exist
 }
+
 object KifiInstallations {
   def apply(all: Seq[KifiInstallation]): KifiInstallations = {
     val agents = all.map(_.userAgent)
@@ -40,6 +41,7 @@ object KifiInstallations {
       firefox = agents.exists(_.name.toLowerCase.contains("firefox")),
       chrome = agents.exists(_.name.toLowerCase.contains("chrome")),
       safari = agents.exists(_.name.toLowerCase.contains("safari")),
+      yandex = agents.exists(_.name.toLowerCase.contains("yabrowser")),
       iphone = agents.exists(_.isIphone),
       android = agents.exists(_.isAndroid),
       windows = agents.exists(_.operatingSystemFamily.toLowerCase.contains("window")),
@@ -53,7 +55,6 @@ case class UserStatistics(
   user: User,
   paying: Boolean,
   emailAddress: Option[EmailAddress],
-  connections: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
   slackMemberships: Seq[SlackTeamMembership],
@@ -315,7 +316,6 @@ class UserStatisticsCommander @Inject() (
       user,
       paying = paying,
       emailAddress,
-      userConnectionRepo.getConnectionCount(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
       slackMemberships,
