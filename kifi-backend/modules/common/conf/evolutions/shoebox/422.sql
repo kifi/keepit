@@ -16,6 +16,7 @@ CREATE TABLE slack_team (
   public_channels_last_synced_at DATETIME DEFAULT NULL,
   channels_synced MEDIUMTEXT NOT NULL DEFAULT '',
   bot_token VARCHAR(512) DEFAULT NULL,
+  bot_users TEXT DEFAULT '',
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_u_slack_team_id (slack_team_id),
