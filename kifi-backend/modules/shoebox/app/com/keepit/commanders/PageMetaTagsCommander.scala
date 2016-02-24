@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig }
+import com.keepit.common.util.DescriptionElements
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
@@ -275,7 +276,7 @@ class PageMetaTagsCommander @Inject() (
     } yield {
       val splitName = authorOpt.map(_.name.split(" "))
       val description = {
-        val shoeboxDescription = keep.note.map(Hashtags.format)
+        val shoeboxDescription = keep.note.map(note => DescriptionElements.formatPlain(Hashtags.format(note)))
         val roverDescription = summary.values.headOption.flatMap(_.description)
         Seq(shoeboxDescription, roverDescription).flatten.mkString(". ")
       }
