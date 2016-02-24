@@ -4,7 +4,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
@@ -12,17 +13,17 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.path.Path
-import com.keepit.common.performance.{ AlertingTimer, StatsdTimingAsync }
+import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.strings._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.{ Duration, DateTime, Period }
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
+import org.joda.time.{ DateTime, Duration }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -73,6 +74,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   keepDecorator: KeepDecorator,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
+  pushingActor: ActorInstance[SlackPushingActor],
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
@@ -98,8 +100,19 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   }
 
   def schedule(libIds: Set[Id[Library]]): Unit = db.readWrite { implicit session =>
-    val nextPushAt = clock.now plus delayFromPushRequest
-    libIds.foreach { libId => pushLibraryAtLatest(libId, nextPushAt) }
+    val now = clock.now
+    val libsById = libRepo.getActiveByIds(libIds)
+    val superFastOrgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
+    val (libsToPushImmediately, libsToPushSoon) = libIds.partition { libId =>
+      libsById.get(libId).exists(_.organizationId.exists(superFastOrgs.contains))
+    }
+    if (libsToPushImmediately.nonEmpty) {
+      libsToPushImmediately.foreach { libId => pushLibraryAtLatest(libId, now) }
+      session.onTransactionSuccess { pushingActor.ref ! IfYouCouldJustGoAhead }
+    }
+    libsToPushSoon.foreach { libId =>
+      pushLibraryAtLatest(libId, now plus delayFromPushRequest)
+    }
   }
 
   private def processIntegrations(integrationsToProcess: Seq[LibraryToSlackChannel]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
