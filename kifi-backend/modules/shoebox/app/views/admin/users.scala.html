@@ -105,7 +105,6 @@
               <th>Keeps PRV/PUB/ORG/DISC</th>
               <th>Email Address</th>
               <th class="sorter-mmddyy">Date Joined</th>
-              <th>Experiment</th>
             </tr>
         </thead>
         <tbody>
@@ -159,7 +158,6 @@
               <td>@userStatistics.keepVisibilityCount.secret / @userStatistics.keepVisibilityCount.published / @userStatistics.keepVisibilityCount.organization / @userStatistics.keepVisibilityCount.discoverable</td>
               <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
               <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
-              <td>@userStatistics.experiments.mkString(", ")</td>
             </tr>
           }
         </tbody>
