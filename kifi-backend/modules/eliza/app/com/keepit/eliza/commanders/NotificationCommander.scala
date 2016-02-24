@@ -52,8 +52,7 @@ class NotificationCommander @Inject() (
       }
     }
   }
-
-  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[(Id[UserThread], JsValue, Boolean, Option[Id[NormalizedURI]])]): Seq[NotificationWithItems] = {
+  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[(Id[UserThread], JsValue, Boolean, Option[Id[NormalizedURI]])]): Seq[NotificationWithItems] = { // kill? no usages
     val recipient = Recipient(userId)
     db.readWrite { implicit session =>
       rawNotifs.map {
