@@ -88,7 +88,7 @@ class KeepInternerImpl @Inject() (
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    ownerIdOpt.foreach { ownerId => reportNewKeeps(ownerId, newKeeps, libraryOpt, context, notifyExternalSources = true) }
+    reportNewKeeps(newKeeps, libraryOpt, context, notifyExternalSources = true)
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
@@ -203,11 +203,11 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
+  private def reportNewKeeps(keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Analytics
-      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeperUserId, keeps, lib, ctx) }
-      heimdalClient.processKeepAttribution(keeperUserId, keeps)
+      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
+      keeps.groupBy(_.userId).collect { case (Some(userId), keeps) => heimdalClient.processKeepAttribution(userId, keeps) }
       searchClient.updateKeepIndex()
 
       // Make external notifications & fetch
