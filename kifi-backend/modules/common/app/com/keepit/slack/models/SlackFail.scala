@@ -39,6 +39,7 @@ object SlackErrorCode {
   val CHANNEL_NOT_FOUND = "channel_not_found"
   val INVALID_AUTH = "invalid_auth"
   val NOT_IN_CHANNEL = "not_in_channel"
+  val RESTRICTED_ACTION = "restricted_action"
   val TOKEN_REVOKED = "token_revoked"
   val WEBHOOK_REVOKED = "webhook_revoked"
 }
