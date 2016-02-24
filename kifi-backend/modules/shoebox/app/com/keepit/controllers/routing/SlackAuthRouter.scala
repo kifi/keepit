@@ -112,19 +112,22 @@ class SlackAuthRouter @Inject() (
       Keep.decodePublicId(pubId)
         .map(keepId => keepRepo.get(keepId)).filter(_.isActive)
         .map { keep =>
-          val isLoggedIn = request.userIdOpt.isDefined
+          val isLoggedIn = request.userIdOpt.isDefined && permissionCommander.getKeepPermissions(keep.id.get, request.userIdOpt).contains(KeepPermission.VIEW_KEEP)
           val keepPageUrl = pathCommander.pathForKeep(keep).absolute
-          if (!onKifi) {
-            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
-          } else if (onKifi && isLoggedIn) {
-            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keepPageUrl))
-          } else if (onKifi && !isLoggedIn) {
-            val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
-            val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))
-            orgOpt
-              .map(org => redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId)))
-              .getOrElse(Redirect(keepPageUrl))
-          } else Redirect(keep.url)
+          () match {
+            case _ if isLoggedIn && onKifi =>
+              Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keepPageUrl))
+            case _ if isLoggedIn && !onKifi =>
+              Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
+            case _ if !isLoggedIn && onKifi =>
+              val orgIdOpt = keep.organizationId.orElse(slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId))
+              val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))
+              orgOpt
+                .map(org => redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId)))
+                .getOrElse(Redirect(keepPageUrl))
+            case _ =>
+              Redirect(keep.url)
+          }
         }
     }
     redirOpt.getOrElse {
