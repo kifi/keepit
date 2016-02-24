@@ -290,6 +290,7 @@ class MessagingCommander @Inject() (
     }
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
+      shoebox.ingestElizaMessagesASAP()
     }
 
     val participantSet = thread.participants.allUsers

@@ -182,6 +182,7 @@ object Shoebox extends Service {
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
     def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
+    def ingestElizaMessagesASAP() = ServiceRoute(POST, "/internal/shoebox/database/ingestElizaMessagesASAP")
   }
 }
 
