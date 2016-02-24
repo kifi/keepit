@@ -46,12 +46,6 @@ case class UserStatistics(
   orgs: Seq[OrganizationStatisticsMin],
   orgCandidates: Seq[OrganizationStatisticsMin])
 
-case class OrganizationStatisticsMin(
-  org: Organization,
-  memberCount: Int,
-  libCount: Int,
-  slackLibs: Int)
-
 case class OrganizationStatisticsOverview(
   org: Organization,
   orgId: Id[Organization],
@@ -77,7 +71,20 @@ case class MemberStatistics(
   numLibrariesFollowing: Int,
   dateLastManualKeep: Option[DateTime])
 
-case class SlackStatistics(activeSlackLibs: Int, inactiveSlackLibs: Int, closedSlackLibs: Int, brokenSlackLibs: Int, teamSize: Int, bots: Set[String])
+case class SlackStatistics(
+  activeSlackLibs: Int,
+  inactiveSlackLibs: Int,
+  closedSlackLibs: Int,
+  brokenSlackLibs: Int,
+  teamSize: Int,
+  bots: Set[String])
+
+case class OrganizationStatisticsMin(
+  org: Organization,
+  memberCount: Int,
+  libCount: Int,
+  slackLibs: Int,
+  slackTeamSize: Int)
 
 object SlackStatistics {
   def apply(teamSize: Int, bots: Set[String], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
@@ -508,6 +515,18 @@ class UserStatisticsCommander @Inject() (
 
   def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {
     val orgId = org.id.get
+    val slackTeamSizeF = db.readOnlyReplica { implicit s =>
+      val teams = slackTeamRepo.getByOrganizationId(orgId)
+      teams flatMap { slackTeam =>
+        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
+        allMembers.find {
+          _.scopes.contains(SlackAuthScope.UsersRead)
+        }
+      } map { member =>
+        getTeamMembersCount(member)
+      } getOrElse Future.successful(if (teams.isEmpty) 0 else -1)
+    }
+
     val (mamberCount, libCount, slackLibs) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.countByOrgId(orgId)
       val libraries = libraryRepo.countOrganizationLibraries(orgId)
@@ -519,7 +538,8 @@ class UserStatisticsCommander @Inject() (
       org = org,
       memberCount = mamberCount,
       libCount = libCount,
-      slackLibs = slackLibs
+      slackLibs = slackLibs,
+      slackTeamSize = Await.result(slackTeamSizeF, Duration.Inf)
     )
   }
 
