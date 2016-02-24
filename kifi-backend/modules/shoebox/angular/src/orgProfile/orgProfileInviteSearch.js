@@ -30,7 +30,7 @@ angular.module('kifi')
         scope.inviter = profileService.me;
         scope.organization = scope.modalData.organization;
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        var slackTeamId = _.get(scope, 'organization.slack.slackTeam.id');
+        var slackTeamId = _.get(scope, 'organization.slackTeam.id');
         scope.slackLink = slackTeamId && ('https://www.kifi.com/s/' + slackTeamId + '/o/' + scope.organization.id);
 
         function inviteMember(opts) {
