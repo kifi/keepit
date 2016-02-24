@@ -1,9 +1,6 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.common.actor.ActorInstance
-import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import com.keepit.common.core.anyExtensionOps
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.akka.SafeFuture
@@ -13,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{ KeyFormat, TraversableFormat, TupleFormat }
-import com.keepit.common.logging.{ SlackLog, AccessLog, Logging }
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice }
 import com.keepit.common.net.URI
@@ -26,13 +23,11 @@ import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
-import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
+import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamRepo, SlackTeamMembershipRepo, SlackUserId, SlackChannelId, SlackTeamId }
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackIntegrationCommander, SlackInfoCommander }
+import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackInfoCommander, SlackIntegrationCommander }
 import com.keepit.social._
-import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -40,7 +35,6 @@ import play.api.mvc.Action
 import securesocial.core.IdentityId
 
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 class ShoeboxController @Inject() (
@@ -98,12 +92,9 @@ class ShoeboxController @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
-  shoeboxMessageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
-  implicit val config: PublicIdConfiguration,
-  implicit val inhouseSlackClient: InhouseSlackClient)(implicit private val clock: Clock)
+  libToSlackPusher: LibraryToSlackChannelPusher,
+  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
-
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   val MaxContentLength = 6000
 
@@ -646,9 +637,13 @@ class ShoeboxController @Inject() (
     NoContent
   }
 
-  def ingestElizaMessagesASAP() = Action { request =>
-    slackLog.info("Telling the message ingesting actor to go ahead", System.currentTimeMillis().toString)
-    shoeboxMessageIngestionActor.ref ! IfYouCouldJustGoAhead
+  def registerMessageOnKeep() = Action(parse.tolerantJson) { request =>
+    import RegisterMessageOnKeep._
+    val input = request.body.as[Request]
+    val keep = db.readWrite { implicit s =>
+      keepRepo.save(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
+    }
+    libToSlackPusher.schedule(keep.connections.libraries)
     NoContent
   }
 }

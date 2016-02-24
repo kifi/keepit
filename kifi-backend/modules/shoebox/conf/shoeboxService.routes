@@ -1042,9 +1042,9 @@ POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keep
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: SlackTeamId)
 
-POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
-POST     /internal/shoebox/database/addUsersToKeep   @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
-POST     /internal/shoebox/database/ingestElizaMessagesASAP   @com.keepit.controllers.internal.ShoeboxController.ingestElizaMessagesASAP()
+POST     /internal/shoebox/database/internKeep              @com.keepit.controllers.internal.ShoeboxController.internKeep()
+POST     /internal/shoebox/database/addUsersToKeep          @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
+POST     /internal/shoebox/database/registerMessageOnKeep   @com.keepit.controllers.internal.ShoeboxController.registerMessageOnKeep()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
