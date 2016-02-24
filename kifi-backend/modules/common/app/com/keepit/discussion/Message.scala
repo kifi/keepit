@@ -78,7 +78,8 @@ case class DiscussionKeep(
   keptBy: Option[BasicUser],
   keptAt: DateTime,
   imagePath: Option[ImagePath],
-  libraries: Set[LibraryCardInfo])
+  libraries: Set[LibraryCardInfo],
+  permissions: Set[KeepPermission])
 object DiscussionKeep {
   private implicit val libCardFormat = LibraryCardInfo.internalFormat
   implicit val format = Json.format[DiscussionKeep]

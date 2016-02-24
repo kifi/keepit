@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.shared
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ DiscussionFail, Message }
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
@@ -82,7 +82,7 @@ class SharedWsMessagingController @Inject() (
         log.info(s"[get_thread] user ${socket.userId} thread $keepIdStr")
         Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
           basicMessageCommander.getDiscussionAndKeep(socket.userId, keepId).map {
-            case (discussion, keepOpt) =>
+            case (discussion, keep) =>
               socket.channel.push(Json.arr(
                 "thread", Json.obj(
                   "id" -> keepIdStr,
@@ -90,8 +90,15 @@ class SharedWsMessagingController @Inject() (
                   "nUrl" -> discussion.nUrl,
                   "participants" -> discussion.participants,
                   "messages" -> discussion.messages.reverse,
-                  "keep" -> keepOpt
+                  "keep" -> keep
                 )))
+          }.recover {
+            case fail: DiscussionFail =>
+              airbrake.notify(fail)
+              socket.channel.push(Json.arr(fail.err, keepIdStr))
+            case fail =>
+              airbrake.notify(fail)
+              socket.channel.push(Json.arr("server_error", keepIdStr))
           }
         }
     },
