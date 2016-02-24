@@ -257,12 +257,18 @@ class SlackTeamDigestNotificationActor @Inject() (
         msg <- msgOpt
         generalChannel <- generalChannelOpt
       } yield {
-        slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map(_ => ()).andThen {
+        slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map { sent =>
+          slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
+          ()
+        }.recover {
+          case SlackFail.NoValidPushMethod =>
+            slackLog.info("Could not find a way to push a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, "), but marking it anwaysy")
+            ()
+        }.andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
               slackTeamRepo.save(slackTeamRepo.get(team.id.get).withGeneralChannelId(generalChannel).withLastDigestNotificationAt(now))
             }
-            slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
         }
       }
       pushOpt.getOrElse { Future.successful(()) }
