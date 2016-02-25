@@ -84,8 +84,8 @@ class SlackPushingActor @Inject() (
   keepDecorator: KeepDecorator,
   airbrake: AirbrakeNotifier,
   orgConfigRepo: OrganizationConfigurationRepo,
-  slackPushForKeepTimestampCache: SlackPushForKeepTimestampCache,
-  slackPushForMessageTimestampCache: SlackPushForMessageTimestampCache,
+  slackPushForKeepRepo: SlackPushForKeepRepo,
+  slackPushForMessageRepo: SlackPushForMessageRepo,
   orgExperimentRepo: OrganizationExperimentRepo,
   eliza: ElizaServiceClient,
   implicit val executionContext: ExecutionContext,
@@ -193,7 +193,7 @@ class SlackPushingActor @Inject() (
           _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
             case (k, ktl) =>
               // lookup k in a cache to find a slack message timestamp
-              slackPushForKeepTimestampCache.direct.get(SlackPushForKeepTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
+              slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
                 // regenerate the slack message
                 val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                   keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
@@ -206,7 +206,7 @@ class SlackPushingActor @Inject() (
                 }.imap(_ => ()).recover {
                   case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
-                    slackPushForKeepTimestampCache.direct.remove(SlackPushForKeepTimestampKey(integration.id.get, k.id.get))
+                    slackPushForKeepRepo.dropTimestampFromCache(integration.id.get, k.id.get)
                   case fail: SlackAPIErrorResponse =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
                     ()
@@ -216,7 +216,7 @@ class SlackPushingActor @Inject() (
           _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
             case (k, msgs) =>
               FutureHelpers.sequentialExec(msgs) { msg =>
-                slackPushForMessageTimestampCache.direct.get(SlackPushForMessageTimestampKey(integration.id.get, msg.id)).map { oldCommentTimestamp =>
+                slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).map { oldCommentTimestamp =>
                   // regenerate the slack message
                   val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                     messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
@@ -225,7 +225,7 @@ class SlackPushingActor @Inject() (
                   slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
                     case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
                       slackLog.warn(s"Failed to update comment ${msg.id} because the edit window closed, remove it from the cache")
-                      slackPushForMessageTimestampCache.direct.remove(SlackPushForMessageTimestampKey(integration.id.get, msg.id))
+                      slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
                     case fail: SlackAPIErrorResponse =>
                       slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
                       ()
@@ -251,12 +251,16 @@ class SlackPushingActor @Inject() (
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { pushedMessage =>
-                  slackPushForKeepTimestampCache.set(SlackPushForKeepTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
+                  if (integration.slackChannelId.isDefined) {
+                    slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
+                  }
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
                 pushedMessageOpt.foreach { pushedMessage =>
-                  slackPushForMessageTimestampCache.set(SlackPushForMessageTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
+                  if (integration.slackChannelId.isDefined) {
+                    slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
+                  }
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }

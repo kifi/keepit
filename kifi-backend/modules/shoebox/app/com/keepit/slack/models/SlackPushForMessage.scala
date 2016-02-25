@@ -31,6 +31,18 @@ case class SlackPushForMessage(
   def isActive: Boolean = state == SlackPushForMessageStates.ACTIVE
 }
 object SlackPushForMessageStates extends States[SlackPushForMessage]
+object SlackPushForMessage {
+  def fromMessage(integration: LibraryToSlackChannel, messageId: Id[Message], pushedMessage: SlackMessageResponse): SlackPushForMessage = {
+    SlackPushForMessage(
+      slackTeamId = integration.slackTeamId,
+      slackChannelId = integration.slackChannelId.get,
+      integrationId = integration.id.get,
+      messageId = messageId,
+      timestamp = pushedMessage.timestamp,
+      text = pushedMessage.text
+    )
+  }
+}
 
 case class SlackPushForMessageTimestampKey(integrationId: Id[LibraryToSlackChannel], msgId: Id[Message]) extends Key[SlackTimestamp] {
   override val version = 1
@@ -44,6 +56,8 @@ class SlackPushForMessageTimestampCache(stats: CacheStatistics, accessLog: Acces
 @ImplementedBy(classOf[SlackPushForMessageRepoImpl])
 trait SlackPushForMessageRepo extends Repo[SlackPushForMessage] {
   def intern(model: SlackPushForMessage)(implicit session: RWSession): SlackPushForMessage // interns by (integrationId, messageId)
+  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], messageId: Id[Message]): Option[SlackTimestamp]
+  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], messageId: Id[Message]): Unit
 }
 
 @Singleton
@@ -85,5 +99,12 @@ class SlackPushForMessageRepoImpl @Inject() (
   def intern(model: SlackPushForMessage)(implicit session: RWSession): SlackPushForMessage = {
     val existingModel = rows.filter(r => r.integrationId === model.integrationId && r.messageId === model.messageId).firstOption
     save(model.copy(id = existingModel.map(_.id.get)))
+  }
+
+  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], messageId: Id[Message]): Option[SlackTimestamp] = {
+    timestampCache.direct.get(SlackPushForMessageTimestampKey(integrationId, messageId))
+  }
+  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], messageId: Id[Message]): Unit = {
+    timestampCache.direct.remove(SlackPushForMessageTimestampKey(integrationId, messageId))
   }
 }

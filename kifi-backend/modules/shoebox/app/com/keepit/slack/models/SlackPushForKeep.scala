@@ -29,6 +29,18 @@ case class SlackPushForKeep(
   def isActive: Boolean = state == SlackPushForKeepStates.ACTIVE
 }
 object SlackPushForKeepStates extends States[SlackPushForKeep]
+object SlackPushForKeep {
+  def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], pushedMessage: SlackMessageResponse): SlackPushForKeep = {
+    SlackPushForKeep(
+      slackTeamId = integration.slackTeamId,
+      slackChannelId = integration.slackChannelId.get,
+      integrationId = integration.id.get,
+      keepId = keepId,
+      timestamp = pushedMessage.timestamp,
+      text = pushedMessage.text
+    )
+  }
+}
 
 case class SlackPushForKeepTimestampKey(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]) extends Key[SlackTimestamp] {
   override val version = 1
@@ -42,6 +54,8 @@ class SlackPushForKeepTimestampCache(stats: CacheStatistics, accessLog: AccessLo
 @ImplementedBy(classOf[SlackPushForKeepRepoImpl])
 trait SlackPushForKeepRepo extends Repo[SlackPushForKeep] {
   def intern(model: SlackPushForKeep)(implicit session: RWSession): SlackPushForKeep // interns by (integrationId, keepId)
+  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Option[SlackTimestamp]
+  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Unit
 }
 
 @Singleton
@@ -83,5 +97,12 @@ class SlackPushForKeepRepoImpl @Inject() (
   def intern(model: SlackPushForKeep)(implicit session: RWSession): SlackPushForKeep = {
     val existingModel = rows.filter(r => r.integrationId === model.integrationId && r.keepId === model.keepId).firstOption
     save(model.copy(id = existingModel.map(_.id.get)))
+  }
+
+  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Option[SlackTimestamp] = {
+    timestampCache.direct.get(SlackPushForKeepTimestampKey(integrationId, keepId))
+  }
+  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Unit = {
+    timestampCache.direct.remove(SlackPushForKeepTimestampKey(integrationId, keepId))
   }
 }
