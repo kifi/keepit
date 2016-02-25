@@ -56,6 +56,8 @@ trait SlackClientWrapper {
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
   def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
+
 }
 
 @Singleton
@@ -270,4 +272,7 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.getUserInfo(token, userId).andThen(onRevokedToken(token))
   }
 
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
+    slackClient.getUsers(token).andThen(onRevokedToken(token))
+  }
 }

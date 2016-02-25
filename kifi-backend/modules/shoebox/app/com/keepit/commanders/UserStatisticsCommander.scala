@@ -187,7 +187,7 @@ class UserStatisticsCommander @Inject() (
     keepToLibraryRepo: KeepToLibraryRepo,
     emailRepo: UserEmailAddressRepo,
     elizaClient: ElizaServiceClient,
-    slackClient: SlackClient,
+    slackClient: SlackClientWrapper,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     userConnectionRepo: UserConnectionRepo,
