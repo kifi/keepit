@@ -2,34 +2,31 @@ package com.keepit.slack
 
 import com.google.inject.Inject
 import com.keepit.commanders._
-import com.keepit.common.db.Id.ord
-import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
-import com.keepit.common.cache._
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.slack.models.SlackErrorCode._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.core._
+import com.keepit.common.db.Id.ord
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ AccessLog, SlackLog }
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time.Clock
-import com.keepit.common.util.{ LinkElement, DescriptionElements }
-import com.keepit.discussion.{ Message, CrossServiceMessage }
+import com.keepit.common.strings._
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.LibrarySpace.OrganizationSpace
-import com.keepit.slack.models.SlackIntegration.{ ForbiddenSlackIntegration, BrokenSlackIntegration }
+import com.keepit.model._
+import com.keepit.slack.models.SlackErrorCode._
+import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
+import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
-import com.keepit.model._
-import com.keepit.slack.models._
-import org.joda.time.{ DateTime, Duration, Period }
-import com.keepit.common.core._
-import com.keepit.common.strings._
-import com.keepit.common.time._
+import org.joda.time.{ DateTime, Duration }
 
-import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.duration.{ Duration => ScalaDuration }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object SlackPushingActor {
@@ -68,24 +65,6 @@ object SlackPushingActor {
   }
 }
 
-case class SlackKeepPushTimestampKey(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]) extends Key[SlackTimestamp] {
-  override val version = 2
-  val namespace = "slack_keep_push_timestamp"
-  def toKey(): String = s"${integrationId.id}_${keepId.id}"
-}
-
-class SlackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ScalaDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ScalaDuration)*)
-  extends JsonCacheImpl[SlackKeepPushTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class SlackCommentPushTimestampKey(integrationId: Id[LibraryToSlackChannel], msgId: Id[Message]) extends Key[SlackTimestamp] {
-  override val version = 1
-  val namespace = "slack_comment_push_timestamp"
-  def toKey(): String = s"${integrationId.id}_${msgId.id}"
-}
-
-class SlackCommentPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ScalaDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ScalaDuration)*)
-  extends JsonCacheImpl[SlackCommentPushTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 class SlackPushingActor @Inject() (
   db: Database,
   organizationInfoCommander: OrganizationInfoCommander,
@@ -105,8 +84,8 @@ class SlackPushingActor @Inject() (
   keepDecorator: KeepDecorator,
   airbrake: AirbrakeNotifier,
   orgConfigRepo: OrganizationConfigurationRepo,
-  slackKeepPushTimestampCache: SlackKeepPushTimestampCache,
-  slackCommentPushTimestampCache: SlackCommentPushTimestampCache,
+  slackPushForKeepTimestampCache: SlackPushForKeepTimestampCache,
+  slackPushForMessageTimestampCache: SlackPushForMessageTimestampCache,
   orgExperimentRepo: OrganizationExperimentRepo,
   eliza: ElizaServiceClient,
   implicit val executionContext: ExecutionContext,
@@ -214,7 +193,7 @@ class SlackPushingActor @Inject() (
           _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
             case (k, ktl) =>
               // lookup k in a cache to find a slack message timestamp
-              slackKeepPushTimestampCache.direct.get(SlackKeepPushTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
+              slackPushForKeepTimestampCache.direct.get(SlackPushForKeepTimestampKey(integration.id.get, k.id.get)).map { oldKeepTimestamp =>
                 // regenerate the slack message
                 val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                   keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
@@ -227,7 +206,7 @@ class SlackPushingActor @Inject() (
                 }.imap(_ => ()).recover {
                   case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
-                    slackKeepPushTimestampCache.direct.remove(SlackKeepPushTimestampKey(integration.id.get, k.id.get))
+                    slackPushForKeepTimestampCache.direct.remove(SlackPushForKeepTimestampKey(integration.id.get, k.id.get))
                   case fail: SlackAPIErrorResponse =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
                     ()
@@ -237,7 +216,7 @@ class SlackPushingActor @Inject() (
           _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
             case (k, msgs) =>
               FutureHelpers.sequentialExec(msgs) { msg =>
-                slackCommentPushTimestampCache.direct.get(SlackCommentPushTimestampKey(integration.id.get, msg.id)).map { oldCommentTimestamp =>
+                slackPushForMessageTimestampCache.direct.get(SlackPushForMessageTimestampKey(integration.id.get, msg.id)).map { oldCommentTimestamp =>
                   // regenerate the slack message
                   val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
                     messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
@@ -246,7 +225,7 @@ class SlackPushingActor @Inject() (
                   slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
                     case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
                       slackLog.warn(s"Failed to update comment ${msg.id} because the edit window closed, remove it from the cache")
-                      slackCommentPushTimestampCache.direct.remove(SlackCommentPushTimestampKey(integration.id.get, msg.id))
+                      slackPushForMessageTimestampCache.direct.remove(SlackPushForMessageTimestampKey(integration.id.get, msg.id))
                     case fail: SlackAPIErrorResponse =>
                       slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
                       ()
@@ -272,12 +251,12 @@ class SlackPushingActor @Inject() (
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { pushedMessage =>
-                  slackKeepPushTimestampCache.set(SlackKeepPushTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
+                  slackPushForKeepTimestampCache.set(SlackPushForKeepTimestampKey(integration.id.get, k.id.get), pushedMessage.timestamp)
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
                 pushedMessageOpt.foreach { pushedMessage =>
-                  slackCommentPushTimestampCache.set(SlackCommentPushTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
+                  slackPushForMessageTimestampCache.set(SlackPushForMessageTimestampKey(integration.id.get, kifiMsg.id), pushedMessage.timestamp)
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }

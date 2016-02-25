@@ -4,7 +4,6 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.slack.models._
 import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
