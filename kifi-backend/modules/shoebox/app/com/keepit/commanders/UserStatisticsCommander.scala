@@ -119,7 +119,7 @@ class UserStatisticsCommander @Inject() (
     userRepo.getAllUsers(inviters).values.toSeq
   }
 
-  def getLastLocation(userId: Id[User])(implicit session: RSession) = {
+  def getLastLocation(userId: Id[User])(implicit session: RSession): Option[RichIpAddress] = {
     userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) flatMap { locationValue =>
       RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt
     }
@@ -185,7 +185,7 @@ class UserStatisticsCommander @Inject() (
       val plan = planManagementCommander.currentPlan(org.id.get)
       plan.pricePerCyclePerUser.cents > 0
     }
-    val lastLocation = getLastLocation(user.id.get)
+    val lastLocation: Option[RichIpAddress] = None //getLastLocation(user.id.get)
 
     UserStatistics(
       user,
