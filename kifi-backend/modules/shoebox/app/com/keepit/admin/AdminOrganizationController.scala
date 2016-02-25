@@ -51,7 +51,8 @@ class AdminOrganizationController @Inject() (
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     orgDomainOwnershipCommander: OrganizationDomainOwnershipCommanderImpl,
     handleCommander: HandleCommander,
-    statsCommander: UserStatisticsCommander,
+    userStatsCommander: UserStatisticsCommander,
+    orgStatsCommander: OrgStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
@@ -69,7 +70,7 @@ class AdminOrganizationController @Inject() (
     val orgsCount = filteredOrgs.length
     val startingIndex = page * pageSize
     val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
-    Future.sequence(orgsPage.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
+    Future.sequence(orgsPage.map(org => orgStatsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
       (orgsCount, orgsStats)
     }
   }
@@ -95,7 +96,7 @@ class AdminOrganizationController @Inject() (
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
-    Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgStats =>
+    Future.sequence(orgs.map(org => orgStatsCommander.organizationStatisticsOverview(org))).map { orgStats =>
       Ok(html.admin.organizations(
         orgStats,
         "Three day active orgs",
@@ -148,7 +149,7 @@ class AdminOrganizationController @Inject() (
   }
 
   def organizationViewById(orgId: Id[Organization], numMemberRecos: Int, adminId: Id[User])(implicit request: UserRequest[AnyContent]) = {
-    val orgStats = statsCommander.organizationStatistics(orgId, adminId, numMemberRecos)
+    val orgStats = orgStatsCommander.organizationStatistics(orgId, adminId, numMemberRecos)
     orgStats.map { os => Ok(html.admin.organization(os)) }
   }
 
@@ -247,7 +248,7 @@ class AdminOrganizationController @Inject() (
         "error" -> s"No results for '$orgName' found"
       ))
     } else {
-      Future.sequence(orgs.map(org => statsCommander.organizationStatisticsOverview(org))).map { orgs =>
+      Future.sequence(orgs.map(org => orgStatsCommander.organizationStatisticsOverview(org))).map { orgs =>
         Ok(html.admin.organizations(
           orgs,
           s"Results for '$orgName'",
