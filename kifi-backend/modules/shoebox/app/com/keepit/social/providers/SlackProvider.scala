@@ -1,17 +1,16 @@
 package com.keepit.social.providers
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.social.UserIdentityProvider
+import com.keepit.common.core._
+import com.keepit.common.oauth._
+import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.Application
-import com.keepit.common.oauth._
-import com.keepit.social.UserIdentity
-import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
-import securesocial.core.{ IdentityProvider, AuthenticationMethod }
-import scala.concurrent.duration._
-import com.keepit.common.core._
+import play.api.mvc.{ Request, Result }
+import securesocial.core.{ AuthenticationMethod, IdentityProvider }
 
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class SlackProvider(app: Application) extends IdentityProvider(app) with UserIdentityProvider {

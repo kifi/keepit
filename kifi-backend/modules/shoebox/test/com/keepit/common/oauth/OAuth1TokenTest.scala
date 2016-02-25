@@ -48,7 +48,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
       followersCount = 42,
       friendsCount = 42
     )
-    TwitterIdentity(oauth1Info, profileInfo)
+    TwitterOAuthProvider.toIdentity(oauth1Info, profileInfo)
   }
 
   def setup()(implicit injector: Injector) = {

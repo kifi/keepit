@@ -5,22 +5,31 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.OAuth2TokenInfo
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsArray
 import play.api.libs.ws.{ WSResponse, WS }
-import securesocial.core.IdentityId
+import securesocial.core.{ AuthenticationMethod, SocialUser, OAuth2Info, IdentityId }
 
 import scala.concurrent.Future
 
 case class LinkedInAPIError(error: String, message: String) extends Exception(s"Error $error while calling Facebook: $message")
 
-trait LinkedInOAuthProvider extends OAuth2Support[LinkedInIdentity] {
-  val providerId = ProviderIds.LinkedIn
-}
-
 object LinkedInOAuthProvider {
+  def toIdentity(auth: OAuth2Info, info: UserProfileInfo): LinkedInIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.userId.id, ProviderIds.LinkedIn.id),
+      firstName = info.firstNameOpt getOrElse "",
+      lastName = info.lastNameOpt getOrElse "",
+      fullName = info.name,
+      avatarUrl = info.pictureUrl.map(_.toString),
+      email = info.emailOpt.map(_.address),
+      authMethod = AuthenticationMethod.OAuth2,
+      oAuth2Info = Some(auth)
+    )
+    LinkedInIdentity(socialUser)
+  }
+
   def api(accessToken: OAuth2AccessToken) = s"https://api.linkedin.com/v1/people/~:(id,first-name,last-name,email-address,formatted-name,public-profile-url,picture-urls::(original);secure=true)?format=json&oauth2_access_token=${accessToken.token}"
   val LinkedIn = "linkedin"
   val ErrorCode = "errorCode"
@@ -34,6 +43,10 @@ object LinkedInOAuthProvider {
   val FormattedName = "formattedName"
   val PictureUrl = "pictureUrls"
   val PublicProfileUrl = "publicProfileUrl"
+}
+
+trait LinkedInOAuthProvider extends OAuth2Support[LinkedInIdentity] {
+  val providerId = ProviderIds.LinkedIn
 }
 
 @Singleton
@@ -50,7 +63,7 @@ class LinkedInOAuthProviderImpl @Inject() (
 
   def getRichIdentity(accessToken: OAuth2TokenInfo): Future[LinkedInIdentity] = {
     getUserProfileInfo(accessToken.accessToken).map { info =>
-      LinkedInIdentity(accessToken, info)
+      LinkedInOAuthProvider.toIdentity(accessToken, info)
     }
   }
 

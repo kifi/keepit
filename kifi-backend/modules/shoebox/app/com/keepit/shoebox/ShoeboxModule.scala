@@ -8,6 +8,7 @@ import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.integration.ReaperModule
 import com.keepit.common.mail.MailModule
+import com.keepit.common.oauth.OAuthConfigurationModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.social.ProdSocialGraphModule
@@ -38,6 +39,7 @@ case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
 trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   //these are modules that inheriting modules need to provide
   val secureSocialModule: SecureSocialModule
+  val oauthModule: OAuthConfigurationModule
   val userActionsModule: UserActionsModule
   val mailModule: MailModule
   val reaperModule: ReaperModule

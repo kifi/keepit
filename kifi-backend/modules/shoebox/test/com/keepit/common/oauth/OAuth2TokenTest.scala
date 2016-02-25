@@ -51,7 +51,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
       None,
       Some("http://www.foo.com/bar")
     )
-    FacebookIdentity(oauth2Info, profileInfo)
+    FacebookOAuthProvider.toIdentity(oauth2Info, profileInfo)
   }
 
   val linkedinIdentity = {
@@ -68,7 +68,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
       None,
       Some("http://www.foo.com/bar")
     )
-    LinkedInIdentity(oauth2Info, profileInfo)
+    LinkedInOAuthProvider.toIdentity(oauth2Info, profileInfo)
   }
 
   def setup()(implicit injector: Injector) = {
