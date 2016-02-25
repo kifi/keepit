@@ -60,7 +60,7 @@ class SlackPushForKeepRepoImpl @Inject() (
   type RepoImpl = SlackPushForKeepTable
   class SlackPushForKeepTable(tag: Tag) extends RepoTable[SlackPushForKeep](db, tag, "slack_push_for_keep") {
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
-    def slackChannelId = column[SlackChannelId]("slack_team_id", O.NotNull)
+    def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
     def integrationId = column[Id[LibraryToSlackChannel]]("integration_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def timestamp = column[SlackTimestamp]("slack_timestamp", O.NotNull)

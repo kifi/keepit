@@ -62,7 +62,7 @@ class SlackPushForMessageRepoImpl @Inject() (
   type RepoImpl = SlackPushForMessageTable
   class SlackPushForMessageTable(tag: Tag) extends RepoTable[SlackPushForMessage](db, tag, "slack_push_for_message") {
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
-    def slackChannelId = column[SlackChannelId]("slack_team_id", O.NotNull)
+    def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
     def integrationId = column[Id[LibraryToSlackChannel]]("integration_id", O.NotNull)
     def messageId = column[Id[Message]]("message_id", O.NotNull)
     def timestamp = column[SlackTimestamp]("slack_timestamp", O.NotNull)
