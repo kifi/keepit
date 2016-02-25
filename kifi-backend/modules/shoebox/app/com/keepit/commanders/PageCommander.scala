@@ -153,7 +153,7 @@ class PageCommander @Inject() (
       val minSamples = 10
 
       val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(since))
-      if (positions.size >= minSamples) {
+      val positionOpt = if (positions.size >= minSamples) {
         val countByPosition = positions.foldLeft(Map.empty[Long, Int]) {
           case (countByBucket, js) =>
             val bottomOpt = (js \ "bottom").asOpt[Double]
@@ -163,12 +163,13 @@ class PageCommander @Inject() (
         } - 0 // ignore default position
 
         val (positionMode, _) = countByPosition.maxBy { case (position, count) => count }
-
-        if (positionMode != 0) log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=$positionMode")
-
-        if (positionMode < 0) Some(Json.obj("top" -> positionMode))
+        if (positionMode < 0) Some(Json.obj("top" -> -positionMode))
         else Some(Json.obj("bottom" -> positionMode))
       } else None
+
+      positionOpt.foreach(pos => log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=${Json.stringify(pos)}"))
+
+      positionOpt
     }
   }
 
@@ -267,7 +268,7 @@ class PageCommander @Inject() (
 }
 
 case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {
-  override val version = 2
+  override val version = 3
   val namespace = "inferred_keeper_position"
   def toKey(): String = id.id.toString
 }
