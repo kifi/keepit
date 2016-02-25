@@ -1,8 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.classify.NormalizedHostname
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -10,12 +9,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.common.util.DollarAmount
 import com.keepit.model._
-import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
+import com.keepit.payments.PlanManagementCommander
 import com.keepit.slack.models._
 import com.keepit.slack._
 import org.joda.time.DateTime
+import play.api.libs.json.Json
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Await }
 import scala.util.Try
@@ -59,32 +58,8 @@ case class UserStatistics(
   librariesFollowed: Int,
   dateLastManualKeep: Option[DateTime],
   orgs: Seq[OrganizationStatisticsMin],
-  orgCandidates: Seq[OrganizationStatisticsMin])
-
-case class OrganizationStatisticsOverview(
-  org: Organization,
-  orgId: Id[Organization],
-  pubId: PublicId[Organization],
-  ownerId: Id[User],
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  libStats: LibCountStatistics,
-  slackStats: SlackStatistics,
-  numKeeps: Int,
-  members: Int,
-  domains: Set[NormalizedHostname],
-  paying: Boolean)
-
-case class MemberStatistics(
-  user: User,
-  online: Option[Boolean],
-  numChats: Int,
-  keepVisibilityCount: KeepVisibilityCount,
-  numLibrariesCreated: Int,
-  numLibrariesCollaborating: Int,
-  numLibrariesFollowing: Int,
-  dateLastManualKeep: Option[DateTime])
+  orgCandidates: Seq[OrganizationStatisticsMin],
+  lastLocation: Option[RichIpAddress])
 
 case class LibCountStatistics(privateLibCount: Int, protectedLibCount: Int, publicLibCount: Int)
 
@@ -98,38 +73,6 @@ object LibCountStatistics {
   }
 }
 
-case class OrganizationStatistics(
-  org: Organization,
-  orgId: Id[Organization],
-  pubId: PublicId[Organization],
-  owner: User,
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  libStats: LibCountStatistics,
-  slackStats: SlackStatistics,
-  numKeeps: Int,
-  numKeepsLastWeek: Int,
-  members: Set[OrganizationMembership],
-  candidates: Set[OrganizationMembershipCandidate],
-  membersStatistics: Map[Id[User], MemberStatistics],
-  memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
-  experiments: Set[OrganizationExperimentType],
-  domains: Set[NormalizedHostname],
-  internalMemberChatStats: Seq[SummaryByYearWeek],
-  allMemberChatStats: Seq[SummaryByYearWeek],
-  credit: DollarAmount,
-  stripeToken: String,
-  paymentStatus: PaymentStatus,
-  planRenewal: DateTime,
-  plan: PaidPlan,
-  accountFrozen: Boolean)
-
-case class OrganizationMemberRecommendationInfo(
-  user: User,
-  emailAddress: Option[EmailAddress],
-  score: Double)
-
 case class FullUserStatistics(
   libs: LibCountStatistics,
   slacks: SlackStatistics,
@@ -142,7 +85,8 @@ case class FullUserStatistics(
   kifiInstallations: Seq[KifiInstallation],
   emails: Seq[UserEmailAddress],
   invitedByUsers: Seq[User],
-  paying: Boolean)
+  paying: Boolean,
+  lastLocation: Option[RichIpAddress])
 
 class UserStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -168,6 +112,7 @@ class UserStatisticsCommander @Inject() (
     slackTeamRepo: SlackTeamRepo,
     orgStatisticsCommander: OrgStatisticsCommander,
     airbrake: AirbrakeNotifier,
+    userValueRepo: UserValueRepo,
     planManagementCommander: PlanManagementCommander) extends Logging {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -176,13 +121,20 @@ class UserStatisticsCommander @Inject() (
     userRepo.getAllUsers(inviters).values.toSeq
   }
 
+  def getLastLocation(userId: Id[User])(implicit session: RSession) = {
+    userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) flatMap { locationValue =>
+      RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt
+    }
+  }
+
   def fullUserStatistics(userId: Id[User]) = {
-    val (keepCount, libs, slackMembers, slackToLibs) = db.readOnlyReplica { implicit s =>
+    val (keepCount, libs, slackMembers, slackToLibs, lastLocation) = db.readOnlyReplica { implicit s =>
       val keepCount = keepRepo.getCountByUser(userId)
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
       val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
       val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
-      (keepCount, libs, slackMembers, slackToLibs)
+      val lastLocation = getLastLocation(userId)
+      (keepCount, libs, slackMembers, slackToLibs, lastLocation)
     }
     val (countF, botsF) = db.readOnlyReplica { implicit s =>
       val members = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }
@@ -214,7 +166,7 @@ class UserStatisticsCommander @Inject() (
       (manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying) <- infoF
     } yield {
       val slacks = SlackStatistics(slackTeamMembersCount, bots, slackToLibs)
-      FullUserStatistics(libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying)
+      FullUserStatistics(libs, slacks, keepCount, manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying, lastLocation)
     }
   }
 
@@ -236,6 +188,7 @@ class UserStatisticsCommander @Inject() (
       val plan = planManagementCommander.currentPlan(org.id.get)
       plan.pricePerCyclePerUser.cents > 0
     }
+    val lastLocation = getLastLocation(user.id.get)
 
     UserStatistics(
       user,
@@ -250,7 +203,8 @@ class UserStatisticsCommander @Inject() (
       librariesFollowed,
       latestManualKeepTime,
       orgsStats,
-      orgCandidatesStats
+      orgCandidatesStats,
+      lastLocation
     )
   }
 
