@@ -106,7 +106,7 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
       slackCommander.registerAuthorization(
         Some(user.id.get),
         SlackAuthorizationResponse(
-          accessToken = SlackAccessToken("fake"),
+          accessToken = SlackUserAccessToken("fake"),
           scopes = Set(),
           teamName = SlackTeamName("fake"),
           teamId = slackTeamId,

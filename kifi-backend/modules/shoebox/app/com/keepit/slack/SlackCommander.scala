@@ -129,7 +129,7 @@ class SlackCommanderImpl @Inject() (
     } yield kifiBotToken
 
     kifiBotTokenOpt match {
-      case Some(kifiBotToken) => slackClient.validateKifiBotToken(kifiBotToken).imap {
+      case Some(kifiBotToken) => slackClient.validateToken(kifiBotToken).imap {
         case true => SlackAuthScope.inheritableBotScopes
         case false => Set.empty[SlackAuthScope]
       }
@@ -147,8 +147,8 @@ class SlackCommanderImpl @Inject() (
     } yield (slackTeamId, slackTeamMembership.slackUserId, tokenWithScopes)
 
     savedIdentityAndExistingUserScopesOpt match {
-      case Some((slackTeamId, slackUserId, SlackTokenWithScopes(token, existingScopes))) => slackClient.validateUserToken(token).imap {
-        case true => (Some((slackTeamId, slackUserId)), existingScopes)
+      case Some((slackTeamId, slackUserId, SlackTokenWithScopes(userToken, existingUserScopes))) => slackClient.validateToken(userToken).imap {
+        case true => (Some((slackTeamId, slackUserId)), existingUserScopes)
         case false => (None, Set.empty[SlackAuthScope])
       }
       case None => Future.successful((None, Set.empty[SlackAuthScope]))
