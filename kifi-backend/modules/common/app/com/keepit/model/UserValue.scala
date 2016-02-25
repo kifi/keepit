@@ -96,6 +96,7 @@ object UserValueName {
 
   val DEFAULT_LIBRARY_ARRANGEMENT = UserValueName("default_library_arrangement")
   val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
+  val LAST_RECORDED_LOCATION = UserValueName("last_recorded_location")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
