@@ -87,6 +87,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
+  def getByKifiBotToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[BotUserAuthorization])(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
@@ -205,6 +206,10 @@ class SlackTeamRepoImpl @Inject() (
     slackTeamIdCache.bulkGetOrElse(slackTeamIds.map(SlackTeamIdKey(_))) { missingKeys =>
       rows.filter(row => row.slackTeamId.inSet(missingKeys.map(_.id)) && row.state =!= excludeState.orNull).list.map { team => SlackTeamIdKey(team.slackTeamId) -> team }.toMap
     }.map { case (SlackTeamIdKey(slackTeamId), team) => slackTeamId -> team }
+  }
+
+  def getByKifiBotToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeam] = {
+    activeRows.filter(_.kifiBotToken === token).firstOption
   }
 
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[BotUserAuthorization])(implicit session: RWSession): SlackTeam = {

@@ -44,7 +44,8 @@ trait SlackClientWrapper {
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
 
   // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
-  def validateToken(token: SlackAccessToken): Future[Boolean]
+  def validateUserToken(token: SlackAccessToken): Future[Boolean]
+  def validateKifiBotToken(token: SlackAccessToken): Future[Boolean]
 
   // These will potentially yield failed futures if the request cannot be completed
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
@@ -112,15 +113,7 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
     }
     botToken match {
-      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen {
-        case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
-          db.readWrite { implicit s =>
-            slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { slackTeam =>
-              slackTeamRepo.save(slackTeam.withNoKifiBot)
-              log.warn(s"[SLACK-CLIENT-WRAPPER] Kifi-bot was killed in ${slackTeam.slackTeamName.value} ${slackTeam.slackTeamId}")
-            }
-          }
-      }
+      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(token))
       case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }
@@ -170,7 +163,7 @@ class SlackClientWrapperImpl @Inject() (
       case None => Future.failed(SlackFail.NoValidToken)
       case Some(token) =>
         val now = clock.now
-        slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedToken(token)).andThen {
+        slackClient.postToChannel(token, slackChannelId, msg).andThen(onRevokedUserToken(token)).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
               slackChannelRepo.getByChannelId(slackTeamId, slackChannelId).foreach { channel =>
@@ -188,15 +181,19 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.deleteMessage(token, channelId, timestamp)
   }
 
-  def validateToken(token: SlackAccessToken): Future[Boolean] = {
-    slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
+  def validateUserToken(token: SlackAccessToken): Future[Boolean] = {
+    slackClient.testToken(token).andThen(onRevokedUserToken(token)).map(_ => true).recover { case f => false }
   }
+  def validateKifiBotToken(token: SlackAccessToken): Future[Boolean] = {
+    slackClient.testToken(token).andThen(onRevokedBotToken(token)).map(_ => true).recover { case f => false }
+  }
+
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
+    slackClient.searchMessages(token, request).andThen(onRevokedUserToken(token))
   }
 
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPublicChannelInfo]] = {
-    slackClient.getPublicChannels(token, excludeArchived).andThen(onRevokedToken(token)).andThen {
+    slackClient.getPublicChannels(token, excludeArchived).andThen(onRevokedUserToken(token)).andThen {
       case Success(chs) => db.readWrite { implicit s =>
         slackTeamMembershipRepo.getByToken(token).map(_.slackTeamId).foreach { teamId =>
           chs.foreach { ch =>
@@ -207,15 +204,15 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
   def getChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = {
-    slackClient.getPublicChannelInfo(token, channelId).andThen(onRevokedToken(token))
+    slackClient.getPublicChannelInfo(token, channelId).andThen(onRevokedUserToken(token))
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
-    slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
+    slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedUserToken(token))
   }
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
-    slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
+    slackClient.getChannelId(token, channelName).andThen(onRevokedUserToken(token))
   }
 
   def getGeneralChannelId(teamId: SlackTeamId): Future[Option[SlackChannelId]] = {
@@ -230,7 +227,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
+  private def onRevokedUserToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
     case Failure(SlackErrorCode(TOKEN_REVOKED)) => db.readWrite { implicit s =>
       slackTeamMembershipRepo.getByToken(token).foreach { stm =>
         slackTeamMembershipRepo.save(stm.revoked)
@@ -244,12 +241,22 @@ class SlackClientWrapperImpl @Inject() (
     case Failure(otherFail) => debouncer.debounce("after-token", 5 seconds) { airbrake.notify(otherFail) }
   }
 
+  private def onRevokedBotToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
+    case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
+      db.readWrite { implicit s =>
+        slackTeamRepo.getByKifiBotToken(token).foreach { slackTeam =>
+          slackTeamRepo.save(slackTeam.withNoKifiBot)
+          log.warn(s"[SLACK-CLIENT-WRAPPER] Kifi-bot was killed in ${slackTeam.slackTeamName.value} ${slackTeam.slackTeamId}")
+        }
+      }
+  }
+
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
-    slackClient.getTeamInfo(token).andThen(onRevokedToken(token))
+    slackClient.getTeamInfo(token).andThen(onRevokedUserToken(token))
   }
 
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = {
-    slackClient.getUserInfo(token, userId).andThen(onRevokedToken(token))
+    slackClient.getUserInfo(token, userId).andThen(onRevokedUserToken(token))
   }
 
 }
