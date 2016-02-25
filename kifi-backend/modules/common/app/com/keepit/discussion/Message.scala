@@ -1,5 +1,6 @@
 package com.keepit.discussion
 
+import java.net.URLDecoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
@@ -38,7 +39,8 @@ case class CrossServiceMessage(
   text: String)
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
-  def stripLookHeres(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => URLDecoder.decode(m.group(2).split('|').last, "ascii"))
 
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
