@@ -4,13 +4,13 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService', 'profileService',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService) {
+  'slackService', 'profileService', 'profile',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService, profile) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    var settings = $scope.profile && $scope.profile.config && $scope.profile.config.settings;
+    var settings = profile.organization && profile.organization.config && profile.organization.config.settings;
     var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings && settings.slack_digest_notif.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
@@ -43,14 +43,14 @@ angular.module('kifi')
     $scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:settings:integrations' });
 
     $scope.onSlackIntegrationReactionChanged = function() {
-      $scope.profile.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_reaction: $scope.profile.config.settings.slack_ingestion_reaction.setting })
+      profile.organization.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_reaction: profile.organization.config.settings.slack_ingestion_reaction.setting })
       .then(onSave, onError);
     };
 
     $scope.onSlackIntegrationDigestChanged = function() {
-      $scope.profile.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_digest_notif: $scope.profile.config.settings.slack_digest_notif.setting })
+      profile.organization.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_digest_notif: profile.organization.config.settings.slack_digest_notif.setting })
       .then(onSave, onError);
     };
 
@@ -76,7 +76,7 @@ angular.module('kifi')
 
     $scope.removeBlacklistEntry = function (path) {
       _.remove($scope.blacklist.existing, {path: path});
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
       }, onError);
@@ -87,7 +87,7 @@ angular.module('kifi')
         path: $scope.blacklist.newPath,
         createdAt: +new Date()
       });
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
       }, onError);
@@ -108,7 +108,7 @@ angular.module('kifi')
 
     $scope.onClickedSyncAllSlackChannels = function() {
       $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
-      slackService.publicSync($scope.profile.id).then(function (resp) {
+      slackService.publicSync(profile.organization.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
         } else if (resp.redirect) {
@@ -119,7 +119,7 @@ angular.module('kifi')
 
     $scope.onClickedConnectSlack = function() {
       $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'connectSlack' });
-      slackService.connectTeam($scope.profile.id).then(function (resp) {
+      slackService.connectTeam(profile.organization.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Slack connected!', type: 'green' });
         } else if (resp.redirect) {
