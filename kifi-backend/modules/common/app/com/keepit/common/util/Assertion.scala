@@ -8,4 +8,9 @@ object Assertion {
     case Some(v) => Future.successful(v)
     case None => Future.failed(fail)
   }
+
+  def fail(fail: Throwable) = new RecoverableFuture(fail)
+  class RecoverableFuture(fail: Throwable) {
+    def unless(pred: Boolean): Future[Unit] = if (pred) Future.successful(()) else Future.failed(fail)
+  }
 }
