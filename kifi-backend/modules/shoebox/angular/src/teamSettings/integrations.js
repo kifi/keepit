@@ -69,10 +69,16 @@ angular.module('kifi')
 
     $scope.isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
 
+    var existingBlacklist = (settings.slack_ingestion_domain_blacklist || {}).setting || [];
     $scope.blacklist = {
       newPath: '',
-      existing: (settings.slack_ingestion_domain_blacklist || {}).setting || [],
-      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable
+      existing: existingBlacklist,
+      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable,
+      limit: existingBlacklist.length > 6 ? 4 : 6
+    };
+
+    $scope.expandBlacklist = function () {
+      $scope.blacklist.limit += 50;
     };
 
     $scope.removeBlacklistEntry = function (path) {
@@ -84,10 +90,15 @@ angular.module('kifi')
     };
 
     $scope.addBlacklistEntry = function () {
-      $scope.blacklist.existing.push({
-        path: $scope.blacklist.newPath,
+      var path = $scope.blacklist.newPath.replace(/^https?:\/\//,'').trim();
+      if (path.length > 50) {
+        return;
+      }
+      $scope.blacklist.existing.splice($scope.blacklist.limit, 0, {
+        path: path,
         createdAt: +new Date()
       });
+      $scope.blacklist.limit += 1;
       orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
