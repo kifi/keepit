@@ -13,7 +13,6 @@ import com.keepit.model._
 import com.keepit.payments.PlanManagementCommander
 import com.keepit.slack.models._
 import com.keepit.slack._
-import org.joda.time.DateTime
 import play.api.libs.json.Json
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future, Await }
@@ -56,7 +55,6 @@ case class UserStatistics(
   kifiInstallations: KifiInstallations,
   librariesCreated: Int,
   librariesFollowed: Int,
-  dateLastManualKeep: Option[DateTime],
   orgs: Seq[OrganizationStatisticsMin],
   orgCandidates: Seq[OrganizationStatisticsMin],
   lastLocation: Option[RichIpAddress])
@@ -178,7 +176,6 @@ class UserStatisticsCommander @Inject() (
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
     val librariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) - 2 //ignoring main and secret
     val librariesFollowed = librariesCountsByAccess(LibraryAccess.READ_ONLY)
-    val latestManualKeepTime = keepRepo.latestManualKeepTime(user.id.get)
     val orgs = orgRepo.getByIds(orgMembershipRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
     val orgsStats = orgs.map(o => organizationStatisticsMin(o))
     val orgCandidates = orgRepo.getByIds(orgMembershipCandidateRepo.getAllByUserId(user.id.get).map(_.organizationId).toSet).values.toList
@@ -201,7 +198,6 @@ class UserStatisticsCommander @Inject() (
       kifiInstallations,
       librariesCreated,
       librariesFollowed,
-      latestManualKeepTime,
       orgsStats,
       orgCandidatesStats,
       lastLocation
