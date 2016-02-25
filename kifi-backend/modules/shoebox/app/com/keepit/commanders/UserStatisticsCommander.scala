@@ -2,7 +2,6 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.classify.NormalizedHostname
-import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -12,8 +11,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.common.util.DollarAmount
-import com.keepit.eliza.ElizaServiceClient
-import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
 import com.keepit.slack.models._
@@ -153,6 +150,7 @@ class UserStatisticsCommander @Inject() (
     db: Database,
     clock: Clock,
     libraryMembershipRepo: LibraryMembershipRepo,
+    slackStatisticsCommander: SlackStatisticsCommander,
     kifiInstallationRepo: KifiInstallationRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     keepRepo: KeepRepo,
@@ -188,9 +186,9 @@ class UserStatisticsCommander @Inject() (
     }
     val (countF, botsF) = db.readOnlyReplica { implicit s =>
       val members = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }
-      val slackTeamMembersCounts = members.map(orgStatisticsCommander.getTeamMembersCount)
+      val slackTeamMembersCounts = members.map(slackStatisticsCommander.getTeamMembersCount)
       val count = Future.sequence(slackTeamMembersCounts).map(_.sum)
-      val bots = Future.sequence(members.map(orgStatisticsCommander.getSlackBots)).map(_.flatten.toSet)
+      val bots = Future.sequence(members.map(slackStatisticsCommander.getSlackBots)).map(_.flatten.toSet)
       (count, bots)
     }
     val infoF = db.readOnlyReplicaAsync { implicit s =>
@@ -266,7 +264,7 @@ class UserStatisticsCommander @Inject() (
           _.scopes.contains(SlackAuthScope.UsersRead)
         }
       } map { member =>
-        orgStatisticsCommander.getTeamMembersCount(member)
+        slackStatisticsCommander.getTeamMembersCount(member)
       } getOrElse Future.successful(if (teams.isEmpty) 0 else -1)
     }
 
