@@ -4,6 +4,7 @@ import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.commanders.emails.activity.ProdActivityEmailQueueModule
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
+import com.keepit.common.oauth.ProdOAuthConfigurationModule
 import com.keepit.common.seo.{ ProdSiteMapGeneratorModule }
 import com.keepit.common.store.ShoeboxProdStoreModule
 import com.keepit.controllers.internal.ProdDataPipelineExecutorModule
@@ -24,6 +25,7 @@ import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
 
   val secureSocialModule = ProdShoeboxSecureSocialModule()
+  val oauthModule = ProdOAuthConfigurationModule()
   val userActionsModule = ProdShoeboxUserActionsModule()
   val mailModule = ProdMailModule()
   val reaperModule = ProdReaperModule()

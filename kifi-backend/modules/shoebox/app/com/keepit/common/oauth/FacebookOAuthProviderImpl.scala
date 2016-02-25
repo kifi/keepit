@@ -5,17 +5,32 @@ import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.OAuth2TokenInfo
 import play.api.http.Status
 import play.api.libs.json.{ JsNumber, JsString, JsNull, JsObject }
 import play.api.libs.ws.{ WSResponse, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.IdentityId
+import securesocial.core.{ AuthenticationMethod, SocialUser, OAuth2Info, IdentityId }
 
 import scala.concurrent.Future
 import play.api.Play.current
 
 case class FacebookAPIError(error: String, message: String) extends Exception(s"Error $error while calling Facebook: $message")
+
+object FacebookOAuthProvider {
+  def toIdentity(auth: OAuth2Info, info: UserProfileInfo): FacebookIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.userId.id, ProviderIds.Facebook.id),
+      firstName = info.firstNameOpt getOrElse "",
+      lastName = info.lastNameOpt getOrElse "",
+      fullName = info.name,
+      avatarUrl = info.pictureUrl.map(_.toString),
+      email = info.emailOpt.map(_.address),
+      authMethod = AuthenticationMethod.OAuth2,
+      oAuth2Info = Some(auth)
+    )
+    FacebookIdentity(socialUser)
+  }
+}
 
 trait FacebookOAuthProvider extends OAuth2Support[FacebookIdentity] {
 
@@ -50,7 +65,7 @@ class FacebookOAuthProviderImpl @Inject() (
   def getRichIdentity(token: OAuth2TokenInfo): Future[FacebookIdentity] = {
     exchangeLongTermToken(token.accessToken).flatMap { oauthInfo =>
       getUserProfileInfo(oauthInfo.accessToken).map { info =>
-        FacebookIdentity(token, info)
+        FacebookOAuthProvider.toIdentity(token, info)
       }
     }
   }
