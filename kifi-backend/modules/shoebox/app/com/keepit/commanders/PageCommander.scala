@@ -274,7 +274,7 @@ class PageCommander @Inject() (
 }
 
 case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {
-  override val version = 3
+  override val version = 4
   val namespace = "inferred_keeper_position"
   def toKey(): String = id.id.toString
 }
