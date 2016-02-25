@@ -206,7 +206,7 @@ class UserIpAddressEventLogger @Inject() (
             case Some(locationValue) =>
               RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt.foreach { lastIp =>
                 if (lastIp != ipInfo)
-                  userValueRepo.setValue(newUserId, UserValueName.LAST_RECORDED_LOCATION, ipInfo)
+                  userValueRepo.setValue(newUserId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
               }
           }
         }

@@ -131,7 +131,7 @@ class UserStatisticsCommander @Inject() (
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
       val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
       val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
-      val lastLocation: Option[RichIpAddress] = None //getLastLocation(userId)
+      val lastLocation: Option[RichIpAddress] = getLastLocation(userId)
       (keepCount, libs, slackMembers, slackToLibs, lastLocation)
     }
     val (countF, botsF) = db.readOnlyReplica { implicit s =>
@@ -185,7 +185,7 @@ class UserStatisticsCommander @Inject() (
       val plan = planManagementCommander.currentPlan(org.id.get)
       plan.pricePerCyclePerUser.cents > 0
     }
-    val lastLocation: Option[RichIpAddress] = None //getLastLocation(user.id.get)
+    val lastLocation: Option[RichIpAddress] = getLastLocation(user.id.get)
 
     UserStatistics(
       user,
