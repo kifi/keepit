@@ -10,7 +10,6 @@ import com.keepit.common.json.KeyFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -23,14 +22,12 @@ import play.api.libs.json.{ Json, Writes }
 case class LibraryToSlackIntegrationInfo(
   id: PublicId[LibraryToSlackChannel],
   status: SlackIntegrationStatus,
-  authLink: Option[String],
   isMutable: Boolean)
 
 @json
 case class SlackToLibraryIntegrationInfo(
   id: PublicId[SlackChannelToLibrary],
   status: SlackIntegrationStatus,
-  authLink: Option[String],
   isMutable: Boolean)
 
 @json
@@ -96,7 +93,6 @@ class SlackInfoCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   libRepo: LibraryRepo,
   orgInfoCommander: OrganizationInfoCommander,
-  slackStateCommander: SlackAuthStateCommander,
   permissionCommander: PermissionCommander,
   slackCommander: SlackCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
@@ -152,36 +148,18 @@ class SlackInfoCommanderImpl @Inject() (
     }
     libraryIds.map { libId =>
       val permissions = permissionsByLib.getOrElse(libId, Set.empty)
-      val publicLibId = Library.publicId(libId)
       val fromSlacksThisLib = slackToLibs.filter(_.libraryId == libId)
       val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
 
       val fromSlackGroupedInfos = fromSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromSTL).map {
         case (key, Seq(fs)) =>
           val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
-          val authLink = {
-            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnChannelIngestion
-            val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val action = TurnChannelIngestion(fs.id.get.id, turnOn = true)
-            val missingScopes = action.getMissingScopes(existingScopes)
-            if (missingScopes.isEmpty) None
-            else Some(slackStateCommander.getAuthLink(action, Some(fs.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
-          }
-
-          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, authLink, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
+          key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
         case (key, Seq(ts)) =>
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
-          val authLink = {
-            // todo(Léo): kill this authLink and have the front-end always call SlackController.turnOnLibraryPush
-            val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).flatMap(_.tokenWithScopes.map(_.scopes)) getOrElse Set.empty
-            val action = TurnLibraryPush(ts.id.get.id, isBroken = false, turnOn = true)
-            val missingScopes = action.getMissingScopes(existingScopes)
-            if (missingScopes.isEmpty) None
-            else Some(slackStateCommander.getAuthLink(action, Some(ts.slackTeamId), missingScopes, SlackOAuthController.REDIRECT_URI).url)
-          }
-          key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, authLink, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
+          key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }
       val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
         LibrarySlackIntegrationInfo(
