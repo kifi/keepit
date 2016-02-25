@@ -39,6 +39,7 @@ trait SlackTeamCommander {
 @Singleton
 class SlackTeamCommanderImpl @Inject() (
   db: Database,
+  slackStatisticsCommander: SlackStatisticsCommander,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
@@ -153,15 +154,28 @@ class SlackTeamCommanderImpl @Inject() (
     } tap {
       case Success(team) => SafeFuture {
         db.readOnlyMaster { implicit session =>
-          (basicUserRepo.load(userId), organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId))
-        }
-      } flatMap {
-        case (user, org) =>
-          SafeFuture {
-            inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-              user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
-            )))
+          val teams = slackTeamRepo.getByOrganizationId(newOrganizationId)
+          val memberOpt = teams flatMap { slackTeam =>
+            val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
+            allMembers.find {
+              _.scopes.contains(SlackAuthScope.UsersRead)
+            }
           }
+          val user = basicUserRepo.load(userId)
+          val org = organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId)
+          val memberCount = memberOpt map { member =>
+            slackStatisticsCommander.getTeamMembersCount(member)
+          } getOrElse Future.successful(-1)
+          memberCount map { count =>
+            val desc = {
+              val base = Seq[DescriptionElements](user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org)
+              if (count > 0) {
+                base ++ Seq[DescriptionElements]("with", count, "slack members")
+              } else base
+            }
+            inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(desc: _*)))
+          }
+        }
       }
 
       case Failure(fail) =>

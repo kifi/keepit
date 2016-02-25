@@ -16,19 +16,10 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
 import com.keepit.model._
 import com.keepit.payments.PlanManagementCommander
-import com.keepit.slack.SlackClient
 import com.keepit.slack.models._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.Try
-
-case class SlackStatistics(
-  activeSlackLibs: Int,
-  inactiveSlackLibs: Int,
-  closedSlackLibs: Int,
-  brokenSlackLibs: Int,
-  teamSize: Int,
-  bots: Set[String])
 
 case class OrganizationStatisticsMin(
   org: Organization,
@@ -37,26 +28,14 @@ case class OrganizationStatisticsMin(
   slackLibs: Int,
   slackTeamSize: Int)
 
-object SlackStatistics {
-  def apply(teamSize: Int, bots: Set[String], slacking: Iterable[SlackChannelToLibrary]): SlackStatistics = {
-    SlackStatistics(
-      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.On },
-      slacking.count { s => s.state == SlackChannelToLibraryStates.INACTIVE },
-      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Off },
-      slacking.count { s => s.state == SlackChannelToLibraryStates.ACTIVE && s.status == SlackIntegrationStatus.Broken },
-      teamSize, bots
-    )
-  }
-}
-
 class OrgStatisticsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     db: Database,
     clock: Clock,
+    slackStatisticsCommander: SlackStatisticsCommander,
     orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
     kifiInstallationRepo: KifiInstallationRepo,
-    slackClient: SlackClient,
     abook: ABookServiceClient,
     keepToLibraryRepo: KeepToLibraryRepo,
     userValueRepo: UserValueRepo,
@@ -68,9 +47,6 @@ class OrgStatisticsCommander @Inject() (
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackTeamRepo: SlackTeamRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    slackTeamMembersCountCache: SlackTeamMembersCountCache,
-    slackTeamMembersCache: SlackTeamMembersCache,
-    slackTeamBotsCache: SlackTeamBotsCache,
     userRepo: UserRepo,
     emailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
@@ -80,40 +56,6 @@ class OrgStatisticsCommander @Inject() (
     orgExperimentsRepo: OrganizationExperimentRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     airbrake: AirbrakeNotifier) extends Logging {
-
-  def getTeamMembersCount(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Int] = {
-    val count = slackTeamMembersCountCache.getOrElseFuture(SlackTeamMembersCountKey(slackTeamMembership.slackTeamId)) {
-      getTeamMembers(slackTeamMembership: SlackTeamMembership).map(_.filterNot(_.bot).size)
-    }
-    count.recover {
-      case error =>
-        log.error(s"error fetching members with $slackTeamMembership", error)
-        -2
-    }
-  }
-
-  def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Set[String]] = {
-    slackTeamBotsCache.getOrElseFuture(SlackTeamBotsKey(slackTeamMembership.slackTeamId)) {
-      val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
-      bots.recover {
-        case error =>
-          log.error("error fetching members", error)
-          Set("ERROR")
-      }
-    }
-  }
-
-  def getTeamMembers(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
-    slackTeamMembersCache.getOrElseFuture(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
-      slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId).map { allMembers =>
-        val deleted = allMembers.filter(_.deleted)
-        val bots = allMembers.filterNot(_.deleted).filter(_.bot)
-        log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
-          s"out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
-        allMembers.filterNot(_.deleted)
-      }
-    }
-  }
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int): Future[OrganizationStatistics] = {
     val (members, candidates) = db.readOnlyMaster { implicit session =>
@@ -147,8 +89,8 @@ class OrgStatisticsCommander @Inject() (
         val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
         allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
       } map { member =>
-        val count = getTeamMembersCount(member)
-        val bots = getSlackBots(member)
+        val count = slackStatisticsCommander.getTeamMembersCount(member)
+        val bots = slackStatisticsCommander.getSlackBots(member)
         (count, bots)
       } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
     }
@@ -254,8 +196,8 @@ class OrgStatisticsCommander @Inject() (
         val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
         allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
       } map { member =>
-        val count = getTeamMembersCount(member)
-        val bots = getSlackBots(member)
+        val count = slackStatisticsCommander.getTeamMembersCount(member)
+        val bots = slackStatisticsCommander.getSlackBots(member)
         (count, bots)
       } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
     }
