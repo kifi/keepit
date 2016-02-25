@@ -88,16 +88,6 @@ angular.module('kifi')
         }
       }
 
-      this.requiresPushAuth = function() {
-        // How can I construct this locally, without using authLink?
-        return this.data.toSlack && this.data.toSlack.authLink;
-      };
-
-      this.requiresIngestAuth = function() {
-        // How can I construct this locally, without using authLink?
-        return this.data.fromSlack && this.data.fromSlack.authLink;
-      };
-
       this.onKeepToSlackChanged = function(on) {
         this.data.toSlack.status = on ? 'on' : 'off';
         this.data.toSlack.space = this.data.space;
