@@ -97,21 +97,8 @@ class SlackCommanderImpl @Inject() (
   }
 
   def getIdentityAndMissingScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
-    val savedIdentityAndExistingScopesOpt = for {
-      slackTeamId <- slackTeamIdOpt
-      slackTeamMembership <- db.readOnlyMaster { implicit session =>
-        slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId)
-      }
-      tokenWithScopes <- slackTeamMembership.tokenWithScopes
-    } yield (slackTeamId, slackTeamMembership.slackUserId, tokenWithScopes)
-
-    val futureValidIdentityAndExistingScopes = savedIdentityAndExistingScopesOpt match {
-      case Some((slackTeamId, slackUserId, SlackTokenWithScopes(token, existingScopes))) => slackClient.validateToken(token).imap {
-        case true => (Some((slackTeamId, slackUserId)), existingScopes)
-        case false => (None, Set.empty[SlackAuthScope])
-      }
-      case None => Future.successful((None, Set.empty[SlackAuthScope]))
-    }
+    val futureInheritableBotScopes = getInheritableBotScopes(slackTeamIdOpt)
+    val futureValidIdentityAndExistingUserScopes = getValidIdentityAndExistingUserScopes(userId, slackTeamIdOpt)
 
     val extraScopesByExperiment = slackTeamIdOpt.flatMap { slackTeamId =>
       db.readOnlyMaster { implicit s =>
@@ -123,8 +110,48 @@ class SlackCommanderImpl @Inject() (
       }
     }.getOrElse(Set.empty)
 
-    futureValidIdentityAndExistingScopes.imap {
-      case (identityOpt, existingScopes) => (identityOpt, action.getMissingScopes(existingScopes) ++ (extraScopesByExperiment -- existingScopes))
+    for {
+      (identityOpt, existingUserScopes) <- futureValidIdentityAndExistingUserScopes
+      inheritableBotScopes <- futureInheritableBotScopes
+    } yield {
+      val existingScopes = existingUserScopes ++ inheritableBotScopes
+      (identityOpt, action.getMissingScopes(existingScopes) ++ (extraScopesByExperiment -- existingScopes))
+    }
+  }
+
+  private def getInheritableBotScopes(slackTeamIdOpt: Option[SlackTeamId]): Future[Set[SlackAuthScope]] = {
+    val kifiBotTokenOpt = for {
+      slackTeamId <- slackTeamIdOpt
+      slackTeam <- db.readOnlyMaster { implicit session =>
+        slackTeamRepo.getBySlackTeamId(slackTeamId)
+      }
+      kifiBotToken <- slackTeam.kifiBotToken
+    } yield kifiBotToken
+
+    kifiBotTokenOpt match {
+      case Some(kifiBotToken) => slackClient.validateToken(kifiBotToken).imap {
+        case true => SlackAuthScope.inheritableBotScopes
+        case false => Set.empty[SlackAuthScope]
+      }
+      case None => Future.successful(Set.empty[SlackAuthScope])
+    }
+  }
+
+  private def getValidIdentityAndExistingUserScopes(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId]): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
+    val savedIdentityAndExistingUserScopesOpt = for {
+      slackTeamId <- slackTeamIdOpt
+      slackTeamMembership <- db.readOnlyMaster { implicit session =>
+        slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId)
+      }
+      tokenWithScopes <- slackTeamMembership.tokenWithScopes
+    } yield (slackTeamId, slackTeamMembership.slackUserId, tokenWithScopes)
+
+    savedIdentityAndExistingUserScopesOpt match {
+      case Some((slackTeamId, slackUserId, SlackTokenWithScopes(userToken, existingUserScopes))) => slackClient.validateToken(userToken).imap {
+        case true => (Some((slackTeamId, slackUserId)), existingUserScopes)
+        case false => (None, Set.empty[SlackAuthScope])
+      }
+      case None => Future.successful((None, Set.empty[SlackAuthScope]))
     }
   }
 }

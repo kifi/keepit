@@ -17,16 +17,16 @@ case class SlackTeamMembershipInternRequest(
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
-  token: Option[SlackAccessToken],
+  token: Option[SlackUserAccessToken],
   scopes: Set[SlackAuthScope],
   slackUser: Option[SlackUserInfo])
 
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
 
-case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthScope])
+case class SlackTokenWithScopes(token: SlackUserAccessToken, scopes: Set[SlackAuthScope])
 object SlackTokenWithScopes {
-  def unapply(stm: SlackTeamMembership): Option[(SlackAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
+  def unapply(stm: SlackTeamMembership): Option[(SlackUserAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
 }
 
 object SlackTeamMembership {
@@ -57,14 +57,14 @@ case class SlackTeamMembership(
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
-    token: Option[SlackAccessToken],
+    token: Option[SlackUserAccessToken],
     scopes: Set[SlackAuthScope],
     slackUser: Option[SlackUserInfo]) extends ModelWithState[SlackTeamMembership] with ModelWithSeqNumber[SlackTeamMembership] {
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
   def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
-  def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackAccessToken] = if (requiredScopes subsetOf scopes) token else None
+  def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackUserAccessToken] = if (requiredScopes subsetOf scopes) token else None
 
   def revoked = this.copy(token = None, scopes = Set.empty)
   def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
@@ -79,7 +79,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
 
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
   def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership]
-  def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
+  def getByToken(token: SlackUserAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
@@ -98,7 +98,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
   implicit val slackUsernameColumnType = SlackDbColumnTypes.username(db)
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackTeamNameColumnType = SlackDbColumnTypes.teamName(db)
-  implicit val tokenColumnType = MappedColumnType.base[SlackAccessToken, String](_.token, SlackAccessToken(_))
+  implicit val tokenColumnType = MappedColumnType.base[SlackUserAccessToken, String](_.token, SlackUserAccessToken(_))
   implicit val scopesFormat = SlackAuthScope.dbFormat
 
   private def membershipFromDbRow(
@@ -112,7 +112,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
-    token: Option[SlackAccessToken],
+    token: Option[SlackUserAccessToken],
     scopes: JsValue,
     slackUser: Option[JsValue]) = {
     SlackTeamMembership(
@@ -156,7 +156,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def slackUsername = column[SlackUsername]("slack_username", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
-    def token = column[Option[SlackAccessToken]]("token", O.Nullable)
+    def token = column[Option[SlackUserAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
     def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
@@ -223,7 +223,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       case (k, Seq(v)) if identities.contains(k) => k -> v
     }
   }
-  def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
+  def getByToken(token: SlackUserAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
     activeRows.filter(_.token === token).firstOption
   }
 

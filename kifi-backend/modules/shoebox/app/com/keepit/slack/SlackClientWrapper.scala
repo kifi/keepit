@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.slack.models._
 import com.keepit.slack.models.SlackErrorCode._
@@ -47,7 +48,7 @@ trait SlackClientWrapper {
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
   // These will potentially yield failed futures if the request cannot be completed
-  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPublicChannelInfo]]
@@ -112,15 +113,7 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
     }
     botToken match {
-      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen {
-        case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
-          db.readWrite { implicit s =>
-            slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { slackTeam =>
-              slackTeamRepo.save(slackTeam.withNoKifiBot)
-              log.warn(s"[SLACK-CLIENT-WRAPPER] Kifi-bot was killed in ${slackTeam.slackTeamName.value} ${slackTeam.slackTeamId}")
-            }
-          }
-      }
+      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(token))
       case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }
@@ -191,14 +184,15 @@ class SlackClientWrapperImpl @Inject() (
   def validateToken(token: SlackAccessToken): Future[Boolean] = {
     slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
   }
-  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
+
+  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
 
   def getChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPublicChannelInfo]] = {
     slackClient.getPublicChannels(token, excludeArchived).andThen(onRevokedToken(token)).andThen {
       case Success(chs) => db.readWrite { implicit s =>
-        slackTeamMembershipRepo.getByToken(token).map(_.slackTeamId).foreach { teamId =>
+        getSlackTeamId(token).foreach { teamId =>
           chs.foreach { ch =>
             slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
           }
@@ -230,7 +224,21 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
+  private def getSlackTeamId(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamId] = {
+    token match {
+      case userToken: SlackUserAccessToken => slackTeamMembershipRepo.getByToken(userToken).map(_.slackTeamId)
+      case botToken: SlackBotAccessToken => slackTeamRepo.getByKifiBotToken(botToken).map(_.slackTeamId)
+    }
+  }
+
   private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
+    token match {
+      case userToken: SlackUserAccessToken => onRevokedUserToken(userToken)
+      case botToken: SlackBotAccessToken => onRevokedBotToken(botToken)
+    }
+  }
+
+  private def onRevokedUserToken[T](token: SlackUserAccessToken): PartialFunction[Try[T], Unit] = {
     case Failure(SlackErrorCode(TOKEN_REVOKED)) => db.readWrite { implicit s =>
       slackTeamMembershipRepo.getByToken(token).foreach { stm =>
         slackTeamMembershipRepo.save(stm.revoked)
@@ -242,6 +250,16 @@ class SlackClientWrapperImpl @Inject() (
       }
     }
     case Failure(otherFail) => debouncer.debounce("after-token", 5 seconds) { airbrake.notify(otherFail) }
+  }
+
+  private def onRevokedBotToken[T](token: SlackBotAccessToken): PartialFunction[Try[T], Unit] = {
+    case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
+      db.readWrite { implicit s =>
+        slackTeamRepo.getByKifiBotToken(token).foreach { slackTeam =>
+          slackTeamRepo.save(slackTeam.withNoKifiBot)
+          log.warn(s"[SLACK-CLIENT-WRAPPER] Kifi-bot was killed in ${slackTeam.slackTeamName.value} ${slackTeam.slackTeamId}")
+        }
+      }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {

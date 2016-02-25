@@ -62,7 +62,7 @@ object TwitterIdentity {
 
 case class EmailPasswordIdentity(firstName: String, lastName: String, email: EmailAddress, password: Option[PasswordInfo]) extends RichIdentity
 
-case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, token: Option[SlackAccessToken], scopes: Set[SlackAuthScope], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
+case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, token: Option[SlackUserAccessToken], scopes: Set[SlackAuthScope], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
 object SlackIdentity {
   def apply(auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse, user: Option[SlackUserInfo]): SlackIdentity = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName && !user.exists(_.id != identity.userId))
