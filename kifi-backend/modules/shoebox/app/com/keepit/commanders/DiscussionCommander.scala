@@ -5,7 +5,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.Assertion
 import com.keepit.discussion.{ DiscussionFail, Message }
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 
@@ -64,10 +66,9 @@ class DiscussionCommanderImpl @Inject() (
   }
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message] = {
     for {
-      msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption).flatMap { msgOpt =>
-        msgOpt.filter(_.keep == keepId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP))
-      }
-      owner <- msg.sentBy.filter(_ == userId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+      msgOpt <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption)
+      msg <- Assertion.find(msgOpt)(_.keep == keepId)(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP)
+      _ <- Assertion.predicate(msg.sentBy.safely.contains(userId))(DiscussionFail.INSUFFICIENT_PERMISSIONS)
       editedMsg <- eliza.editMessage(msgId, newText)
     } yield editedMsg
   }

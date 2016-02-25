@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.util.Assertion
 import com.keepit.discussion.{ DiscussionFail, Message, DiscussionKeep }
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
@@ -84,6 +85,14 @@ class MessageFetchingCommander @Inject() (
           discussionKeepOpt <- futureKeep
           discussionKeep <- discussionKeepOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
           _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+          _ <- if (discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)) Future.successful(()) else Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS)
+          _ <- Assertion.predicate(discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP))(DiscussionFail.INSUFFICIENT_PERMISSIONS)
+          _ <- Assertion.fail(DiscussionFail.INSUFFICIENT_PERMISSIONS).unless(discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP))
+          validDiscussionKeep <- futureKeep.flatMap[DiscussionKeep] {
+            case None => Future.failed(DiscussionFail.INVALID_KEEP_ID)
+            case Some(dk) if !dk.permissions.contains(KeepPermission.VIEW_KEEP) => Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS)
+            case Some(dk) => Future.successful(dk)
+          }
         } yield (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeep)
       case None =>
         val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))
