@@ -146,7 +146,7 @@ class PageCommander @Inject() (
 
   private val doNotMoveKeeperDomains = Set(
     371L // ted.com
-  ).map(Id[Domain].apply)
+  ).map(Id[Domain](_))
   @StatsdTiming("PageCommander.inferKeeperPosition")
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {
     // if a domain has more than $minSamples users moving it in the past $since months, move the keeper to a popular location
