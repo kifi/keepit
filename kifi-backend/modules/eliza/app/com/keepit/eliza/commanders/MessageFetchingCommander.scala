@@ -88,6 +88,11 @@ class MessageFetchingCommander @Inject() (
           _ <- if (discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)) Future.successful(()) else Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS)
           _ <- Assertion.predicate(discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP))(DiscussionFail.INSUFFICIENT_PERMISSIONS)
           _ <- Assertion.fail(DiscussionFail.INSUFFICIENT_PERMISSIONS).unless(discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP))
+          validDiscussionKeep <- futureKeep.flatMap[DiscussionKeep] {
+            case None => Future.failed(DiscussionFail.INVALID_KEEP_ID)
+            case Some(dk) if !dk.permissions.contains(KeepPermission.VIEW_KEEP) => Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS)
+            case Some(dk) => Future.successful(dk)
+          }
         } yield (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeep)
       case None =>
         val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))
