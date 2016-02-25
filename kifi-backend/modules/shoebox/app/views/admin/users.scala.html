@@ -96,7 +96,6 @@
               <th>User</th>
               <th>$</th>
               <th>Location</th>
-              <th class="sorter-mmddyy">Last Kept</th>
               <th>org mem/cand</th>
               <th>Invite By</th>
               <th>Msgs</th>
@@ -151,7 +150,6 @@
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
               <td>@if(userStatistics.paying) { &#36;&#36;&#36; }</td>
               <td>@(userStatistics.lastLocation.map { loc => loc.country.getOrElse("") + " " + loc.region.getOrElse("") })</td>
-              <td>@userStatistics.dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
               <td>@adminHelper.orgsStatisticsMinDisplay(userStatistics.orgs) @adminHelper.orgsStatisticsMinDisplayCandidates(userStatistics.orgCandidates)</td>
               <td>@for(i <- userStatistics.invitedBy){ @adminHelper.userDisplay(i) }</td>
               <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
