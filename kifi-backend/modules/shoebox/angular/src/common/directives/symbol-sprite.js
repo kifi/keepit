@@ -11,7 +11,7 @@ angular.module('kifi')
     var MutationObserver = $window.MutationObserver;
     var symbolSpriteReady = getSymbolSpritePromise();
 
-    function getSymbolSpritePromise () {
+    function getSymbolSpritePromise() {
       var symbolSpriteContainer = angular.element('.symbol-sprite-container')[0];
       var deferred = $q.defer();
       var observer;
