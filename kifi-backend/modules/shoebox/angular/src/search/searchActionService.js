@@ -101,11 +101,12 @@ angular.module('kifi')
     //
     // Exposed API methods.
     //
-    function find(query, filter, library, context, userLoggedIn) {
+    function find(query, filter, orderBy, library, context, userLoggedIn) {
       var params = {
         q: query,
         f: filter || [],
         l: library && library.id || [],
+        orderBy: orderBy || [],
         disablePrefixSearch: 1,
         maxUris: 5,
         maxLibraries: context ? [] : 6,

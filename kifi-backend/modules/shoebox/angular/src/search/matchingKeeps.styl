@@ -31,6 +31,11 @@
     padding-left: 10px
     margin-left: 10px
 
+.kf-smk-order-by-option
+  margin: 2px 0px
+  width: auto
+  text-align: center
+
 .kf-smk-top
   display: flex
   flex-direction: row
@@ -42,6 +47,30 @@
   .kf-card-style-selector
     float: right
     padding-left: 10px
+
+  .kf-smk-dropdown-parent
+    position: relative
+    display: inline-block
+
+    .kf-dropdown-menu
+      left: -14px
+      right: -14px
+
+    &:not(.kf-open)>.kf-dropdown-menu
+      dur = .16s
+      visibility: hidden
+      opacity: 0
+      transform: scale(.9)
+      transition-duration: 0s, dur, dur
+      transition-delay: dur, 0s, 0s
+
+    &.kf-open::before
+      content: ''
+      position: absolute
+      top: 'calc(100% - %s)' % menuGap
+      left: -10px
+      right: -10px
+      height: 20px
 
 .kf-smk-heading
   color: #999
