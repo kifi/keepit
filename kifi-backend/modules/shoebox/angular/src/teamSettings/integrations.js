@@ -44,7 +44,8 @@ angular.module('kifi')
 
     $scope.onSlackIntegrationReactionChanged = function() {
       profile.organization.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_reaction: profile.organization.config.settings.slack_ingestion_reaction.setting })
+      orgProfileService.setOrgSettings(profile.organization.id,
+        { slack_ingestion_reaction: profile.organization.config.settings.slack_ingestion_reaction.setting })
       .then(onSave, onError);
     };
 
