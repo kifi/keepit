@@ -1,16 +1,16 @@
 package com.keepit.slack
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.cache._
+import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.{ Organization, Library }
+import com.keepit.model.{Library, Organization}
 import com.keepit.slack.models._
 import com.kifi.macros.json
 import play.api.libs.json._
-import scala.concurrent.duration.Duration
 
-import com.keepit.common.core._
+import scala.concurrent.duration.Duration
 
 // This is in common only because SecureSocial's SlackProvider needs to be because fuck 2.11 play.plugins
 
