@@ -144,6 +144,9 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
+  private val doNotMoveKeeperDomains = Set(
+    371L // ted.com
+  ).map(Id[Domain].apply)
   @StatsdTiming("PageCommander.inferKeeperPosition")
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {
     // if a domain has more than $minSamples users moving it in the past $since months, move the keeper to a popular location
@@ -167,9 +170,12 @@ class PageCommander @Inject() (
         else Some(Json.obj("bottom" -> positionMode))
       } else None
 
-      positionOpt.foreach(pos => log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=${Json.stringify(pos)}"))
-
-      positionOpt
+      if (doNotMoveKeeperDomains.contains(domainId)) {
+        None
+      } else {
+        positionOpt.foreach(pos => log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=${Json.stringify(pos)}"))
+        positionOpt
+      }
     }
   }
 
