@@ -131,7 +131,7 @@ class UserStatisticsCommander @Inject() (
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
       val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
       val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
-      val lastLocation = getLastLocation(userId)
+      val lastLocation: Option[RichIpAddress] = None //getLastLocation(userId)
       (keepCount, libs, slackMembers, slackToLibs, lastLocation)
     }
     val (countF, botsF) = db.readOnlyReplica { implicit s =>
