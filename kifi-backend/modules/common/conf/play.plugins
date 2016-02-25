@@ -1,4 +1,15 @@
 1500:com.keepit.common.mail.PlayMailerPlugin
 9990:com.keepit.common.db.C3P0Plugin
+9994:com.keepit.social.SecureSocialAuthenticatorStore
+9995:com.keepit.social.SecureSocialIdGenerator
+9996:securesocial.core.providers.utils.DefaultPasswordValidator
+9997:com.keepit.social.SecureSocialTemplatesPlugin
+9998:com.keepit.social.SecureSocialUserService
+9999:securesocial.core.providers.utils.BCryptPasswordHasher
+10001:com.keepit.social.providers.FacebookProvider
+10002:com.keepit.social.providers.TwitterProvider
+10003:com.keepit.social.providers.LinkedInProvider
+10004:com.keepit.social.providers.UsernamePasswordProvider
+10005:com.keepit.social.providers.SlackProvider
 10006:com.keepit.common.cache.PlayCachePlugin
 10007:com.keepit.ShutdownPlugin
