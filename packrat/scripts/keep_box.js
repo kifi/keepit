@@ -235,7 +235,7 @@ k.keepBox = k.keepBox || (function () {
 
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
     .on('transitionend', function end(e) {
-      if (e.target === this) {
+      if (e.target === this && e.originalEvent.propertyName === 'transform') {
         if (!back) {
           $cart.removeClass('kifi-animated kifi-back kifi-forward');
         }
