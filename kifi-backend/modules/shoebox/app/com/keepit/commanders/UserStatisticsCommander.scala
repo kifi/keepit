@@ -241,7 +241,7 @@ class UserStatisticsCommander @Inject() (
 
   def getTeamMembers(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
     slackTeamMembersCache.getOrElseFuture(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
-      slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId).map { allMembers =>
+      slackClient.getUsers(slackTeamMembership.token.get).map { allMembers =>
         val deleted = allMembers.filter(_.deleted)
         val bots = allMembers.filterNot(_.deleted).filter(_.bot)
         log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
