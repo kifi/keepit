@@ -12,6 +12,8 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.util.Try
+
 // Exposed to clients
 case class Message(
   pubId: PublicId[Message],
@@ -40,7 +42,7 @@ case class CrossServiceMessage(
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
   def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
-  def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => URLDecoder.decode(m.group(2).split('|').last, "ascii"))
+  def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => Try(URLDecoder.decode(m.group(2).split('|').last, "ascii")).getOrElse("look here"))
 
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
