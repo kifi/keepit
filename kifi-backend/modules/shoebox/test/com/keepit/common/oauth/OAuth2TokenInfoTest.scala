@@ -1,6 +1,5 @@
 package com.keepit.common.oauth
 
-import com.keepit.model.OAuth2TokenInfo
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 

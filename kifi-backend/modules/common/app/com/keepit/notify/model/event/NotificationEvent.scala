@@ -107,7 +107,7 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
 case class LibraryNewKeep(
   recipient: Recipient,
   time: DateTime,
-  keeperId: Id[User],
+  keeperId: Option[Id[User]],
   keepId: Id[Keep],
   libraryId: Id[Library]) extends NotificationEvent {
 
@@ -123,7 +123,7 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
       (__ \ "time").format[DateTime] and
-      (__ \ "keeperId").format[Id[User]] and
+      (__ \ "keeperId").formatNullable[Id[User]] and
       (__ \ "keepId").format[Id[Keep]] and
       (__ \ "libraryId").format[Id[Library]]
     )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))

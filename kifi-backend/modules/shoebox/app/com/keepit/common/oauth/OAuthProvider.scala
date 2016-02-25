@@ -4,7 +4,6 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.mvc.{ Result, Request }
 import securesocial.core._
 

@@ -147,7 +147,7 @@ class SlackClientImpl(
       case userToken: SlackUserAccessToken =>
         val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
         searchMessages(userToken, searchRequest).map(_.messages.matches.headOption.map(_.channel.id))
-      case botToken: SlackUserAccessToken => Future.successful(None)
+      case botToken: SlackBotAccessToken => Future.successful(None)
     }
 
     searchChannelIdFuture.flatMap {

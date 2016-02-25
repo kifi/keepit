@@ -7,7 +7,6 @@ import java.util.UUID
 import com.keepit.common.auth.AuthException
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.OAuth2Configuration._
-import com.keepit.model.OAuth2TokenInfo
 import play.api.Play._
 import play.api.cache.Cache
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

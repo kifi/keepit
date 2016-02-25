@@ -1,6 +1,5 @@
-package com.keepit.model
+package com.keepit.common.oauth
 
-import com.keepit.common.oauth.OAuth2AccessToken
 import com.kifi.macros.json
 import play.api.libs.oauth.RequestToken
 import securesocial.core.{ OAuth1Info, OAuth2Info }
