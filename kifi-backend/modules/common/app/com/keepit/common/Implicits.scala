@@ -5,8 +5,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
 import scala.collection.{ TraversableLike, IterableLike }
+import com.keepit.common.core.iterableExtensionOps
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
+import scala.util.matching.Regex
+import scala.util.matching.Regex.Match
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
   // forward pipe operator, analogous to the Unix pipe.
@@ -123,6 +126,23 @@ final class OptionExtensionOpts[A](x: Option[A]) {
   }
 }
 
+final class RegexExtensionOps(r: Regex) {
+  // See ImplicitsTest for examples
+  def collate(str: String): Seq[Either[String, Regex.Match]] = {
+    if (str.isEmpty) Seq(Left("")) else
+      r.findAllMatchIn(str).toList.mapAccumLeft((str, 0)) {
+        case ((remainingString, idxInOriginalString), m) =>
+          val beforeMatch = remainingString.take(m.start - idxInOriginalString)
+          ((remainingString.drop(m.end - idxInOriginalString), m.end), Seq(Left(beforeMatch), Right(m)))
+      } match {
+        case ((endOfString, _), ans) => (ans.flatten :+ Left(endOfString)).filterNot {
+          case Left("") => true
+          case _ => false
+        }
+      }
+  }
+}
+
 final class JsObjectExtensionOps(x: JsObject) {
   def nonNullFields: JsObject = JsObject(x.fields.filter { case (_, b) => b != JsNull })
 }
@@ -148,6 +168,7 @@ trait Implicits {
   implicit def mapExtensionOps[A, B](xs: Map[A, B]): MapExtensionOps[A, B] = new MapExtensionOps(xs)
   implicit def eitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]): EitherExtensionOps[A, B, Repr] = new EitherExtensionOps(xs)
   implicit def optionExtensionOps[A, B](x: Option[A]): OptionExtensionOpts[A] = new OptionExtensionOpts(x)
+  implicit def regexExtensionOps(r: Regex): RegexExtensionOps = new RegexExtensionOps(r)
   implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
   implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)
 }
