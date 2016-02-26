@@ -1,7 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.keepit.common.crypto.PublicId
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ MessageSource, Message }
 import org.joda.time.DateTime
 
 import com.keepit.common.time._

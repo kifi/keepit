@@ -88,3 +88,27 @@ object DiscussionKeep {
   private implicit val libCardFormat = LibraryCardInfo.internalFormat
   implicit val format = Json.format[DiscussionKeep]
 }
+
+case class MessageSource(value: String)
+object MessageSource {
+  val CHROME = MessageSource("Chrome")
+  val FIREFOX = MessageSource("Firefox")
+  val EMAIL = MessageSource("Email")
+  val IPHONE = MessageSource("iPhone")
+  val IPAD = MessageSource("iPad")
+  val ANDROID = MessageSource("Android")
+  val SERVER = MessageSource("server")
+  val SITE = MessageSource("Kifi.com")
+
+  implicit val messageSourceFormat = new Format[MessageSource] {
+    def reads(json: JsValue): JsResult[MessageSource] = {
+      json.asOpt[String] match {
+        case Some(str) => JsSuccess(MessageSource(str))
+        case None => JsError()
+      }
+    }
+    def writes(kind: MessageSource): JsValue = {
+      JsString(kind.value)
+    }
+  }
+}

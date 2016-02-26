@@ -9,9 +9,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
-import com.keepit.discussion.{ DiscussionKeep, DiscussionFail, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.MessageSource
 import scala.collection._
 import com.keepit.heimdal._
 import com.keepit.model.{ Keep, Organization, User }

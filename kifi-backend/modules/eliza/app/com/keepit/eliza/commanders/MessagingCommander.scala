@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.{ DiscussionKeep, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionKeep, Message }
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
@@ -198,7 +198,6 @@ class MessagingCommander @Inject() (
   def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): Future[(MessageThread, ElizaMessage)] = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
-    val tStart = currentDateTime
 
     val uriFetch = URI.parse(url) match {
       case Success(parsed) =>
