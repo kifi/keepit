@@ -547,10 +547,8 @@ class MobileLibraryController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        for {
-          keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, sanitizeUrls = true)
-        } yield {
+        val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, sanitizeUrls = true).map { keepInfos =>
           val editedKeepInfos = keepInfos.map { kInfo =>
             kInfo.copy(note = Hashtags.formatMobileNote(kInfo.note, v1))
           }
