@@ -121,7 +121,7 @@ final class OptionExtensionOpts[A](x: Option[A]) {
 
   // Does not have the liberal [A1 >: A] type bound, so you cannot do really dumb things
   def safely: SafelyTypedOption[A] = new SafelyTypedOption(x)
-  class SafelyTypedOption[T](valOpt: Option[T]) {
+  final class SafelyTypedOption[T](valOpt: Option[T]) {
     def contains(v: T): Boolean = valOpt.contains(v)
   }
 }
