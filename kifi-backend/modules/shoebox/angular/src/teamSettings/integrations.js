@@ -11,8 +11,8 @@ angular.module('kifi')
     $scope.integrations = [];
 
     var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
-    var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
-    var notifSetting = settings && settings.slack_digest_notif.setting;
+    var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
+    var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
 
