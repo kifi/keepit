@@ -48,6 +48,7 @@ case class SlackAttachment(
     thumbUrl: Option[String] = None,
     markdownIn: Option[Set[String]] = None) {
   def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
+  def withColor(newColor: String) = this.copy(color = Some(newColor))
 }
 
 object SlackAttachment {
