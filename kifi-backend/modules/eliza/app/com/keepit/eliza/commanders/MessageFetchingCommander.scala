@@ -83,7 +83,7 @@ class MessageFetchingCommander @Inject() (
           messages <- futureMessages
           discussionKeepOpt <- futureKeep
           discussionKeep <- discussionKeepOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.ADD_MESSAGE)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
         } yield (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeep)
       case None =>
         val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))
@@ -95,7 +95,7 @@ class MessageFetchingCommander @Inject() (
         for {
           discussionKeepOpt <- futureDiscussionKeep
           discussionKeep <- discussionKeepOpt.map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.VIEW_KEEP)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+          _ <- Some(()).filter(_ => discussionKeep.permissions.contains(KeepPermission.ADD_MESSAGE)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
           nUrl <- futureNormalizedUrl
         } yield (BasicDiscussion(discussionKeep.url, nUrl, discussionKeep.keptBy.map(BasicUserLikeEntity(_)).toSet, Seq.empty), discussionKeep)
     }
