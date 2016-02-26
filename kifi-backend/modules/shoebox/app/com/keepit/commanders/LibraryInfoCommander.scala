@@ -27,14 +27,14 @@ import scala.util.Try
 @ImplementedBy(classOf[LibraryInfoCommanderImpl])
 trait LibraryInfoCommander {
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser]
-  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int, useMultilibLogic: Boolean = false): Future[Seq[Keep]]
+  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Seq[Keep]
   def getKeepsCount(libraryId: Id[Library]): Future[Int]
   def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]], sanitizeUrls: Boolean)(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
@@ -79,16 +79,9 @@ class LibraryInfoCommanderImpl @Inject() (
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
-  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int, useMultilibLogic: Boolean = false): Future[Seq[Keep]] = {
-    if (limit > 0) db.readOnlyReplicaAsync { implicit s =>
-      val oldWay = keepRepo.getByLibrary(libraryId, offset, limit)
-      val newWay = ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit)) |> keepCommander.idsToKeeps
-      if (newWay.map(_.id.get) != oldWay.map(_.id.get)) {
-        log.info(s"[KTL-MATCH] getKeeps($libraryId, $offset, $limit): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
-      }
-      if (useMultilibLogic) newWay else oldWay
-    }
-    else Future.successful(Seq.empty)
+  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Seq[Keep] = {
+    if (limit > 0) db.readOnlyReplica(implicit s => ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit)) |> keepCommander.idsToKeeps)
+    else Seq.empty
   }
 
   def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
@@ -182,7 +175,7 @@ class LibraryInfoCommanderImpl @Inject() (
   }.toMap
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
-    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val libIds = libraries.map(_.id.get).toSet
     val futureKeepInfosByLibraryId = libraries.map { library =>
@@ -190,18 +183,11 @@ class LibraryInfoCommanderImpl @Inject() (
         if (maxKeepsShown > 0) {
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
-              case LibraryKind.SYSTEM_MAIN =>
-                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
-              case LibraryKind.SYSTEM_SECRET =>
-                assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+              case LibraryKind.SYSTEM_MAIN => assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
+              case LibraryKind.SYSTEM_SECRET => assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
               case _ =>
-                val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
-                val newWay = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
-                if (newWay.map(_.id.get) != oldWay.map(_.id.get)) log.info(s"[KTL-MATCH] createFullLibraryInfos(${library.id.get}): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
-                if (useMultilibLogic) newWay else oldWay
             }
+            ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
           }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, sanitizeUrls)
         } else Future.successful(Seq.empty)
@@ -336,9 +322,9 @@ class LibraryInfoCommanderImpl @Inject() (
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
     users.sortBy(_.pictureName == BasicNonUser.DefaultPictureName)
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean, useMultilibLogic: Boolean = false): Future[FullLibraryInfo] = {
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean): Future[FullLibraryInfo] = {
     val maxMembersShown = 10
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, sanitizeUrls, useMultilibLogic, authToken.map(library.id.get -> _).toMap).imap {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, sanitizeUrls, authToken.map(library.id.get -> _).toMap).imap {
       case Seq((_, info)) =>
         val followers = info.followers
         val sortedFollowers = sortUsersByImage(followers)

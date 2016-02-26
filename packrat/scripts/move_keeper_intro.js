@@ -36,9 +36,13 @@ k.moveKeeperIntro = k.moveKeeperIntro || (function () {
     .insertAfter(k.tile)
     .on('click', '.kifi-tile-tooltip-x', onClickX)
     .each(function () { api.noop(this.offsetHeight); })  // force layout
-    .addClass('kifi-showing kifi-move-keeper-intro')
+    .addClass('kifi-showing kifi-move-keeper-intro');
 
     var pos = JSON.parse(k.tile.dataset.pos || '{}');
+    if (pos.top < $intro.height()) {
+      hide();
+      return;
+    }
     pos.top = (typeof pos.top !== 'undefined' && pos.top - $intro.height() - 16) || 'auto';
     pos.bottom = (typeof pos.bottom !== 'undefined' && pos.bottom + k.tile.getBoundingClientRect().height) || 'auto';
 

@@ -74,7 +74,7 @@ class MessageRepoImpl @Inject() (
   private def activeRows = rows.filter(_.state === ElizaMessageStates.ACTIVE)
 
   override def save(message: ElizaMessage)(implicit session: RWSession): ElizaMessage = {
-    super.save(message.copy(seq = deferredSeqNum()))
+    super.save(message.copy(seq = sequence.incrementAndGet()))
   }
 
   override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = deleteCache(message)

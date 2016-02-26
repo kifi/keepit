@@ -11,7 +11,7 @@ import com.keepit.integrity.{ DataIntegrityPlugin, UriIntegrityPlugin }
 import com.keepit.model._
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.reports._
-import com.keepit.shoebox.cron.{ ActivityEmailCronPlugin, UserIpAddressClusterCronPlugin }
+import com.keepit.shoebox.cron.ActivityEmailCronPlugin
 import com.keepit.social.SocialGraphPlugin
 import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.Mode._
@@ -48,7 +48,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ShoeboxTasksPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityEmailCronPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[SuggestedSearchTermUpdatePlugin] != null) // make sure its not lazy loaded
-    require(injector.instance[UserIpAddressClusterCronPlugin] != null) // make sure its not lazy loaded
 
     // DB sequencing plugins
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded

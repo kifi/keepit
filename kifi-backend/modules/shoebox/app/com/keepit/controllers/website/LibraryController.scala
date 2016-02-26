@@ -197,12 +197,7 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = LibraryController.defaultLibraryImageSize
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          val useMultilibLogic = request match {
-            case u: UserRequest[_] => u.experiments.contains(UserExperimentType.KEEP_MULTILIB)
-            case _ => false
-          }
-          if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, sanitizeUrls = false, useMultilibLogic).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, sanitizeUrls = false).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
@@ -377,8 +372,8 @@ class LibraryController @Inject() (
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
         val numKeepsF = libraryInfoCommander.getKeepsCount(libraryId)
+        val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
         for {
-          keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
           numKeeps <- numKeepsF
         } yield {

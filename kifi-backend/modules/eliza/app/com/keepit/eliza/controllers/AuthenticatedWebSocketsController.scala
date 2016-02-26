@@ -5,6 +5,7 @@ import com.keepit.common.controller.{ KifiSession, ElizaServiceController }
 import com.keepit.common.db.Id
 import com.keepit.model.{ UserExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -26,7 +27,7 @@ import play.api.libs.json.{ Json, JsValue }
 
 import akka.actor.ActorSystem
 
-import securesocial.core.{ Authenticator, UserService, SecureSocial }
+import securesocial.core.{ IdentityId, Authenticator, UserService, SecureSocial }
 
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
@@ -112,29 +113,26 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       })
   }
 
-  // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
-  // This is mainly a workaround for the mobile client, since the library we use doesn't support cookies
   private def getUserIdFromRequest(implicit request: RequestHeader): Future[Option[Id[User]]] = {
+    // 3 ways we could figure out who this user is:
+    // • Play sesssion exists, and has a userId. Super fast.
+    // • SecureSocial cookie exists, containing sessionId. Look it up on shoebox.
+    // • sessionId was passed in directly. Look it up on shoebox.
     request.session.get(KifiSession.FORTYTWO_USER_ID).map { userIdStr =>
       Future.successful(Try(userIdStr.toLong).map(Id[User](_)).toOption)
     }.getOrElse {
-      // Fall back to SecureSocial's blocking API to do true lookups to shoebox
-      val authenticatorOpt = SecureSocial.authenticatorFromRequest(request).orElse {
-        (for {
-          sid <- request.queryString.get("sid").map(_.head)
-          auth <- Authenticator.find(sid).fold(_ => None, Some(_)).flatten
-        } yield auth) match {
-          case Some(auth) if !auth.isValid =>
-            Authenticator.delete(auth.id)
+      val sessionIdOpt = request.cookies.get(Authenticator.cookieName).map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption))
+      sessionIdOpt.map { sid =>
+        shoebox.getSessionByExternalId(UserSessionExternalId(sid)).flatMap {
+          case Some(session) if session.valid =>
+            val identityId = IdentityId(session.socialId.id, session.provider.name)
+            shoebox.getUserIdByIdentityId(identityId).map {
+              case Some(userId) => Some(userId)
+              case None => log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${identityId.providerId} :: ${identityId.userId}."); None
+            }
+          case otherwise =>
             log.info(s"[getUserIdFromRequest] Refusing auth because not valid: ${request.headers.toSimpleMap.toString}")
-            None
-          case maybeAuth => maybeAuth
-        }
-      }
-      authenticatorOpt.map { auth =>
-        shoebox.getUserIdByIdentityId(auth.identityId).map { userIdOpt =>
-          if (userIdOpt.isEmpty) log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${auth.identityId.providerId} :: ${auth.identityId.userId}.")
-          userIdOpt
+            Future.successful(None)
         }
       }.getOrElse {
         log.warn(s"[getUserIdFromRequest] Could not find user. ${request.headers.toSimpleMap.toString}")

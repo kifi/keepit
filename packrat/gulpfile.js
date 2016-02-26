@@ -598,18 +598,15 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
     .pipe(shell([
       // TODO: verify jpm version before using it
       // TODO(carlos): remove the line copying icons when https://bugzilla.mozilla.org/show_bug.cgi?id=1141839 and https://github.com/mozilla-jetpack/jpm/issues/341 are fixed
-      // TODO(carlos): remove the line with sed when https://github.com/mozilla-jetpack/jpm/issues/409 is resolved
-      (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') + '\
-      cp icons/kifi.48.png out/firefox/icon.png && cp icons/kifi.64.png out/firefox/icon64.png && \
-      cd ' + path.join(outDir + '/firefox') + ' && \
-      jpm xpi && \
-      sed -i ".bak" -e \'s/kifi.*\@42go.com/kifi\@42go.com/g\' ' + glob + ' && \
-      node ../../bin/duplicateRdfDescription.js ' + glob + ' kifi.update.rdf ' + (listed ? 'listed' : 'unlisted') + ' && \
-      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi.update.rdf && \
-      sed -i ".bak" -e \'s/<em:maxVersion>.*<\\/em:maxVersion>/<em:maxVersion>48.0<\\/em:maxVersion>/g\' kifi.update.rdf && \
-      cp *.xpi ../kifi.xpi && \
-      cp kifi.update.rdf ../kifi.update.rdf && \
-      cd - > /dev/null'
+      (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') +
+      'cp icons/kifi.48.png out/firefox/icon.png && cp icons/kifi.64.png out/firefox/icon64.png && ' +
+      'cd ' + path.join(outDir + '/firefox') + ' && ' +
+      'jpm xpi && ' +
+      //'sed -i ".bak" -e \'s/kifi.*\@42go.com/kifi\@42go.com/g\' ' + glob + ' && ' + // TODO(carlos): uncomment this line when we want to move unlisted users to the listed extension
+      'cp ' + glob + ' kifi.update.rdf && ' + //'node ../../bin/duplicateRdfDescription.js ' + glob + ' kifi.update.rdf ' + (listed ? 'listed' : 'unlisted') + ' && ' + // TODO(carlos): uncomment this line when we want to move unlisted users to the listed extension
+      'cp *.xpi ../kifi.xpi && ' +
+      'cp kifi.update.rdf ../kifi.update.rdf && ' +
+      'cd - > /dev/null'
     ]));
 });
 

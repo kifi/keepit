@@ -41,7 +41,7 @@ case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throw
 trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   import db.Driver.simple._
 
-  implicit def idMapper[M <: Model[M]] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
+  implicit def idMapper[M] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
   implicit def stateTypeMapper[M <: Model[M]] = MappedColumnType.base[State[M], String](_.value, State[M])
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])

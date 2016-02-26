@@ -11,7 +11,7 @@
       </span>
 
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && !slackTeam">
-        <div class="kf-container-header"><h2 id="slack-connect">Connect your team to Slack</h2></div>
+        <div class="kf-container-header"><h2 id="slack-sync">Connect your team to Slack</h2></div>
         <span class="kf-ts-integrations-marketing-text">Team members will be able to join your team using Slack, share links more easily, and sync Kifi libraries and Slack channels.</span>
         <div class="kf-ts-integrations-sync"><button
           class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
@@ -34,7 +34,7 @@
       </div>
 
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && slackTeam.publicChannelsLastSyncedAt">
-        <div class="kf-container-header"><h2 id="slack-fetch">Fetch channels to sync</h2></div>
+        <div class="kf-container-header"><h2 id="slack-sync">Fetch channels to sync</h2></div>
         <span class="kf-ts-integrations-marketing-text">
           Refetch your Slack channels to automatically create Kifi libraries.
           You can always connect one channel at a time with the
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam && isAdmin">
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam">
         <div class="kf-container-header"><h2 id="blacklist">Link Ingestion Blacklist</h2></div>
         <span class="kf-ts-integrations-marketing-text">
           Control which domains are pulled into Kifi from Slack. Links matching the patterns below will be ignored.
@@ -70,19 +70,26 @@
           <thead>
             <tr><th>URL path</th><th>Added at</th><th></th></tr>
           </thead>
-          <tr ng-repeat="entry in blacklist.existing">
+          <tr ng-repeat="entry in blacklist.existing | limitTo: blacklist.limit">
             <td ng-bind="::entry.path"></td>
-            <td><time am-time-ago="::entry.createdAt"></time></td>
+            <td><time am-time-ago="entry.createdAt"></time></td>
             <td><button class="kf-link" ng-click="removeBlacklistEntry(entry.path)" ng-show="blacklist.editable">×</button></td>
           </tr>
+          <tr ng-if="blacklist.existing.length > blacklist.limit"><td colspan="3">
+            <button class="kf-button-textonly kf-link" ng-click="expandBlacklist()">Show all <span ng-bind="blacklist.existing.length"></span> blacklisted paths</button>
+          </td></tr>
         </table>
-        <div>
+
+        <div ng-if="blacklist.editable">
           <h3>Blacklist custom URLs</h3>
           <div>
-            <input type="text" class="kf-textbox kf-textbox-auto kf-ts-integations-blacklist-input" placeholder="URL path to blacklist" ng-model="blacklist.newPath">
-            <button class="kf-button kf-button-large kf-button-cta-green" ng-click="addBlacklistEntry()">Add to Blacklist</button>
+            <form ng-submit="addBlacklistEntry()">
+              <input type="text" class="kf-textbox kf-textbox-auto kf-ts-integations-blacklist-input" placeholder="URL path to blacklist" ng-model="blacklist.newPath">
+              <button type="submit" class="kf-button kf-button-large kf-button-cta-green">Add to Blacklist</button>
+            </form>
           </div>
           <span class="kf-ts-integrations-marketing-text kf-ts-integrations-blacklist-ex">Example: <code>github.com</code>, <code>*.acme-corp.com/internal</code>.</span>
+          <div ng-if="blacklist.error" ng-bind="blacklist.error"></div>
         </div>
       </div>
 

@@ -15,7 +15,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.discussion.DiscussionKeep
+import com.keepit.discussion.{ CrossServiceMessage, DiscussionKeep }
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
@@ -23,7 +23,7 @@ import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models._
-import com.keepit.social.BasicUser
+import com.keepit.social.{ SocialNetworkType, SocialId, BasicUser }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
 import securesocial.core.IdentityId
@@ -408,7 +408,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }
-  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = ???
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = Future.successful {
+    if (sessionId.id == "dc6cb121-2a69-47c7-898b-bc2b9356054c") { // This is FakeSecureSocial.FAKE_SID, which is stuck in Eliza for now.
+      Some(UserSessionView(SocialId("fake_user_id"), SocialNetworkType("facebook"), new DateTime(), true, new DateTime(), new DateTime()))
+    } else {
+      None
+    }
+  }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
@@ -710,5 +716,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = Future.successful(())
-  def ingestElizaMessagesASAP(): Future[Unit] = Future.successful(())
+  def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(())
 }

@@ -26,7 +26,7 @@ k.panes.thread = k.panes.thread || function () {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
         $holder.data('keep', o.keep);
-        var participants = o.th.participants || o.keep && [o.keep.keptBy] || [];
+        var participants = o.th.participants || o.keep && o.keep.keptBy && [o.keep.keptBy] || [];
         k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },

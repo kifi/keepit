@@ -117,17 +117,54 @@ class UserIpAddressEventLogger @Inject() (
 
       if (!userIsFake) {
         val model = UserIpAddress(userId = event.userId, ipAddress = event.ip, agentType = agentType)
-        userIpAddressRepo.saveIfNew(model)
+        val newIp = userIpAddressRepo.saveIfNew(model)
       }
 
       (currentCluster.toSet, ignoreForPotentialOrgs)
     }
 
-    if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
+    if (event.reportNewClusters
+      && !cluster.contains(event.userId)
+      && cluster.nonEmpty
+      && !ignoreForPotentialOrgs
+      && !userIsFake
       && !Set("67.161.4.140", "67.160.194.3").contains(event.ip.ip) //office ip(s) address
       && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
-      notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
+      getIpInfoOpt(event.ip).map(_.foreach { ipInfo =>
+        notifySlackChannelAboutCluster(ipInfo, cluster + event.userId, event.userId)
+        registerUserLocationInUserValue(event.userId, ipInfo)
+      })
+    } else {
+      registerUserLocationInUserValue(event.userId, event.ip)
+    }
+  }
+
+  def registerUserLocationInUserValue(userId: Id[User], ipInfo: RichIpAddress): Unit = {
+    db.readWrite { implicit session =>
+      def save() = userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
+      userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) match {
+        case None => save()
+        case Some(locationValue) =>
+          RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt.foreach { lastIp =>
+            if (lastIp.ip != ipInfo.ip) save()
+          }
+      }
+    }
+  }
+
+  def registerUserLocationInUserValue(userId: Id[User], ip: IpAddress): Unit = {
+    db.readWrite { implicit session =>
+      def save() = getIpInfoOpt(ip).map(_.foreach { ipInfo =>
+        userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
+      })
+      userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) match {
+        case None => save()
+        case Some(locationValue) =>
+          RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt.foreach { lastIp =>
+            if (lastIp.ip != ip) save()
+          }
+      }
     }
   }
 
@@ -151,7 +188,7 @@ class UserIpAddressEventLogger @Inject() (
 
   private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
 
-  private def describeCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): SlackMessageRequest = {
+  private def describeCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Id[User]): SlackMessageRequest = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
@@ -162,7 +199,7 @@ class UserIpAddressEventLogger @Inject() (
     )
 
     val userDeclarations = users.map {
-      case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id == newUserId)
+      case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id.get == newUserId)
     }
 
     SlackMessageRequest.inhouse(DescriptionElements((clusterDeclaration ++ userDeclarations).mkString("\n")))
@@ -187,8 +224,7 @@ class UserIpAddressEventLogger @Inject() (
       }
     }
 
-  def notifySlackChannelAboutCluster(clusterIp: IpAddress, clusterMembers: Set[Id[User]], newUserId: Option[Id[User]] = None): Unit = {
-    log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
+  def notifySlackChannelAboutCluster(ipInfo: RichIpAddress, clusterMembers: Set[Id[User]], newUserId: Id[User]): Unit = {
     val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = clusterMembers.toSeq
       userRepo.getUsers(userIds).values.toList map { user =>
@@ -198,20 +234,14 @@ class UserIpAddressEventLogger @Inject() (
         (user, email, candidates, orgs)
       }
     }
-    getIpInfoOpt(clusterIp) map { ipInfoOpt =>
-      log.info("[IPTRACK NOTIFY] Retrieved IP geolocation info: " + ipInfoOpt)
-
-      ipInfoOpt foreach { ipInfo =>
-        if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
-          if (shouldIgnoreAll(usersFromCluster)) {
-            log.info(s"[IPTRACK NOTIFY] Decided not to notify about $clusterIp since all users are members or " +
-              s"candidates of organizations or have been marked as ignored for potential organizations")
-          } else {
-            log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about $clusterIp")
-            val msg = describeCluster(ipInfo, usersFromCluster, newUserId)
-            slackClient.sendToSlack(InhouseSlackChannel.IP_CLUSTERS, msg)
-          }
-        }
+    if (heuristicsSayThisClusterIsRelevant(ipInfo)) {
+      if (shouldIgnoreAll(usersFromCluster)) {
+        log.info(s"[IPTRACK NOTIFY] Decided not to notify about ${ipInfo.ip} since all users are members or " +
+          s"candidates of organizations or have been marked as ignored for potential organizations")
+      } else {
+        log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about ${ipInfo.ip}")
+        val msg = describeCluster(ipInfo, usersFromCluster, newUserId)
+        slackClient.sendToSlack(InhouseSlackChannel.IP_CLUSTERS, msg)
       }
     }
   }

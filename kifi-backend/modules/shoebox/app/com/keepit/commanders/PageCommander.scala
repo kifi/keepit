@@ -144,29 +144,38 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
+  private val doNotMoveKeeperDomains = Set(
+    371L // ted.com
+  ).map(Id[Domain](_))
   @StatsdTiming("PageCommander.inferKeeperPosition")
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {
+    // if a domain has more than $minSamples users moving it in the past $since months, move the keeper to a popular location
     inferredKeeperPositionCache.getOrElseOpt(InferredKeeperPositionKey(domainId)) {
       val since = currentDateTime.minusMonths(6)
-      val roundToNearest = 50 // return value will vary in roundToNearest intervals
+      val roundToNearest = 100 // return value will vary in roundToNearest intervals
       val minSamples = 10
 
       val positions = userToDomainRepo.getPositionsForDomain(domainId, sinceOpt = Some(since))
-      if (positions.size >= minSamples) {
-        // get mode of all positions rounded to the nearest 100 pixels, distances from "top" being negative
-        val positionMode = positions.foldLeft(Map.empty[Long, Int]) {
+      val positionOpt = if (positions.size >= minSamples) {
+        val countByPosition = positions.foldLeft(Map.empty[Long, Int]) {
           case (countByBucket, js) =>
             val bottomOpt = (js \ "bottom").asOpt[Double]
             val topOpt = (js \ "top").asOpt[Double]
             val position = Math.round(bottomOpt.orElse(topOpt.map(_ * -1)).getOrElse(0.0) / roundToNearest.toDouble) * roundToNearest
             countByBucket + (position -> (countByBucket.getOrElse(position, 0) + 1))
-        }.maxBy(_._2)._1
+        } - 0 // ignore default position
 
-        if (positionMode != 0) log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=$positionMode")
-
-        if (positionMode < 0) Some(Json.obj("top" -> positionMode))
+        val (positionMode, _) = countByPosition.maxBy { case (position, count) => count }
+        if (positionMode < 0) Some(Json.obj("top" -> -positionMode))
         else Some(Json.obj("bottom" -> positionMode))
       } else None
+
+      if (doNotMoveKeeperDomains.contains(domainId)) {
+        None
+      } else {
+        positionOpt.foreach(pos => log.info(s"[inferKeeper] setting position on domain id=${domainId.id} to position=${Json.stringify(pos)}"))
+        positionOpt
+      }
     }
   }
 
@@ -265,7 +274,7 @@ class PageCommander @Inject() (
 }
 
 case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {
-  override val version = 1
+  override val version = 4
   val namespace = "inferred_keeper_position"
   def toKey(): String = id.id.toString
 }

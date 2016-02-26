@@ -40,7 +40,7 @@ k.formatting = k.formatting || (function () {
     if (hasRootElement) {
       element = body.firstChild;
     } else {
-      element = document.createElement(wrapper);
+      element = (wrapper === 'span' ? document.createElement('span') : document.createElement('div'));
       Array.prototype.slice.apply(docNode.body.childNodes).forEach(function (n) {
         element.appendChild(n);
       });

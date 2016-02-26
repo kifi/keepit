@@ -152,15 +152,14 @@ class SlackTeamCommanderImpl @Inject() (
         }
       }
     } tap {
-      case Success(team) => SafeFuture {
-        db.readOnlyMaster { implicit session =>
+      case Success(team) => slackClient.getUsers(team.slackTeamId).imap(Some(_)).recover { case _ => None }.map { slackTeamMembersOpt =>
+        val numMembersOpt = slackTeamMembersOpt.map(_.count(member => !member.deleted && !member.bot))
+        val (user, org) = db.readOnlyMaster { implicit session =>
           (basicUserRepo.load(userId), organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId))
         }
-      } flatMap {
-        case (user, org) =>
-          inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-            user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
-          )))
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          user, "connected Slack team", team.slackTeamName.value, numMembersOpt.map(numMembers => s"with $numMembers members"), "to Kifi org", org
+        )))
       }
 
       case Failure(fail) =>

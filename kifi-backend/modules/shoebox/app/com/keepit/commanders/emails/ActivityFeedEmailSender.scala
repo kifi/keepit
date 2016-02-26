@@ -324,19 +324,16 @@ class ActivityFeedEmailSenderImpl @Inject() (
   private def fetchLibToKeepImages(libInfoView: LibraryInfoView): Future[LibraryInfoViewWithKeepImages] = {
     def recur(target: Int, offset: Int, limit: Int): Future[Seq[String]] = {
       if (target > 0) {
-        val keepsF = libraryInfoCommander.getKeeps(libInfoView.libraryId, offset, limit)
+        val keeps = libraryInfoCommander.getKeeps(libInfoView.libraryId, offset, limit)
+        val keepIds = keeps.map(_.id.get).toSet
+        val urlsF = keepImageCommander.getBestImagesForKeepsPatiently(keepIds, keepImageCropRequest).map { keepIdsToImages =>
+          keepIdsToImages.collect { case (_, Some(img)) => img.imagePath.path }.toSeq
+        }
 
-        keepsF flatMap { keeps =>
-          val keepIds = keeps.map(_.id.get).toSet
-          val urlsF = keepImageCommander.getBestImagesForKeepsPatiently(keepIds, keepImageCropRequest).map { keepIdsToImages =>
-            keepIdsToImages.collect { case (_, Some(img)) => img.imagePath.path }.toSeq
-          }
-
-          urlsF flatMap { urls =>
-            // if keeps.size < limit, we assume we're out of keeps in this library
-            if (keeps.size == limit) recur(target - urls.size, offset + limit, limit) map { moreUrls => urls ++ moreUrls }
-            else Future.successful(urls)
-          }
+        urlsF flatMap { urls =>
+          // if keeps.size < limit, we assume we're out of keeps in this library
+          if (keeps.size == limit) recur(target - urls.size, offset + limit, limit) map { moreUrls => urls ++ moreUrls }
+          else Future.successful(urls)
         }
       } else Future.successful(Seq.empty)
     }

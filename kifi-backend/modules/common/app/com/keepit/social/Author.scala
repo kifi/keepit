@@ -13,7 +13,7 @@ import com.keepit.common.core.jsObjectExtensionOps
 object ImageUrls {
   val SLACK_LOGO = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
   val KIFI_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
-  val TWITTER_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/twitter_64x64.png"
+  val TWITTER_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/twitter_logo_104.png"
 }
 
 sealed abstract class Author(val kind: AuthorKind)
@@ -83,7 +83,7 @@ object BasicAuthor {
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
     case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
-      name = msg.username.value,
+      name = s"@${msg.username.value}",
       picture = ImageUrls.SLACK_LOGO,
       url = msg.permalink
     )

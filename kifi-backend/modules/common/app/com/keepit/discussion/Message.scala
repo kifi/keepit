@@ -1,5 +1,6 @@
 package com.keepit.discussion
 
+import java.net.URLDecoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
@@ -10,6 +11,8 @@ import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.util.Try
 
 // Exposed to clients
 case class Message(
@@ -38,7 +41,8 @@ case class CrossServiceMessage(
   text: String)
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
-  def stripLookHeres(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => Try(URLDecoder.decode(m.group(2).split('|').last, "ascii")).getOrElse("look here"))
 
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
