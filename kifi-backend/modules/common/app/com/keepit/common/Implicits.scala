@@ -65,6 +65,16 @@ final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
     }
     builder.result()
   }
+  def mapAccumLeft[Acc, B, That](a0: Acc)(fn: (Acc, A) => (Acc, B))(implicit cbf: CanBuildFrom[Repr, B, That]): (Acc, That) = {
+    val builder = cbf(xs.repr)
+    var acc = a0
+    xs.foreach { x =>
+      val (newAcc, y) = fn(acc, x)
+      acc = newAcc
+      builder += y
+    }
+    (acc, builder.result())
+  }
 }
 
 final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
@@ -106,9 +116,11 @@ final class OptionExtensionOpts[A](x: Option[A]) {
     case _ => false
   }
 
-  // Does not have the liberal [A1 >: A] type bound, which lets you do really dumb things
-  case class SafelyTypedOption[T](valOpt: Option[T]) { def contains(v: T): Boolean = valOpt.contains(v) }
-  def safely: SafelyTypedOption[A] = SafelyTypedOption(x)
+  // Does not have the liberal [A1 >: A] type bound, so you cannot do really dumb things
+  def safely: SafelyTypedOption[A] = new SafelyTypedOption(x)
+  class SafelyTypedOption[T](valOpt: Option[T]) {
+    def contains(v: T): Boolean = valOpt.contains(v)
+  }
 }
 
 final class JsObjectExtensionOps(x: JsObject) {
