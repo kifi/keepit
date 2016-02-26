@@ -4,8 +4,8 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService', 'profileService', 'profile',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService, profile) {
+  'slackService', 'profile',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profile) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
@@ -66,8 +66,6 @@ angular.module('kifi')
       slackService.modifyLibraryIngestIntegration(integration.library.id, integration.integration.fromSlack.id, integration.slackToKifi)
       .then(onSave, onError);
     };
-
-    $scope.isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
 
     var existingBlacklist = (settings.slack_ingestion_domain_blacklist || {}).setting || [];
     $scope.blacklist = {
