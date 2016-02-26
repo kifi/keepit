@@ -398,13 +398,13 @@ class SlackPushingActor @Inject() (
     SlackMessageRequest.fromKifi(
       text = DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.speechBalloon, userElement getOrElse "Someone", "on", keepElement)),
       attachments = if (msg.isDeleted) Seq(SlackAttachment.simple("[deleted]")) else CrossServiceMessage.splitOutLookHeres(msg.text).collect {
-        case Left(text) => SlackAttachment.simple(DescriptionElements.unlines(text.lines.toSeq.map(ln => DescriptionElements("_", ln, "_"))))
+        case Left(text) => SlackAttachment.simple(DescriptionElements.unlines(text.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))).withFullMarkdown
         case Right(Success((pointer, ref))) => SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
         case Right(Failure(fail)) =>
           slackLog.error(s"Failed to process a look-here in ${msg.text} because ${fail.getMessage}")
           SlackAttachment.simple("look here")
       }
-    )
+    ).copy(unfurlMedia = true)
   }
 }
 
