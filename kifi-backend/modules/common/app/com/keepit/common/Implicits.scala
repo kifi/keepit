@@ -116,9 +116,11 @@ final class OptionExtensionOpts[A](x: Option[A]) {
     case _ => false
   }
 
-  // Does not have the liberal [A1 >: A] type bound, which lets you do really dumb things
-  case class SafelyTypedOption[T](valOpt: Option[T]) { def contains(v: T): Boolean = valOpt.contains(v) }
-  def safely: SafelyTypedOption[A] = SafelyTypedOption(x)
+  // Does not have the liberal [A1 >: A] type bound, so you cannot do really dumb things
+  def safely: SafelyTypedOption[A] = new SafelyTypedOption(x)
+  class SafelyTypedOption[T](valOpt: Option[T]) {
+    def contains(v: T): Boolean = valOpt.contains(v)
+  }
 }
 
 final class JsObjectExtensionOps(x: JsObject) {
