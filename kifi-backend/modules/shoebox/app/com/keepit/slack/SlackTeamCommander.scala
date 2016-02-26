@@ -99,9 +99,10 @@ class SlackTeamCommanderImpl @Inject() (
 
     slackTeamOpt match {
       case Some(team) => team.organizationId match {
-        case None => membershipOpt.flatMap(_.getTokenIncludingScopes(SlackAuthScope.teamSetup)) match {
-          case Some(validToken) =>
-            slackClient.getTeamInfo(validToken).flatMap { teamInfo =>
+        case None => membershipOpt match {
+          case Some(membership) =>
+            val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.teamSetup), membership.getTokenIncludingScopes(SlackAuthScope.teamSetup)).flatten
+            slackClient.getTeamInfo(slackTeamId, preferredTokens).flatMap { teamInfo =>
               val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None)
               orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
                 case Right(createdOrg) =>
@@ -270,11 +271,12 @@ class SlackTeamCommanderImpl @Inject() (
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
             if (hasOrgPermissions) {
-              membershipOpt.flatMap(membership => membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels).map((membership, _))) match {
-                case Some((membership, validToken)) =>
+              membershipOpt match {
+                case Some(membership) =>
+                  val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
                   val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
                   onboardingAgent.intro().flatMap { _ =>
-                    slackClient.getChannels(validToken, excludeArchived = true).map { channels =>
+                    slackClient.getChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
                       val updatedTeam = {
                         val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
                         val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
