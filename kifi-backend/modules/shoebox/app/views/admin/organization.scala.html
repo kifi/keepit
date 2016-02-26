@@ -52,6 +52,7 @@ orgStats: OrganizationStatistics
             <th>Member Name</th>
             <th>Role</th>
             <th class="sorter-mmddyy">Last Keep</th>
+            <th>Location</th>
             <th>Libs</th>
             <th>Keeps PRV/PUB/ORG/DISC</th>
             <th>Chats</th>
@@ -76,6 +77,7 @@ orgStats: OrganizationStatistics
                 </td>
                 <td>@membership.role</td>
                 <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
+                <td>@orgStats.membersStatistics(membership.userId).lastLocation.map(_.countryRegionCity).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
                 <td>@orgStats.membersStatistics(membership.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.published / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.discoverable</td>
                 <td>@orgStats.membersStatistics(membership.userId).numChats</td>

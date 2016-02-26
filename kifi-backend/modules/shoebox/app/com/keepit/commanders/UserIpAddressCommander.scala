@@ -7,6 +7,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, ImmutableJsonCacheImpl, Key }
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -24,11 +25,14 @@ import play.api.libs.json._
 import play.api.{ Mode, Play }
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.Try
 
 case class RichIpAddress(ip: IpAddress, org: Option[String], country: Option[String], region: Option[String], city: Option[String],
-  lat: Option[Double], lon: Option[Double], timezone: Option[String], zip: Option[String])
+    lat: Option[Double], lon: Option[Double], timezone: Option[String], zip: Option[String]) {
+  def countryRegion = Seq(country, region).flatten.mkString(", ")
+  def countryRegionCity = Seq(country, region, city).flatten.mkString(", ")
+}
 
 object RichIpAddress {
   implicit val format = (
@@ -140,6 +144,23 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
+  def getLastLocation(userId: Id[User]): Future[Option[RichIpAddress]] = db.readWrite { implicit s =>
+    userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) match {
+      case Some(locationValue) =>
+        Future.successful(RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt)
+      case None =>
+        userIpAddressRepo.getLastByUser(userId) match {
+          case None => Future.successful(None)
+          case Some(userIpAddress) =>
+            val infoF = getIpInfoOpt(userIpAddress.ipAddress)
+            infoF.map(_.foreach { ipInfo =>
+              userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
+            })
+            infoF
+        }
+    }
+  }
+
   def registerUserLocationInUserValue(userId: Id[User], ipInfo: RichIpAddress): Unit = {
     db.readWrite { implicit session =>
       def save() = userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
@@ -153,17 +174,21 @@ class UserIpAddressEventLogger @Inject() (
     }
   }
 
-  def registerUserLocationInUserValue(userId: Id[User], ip: IpAddress): Unit = {
+  def registerUserLocationInUserValue(userId: Id[User], ip: IpAddress): Future[Option[RichIpAddress]] = {
     db.readWrite { implicit session =>
-      def save() = getIpInfoOpt(ip).map(_.foreach { ipInfo =>
-        userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
-      })
+      def save(): Future[Option[RichIpAddress]] = {
+        val infoF = getIpInfoOpt(ip)
+        infoF.map(_.foreach { ipInfo =>
+          userValueRepo.setValue(userId, UserValueName.LAST_RECORDED_LOCATION, RichIpAddress.format.writes(ipInfo).toString())
+        })
+        infoF
+      }
       userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) match {
         case None => save()
         case Some(locationValue) =>
-          RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt.foreach { lastIp =>
-            if (lastIp.ip != ip) save()
-          }
+          RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt.map { lastIp =>
+            if (lastIp.ip != ip) save() else Future.successful(Some(lastIp))
+          } getOrElse Future.successful(None)
       }
     }
   }
@@ -174,7 +199,7 @@ class UserIpAddressEventLogger @Inject() (
   }
 
   private def linkToOrg(flag: String = "")(org: Organization): String =
-    s"<http://admin.kifi.com/admin/organization/${org.id.get.id}|${org.name}$flag>"
+    s"<https://admin.kifi.com/admin/organization/${org.id.get.id}|${org.name}$flag>"
 
   private def formatUser(user: User, email: Option[EmailAddress], candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
     val primaryMail = email.map(_.address).getOrElse("No Primary Mail")

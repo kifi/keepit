@@ -118,13 +118,9 @@ class OrgStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     orgExperimentsRepo: OrganizationExperimentRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    userIpAddressEventLogger: UserIpAddressEventLogger,
     airbrake: AirbrakeNotifier) extends Logging {
 
-  def getLastLocation(userId: Id[User])(implicit session: RSession) = {
-    userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) flatMap { locationValue =>
-      RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt
-    }
-  }
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int): Future[OrganizationStatistics] = {
     val (members, candidates) = db.readOnlyMaster { implicit session =>
       val members = orgMembershipRepo.getAllByOrgId(orgId)
@@ -308,10 +304,11 @@ class OrgStatisticsCommander @Inject() (
       val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
       val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
       val user = userRepo.get(userId)
-      val lastLocation = getLastLocation(user.id.get)
+      val lastLocationF = userIpAddressEventLogger.getLastLocation(user.id.get)
       for {
         numChats <- numChatsFut
         onlineUsers <- onlineUsersF
+        lastLocation <- lastLocationF
       } yield {
         userId -> MemberStatistics(
           user = user,

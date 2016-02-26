@@ -111,6 +111,7 @@ class UserStatisticsCommander @Inject() (
     orgStatisticsCommander: OrgStatisticsCommander,
     airbrake: AirbrakeNotifier,
     userValueRepo: UserValueRepo,
+    userIpAddressEventLogger: UserIpAddressEventLogger,
     planManagementCommander: PlanManagementCommander) extends Logging {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
@@ -119,21 +120,15 @@ class UserStatisticsCommander @Inject() (
     userRepo.getAllUsers(inviters).values.toSeq
   }
 
-  def getLastLocation(userId: Id[User])(implicit session: RSession): Option[RichIpAddress] = {
-    userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION) flatMap { locationValue =>
-      RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt
-    }
-  }
-
   def fullUserStatistics(userId: Id[User]) = {
-    val (keepCount, libs, slackMembers, slackToLibs, lastLocation) = db.readOnlyReplica { implicit s =>
+    val (keepCount, libs, slackMembers, slackToLibs) = db.readOnlyReplica { implicit s =>
       val keepCount = keepRepo.getCountByUser(userId)
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
       val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
       val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
-      val lastLocation: Option[RichIpAddress] = getLastLocation(userId)
-      (keepCount, libs, slackMembers, slackToLibs, lastLocation)
+      (keepCount, libs, slackMembers, slackToLibs)
     }
+    val lastLocationF = userIpAddressEventLogger.getLastLocation(userId)
     val (countF, botsF) = db.readOnlyReplica { implicit s =>
       val members = slackMembers.filter { _.scopes.contains(SlackAuthScope.UsersRead) }
       val slackTeamMembersCounts = members.map(slackStatisticsCommander.getTeamMembersCount)
@@ -161,6 +156,7 @@ class UserStatisticsCommander @Inject() (
     for {
       slackTeamMembersCount <- countF
       bots <- botsF
+      lastLocation <- lastLocationF
       (manualKeepsLastWeek, organizations, candidateOrganizations, socialUsers, fortyTwoConnections, kifiInstallations, emails, invitedByUsers, paying) <- infoF
     } yield {
       val slacks = SlackStatistics(slackTeamMembersCount, bots, slackToLibs)
@@ -169,6 +165,7 @@ class UserStatisticsCommander @Inject() (
   }
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
+    val lastLocationF = userIpAddressEventLogger.getLastLocation(user.id.get)
     val kifiInstallations = KifiInstallations(kifiInstallationRepo.all(user.id.get))
     val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
@@ -185,7 +182,6 @@ class UserStatisticsCommander @Inject() (
       val plan = planManagementCommander.currentPlan(org.id.get)
       plan.pricePerCyclePerUser.cents > 0
     }
-    val lastLocation: Option[RichIpAddress] = getLastLocation(user.id.get)
 
     UserStatistics(
       user,
@@ -200,7 +196,7 @@ class UserStatisticsCommander @Inject() (
       librariesFollowed,
       orgsStats,
       orgCandidatesStats,
-      lastLocation
+      Await.result(lastLocationF, Duration.Inf)
     )
   }
 
