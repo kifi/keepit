@@ -188,85 +188,70 @@ class SlackPushingActor @Inject() (
       // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
       // We do not keep track of whether this succeeds, we just assume that it does
       db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBotToken) }.foreach { botToken =>
-        log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found bot token $botToken")
-        for {
-          _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
-            case (k, ktl) =>
-              // lookup k in a cache to find a slack message timestamp
-              slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
-                // regenerate the slack message
-                val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
-                ))
-                // call the SlackClient to try and update the message
-                log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
-                slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).andThen {
-                  case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
-                  case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
-                }.imap(_ => ()).recover {
-                  case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
-                    slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
-                    slackPushForKeepRepo.dropTimestampFromCache(integration.id.get, k.id.get)
-                  case fail: SlackAPIErrorResponse =>
-                    slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
-                    ()
-                }
-              }.getOrElse(Future.successful(()))
-          }
-          _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
-            case (k, msgs) =>
-              FutureHelpers.sequentialExec(msgs) { msg =>
-                slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).map { oldCommentTimestamp =>
-                  // regenerate the slack message
-                  val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                    messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                  ))
-                  // call the SlackClient to try and update the message
-                  slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
-                    case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
-                      slackLog.warn(s"Failed to update comment ${msg.id} because the edit window closed, remove it from the cache")
-                      slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
-                    case fail: SlackAPIErrorResponse =>
-                      slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
-                      ()
-                  }
-                }.getOrElse(Future.successful(()))
+        FutureHelpers.sequentialExec(pushItems.oldKeeps) {
+          case (k, ktl) =>
+            // lookup k in a cache to find a slack message timestamp
+            slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
+              // regenerate the slack message
+              val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+                keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
+              ))
+              // call the SlackClient to try and update the message
+              slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).imap(_ => ()).recover {
+                case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+                  slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
+                  slackPushForKeepRepo.dropTimestampFromCache(integration.id.get, k.id.get)
+                case fail: SlackAPIErrorResponse =>
+                  slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
+                  ()
               }
-          }
-        } yield ()
+            }.getOrElse(Future.successful(()))
+        }
       }
 
       // Now push new things, updating the integration state as we go
-      FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
-        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
-          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, message.quiet).recoverWith {
-            case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+      val lastKeep = db.readOnlyMaster { implicit s => integration.lastProcessedKeep.map(ktlId => ktlRepo.get(ktlId).keepId) }
+      FutureHelpers.foldLeft(pushItems.sortedNewItems)(lastKeep) {
+        case (currentKeepOpt, item) =>
+          val asAttachment = item match {
+            case PushItem.MessageToPush(k, msg) if currentKeepOpt.safely.contains(k.id.get) => true
+            case _ => false
           }
-        ).map { pushedMessageOpt =>
-          db.readWrite { implicit s =>
+          slackMessageForItem(item, asAttachment).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
+            slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, message.quiet).recoverWith {
+              case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+            }
+          ).map { pushedMessageOpt =>
+            db.readWrite { implicit s =>
+              item match {
+                case PushItem.Digest(_) =>
+                  pushItems.newKeeps.map(_._2.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
+                  pushItems.newMsgs.values.flatten.map(_.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
+                case PushItem.KeepToPush(k, ktl) =>
+                  log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
+                  pushedMessageOpt.foreach { pushedMessage =>
+                    if (integration.slackChannelId.isDefined) {
+                      slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
+                    }
+                  }
+                  integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
+                case PushItem.MessageToPush(k, kifiMsg) =>
+                  pushedMessageOpt.foreach { pushedMessage =>
+                    if (integration.slackChannelId.isDefined) {
+                      slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
+                    }
+                  }
+                  integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
+              }
+            }
+          }.map { _ =>
             item match {
-              case PushItem.Digest(_) =>
-                pushItems.newKeeps.map(_._2.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
-                pushItems.newMsgs.values.flatten.map(_.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
-              case PushItem.KeepToPush(k, ktl) =>
-                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
-                pushedMessageOpt.foreach { pushedMessage =>
-                  if (integration.slackChannelId.isDefined) {
-                    slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
-                  }
-                }
-                integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
-              case PushItem.MessageToPush(k, kifiMsg) =>
-                pushedMessageOpt.foreach { pushedMessage =>
-                  if (integration.slackChannelId.isDefined) {
-                    slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
-                  }
-                }
-                integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
+              case PushItem.Digest(_) => None
+              case PushItem.KeepToPush(k, ktl) => Some(k.id.get)
+              case PushItem.MessageToPush(k, msg) => Some(k.id.get)
             }
           }
-        }
-      }.andThen {
+      }.map(_ => ()).andThen {
         case Success(_) =>
           db.readWrite { implicit s =>
             integrationRepo.updateLastProcessedSeqs(integration.id.get, pushItems.maxKeepSeq, pushItems.maxMsgSeq)
@@ -333,7 +318,7 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def slackMessageForItem(item: PushItem)(implicit items: PushItems): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem, asAttachment: Boolean = false)(implicit items: PushItems): Option[SlackMessageRequest] = {
     import DescriptionElements._
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
@@ -345,6 +330,9 @@ class SlackPushingActor @Inject() (
       case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get), items.newMsgs.getOrElse(k, Seq.empty).size + items.oldMsgs.getOrElse(k, Seq.empty).size)
       )))
+      case PushItem.MessageToPush(k, msg) if asAttachment => Some(SlackMessageRequest.fromKifi(text = "", attachments = Seq(SlackAttachment(text = Some(DescriptionElements.formatForSlack(
+        messageAttachmentAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
+      ))))))
       case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         messageAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
       )))
@@ -404,6 +392,21 @@ class SlackPushingActor @Inject() (
       SlackEmoji.speechBalloon,
       if (msg.isDeleted) DescriptionElements("[deleted]") else DescriptionElements(userElement getOrElse DescriptionElements("Someone"), "said:", CrossServiceMessage.stripLookHeresToReferencedText(msg.text)),
       "---", keepElement
+    )
+  }
+  private def messageAttachmentAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+    airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
+    airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
+    import DescriptionElements._
+
+    val shouldSmartRoute = canSmartRoute(slackTeamId)
+    val userElement: Option[DescriptionElements] = {
+      if (lib.organizationId.isEmpty || !shouldSmartRoute) user.map(fromBasicUser)
+      else user.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    }
+    if (msg.isDeleted) DescriptionElements("[deleted]")
+    else DescriptionElements(
+      userElement getOrElse DescriptionElements("Someone"), ":", CrossServiceMessage.stripLookHeresToReferencedText(msg.text)
     )
   }
 }
