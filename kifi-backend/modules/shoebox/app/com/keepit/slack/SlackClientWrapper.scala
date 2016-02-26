@@ -241,18 +241,18 @@ class SlackClientWrapperImpl @Inject() (
 
   private def withFirstValidToken[T](slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken], requiredScopes: Set[SlackAuthScope])(f: SlackAccessToken => Future[T]): Future[T] = {
     val tokens: Stream[SlackAccessToken] = {
-      lazy val botTokenOpt = if (requiredScopes subsetOf SlackAuthScope.botScopes) db.readOnlyMaster { implicit session =>
+      lazy val botTokenOpt = if (requiredScopes subsetOf SlackAuthScope.inheritableBotScopes) db.readOnlyMaster { implicit session =>
         slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
       }
       else None
       lazy val userTokens = db.readOnlyMaster { implicit session =>
-        val memberships = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).toSeq.sortBy(_.updatedAt.getMillis).reverse
+        val memberships = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).toSeq.sortBy(_.updatedAt.getMillis)(Ord.descending)
         memberships.flatMap(_.getTokenIncludingScopes(requiredScopes)).filter(!preferredTokens.contains(_))
       }
       preferredTokens.toStream append botTokenOpt append userTokens
     }
     FutureHelpers.collectFirst(tokens) { token =>
-      ((f(token).map(Some(_)) andThen onRevokedToken(token))) recover { case fail: SlackAPIErrorResponse => None }
+      f(token).map(Some(_)) andThen onRevokedToken(token) recover { case fail: SlackAPIErrorResponse => None }
     }
   }.flatMap(_.map(Future.successful(_)).getOrElse(Future.failed(SlackFail.NoValidToken)))
 

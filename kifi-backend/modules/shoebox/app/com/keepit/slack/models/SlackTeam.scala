@@ -58,7 +58,7 @@ case class SlackTeam(
 
   def unnotifiedSince: DateTime = lastDigestNotificationAt getOrElse createdAt
 
-  def getKifiBotTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackBotAccessToken] = if (requiredScopes subsetOf SlackAuthScope.botScopes) kifiBotToken else None
+  def getKifiBotTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackBotAccessToken] = if (requiredScopes subsetOf SlackAuthScope.inheritableBotScopes) kifiBotToken else None
 }
 
 object SlackTeam {
