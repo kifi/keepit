@@ -89,7 +89,7 @@ object BasicAuthor {
     )
     case TwitterAttribution(tweet) => TwitterUser(
       id = tweet.user.id.id.toString,
-      name = s"@${tweet.user.name}",
+      name = tweet.user.name,
       picture = ImageUrls.TWITTER_LOGO,
       url = tweet.permalink
     )
