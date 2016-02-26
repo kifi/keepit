@@ -23,22 +23,38 @@ object SlackResponse {
 
 @ImplementedBy(classOf[SlackAuthenticationCommanderImpl])
 trait SlackAuthenticationCommander {
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
+  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
   def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhook: Option[Id[SlackIncomingWebhookInfo]])(implicit context: HeimdalContext): Future[SlackResponse]
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse]
+  def getIdentityAndMissingScopes(userIdOpt: Option[Id[User]], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])]
 }
 
 @Singleton
 class SlackAuthenticationCommanderImpl @Inject() (
   db: Database,
   userValueRepo: UserValueRepo,
-  slackCommander: SlackCommander,
+  slackIdentityCommander: SlackIdentityCommander,
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
-  slackStateCommander: SlackAuthStateCommander,
   pathCommander: PathCommander,
   implicit val executionContext: ExecutionContext,
+  stateCache: SlackAuthStateCache,
   airbrake: AirbrakeNotifier)
     extends SlackAuthenticationCommander {
+
+  private def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState = {
+    SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), action) }
+  }
+
+  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
+    val state = setNewSlackState(action)
+    SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
+  }
+
+  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction] = {
+    stateCache.direct.get(SlackAuthStateKey(state))
+  }
 
   private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): SlackResponse.ActionPerformed = {
     val libraryUrl = db.readOnlyMaster { implicit s => pathCommander.libraryPageById(libraryId) }.absolute
@@ -95,7 +111,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
               val slackState = andThen.map {
                 case SetupLibraryIntegrations(libraryId, _) if incomingWebhookId.isDefined => SetupLibraryIntegrations(libraryId, incomingWebhookId.map(_.id))
                 case nextAction => nextAction
-              }.map(slackStateCommander.setNewSlackState)
+              }.map(setNewSlackState)
               val slackStateParam = slackState.map(state => s"&slackState=${state.state}") getOrElse ""
               val redirectUrl = s"/integrations/slack/teams?slackTeamId=${slackTeam.slackTeamId.value}$slackStateParam"
               Future.successful(SlackResponse.RedirectClient(redirectUrl))
@@ -137,13 +153,19 @@ class SlackAuthenticationCommanderImpl @Inject() (
   } tap (_.onFailure { case error => airbrake.notify(error) })
 
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse] = {
-    slackCommander.getIdentityAndMissingScopes(userId, slackTeamIdOpt, action).flatMap {
+    getIdentityAndMissingScopes(Some(userId), slackTeamIdOpt, action).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
       case (_, missingScopes) =>
-        val authUrl = slackStateCommander.getAuthLink(action, slackTeamIdOpt, missingScopes, SlackOAuthController.REDIRECT_URI).url
+        val authUrl = getAuthLink(action, slackTeamIdOpt, missingScopes, SlackOAuthController.REDIRECT_URI).url
         Future.successful(SlackResponse.RedirectClient(authUrl))
     }
   }
 
+  def getIdentityAndMissingScopes(userIdOpt: Option[Id[User]], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
+    slackIdentityCommander.getIdentityAndExistingScopes(userIdOpt, slackTeamIdOpt).imap {
+      case (identityOpt, existingScopes) =>
+        (identityOpt, action.getMissingScopes(existingScopes))
+    }
+  }
 }

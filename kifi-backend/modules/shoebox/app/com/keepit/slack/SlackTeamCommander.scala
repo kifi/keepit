@@ -133,7 +133,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam] = {
     db.readWrite { implicit session =>
-      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission) match {
+      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission) match {
         case false => Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         case true => slackTeamRepo.getBySlackTeamId(slackTeamId) match {
           case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
@@ -266,7 +266,7 @@ class SlackTeamCommanderImpl @Inject() (
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == team.slackTeamId)
               val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).flatMap(_.slackChannelId).toSet
-              val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackCommander.slackSetupPermission)
+              val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
             if (hasOrgPermissions) {
@@ -306,7 +306,7 @@ class SlackTeamCommanderImpl @Inject() (
     val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
     val permissionsByOrgIds = permissionCommander.getOrganizationsPermissions(allOrgIds, Some(userId))
     val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
-    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackCommander.slackSetupPermission))
+    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackIdentityCommander.slackSetupPermission))
     organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
   }
 }

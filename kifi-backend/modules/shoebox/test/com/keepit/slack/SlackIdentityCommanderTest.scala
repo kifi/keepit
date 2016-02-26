@@ -14,7 +14,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
-class SlackCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),

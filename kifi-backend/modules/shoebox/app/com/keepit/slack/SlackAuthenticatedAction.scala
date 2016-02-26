@@ -1,8 +1,6 @@
 package com.keepit.slack
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.cache._
-import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.{Library, Organization}
@@ -12,30 +10,6 @@ import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
 
-// This is in common only because SecureSocial's SlackProvider needs to be because fuck 2.11 play.plugins
-
-@ImplementedBy(classOf[SlackAuthStateCommanderImpl])
-trait SlackAuthStateCommander {
-  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
-  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
-}
-
-@Singleton
-class SlackAuthStateCommanderImpl @Inject() (stateCache: SlackAuthStateCache) extends SlackAuthStateCommander {
-  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState = {
-    SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), action) }
-  }
-
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
-    val state = setNewSlackState(action)
-    SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
-  }
-
-  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction] = {
-    stateCache.direct.get(SlackAuthStateKey(state))
-  }
-}
 
 sealed trait SlackAuthenticatedAction { self =>
   type A >: self.type <: SlackAuthenticatedAction

@@ -16,8 +16,7 @@ object SlackOAuthController {
 @Singleton
 class SlackOAuthController @Inject() (
   slackClient: SlackClient,
-  slackCommander: SlackCommander,
-  slackStateCommander: SlackAuthStateCommander,
+  slackIdentityCommander: SlackIdentityCommander,
   slackAuthCommander: SlackAuthenticationCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper,
@@ -30,11 +29,11 @@ class SlackOAuthController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val resultFut = for {
       code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackFail.NoAuthCode))
-      action <- slackStateCommander.getSlackAction(SlackAuthState(state)).map(Future.successful).getOrElse(Future.failed(SlackFail.InvalidAuthState))
+      action <- slackAuthCommander.getSlackAction(SlackAuthState(state)).map(Future.successful).getOrElse(Future.failed(SlackFail.InvalidAuthState))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), SlackOAuthController.REDIRECT_URI)
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
       result <- {
-        val webhookIdOpt = slackCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
+        val webhookIdOpt = slackIdentityCommander.registerAuthorization(request.userIdOpt, slackAuth, slackIdentity)
         slackAuthCommander.processAuthorizedAction(request.userId, slackIdentity.teamId, slackIdentity.userId, action, webhookIdOpt)
       }
     } yield {

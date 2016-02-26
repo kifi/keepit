@@ -94,7 +94,6 @@ class SlackInfoCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   orgInfoCommander: OrganizationInfoCommander,
   permissionCommander: PermissionCommander,
-  slackCommander: SlackCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
