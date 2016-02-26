@@ -100,9 +100,18 @@ var CurvedArrow = CurvedArrow || (function (window, document) {
     window.requestAnimationFrame(tick);
   }
 
+  var NS_SVG = 'http://www.w3.org/2000/svg';
   function $svg(tagName) {
     if (this) {
-      this.el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+      // Mozilla doesn't like variable arguments to document.createElements
+      // so just switch on any tag you want to use.
+      // TODO(carlos): change default case to something useful
+      switch(tagName) {
+        default:
+        case 'path':
+          this.el = document.createElementNS(NS_SVG, 'path');
+          break;
+      }
     } else {
       return new $svg(tagName);
     }

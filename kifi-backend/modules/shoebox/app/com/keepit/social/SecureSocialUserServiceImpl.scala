@@ -15,7 +15,7 @@ import com.keepit.model._
 import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
-import com.keepit.slack.SlackCommander
+import com.keepit.slack.SlackIdentityCommander
 import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
@@ -108,7 +108,7 @@ class SecureSocialUserPluginImpl @Inject() (
   userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
-  slackCommander: SlackCommander,
+  slackIdentityCommander: SlackIdentityCommander,
   userIdentityHelper: UserIdentityHelper,
   clock: Clock)
     extends UserService with SecureSocialUserPlugin with Logging {
@@ -292,7 +292,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def internSlackIdentity(userId: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
-    slackCommander.internSlackIdentity(userId, identity)
+    slackIdentityCommander.internSlackIdentity(userId, identity)
   }
 
   private def uploadProfileImage(user: User, identity: MaybeUserIdentity): Future[Unit] = {

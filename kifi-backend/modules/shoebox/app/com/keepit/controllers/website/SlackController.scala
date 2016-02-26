@@ -24,7 +24,6 @@ class SlackController @Inject() (
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
   slackAuthCommander: SlackAuthenticationCommander,
-  slackAuthStateCommander: SlackAuthStateCommander,
   slackToLibRepo: SlackChannelToLibraryRepo,
   libToSlackRepo: LibraryToSlackChannelRepo,
   userRepo: UserRepo,
@@ -98,19 +97,19 @@ class SlackController @Inject() (
 
   def createSlackTeam(slackTeamId: Option[SlackTeamId], slackState: Option[String]) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val andThen = slackState.flatMap(state => slackAuthStateCommander.getSlackAction(SlackAuthState(state)))
+    val andThen = slackState.flatMap(state => slackAuthCommander.getSlackAction(SlackAuthState(state)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, CreateSlackTeam(andThen))
     handleAsAPIRequest(res)(request)
   }
 
-  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId], slackState: Option[String]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  def connectSlackTeam(organizationId: PublicId[Organization], slackTeamId: Option[SlackTeamId], slackState: Option[String]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val andThen = slackState.flatMap(state => slackAuthStateCommander.getSlackAction(SlackAuthState(state)))
+    val andThen = slackState.flatMap(state => slackAuthCommander.getSlackAction(SlackAuthState(state)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamId, ConnectSlackTeam(request.orgId, andThen))
     handleAsAPIRequest(res)(request.request)
   }
 
-  def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackCommander.slackSetupPermission).async { implicit request =>
+  def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
       slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
@@ -127,7 +126,7 @@ class SlackController @Inject() (
     Ok(Json.obj("orgs" -> orgs))
   }
 
-  def getOrgIntegrations(pubId: PublicId[Organization], max: Int = 100) = OrganizationUserAction(pubId, SlackCommander.slackSetupPermission) { implicit request =>
+  def getOrgIntegrations(pubId: PublicId[Organization], max: Int = 100) = OrganizationUserAction(pubId, SlackIdentityCommander.slackSetupPermission) { implicit request =>
     val result = db.readOnlyReplica { implicit s =>
       slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId, Some(max))
     }

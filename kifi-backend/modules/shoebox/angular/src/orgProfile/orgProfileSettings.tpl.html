@@ -80,8 +80,31 @@
                     ui-sref="orgProfile.settings.integrations"
             >Slack Integrations</a>
           </li>
-          <!-- <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
-          <li><a class="kf-link" href="#history">History</a></li> -->
+          <!-- sublisting -->
+          <li ng-if="state.current.activenav === 'integrations'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.integrations({ '#': 'slack-sync-' })"
+            >Fetch channels</a>
+          </li>
+          <li ng-if="state.current.activenav === 'integrations'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.integrations({ '#': 'slack-settings-' })"
+            >Settings</a>
+          </li>
+          <li ng-if="state.current.activenav === 'integrations'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.integrations({ '#': 'blacklist-' })"
+            >Blacklist</a>
+          </li>
+          <li ng-if="state.current.activenav === 'integrations'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.integrations({ '#': 'slack-integrations-' })"
+            >Libraries</a>
+          </li>
         </ul>
       </nav>
       <div class="kf-ops-fixed-nav-fix">&nbsp;<!-- prevent the layout from jumping --></div>

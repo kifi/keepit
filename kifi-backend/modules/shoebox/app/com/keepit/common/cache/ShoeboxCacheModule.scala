@@ -14,8 +14,8 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.search.{ ActiveExperimentsCache, ArticleSearchResultCache, InitialSearchIdCache }
 import com.keepit.shoebox.model.KeepImagesCache
+import com.keepit.slack.SlackAuthStateCache
 import com.keepit.slack.models._
-import com.keepit.slack.{ SlackAuthStateCache, SlackCommentPushTimestampCache, SlackKeepPushTimestampCache }
 import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
 import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
 
@@ -477,10 +477,10 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new InferredKeeperPositionCache(stats, accessLog, (innerRepo, 1 day), (outerRepo, 30 days))
 
   @Provides @Singleton
-  def slackKeepPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackKeepPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
+  def slackPushForKeepTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackPushForKeepTimestampCache(stats, accessLog, (outerRepo, 1 day))
 
   @Provides @Singleton
-  def slackCommentPushTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackCommentPushTimestampCache(stats, accessLog, (outerRepo, 1 day))
+  def slackPushForMessageTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackPushForMessageTimestampCache(stats, accessLog, (outerRepo, 1 day))
 }

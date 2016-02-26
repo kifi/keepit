@@ -16,7 +16,7 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.slack.SlackCommander
+import com.keepit.slack.SlackIdentityCommander
 import com.keepit.slack.models._
 import com.keepit.social.{ IdentityHelpers, SocialNetworks, SocialId }
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
