@@ -196,7 +196,7 @@ class SlackPushingActor @Inject() (
               slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
                 // regenerate the slack message
                 val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get), pushItems.oldMsgs.getOrElse(k, Seq.empty).size + pushItems.newMsgs.getOrElse(k, Seq.empty).size)
+                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                 ))
                 // call the SlackClient to try and update the message
                 log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
@@ -218,9 +218,7 @@ class SlackPushingActor @Inject() (
               FutureHelpers.sequentialExec(msgs) { msg =>
                 slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).map { oldCommentTimestamp =>
                   // regenerate the slack message
-                  val updatedCommentMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                    messageAsDescriptionElements(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                  ))
+                  val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                   // call the SlackClient to try and update the message
                   slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
                     case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
@@ -238,11 +236,9 @@ class SlackPushingActor @Inject() (
 
       // Now push new things, updating the integration state as we go
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
-        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse]))(message =>
-          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, message.quiet).recoverWith {
-            case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
-          }
-        ).map { pushedMessageOpt =>
+        slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, slackMessageForItem(item)).recoverWith {
+          case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+        }.map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {
               case PushItem.Digest(_) =>
@@ -333,24 +329,23 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def slackMessageForItem(item: PushItem)(implicit items: PushItems): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem)(implicit items: PushItems): SlackMessageRequest = {
     import DescriptionElements._
     item match {
-      case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+      case PushItem.Digest(since) => SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
           case (m, n) => DescriptionElements(m, "new keeps and", n, "new comments since", since, ".")
         },
         "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
-      ))))
-      case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get), items.newMsgs.getOrElse(k, Seq.empty).size + items.oldMsgs.getOrElse(k, Seq.empty).size)
       )))
-      case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-        messageAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
-      )))
+      case PushItem.KeepToPush(k, ktl) => SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get))
+      ))
+      case PushItem.MessageToPush(k, msg) =>
+        messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
     }
   }
-  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser], msgCount: Int): DescriptionElements = {
+  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
     import DescriptionElements._
 
     val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
@@ -358,8 +353,7 @@ class SlackPushingActor @Inject() (
 
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val addComment = {
-      val text = s"${SlackEmoji.speechBalloon.value} " + (if (msgCount > 1) s"$msgCount comments" else if (msgCount == 1) s"$msgCount comment" else "Reply")
-      DescriptionElements(text --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)))
+      DescriptionElements("(", "Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)), ")")
     }
     val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
 
@@ -388,7 +382,7 @@ class SlackPushingActor @Inject() (
         )
     }
   }
-  private def messageAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
@@ -400,10 +394,12 @@ class SlackPushingActor @Inject() (
     }
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
-    DescriptionElements(
-      SlackEmoji.speechBalloon,
-      if (msg.isDeleted) DescriptionElements("[deleted]") else DescriptionElements(userElement getOrElse DescriptionElements("Someone"), "said:", CrossServiceMessage.stripLookHeresToReferencedText(msg.text)),
-      "---", keepElement
+    SlackMessageRequest.fromKifi(
+      text = DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.speechBalloon, userElement getOrElse "Someone", "on", keepElement)),
+      attachments = Seq(SlackAttachment.simple(
+        if (msg.isDeleted) DescriptionElements("[deleted]")
+        else DescriptionElements(CrossServiceMessage.stripLookHeresToReferencedText(msg.text))
+      ))
     )
   }
 }
