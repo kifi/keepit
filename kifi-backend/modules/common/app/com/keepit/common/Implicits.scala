@@ -65,6 +65,16 @@ final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
     }
     builder.result()
   }
+  def mapAccumLeft[Acc, B, That](a0: Acc)(fn: (Acc, A) => (Acc, B))(implicit cbf: CanBuildFrom[Repr, B, That]): (Acc, That) = {
+    val builder = cbf(xs.repr)
+    var acc = a0
+    xs.foreach { x =>
+      val (newAcc, y) = fn(acc, x)
+      acc = newAcc
+      builder += y
+    }
+    (acc, builder.result())
+  }
 }
 
 final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
