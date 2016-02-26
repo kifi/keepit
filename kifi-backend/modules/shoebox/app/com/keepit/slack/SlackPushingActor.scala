@@ -333,9 +333,11 @@ class SlackPushingActor @Inject() (
       case PushItem.MessageToPush(k, msg) if asAttachment => Some(SlackMessageRequest.fromKifi(text = "", attachments = Seq(SlackAttachment(text = Some(DescriptionElements.formatForSlack(
         messageAttachmentAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
       ))))))
-      case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-        messageAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
-      )))
+      case PushItem.MessageToPush(k, msg) => Some(SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(
+        messageIntroAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
+      ), attachments = Seq(SlackAttachment(text = Some(DescriptionElements.formatForSlack(
+        messageAttachmentAsDescriptionElements(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get))
+      ))))))
     }
   }
   private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser], msgCount: Int): DescriptionElements = {
@@ -376,23 +378,15 @@ class SlackPushingActor @Inject() (
         )
     }
   }
-  private def messageAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+  private def messageIntroAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
     val shouldSmartRoute = canSmartRoute(slackTeamId)
-    val userElement: Option[DescriptionElements] = {
-      if (lib.organizationId.isEmpty || !shouldSmartRoute) user.map(fromBasicUser)
-      else user.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
-    }
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
-    DescriptionElements(
-      SlackEmoji.speechBalloon,
-      if (msg.isDeleted) DescriptionElements("[deleted]") else DescriptionElements(userElement getOrElse DescriptionElements("Someone"), "said:", CrossServiceMessage.stripLookHeresToReferencedText(msg.text)),
-      "---", keepElement
-    )
+    DescriptionElements(SlackEmoji.speechBalloon, "On", "---", keepElement)
   }
   private def messageAttachmentAsDescriptionElements(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
