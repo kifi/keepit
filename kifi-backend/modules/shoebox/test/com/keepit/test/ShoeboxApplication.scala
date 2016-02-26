@@ -25,6 +25,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
+import com.keepit.model.EmailOptOut
 import com.keepit.normalizer.FakeNormalizationServiceModule
 import com.keepit.payments.FakeStripeClientModule
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
@@ -41,6 +42,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeRoverServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
@@ -63,7 +65,9 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
-    FakeStripeClientModule()
+    FakeStripeClientModule(),
+    FakeShoeboxStoreModule(),
+    FakeMailModule()
   ))
 
 trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers

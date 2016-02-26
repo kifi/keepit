@@ -4,7 +4,6 @@ import com.keepit.cortex.models.lda.UserLDAStatisticsCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.SlackAuthStateCache
 import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
@@ -183,8 +182,4 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
-
-  @Provides @Singleton
-  def slackStateCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
 }

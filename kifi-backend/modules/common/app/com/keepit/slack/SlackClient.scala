@@ -71,7 +71,7 @@ trait SlackClient {
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]]
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
-  def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]]
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
 }
 
 class SlackClientImpl(
@@ -172,7 +172,7 @@ class SlackClientImpl(
     slackCall[SlackUserInfo](SlackAPI.UserInfo(token, userId))((__ \ 'user).read)
   }
 
-  def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]] = {
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
     slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token))((__ \ 'members).read)
   }
 }
