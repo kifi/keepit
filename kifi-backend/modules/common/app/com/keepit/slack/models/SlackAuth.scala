@@ -60,7 +60,7 @@ object SlackAuthScope {
   val teamSetup = Set(TeamRead)
   val syncPublicChannels = teamSetup ++ pushAnywhere ++ ingestAnywhere
 
-  val userSignup: Set[SlackAuthScope] = Set(UsersRead, TeamRead)
+  val userSignup: Set[SlackAuthScope] = Set(Identify, UsersRead, TeamRead)
   val userLogin: Set[SlackAuthScope] = Set(Identify)
 
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
