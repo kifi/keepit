@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
 import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
-import com.keepit.model.{SourceAttribution, SlackAttribution, Keep, LibraryAccess, NotificationCategory}
+import com.keepit.model.{LibraryPermission, SourceAttribution, SlackAttribution, Keep, LibraryAccess, NotificationCategory}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import com.keepit.social.ImageUrls
@@ -110,6 +110,8 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
         }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse("a new keep")}")
       }
 
+      val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
+
       import com.keepit.common._
       StandardNotificationInfo(
         url = newKeep.url,
@@ -117,7 +119,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
         title = s"New keep in ${libraryKept.name}",
         body = body,
         linkText = "Go to page",
-        locator = Some(MessageThread.locator(Keep.publicId(event.keepId))),
+        locator = locator,
         extraJson = Some(Json.obj(
           "keeper" -> author,
           "library" -> Json.toJson(libraryKept),
