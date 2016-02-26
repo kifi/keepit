@@ -122,7 +122,15 @@
   box-sizing: content-box;
   width: 149px;
   height: 43px;
+  overflow: hidden;
   transition: width @keeper-transition-duration ease-out;
+
+  line-height: 43px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  background-image: linear-gradient(#fff, #f3f3f3);
+
   .kifi-hidden>& {
     width: 43px;
   }
@@ -139,12 +147,7 @@
     border-width: 1px;
     bottom: 2px;
   }
-  line-height: 43px;
-  font-weight: bold;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  background-image: linear-gradient(#fff, #f3f3f3);
+
   .kifi-tile.ui-draggable &,
   .kifi-dragged>& {
     transition: @draggable-box-shadow-transition;
@@ -167,6 +170,10 @@
     background-size: 16px 12px;
     background-repeat: no-repeat;
   }
+  &::after {
+    display: inline-block;
+  }
+
   &.kifi-unkept {
     color: #333 !important;
     &::before {
