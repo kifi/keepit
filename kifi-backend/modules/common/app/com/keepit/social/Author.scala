@@ -83,13 +83,13 @@ object BasicAuthor {
   def fromSource(source: SourceAttribution): BasicAuthor = source match {
     case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
-      name = msg.username.value,
+      name = s"@${msg.username.value}",
       picture = ImageUrls.SLACK_LOGO,
       url = msg.permalink
     )
     case TwitterAttribution(tweet) => TwitterUser(
       id = tweet.user.id.id.toString,
-      name = tweet.user.name,
+      name = s"@${tweet.user.name}",
       picture = ImageUrls.TWITTER_LOGO,
       url = tweet.permalink
     )
