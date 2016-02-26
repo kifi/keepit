@@ -62,7 +62,7 @@ angular.module('kifi')
         controller: 'ProfileCtrl'
       })
       .state('search', {
-        url: '/find?q&f&o',
+        url: '/find?q&f',
         templateUrl: 'search/search.tpl.html',
         controller: 'SearchCtrl',
         resolve: {
@@ -366,7 +366,7 @@ angular.module('kifi')
         errorView: 'kf-contact-admin'
       })
       .state('library.search', {
-        url: '/find?q&f&o',
+        url: '/find?q&f',
         templateUrl: 'search/matchingKeeps.tpl.html',
         controller: 'SearchCtrl',
         reloadOnSearch: false  // controller handles search query changes itself
