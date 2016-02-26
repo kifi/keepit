@@ -304,21 +304,31 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
     $slider.remove(), $slider = null;
     $(k.tile).triggerHandler('kifi:keeper:remove');
-    api.port.emit('prefs', function (prefs) {
-      if (prefs.showExtMsgIntro && extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
-        extMsgIntroEligible = false;
-        setTimeout(function () {
-          api.require('scripts/external_messaging_intro.js', api.noop);
-        }, 1000);
-      } else if(prefs.showExtMoveIntro && extMoveIntroEligible) {
-        extMoveIntroEligible = false;
-        setTimeout(function () {
-          api.require('scripts/move_keeper_intro.js', function () {
-            k.moveKeeperIntro.show();
-          });
-        }, 1000);
-      }
-    });
+    if (!k.guide) {
+      api.port.emit('prefs', function (prefs) {
+        if (k.eligibleForSafariUpdate) {
+          k.eligibleForSafariUpdate = false;
+          api.port.emit('api:safari-update-seen');
+          setTimeout(function () {
+            api.require('scripts/safari_update_tooltip.js', function () {
+              k.safariUpdateTooltip.show();
+            });
+          }, 1000);
+        } else if (prefs.showExtMsgIntro && extMsgIntroEligible && k.tile.dataset.kept) {
+          extMsgIntroEligible = false;
+          setTimeout(function () {
+            api.require('scripts/external_messaging_intro.js', api.noop);
+          }, 1000);
+        } else if(prefs.showExtMoveIntro && extMoveIntroEligible) {
+          extMoveIntroEligible = false;
+          setTimeout(function () {
+            api.require('scripts/move_keeper_intro.js', function () {
+              k.moveKeeperIntro.show();
+            });
+          }, 1000);
+        }
+      });
+    }
   }
 
   function startDrag(data) {

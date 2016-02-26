@@ -447,18 +447,21 @@ var api = api || (function () {
     loadReason: (function () {
       var extension = safari.extension;
       var settings = safari.extension.settings;
-      var hasRun = settings.hasRun;
-      var lastVersion = !!settings.lastVersion;
+      var savedHasRun = settings.hasRun;
+      var savedLastVersion = !!settings.lastVersion;
 
-      if (!hasRun && !lastVersion) {
-        return 'install';
-      } else if (lastVersion === extension.bundleVersion) {
-        return 'startup';
-      } else if (lastVersion){
-        return 'update';
-      }
       settings.hasRun = true;
       settings.lastVersion = extension.bundleVersion;
+
+      if (!savedHasRun) {
+        return 'install';
+      } else if (savedLastVersion !== extension.bundleVersion) {
+        return 'update';
+      } else if (savedLastVersion){
+        return 'startup';
+      } else {
+        return 'enabled';
+      }
     }()),
     mode: {
       isDev: function () {
@@ -503,29 +506,39 @@ var api = api || (function () {
       name: 'Safari',
       userAgent: navigator.userAgent
     },
-    requestUpdateCheck: function () {
-      var versionXPath = '//key[text()="CFBundleVersion"]/following-sibling::string/text()';
-      var request = new XMLHttpRequest();
-      request.open('GET', 'https://www.kifi.com/extensions/safari/KifiUpdates.plist', true);
-      request.onload = function() {
-        if (this.status >= 200 && this.status < 400) {
-          var xml = this.responseXML;
-          var xPathResult = xml.evaluate(versionXPath, xml, null, XPathResult.STRING_TYPE, null);
-          var updateVersion;
-          if (!xPathResult.invalidIteratorState) {
-            updateVersion = xPathResult.stringValue
-            if (bundleVersion !== updateVersion) {
-              // we have an update. show tooltip?
+    requestUpdateCheck: function (force) {
+      if (force) {
+        emitUpdateAvailable();
+      } else {
+        var versionXPath = '//key[text()="CFBundleVersion"]/following-sibling::string/text()';
+        var request = new XMLHttpRequest();
+        request.open('GET', 'https://www.kifi.com/extensions/safari/KifiUpdates.plist', true);
+        request.onload = function() {
+          if (this.status >= 200 && this.status < 400) {
+            var xml = this.responseXML;
+            var xPathResult = xml.evaluate(versionXPath, xml, null, XPathResult.STRING_TYPE, null);
+            var updateVersion;
+            if (!xPathResult.invalidIteratorState) {
+              updateVersion = xPathResult.stringValue
+              if (safari.extension.bundleVersion !== updateVersion) {
+                emitUpdateAvailable();
+              }
+            } else {
+              onError.call(this, xPathResult);
             }
           } else {
-            onError.call(this, xPathResult);
+            onError.call(this);
           }
-        } else {
-          onError.call(this);
-        }
-      };
-      request.onerror = onError;
-      request.send();
+        };
+        request.onerror = onError;
+        request.send();
+      }
+
+      function emitUpdateAvailable() {
+        api.tabs.each(function (page) {
+          page._port.postMessage('api:safari-update');
+        });
+      }
 
       function onError(extra) {
         l`${CRED}[requestUpdateCheck] an error occurred in the response %O${this} %s${this.response} %s${extra}`;

@@ -107,7 +107,13 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     silence: cleanUpDom.bind(null, 'silence'),
     unsilenced: api.require.bind(api, 'scripts/unsilenced.js', function () {
       showUnsilenced();
-    })
+    }),
+    'api:safari-update': function () {
+      k.eligibleForSafariUpdate = true;
+    },
+    'api:safari-update-clear': function () {
+      k.eligibleForSafariUpdate = false;
+    }
   });
 
   var tLastK = 0;

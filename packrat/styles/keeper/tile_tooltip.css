@@ -140,3 +140,6 @@
 .kifi-tile-tooltip a:active {
   color: #8cb8f2;
 }
+.kifi-tile-tooltip-tip-center.kifi-tile-tooltip-tip-center {
+  text-align: center;
+}

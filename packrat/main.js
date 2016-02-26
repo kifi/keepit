@@ -1525,6 +1525,11 @@ api.port.on({
     if (api.isPackaged()) {
       guideData = null;
     }
+  },
+  'api:safari-update-seen': function () {
+    api.tabs.each(function (page) {
+      api.tabs.emit(page, 'api:safari-update-clear');
+    });
   }
 });
 
