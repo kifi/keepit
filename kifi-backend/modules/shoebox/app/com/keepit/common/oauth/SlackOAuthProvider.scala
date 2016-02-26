@@ -48,9 +48,8 @@ class SlackOAuthProviderImpl @Inject() (
           val slackTeamId = getParameter("slackTeamId").map(SlackTeamId(_))
           val action = Authenticate()
           slackAuthCommander.getIdentityAndMissingScopes(None, slackTeamId, action).imap {
-            case (_, existingScopes) =>
-              val requiredScopes = action.getMissingScopes(existingScopes)
-              val link = slackAuthCommander.getAuthLink(action, slackTeamId, requiredScopes, REDIRECT_URI).url
+            case (_, missingScopes) =>
+              val link = slackAuthCommander.getAuthLink(action, slackTeamId, missingScopes, REDIRECT_URI).url
               Left(Results.Redirect(link, SEE_OTHER).withSession(request.session))
           }
         case Some(code) => {
