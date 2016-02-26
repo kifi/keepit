@@ -10,7 +10,7 @@ angular.module('kifi')
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    var settings = profile.organization && profile.organization.config && profile.organization.config.settings;
+    var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
     var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings && settings.slack_digest_notif.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
@@ -89,8 +89,11 @@ angular.module('kifi')
 
     $scope.addBlacklistEntry = function () {
       var path = $scope.blacklist.newPath.replace(/^https?:\/\//,'').trim();
-      if (path.length > 50) {
+      if (path.length > 70 || path.indexOf('.') === -1 || path.length < 5) {
+        $scope.blacklist.error = 'Paths must start with a valid domain.';
         return;
+      } else {
+        $scope.blacklist.error = '';
       }
       $scope.blacklist.existing.splice($scope.blacklist.limit, 0, {
         path: path,

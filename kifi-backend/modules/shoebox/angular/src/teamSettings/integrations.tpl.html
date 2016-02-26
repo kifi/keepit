@@ -80,7 +80,7 @@
           </td></tr>
         </table>
 
-        <div>
+        <div ng-if="blacklist.editable">
           <h3>Blacklist custom URLs</h3>
           <div>
             <form ng-submit="addBlacklistEntry()">
@@ -89,6 +89,7 @@
             </form>
           </div>
           <span class="kf-ts-integrations-marketing-text kf-ts-integrations-blacklist-ex">Example: <code>github.com</code>, <code>*.acme-corp.com/internal</code>.</span>
+          <div ng-if="blacklist.error" ng-bind="blacklist.error"></div>
         </div>
       </div>
 
