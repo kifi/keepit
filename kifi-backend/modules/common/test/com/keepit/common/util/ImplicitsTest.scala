@@ -93,12 +93,13 @@ class ImplicitsTest extends Specification {
           case Right(m) => m.group(1)
         }
 
-        foo("") === Seq("")
+        foo("") === Seq.empty
         foo("abc") === Seq("abc")
         foo("<15>") === Seq("15")
         foo("<15>abc") === Seq("15", "abc")
         foo("abc<15>") === Seq("abc", "15")
         foo("<10>abc<15>") === Seq("10", "abc", "15")
+        foo("<10><15>") === Seq("10", "15")
         foo("10>abc<15>") === Seq("10>abc", "15")
         foo("10>abc<15") === Seq("10>abc<15")
         foo("ab<15>cd<20>ef<25>") === Seq("ab", "15", "cd", "20", "ef", "25")

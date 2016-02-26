@@ -129,17 +129,14 @@ final class OptionExtensionOpts[A](x: Option[A]) {
 final class RegexExtensionOps(r: Regex) {
   // See ImplicitsTest for examples
   def collate(str: String): Seq[Either[String, Regex.Match]] = {
-    if (str.isEmpty) Seq(Left("")) else
-      r.findAllMatchIn(str).toList.mapAccumLeft((str, 0)) {
-        case ((remainingString, idxInOriginalString), m) =>
-          val beforeMatch = remainingString.take(m.start - idxInOriginalString)
-          ((remainingString.drop(m.end - idxInOriginalString), m.end), Seq(Left(beforeMatch), Right(m)))
-      } match {
-        case ((endOfString, _), ans) => (ans.flatten :+ Left(endOfString)).filterNot {
-          case Left("") => true
-          case _ => false
-        }
+    r.findAllMatchIn(str).toSeq.mapAccumLeft(0) {
+      case (idx, m) => (m.end, Seq(Left(str.slice(idx, m.start)), Right(m)))
+    } match {
+      case (lastIdx, ans) => (ans.flatten :+ Left(str.drop(lastIdx))).filterNot {
+        case Left("") => true
+        case _ => false
       }
+    }
   }
 }
 
