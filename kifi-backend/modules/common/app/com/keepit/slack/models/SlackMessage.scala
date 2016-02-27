@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.util.DescriptionElements
 import com.keepit.model.KeepAttributionType._
 import com.keepit.model.{ LibrarySpace, Keep, Library }
 import com.keepit.rover.model.BasicImages
@@ -47,12 +48,18 @@ case class SlackAttachment(
     thumbUrl: Option[String] = None,
     markdownIn: Option[Set[String]] = None) {
   def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
+  def withColor(newColor: String) = this.copy(color = Some(newColor))
 }
 
 object SlackAttachment {
   case class Author(name: String, link: Option[String], icon: Option[String])
   case class Title(value: String, link: Option[String])
   @json case class Field(title: String, value: JsValue, short: Option[Boolean])
+
+  def simple(text: DescriptionElements): SlackAttachment = {
+    val str = DescriptionElements.formatForSlack(text)
+    SlackAttachment(text = Some(str), fallback = Some(str))
+  }
 
   def applyFromSlack(
     fallback: Option[String],

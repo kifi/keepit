@@ -79,15 +79,13 @@ class LibraryNewKeepsCommander @Inject() (
           pushNotificationExperiment = PushNotificationExperiment.Experiment1,
           category = LibraryPushNotificationCategory.LibraryChanged
         )
-        keeperOpt.map { keeper =>
-          elizaClient.sendNotificationEvent(LibraryNewKeep(
-            Recipient(userId),
-            currentDateTime,
-            keeper.id.get,
-            keep.id.get,
-            library.id.get
-          ))
-        }.getOrElse(Future.successful(Unit))
+        elizaClient.sendNotificationEvent(LibraryNewKeep(
+          Recipient(userId),
+          currentDateTime,
+          keeperOpt.flatMap(_.id),
+          keep.id.get,
+          library.id.get
+        ))
       }
     } else Future.successful((): Unit)
   }

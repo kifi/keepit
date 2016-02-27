@@ -4,15 +4,15 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService', 'profileService', 'profile',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService, profile) {
+  'slackService', 'profile',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profile) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    var settings = profile.organization && profile.organization.config && profile.organization.config.settings;
-    var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
-    var notifSetting = settings && settings.slack_digest_notif.setting;
+    var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
+    var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
+    var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
 
@@ -67,12 +67,16 @@ angular.module('kifi')
       .then(onSave, onError);
     };
 
-    $scope.isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
-
+    var existingBlacklist = (settings.slack_ingestion_domain_blacklist || {}).setting || [];
     $scope.blacklist = {
       newPath: '',
-      existing: (settings.slack_ingestion_domain_blacklist || {}).setting || [],
-      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable
+      existing: existingBlacklist,
+      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable,
+      limit: existingBlacklist.length > 6 ? 4 : 6
+    };
+
+    $scope.expandBlacklist = function () {
+      $scope.blacklist.limit += 50;
     };
 
     $scope.removeBlacklistEntry = function (path) {
@@ -84,10 +88,18 @@ angular.module('kifi')
     };
 
     $scope.addBlacklistEntry = function () {
-      $scope.blacklist.existing.push({
-        path: $scope.blacklist.newPath,
+      var path = $scope.blacklist.newPath.replace(/^https?:\/\//,'').trim();
+      if (path.length > 70 || path.indexOf('.') === -1 || path.length < 5) {
+        $scope.blacklist.error = 'Paths must start with a valid domain.';
+        return;
+      } else {
+        $scope.blacklist.error = '';
+      }
+      $scope.blacklist.existing.splice($scope.blacklist.limit, 0, {
+        path: path,
         createdAt: +new Date()
       });
+      $scope.blacklist.limit += 1;
       orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;

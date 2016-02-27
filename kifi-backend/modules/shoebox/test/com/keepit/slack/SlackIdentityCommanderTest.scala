@@ -14,7 +14,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
-class SlackCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
@@ -32,7 +32,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           }
           val slackUser = SlackUserFactory.user()
           val ident = SlackIdentifyResponse("http://www.rando.slack.com/", slackTeam.slackTeamName, slackUser.username, slackTeam.slackTeamId, slackUser.userId)
-          val auth = SlackAuthorizationResponse(SlackAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.newPush, slackTeam.slackTeamName, slackTeam.slackTeamId, None, botAuth = None)
+          val auth = SlackAuthorizationResponse(SlackUserAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.newPush, slackTeam.slackTeamName, slackTeam.slackTeamId, None, botAuth = None)
 
           db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
           slackCommander.registerAuthorization(Some(user1.id.get), auth, ident)

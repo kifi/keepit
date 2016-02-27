@@ -8,7 +8,7 @@ import securesocial.core.{ AuthenticationMethod, SocialUser, IdentityId }
 
 object FakeSecureSocial {
 
-  val FAKE_SID = "fake_sid"
+  val FAKE_SID = "dc6cb121-2a69-47c7-898b-bc2b9356054c"
 
   val FAKE_ID = "fake_user_id"
 

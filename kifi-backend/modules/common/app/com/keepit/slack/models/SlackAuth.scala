@@ -48,6 +48,8 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
+  val inheritableBotScopes: Set[SlackAuthScope] = Set(Bot, UsersRead, TeamRead, ChannelsRead) // scopes covering APIs that can use a user token or the Kifi bot token transparently
+
   val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot) + ChannelsRead // adding ChannelsReads *temporarily* as an attempt to backfill some of the missing channel ids
   val newPush: Set[SlackAuthScope] = Set(Commands, IncomingWebhook)
   val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
@@ -58,7 +60,7 @@ object SlackAuthScope {
   val teamSetup = Set(TeamRead)
   val syncPublicChannels = teamSetup ++ pushAnywhere ++ ingestAnywhere
 
-  val userSignup: Set[SlackAuthScope] = Set(UsersRead, TeamRead)
+  val userSignup: Set[SlackAuthScope] = Set(Identify, UsersRead, TeamRead)
   val userLogin: Set[SlackAuthScope] = Set(Identify)
 
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
@@ -83,16 +85,16 @@ case class SlackAuthorizationRequest(
 
 case class BotUserAuthorization(
   userId: SlackUserId,
-  accessToken: SlackAccessToken)
+  accessToken: SlackBotAccessToken)
 object BotUserAuthorization {
   implicit val reads: Reads[BotUserAuthorization] = (
     (__ \ 'bot_user_id).read[SlackUserId] and
-    (__ \ 'bot_access_token).read[SlackAccessToken]
+    (__ \ 'bot_access_token).read[SlackBotAccessToken]
   )(BotUserAuthorization.apply _)
 }
 
 case class SlackAuthorizationResponse(
-  accessToken: SlackAccessToken,
+  accessToken: SlackUserAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: SlackTeamName,
   teamId: SlackTeamId,
@@ -100,7 +102,7 @@ case class SlackAuthorizationResponse(
   botAuth: Option[BotUserAuthorization])
 object SlackAuthorizationResponse {
   implicit val reads: Reads[SlackAuthorizationResponse] = (
-    (__ \ 'access_token).read[SlackAccessToken] and
+    (__ \ 'access_token).read[SlackUserAccessToken] and
     (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
     (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'team_id).read[SlackTeamId] and

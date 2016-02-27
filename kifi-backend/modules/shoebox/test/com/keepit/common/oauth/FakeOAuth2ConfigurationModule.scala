@@ -1,13 +1,12 @@
 package com.keepit.common.oauth
 
-import com.google.inject.{ Singleton, Provides }
-import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.google.inject.{Provides, Singleton}
+import com.keepit.common.core._
 import com.keepit.slack.models.SlackAuthorizationResponse
 import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
 import securesocial.core.IdentityId
-import com.keepit.common.core._
 
 import scala.concurrent.Future
 
@@ -60,14 +59,14 @@ case class FakeOAuthConfigurationModule() extends OAuthConfigurationModule {
 
   @Provides @Singleton
   def getOAuth1Configuration(): OAuth1Configuration = {
-    import OAuth1Providers._
+    import com.keepit.common.oauth.OAuth1Providers._
     val providerMap = Map(TWTR -> twtrConfigBuilder(ConsumerKey("cwXfTNd8iiKbWtXtszz9ADNmQ", "sO2GthBWUMhNG7WYp0gyBq4yLpSzVlJkdVPjfaxhTEe92ZfPS1"), ConsumerKey("17148682-0x4Qq6BU5GcX8NNmdDgpEPgbUORz0aRIwqPnynlTA", "8C3NU8zmy0FgHy9Ga7X8Xay2Yp1uB1EhQnpGsZ9ODa8vq")))
     OAuth1Configuration(providerMap)
   }
 
   @Provides @Singleton
   def getOAuth2Configuration(): OAuth2Configuration = {
-    import OAuth2Providers._
+    import com.keepit.common.oauth.OAuth2Providers._
     val providerMap = Map(
       FB -> fbConfigBuilder("530357056981814", "cdb2939941a1147a4b88b6c8f3902745"),
       LNKD -> lnkdConfigBuilder("ovlhms1y0fjr", "5nz8568RERDuTNpu"),

@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
+import com.keepit.discussion.Message
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.slack.models._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
@@ -93,7 +94,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
             organizationId = Some(org.id.get),
             generalChannelId = None,
             kifiBotUserId = Some(SlackUserId("UIAMABOT")),
-            kifiBotToken = Some(SlackAccessToken("xbxb-bottoken"))
+            kifiBotToken = Some(SlackBotAccessToken("xbxb-bottoken"))
           ))
           slackTeamRepo.getBySlackTeamId(saved.slackTeamId) must beSome(saved)
           saved
@@ -107,7 +108,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           SlackUsername("@fake"),
           slackTeam.slackTeamId,
           slackTeam.slackTeamName,
-          Some(SlackAccessToken("fake_token")),
+          Some(SlackUserAccessToken("fake_token")),
           Set(SlackAuthScope.SearchRead),
           slackUser = None
         )
@@ -133,11 +134,12 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId.get, LibrarySpace.fromUserId(slackAccount.userId.get), slackAccount.slackUserId, slackAccount.slackTeamId, None, channelName, lib.id.get, status = SlackIntegrationStatus.On)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId.get, LibrarySpace.fromUserId(slackAccount.userId.get), slackAccount.slackUserId, slackAccount.slackTeamId, Some(channelId), channelName, lib.id.get, status = SlackIntegrationStatus.On)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
-        db.readWrite { implicit session =>
+        val libToSlackChannel = db.readWrite { implicit session =>
           val saved = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
           libraryToSlackChannelRepo.get(saved.id.get) === saved
+          saved
         }
 
         // SlackChannelToLibrary
@@ -146,6 +148,38 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           val saved = slackChannelToLibraryRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
           slackChannelToLibraryRepo.get(saved.id.get) === saved
         }
+
+        // SlackPushForKeep
+        val slackPushForKeepRepo = inject[SlackPushForKeepRepo]
+        val slackPushForKeep = db.readWrite { implicit session =>
+          val saved = slackPushForKeepRepo.intern(SlackPushForKeep(
+            slackTeamId = libToSlackChannel.slackTeamId,
+            slackChannelId = libToSlackChannel.slackChannelId.get,
+            integrationId = libToSlackChannel.id.get,
+            keepId = keep.id.get,
+            timestamp = SlackTimestamp("42424242.00000"),
+            text = "I am a keep-flavored meat popsicle"
+          ))
+          slackPushForKeepRepo.get(saved.id.get) === saved
+          saved
+        }
+
+        // SlackPushForMessage
+        val slackPushForMessageRepo = inject[SlackPushForMessageRepo]
+        val slackPushForMessage = db.readWrite { implicit session =>
+          val saved = slackPushForMessageRepo.intern(SlackPushForMessage(
+            slackTeamId = libToSlackChannel.slackTeamId,
+            slackChannelId = libToSlackChannel.slackChannelId.get,
+            integrationId = libToSlackChannel.id.get,
+            messageId = Id[Message](4257),
+            timestamp = SlackTimestamp("42424242.00000"),
+            text = "I am a message-flavored meat popsicle"
+          ))
+          slackPushForMessageRepo.get(saved.id.get) === saved
+          saved
+        }
+
+        1 === 1
       }
     }
   }

@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.logging.Logging
-import com.keepit.slack.SlackClient
+import com.keepit.slack.{ SlackClientWrapper, SlackClient }
 import com.keepit.slack.models._
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -31,23 +31,23 @@ class SlackStatisticsCommander @Inject() (
     slackTeamMembersCountCache: SlackTeamMembersCountCache,
     slackTeamMembersCache: SlackTeamMembersCache,
     slackTeamBotsCache: SlackTeamBotsCache,
-    slackClient: SlackClient,
+    slackClient: SlackClientWrapper,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def getTeamMembersCount(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Int] = {
-    val count = slackTeamMembersCountCache.getOrElseFuture(SlackTeamMembersCountKey(slackTeamMembership.slackTeamId)) {
-      getTeamMembers(slackTeamMembership: SlackTeamMembership).map(_.filterNot(_.bot).size)
+  def getTeamMembersCount(slackTeamId: SlackTeamId): Future[Int] = {
+    val count = slackTeamMembersCountCache.direct.getOrElseFuture(SlackTeamMembersCountKey(slackTeamId)) {
+      getTeamMembers(slackTeamId).map(_.filterNot(_.bot).size)
     }
     count.recover {
       case error =>
-        log.error(s"error fetching members with $slackTeamMembership", error)
+        log.error(s"error fetching members for $slackTeamId", error)
         -2
     }
   }
 
-  def getSlackBots(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Set[String]] = {
-    slackTeamBotsCache.getOrElseFuture(SlackTeamBotsKey(slackTeamMembership.slackTeamId)) {
-      val bots = getTeamMembers(slackTeamMembership).map(_.filter(_.bot).map(_.name.value).toSet)
+  def getSlackBots(slackTeamId: SlackTeamId): Future[Set[String]] = {
+    slackTeamBotsCache.direct.getOrElseFuture(SlackTeamBotsKey(slackTeamId)) {
+      val bots = getTeamMembers(slackTeamId).map(_.filter(_.bot).map(_.name.value).toSet)
       bots.recover {
         case error =>
           log.error("error fetching members", error)
@@ -56,16 +56,14 @@ class SlackStatisticsCommander @Inject() (
     }
   }
 
-  def getTeamMembers(slackTeamMembership: SlackTeamMembership)(implicit session: RSession): Future[Seq[SlackUserInfo]] = {
-    slackTeamMembersCache.getOrElseFuture(SlackTeamMembersKey(slackTeamMembership.slackTeamId)) {
-      slackClient.getUsersList(slackTeamMembership.token.get, slackTeamMembership.slackUserId).map { allMembers =>
+  def getTeamMembers(slackTeamId: SlackTeamId): Future[Seq[SlackUserInfo]] = {
+    slackTeamMembersCache.direct.getOrElseFuture(SlackTeamMembersKey(slackTeamId)) {
+      slackClient.getUsers(slackTeamId).map { allMembers =>
         val deleted = allMembers.filter(_.deleted)
         val bots = allMembers.filterNot(_.deleted).filter(_.bot)
-        log.info(s"fetched members from slack team ${slackTeamMembership.slackTeamName} ${slackTeamMembership.slackTeamId} via user ${slackTeamMembership.slackUsername} ${slackTeamMembership.slackUserId}; " +
-          s"out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
+        log.info(s"fetched members from slack team $slackTeamId: out of ${allMembers.size}, ${deleted.size} deleted, ${bots.size} where bots: ${bots.map(_.name)}")
         allMembers.filterNot(_.deleted)
       }
     }
   }
-
 }

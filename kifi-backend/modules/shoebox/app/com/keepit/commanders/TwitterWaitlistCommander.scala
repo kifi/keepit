@@ -8,7 +8,7 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.oauth.{ TwitterUserShow, TwitterOAuthProvider }
+import com.keepit.common.oauth.{ OAuth1TokenInfo, TwitterUserShow, TwitterOAuthProvider }
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._

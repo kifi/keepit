@@ -6,7 +6,6 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.SlackAuthStateCache
 import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
@@ -220,9 +219,5 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
-
-  @Provides @Singleton
-  def slackStateCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
 }
 

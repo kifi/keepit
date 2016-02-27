@@ -94,8 +94,12 @@
       var beforeTransitionProperties = getSingleTransitionProperties(element, ':before');
       var afterTransitionProperties = getSingleTransitionProperties(element, ':after');
       var allProperties = elementTransitionProperties.concat(beforeTransitionProperties).concat(afterTransitionProperties);
-
-      return unique(allProperties);
+      var uniqueProps = unique(allProperties);
+      var indexOfAll = uniqueProps.indexOf('all');
+      if (uniqueProps.length > 1 && indexOfAll > -1) {
+        uniqueProps.splice(indexOfAll, 1);
+      }
+      return uniqueProps;
     }
 
     function getTransitionEvent(element, property, duration) {

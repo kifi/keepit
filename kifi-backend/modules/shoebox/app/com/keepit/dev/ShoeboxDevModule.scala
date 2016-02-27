@@ -1,6 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.commanders.emails.activity.DevActivityEmailQueueModule
+import com.keepit.common.oauth.DevOAuthConfigurationModule
 import com.keepit.controllers.internal.DevDataPipelineExecutorModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
@@ -26,6 +27,7 @@ import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 
 case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val secureSocialModule = ProdShoeboxSecureSocialModule()
+  val oauthModule = DevOAuthConfigurationModule()
   val userActionsModule = ProdShoeboxUserActionsModule()
   val mailModule = DevMailModule()
   val reaperModule = DevReaperModule()

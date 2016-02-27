@@ -109,7 +109,6 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val slackChannelColumnType = SlackDbColumnTypes.channelName(db)
   implicit val statusColumnType = SlackIntegrationStatus.columnType(db)
-  implicit val msgIdColumnType = MappedColumnType.base[Id[Message], Long](id => id.id, v => Id(v))
 
   private def ltsFromDbRow(
     id: Option[Id[LibraryToSlackChannel]],

@@ -46,7 +46,6 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     userEmailAddressCommander: UserEmailAddressCommander,
     permissionCommander: PermissionCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
-    orgMembershipCommander: OrganizationMembershipCommander,
     orgAnalytics: OrganizationAnalytics,
     userRepo: UserRepo,
     userValueRepo: UserValueRepo,

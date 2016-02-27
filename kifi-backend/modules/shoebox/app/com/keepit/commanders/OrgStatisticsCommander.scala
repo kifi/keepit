@@ -22,8 +22,10 @@ import com.keepit.model._
 import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
 import com.keepit.slack.models._
 import org.joda.time.DateTime
+import com.keepit.common.core._
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future, ExecutionContext }
 import scala.util.Try
 
 case class MemberStatistics(
@@ -122,7 +124,7 @@ class OrgStatisticsCommander @Inject() (
     airbrake: AirbrakeNotifier) extends Logging {
 
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int): Future[OrganizationStatistics] = {
-    val (members, candidates) = db.readOnlyMaster { implicit session =>
+    val (members, candidates) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.getAllByOrgId(orgId)
       val candidates = orgMembershipCandidateRepo.getAllByOrgId(orgId).toSet
       (members, candidates)
@@ -134,7 +136,7 @@ class OrgStatisticsCommander @Inject() (
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
     }
 
-    val (org, libraries, slackToLibs, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains) = db.readOnlyMaster { implicit session =>
+    val (org, libraries, slackToLibs, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains, slackTeam) = db.readOnlyReplica { implicit session =>
       val org = orgRepo.get(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackToLibs = slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get))
@@ -144,24 +146,19 @@ class OrgStatisticsCommander @Inject() (
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
-      (org, libraries, slackToLibs, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains)
+      val slackTeam = slackTeamRepo.getByOrganizationId(orgId)
+      (org, libraries, slackToLibs, numKeeps, numKeepsLastWeek, experiments, membersStatsFut, domains, slackTeam)
     }
 
-    val (countF, botsF) = db.readOnlyReplica { implicit s =>
-      val teams = slackTeamRepo.getByOrganizationId(orgId)
-      teams flatMap { slackTeam =>
-        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
-        allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
-      } map { member =>
-        val count = slackStatisticsCommander.getTeamMembersCount(member)
-        val bots = slackStatisticsCommander.getSlackBots(member)
-        (count, bots)
-      } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
-    }
+    val (countF, botsF) = slackTeam map { team =>
+      val count = slackStatisticsCommander.getTeamMembersCount(team.slackTeamId)
+      val bots = slackStatisticsCommander.getSlackBots(team.slackTeamId)
+      (count, bots)
+    } getOrElse (Future.successful(0), Future.successful(Set.empty[String]))
 
     val fMemberRecoInfos = fMemberRecommendations.map(_.filter { reco =>
       reco.identifier.isLeft &&
-        db.readOnlyMaster { implicit session =>
+        db.readOnlyReplica { implicit session =>
           orgMembershipRepo.getAllByUserId(reco.identifier.left.get).isEmpty &&
             orgMembershipCandidateRepo.getAllByUserId(reco.identifier.left.get).isEmpty &&
             !userExperimentRepo.hasExperiment(reco.identifier.left.get, UserExperimentType.ADMIN) &&
@@ -169,7 +166,7 @@ class OrgStatisticsCommander @Inject() (
         }
     }.map {
       case OrganizationInviteRecommendation(Left(userId), _, score) =>
-        val (user, emailAddress) = db.readOnlyMaster { implicit session =>
+        val (user, emailAddress) = db.readOnlyReplica { implicit session =>
           (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
         }
         OrganizationMemberRecommendationInfo(user, emailAddress, math.floor(score * 10000) / 10000)
@@ -247,26 +244,21 @@ class OrgStatisticsCommander @Inject() (
 
   def organizationStatisticsOverview(org: Organization): Future[OrganizationStatisticsOverview] = {
     val orgId = org.id.get
-    val infoF = db.readOnlyReplicaAsync { implicit session =>
+    val (libraries, members, domains, slackChannelToLibrary, slackTeam) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.countByOrgId(orgId)
       val domains = orgDomainOwnCommander.getDomainsOwned(orgId)
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackChannelToLibrary = slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get))
-      (libraries, members, domains, slackChannelToLibrary)
+      val slackTeam = slackTeamRepo.getByOrganizationId(orgId)
+      (libraries, members, domains, slackChannelToLibrary, slackTeam)
     }
-    val (countF, botsF) = db.readOnlyReplica { implicit s =>
-      val teams = slackTeamRepo.getByOrganizationId(orgId)
-      teams flatMap { slackTeam =>
-        val allMembers = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).toSeq
-        allMembers.find { _.scopes.contains(SlackAuthScope.UsersRead) }
-      } map { member =>
-        val count = slackStatisticsCommander.getTeamMembersCount(member)
-        val bots = slackStatisticsCommander.getSlackBots(member)
-        (count, bots)
-      } getOrElse (Future.successful(if (teams.isEmpty) 0 else -1), Future.successful(Set.empty[String]))
-    }
+    val (countF, botsF) = slackTeam map { team =>
+      val count = slackStatisticsCommander.getTeamMembersCount(team.slackTeamId)
+      val bots = slackStatisticsCommander.getSlackBots(team.slackTeamId)
+      (count, bots)
+    } getOrElse (Future.successful(0), Future.successful(Set.empty[String]))
+
     for {
-      (libraries, members, domains, slackChannelToLibrary) <- infoF
       slackTeamMembersCount <- countF
       bots <- botsF
     } yield {
@@ -292,23 +284,27 @@ class OrgStatisticsCommander @Inject() (
     }
   }
 
-  def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
+  def membersStatistics(userIds: Set[Id[User]]): Future[Map[Id[User], MemberStatistics]] = {
     val onlineUsersF = elizaClient.areUsersOnline(userIds.toSeq)
     val membersStatsFut = userIds.map { userId =>
+      val infoF = db.readOnlyMasterAsync { implicit s =>
+        val installed = kifiInstallationRepo.all(userId).nonEmpty
+        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
+        val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
+        val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
+        val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+        val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
+        val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
+        val user = userRepo.get(userId)
+        (user, installed, keepVisibilityCount, numLibrariesCreated, numLibrariesCollaborating, numLibrariesFollowing, dateLastManualKeep)
+      }
       val numChatsFut = elizaClient.getUserThreadStats(userId)
-      val installed = kifiInstallationRepo.all(userId).nonEmpty
-      val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
-      val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
-      val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
-      val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
-      val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
-      val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
-      val user = userRepo.get(userId)
-      val lastLocationF = userIpAddressEventLogger.getLastLocation(user.id.get)
+      val lastLocationF = userIpAddressEventLogger.getLastLocation(userId)
       for {
         numChats <- numChatsFut
         onlineUsers <- onlineUsersF
         lastLocation <- lastLocationF
+        (user, installed, keepVisibilityCount, numLibrariesCreated, numLibrariesCollaborating, numLibrariesFollowing, dateLastManualKeep) <- infoF
       } yield {
         userId -> MemberStatistics(
           user = user,
@@ -324,6 +320,29 @@ class OrgStatisticsCommander @Inject() (
       }
     }
     Future.sequence(membersStatsFut).imap(_.toMap)
+  }
+
+  def organizationStatisticsMin(org: Organization): OrganizationStatisticsMin = {
+    val orgId = org.id.get
+    val slackTeam = db.readOnlyReplica { implicit session => slackTeamRepo.getByOrganizationId(orgId) }
+    val slackTeamSizeF = slackTeam.map { team =>
+      slackStatisticsCommander.getTeamMembersCount(team.slackTeamId)
+    } getOrElse Future.successful(0)
+
+    val (mamberCount, libCount, slackLibs) = db.readOnlyReplica { implicit session =>
+      val members = orgMembershipRepo.countByOrgId(orgId)
+      val libraries = libraryRepo.countOrganizationLibraries(orgId)
+      val slack = libraryRepo.countSlackOrganizationLibraries(orgId)
+      (members, libraries, slack)
+    }
+
+    OrganizationStatisticsMin(
+      org = org,
+      memberCount = mamberCount,
+      libCount = libCount,
+      slackLibs = slackLibs,
+      slackTeamSize = Await.result(slackTeamSizeF, Duration.Inf)
+    )
   }
 
 }

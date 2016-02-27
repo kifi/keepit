@@ -677,16 +677,17 @@ class KeepCommanderImpl @Inject() (
     require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
     val oldKeepOpt = k.id.map(keepRepo.get)
-    val newKeep = keepRepo.save(k)
+    val (oldLibs, oldUsers) = (oldKeepOpt.map(_.connections.libraries).getOrElse(Set.empty), oldKeepOpt.map(_.connections.users).getOrElse(Set.empty))
+    val newKeep = keepRepo.save(k.withLibraries(oldLibs ++ k.connections.libraries).withParticipants(oldUsers ++ k.connections.users))
 
-    if (oldKeepOpt.forall(_.connections.libraries != newKeep.connections.libraries)) {
-      val libraries = libraryRepo.getActiveByIds(newKeep.connections.libraries).values
+    if (oldLibs != newKeep.connections.libraries) {
+      val libraries = libraryRepo.getActiveByIds(newKeep.connections.libraries -- oldLibs).values
       libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
     }
 
-    if (oldKeepOpt.forall(_.connections.users != newKeep.connections.users)) {
-      val newUsers = oldKeepOpt.map(oldKeep => newKeep.connections.users -- oldKeep.connections.users).getOrElse(newKeep.connections.users)
-      addUsersToKeep(newKeep.id.get, addedBy = newKeep.userId, newUsers)
+    if (oldUsers != newKeep.connections.users) {
+      val newUsers = newKeep.connections.users -- oldUsers
+      newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = None, addedAt = None) }
     }
 
     newKeep

@@ -5,19 +5,17 @@ import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.User
 import com.keepit.social.{ UserIdentity, UserIdentityProvider }
-
-import play.api.Application
-import play.api.data.Forms._
-import play.api.data.Form
-import play.api.libs.json.Json
-import play.api.mvc._
-import play.api.mvc.Results.{ Forbidden, BadRequest }
-
-import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
-import securesocial.core._
-import securesocial.core.IdentityId
 import net.codingwell.scalaguice.InjectorExtensions._
-import scala.util.{ Success, Failure }
+import play.api.Application
+import play.api.data.Form
+import play.api.data.Forms._
+import play.api.libs.json.Json
+import play.api.mvc.Results.{ BadRequest, Forbidden }
+import play.api.mvc._
+import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
+import securesocial.core.{ IdentityId, _ }
+
+import scala.util.{ Failure, Success }
 
 class UsernamePasswordProvider(app: Application)
     extends UPP(app) with UserIdentityProvider with BodyParsers {

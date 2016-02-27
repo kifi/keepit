@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.{ Singleton, Provides }
-import com.keepit.slack.SlackCommander
+import com.keepit.slack.SlackIdentityCommander
 import com.keepit.slack.models.SlackTeamMembershipRepo
 import com.keepit.social.providers.PasswordAuthentication
 import securesocial.controllers.TemplatesPlugin
@@ -11,7 +11,7 @@ import com.keepit.model._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
-import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, LocalUserExperimentCommander }
 import play.api.Play.current
 import com.keepit.controllers.core.OAuth2CommonConfig
 
@@ -47,10 +47,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     userCreationCommander: UserCreationCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
-    slackCommander: SlackCommander,
+    slackIdentityCommander: SlackIdentityCommander,
     userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, slackMembershipRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, slackCommander, userIdentityHelper, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, slackMembershipRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, slackIdentityCommander, userIdentityHelper, clock
   )
 
   @Singleton
