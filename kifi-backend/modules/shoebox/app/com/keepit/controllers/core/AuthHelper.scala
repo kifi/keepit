@@ -8,12 +8,12 @@ import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import com.keepit.common.oauth._
 import com.keepit.common.service.IpAddress
+import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.payments.CreditCode
 import com.keepit.slack.models.{SlackAuthorizationResponse, SlackTeamMembershipRepo, SlackTeamId}
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
-import play.mvc.Results.Redirect
 import securesocial.core._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
@@ -50,56 +50,64 @@ object AuthHelper {
 }
 
 sealed abstract class PostRegIntent
-case class AutoFollowLibrary(libraryId: Id[Library], authToken: Option[String]) extends PostRegIntent
-object AutoFollowLibrary {
-  // strings that represent Cookie keys and values
-  val intentValue = "follow"
-  val libIdKey = "publicLibraryId"
-  val authKey = "libAuthToken"
-}
-case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
-object AutoJoinOrganization {
-  val intentValue = "joinOrg"
-  val orgIdKey = "publicOrgId"
-  val authKey = "orgAuthToken"
-}
-case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
-object AutoJoinKeep {
-  val intentValue = "joinKeep"
-  val keepIdKey = "publicKeepId"
-  val authKey = "keepAuthToken"
-}
-case class Slack(slackTeamId: Option[SlackTeamId]) extends PostRegIntent
-object Slack {
-  val intentValue = "slack"
-  val slackTeamIdKey = "slackTeamId"
-}
-case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
-object ApplyCreditCode {
-  val intentValue = "applyCredit"
-  val creditCodeKey = "creditCode"
-}
-case object JoinTwitterWaitlist extends PostRegIntent { val intentValue = "waitlist" }
-case object NoIntent extends PostRegIntent
-
 object PostRegIntent {
+  case class AutoFollowLibrary(libraryId: Id[Library], authToken: Option[String]) extends PostRegIntent
+  object AutoFollowLibrary {
+    // strings that represent Cookie keys and values
+    val intentValue = "follow"
+    val libIdKey = "publicLibraryId"
+    val authKey = "libAuthToken"
+    val cookieKeys = Set(libIdKey, authKey)
+  }
+  case class AutoJoinOrganization(organizationId: Id[Organization], authToken: String) extends PostRegIntent
+  object AutoJoinOrganization {
+    val intentValue = "joinOrg"
+    val orgIdKey = "publicOrgId"
+    val authKey = "orgAuthToken"
+    val cookieKeys = Set(orgIdKey, authKey)
+  }
+  case class AutoJoinKeep(keepId: Id[Keep], authTokenOpt: Option[String]) extends PostRegIntent
+  object AutoJoinKeep {
+    val intentValue = "joinKeep"
+    val keepIdKey = "publicKeepId"
+    val authKey = "keepAuthToken"
+    val cookieKeys = Set(keepIdKey, authKey)
+  }
+  case class Slack(slackTeamId: Option[SlackTeamId]) extends PostRegIntent
+  object Slack {
+    val intentValue = "slack"
+    val slackTeamIdKey = "slackTeamId"
+    val cookieKeys = Set(slackTeamIdKey)
+  }
+  case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
+  object ApplyCreditCode {
+    val intentValue = "applyCredit"
+    val creditCodeKey = "creditCode"
+    val cookieKeys = Set(creditCodeKey)
+  }
+  case object JoinTwitterWaitlist extends PostRegIntent { val intentValue = "waitlist" }
+  case object NoIntent extends PostRegIntent
+
   val intentKey = "intent"
-  def fromCookies(cookies: Cookies)(implicit config: PublicIdConfiguration): PostRegIntent = {
-    cookies.get(intentKey).map(_.value).collect {
+  val discardingCookies = Set(AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
+
+  def fromCookies(cookies: Set[Cookie])(implicit config: PublicIdConfiguration): PostRegIntent = {
+    val cookieByName = cookies.groupBy(_.name).mapValuesStrict(_.head)
+    cookieByName.get(intentKey).map(_.value).collect {
       case AutoFollowLibrary.intentValue => {
         import AutoFollowLibrary._
-        val libId = cookies.get(libIdKey)
+        val libId = cookieByName.get(libIdKey)
           .map(c => PublicId[Library](c.value))
           .flatMap(Library.decodePublicId(_).toOption)
-        val authTokenOpt = cookies.get(authKey).map(_.value)
+        val authTokenOpt = cookieByName.get(authKey).map(_.value)
         libId.map(AutoFollowLibrary(_, authTokenOpt))
       }
       case AutoJoinOrganization.intentValue => {
         import AutoJoinOrganization._
-        val orgIdOpt = cookies.get(orgIdKey)
+        val orgIdOpt = cookieByName.get(orgIdKey)
           .map(c => PublicId[Organization](c.value))
           .flatMap(Organization.decodePublicId(_).toOption)
-        val authTokenOpt = cookies.get(authKey).map(_.value)
+        val authTokenOpt = cookieByName.get(authKey).map(_.value)
         (orgIdOpt, authTokenOpt) match {
           case (Some(orgId), Some(authToken)) => Some(AutoJoinOrganization(orgId, authToken))
           case _ => None
@@ -107,17 +115,17 @@ object PostRegIntent {
       }
       case AutoJoinKeep.intentValue => {
         import AutoJoinKeep._
-        val keepIdOpt = cookies.get(keepIdKey)
+        val keepIdOpt = cookieByName.get(keepIdKey)
           .map(c => PublicId[Keep](c.value))
           .flatMap(Keep.decodePublicId(_).toOption)
-        val authTokenOpt = cookies.get(authKey).map(_.value)
+        val authTokenOpt = cookieByName.get(authKey).map(_.value)
         keepIdOpt.map(AutoJoinKeep(_, authTokenOpt))
       }
       case Slack.intentValue => {
-        val slackTeamIdOpt = cookies.get(Slack.slackTeamIdKey).map(c => SlackTeamId(c.value))
+        val slackTeamIdOpt = cookieByName.get(Slack.slackTeamIdKey).map(c => SlackTeamId(c.value))
         Some(Slack(slackTeamIdOpt))
       }
-      case ApplyCreditCode.intentValue => cookies.get(ApplyCreditCode.creditCodeKey).map(c => ApplyCreditCode(CreditCode(c.value)))
+      case ApplyCreditCode.intentValue => cookieByName.get(ApplyCreditCode.creditCodeKey).map(c => ApplyCreditCode(CreditCode(c.value)))
       case JoinTwitterWaitlist.intentValue => Some(JoinTwitterWaitlist)
     }.flatten.getOrElse(NoIntent)
   }
@@ -133,6 +141,10 @@ object PostRegIntent {
     }
     def keepIntent = keepPubId.flatMap(Keep.decodePublicId(_).toOption).map(AutoJoinKeep(_, keepAuthToken))
     Stream(libIntent, orgIntent, keepIntent).flatten.headOption.getOrElse(NoIntent)
+  }
+  def requestToCookies(request: Request[_]): Seq[Cookie] = {
+    val intentKeys = Set(AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten + this.intentKey
+    intentKeys.flatMap { key => request.getQueryString(key).map(Cookie(key, _)) }.toSeq
   }
 }
 
@@ -316,8 +328,7 @@ class AuthHelper @Inject() (
     val uri = processIntent(user.id.get, intent, Some(request))
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
     log.info(s"[authCookies] remaining cookies=${request.cookies}")
-    val discardedCookies = Seq("inv", PostRegIntent.intentKey, AutoFollowLibrary.libIdKey, AutoFollowLibrary.authKey, AutoJoinOrganization.orgIdKey, AutoJoinOrganization.authKey,
-      AutoJoinKeep.keepIdKey, AutoJoinKeep.authKey, Slack.slackTeamIdKey, ApplyCreditCode.creditCodeKey).map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("inv").map(n => DiscardingCookie(n)) ++ PostRegIntent.discardingCookies
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),

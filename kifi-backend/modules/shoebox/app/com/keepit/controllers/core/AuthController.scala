@@ -13,6 +13,7 @@ import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.time._
+import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -345,16 +346,7 @@ class AuthController @Inject() (
         // todo implement POST hook
         // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
         // ie, auto follow library, auto friend, etc
-
-        val cookies = Seq(
-          intent.map(action => Cookie("intent", action)),
-          publicLibraryId.map(libId => Cookie(AutoFollowLibrary.libIdKey, libId)),
-          libAuthToken.map(at => Cookie(AutoFollowLibrary.authKey, at)),
-          publicOrgId.map(orgId => Cookie(AutoJoinOrganization.orgIdKey, orgId)),
-          orgAuthToken.map(at => Cookie(AutoJoinOrganization.authKey, at)),
-          publicKeepId.map(keepId => Cookie(AutoJoinKeep.keepIdKey, keepId)),
-          keepAuthToken.map(at => Cookie(AutoJoinKeep.authKey, at))
-        ).flatten
+        val cookies = PostRegIntent.requestToCookies(request)
         res.withCookies(cookies: _*)
       }
     }
@@ -421,9 +413,8 @@ class AuthController @Inject() (
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported())
     } else {
-      val intent = PostRegIntent.fromCookies(request.cookies)
-      val discardedCookies = Seq(PostRegIntent.intentKey, AutoFollowLibrary.libIdKey, AutoFollowLibrary.authKey, AutoJoinOrganization.orgIdKey, AutoJoinOrganization.authKey,
-        AutoJoinKeep.keepIdKey, AutoJoinKeep.authKey, Slack.slackTeamIdKey, ApplyCreditCode.creditCodeKey).map(name => DiscardingCookie(name))
+      val intent = PostRegIntent.fromCookies(request.cookies.toSet)
+      val discardedCookies = PostRegIntent.discardingCookies
 
       request match {
         case ur: UserRequest[_] =>
