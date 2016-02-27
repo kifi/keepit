@@ -85,5 +85,25 @@ class ImplicitsTest extends Specification {
         Seq(Left(1), Left(2), Right("a"), Right("b"), Left(5)).partitionEithers === (Seq(1, 2, 5), Seq("a", "b"))
       }
     }
+    "RegexExtensionOps" in {
+      "collate" in {
+        val rx = """<(\d+)>""".r
+        def foo(str: String) = rx.collate(str).map {
+          case Left(s) => s
+          case Right(m) => m.group(1)
+        }
+
+        foo("") === Seq.empty
+        foo("abc") === Seq("abc")
+        foo("<15>") === Seq("15")
+        foo("<15>abc") === Seq("15", "abc")
+        foo("abc<15>") === Seq("abc", "15")
+        foo("<10>abc<15>") === Seq("10", "abc", "15")
+        foo("<10><15>") === Seq("10", "15")
+        foo("10>abc<15>") === Seq("10>abc", "15")
+        foo("10>abc<15") === Seq("10>abc<15")
+        foo("ab<15>cd<20>ef<25>") === Seq("ab", "15", "cd", "20", "ef", "25")
+      }
+    }
   }
 }

@@ -394,13 +394,17 @@ class SlackPushingActor @Inject() (
     }
     val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
+
     SlackMessageRequest.fromKifi(
       text = DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.speechBalloon, userElement getOrElse "Someone", "on", keepElement)),
-      attachments = Seq(SlackAttachment.simple(
-        if (msg.isDeleted) DescriptionElements("[deleted]")
-        else DescriptionElements(CrossServiceMessage.stripLookHeresToReferencedText(msg.text))
-      ))
-    )
+      attachments = if (msg.isDeleted) Seq(SlackAttachment.simple("[deleted]")) else CrossServiceMessage.splitOutLookHeres(msg.text).collect {
+        case Left(text) => SlackAttachment.simple(DescriptionElements.unlines(text.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))).withFullMarkdown
+        case Right(Success((pointer, ref))) => SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
+        case Right(Failure(fail)) =>
+          slackLog.error(s"Failed to process a look-here in ${msg.text} because ${fail.getMessage}")
+          SlackAttachment.simple("look here")
+      }
+    ).copy(unfurlMedia = true)
   }
 }
 

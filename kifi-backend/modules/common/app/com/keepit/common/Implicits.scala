@@ -5,8 +5,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
 import scala.collection.{ TraversableLike, IterableLike }
+import com.keepit.common.core.iterableExtensionOps
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
+import scala.util.matching.Regex
+import scala.util.matching.Regex.Match
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
   // forward pipe operator, analogous to the Unix pipe.
@@ -118,8 +121,22 @@ final class OptionExtensionOpts[A](x: Option[A]) {
 
   // Does not have the liberal [A1 >: A] type bound, so you cannot do really dumb things
   def safely: SafelyTypedOption[A] = new SafelyTypedOption(x)
-  class SafelyTypedOption[T](valOpt: Option[T]) {
+  final class SafelyTypedOption[T](valOpt: Option[T]) {
     def contains(v: T): Boolean = valOpt.contains(v)
+  }
+}
+
+final class RegexExtensionOps(r: Regex) {
+  // See ImplicitsTest for examples
+  def collate(str: String): Seq[Either[String, Regex.Match]] = {
+    r.findAllMatchIn(str).toSeq.mapAccumLeft(0) {
+      case (idx, m) => (m.end, Seq(Left(str.slice(idx, m.start)), Right(m)))
+    } match {
+      case (lastIdx, ans) => (ans.flatten :+ Left(str.drop(lastIdx))).filterNot {
+        case Left("") => true
+        case _ => false
+      }
+    }
   }
 }
 
@@ -148,6 +165,7 @@ trait Implicits {
   implicit def mapExtensionOps[A, B](xs: Map[A, B]): MapExtensionOps[A, B] = new MapExtensionOps(xs)
   implicit def eitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]): EitherExtensionOps[A, B, Repr] = new EitherExtensionOps(xs)
   implicit def optionExtensionOps[A, B](x: Option[A]): OptionExtensionOpts[A] = new OptionExtensionOpts(x)
+  implicit def regexExtensionOps(r: Regex): RegexExtensionOps = new RegexExtensionOps(r)
   implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
   implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)
 }

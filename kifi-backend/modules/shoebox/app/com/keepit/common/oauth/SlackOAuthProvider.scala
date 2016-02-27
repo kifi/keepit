@@ -40,7 +40,9 @@ class SlackOAuthProviderImpl @Inject() (
     def getParameter(key: String) = request.queryString.get(key).flatMap(_.headOption)
     val REDIRECT_URI = BetterRoutesHelper.authenticate("slack").absoluteURL(true)
     getParameter("error") match {
-      case Some(errorCode) => Future.successful(Left(Results.BadRequest(errorCode)))
+      case Some(errorCode) =>
+        airbrake.notify(s"[SlackAuthError] error response from slack err=$errorCode, query string = ${request.rawQueryString}")
+        Future.successful(Left(Results.BadRequest(errorCode)))
       case None => getParameter("code") match {
         case None =>
           val slackTeamId = getParameter("slackTeamId").map(SlackTeamId(_))
@@ -52,8 +54,10 @@ class SlackOAuthProviderImpl @Inject() (
           }
         case Some(code) => {
           getParameter("state").flatMap(state => slackAuthCommander.getSlackAction(SlackAuthState(state))) match {
-            case Some(action @ (Login() | Signup())) => slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), REDIRECT_URI).imap(Right(_))
-            case _ => Future.successful(Left(SlackFail.InvalidAuthState.asResponse))
+            case Some(Login() | Signup()) => slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), REDIRECT_URI).imap(Right(_))
+            case _ =>
+              airbrake.notify(s"[SlackAuthError] invalid query param state, query string = ${request.rawQueryString}")
+              Future.successful(Left(SlackFail.InvalidAuthState.asResponse))
           }
         }
       }
