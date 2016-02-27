@@ -6,7 +6,7 @@ import play.api.http.Status._
 import play.api.libs.json._
 
 // Failures on our end that deal with slack
-sealed abstract class SlackFail(val status: Int, val code: String, val extra: JsValue = JsNull) extends Exception(code) {
+sealed abstract class SlackFail(val status: Int, val code: String, val extra: JsValue = JsNull) extends Exception(s"$code: ${Json.stringify(extra)}") {
   import play.api.mvc.Results.Status
   def asResponse = Status(status)(Json.obj("error" -> code, "extra" -> extra))
 }
