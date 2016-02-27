@@ -3,7 +3,7 @@ package com.keepit.slack
 import com.keepit.common.core._
 import com.keepit.common.json.readUnit
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient, NonOKResponseException }
+import com.keepit.common.net._
 import com.keepit.slack.models._
 import play.api.http.Status
 import play.api.libs.json._
@@ -74,6 +74,11 @@ trait SlackClient {
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
 }
 
+object SlackClient {
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(30000), maxJsonParseTime = Some(30000))
+  val standardTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
+}
+
 class SlackClientImpl(
   httpClient: HttpClient,
   implicit val ec: ExecutionContext)
@@ -104,8 +109,8 @@ class SlackClientImpl(
     }
   }
 
-  private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
-    httpClient.getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
+  private def slackCall[T](route: SlackAPI.Route, callTimeouts: CallTimeouts = SlackClient.standardTimeout)(implicit reads: Reads[T]): Future[T] = {
+    httpClient.withTimeout(callTimeouts).getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
@@ -116,6 +121,7 @@ class SlackClientImpl(
       }
     }
   }
+
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
   }
@@ -131,7 +137,7 @@ class SlackClientImpl(
   }
 
   def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request))
+    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request), SlackClient.longTimeout)
   }
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
@@ -162,7 +168,7 @@ class SlackClientImpl(
     slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
   }
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
-    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived))((__ \ 'channels).read)
+    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived), SlackClient.longTimeout)((__ \ 'channels).read)
   }
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = {
     slackCall[SlackPublicChannelInfo](SlackAPI.ChannelInfo(token, channelId))((__ \ 'channel).read)
@@ -173,6 +179,6 @@ class SlackClientImpl(
   }
 
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
-    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token))((__ \ 'members).read)
+    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
   }
 }
