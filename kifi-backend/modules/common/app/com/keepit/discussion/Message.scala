@@ -44,7 +44,7 @@ object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
   def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
   def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => Try(URLDecoder.decode(m.group(2).split('|').last, "ascii")).getOrElse("look here"))
-  def splitOutLookHeres(str: String): Seq[Either[String, Try[(String, String)]]] = lookHereRe.collate(str).map {
+  def splitOutLookHeres(str: String): Seq[Either[String, Try[(String, String)]]] = lookHereRe.findMatchesAndInterstitials(str).map {
     case Left(text) => Left(text)
     case Right(m) => Right(Try(m.group(1) -> URLDecoder.decode(m.group(2).split('|').last, "ascii")))
   }

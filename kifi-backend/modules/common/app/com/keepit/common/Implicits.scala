@@ -1,15 +1,14 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
-import scala.collection.{ TraversableLike, IterableLike }
-import com.keepit.common.core.iterableExtensionOps
+import scala.collection.IterableLike
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
 import scala.util.matching.Regex
-import scala.util.matching.Regex.Match
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
   // forward pipe operator, analogous to the Unix pipe.
@@ -127,15 +126,26 @@ final class OptionExtensionOpts[A](x: Option[A]) {
 }
 
 final class RegexExtensionOps(r: Regex) {
+
+  // Breaks a string into chunks:
+  //     Right(match: Regex.Match) for the matches
+  //     Left(chunk: String) for chunks that do not match
+  // They are interleaved such that
+  //     ```
+  //     regex.findMatchesAndInterstitials(originalStr).map {
+  //         case Left(chunk) => chunk
+  //         case Right(match) => match.source
+  //     }.mkString == originalStr
+  //     ```
   // See ImplicitsTest for examples
-  def collate(str: String): Seq[Either[String, Regex.Match]] = {
-    r.findAllMatchIn(str).toSeq.mapAccumLeft(0) {
-      case (idx, m) => (m.end, Seq(Left(str.slice(idx, m.start)), Right(m)))
-    } match {
-      case (lastIdx, ans) => (ans.flatten :+ Left(str.drop(lastIdx))).filterNot {
-        case Left("") => true
-        case _ => false
-      }
+  def findMatchesAndInterstitials(str: String): Seq[Either[String, Regex.Match]] = {
+    val (lastIdx, matches) = r.findAllMatchIn(str).toSeq.mapAccumLeft(0) {
+      case (idx, m) =>
+        (m.end, Seq(Left(str.slice(idx, m.start)), Right(m)))
+    }
+    (matches.flatten :+ Left(str.drop(lastIdx))).filterNot {
+      case Left("") => true
+      case _ => false
     }
   }
 }
