@@ -120,13 +120,9 @@ class OrgStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     orgExperimentsRepo: OrganizationExperimentRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    userIpAddressEventLogger: UserIpAddressEventLogger,
     airbrake: AirbrakeNotifier) extends Logging {
 
-  def getLastLocation(userId: Id[User])(implicit session: RSession): Option[RichIpAddress] = {
-    userValueRepo.getUserValue(userId, UserValueName.LAST_RECORDED_LOCATION).flatMap { locationValue =>
-      RichIpAddress.format.reads(Json.parse(locationValue.value)).asOpt
-    }
-  }
   def organizationStatistics(orgId: Id[Organization], adminId: Id[User], numMemberRecos: Int): Future[OrganizationStatistics] = {
     val (members, candidates) = db.readOnlyReplica { implicit session =>
       val members = orgMembershipRepo.getAllByOrgId(orgId)
@@ -291,34 +287,36 @@ class OrgStatisticsCommander @Inject() (
   def membersStatistics(userIds: Set[Id[User]]): Future[Map[Id[User], MemberStatistics]] = {
     val onlineUsersF = elizaClient.areUsersOnline(userIds.toSeq)
     val membersStatsFut = userIds.map { userId =>
+      val infoF = db.readOnlyMasterAsync { implicit s =>
+        val installed = kifiInstallationRepo.all(userId).nonEmpty
+        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
+        val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
+        val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
+        val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
+        val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
+        val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
+        val user = userRepo.get(userId)
+        (user, installed, keepVisibilityCount, numLibrariesCreated, numLibrariesCollaborating, numLibrariesFollowing, dateLastManualKeep)
+      }
       val numChatsFut = elizaClient.getUserThreadStats(userId)
+      val lastLocationF = userIpAddressEventLogger.getLastLocation(userId)
       for {
         numChats <- numChatsFut
         onlineUsers <- onlineUsersF
+        lastLocation <- lastLocationF
+        (user, installed, keepVisibilityCount, numLibrariesCreated, numLibrariesCollaborating, numLibrariesFollowing, dateLastManualKeep) <- infoF
       } yield {
-        db.readOnlyReplica { implicit session =>
-          val installed = kifiInstallationRepo.all(userId).nonEmpty
-          val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
-          val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
-          val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
-          val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
-          val numLibrariesCollaborating = librariesCountsByAccess(LibraryAccess.READ_WRITE)
-          val dateLastManualKeep = keepRepo.latestManualKeepTime(userId)
-          val user = userRepo.get(userId)
-          val lastLocation = getLastLocation(user.id.get)
-
-          userId -> MemberStatistics(
-            user = user,
-            online = if (installed) Some(onlineUsers(userId)) else None,
-            numChats = numChats.all,
-            keepVisibilityCount = keepVisibilityCount,
-            numLibrariesCreated = numLibrariesCreated,
-            numLibrariesCollaborating = numLibrariesCollaborating,
-            numLibrariesFollowing = numLibrariesFollowing,
-            dateLastManualKeep = dateLastManualKeep,
-            lastLocation = lastLocation
-          )
-        }
+        userId -> MemberStatistics(
+          user = user,
+          online = if (installed) Some(onlineUsers(userId)) else None,
+          numChats = numChats.all,
+          keepVisibilityCount = keepVisibilityCount,
+          numLibrariesCreated = numLibrariesCreated,
+          numLibrariesCollaborating = numLibrariesCollaborating,
+          numLibrariesFollowing = numLibrariesFollowing,
+          dateLastManualKeep = dateLastManualKeep,
+          lastLocation = lastLocation
+        )
       }
     }
     Future.sequence(membersStatsFut).imap(_.toMap)
