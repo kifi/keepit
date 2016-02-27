@@ -1,6 +1,6 @@
 
 
-GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
+GET     /login                      @com.keepit.controllers.core.AuthController.loginPage(intent: Option[String] ?= None, publicLibraryId: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None)
 GET     /ss/login                   com.keepit.social.providers.LoginPage.login
 GET     /logout                     com.keepit.social.providers.LoginPage.logout
 

@@ -17,6 +17,7 @@ import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
@@ -278,25 +279,21 @@ class AuthController @Inject() (
     }
   }
 
-  // todo(Léo): why doesn't this deal with intents at all?
   def afterLogin() = MaybeUserAction { implicit req =>
     req match {
       case userRequest: UserRequest[_] =>
         userIpAddressCommander.logUserByRequest(userRequest)
-        if (userRequest.user.state == UserStates.PENDING) {
-          Redirect("/")
+        val url = authHelper.processIntent(userRequest.userId, PostRegIntent.fromCookies(userRequest.cookies.toSet))
+        val discardingCookies = PostRegIntent.discardingCookies
+        val res = if (userRequest.user.state == UserStates.PENDING) { // todo(cam): kill UserStates.PENDING
+          Redirect(url)
         } else if (userRequest.user.state == UserStates.INCOMPLETE_SIGNUP) {
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        } else if (userRequest.kifiInstallationId.isEmpty && !hasSeenInstall(userRequest)) {
-          inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
-          Redirect(com.keepit.controllers.website.HomeControllerRoutes.install())
         } else {
-          userRequest.session.get(SecureSocial.OriginalUrlKey) map { url =>
-            Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
-          } getOrElse {
-            Redirect("/")
-          }
+          Future { inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))) }
+          Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
         }
+        res.discardingCookies(discardingCookies: _*)
       case nonUserRequest: NonUserRequest[_] => {
         nonUserRequest.identityId.flatMap(authCommander.getUserIdentity) match {
 
@@ -342,7 +339,6 @@ class AuthController @Inject() (
       authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
-
         // todo implement POST hook
         // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
         // ie, auto follow library, auto friend, etc
@@ -370,11 +366,10 @@ class AuthController @Inject() (
   // Utility methods
   // --
 
-  private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
-    db.readOnlyReplica { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
-  }
-
-  def loginPage() = MaybeUserAction { implicit request =>
+  def loginPage(
+    intent: Option[String] = None, publicLibraryId: Option[String] = None, libAuthToken: Option[String] = None, publicOrgId: Option[String] = None,
+    orgAuthToken: Option[String] = None, publicKeepId: Option[String] = None, keepAuthToken: Option[String] = None) = MaybeUserAction { implicit request =>
+    val cookies = PostRegIntent.requestToCookies(request)
     request match {
       case ur: UserRequest[_] =>
         Redirect("/")
@@ -385,7 +380,7 @@ class AuthController @Inject() (
           if (agent.isOldIE) {
             Some(Redirect(com.keepit.controllers.website.HomeControllerRoutes.unsupported()))
           } else None
-        }.getOrElse(Ok(views.html.authMinimal.loginToKifi()))
+        }.getOrElse(Ok(views.html.authMinimal.loginToKifi()).withCookies(cookies: _*))
     }
   }
 
@@ -405,7 +400,6 @@ class AuthController @Inject() (
     authHelper.userPasswordSignupAction
   }
 
-  // todo(Léo): why does this deal with intents just like AuthHelper? DRY?
   private def doSignupPage(implicit request: MaybeUserRequest[_]): Result = {
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent(agent)
@@ -421,7 +415,7 @@ class AuthController @Inject() (
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
             log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
-            val uri = authHelper.processIntent(ur.userId, intent, maybeTakeToInstall = None)
+            val uri = authHelper.processIntent(ur.userId, intent)
             Redirect(uri).discardingCookies(discardedCookies: _*)
           } else if (ur.identityId.exists(authCommander.getUserIdentity(_).isDefined)) {
             log.info(s"[doSignupPage] ${ur.identityId.get} has incomplete signup state")

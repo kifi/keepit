@@ -183,6 +183,10 @@ class AuthHelper @Inject() (
     fortytwoConfig: FortyTwoConfig,
     mode: Mode) extends HeaderNames with Results with Status with Logging {
 
+  private def hasSeenInstall(userId: Id[User]): Boolean = db.readOnlyMaster { implicit s =>
+    userValueRepo.getValue(userId, UserValues.hasSeenInstall)
+  }
+
   def connectOptionView(email: EmailAddress, providerId: String) = {
     log.info(s"[connectOptionView] $email matches some kifi user, but no (social) user exists given $providerId")
     views.html.auth.connectToAuthenticate(
@@ -268,14 +272,12 @@ class AuthHelper @Inject() (
     case t: Throwable => airbrake.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
-  def processIntent(userId: Id[User], intent: PostRegIntent, maybeTakeToInstall: Option[MaybeUserRequest[_]]): String = {
-    val homeOrInstall = maybeTakeToInstall.flatMap { request =>
-      request.session.get(SecureSocial.OriginalUrlKey).orElse {
-        request.headers.get(USER_AGENT).collect {
-          case agentString if UserAgent(agentString).canRunExtensionIfUpToDate => "/install"
-        }
-      }
-    }.getOrElse(com.keepit.controllers.website.HomeControllerRoutes.home)
+  def processIntent(userId: Id[User], intent: PostRegIntent)(implicit request: MaybeUserRequest[_]): String = {
+    import com.keepit.controllers.website.HomeControllerRoutes
+    val homeOrInstall = request match {
+      case ur: UserRequest[_] if ur.kifiInstallationId.isEmpty && !hasSeenInstall(userId) => HomeControllerRoutes.install
+      case _ => HomeControllerRoutes.home
+    }
 
     intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
@@ -325,7 +327,7 @@ class AuthHelper @Inject() (
         }
     }
 
-    val uri = processIntent(user.id.get, intent, Some(request))
+    val uri = processIntent(user.id.get, intent)
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
     log.info(s"[authCookies] remaining cookies=${request.cookies}")
     val discardedCookies = Seq("inv").map(n => DiscardingCookie(n)) ++ PostRegIntent.discardingCookies
