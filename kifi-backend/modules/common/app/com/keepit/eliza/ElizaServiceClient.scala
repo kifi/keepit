@@ -318,6 +318,7 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].msgs
     }
   }
+
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
     import GetDiscussionsForKeeps._
     val request = Request(keepIds)
