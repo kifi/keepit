@@ -60,10 +60,16 @@ case class SyncPublicChannels() extends SlackAuthenticatedAction {
   def helper = SyncPublicChannels
 }
 
-object Authenticate extends SlackAuthenticatedActionHelper[Authenticate]("authenticate")
-case class Authenticate() extends SlackAuthenticatedAction {
-  type A = Authenticate
-  def helper = Authenticate
+object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
+case class Signup() extends SlackAuthenticatedAction {
+  type A = Signup
+  def helper = Signup
+}
+
+object Login extends SlackAuthenticatedActionHelper[Login]("login")
+case class Login() extends SlackAuthenticatedAction {
+  type A = Login
+  def helper = Login
 }
 
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String) {
@@ -79,7 +85,7 @@ object SlackAuthenticatedActionHelper {
     ConnectSlackTeam,
     CreateSlackTeam,
     SyncPublicChannels,
-    Authenticate
+    Signup
   )
 
   implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
@@ -98,7 +104,7 @@ object SlackAuthenticatedActionHelper {
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
     case SyncPublicChannels => formatPure(SyncPublicChannels())
-    case Authenticate => formatPure(Authenticate())
+    case Signup => formatPure(Signup())
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
@@ -109,7 +115,8 @@ object SlackAuthenticatedActionHelper {
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
-    case Authenticate() => SlackAuthScope.userSignup
+    case Signup() => SlackAuthScope.userSignup
+    case Login() => SlackAuthScope.userLogin
   }
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {

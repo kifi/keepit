@@ -46,7 +46,7 @@ class SlackOAuthProviderImpl @Inject() (
       case None => getParameter("code") match {
         case None =>
           val slackTeamId = getParameter("slackTeamId").map(SlackTeamId(_))
-          val action = Authenticate()
+          val action = if (request.uri.contains("login")) Login() else Signup()
           slackAuthCommander.getIdentityAndMissingScopes(None, slackTeamId, action).imap {
             case (_, missingScopes) =>
               val link = slackAuthCommander.getAuthLink(action, slackTeamId, missingScopes, REDIRECT_URI).url
@@ -54,7 +54,7 @@ class SlackOAuthProviderImpl @Inject() (
           }
         case Some(code) => {
           getParameter("state").flatMap(state => slackAuthCommander.getSlackAction(SlackAuthState(state))) match {
-            case Some(Authenticate()) => slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), REDIRECT_URI).imap(Right(_))
+            case Some(Login() | Signup()) => slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), REDIRECT_URI).imap(Right(_))
             case _ =>
               airbrake.notify(s"[SlackAuthError] invalid query param state, query string = ${request.rawQueryString}")
               Future.successful(Left(SlackFail.InvalidAuthState.asResponse))
