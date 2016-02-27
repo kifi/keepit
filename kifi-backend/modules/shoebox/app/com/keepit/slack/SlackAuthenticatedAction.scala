@@ -106,6 +106,7 @@ object SlackAuthenticatedActionHelper {
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
     case SyncPublicChannels => formatPure(SyncPublicChannels())
     case Signup => formatPure(Signup())
+    case Login => formatPure(Login())
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
