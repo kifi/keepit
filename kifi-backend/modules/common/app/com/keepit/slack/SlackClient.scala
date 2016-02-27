@@ -74,12 +74,15 @@ trait SlackClient {
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
 }
 
+object SlackClient {
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(30000), maxJsonParseTime = Some(30000))
+  val standardTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
+}
+
 class SlackClientImpl(
   httpClient: HttpClient,
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
-
-  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(30000), maxJsonParseTime = Some(30000))
 
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
@@ -106,22 +109,16 @@ class SlackClientImpl(
     }
   }
 
-  private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
-    parseSlackResponse(httpClient.getFuture(DirectUrl(route.url)))
-  }
-
-  private def slackCall[T](route: SlackAPI.Route, callTimeouts: CallTimeouts)(implicit reads: Reads[T]): Future[T] = {
-    parseSlackResponse(httpClient.withTimeout(callTimeouts).getFuture(DirectUrl(route.url)))
-  }
-
-  private def parseSlackResponse[T](resp: Future[ClientResponse])(implicit reads: Reads[T]): Future[T] = resp.flatMap { clientResponse =>
-    (clientResponse.status, clientResponse.json) match {
-      case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
-        reads.reads(payload) match {
-          case JsSuccess(res, _) => Future.successful(res)
-          case errs: JsError => Future.failed(SlackFail.MalformedPayload(payload))
-        }
-      case (status, payload) => Future.failed(SlackAPIErrorResponse.ApiError(status, payload))
+  private def slackCall[T](route: SlackAPI.Route, callTimeouts: CallTimeouts = SlackClient.standardTimeout)(implicit reads: Reads[T]): Future[T] = {
+    httpClient.withTimeout(callTimeouts).getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
+      (clientResponse.status, clientResponse.json) match {
+        case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
+          reads.reads(payload) match {
+            case JsSuccess(res, _) => Future.successful(res)
+            case errs: JsError => Future.failed(SlackFail.MalformedPayload(payload))
+          }
+        case (status, payload) => Future.failed(SlackAPIErrorResponse.ApiError(status, payload))
+      }
     }
   }
 
@@ -140,7 +137,7 @@ class SlackClientImpl(
   }
 
   def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request), longTimeout)
+    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request), SlackClient.longTimeout)
   }
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
@@ -171,7 +168,7 @@ class SlackClientImpl(
     slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
   }
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
-    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived), longTimeout)((__ \ 'channels).read)
+    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived), SlackClient.longTimeout)((__ \ 'channels).read)
   }
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = {
     slackCall[SlackPublicChannelInfo](SlackAPI.ChannelInfo(token, channelId))((__ \ 'channel).read)
@@ -182,6 +179,6 @@ class SlackClientImpl(
   }
 
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
-    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), longTimeout)((__ \ 'members).read)
+    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
   }
 }
