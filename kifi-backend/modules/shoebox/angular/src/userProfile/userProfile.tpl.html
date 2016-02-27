@@ -9,7 +9,7 @@
         ng-class="{ 'active': currentPageName === 'OwnedLibraries'}"
         ng-click="trackLibraryNav('own')"
       >
-        <div class="kf-up-tab-count">{{profile.numLibraries|num}}</div>
+        <div class="kf-up-tab-count">{{(profile.numLibraries + profile.numCollabLibraries)|num}}</div>
         <div class="kf-up-tab-name" >Libraries</div>
       </a>
       <a
