@@ -10,6 +10,8 @@
         Connect with <a href="https://slack.com/" target="_blank">Slack</a> to automatically save links messages or send new keeps to your Slack team.
       </span>
 
+      <div kf-loading-spinner class="kf-loading-spinner-center" hide="integrationsLoaded"></div>
+
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && !slackTeam">
         <div class="kf-container-header"><h2 id="slack-sync">Connect your team to Slack</h2></div>
         <span class="kf-ts-integrations-marketing-text">Team members will be able to join your team using Slack, share links more easily, and sync Kifi libraries and Slack channels.</span>
