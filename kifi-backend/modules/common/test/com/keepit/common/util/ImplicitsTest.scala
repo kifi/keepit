@@ -86,9 +86,9 @@ class ImplicitsTest extends Specification {
       }
     }
     "RegexExtensionOps" in {
-      "collate" in {
+      "findMatchesAndInterstitials" in {
         val rx = """<(\d+)>""".r
-        def foo(str: String) = rx.collate(str).map {
+        def foo(str: String) = rx.findMatchesAndInterstitials(str).map {
           case Left(s) => s
           case Right(m) => m.group(1)
         }
