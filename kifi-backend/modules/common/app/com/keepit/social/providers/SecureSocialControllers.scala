@@ -80,12 +80,7 @@ object ProviderController extends Controller with Logging {
             user =>
               log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
-          }) match {
-            case result if result.header.status == 400 =>
-              log.error(s"[handleAuth] ${result.header.status} response from IdentityProvider $provider, res body=${result.body}")
-              Redirect(RoutesHelper.login())
-            case result => result
-          }
+          })
         } catch {
           case ex: AccessDeniedException => {
             log.error("[handleAuth] Access Denied for user logging in")
