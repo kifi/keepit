@@ -114,12 +114,16 @@ class SlackClientWrapperImpl @Inject() (
 
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse] = {
     val botToken = db.readOnlyMaster { implicit s =>
-      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
+      slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot.map(_.token))
     }
     botToken match {
-      case Some(token) => slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(token))
+      case Some(token) =>
+        slackClient.postToChannel(token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(token))
       case None => Future.failed(SlackFail.NoValidBotToken)
     }
+  }
+  def inviteToChannel(invitee: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId): Future[Unit] = {
+    ???
   }
 
   private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
@@ -242,7 +246,7 @@ class SlackClientWrapperImpl @Inject() (
   private def withFirstValidToken[T](slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken], requiredScopes: Set[SlackAuthScope])(f: SlackAccessToken => Future[T]): Future[T] = {
     val tokens: Stream[SlackAccessToken] = {
       lazy val botTokenOpt = if (requiredScopes subsetOf SlackAuthScope.inheritableBotScopes) db.readOnlyMaster { implicit session =>
-        slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBotToken)
+        slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot.map(_.token))
       }
       else None
       lazy val userTokens = db.readOnlyMaster { implicit session =>

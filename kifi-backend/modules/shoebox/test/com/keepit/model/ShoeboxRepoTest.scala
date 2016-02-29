@@ -93,8 +93,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
             slackTeamName = SlackTeamName("Fake"),
             organizationId = Some(org.id.get),
             generalChannelId = None,
-            kifiBotUserId = Some(SlackUserId("UIAMABOT")),
-            kifiBotToken = Some(SlackBotAccessToken("xbxb-bottoken"))
+            kifiBot = Some(KifiSlackBot(SlackUserId("UIAMABOT"), SlackBotAccessToken("xbxb-bottoken")))
           ))
           slackTeamRepo.getBySlackTeamId(saved.slackTeamId) must beSome(saved)
           saved
