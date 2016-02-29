@@ -37,6 +37,7 @@ object SlackErrorCode {
   val ALREADY_REACTED = "already_reacted"
   val CANT_UPDATE_MESSAGE = "cant_update_message"
   val CHANNEL_NOT_FOUND = "channel_not_found"
+  val EDIT_WINDOW_CLOSED = "edit_window_closed"
   val INVALID_AUTH = "invalid_auth"
   val NOT_IN_CHANNEL = "not_in_channel"
   val RESTRICTED_ACTION = "restricted_action"

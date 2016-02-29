@@ -204,8 +204,8 @@ class SlackPushingActor @Inject() (
                   case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                   case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
                 }.imap(_ => ()).recover {
-                  case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
-                    slackLog.warn(s"Failed to update keep ${k.id.get} because the edit window closed, remove it from the cache")
+                  case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+                    slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
                     slackPushForKeepRepo.dropTimestampFromCache(integration.id.get, k.id.get)
                   case fail: SlackAPIErrorResponse =>
                     slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
@@ -221,8 +221,8 @@ class SlackPushingActor @Inject() (
                   val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                   // call the SlackClient to try and update the message
                   slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
-                    case SlackErrorCode(CANT_UPDATE_MESSAGE) =>
-                      slackLog.warn(s"Failed to update comment ${msg.id} because the edit window closed, remove it from the cache")
+                    case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
+                      slackLog.warn(s"Failed to update comment ${msg.id} because Slack says it's uneditable, removing it from the cache")
                       slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
                     case fail: SlackAPIErrorResponse =>
                       slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
