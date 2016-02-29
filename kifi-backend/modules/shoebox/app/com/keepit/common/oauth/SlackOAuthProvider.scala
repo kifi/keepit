@@ -37,11 +37,12 @@ class SlackOAuthProviderImpl @Inject() (
   }
 
   def doOAuth[A]()(implicit request: Request[A]): Future[Either[Result, SlackAuthorizationResponse]] = {
+    val knownErrorCodes = Set("access_denied")
     def getParameter(key: String) = request.queryString.get(key).flatMap(_.headOption)
     val REDIRECT_URI = BetterRoutesHelper.authenticate("slack").absoluteURL(true)
     getParameter("error") match {
       case Some(errorCode) =>
-        airbrake.notify(s"[SlackAuthError] error response from slack err=$errorCode, query string = ${request.rawQueryString}")
+        if (!knownErrorCodes.contains(errorCode)) airbrake.notify(s"[SlackAuthError] unknown error code $errorCode from slack, query string = ${request.rawQueryString}")
         Future.successful(Left(Results.BadRequest(errorCode)))
       case None => getParameter("code") match {
         case None =>
