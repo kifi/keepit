@@ -83,14 +83,14 @@ case class SlackAuthorizationRequest(
   uniqueToken: String,
   redirectUri: Option[String])
 
-case class BotUserAuthorization(
+case class SlackBotUserAuthorization(
   userId: SlackUserId,
   accessToken: SlackBotAccessToken)
-object BotUserAuthorization {
-  implicit val reads: Reads[BotUserAuthorization] = (
+object SlackBotUserAuthorization {
+  implicit val reads: Reads[SlackBotUserAuthorization] = (
     (__ \ 'bot_user_id).read[SlackUserId] and
     (__ \ 'bot_access_token).read[SlackBotAccessToken]
-  )(BotUserAuthorization.apply _)
+  )(SlackBotUserAuthorization.apply _)
 }
 
 case class SlackAuthorizationResponse(
@@ -99,7 +99,7 @@ case class SlackAuthorizationResponse(
   teamName: SlackTeamName,
   teamId: SlackTeamId,
   incomingWebhook: Option[SlackIncomingWebhook],
-  botAuth: Option[BotUserAuthorization])
+  botAuth: Option[SlackBotUserAuthorization])
 object SlackAuthorizationResponse {
   implicit val reads: Reads[SlackAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackUserAccessToken] and
@@ -107,7 +107,7 @@ object SlackAuthorizationResponse {
     (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'team_id).read[SlackTeamId] and
     (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook] and
-    (__ \ 'bot).readNullable[BotUserAuthorization]
+    (__ \ 'bot).readNullable[SlackBotUserAuthorization]
   )(SlackAuthorizationResponse.apply _)
 }
 

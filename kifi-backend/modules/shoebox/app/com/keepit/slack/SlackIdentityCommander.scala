@@ -110,7 +110,7 @@ class SlackIdentityCommanderImpl @Inject() (
       slackTeam <- db.readOnlyMaster { implicit session =>
         slackTeamRepo.getBySlackTeamId(slackTeamId)
       }
-      kifiBotToken <- slackTeam.kifiBotToken
+      kifiBotToken <- slackTeam.kifiBot.map(_.token)
     } yield kifiBotToken
 
     kifiBotTokenOpt match {
