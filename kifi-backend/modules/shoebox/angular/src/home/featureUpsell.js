@@ -14,8 +14,8 @@ angular.module('kifi')
       templateUrl: 'home/featureUpsell.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
-        var isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
-        scope.showFeatureUpsell =  isAdmin && (scope.me.orgs || []).filter(function(org) {
+        var hasFeatureUpsellExp = ((profileService.me.experiments || []).indexOf('slack_upsell_widget') !== -1);
+        scope.showFeatureUpsell =  hasFeatureUpsellExp && (scope.me.orgs || []).filter(function(org) {
             return org.slackTeam;
         }).length === 0;
         scope.userLoggedIn = $rootScope.userLoggedIn;
