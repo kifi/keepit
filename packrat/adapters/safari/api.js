@@ -444,7 +444,25 @@ var api = api || (function () {
     isPackaged: function() {
       return isPackaged;
     },
-    loadReason: 'enable',  // by elimination
+    loadReason: (function () {
+      var extension = safari.extension;
+      var settings = safari.extension.settings;
+      var savedHasRun = settings.hasRun;
+      var savedLastVersion = !!settings.lastVersion;
+
+      settings.hasRun = true;
+      settings.lastVersion = extension.bundleVersion;
+
+      if (!savedHasRun) {
+        return 'install';
+      } else if (savedLastVersion !== extension.bundleVersion) {
+        return 'update';
+      } else if (savedLastVersion){
+        return 'startup';
+      } else {
+        return 'enabled';
+      }
+    }()),
     mode: {
       isDev: function () {
         return localStorage[':mode'] === 'dev';
@@ -487,6 +505,44 @@ var api = api || (function () {
     browser: {
       name: 'Safari',
       userAgent: navigator.userAgent
+    },
+    requestUpdateCheck: function (force) {
+      if (force) {
+        emitUpdateAvailable();
+      } else {
+        var versionXPath = '//key[text()="CFBundleVersion"]/following-sibling::string/text()';
+        var request = new XMLHttpRequest();
+        request.open('GET', 'https://www.kifi.com/extensions/safari/KifiUpdates.plist', true);
+        request.onload = function() {
+          if (this.status >= 200 && this.status < 400) {
+            var xml = this.responseXML;
+            var xPathResult = xml.evaluate(versionXPath, xml, null, XPathResult.STRING_TYPE, null);
+            var updateVersion;
+            if (!xPathResult.invalidIteratorState) {
+              updateVersion = xPathResult.stringValue
+              if (safari.extension.bundleVersion !== updateVersion) {
+                emitUpdateAvailable();
+              }
+            } else {
+              onError.call(this, xPathResult);
+            }
+          } else {
+            onError.call(this);
+          }
+        };
+        request.onerror = onError;
+        request.send();
+      }
+
+      function emitUpdateAvailable() {
+        api.tabs.each(function (page) {
+          page._port.postMessage('api:safari-update');
+        });
+      }
+
+      function onError(extra) {
+        l`${CRED}[requestUpdateCheck] an error occurred in the response %O${this} %s${this.response} %s${extra}`;
+      }
     },
     screenshot: function (callback) {
       var activeTab = safari.application.activeBrowserWindow.activeTab;

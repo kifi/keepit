@@ -18,7 +18,7 @@
 <script src="/dist/lib.min.js"></script>
 <script src="/dist/kifi.min.js"></script>
 <script nonce="<!-- NONCE_PLACEHOLDER -->">
-var c = document.createElement('div');c.classList.add('symbol-sprite-container');document.body.appendChild(c);
+var c = document.createElement('div');c.classList.add('symbol-sprite-container');c.style.display = 'none';document.body.appendChild(c);
 $.get('/dist/symbol-sprite.svg', function (data) { c.appendChild(data.documentElement); });
 </script>
 <script nonce="<!-- NONCE_PLACEHOLDER -->">

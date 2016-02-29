@@ -8,6 +8,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
@@ -133,6 +134,7 @@ class AuthController @Inject() (
     config: FortyTwoConfig,
     userIdentityHelper: UserIdentityHelper,
     pathCommander: PathCommander,
+    airbrake: AirbrakeNotifier,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
@@ -149,6 +151,9 @@ class AuthController @Inject() (
       authHelper.transformResult(res) { (_, session: Session) =>
         res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
       }
+    } else if (res.header.status == 400) {
+      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider, body=${res.body}")
+      Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
     } else {
       res
     }
@@ -187,7 +192,12 @@ class AuthController @Inject() (
           p.authenticate().fold(
             result => result,
             user => completeAuthentication(user, request.session)
-          )
+          ) match {
+              case result if result.header.status == 400 =>
+                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider, body=${result.body}")
+                Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
+              case result => result
+            }
         } catch {
           case ex: AccessDeniedException => {
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
@@ -335,16 +345,22 @@ class AuthController @Inject() (
     publicOrgId: Option[String], orgAuthToken: Option[String],
     publicKeepId: Option[String], keepAuthToken: Option[String]) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
-    authRes(request).map { result =>
-      authHelper.transformResult(result) { (_, sess: Session) =>
-        // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
-        // todo implement POST hook
-        // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
-        // ie, auto follow library, auto friend, etc
-        val cookies = PostRegIntent.requestToCookies(request)
-        res.withCookies(cookies: _*)
-      }
+    authRes(request).map {
+      case badResult if badResult.header.status == 400 =>
+        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status} and body ${badResult.body}")
+        Redirect("/signup").discardingCookies(PostRegIntent.discardingCookies: _*)
+      case result =>
+        authHelper.transformResult(result) { (_, sess: Session) =>
+          // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+          val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
+
+          // todo implement POST hook
+          // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
+          // ie, auto follow library, auto friend, etc
+
+          val cookies = PostRegIntent.requestToCookies(request)
+          res.withCookies(cookies: _*)
+        }
     }
   }
 

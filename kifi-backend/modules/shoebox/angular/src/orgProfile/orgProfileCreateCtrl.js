@@ -3,8 +3,12 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', '$timeout', 'orgProfileService', '$state', '$stateParams', 'initParams', 'profileService', 'modalService', 'billingService',
-  function($scope, $timeout, orgProfileService, $state, $stateParams, initParams, profileService, modalService, billingService) {
+  '$scope', '$timeout', 'orgProfileService', '$state', '$stateParams',
+  'initParams', 'profileService', 'modalService', 'billingService', '$analytics',
+  'originTrackingService', '$location',
+  function($scope, $timeout, orgProfileService, $state, $stateParams,
+           initParams, profileService, modalService, billingService, $analytics,
+           originTrackingService, $location) {
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
     $scope.orgName = '';
@@ -60,7 +64,7 @@ angular.module('kifi')
         return;
       }
 
-      $scope.$emit('trackOrgProfileEvent', 'click', {
+      trackPageEvent('click', {
         type: 'createTeam',
         action: 'clickedSubmitTeam'
       });
@@ -89,10 +93,23 @@ angular.module('kifi')
       });
     };
 
+    function trackPageView(attributes) {
+      var url = $analytics.settings.pageTracking.basePath + $location.url();
+      attributes = _.extend(orgProfileService.getCommonTrackingAttributes({ name: $scope.orgName }), attributes);
+      attributes = originTrackingService.applyAndClear(attributes);
+      $analytics.pageTrack(url, attributes);
+    }
+
+    function trackPageEvent(eventType, attributes) {
+      if (eventType === 'click') {
+        orgProfileService.trackEvent('user_clicked_page', { name: $scope.orgName }, attributes);
+      } else if (eventType === 'view') {
+        trackPageView(attributes);
+      }
+    }
+
     $timeout(function () {
-      $scope.$emit('trackOrgProfileEvent', 'view', {
-        type: 'createTeam'
-      });
+      trackPageEvent('view', { type: 'createTeam' });
     });
   }
 ]);

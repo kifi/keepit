@@ -72,6 +72,8 @@ angular.module('kifi')
           scope.initialFetchFailed = false;
           futureMe.then(function (me) {
             scope.me = me;
+            var numSections = (me.orgs && me.orgs.length || 0) + 1;
+            var INITIAL_PAGE_SIZE = 2 + Math.floor(20 / numSections);
             return net.getInitialLeftHandRailInfo(INITIAL_PAGE_SIZE + 1, sortOpts).then(function(res) {
               var lhr = res.data.lhr;
               scope.initialFetchFailed = false;
@@ -95,7 +97,6 @@ angular.module('kifi')
         // TODO: REMOVE THIS HACK
         document.body.style.overflow = 'hidden';
 
-        var INITIAL_PAGE_SIZE = 6;
         var PAGE_SIZE = 15;
         var pageName = function() {
           return $state.$current.name;

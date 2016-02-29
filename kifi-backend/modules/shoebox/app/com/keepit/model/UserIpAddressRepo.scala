@@ -16,9 +16,10 @@ import scala.slick.jdbc.GetResult
 
 @ImplementedBy(classOf[UserIpAddressRepoImpl])
 trait UserIpAddressRepo extends Repo[UserIpAddress] with SeqNumberFunction[UserIpAddress] {
-  def saveIfNew(model: UserIpAddress)(implicit session: RWSession): UserIpAddress
+  def saveIfNew(model: UserIpAddress)(implicit session: RWSession): Option[UserIpAddress]
   def countByUser(userId: Id[User])(implicit session: RSession): Int
   def getByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[UserIpAddress]
+  def getLastByUser(userId: Id[User])(implicit session: RSession): Option[UserIpAddress]
   def getUsersFromIpAddressSince(ip: IpAddress, time: DateTime)(implicit session: RSession): Seq[Id[User]]
   def findSharedIpsByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[(IpAddress, Id[User])]
   def findIpClustersSince(time: DateTime, limit: Int)(implicit session: RSession): Seq[IpAddress]
@@ -57,20 +58,27 @@ class UserIpAddressRepoImpl @Inject() (
     super.save(model.copy(seq = deferredSeqNum()))
   }
 
-  def saveIfNew(model: UserIpAddress)(implicit session: RWSession): UserIpAddress = {
+  //Return Some(model) only if its a brand new ip that the user did not have last time he logged
+  def saveIfNew(model: UserIpAddress)(implicit session: RWSession): Option[UserIpAddress] = {
     userIpAddressCache.get(UserIpAddressKey(model.userId)) match {
-      case None => save(model)
+      case None =>
+        Some(save(model))
       case Some(oldModel) =>
         if (model.createdAt.minusMinutes(30).isBefore(oldModel.createdAt)) {
           oldModel // within 30 minutes of old model, ignore
         } else {
           save(model)
         }
+        None
     }
   }
 
   def getByUser(ownerId: Id[User], limit: Int)(implicit session: RSession): Seq[UserIpAddress] = {
     (for { row <- rows if row.userId === ownerId } yield row).sortBy(_.createdAt.desc).take(limit).list
+  }
+
+  def getLastByUser(ownerId: Id[User])(implicit session: RSession): Option[UserIpAddress] = {
+    (for { row <- rows if row.userId === ownerId } yield row).sortBy(_.createdAt.desc).firstOption
   }
 
   def countByUser(userId: Id[User])(implicit session: RSession): Int = {

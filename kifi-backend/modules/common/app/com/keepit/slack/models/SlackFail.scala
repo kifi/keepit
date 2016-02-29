@@ -6,7 +6,7 @@ import play.api.http.Status._
 import play.api.libs.json._
 
 // Failures on our end that deal with slack
-sealed abstract class SlackFail(val status: Int, val code: String, val extra: JsValue = JsNull) extends Exception(code) {
+sealed abstract class SlackFail(val status: Int, val code: String, val extra: JsValue = JsNull) extends Exception(s"$code: ${Json.stringify(extra)}") {
   import play.api.mvc.Results.Status
   def asResponse = Status(status)(Json.obj("error" -> code, "extra" -> extra))
 }
@@ -37,6 +37,7 @@ object SlackErrorCode {
   val ALREADY_REACTED = "already_reacted"
   val CANT_UPDATE_MESSAGE = "cant_update_message"
   val CHANNEL_NOT_FOUND = "channel_not_found"
+  val EDIT_WINDOW_CLOSED = "edit_window_closed"
   val INVALID_AUTH = "invalid_auth"
   val NOT_IN_CHANNEL = "not_in_channel"
   val RESTRICTED_ACTION = "restricted_action"

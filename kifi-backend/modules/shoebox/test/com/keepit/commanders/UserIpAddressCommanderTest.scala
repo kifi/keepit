@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import play.api.libs.json.Json
 import com.keepit.common.social.FakeSocialGraphModule
 import play.api.libs.json._
 import com.keepit.common.db.Id
@@ -10,14 +11,20 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-
 class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
     FakeSocialGraphModule()
   )
+
+  "RichIpAddress" should {
+    "should be parsed" in {
+      val rip = RichIpAddress.empty(IpAddress("23.43.2.34"))
+      val str = RichIpAddress.format.writes(rip).toString()
+      val nrip = RichIpAddress.format.reads(Json.parse(str)).get
+      nrip === rip
+    }
+  }
 
   "UserIpAddressCommander" should {
     "correctly simplify user agent strings" in {

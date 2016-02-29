@@ -4,15 +4,15 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService', 'profileService',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profileService) {
+  'slackService', 'profile',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profile) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
-    var settings = $scope.profile && $scope.profile.config && $scope.profile.config.settings;
-    var reactionSetting = settings && settings.slack_ingestion_reaction.setting;
-    var notifSetting = settings && settings.slack_digest_notif.setting;
+    var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
+    var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
+    var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
 
@@ -43,14 +43,15 @@ angular.module('kifi')
     $scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:settings:integrations' });
 
     $scope.onSlackIntegrationReactionChanged = function() {
-      $scope.profile.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_reaction: $scope.profile.config.settings.slack_ingestion_reaction.setting })
+      profile.organization.config.settings.slack_ingestion_reaction.setting = $scope.slackIntegrationReactionModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.setOrgSettings(profile.organization.id,
+        { slack_ingestion_reaction: profile.organization.config.settings.slack_ingestion_reaction.setting })
       .then(onSave, onError);
     };
 
     $scope.onSlackIntegrationDigestChanged = function() {
-      $scope.profile.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_digest_notif: $scope.profile.config.settings.slack_digest_notif.setting })
+      profile.organization.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_digest_notif: profile.organization.config.settings.slack_digest_notif.setting })
       .then(onSave, onError);
     };
 
@@ -66,28 +67,40 @@ angular.module('kifi')
       .then(onSave, onError);
     };
 
-    $scope.isAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
-
+    var existingBlacklist = (settings.slack_ingestion_domain_blacklist || {}).setting || [];
     $scope.blacklist = {
       newPath: '',
-      existing: (settings.slack_ingestion_domain_blacklist || {}).setting || [],
-      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable
+      existing: existingBlacklist,
+      editable: !!(settings.slack_ingestion_domain_blacklist || {}).editable,
+      limit: existingBlacklist.length > 6 ? 4 : 6
+    };
+
+    $scope.expandBlacklist = function () {
+      $scope.blacklist.limit += 50;
     };
 
     $scope.removeBlacklistEntry = function (path) {
       _.remove($scope.blacklist.existing, {path: path});
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
       }, onError);
     };
 
     $scope.addBlacklistEntry = function () {
-      $scope.blacklist.existing.push({
-        path: $scope.blacklist.newPath,
+      var path = $scope.blacklist.newPath.replace(/^https?:\/\//,'').trim();
+      if (path.length > 70 || path.indexOf('.') === -1 || path.length < 5) {
+        $scope.blacklist.error = 'Paths must start with a valid domain.';
+        return;
+      } else {
+        $scope.blacklist.error = '';
+      }
+      $scope.blacklist.existing.splice($scope.blacklist.limit, 0, {
+        path: path,
         createdAt: +new Date()
       });
-      orgProfileService.setOrgSettings($scope.profile.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
+      $scope.blacklist.limit += 1;
+      orgProfileService.setOrgSettings(profile.organization.id, { slack_ingestion_domain_blacklist: $scope.blacklist.existing })
       .then(function (data) {
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
       }, onError);
@@ -108,7 +121,7 @@ angular.module('kifi')
 
     $scope.onClickedSyncAllSlackChannels = function() {
       $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
-      slackService.publicSync($scope.profile.id).then(function (resp) {
+      slackService.publicSync(profile.organization.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
         } else if (resp.redirect) {
@@ -119,7 +132,7 @@ angular.module('kifi')
 
     $scope.onClickedConnectSlack = function() {
       $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'connectSlack' });
-      slackService.connectTeam($scope.profile.id).then(function (resp) {
+      slackService.connectTeam(profile.organization.id).then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Slack connected!', type: 'green' });
         } else if (resp.redirect) {

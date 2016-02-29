@@ -112,25 +112,25 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
       }
       "ignore links from bot users" in {
         withDb(modules: _*) { implicit injector =>
-          val (user, bot, lib, integration) = db.readWrite { implicit session =>
+          val (teamId, user, bot, lib, integration) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved
-            val slackTeam = SlackTeamFactory.team().saved
+            val slackTeam = SlackTeamFactory.team().withKifiBot(SlackUserId("B4242"), SlackBotAccessToken("LETMEIN")).saved
             val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").saved
-            val botMembership = SlackTeamMembershipFactory.membership().withTeam(slackTeam).withUsername("KIFIBOT_THE_DESTROYER").saved
-            slackTeamRepo.save(slackTeam.withKifiBotIfDefined(Some((botMembership.slackUserId, botMembership.token.get))))
             val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel("#eng").withNextIngestionAt(fakeClock.now).on().saved
-            (userMembership, botMembership, lib, stl)
+            val slackUser = (userMembership.slackUserId, userMembership.slackUsername, userMembership.token.get)
+            val kifiBot = (slackTeam.kifiBot.get.userId, SlackUsername("Kifi"), slackTeam.kifiBot.get.token)
+            (slackTeam.slackTeamId, slackUser, kifiBot, lib, stl)
           }
 
           val ch = SlackChannelIdAndName(SlackChannelId("C123123"), integration.slackChannelName)
           val msgs = Iterator.continually(s"I love <https://www.${RandomStringUtils.randomAlphabetic(10)}.com|this random link>!")
-          for (sender <- Random.shuffle(Seq.fill(10)(user) ++ Seq.fill(10)(bot)).take(10)) {
+          for (sender @ (userId, username, token) <- Random.shuffle(Seq.fill(10)(user) ++ Seq.fill(10)(bot)).take(10)) {
             fakeClock += Period.hours(2)
             val preIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             val msg = msgs.next()
-            slackClient.sayInChannel(sender.slackUserId, sender.slackUsername, sender.slackTeamId, sender.token, ch)(msg)
+            slackClient.sayInChannel(userId, username, teamId, Some(token), ch)(msg)
             ingestFromSlackSurely()
             val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             val expectedLinkCount = if (sender == user) 1 else 0

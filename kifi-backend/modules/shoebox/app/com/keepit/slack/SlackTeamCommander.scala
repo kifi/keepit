@@ -99,9 +99,10 @@ class SlackTeamCommanderImpl @Inject() (
 
     slackTeamOpt match {
       case Some(team) => team.organizationId match {
-        case None => membershipOpt.flatMap(_.getTokenIncludingScopes(SlackAuthScope.teamSetup)) match {
-          case Some(validToken) =>
-            slackClient.getTeamInfo(validToken).flatMap { teamInfo =>
+        case None => membershipOpt match {
+          case Some(membership) =>
+            val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.teamSetup), membership.getTokenIncludingScopes(SlackAuthScope.teamSetup)).flatten
+            slackClient.getTeamInfo(slackTeamId, preferredTokens).flatMap { teamInfo =>
               val orgInitialValues = OrganizationInitialValues(name = teamInfo.name.value, description = None)
               orgCommander.createOrganization(OrganizationCreateRequest(userId, orgInitialValues)) match {
                 case Right(createdOrg) =>
@@ -133,7 +134,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, newOrganizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam] = {
     db.readWrite { implicit session =>
-      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackCommander.slackSetupPermission) match {
+      permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission) match {
         case false => Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         case true => slackTeamRepo.getBySlackTeamId(slackTeamId) match {
           case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
@@ -151,15 +152,14 @@ class SlackTeamCommanderImpl @Inject() (
         }
       }
     } tap {
-      case Success(team) => SafeFuture {
-        db.readOnlyMaster { implicit session =>
+      case Success(team) => slackClient.getUsers(team.slackTeamId).imap(Some(_)).recover { case _ => None }.map { slackTeamMembersOpt =>
+        val numMembersOpt = slackTeamMembersOpt.map(_.count(member => !member.deleted && !member.bot))
+        val (user, org) = db.readOnlyMaster { implicit session =>
           (basicUserRepo.load(userId), organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId))
         }
-      } flatMap {
-        case (user, org) =>
-          inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-            user, "connected Slack team", team.slackTeamName.value, "to Kifi org", org
-          )))
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          user, "connected Slack team", team.slackTeamName.value, numMembersOpt.map(numMembers => s"with $numMembers members"), "to Kifi org", org
+        )))
       }
 
       case Failure(fail) =>
@@ -266,15 +266,16 @@ class SlackTeamCommanderImpl @Inject() (
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == team.slackTeamId)
               val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).flatMap(_.slackChannelId).toSet
-              val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackCommander.slackSetupPermission)
+              val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
             if (hasOrgPermissions) {
-              membershipOpt.flatMap(membership => membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels).map((membership, _))) match {
-                case Some((membership, validToken)) =>
+              membershipOpt match {
+                case Some(membership) =>
+                  val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
                   val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
                   onboardingAgent.intro().flatMap { _ =>
-                    slackClient.getChannels(validToken, excludeArchived = true).map { channels =>
+                    slackClient.getChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
                       val updatedTeam = {
                         val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
                         val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
@@ -306,7 +307,7 @@ class SlackTeamCommanderImpl @Inject() (
     val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
     val permissionsByOrgIds = permissionCommander.getOrganizationsPermissions(allOrgIds, Some(userId))
     val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
-    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackCommander.slackSetupPermission))
+    val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackIdentityCommander.slackSetupPermission))
     organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
   }
 }

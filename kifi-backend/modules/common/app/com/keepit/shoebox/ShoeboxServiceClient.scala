@@ -17,14 +17,13 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.store.ImageSize
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentCache, UserSegmentFactory, UserSegmentKey }
 import com.keepit.common.zookeeper._
-import com.keepit.discussion.DiscussionKeep
+import com.keepit.discussion.{ CrossServiceMessage, DiscussionKeep }
 import com.keepit.model._
 import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewExternalIdKey }
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
-import com.keepit.shoebox.ShoeboxServiceClient.GetSlackTeamInfo
+import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetSlackTeamInfo }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -137,7 +136,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
-  def ingestElizaMessagesASAP(): Future[Unit]
+  def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -875,14 +874,20 @@ class ShoeboxServiceClientImpl @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = {
     call(Shoebox.internal.addUsersToKeep(adderId, keepId), body = Json.obj("users" -> newUsers)).map(_ => ())
   }
-  def ingestElizaMessagesASAP(): Future[Unit] = {
-    call(Shoebox.internal.ingestElizaMessagesASAP()).map(_ => ())
+  def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = {
+    import RegisterMessageOnKeep._
+    val request = Request(keepId, msg)
+    call(Shoebox.internal.registerMessageOnKeep(), body = Json.toJson(request)).map(_ => ())
   }
 }
 
 object ShoeboxServiceClient {
   object InternKeep {
     case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+  }
+  object RegisterMessageOnKeep {
+    case class Request(keepId: Id[Keep], msg: CrossServiceMessage)
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 

@@ -595,7 +595,7 @@ class UserCommanderImpl @Inject() (
       prefSet.collect {
         case SLACK_INT_PROMO =>
           val teamOpt = organizationMembershipRepo.getByUserId(userId, Limit(1), Offset(0)).headOption
-          lazy val hasIntegrations = {
+          def hasIntegrations = {
             slackTeamMembershipRepo.getByUserId(userId).nonEmpty ||
               teamOpt.flatMap(team => slackChannelToLibraryRepo.getIntegrationsByOrg(team.organizationId).headOption).nonEmpty
           }

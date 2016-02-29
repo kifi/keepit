@@ -1,12 +1,14 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.core.iterableExtensionOps
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json._
 
-import scala.collection.{ TraversableLike, IterableLike }
+import scala.collection.IterableLike
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
   // forward pipe operator, analogous to the Unix pipe.
@@ -65,6 +67,16 @@ final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
     }
     builder.result()
   }
+  def mapAccumLeft[Acc, B, That](a0: Acc)(fn: (Acc, A) => (Acc, B))(implicit cbf: CanBuildFrom[Repr, B, That]): (Acc, That) = {
+    val builder = cbf(xs.repr)
+    var acc = a0
+    xs.foreach { x =>
+      val (newAcc, y) = fn(acc, x)
+      acc = newAcc
+      builder += y
+    }
+    (acc, builder.result())
+  }
 }
 
 final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
@@ -106,9 +118,36 @@ final class OptionExtensionOpts[A](x: Option[A]) {
     case _ => false
   }
 
-  // Does not have the liberal [A1 >: A] type bound, which lets you do really dumb things
-  case class SafelyTypedOption[T](valOpt: Option[T]) { def contains(v: T): Boolean = valOpt.contains(v) }
-  def safely: SafelyTypedOption[A] = SafelyTypedOption(x)
+  // Does not have the liberal [A1 >: A] type bound, so you cannot do really dumb things
+  def safely: SafelyTypedOption[A] = new SafelyTypedOption(x)
+  final class SafelyTypedOption[T](valOpt: Option[T]) {
+    def contains(v: T): Boolean = valOpt.contains(v)
+  }
+}
+
+final class RegexExtensionOps(r: Regex) {
+
+  // Breaks a string into chunks:
+  //     Right(match: Regex.Match) for the matches
+  //     Left(chunk: String) for chunks that do not match
+  // They are interleaved such that
+  //     ```
+  //     regex.findMatchesAndInterstitials(originalStr).map {
+  //         case Left(chunk) => chunk
+  //         case Right(match) => match.source
+  //     }.mkString == originalStr
+  //     ```
+  // See ImplicitsTest for examples
+  def findMatchesAndInterstitials(str: String): Seq[Either[String, Regex.Match]] = {
+    val (lastIdx, matches) = r.findAllMatchIn(str).toSeq.mapAccumLeft(0) {
+      case (idx, m) =>
+        (m.end, Seq(Left(str.slice(idx, m.start)), Right(m)))
+    }
+    (matches.flatten :+ Left(str.drop(lastIdx))).filterNot {
+      case Left("") => true
+      case _ => false
+    }
+  }
 }
 
 final class JsObjectExtensionOps(x: JsObject) {
@@ -136,6 +175,7 @@ trait Implicits {
   implicit def mapExtensionOps[A, B](xs: Map[A, B]): MapExtensionOps[A, B] = new MapExtensionOps(xs)
   implicit def eitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]): EitherExtensionOps[A, B, Repr] = new EitherExtensionOps(xs)
   implicit def optionExtensionOps[A, B](x: Option[A]): OptionExtensionOpts[A] = new OptionExtensionOpts(x)
+  implicit def regexExtensionOps(r: Regex): RegexExtensionOps = new RegexExtensionOps(r)
   implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
   implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)
 }

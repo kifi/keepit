@@ -5,7 +5,6 @@ import com.keepit.common.concurrent.{ PlayDefaultExecutionContextModule, FakeExe
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
-import com.keepit.common.oauth.{ OAuthConfigurationModule, DevOAuthConfigurationModule, ProdOAuthConfigurationModule }
 import com.keepit.common.zookeeper.{ ProdDiscoveryModule, ServiceTypeModule }
 import com.keepit.common.util.PlayAppConfigurationModule
 import com.keepit.common.zookeeper.{ DiscoveryModule, DevDiscoveryModule }
@@ -46,7 +45,6 @@ trait CommonServiceModule {
   val actorSystemModule: ActorSystemModule
   val serviceTypeModule: ServiceTypeModule
   val discoveryModule: DiscoveryModule
-  val oauthModule: OAuthConfigurationModule
 
   val executionContextModule: ExecutionContextModule
   val cryptoModule = ShoeboxCryptoModule()
@@ -66,7 +64,6 @@ trait CommonProdModule extends CommonServiceModule {
   val airbrakeModule = ProdAirbrakeModule()
   val memoryUsageModule = ProdMemoryUsageModule()
 
-  val oauthModule = ProdOAuthConfigurationModule()
   val slackClientModule = ProdSlackClientModule()
 
   val executionContextModule: ExecutionContextModule = PlayDefaultExecutionContextModule()
@@ -81,7 +78,6 @@ trait CommonDevModule extends CommonServiceModule {
   val airbrakeModule = DevAirbrakeModule()
   val memoryUsageModule = DevMemoryUsageModule()
 
-  val oauthModule = DevOAuthConfigurationModule()
   val slackClientModule = ProdSlackClientModule()
 
   val executionContextModule = FakeExecutionContextModule()

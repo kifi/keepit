@@ -4,7 +4,6 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.OAuth1TokenInfo
 import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
@@ -12,7 +11,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.oauth._
 import play.api.libs.ws.WS
-import securesocial.core.IdentityId
+import securesocial.core.{ AuthenticationMethod, SocialUser, OAuth1Info, IdentityId }
 
 import scala.concurrent.Future
 
@@ -21,6 +20,22 @@ import scala.concurrent.Future
   followers_count: Option[Int],
   description: Option[String],
   friends_count: Option[Int])
+
+object TwitterOAuthProvider {
+  def toIdentity(auth: OAuth1Info, info: TwitterUserInfo): TwitterIdentity = {
+    val socialUser = SocialUser(
+      identityId = IdentityId(info.id.toString, ProviderIds.Twitter.id),
+      firstName = info.firstName,
+      lastName = info.lastName,
+      fullName = info.name,
+      avatarUrl = info.pictureUrl,
+      email = None,
+      authMethod = AuthenticationMethod.OAuth1,
+      oAuth1Info = Some(auth)
+    )
+    TwitterIdentity(socialUser, info.pictureUrl, Some(info.profileUrl))
+  }
+}
 
 trait TwitterOAuthProvider extends OAuth1Support[TwitterIdentity] {
   val providerId = ProviderIds.Twitter
@@ -41,7 +56,7 @@ class TwitterOAuthProviderImpl @Inject() (
 
   def getRichIdentity(accessToken: OAuth1TokenInfo): Future[TwitterIdentity] = {
     getUserProfileInfo(accessToken) map { info =>
-      TwitterIdentity(accessToken, info)
+      TwitterOAuthProvider.toIdentity(accessToken, info)
     }
   }
 

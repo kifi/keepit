@@ -170,7 +170,7 @@ class KeepToLibraryRepoImpl @Inject() (
     val q = sql"""select k.id from
                   keep_to_library ktl inner join bookmark k on (ktl.keep_id = k.id)
                   where ktl.library_id = $libraryId and ktl.state = 'active' and k.state = 'active'
-                  order by k.kept_at desc, k.id desc
+                  order by k.last_activity_at desc, k.id desc
                   limit ${limit.value} offset ${offset.value};"""
     q.as[Id[Keep]].list
   }

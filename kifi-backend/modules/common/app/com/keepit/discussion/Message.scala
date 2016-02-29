@@ -1,15 +1,19 @@
 package com.keepit.discussion
 
+import java.net.URLDecoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
+import com.keepit.common.core.{ regexExtensionOps, tryExtensionOps }
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+import scala.util.Try
 
 // Exposed to clients
 case class Message(
@@ -38,7 +42,12 @@ case class CrossServiceMessage(
   text: String)
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
-  def stripLookHeres(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
+  def stripLookHeresToReferencedText(str: String): String = lookHereRe.replaceAllIn(str, m => Try(URLDecoder.decode(m.group(2).split('|').last, "UTF-8")).getOrElse("look here"))
+  def splitOutLookHeres(str: String): Seq[Either[String, Try[(String, String)]]] = lookHereRe.findMatchesAndInterstitials(str).map {
+    case Left(text) => Left(text)
+    case Right(m) => Right(Try(m.group(1) -> URLDecoder.decode(m.group(2).split('|').last, "UTF-8")))
+  }
 
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and

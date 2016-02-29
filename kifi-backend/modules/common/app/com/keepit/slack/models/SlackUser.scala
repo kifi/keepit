@@ -12,5 +12,9 @@ object SlackUsername {
   val doNotIngest = Set(slackbot, kifibot)
 }
 
-@json case class SlackAccessToken(token: String)
+sealed trait SlackAccessToken {
+  def token: String
+}
+@json case class SlackUserAccessToken(token: String) extends SlackAccessToken
+@json case class SlackBotAccessToken(token: String) extends SlackAccessToken
 

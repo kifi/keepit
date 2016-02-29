@@ -3,7 +3,7 @@ package com.keepit.slack
 import com.keepit.common.core._
 import com.keepit.common.json.readUnit
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient, NonOKResponseException }
+import com.keepit.common.net._
 import com.keepit.slack.models._
 import play.api.http.Status
 import play.api.libs.json._
@@ -54,6 +54,7 @@ object SlackAPI {
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
   def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
+  def InviteToChannel(token: SlackAccessToken, userId: SlackUserId, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.invite", token, userId, channelId)
 }
 
 trait SlackClient {
@@ -64,14 +65,20 @@ trait SlackClient {
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
-  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]]
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
-  def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]]
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
+  def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit]
+}
+
+object SlackClient {
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(30000), maxJsonParseTime = Some(30000))
+  val standardTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
 }
 
 class SlackClientImpl(
@@ -104,8 +111,8 @@ class SlackClientImpl(
     }
   }
 
-  private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
-    httpClient.getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
+  private def slackCall[T](route: SlackAPI.Route, callTimeouts: CallTimeouts = SlackClient.standardTimeout)(implicit reads: Reads[T]): Future[T] = {
+    httpClient.withTimeout(callTimeouts).getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
@@ -116,6 +123,7 @@ class SlackClientImpl(
       }
     }
   }
+
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
   }
@@ -130,8 +138,8 @@ class SlackClientImpl(
     slackCall[Unit](SlackAPI.Test(token))(readUnit)
   }
 
-  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request))
+  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
+    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request), SlackClient.longTimeout)
   }
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
@@ -143,13 +151,17 @@ class SlackClientImpl(
   }
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
-    val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
-    searchMessages(token, searchRequest).flatMap { response =>
-      response.messages.matches.headOption.map(_.channel.id) match {
-        case Some(channelId) => Future.successful(Some(channelId))
-        case None => getPublicChannels(token, excludeArchived = false).map { channels =>
-          channels.collectFirst { case channel if channel.channelName == channelName => channel.channelId }
-        }
+    val searchChannelIdFuture = token match {
+      case userToken: SlackUserAccessToken =>
+        val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
+        searchMessages(userToken, searchRequest).map(_.messages.matches.headOption.map(_.channel.id))
+      case botToken: SlackBotAccessToken => Future.successful(None)
+    }
+
+    searchChannelIdFuture.flatMap {
+      case Some(channelId) => Future.successful(Some(channelId))
+      case None => getPublicChannels(token, excludeArchived = false).map { channels =>
+        channels.collectFirst { case channel if channel.channelName == channelName => channel.channelId }
       }
     }
   }
@@ -158,7 +170,7 @@ class SlackClientImpl(
     slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
   }
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
-    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived))((__ \ 'channels).read)
+    slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived), SlackClient.longTimeout)((__ \ 'channels).read)
   }
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = {
     slackCall[SlackPublicChannelInfo](SlackAPI.ChannelInfo(token, channelId))((__ \ 'channel).read)
@@ -168,7 +180,10 @@ class SlackClientImpl(
     slackCall[SlackUserInfo](SlackAPI.UserInfo(token, userId))((__ \ 'user).read)
   }
 
-  def getUsersList(token: SlackAccessToken, userId: SlackUserId): Future[Seq[SlackUserInfo]] = {
-    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token))((__ \ 'members).read)
+  def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
+    slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
+  }
+  def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = {
+    slackCall[Unit](SlackAPI.InviteToChannel(token, invitee, channelId))(readUnit)
   }
 }

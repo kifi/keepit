@@ -15,6 +15,7 @@ import scala.slick.jdbc.{ GetResult, PositionedResult }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
+  def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
   def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
@@ -273,6 +274,10 @@ class KeepRepoImpl @Inject() (
       model.copy(seq = sequence.incrementAndGet())
     }
     super.save(newModel.clean())
+  }
+
+  def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep = {
+    super.save(model.copy(seq = sequence.incrementAndGet()))
   }
 
   def deactivate(model: Keep)(implicit session: RWSession) = {
@@ -563,7 +568,7 @@ class KeepRepoImpl @Inject() (
   // Make compiled in Slick 2.1
 
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.keptAt desc, r.id desc)).drop(offset).take(limit).list
+    (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.lastActivityAt desc, r.id desc)).drop(offset).take(limit).list
   }
 
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]] = {
@@ -786,7 +791,7 @@ class KeepRepoImpl @Inject() (
     val q = sql"""
             SELECT #$bookmarkColumnOrder
             FROM bookmark bm INNER JOIN keep_to_library ktl ON (bm.id = ktl.keep_id)
-            WHERE bm.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND bm.seq > $seq
+            WHERE bm.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND (bm.seq > $seq OR bm.seq < 0)
             ORDER BY bm.seq ASC
             """
     q.as[Keep].list

@@ -30,7 +30,7 @@ object SlackTeamMembershipFactory {
       slackUsername = SlackUsername(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
-      token = Some(SlackAccessToken(ran(30))),
+      token = Some(SlackUserAccessToken(ran(30))),
       scopes = SlackAuthScope.newPush ++ SlackAuthScope.ingest,
       slackUser = None
     ))
@@ -54,14 +54,14 @@ object SlackTeamFactory {
       slackTeamName = SlackTeamName(ran(10)),
       organizationId = None,
       generalChannelId = None,
-      kifiBotUserId = None,
-      kifiBotToken = None
+      kifiBot = None
     ))
   }
 
   case class PartialSlackTeam(team: SlackTeam) {
     def withName(newName: String) = this.copy(team = team.copy(slackTeamName = SlackTeamName(newName)))
     def withOrg(org: Organization) = this.copy(team = team.withOrganizationId(Some(org.id.get)))
+    def withKifiBot(botUserId: SlackUserId, token: SlackBotAccessToken) = this.copy(team = team.withKifiBotIfDefined(Some(KifiSlackBot(botUserId, token))))
   }
 }
 

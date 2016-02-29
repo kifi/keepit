@@ -1,41 +1,15 @@
 package com.keepit.slack
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.{ Organization, Library }
+import com.keepit.model.{Library, Organization}
 import com.keepit.slack.models._
 import com.kifi.macros.json
 import play.api.libs.json._
+
 import scala.concurrent.duration.Duration
 
-import com.keepit.common.core._
-
-// This is in common only because SecureSocial's SlackProvider needs to be because fuck 2.11 play.plugins
-
-@ImplementedBy(classOf[SlackAuthStateCommanderImpl])
-trait SlackAuthStateCommander {
-  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route
-  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction]
-}
-
-@Singleton
-class SlackAuthStateCommanderImpl @Inject() (stateCache: SlackAuthStateCache) extends SlackAuthStateCommander {
-  def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState = {
-    SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), action) }
-  }
-
-  def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
-    val state = setNewSlackState(action)
-    SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
-  }
-
-  def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction] = {
-    stateCache.direct.get(SlackAuthStateKey(state))
-  }
-}
 
 sealed trait SlackAuthenticatedAction { self =>
   type A >: self.type <: SlackAuthenticatedAction
@@ -86,10 +60,16 @@ case class SyncPublicChannels() extends SlackAuthenticatedAction {
   def helper = SyncPublicChannels
 }
 
-object Authenticate extends SlackAuthenticatedActionHelper[Authenticate]("authenticate")
-case class Authenticate() extends SlackAuthenticatedAction {
-  type A = Authenticate
-  def helper = Authenticate
+object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
+case class Signup() extends SlackAuthenticatedAction {
+  type A = Signup
+  def helper = Signup
+}
+
+object Login extends SlackAuthenticatedActionHelper[Login]("login")
+case class Login() extends SlackAuthenticatedAction {
+  type A = Login
+  def helper = Login
 }
 
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String) {
@@ -105,7 +85,8 @@ object SlackAuthenticatedActionHelper {
     ConnectSlackTeam,
     CreateSlackTeam,
     SyncPublicChannels,
-    Authenticate
+    Signup,
+    Login
   )
 
   implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
@@ -124,7 +105,8 @@ object SlackAuthenticatedActionHelper {
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
     case SyncPublicChannels => formatPure(SyncPublicChannels())
-    case Authenticate => formatPure(Authenticate())
+    case Signup => formatPure(Signup())
+    case Login => formatPure(Login())
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
@@ -135,7 +117,8 @@ object SlackAuthenticatedActionHelper {
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
-    case Authenticate() => SlackAuthScope.userSignup
+    case Signup() => SlackAuthScope.userSignup
+    case Login() => SlackAuthScope.userLogin
   }
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {

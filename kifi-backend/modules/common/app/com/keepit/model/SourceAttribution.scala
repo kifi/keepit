@@ -71,7 +71,7 @@ object SourceAttribution {
   }
 }
 
-case class BasicTweet(id: TwitterStatusId, user: RawTweet.User, permalink: String)
+case class BasicTweet(id: TwitterStatusId, user: RawTweet.User, permalink: String, text: String)
 object BasicTweet {
   private val userFormat: Format[RawTweet.User] = (
     (__ \ 'name).format[String] and
@@ -83,10 +83,11 @@ object BasicTweet {
   implicit val format = (
     (__ \ 'id_str).format(Format(TwitterStatusId.stringReads, Writes[TwitterStatusId](id => JsString(id.id.toString)))) and
     (__ \ 'user).format(userFormat) and
-    (__ \ 'permalink).format[String]
+    (__ \ 'permalink).format[String] and
+    (__ \ 'text).format[String]
   )(BasicTweet.apply _, unlift((BasicTweet.unapply)))
 
-  def fromRawTweet(tweet: RawTweet): BasicTweet = BasicTweet(tweet.id, tweet.user, tweet.getUrl)
+  def fromRawTweet(tweet: RawTweet): BasicTweet = BasicTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text)
 }
 
 case class TwitterAttribution(tweet: BasicTweet) extends SourceAttribution
@@ -94,10 +95,10 @@ object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 }
 
-case class BasicSlackMessage(channel: SlackChannelIdAndName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String)
+case class BasicSlackMessage(channel: SlackChannelIdAndName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String, text: String)
 object BasicSlackMessage {
   implicit val format = Json.format[BasicSlackMessage]
-  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(message.channel, message.userId, message.username, message.timestamp, message.permalink)
+  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(message.channel, message.userId, message.username, message.timestamp, message.permalink, message.text)
 }
 
 case class SlackAttribution(message: BasicSlackMessage, teamId: SlackTeamId) extends SourceAttribution
@@ -106,7 +107,7 @@ object SlackAttribution {
 }
 
 case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
-  override val version = 3
+  override val version = 4
   val namespace = "source_attribution_by_keep_id"
   def toKey(): String = keepId.id.toString
 }

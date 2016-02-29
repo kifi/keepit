@@ -3,6 +3,7 @@
 // @require styles/google_inject.css
 // @require styles/friend_card.css
 // @require scripts/api.js
+// @require scripts/lib/purify.js
 // @require scripts/formatting.js
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js

@@ -85,6 +85,7 @@
         "scripts/lib/jquery-hoverfu.js",
         "scripts/lib/jquery-ui-position.min.js",
         "scripts/lib/mustache.js",
+        "scripts/lib/purify.js",
         "scripts/render.js",
         "scripts/formatting.js",
         "scripts/title_from_url.js",

@@ -3,22 +3,22 @@ package com.keepit.social.providers
 import java.util.UUID
 
 import com.keepit.FortyTwoGlobal
+import com.keepit.common.core._
 import com.keepit.common.logging.Logging
 import com.keepit.common.oauth.TwitterOAuthProvider
 import com.keepit.social.{ UserIdentity, UserIdentityProvider }
+import net.codingwell.scalaguice.InjectorExtensions._
 import play.api.Application
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.libs.oauth.{ RequestToken }
+import play.api.libs.oauth.RequestToken
 import play.api.mvc.Results._
 import play.api.mvc.{ Request, Result }
 import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
-import net.codingwell.scalaguice.InjectorExtensions._
-import com.keepit.common.core._
-import scala.concurrent.duration._
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class TwitterProvider(app: Application) extends securesocial.core.providers.TwitterProvider(app) with UserIdentityProvider with Logging {
 
