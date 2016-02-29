@@ -12,16 +12,29 @@ section-border-radius = 10px
   background-color: #fff
   text-align: center
 
-.kf-fu-slack-icon
-  display: inline-block
-  height: 15px
-  width: 15px
+  &:hover
+    .kf-fu-hide
+      opacity: .7
+
+.kf-fu-hide
+  position: relative
+  float: right
+  top: -12px
+  right: -5px
+  opacity: 0
+
 
 .kf-fu-header
+  margin-top: 10px
   margin-bottom: 10px
   font-size: 15px
   text-align: center
   margin-left: 16px
+
+.kf-fu-slack-icon
+  display: inline-block
+  height: 15px
+  width: 15px
 
 .kf-fu-body
   display: inline-block

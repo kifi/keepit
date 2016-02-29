@@ -15,9 +15,6 @@ angular.module('kifi')
       link: function (scope) {
         scope.me = profileService.me;
         var hasFeatureUpsellExp = ((profileService.me.experiments || []).indexOf('slack_upsell_widget') !== -1);
-        scope.showFeatureUpsell =  hasFeatureUpsellExp && (scope.me.orgs || []).filter(function(org) {
-            return org.slackTeam;
-        }).length === 0;
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
         var slackIntPromoP;
@@ -29,8 +26,13 @@ angular.module('kifi')
           slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
         }
         slackIntPromoP.then(function(showPromo) {
-          scope.showFeatureUpsell = scope.showFeatureUpsell || showPromo;
+          scope.showFeatureUpsell = hasFeatureUpsellExp && showPromo;
         });
+
+        scope.hide = function () {
+          scope.showFeatureUpsell = false;
+          profileService.savePrefs({ slack_int_promo: false });
+        };
 
         scope.clickedConnectSlack = function() {
           $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackSyncAllChannels' });
