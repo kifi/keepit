@@ -73,12 +73,16 @@
       </div>
 
       <div class="kf-lh-followers">
-        <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{::follower|profileUrl}}" kf-track-origin="libraryPage/follower">
-          <img class="kf-lh-followers-pic" ng-src="{{::follower|pic:100}}" alt="{{::follower|name}}">
-          <span class="kf-lh-followers-name">{{::follower.firstName}}</span>
+        <a class="kf-lh-followers-a" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator" ng-if="library.org">
+          <img class="kf-lh-organization-pic" ng-src="{{ library.org|pic:100 }}" itemprop="image" alt="{{library.org|name}}">
+          <span class="kf-lh-followers-name">{{::library.org.name}}</span>
         </a>
-        <button class="kf-lh-followers-more" ng-if="numMoreFollowersText" ng-click="showFollowers()">
-          <span class="kf-lh-followers-more-text kf-{{numMoreFollowers}}">{{numMoreFollowersText}}</span>
+        <a class="kf-lh-followers-a" ng-repeat="author in authorsToShow" href="{{::author|profileUrl}}" kf-track-origin="libraryPage/author">
+          <img class="kf-lh-followers-pic" ng-src="{{::author|pic:100}}" alt="{{::author|name}}">
+          <span class="kf-lh-followers-name">{{::author.firstName}}</span>
+        </a>
+        <button class="kf-lh-followers-more" ng-if="!isSystem" ng-click="showFollowers()">
+          <span class="kf-lh-followers-more-text">See all</span>
         </button>
       </div>
     </div>
@@ -98,58 +102,6 @@
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
         <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{'one': '1 follower', 'other': '{{library.numFollowers|num}} followers'}" ng-if="library.numFollowers" ng-click="openMembersModal('followers_only')"></button>
-      </div>
-
-      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.org">
-        <div class="kf-lh-owner-image-wrap">
-          <a class="kf-lh-owner-image-a kf-lh-org" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator">
-            <img class="kf-lh-owner-image" ng-src="{{ library.org|pic:200 }}" itemprop="image" alt="{{library.org|name}}">
-          </a>
-        </div>
-        <div class="kf-lh-owner-name-wrap kf-lh-org-name">
-          <a class="kf-lh-owner-name" href="{{library.org|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.org|name}}</a>
-        </div>
-      </div>
-
-      <!-- owner only -->
-      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.numCollaborators === 0">
-        <div class="kf-lh-owner-image-wrap">
-          <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
-            <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
-          </a>
-          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && hasPermission(LIB_PERMISSION.INVITE_COLLABORATORS)" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
-            <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
-            <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
-          </button>
-        </div>
-        <div class="kf-lh-owner-name-wrap">
-          <a class="kf-lh-owner-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.owner|name}}</a>
-          <a class="kf-lh-owner-twitter-a svg-twitter-blue" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" target="_blank" title="@{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" ng-click="trackTwitterProfile()"></a>
-        </div>
-      </div>
-
-      <!--  owner with collaborators -->
-      <div class="kf-lh-collabs" ng-if="library.numCollaborators > 0">
-        <div class="kf-lh-collab-image-wrap" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-          <a class="kf-lh-collab-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
-            <img class="kf-lh-collab-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner.firstName}}">
-          </a>
-          <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
-        </div>
-
-        <div class="kf-lh-collab-image-wrap" itemprop="contributor" itemscope itemtype="http://schema.org/Person" ng-repeat="collab in library.collaborators | limitTo:maxNumCollaboratorsToShow">
-          <a class="kf-lh-collab-image-a" href="{{::collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
-            <img class="kf-lh-collab-image" ng-src="{{::collab|pic:200}}" itemprop="image" alt="{{::collab|name}}">
-          </a>
-          <a class="kf-lh-collab-name" href="{{::collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{::collab.firstName}}</a>
-        </div>
-        <button class="kf-lh-more-collab" ng-if="library.numCollaborators > maxNumCollaboratorsToShow" ng-click="openMembersModal('collaborators_only')" ng-style="{'background-color': library.color}">
-          + {{library.numCollaborators - maxNumCollaboratorsToShow|num}}
-        </button>
-        <button class="kf-lh-add-collab-button" ng-if="hasPermission(LIB_PERMISSION.INVITE_COLLABORATORS)" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
-          <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
-          <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
-        </button>
       </div>
 
     </div>
@@ -198,7 +150,7 @@
 
     <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem && hasPermission(LIB_PERMISSION.INVITE_FOLLOWERS)">
       <div class="svg-share-arrow-green"></div>
-      Invite followers
+      Invite members
     </button>
   </div>
 

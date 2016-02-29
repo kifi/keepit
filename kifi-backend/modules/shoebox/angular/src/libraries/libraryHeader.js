@@ -75,16 +75,12 @@ angular.module('kifi')
           });
         }
 
-        function updateFollowers() {
-          var lib = scope.library;
-          var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
+        function updateAuthors() {
+          var authors = [scope.library.owner].concat(scope.library.collaborators || []);
           var numFit = smallWindow ? 0 : 3;
-          var showPlus = numFit > 0 && Math.min(lib.followers.length, numFit) < numFollowers;
-          var numToShow = Math.min(lib.followers.length, numFit);
+          var numToShow = Math.min(authors.length, numFit + (scope.library.org ? 0 : 1));
 
-          scope.followersToShow = lib.followers.slice(0, numToShow);
-          scope.numMoreFollowersText = showPlus ? '+' + $filter('num')(numFollowers - numToShow) : 'See all';
-          scope.numMoreFollowers = showPlus ? $filter('num')(numFollowers - numToShow) : 0;
+          scope.authorsToShow = authors.slice(0, numToShow);
         }
 
         //
@@ -672,7 +668,7 @@ angular.module('kifi')
           if (smallWindow !== small) {
             scope.$apply(function() {
               smallWindow = small;
-              updateFollowers();
+              updateAuthors();
             });
           }
         }
@@ -683,15 +679,7 @@ angular.module('kifi')
 
         $window.addEventListener('resize', onWinResize);
 
-        scope.$watch('library.numFollowers', updateFollowers);
-
-        scope.$watch('library.numCollaborators', function (numCollaborators) {
-          var n = 4; // at most 5 circles, one spot reserved for owner
-          if (scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite)) {
-            n--; // one spot reserved for add collaborator button
-          }
-          scope.maxNumCollaboratorsToShow = numCollaborators > n ? n - 1 : n;  // one spot may be reserved for +N button
-        });
+        scope.$watch('library.numCollaborators', updateAuthors);
 
         [
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
