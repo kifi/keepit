@@ -80,7 +80,14 @@ object ProviderController extends Controller with Logging {
             user =>
               log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
-          })
+          }) match {
+            case badRequest if badRequest.header.status == 400 =>
+              log.error(s"[handleAuth] ${badRequest.header.status} from $provider with body ${badRequest.body}")
+              val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
+                "slackTeamId", "creditCode").map(DiscardingCookie(_))
+              Redirect(RoutesHelper.login()).discardingCookies(discardingCookies: _*)
+            case req => req
+          }
         } catch {
           case ex: AccessDeniedException => {
             log.error("[handleAuth] Access Denied for user logging in")
