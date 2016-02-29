@@ -54,6 +54,7 @@ object SlackAPI {
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
   def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
+  def InviteToChannel(token: SlackAccessToken, userId: SlackUserId, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.invite", token, userId, channelId)
 }
 
 trait SlackClient {
@@ -72,6 +73,7 @@ trait SlackClient {
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
+  def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit]
 }
 
 object SlackClient {
@@ -180,5 +182,8 @@ class SlackClientImpl(
 
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
     slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
+  }
+  def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = {
+    slackCall[Unit](SlackAPI.InviteToChannel(token, invitee, channelId))(readUnit)
   }
 }
