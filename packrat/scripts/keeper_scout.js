@@ -152,12 +152,12 @@ k.tile = k.tile || function () {  // idempotent for Chrome
         loadAndDo('keeper', 'compose', 'key');
         e.preventDefault();
         break;
-      case 49: case 50: case 51: case 52: // 1,2,3,4
-        if (e.altKey) {
-          api.port.emit('resume_guide', e.keyCode - 48);
-          e.preventDefault();
-        }
-        break;
+      // case 49: case 50: case 51: case 52: // 1,2,3,4 Useful for debugging the guide. Uncomment and use Cmd+Alt+Shift+[1,2,3,4]
+      //   if (e.altKey) {
+      //     api.port.emit('resume_guide', e.keyCode - 48);
+      //     e.preventDefault();
+      //   }
+      //   break;
       }
     }
   }
