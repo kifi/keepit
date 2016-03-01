@@ -15,6 +15,8 @@ angular.module('kifi')
     return {
       event: post(shoebox, '/events'),
 
+      fetchPrefs: get(shoebox, '/user/prefs', 30),
+
       getLibraryInfos: get(shoebox, '/libraries', 30),
       getBasicLibraries: get(shoebox, '/users/:id/basicLibraries?offset=:offset&limit=:limit'),
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
