@@ -232,8 +232,8 @@ class PageCommander @Inject() (
             qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
           }
           val sources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1).toSeq.sortBy {
-            case _: SlackAttribution => true
-            case _ => false
+            case _: SlackAttribution => 0
+            case _ => 1
           }.take(5)
           (basicUserMap, topLibs, sources)
         }
