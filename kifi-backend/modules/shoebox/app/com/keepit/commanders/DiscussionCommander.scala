@@ -5,8 +5,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.discussion.{ DiscussionFail, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -14,7 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[DiscussionCommanderImpl])
 trait DiscussionCommander {
   def markKeepsAsRead(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromId: Option[Id[Message]]): Future[Seq[Message]]
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message]
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit]
@@ -35,19 +36,20 @@ class DiscussionCommanderImpl @Inject() (
   def markKeepsAsRead(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
     eliza.markKeepsAsReadForUser(userId, lastSeenByKeep)
   }
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
-    val errs = db.readOnlyReplica { implicit s =>
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message] = {
+    val failOpt = db.readOnlyReplica { implicit s =>
       val userCanSendMessage = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.ADD_MESSAGE)
-      Stream[Option[DiscussionFail]](
-        Some(DiscussionFail.INSUFFICIENT_PERMISSIONS).filter(_ => !userCanSendMessage)
-      ).flatten
+      if (!userCanSendMessage) Some(DiscussionFail.INSUFFICIENT_PERMISSIONS) else None
     }
 
-    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+    failOpt.map { fail =>
+      airbrake.notify(s"[sendMessageOnKeep] $userId tried to sent message from ${source.map(_.value).getOrElse("unknown")} on $keepId without permission")
+      Future.failed(fail)
+    }.getOrElse {
       db.readWrite { implicit s =>
         keepCommander.addUsersToKeep(keepId, Some(userId), Set(userId))
       }
-      eliza.sendMessageOnKeep(userId, text, keepId)
+      eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
   }
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromIdOpt: Option[Id[Message]]): Future[Seq[Message]] = {

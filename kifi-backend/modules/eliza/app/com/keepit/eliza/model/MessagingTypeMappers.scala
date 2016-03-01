@@ -1,8 +1,9 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.{ Id }
+import com.keepit.common.db.Id
+import com.keepit.discussion.MessageSource
 import play.api.libs.json.{ Json, JsSuccess, JsArray, JsNumber }
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.NormalizedURI
 import com.keepit.common.db.slick.DataBaseComponent
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable

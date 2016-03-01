@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.time._
-import com.keepit.discussion.{ DiscussionFail, Discussion, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Discussion, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
