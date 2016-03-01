@@ -3,26 +3,23 @@
     <div class="kf-row">
       <header class="kf-full-pane">
         <h1 class="kf-org-create-title">Create a Team</h1>
-        <span class="kf-org-create-slack-container kf-flex-row" ng-if="showSlackPromo">
-          <span class="svg-slack kf-org-create-slack-icon"></span>
-          <h4 class="kf-org-create-slack-header">Create a team (ex. your company) to integrate with Slack</h4>
-        </span>
       </header>
     </div>
     <div class="kf-row kf-container">
-      <div class="kf-org-create-container kf-split-pane">
+      <div class="kf-org-create-container">
         <div class="kf-org-create-field">
-          <label>Name</label>
-          <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your team" autofocus/>
+          <label>Enter a name</label>
+          <div class="kf-flex-row">
+            <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your team" autofocus/>
+            <span class="kf-org-create-or">or</span>
+            <a class="kf-button kf-button-large kf-org-create-slack-btn" href="/integrations/slack/start" target="_self">Use <span class="svg-slack kf-org-create-slack-hash"></span>Slack</a>
+          </div>
         </div>
         <div class="kf-org-create-field" ng-show="redeemCode">
           <label>Promotion Code</label>
-          <input type="text" class="kf-textbox kf-org-create-name" placeholder="Enter code (e.g. KIFI50)" ng-model="redeemCode" />
+          <input type="text" class="kf-textbox kf-org-create-code" placeholder="Enter code (e.g. KIFI50)" ng-model="redeemCode" />
         </div>
         <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Team" ng-disabled="disableCreate"/>
-      </div>
-      <div class="kf-split-pane">
-        <p>After choosing a name for your team, we'll let you choose a logo, description, and link.</p>
       </div>
     </div>
     <div class="kf-org-create-error" ng-show="$error" ng-bind="$error.message"></div>
