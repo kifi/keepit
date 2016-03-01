@@ -16,14 +16,13 @@ angular.module('kifi')
         scope.me = profileService.me;
         var hasFeatureUpsellExp = ((profileService.me.experiments || []).indexOf('slack_upsell_widget') !== -1);
         scope.userLoggedIn = $rootScope.userLoggedIn;
-
         var slackIntPromoP;
         if (Object.keys(profileService.prefs).length === 0 ) {
           slackIntPromoP = profileService.fetchPrefs().then(function(prefs) {
             return prefs.slack_int_promo;
           });
         } else {
-          slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
+          slackIntPromoP = $q.when(profileService.prefs.slack_upsell_widget);
         }
         slackIntPromoP.then(function(showPromo) {
           scope.showFeatureUpsell = hasFeatureUpsellExp && showPromo;
@@ -31,7 +30,7 @@ angular.module('kifi')
 
         scope.hide = function () {
           scope.showFeatureUpsell = false;
-          profileService.savePrefs({ slack_int_promo: false });
+          profileService.savePrefs({ slack_upsell_widget: false });
         };
 
         scope.clickedConnectSlack = function() {
