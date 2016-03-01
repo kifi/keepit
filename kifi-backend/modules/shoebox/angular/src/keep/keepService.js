@@ -17,7 +17,7 @@ angular.module('kifi')
     var api = {
       addMessageToKeepDiscussion: function (keepId, text) {
         return net
-        .addMessageToKeepDiscussion(keepId, { text: text, source: 'Kifi.com' }) // '/kifi-backend/modules/common/app/com/keepit/discussion/MessageSource'
+        .addMessageToKeepDiscussion(keepId, 'Kifi.com', { text: text }) // '/kifi-backend/modules/common/app/com/keepit/discussion/MessageSource'
         .then(getResponseData);
       },
 
