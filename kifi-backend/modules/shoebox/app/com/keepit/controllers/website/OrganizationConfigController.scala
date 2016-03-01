@@ -66,9 +66,8 @@ class OrganizationConfigController @Inject() (
   }
 
   def backfillSlackBlacklist(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS)(parse.tolerantJson) { request =>
-    val filter = FeedFilter.OrganizationKeeps(request.orgId)
 
-    val readOnly = (request.body \ "confirm").asOpt[Boolean].getOrElse(true)
+    val readOnly = !(request.body \ "confirm").asOpt[Boolean].getOrElse(false)
 
     val blacklistedKeeps = db.readOnlyReplica { implicit session =>
       val blacklist = orgConfigRepo.getByOrgId(request.orgId).settings.settingFor(SlackIngestionDomainBlacklist).collect { case blk: Blacklist => blk.entries.map(_.path) }.getOrElse(Seq.empty)
