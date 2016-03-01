@@ -11,10 +11,10 @@ object ChunkedResponseHelper {
   def chunkedFuture[I](items: Seq[I])(process: I => Future[String])(implicit exc: ScalaExecutionContext): Enumerator[String] = {
     Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
       FutureHelpers.sequentialExec(items) { x =>
-        process(x).imap(channel.push)
+        process(x).imap(str => channel.push(if (str.endsWith("\n")) str else str + "\n"))
       } andThen {
         case res =>
-          if (res.isFailure) channel.push("server error")
+          if (res.isFailure) channel.push("server error\n")
           channel.eofAndEnd()
       }
     })
