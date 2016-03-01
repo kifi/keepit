@@ -39,7 +39,7 @@ angular.module('kifi')
           billingService
             .applyReferralCode($scope.profile.id, code)
             .then(function (response) {
-              profileService.fetchPrefs();
+              profileService.fetchPrefs(true);
               $scope.$error = {};
               $scope.showCredit = true;
               $scope.creditRedeemed = response.data.value;

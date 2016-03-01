@@ -35,6 +35,7 @@ class PageCommander @Inject() (
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
+    keepSourceCommander: KeepSourceCommander,
     keepDecorator: KeepDecorator,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -135,10 +136,10 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId, useMultilibLogic).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.sources, info.keeps)
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty[KeepData]))
       }
     }
     infoF.flatten
@@ -208,6 +209,7 @@ class PageCommander @Inject() (
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       showPublishedLibraries = true,
+      maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,
       maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit
       maxTagsShown = 0,
@@ -218,7 +220,7 @@ class PageCommander @Inject() (
     augmentFuture map {
       case Seq(info) =>
         val userIdSet = info.keepers.map(_._1).toSet
-        val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
+        val (basicUserMap, libraries, sources) = db.readOnlyMaster { implicit session =>
           val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
           val libraries = firstQualityFilterAndSort(notMyLibs)
           val qualityLibraries = secondQualityFilter(libraries)
@@ -229,7 +231,11 @@ class PageCommander @Inject() (
             val fakeUsers = userCommander.getAllFakeUsers()
             qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
           }
-          (basicUserMap, topLibs)
+          val sources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1).toSeq.sortBy {
+            case _: SlackAttribution => 0
+            case _ => 1
+          }.take(5)
+          (basicUserMap, topLibs, sources)
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
@@ -247,7 +253,7 @@ class PageCommander @Inject() (
             "keeps" -> lib.keepCount,
             "followers" -> followerCounts(lib.id.get))
         }
-        KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, keepDatas)
+        KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, sources, keepDatas)
     }
   }
 
@@ -286,4 +292,5 @@ case class KeeperPagePartialInfo(
   keepers: Seq[BasicUser],
   keepersTotal: Int,
   libraries: Seq[JsObject],
+  sources: Seq[SourceAttribution],
   keeps: Seq[KeepData])

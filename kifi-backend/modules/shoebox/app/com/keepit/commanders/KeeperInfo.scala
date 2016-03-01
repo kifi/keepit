@@ -43,19 +43,24 @@ case class KeeperPageInfo(
   keepers: Seq[BasicUser],
   keepersTotal: Int,
   libraries: Seq[JsObject],
+  sources: Seq[SourceAttribution],
   keeps: Seq[KeepData])
 
 object KeeperPageInfo {
-  implicit val writes: Writes[KeeperPageInfo] = (
-    (__ \ 'normalized).write[String] and
-    (__ \ 'position).writeNullable[JsObject] and
-    (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
-    (__ \ 'keepersTotal).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
-    (__ \ 'libraries).writeNullable[Seq[JsObject]].contramap[Seq[JsObject]](Some(_).filter(_.nonEmpty)) and
-    (__ \ 'keeps).write[Seq[KeepData]]
-  )(unlift(KeeperPageInfo.unapply))
+  implicit val writes: Writes[KeeperPageInfo] = {
+    implicit val sourceWrites = SourceAttribution.externalWrites
+    (
+      (__ \ 'normalized).write[String] and
+      (__ \ 'position).writeNullable[JsObject] and
+      (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+      (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
+      (__ \ 'keepersTotal).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
+      (__ \ 'libraries).writeNullable[Seq[JsObject]].contramap[Seq[JsObject]](Some(_).filter(_.nonEmpty)) and
+      (__ \ 'sources).writeNullable[Seq[SourceAttribution]].contramap[Seq[SourceAttribution]](Some(_).filter(_.nonEmpty)) and
+      (__ \ 'keeps).write[Seq[KeepData]]
+    )(unlift(KeeperPageInfo.unapply))
+  }
 }
 
 case class KeepData(
