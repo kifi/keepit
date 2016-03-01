@@ -8,8 +8,8 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
+import com.keepit.discussion.MessageSource
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.eliza.model.MessageSource
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.rover.FakeRoverServiceModule

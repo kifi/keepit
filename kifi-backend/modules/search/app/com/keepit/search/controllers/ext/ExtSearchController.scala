@@ -26,6 +26,7 @@ import com.keepit.common.core._
 import scala.concurrent.Future
 
 object ExtSearchController {
+  private[ExtSearchController] val maxKeepsShown = 0
   private[ExtSearchController] val maxKeepersShown = 20
   private[ExtSearchController] val maxLibrariesShown = 10
   private[ExtSearchController] val maxTagsShown = 15
@@ -89,7 +90,7 @@ class ExtSearchController @Inject() (
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
         val librarySearcher = libraryIndexer.getSearcher
-        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
         val futureHitsJson = futureAugmentationFields.imap(_.map(json.aggressiveMinify))
         val futureBasicUsersAndLibrariesJson = futureBasicUsersAndLibraries.imap {
@@ -122,6 +123,7 @@ class ExtSearchController @Inject() (
   private def writesAugmentationFields(
     librarySearcher: Searcher,
     userId: Id[User],
+    maxKeepsShown: Int,
     maxKeepersShown: Int,
     maxLibrariesShown: Int,
     maxTagsShown: Int,
@@ -130,7 +132,7 @@ class ExtSearchController @Inject() (
     val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
     val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
 
-    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown))
 
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)

@@ -41,6 +41,8 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
     val now = currentDateTime
     private val info = LimitedAugmentationInfo(
       None,
+      Seq.empty,
+      0,
       keepers = Seq(Id[User](1) -> now),
       keepersOmitted = 0,
       keepersTotal = 1,
@@ -49,7 +51,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       librariesTotal = 1,
       tags = Seq(),
       tagsOmitted = 0)
-    override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+    override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
       Future.successful(Seq(info))
     }
   }

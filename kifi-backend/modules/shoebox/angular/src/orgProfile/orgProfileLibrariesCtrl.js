@@ -149,12 +149,12 @@ angular.module('kifi')
     var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
     if (showSlackDialog) {
       slackIntPromoP = $q.when(true);
-    } else if (Object.keys(profileService.prefs).length === 0) {
+    } else if (Object.keys(profileService.prefs).length !== 0) {
+      slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
+    } else {
       slackIntPromoP = profileService.fetchPrefs().then(function(prefs) {
         return prefs.slack_int_promo;
       });
-    } else {
-      slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
     }
 
     var forcePromo = $stateParams.forceSlackDialog || initParams.getAndClear('forceSlackDialog');

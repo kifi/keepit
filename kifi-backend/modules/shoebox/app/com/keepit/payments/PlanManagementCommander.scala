@@ -88,6 +88,7 @@ class PlanManagementCommanderImpl @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
+  userValueRepo: UserValueRepo,
   accountLockHelper: AccountLockHelper,
   eventTrackingCommander: AccountEventTrackingCommander,
   creditRewardCommander: CreditRewardCommander,
@@ -155,6 +156,10 @@ class PlanManagementCommanderImpl @Inject() (
 
               log.info(s"[PAC] $orgId: Granting initial rewards...")
               creditRewardCommander.initializeRewards(orgId)
+
+              userValueRepo.getUserValue(creator, UserValueName.STORED_CREDIT_CODE).foreach { code =>
+                creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(CreditCode(code.value), creator, Some(orgId)))
+              }
 
               log.info(s"[PAC] $orgId: Registering owner...")
               registerNewUser(orgId, creator, OrganizationRole.ADMIN, attribution)
