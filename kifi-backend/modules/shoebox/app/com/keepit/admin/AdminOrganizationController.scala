@@ -62,14 +62,18 @@ class AdminOrganizationController @Inject() (
   // needed to coerce the passed in Int => Call to Int => Html
   def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
 
-  private def getOrgs(page: Int, orgFilter: Organization => Boolean = _ => true): Future[(Int, Seq[OrganizationStatisticsOverview])] = {
+  private def getOrgs(page: Int, orgFilter: Id[Organization] => Boolean = _ => true): Future[(Int, Seq[OrganizationStatisticsOverview])] = {
     val all = db.readOnlyReplica { implicit s =>
-      orgRepo.allActive
+      orgRepo.allActiveIds
     }
-    val filteredOrgs = all.filter(_.state == OrganizationStates.ACTIVE).filter(orgFilter).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
-    val orgsCount = filteredOrgs.length
+    val filteredOrgIds = all.filter(orgFilter).sorted(Ordering[Id[Organization]].reverse)
+    val orgsCount = filteredOrgIds.length
     val startingIndex = page * pageSize
-    val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
+    val orgsPage = {
+      val orgIdsToFetch = filteredOrgIds.slice(startingIndex, startingIndex + pageSize)
+      val orgsById = db.readOnlyReplica { implicit s => orgRepo.getByIds(orgIdsToFetch.toSet) }
+      orgIdsToFetch.flatMap(orgsById.get)
+    }
     Future.sequence(orgsPage.map(org => orgStatsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
       (orgsCount, orgsStats)
     }
@@ -109,8 +113,8 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  private def isFake(org: Organization): Boolean = db.readOnlyMaster { implicit session =>
-    orgExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE)
+  private def isFake(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>
+    orgExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
   }
 
   def realOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
@@ -435,7 +439,7 @@ class AdminOrganizationController @Inject() (
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
-    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
+    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActiveIds }
     val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
       Try(db.readWrite { implicit s =>
         val account = paidAccountRepo.getByOrgId(orgId)

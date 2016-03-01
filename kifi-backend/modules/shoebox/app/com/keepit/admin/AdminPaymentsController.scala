@@ -208,7 +208,7 @@ class AdminPaymentsController @Inject() (
     if (request.userId.id == 134 && doIt) {
       SafeFuture {
         val activeOrgIds = db.readOnlyMaster { implicit session =>
-          orgRepo.allActive.map(_.id.get).toSet - Id[Organization](2941)
+          orgRepo.allActiveIds.toSet - Id[Organization](2941)
         }
         activeOrgIds.map(doResetAccount)
       }
