@@ -200,7 +200,7 @@ class WebsiteSearchController @Inject() (
           }.flatten
 
           val (libraryId, keeperId, keptAt, note) = limitedInfo.keep match {
-            case Some(RestrictedKeepInfo(_, _, keptAt, library, keeper, note, _)) if !library.exists(!doShowLibrary(_)) =>
+            case Some(RestrictedKeepInfo(_, _, keptAt, library, _, keeper, note, _)) if !library.exists(!doShowLibrary(_)) =>
               (library, keeper, Some(keptAt), note) // canonical keep
             case _ => limitedInfo.libraries.collectFirst {
               case (library, keeper, keptAt) if doShowLibrary(library) =>

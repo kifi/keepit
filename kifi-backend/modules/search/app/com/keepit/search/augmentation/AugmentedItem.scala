@@ -21,7 +21,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   // Libraries
 
-  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, _, keptAt, Some(libraryId), Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
+  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, _, keptAt, Some(libraryId), _, Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
 
   def librariesTotal = keeps.length + otherPublishedKeeps + otherDiscoverableKeeps
 
