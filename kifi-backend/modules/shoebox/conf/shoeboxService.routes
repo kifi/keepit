@@ -114,6 +114,7 @@ DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthControlle
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
 POST    /ext/keeps/new              @com.keepit.controllers.ext.ExtKeepController.createKeep()
+POST    /ext/keeps/:id/messages     @com.keepit.controllers.ext.ExtKeepController.sendMessageOnKeep(id: PublicId[Keep])
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)

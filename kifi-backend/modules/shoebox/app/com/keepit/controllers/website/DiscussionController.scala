@@ -46,11 +46,10 @@ class DiscussionController @Inject() (
     }
   }
   def sendMessageOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    val source = (request.body \ "source").asOpt[MessageSource]
     (for {
       text <- (request.body \ "text").asOpt[String].map(Future.successful).getOrElse(Future.failed(DiscussionFail.MISSING_MESSAGE_TEXT))
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source)
+      msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, Some(MessageSource.SITE))
     } yield {
       Ok(Json.toJson(msg))
     }).recover {
