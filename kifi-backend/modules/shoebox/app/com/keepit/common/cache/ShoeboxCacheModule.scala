@@ -483,4 +483,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def slackPushForMessageTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackPushForMessageTimestampCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackNotificationVectorsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackNotificationVectorCache(stats, accessLog, (outerRepo, 30 days))
 }

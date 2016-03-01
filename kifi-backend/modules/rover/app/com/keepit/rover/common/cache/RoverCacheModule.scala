@@ -12,7 +12,7 @@ import com.keepit.rover.model.{ RoverUrlRuleAllCache, RoverArticleImagesCache, R
 import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.rover.store.UrlContentSignatureCache
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.slack.models.SlackChannelIntegrationsCache
+import com.keepit.slack.models.{ SlackNotificationVectorCache, SlackChannelIntegrationsCache }
 import com.keepit.social.{ IdentityUserIdCache, BasicUserUserIdCache }
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
@@ -232,4 +232,8 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def slackNotificationVectorsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackNotificationVectorCache(stats, accessLog, (outerRepo, 30 days))
 }

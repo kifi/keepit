@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.eliza.model._
 import com.keepit.model.{NormalizedURI, User}
-import com.keepit.notify.delivery.WsNotificationDelivery
+import com.keepit.notify.delivery.NotificationDeliverer
 import com.keepit.notify.model.event.{LegacyNotification, NotificationEvent}
 import com.keepit.notify.model.{GroupingNotificationKind, NKind, Recipient}
 import org.joda.time.DateTime
@@ -20,7 +20,7 @@ class NotificationCommander @Inject() (
     db: Database,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
-    wsNotificationDelivery: WsNotificationDelivery,
+    wsNotificationDelivery: NotificationDeliverer,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {

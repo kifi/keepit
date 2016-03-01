@@ -4,12 +4,14 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, Key, Stri
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.slack.models.SlackNotificationVector
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 case class UserValue(
     id: Option[Id[UserValue]] = None,
@@ -99,6 +101,8 @@ object UserValueName {
   val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
   val LAST_RECORDED_LOCATION = UserValueName("last_recorded_location")
 
+  val SLACK_NOTIFICATION_VECTORS = UserValueName("slack_notification_vectors")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -157,6 +161,12 @@ object UserValues {
     def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
   }
 
+  case class UserValueJsonEncodedHandler[T](override val name: UserValueName, default: T)(implicit format: Format[T]) extends UserValueHandler[T] {
+    def parse(valOpt: Option[String]): T = {
+      valOpt.fold(default)(str => Json.parse(str).as[T])
+    }
+  }
+
   val lookHereMode = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, true)
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
   val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
@@ -189,6 +199,8 @@ object UserValues {
   val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 
   val pendingOrgDomainOwnershipByEmail = UserValueJsValueHandler(UserValueName.PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL, default = Json.obj())
+
+  val slackNotificationVectors = UserValueJsonEncodedHandler[Seq[SlackNotificationVector]](UserValueName.SLACK_NOTIFICATION_VECTORS, default = Seq.empty)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)
