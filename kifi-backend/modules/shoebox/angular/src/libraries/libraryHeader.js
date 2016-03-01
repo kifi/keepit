@@ -471,12 +471,11 @@ angular.module('kifi')
 
           var scrollTop = descEl[0].scrollTop;
           if (scrollTop > 0) {
-            smoothScroll(descEl[0], scrollTop, 0, Math.max(100, Math.min(500, 100 * Math.log(scrollTop))))
-            .then(angular.noop, angular.noop, function progress(frac) {
-              if (collapse && frac >= 0.5) {
-                collapse();
-                collapse = null;
-              }
+            angular.element(descEl[0]).animate({
+              scrollTop: 0 // the 16 provides padding from the site header
+            }, Math.min(500, 100 * Math.log(scrollTop)), 'swing', function () {
+              collapse();
+              collapse = null;
             });
           } else {
             collapse();
@@ -488,30 +487,6 @@ angular.module('kifi')
             var n = parseFloat(dur, 10);
             return dur.replace(/[^a-z]/g, '') === 's' ? n * 1000 : n;
           }));
-        }
-
-        function smoothScroll(el, top0, topN, ms) {
-          var deferred = $q.defer();
-          var t0, ms_1 = 1 / ms, px = topN - top0;
-          function step(t) {
-            if (!t0) {
-              t0 = t;
-            }
-            var alpha = easeInCubic(Math.min(1, (t - t0) * ms_1));
-            var top = el.scrollTop = top0 + Math.round(px * alpha);
-            deferred.notify(alpha);
-            if (top !== topN) {
-              $$rAF(step);
-            } else {
-              deferred.resolve();
-            }
-          }
-          $$rAF(step);
-          return deferred.promise;
-        }
-
-        function easeInCubic(t) {
-          return t*t*t;
         }
 
         scope.hasPermission = function (permission) {
