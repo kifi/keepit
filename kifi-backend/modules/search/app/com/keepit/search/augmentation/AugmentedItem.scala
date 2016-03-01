@@ -58,25 +58,26 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 }
 
 object AugmentedItem {
-  // todo(Léo): update this logic to take organizations into account
   private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], organizations: Set[Id[Organization]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
 
     val sortedKeeps = keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
 
     val myKeeps = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyLibraries = new ListBuffer[RestrictedKeepInfo]()
+    val keepsFromMyOrgs = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyNetwork = new ListBuffer[RestrictedKeepInfo]()
     val otherKeeps = new ListBuffer[RestrictedKeepInfo]()
     sortedKeeps.foreach { keep =>
       val keepCategory = {
         if (keep.keptBy.exists(_ == userId)) myKeeps
         else if (keep.keptIn.exists(libraries.contains)) keepsFromMyLibraries
+        else if (keep.organizationId.exists(organizations.contains)) keepsFromMyOrgs
         else if (keep.keptBy.exists(friends.contains)) keepsFromMyNetwork
         else otherKeeps
       }
       keepCategory += keep
     }
-    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyNetwork ++ otherKeeps
+    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyOrgs ++ keepsFromMyNetwork ++ otherKeeps
     (myKeeps.toList, moreKeeps.toList)
   }
 
