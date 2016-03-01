@@ -220,17 +220,15 @@ class SlackPushingActor @Inject() (
               FutureHelpers.sequentialExec(msgs) { msg =>
                 slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).fold(Future.successful(())) { oldCommentTimestamp =>
                   // regenerate the slack message if there is some text to push
-                  if (msg.text.isEmpty) Future.successful(()) else {
-                    val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                    // call the SlackClient to try and update the message
-                    slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
-                      case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
-                        slackLog.warn(s"Failed to update comment ${msg.id} because Slack says it's uneditable, removing it from the cache")
-                        slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
-                      case fail: SlackAPIErrorResponse =>
-                        slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
-                        ()
-                    }
+                  val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+                  // call the SlackClient to try and update the message
+                  slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
+                    case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
+                      slackLog.warn(s"Failed to update comment ${msg.id} because Slack says it's uneditable, removing it from the cache")
+                      slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
+                    case fail: SlackAPIErrorResponse =>
+                      slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
+                      ()
                   }
                 }
               }
@@ -240,7 +238,7 @@ class SlackPushingActor @Inject() (
 
       // Now push new things, updating the integration state as we go
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
-        slackMessageForItem(item).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
+        slackMessageForItem(item, settings).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
           slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, itemMsg).recoverWith {
             case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
           }
@@ -335,7 +333,7 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def slackMessageForItem(item: PushItem)(implicit items: PushItems): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[SlackMessageRequest] = {
     import DescriptionElements._
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
@@ -347,8 +345,10 @@ class SlackPushingActor @Inject() (
       case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get))
       )))
-      case PushItem.MessageToPush(k, msg) => if (msg.text.isEmpty) None else
+      case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty &&
+        orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
         Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get)))
+      case messageToSwallow: PushItem.MessageToPush => None
     }
   }
   private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
