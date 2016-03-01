@@ -2,15 +2,16 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.DiscussionCommander
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.{ TraversableFormat, KeyFormat }
-import com.keepit.discussion.{ DiscussionFail, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
 import com.keepit.model._
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -21,6 +22,7 @@ class DiscussionController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val db: Database,
   userRepo: UserRepo,
+  protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val ec: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
@@ -47,7 +49,7 @@ class DiscussionController @Inject() (
     (for {
       text <- (request.body \ "text").asOpt[String].map(Future.successful).getOrElse(Future.failed(DiscussionFail.MISSING_MESSAGE_TEXT))
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId)
+      msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, Some(MessageSource.SITE))
     } yield {
       Ok(Json.toJson(msg))
     }).recover {

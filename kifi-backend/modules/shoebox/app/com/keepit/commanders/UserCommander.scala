@@ -593,13 +593,13 @@ class UserCommanderImpl @Inject() (
   private def generateDynamicPrefs(prefSet: Set[UserValueName], userId: Id[User]): Map[UserValueName, JsValue] = {
     db.readOnlyReplica { implicit session =>
       prefSet.collect {
-        case SLACK_INT_PROMO =>
+        case pref if pref == SLACK_INT_PROMO || pref == SLACK_UPSELL_WIDGET =>
           val teamOpt = organizationMembershipRepo.getByUserId(userId, Limit(1), Offset(0)).headOption
           def hasIntegrations = {
             slackTeamMembershipRepo.getByUserId(userId).nonEmpty ||
               teamOpt.flatMap(team => slackChannelToLibraryRepo.getIntegrationsByOrg(team.organizationId).headOption).nonEmpty
           }
-          SLACK_INT_PROMO -> JsBoolean(teamOpt.nonEmpty && !hasIntegrations)
+          pref -> JsBoolean(teamOpt.nonEmpty && !hasIntegrations)
       }.toMap
     }
   }

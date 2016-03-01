@@ -15,6 +15,8 @@ angular.module('kifi')
     return {
       event: post(shoebox, '/events'),
 
+      fetchPrefs: get(shoebox, '/user/prefs', 30),
+
       getLibraryInfos: get(shoebox, '/libraries', 30),
       getBasicLibraries: get(shoebox, '/users/:id/basicLibraries?offset=:offset&limit=:limit'),
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
@@ -111,7 +113,6 @@ angular.module('kifi')
       connectSlack: post(shoebox, '/organizations/:teamId/slack/connect?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
 
-    // eliza
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
       getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),

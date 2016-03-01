@@ -21,7 +21,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   // Libraries
 
-  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, _, keptAt, Some(libraryId), Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
+  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, _, keptAt, Some(libraryId), _, Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
 
   def librariesTotal = keeps.length + otherPublishedKeeps + otherDiscoverableKeeps
 
@@ -40,9 +40,11 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   def tags = CollectionHelpers.dedupBy(myTags ++ primaryTags.filterNot(_.isSensitive) ++ moreTags.filterNot(_.isSensitive))(_.normalized)
 
-  def toLimitedAugmentationInfo(maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
+  def toLimitedAugmentationInfo(maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
 
     val keep = primaryKeep
+    val keepsShown = keeps.take(maxKeepsShown)
+    val keepsOmitted = keeps.size - keepsShown.size
 
     val keepersShown = relatedKeepers.take(maxKeepersShown)
     val keepersOmitted = relatedKeepers.size - keepersShown.size
@@ -53,30 +55,31 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
     val tagsShown = tags.take(maxTagsShown)
     val tagsOmitted = tags.size - tagsShown.size
 
-    LimitedAugmentationInfo(keep, keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
+    LimitedAugmentationInfo(keep, keepsShown, keepsOmitted, keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
   }
 }
 
 object AugmentedItem {
-  // todo(Léo): update this logic to take organizations into account
   private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], organizations: Set[Id[Organization]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
 
     val sortedKeeps = keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
 
     val myKeeps = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyLibraries = new ListBuffer[RestrictedKeepInfo]()
+    val keepsFromMyOrgs = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyNetwork = new ListBuffer[RestrictedKeepInfo]()
     val otherKeeps = new ListBuffer[RestrictedKeepInfo]()
     sortedKeeps.foreach { keep =>
       val keepCategory = {
         if (keep.keptBy.exists(_ == userId)) myKeeps
         else if (keep.keptIn.exists(libraries.contains)) keepsFromMyLibraries
+        else if (keep.organizationId.exists(organizations.contains)) keepsFromMyOrgs
         else if (keep.keptBy.exists(friends.contains)) keepsFromMyNetwork
         else otherKeeps
       }
       keepCategory += keep
     }
-    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyNetwork ++ otherKeeps
+    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyOrgs ++ keepsFromMyNetwork ++ otherKeeps
     (myKeeps.toList, moreKeeps.toList)
   }
 

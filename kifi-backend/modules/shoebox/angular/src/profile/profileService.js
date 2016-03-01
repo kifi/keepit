@@ -249,8 +249,11 @@ angular.module('kifi')
       });
     }
 
-    function fetchPrefs() {
-      return $http.get(routeService.prefs).then(function (p) {
+    function fetchPrefs(invalidateCache) {
+      if (invalidateCache) {
+        net.fetchPrefs.clearCache();
+      }
+      return net.fetchPrefs().then(function (p) {
         util.replaceObjectInPlace(prefs, p.data);
         $rootScope.$emit('prefsChanged');
         return p.data;

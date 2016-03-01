@@ -164,6 +164,7 @@ class AugmentationCommanderImpl @Inject() (
       }
 
       @inline def getLibraryId(libraryId: Long): Option[Id[Library]] = if (libraryId < 0) None else Some(Id(libraryId))
+      @inline def getOrganizationId(orgId: Long): Option[Id[Organization]] = if (orgId < 0) None else Some(Id(orgId))
 
       if (docs != null) {
         var docId = docs.nextDoc()
@@ -177,30 +178,30 @@ class AugmentationCommanderImpl @Inject() (
 
           if (item.keepId.isDefined && item.keepId.get.id == keepId) { // canonical keep, get note
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), record.note, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
           } else if (organizationIdFilter.findIndex(orgId) >= 0) visibility match { // kept in my organizations
             case PUBLISHED | ORGANIZATION =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
             case SECRET | DISCOVERABLE => // ignore
           }
           else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, getAndCountUserId(userId), None, Set.empty)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, None, getAndCountUserId(userId), None, Set.empty)
             case SECRET | ORGANIZATION => // ignore
           }
           else if (restrictedUserIdFilter.findIndex(userId) < 0) visibility match { // kept by others
             case PUBLISHED =>
               if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getAndCountUserId(userId), None, record.tags)
+                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }
@@ -225,7 +226,7 @@ class AugmentationCommanderImpl @Inject() (
     weightedAugmentationInfos.foreach {
       case (info, weight) =>
         (info.keeps).foreach {
-          case RestrictedKeepInfo(_, _, _, libraryIdOpt, userIdOpt, _, tags) =>
+          case RestrictedKeepInfo(_, _, _, libraryIdOpt, _, userIdOpt, _, tags) =>
             libraryIdOpt.foreach { libraryId => libraryScores(libraryId) = libraryScores(libraryId) + weight }
             userIdOpt.foreach { userId => userScores(userId) = userScores(userId) + weight }
             tags.foreach { tag =>
