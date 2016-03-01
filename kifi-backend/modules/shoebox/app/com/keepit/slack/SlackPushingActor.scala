@@ -40,7 +40,7 @@ object SlackPushingActor {
   val KEEP_URL_MAX_DISPLAY_LENGTH = 60
   def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
 
-  val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)$""".r
+  val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)""".r
 
   sealed abstract class PushItem(val time: DateTime)
   object PushItem {
@@ -407,7 +407,7 @@ class SlackPushingActor @Inject() (
         case Left(text) => SlackAttachment.simple(DescriptionElements.unlines(text.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))).withFullMarkdown
         case Right(Success((pointer, ref))) =>
           val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
-          if (imageUrlRegex.findFirstIn(ref).isDefined) attachment.withImageUrl(ref) else attachment
+          imageUrlRegex.findFirstIn(ref).fold(attachment)(attachment.withImageUrl)
         case Right(Failure(fail)) =>
           slackLog.error(s"Failed to process a look-here in ${msg.text} because ${fail.getMessage}")
           SlackAttachment.simple("look here")
