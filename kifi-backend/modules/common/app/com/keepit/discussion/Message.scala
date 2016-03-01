@@ -93,12 +93,14 @@ case class MessageSource(value: String)
 object MessageSource {
   val CHROME = MessageSource("Chrome")
   val FIREFOX = MessageSource("Firefox")
+  val SAFARI = MessageSource("Safari")
   val EMAIL = MessageSource("Email")
   val IPHONE = MessageSource("iPhone")
   val IPAD = MessageSource("iPad")
   val ANDROID = MessageSource("Android")
   val SERVER = MessageSource("server")
   val SITE = MessageSource("Kifi.com")
+  val UNKNOWN = MessageSource("unknown")
 
   implicit val messageSourceFormat = new Format[MessageSource] {
     def reads(json: JsValue): JsResult[MessageSource] = {

@@ -1081,7 +1081,7 @@ api.port.on({
     data.extVersion = api.version;
     data.source = api.browser.name;
     data.eip = eip;
-    ajax('shoebox', 'POST', '/site/keeps/' + threadId + '/messages', data, logAndRespond, logErrorAndRespond);
+    ajax('shoebox', 'POST', '/ext/keeps/' + threadId + '/messages', data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o);
       respond(o);
