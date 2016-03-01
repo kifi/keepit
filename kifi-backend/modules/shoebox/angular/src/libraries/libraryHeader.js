@@ -473,7 +473,7 @@ angular.module('kifi')
           var scrollTop = descEl[0].scrollTop;
           if (scrollTop > 0) {
             angular.element(descEl[0]).animate({
-              scrollTop: 0 // the 16 provides padding from the site header
+              scrollTop: 0
             }, Math.min(500, 100 * Math.log(scrollTop)), 'swing', function () {
               collapse();
               collapse = null;

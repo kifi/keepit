@@ -67,22 +67,22 @@
         </menu>
       </div>
       <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isOwner() && !library.isSystem">
-      <div class="kf-lh-subscribe-btn-wrap" ng-if="!isOwner() || library.numCollaborators > 0" ng-class="{'for-owner': isOwner()}">
+      <div class="kf-lh-subscribe-btn-wrap" ng-if="!isOwner() || library.numCollaborators > 0">
         <button ng-attr-class="kf-lh-subscribe-btn {{library.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}" ng-click="changeSubscription()"></button>
         <div class="kf-lh-subscribe-msg">Notifications {{library.membership.subscribed ? 'enabled' : 'disabled'}}</div>
       </div>
 
-      <div class="kf-lh-followers">
-        <a class="kf-lh-followers-a" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator" ng-if="library.org">
+      <div class="kf-lh-authors">
+        <a class="kf-lh-authors-a" href="{{ library.org|profileUrl }}" itemprop="url" kf-track-origin="libraryPage/curator" ng-if="library.org">
           <img class="kf-lh-organization-pic" ng-src="{{ library.org|pic:100 }}" itemprop="image" alt="{{library.org|name}}">
-          <span class="kf-lh-followers-name">{{::library.org.name}}</span>
+          <span class="kf-lh-authors-name">{{::library.org.name}}</span>
         </a>
-        <a class="kf-lh-followers-a" ng-repeat="author in authorsToShow" href="{{::author|profileUrl}}" kf-track-origin="libraryPage/author">
-          <img class="kf-lh-followers-pic" ng-src="{{::author|pic:100}}" alt="{{::author|name}}">
-          <span class="kf-lh-followers-name">{{::author.firstName}}</span>
+        <a class="kf-lh-authors-a" ng-repeat="author in authorsToShow" href="{{::author|profileUrl}}" kf-track-origin="libraryPage/author">
+          <img class="kf-lh-authors-pic" ng-src="{{::author|pic:100}}" alt="{{::author|name}}">
+          <span class="kf-lh-authors-name">{{::author.firstName}}</span>
         </a>
-        <button class="kf-lh-followers-more" ng-if="!isSystem" ng-click="showFollowers()">
-          <span class="kf-lh-followers-more-text">See all</span>
+        <button class="kf-lh-members-more" ng-if="!isSystem" ng-click="showFollowers()">
+          <span class="kf-lh-members-more-text">See all</span>
         </button>
       </div>
     </div>
@@ -101,7 +101,7 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
-        <button class="kf-lh-stat" ng-pluralize count="numMembers" when="{'one': '1 follower', 'other': '{{numMembers|num}} members'}" ng-click="openMembersModal('followers_only')"></button>
+        <button class="kf-lh-stat" ng-if="numMembers > 1" ng-bind="(numMembers|num) + ' members'" ng-click="openMembersModal('followers_only')"></button>
       </div>
 
     </div>
@@ -127,7 +127,7 @@
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()" ng-style="{'color': library.color}" ng-if="$root.userLoggedIn">Accept</button>
       <button class="kf-lh-invite-banner-button kf-continue" ng-click="signupFromInvitation()" ng-if="!$root.userLoggedIn">Continue</button>
     </div>
-
+    <div class="kf-lh-buttons-divider"></div>
     <div class="kf-lh-follow-btn-wrap" ng-if="!isMember() && library.visibility !== 'secret'">
       <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn && !library.invite"></div>
       <button class="kf-lh-follow-btn" ng-click="followLibrary({via: 'followBtn'})">Follow</button>
@@ -138,16 +138,16 @@
       <div class="kf-lh-subs-msg">Notifications {{library.membership.subscribed ? 'enabled' : 'disabled'}}</div>
     </div>
 
-    <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="$root.userLoggedIn && (library.visibility === 'published' || (library.visibility === 'secret' && isCollaborating() && collabsCanInvite))">
+    <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem && hasPermission(LIB_PERMISSION.INVITE_FOLLOWERS)">
       <div class="svg-share-arrow-green"></div>
-      Share
+      Invite members
     </button>
 
   </div>
   <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
     <div kf-card-style-selector></div>
     <button class="kf-lh-edit-keeps svg-edit-keeps-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
-
+    <div class="kf-lh-buttons-divider"></div>
     <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem && hasPermission(LIB_PERMISSION.INVITE_FOLLOWERS)">
       <div class="svg-share-arrow-green"></div>
       Invite members

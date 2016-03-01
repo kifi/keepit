@@ -144,7 +144,7 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   > * + *
     margin-left: 0.7em
 
-.kf-lh-followers
+.kf-lh-authors
   margin-left: auto
   position: relative
 
@@ -153,7 +153,7 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
 
 followerPicDiam = 2.2em
 
-.kf-lh-followers-a
+.kf-lh-authors-a
   position: relative
   display: inline-block
   width: followerPicDiam + .4em
@@ -174,13 +174,13 @@ followerPicDiam = 2.2em
   border-radius: 16%
   box-shadow: 0 0 .3em rgba(0,0,0,.16)
 
-.kf-lh-followers-pic
+.kf-lh-authors-pic
   height: followerPicDiam
   width: followerPicDiam
   border-radius: 50%
   box-shadow: 0 0 .3em rgba(0,0,0,.16)
 
-.kf-lh-followers-name
+.kf-lh-authors-name
   display: block
   position: absolute
   width: 100%
@@ -227,7 +227,7 @@ followerPicDiam = 2.2em
     padding: 1px 10px
     font-size: 10px
 
-.kf-lh-followers-more
+.kf-lh-members-more
   display: inline-block
   vertical-align: top
   height: followerPicDiam
@@ -249,7 +249,7 @@ followerPicDiam = 2.2em
   &:focus
     outline: thin dotted alpha(#fff,.5)
 
-.kf-lh-followers-more-text
+.kf-lh-members-more-text
   padding: 0 0.7em
   font-size: .75em
   text-shadow: 0 1px 1px rgba(0,0,0,.6)
@@ -348,12 +348,8 @@ followerPicDiam = 2.2em
 .kf-lh-subscribe-btn-wrap
   display: flex
   align-items: center
-  //margin-left: 1em
   position: relative // for .kf-lh-subscribed-msg
   opacity: .7
-
-  // &.for-owner
-  //   margin-left: 3.3em
 
   &:hover
     opacity: .85
@@ -592,7 +588,7 @@ coverDragShadeHeight = 3em
     font-size: 2.5em
 
   &.kf-long-2
-    width: 16em
+    width: 18em
     font-size: 2.3em
 
   @media (max-width: 479px)
@@ -1029,9 +1025,14 @@ collabImageDiam2 = 3.6em
       &:active
         background-color: alpha(#fff, .05)
 
+.kf-lh-buttons-divider
+  margin: auto
+
 .kf-lh-buttons
   padding-top: 1.8em
   text-align: center
+  display: flex
+  align-items: center
 
   .kf-card-style-selector
     float: left
