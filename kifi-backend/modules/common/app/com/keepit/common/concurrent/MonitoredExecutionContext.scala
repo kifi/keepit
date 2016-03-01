@@ -1,10 +1,10 @@
 package com.keepit.common.concurrent
 
-import com.keepit.common.logging.Logging
+import play.modules.statsd.api.Statsd
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
-class MonitoredExecutionContext(underlying: ScalaExecutionContext, samplingRate: Double) extends ScalaExecutionContext with Logging {
+class MonitoredExecutionContext(underlying: ScalaExecutionContext, samplingRate: Double) extends ScalaExecutionContext {
   private val underlyingName = underlying.getClass.getSimpleName
   private val executeMetric = s"executionContext.$underlyingName.execute"
   override def execute(runnable: Runnable): Unit = {
@@ -12,7 +12,7 @@ class MonitoredExecutionContext(underlying: ScalaExecutionContext, samplingRate:
     val monitoredRunnable = new Runnable {
       def run(): Unit = {
         val runningAt = System.currentTimeMillis()
-        statsd.timing(executeMetric, runningAt - executingAt, samplingRate)
+        Statsd.timing(executeMetric, runningAt - executingAt, samplingRate)
         runnable.run()
       }
     }
