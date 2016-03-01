@@ -81,6 +81,7 @@ angular.module('kifi')
           var numToShow = Math.min(authors.length, numFit + (scope.library.org ? 0 : 1));
 
           scope.authorsToShow = authors.slice(0, numToShow);
+          scope.numMembers = 1 + scope.library.numFollowers + scope.library.numCollaborators;
         }
 
         //
@@ -654,6 +655,7 @@ angular.module('kifi')
 
         $window.addEventListener('resize', onWinResize);
 
+        scope.$watch('library.numFollowers', updateAuthors);
         scope.$watch('library.numCollaborators', updateAuthors);
 
         [

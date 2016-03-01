@@ -16,11 +16,11 @@ colorBarHeight = .4em
 
 .kf-lh-cover
   height: 20em
-  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0))
+  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0.07), rgba(0,0,0,0))
   position: relative
 
   @media (min-width: 480px)
-    height: 23em
+    height: 21em
 
     &.kf-system-main
     &.kf-system-secret
@@ -136,6 +136,7 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   position: relative
   display: flex
   align-items: center
+  z-index: 1
 
   @media (min-width: appSidePad2MinWidth)
     border-width: 1.2em appSidePad2 0
@@ -549,7 +550,7 @@ coverDragShadeHeight = 3em
 
 .kf-lh-mid
   position: absolute
-  bottom: 6em
+  bottom: 3.5em
   left: 0
   width: 100%
   text-align: center
@@ -558,7 +559,7 @@ coverDragShadeHeight = 3em
     z-index: 1
 
   @media (min-width: 480px)
-    bottom: 9em
+    bottom: 8em
 
     .kf-system-main>&
     .kf-system-secret>&
@@ -575,7 +576,7 @@ coverDragShadeHeight = 3em
   background-position: center top
   background-size: contain
   opacity: .5
-  z-index: -1
+  z-index: 0
 
 .kf-lh-name
   max-width: 96%
@@ -610,7 +611,7 @@ coverDragShadeHeight = 3em
   white-space: nowrap
 
   @media (min-width: 480px)
-    margin: .75em auto 0
+    margin: .5em auto 0
     font-size: 1.2em
 
 .kf-lh-stat
@@ -871,9 +872,10 @@ collabImageDiam2 = 3.6em
   position: relative
   border-top: .4em solid transparent
   text-align: center
+  z-index: 2
 
   @media (max-width: 479px)
-    padding: 5em 1.5em 0
+    padding: 1em 1.5em 0
     transition: padding-bottom .2s
 
     &.kf-long
@@ -904,12 +906,12 @@ collabImageDiam2 = 3.6em
 
   @media (min-width: 480px)
     position: absolute
-    bottom: 0
+    bottom: 1.0em
     left: 50%
     transform: translate(-50%)
     width: width
     height: 5.2em
-    line-height: 1.8
+    line-height: 1.6
     border: solid transparent
     border-width: 0 sideBorderWidth 1.5em
     border-radius: 8px 8px 0 0
@@ -937,7 +939,7 @@ collabImageDiam2 = 3.6em
 .kf-lh-desc
   sidePad = 2.2em
   @media (min-width: 480px)
-    max-height: 21em
+    max-height: 17em
     padding: 0 sidePad
     overflow: hidden
 
@@ -985,7 +987,7 @@ collabImageDiam2 = 3.6em
         background-color: #e4e4e4
 
   @media (min-width: 480px)
-    bottom: 0em
+    bottom: 1.2em
     color: #fff
     font-size: .75em
     text-shadow: 1px 1px 1px rgba(0,0,0,.2)
@@ -1012,7 +1014,7 @@ collabImageDiam2 = 3.6em
 
   @media (min-width: 480px)
     position: absolute
-    bottom: 2em
+    bottom: 1.3em
     left: 50%
     transform: translate(-50%)
     width: 30em
