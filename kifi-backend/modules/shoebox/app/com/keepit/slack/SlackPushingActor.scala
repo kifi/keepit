@@ -412,7 +412,7 @@ class SlackPushingActor @Inject() (
           slackLog.error(s"Failed to process a look-here in ${msg.text} because ${fail.getMessage}")
           SlackAttachment.simple("look here")
       }
-    ).copy(unfurlMedia = true)
+    )
   }
 }
 
