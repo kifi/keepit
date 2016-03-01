@@ -76,7 +76,7 @@ class KeepDecoratorImpl @Inject() (
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(viewerIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
+        searchClient.augment(viewerIdOpt, showPublishedLibraries, 0, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val ktusByKeep = db.readOnlyMaster(implicit s => ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet))
       val entitiesFutures = augmentationFuture.map { augmentationInfos =>
