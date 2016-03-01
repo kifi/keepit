@@ -1046,6 +1046,8 @@ POST     /internal/shoebox/database/internKeep              @com.keepit.controll
 POST     /internal/shoebox/database/addUsersToKeep          @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
 POST     /internal/shoebox/database/registerMessageOnKeep   @com.keepit.controllers.internal.ShoeboxController.registerMessageOnKeep()
 
+POST     /internal/shoebox/database/getSlackNotificationVectorsForUser   @com.keepit.controllers.internal.ShoeboxController.getSlackNotificationVectorsForUser()
+
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: UserExperimentType)

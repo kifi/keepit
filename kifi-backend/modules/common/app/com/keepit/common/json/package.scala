@@ -48,11 +48,11 @@ package object json {
       } yield a
       case _ => JsError(Seq(JsPath() -> Seq(ValidationError(s"Expected a JsObject"))))
     }
-    def key1Writes[A](strA: String)(implicit aWrites: Writes[A]): Writes[(A)] = Writes[(A)] {
+    def key1Writes[A](strA: String)(implicit aWrites: Writes[A]): OWrites[(A)] = OWrites[(A)] {
       tup: (A) => JsObject(Seq(strA -> aWrites.writes(tup)))
     }
-    def key1Format[A](strA: String)(implicit aFormat: Format[A]): Format[(A)] = {
-      Format(key1Reads[A](strA), key1Writes[A](strA))
+    def key1Format[A](strA: String)(implicit aFormat: Format[A]): OFormat[(A)] = {
+      OFormat(key1Reads[A](strA), key1Writes[A](strA))
     }
 
     def key2Reads[A, B](strA: String, strB: String)(implicit aReads: Reads[A], bReads: Reads[B]): Reads[(A, B)] = Reads[(A, B)] {

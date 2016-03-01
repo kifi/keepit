@@ -23,7 +23,7 @@ import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
+import com.keepit.shoebox.ShoeboxServiceClient.{ GetSlackNotificationVectorsForUser, InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackInfoCommander, SlackIntegrationCommander }
@@ -645,5 +645,14 @@ class ShoeboxController @Inject() (
     }
     libToSlackPusher.schedule(keep.connections.libraries)
     NoContent
+  }
+
+  def getSlackNotificationVectorsForUser() = Action(parse.tolerantJson) { request =>
+    import GetSlackNotificationVectorsForUser._
+    val input = request.body.as[Request]
+    val notifVectors = db.readOnlyReplica { implicit s =>
+      userValueRepo.getValue(input.userId, UserValues.slackNotificationVectors)
+    }
+    Ok(Json.toJson(Response(notifVectors)))
   }
 }

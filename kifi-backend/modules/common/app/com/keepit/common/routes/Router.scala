@@ -183,6 +183,7 @@ object Shoebox extends Service {
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
     def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
     def registerMessageOnKeep() = ServiceRoute(POST, "/internal/shoebox/database/registerMessageOnKeep")
+    def getSlackNotificationVectorsForUser() = ServiceRoute(POST, "/internal/shoebox/database/getSlackNotificationVectorsForUser")
   }
 }
 

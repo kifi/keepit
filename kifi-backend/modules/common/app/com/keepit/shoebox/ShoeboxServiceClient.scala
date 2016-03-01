@@ -23,7 +23,7 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetSlackTeamInfo }
+import com.keepit.shoebox.ShoeboxServiceClient.{ GetSlackNotificationVectorsForUser, RegisterMessageOnKeep, InternKeep, GetSlackTeamInfo }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -31,6 +31,8 @@ import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.libs.functional._
+import play.api.libs.functional.syntax._
 import securesocial.core.IdentityId
 
 import scala.concurrent.duration._
@@ -137,6 +139,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]
+  def getSlackNotificationVectorsForUser(userId: Id[User]): Future[Seq[SlackNotificationVector]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -167,7 +170,8 @@ case class ShoeboxCacheProvider @Inject() (
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
   slackIntegrationsCache: SlackChannelIntegrationsCache,
-  sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache)
+  sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache,
+  slackNotificationVectorCache: SlackNotificationVectorCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -879,6 +883,15 @@ class ShoeboxServiceClientImpl @Inject() (
     val request = Request(keepId, msg)
     call(Shoebox.internal.registerMessageOnKeep(), body = Json.toJson(request)).map(_ => ())
   }
+  def getSlackNotificationVectorsForUser(userId: Id[User]): Future[Seq[SlackNotificationVector]] = {
+    import GetSlackNotificationVectorsForUser._
+    cacheProvider.slackNotificationVectorCache.getOrElseFuture(SlackNotificationVectorKey(userId)) {
+      val request = Request(userId)
+      call(Shoebox.internal.getSlackNotificationVectorsForUser(), body = Json.toJson(request)).map { response =>
+        response.json.as[Response].vectors
+      }
+    }
+  }
 }
 
 object ShoeboxServiceClient {
@@ -893,6 +906,12 @@ object ShoeboxServiceClient {
 
   object GetSlackTeamInfo {
     case class Response(teamInfo: InternalSlackTeamInfo)
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetSlackNotificationVectorsForUser {
+    case class Request(userId: Id[User])
+    case class Response(vectors: Seq[SlackNotificationVector])
+    implicit val requestFormat: Format[Request] = KeyFormat.key1Format[Id[User]]("userId").inmap(Request(_), _.userId)
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

@@ -717,4 +717,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = Future.successful(())
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(())
+  def getSlackNotificationVectorsForUser(userId: Id[User]): Future[Seq[SlackNotificationVector]] = ???
 }
