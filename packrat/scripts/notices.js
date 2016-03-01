@@ -204,15 +204,14 @@ k.panes.notices = k.panes.notices || function () {
       notice.title = notice.title || formatTitleFromUrl(notice.url);
       var participants = notice.participants;
       var nParticipants = participants.length;
-      notice.author = notice.author || notice.participants[0];
       if (notice.authors === 1) {
-        notice[nParticipants === 1 ? 'isSelf' : notice.author.id === k.me.id ? 'isSent' : 'isReceived'] = true;
+        notice[nParticipants === 1 ? 'isSelf' : (notice.author && notice.author.id) === k.me.id ? 'isSent' : 'isReceived'] = true;
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
       var nPicsMax = 3;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
-        notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
+        notice.isReceived && nParticipants === 2 ? notice.author && [notice.author] || [] : participants :
         participants.slice(0, nPicsMax);
       notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
       var nNamesMax = 4;
@@ -246,12 +245,12 @@ k.panes.notices = k.panes.notices || function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      if (notice.author.id === k.me.id) {
+      if (notice.author && notice.author.id === k.me.id) {
         if (notice.isSelf) {
           notice.multiple = notice.messages > 1;
         }
         notice.authorShortName = 'Me';
-      } else if (nParticipants > 2) {
+      } else if (notice.author && nParticipants > 2) {
         notice.authorShortName = notice.author.firstName;
       }
       notice.picturedParticipants.map(formatParticipant);
