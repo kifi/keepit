@@ -20,7 +20,8 @@ class SlackPushingActorTest extends TestKitSupport with SpecificationLike with S
     "do magic parsing on look-heres" in {
       val goodUrls = Set(
         "http://i.imgur.com/Lg9iNlB.gifv",
-        "https://cdn-images-1.medium.com/max/1600/1*U1EoH6ltIYQ6KDSfJbR9fQ.png"
+        "https://cdn-images-1.medium.com/max/1600/1*U1EoH6ltIYQ6KDSfJbR9fQ.png",
+        "http://www.iflscience.com/sites/www.iflscience.com/files/styles/ifls_large/public/blog/%5Bnid%5D/embed_asset.jpg?itok=t0LiDC4J"
       )
       val badUrls = Set(
         "http://google.com",
