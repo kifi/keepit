@@ -162,12 +162,7 @@ object UserValues {
 
   case class UserValueJsonEncodedHandler[T](override val name: UserValueName, default: T)(implicit format: Format[T]) extends UserValueHandler[T] {
     def parse(valOpt: Option[String]): T = {
-      val bestEffort = for {
-        str <- valOpt
-        js <- Try(Json.parse(str)).toOption
-        v <- js.asOpt[T]
-      } yield v
-      bestEffort.getOrElse(default)
+      valOpt.fold(default)(str => Json.parse(str).as[T])
     }
   }
 
