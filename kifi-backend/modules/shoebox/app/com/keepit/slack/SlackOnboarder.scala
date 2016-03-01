@@ -77,7 +77,7 @@ class SlackOnboarderImpl @Inject() (
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
       debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
-        slackClient.sendToSlackViaUser(integ.slackUserId, integ.slackTeamId, (integ.slackChannelName, integ.slackChannelId), welcomeMsg).map(_ => ())
+        slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId.get, welcomeMsg).map(_ => ())
       }
     }.getOrElse {
       log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")
@@ -193,7 +193,7 @@ class SlackOnboarderImpl @Inject() (
           }
         )))).filter(_ => agent.isWorking)
       } yield {
-        slackClient.sendToSlackViaUser(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+        slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
       }) getOrElse {
         slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
         Future.successful(Unit)
@@ -256,7 +256,7 @@ class SlackOnboarderImpl @Inject() (
           ))).filter(_ => agent.isWorking)
         } yield {
           agent.dieIf(channels.isEmpty)
-          slackClient.sendToSlackViaUser(agent.membership.slackUserId, agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+          slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
         }) getOrElse {
           slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
           Future.successful(Unit)
