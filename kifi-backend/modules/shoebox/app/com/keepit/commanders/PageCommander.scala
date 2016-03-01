@@ -208,6 +208,7 @@ class PageCommander @Inject() (
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       showPublishedLibraries = true,
+      maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,
       maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit
       maxTagsShown = 0,

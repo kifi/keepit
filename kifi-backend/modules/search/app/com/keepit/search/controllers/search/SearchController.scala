@@ -150,6 +150,7 @@ class SearchController @Inject() (
   def augment() = Action.async(parse.json) { implicit request =>
     // This should stay in sync with SearchServiceClient.augment
     val userId = (request.body \ "userId").asOpt[Id[User]]
+    val maxKeepsShown = (request.body \ "maxKeepsShown").asOpt[Int] getOrElse 0 // todo(Léo): remove after Shoebox has been deployed
     val maxKeepersShown = (request.body \ "maxKeepersShown").as[Int]
     val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
     val maxTagsShown = (request.body \ "maxTagsShown").as[Int]
@@ -158,7 +159,7 @@ class SearchController @Inject() (
 
     val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*).copy(showPublishedLibraries = showPublishedLibrariesOpt)
     augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
-      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown))
       val result = Json.toJson(infos)
       Ok(result)
     }

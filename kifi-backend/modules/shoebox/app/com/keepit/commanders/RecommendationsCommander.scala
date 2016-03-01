@@ -110,7 +110,7 @@ class RecommendationsCommander @Inject() (
     val uriId2Idx = uriIds.zipWithIndex.toMap
     val ret: Array[Option[UserAttribution]] = Array.fill(uriIds.size)(None)
 
-    search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
+    search.augment(Some(userId), false, maxKeepsShown = 0, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = uriIds.map(AugmentableItem(_))).map { infos =>
       (uriIds zip infos).foreach {
         case (uriId, info) =>
           val idx = uriId2Idx(uriId)

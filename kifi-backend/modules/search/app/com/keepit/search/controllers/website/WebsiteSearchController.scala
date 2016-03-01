@@ -33,6 +33,7 @@ import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.common.json
 
 object WebsiteSearchController {
+  private[WebsiteSearchController] val maxKeepsShown = 0
   private[WebsiteSearchController] val maxKeepersShown = 20
   private[WebsiteSearchController] val maxLibrariesShown = 10
   private[WebsiteSearchController] val maxTagsShown = 15
@@ -77,7 +78,7 @@ class WebsiteSearchController @Inject() (
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
         val librarySearcher = libraryIndexer.getSearcher
-        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, futureBasicKeeps, futureLibrariesWithWriteAccess, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, futureBasicKeeps, futureLibrariesWithWriteAccess, userId, maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
         val futureJsHits = for {
           summaries <- futureUriSummaries
@@ -135,6 +136,7 @@ class WebsiteSearchController @Inject() (
     futureBasicKeeps: Future[Map[Id[NormalizedURI], Set[PersonalKeep]]],
     futureLibrariesWithWriteAccess: Future[Set[Id[Library]]],
     userId: Id[User],
+    maxKeepsShown: Int,
     maxKeepersShown: Int,
     maxLibrariesShown: Int,
     maxTagsShown: Int,
@@ -143,7 +145,7 @@ class WebsiteSearchController @Inject() (
     val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
     val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
 
-    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown))
     val allKeepsShown = limitedAugmentationInfos.map(_.keep).flatten
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers).flatten
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries).flatten

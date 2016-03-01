@@ -33,6 +33,7 @@ import scala.concurrent.Future
 import com.keepit.search.controllers.mobile.MobileSearchController._
 
 object MobileSearchController {
+  private[MobileSearchController] val maxKeepsShown = 0
   private[MobileSearchController] val maxKeepersShown = 20
   private[MobileSearchController] val maxLibrariesShown = 0
   private[MobileSearchController] val maxTagsShown = 0
@@ -252,7 +253,7 @@ class MobileSearchController @Inject() (
         val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
         val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
 
-        val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+        val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown))
         val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
 
         val futureUsers = {

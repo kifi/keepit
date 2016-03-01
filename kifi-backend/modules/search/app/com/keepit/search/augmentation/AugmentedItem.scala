@@ -40,9 +40,11 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   def tags = CollectionHelpers.dedupBy(myTags ++ primaryTags.filterNot(_.isSensitive) ++ moreTags.filterNot(_.isSensitive))(_.normalized)
 
-  def toLimitedAugmentationInfo(maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
+  def toLimitedAugmentationInfo(maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
 
     val keep = primaryKeep
+    val keepsShown = keeps.take(maxKeepsShown)
+    val keepsOmitted = keeps.size - keepsShown.size
 
     val keepersShown = relatedKeepers.take(maxKeepersShown)
     val keepersOmitted = relatedKeepers.size - keepersShown.size
@@ -53,7 +55,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
     val tagsShown = tags.take(maxTagsShown)
     val tagsOmitted = tags.size - tagsShown.size
 
-    LimitedAugmentationInfo(keep, keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
+    LimitedAugmentationInfo(keep, keepsShown, keepsOmitted, keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
   }
 }
 
