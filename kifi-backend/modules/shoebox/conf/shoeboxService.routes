@@ -919,8 +919,6 @@ GET           /admin/payments/refundCharge                 @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 
 GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)
-GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
-GET           /admin/payments/resetAllAccounts             @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
 GET           /admin/payments/activity   @com.keepit.controllers.admin.AdminPaymentsController.activityOverview(page: Int ?= 0, kind: Option[String] ?= None)
 POST          /admin/payments/createCode @com.keepit.controllers.admin.AdminPaymentsController.createCode()
