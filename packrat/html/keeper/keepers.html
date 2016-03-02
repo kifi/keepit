@@ -22,11 +22,14 @@
           <div class="kifi-keepers-source-content">
             <span class="kifi-keepers-source-content-head">
               {{#inMultipleTeams}}
-                <span class="kifi-keepers-source-slack-team">[{{#getTeamName}}{{permalink}}{{/getTeamName}}]</span> in
+                <span class="kifi-keepers-source-slack-team">[{{#getTeamName}}{{permalink}}{{/getTeamName}}]</span>
+                {{#channel.name}}in{{/channel.name}}
+                {{^channel.name}}with{{/channel.name}}
               {{/inMultipleTeams}}
-              #{{channel.name}}
+              {{#channel.name}}#{{channel.name}}{{/channel.name}}
+              {{^channel.name}}@{{username}}{{/channel.name}}
             </span>
-            <p class="kifi-keepers-source-context">@{{username}}{{#text}}: {{text}}{{/text}}{{^text}} shared this page{{/text}}</p>
+            <p class="kifi-keepers-source-context">{{#channel.name}}@{{username}}: {{/channel.name}}{{#text}}{{text}}{{/text}}{{^text}} shared this page{{/text}}</p>
           </div>
         </a>
       {{/slack.message}}
