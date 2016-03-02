@@ -531,10 +531,10 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     };
   }
 
-  var slackUserEntityRe = /<@U.*?>/g;
+  var slackSpecialEntityRe = /<@[A-Z].*?>/g; // TODO(carlos): process these entities instead of getting rid of them
   function massageSlackEntities(message) {
     var matches = [];
-    message = message.replace(slackUserEntityRe, '');
+    message = message.replace(slackSpecialEntityRe, '');
 
     // Fill an array with match objects from slackUrlEntityRe
     for (var m, slackUrlEntityRe = /<(.*?)\|(.*?)>|<(.*?)>/g; m = slackUrlEntityRe.exec(message); matches.push(m)) {}
