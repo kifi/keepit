@@ -49,7 +49,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
 
   def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
     val state = setNewSlackState(action)
-    SlackAPI.OAuthAuthorize(scopes + SlackAuthScope.Identify, state, teamId, redirectUri)
+    SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
   }
 
   def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction] = {
@@ -162,8 +162,9 @@ class SlackAuthenticationCommanderImpl @Inject() (
     getIdentityAndMissingScopes(Some(userId), slackTeamIdOpt, action).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
-      case (_, missingScopes) =>
-        val authUrl = getAuthLink(action, slackTeamIdOpt, missingScopes, SlackOAuthController.REDIRECT_URI).url
+      case (identityOpt, missingScopes) =>
+        val scopes = if (identityOpt.isDefined) missingScopes else missingScopes + SlackAuthScope.Identify
+        val authUrl = getAuthLink(action, slackTeamIdOpt, scopes, SlackOAuthController.REDIRECT_URI).url
         Future.successful(SlackResponse.RedirectClient(authUrl))
     }
   }
