@@ -319,7 +319,9 @@ class SlackTeamCommanderImpl @Inject() (
           case Some(orgId) =>
             val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
             if (hasOrgPermissions) {
-              ???
+              val updatedSetting = if (turnOn) StaticFeatureSetting.ENABLED else StaticFeatureSetting.DISABLED
+              orgCommander.unsafeSetAccountFeatureSettings(orgId, OrganizationSettings(Map(StaticFeature.SlackCommentMirroring -> updatedSetting)), Some(userId))
+              Success(orgId)
             } else Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           case None => Failure(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
