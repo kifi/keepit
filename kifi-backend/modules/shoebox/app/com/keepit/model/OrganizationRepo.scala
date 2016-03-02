@@ -14,14 +14,17 @@ import com.keepit.controllers.admin.AdminOrganizationController
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
-  def allActiveIds(implicit session: RSession): Seq[Id[Organization]]
   def getActive(id: Id[Organization])(implicit session: RSession): Option[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
-  def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
+
+  // Admin methods
+  def adminGetActiveFromId(fromId: Id[Organization], limit: Int)(implicit session: RSession): Seq[Organization]
+  def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def getOrgByName(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Option[Organization]
   def searchOrgsByNameFuzzy(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Seq[Organization]
   def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
+  def allActiveIds(implicit session: RSession): Seq[Id[Organization]]
   def getAllByState(state: State[Organization])(implicit session: RSession): Set[Organization]
 }
 
@@ -51,8 +54,9 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
-
   initTable()
+
+  private def activeRows = rows.filter(_.state === OrganizationStates.ACTIVE)
 
   override def deleteCache(model: Organization)(implicit session: RSession) {
     orgMetadataCache.remove(OrgMetadataKey(model.id.get))
@@ -71,8 +75,7 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def allActiveIds(implicit session: RSession): Seq[Id[Organization]] = {
-    val q = for { row <- rows if row.state === OrganizationStates.ACTIVE } yield row.id
-    q.list
+    activeRows.map(_.id).list
   }
 
   override def get(id: Id[Organization])(implicit session: RSession): Organization = {
@@ -93,6 +96,9 @@ class OrganizationRepoImpl @Inject() (
     }.map { case (key, org) => key.id -> org }
   }
 
+  def adminGetActiveFromId(fromId: Id[Organization], limit: Int)(implicit session: RSession): Seq[Organization] = {
+    activeRows.filter(_.id > fromId).sortBy(_.id asc).take(limit).list
+  }
   def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization] = {
     val q = for (row <- rows if row.ownerId === ownerId && row.state =!= excludeStateOpt.orNull) yield row
     q.list.toSet
