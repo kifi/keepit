@@ -567,7 +567,7 @@ POST          /site/organizations/create/slack                  @com.keepit.cont
 POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization], max: Int ?= 100)
 POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
-
+POST          /site/organizations/:id/slack/mirrorComments      @com.keepit.controllers.website.SlackController.mirrorComments(id: PublicId[Organization], turnOn: Boolean)
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")

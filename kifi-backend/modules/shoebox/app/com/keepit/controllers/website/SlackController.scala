@@ -45,7 +45,7 @@ class SlackController @Inject() (
       case JsSuccess(mods, _) =>
         val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }.toSet
         val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }.toSet
-        val extToIntUserId = db.readOnlyReplica { implicit s =>
+        val extToIntUserId = db.readOnlyMaster { implicit s =>
           userRepo.getAllUsersByExternalId(extUserIds)
         }.map { case (extId, u) => extId -> u.id.get }
         val externalToInternalSpace: Map[ExternalLibrarySpace, LibrarySpace] = {
@@ -112,7 +112,7 @@ class SlackController @Inject() (
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val (slackTeamIdOpt, useKifiBot) = db.readOnlyReplica { implicit session =>
+    val (slackTeamIdOpt, useKifiBot) = db.readOnlyMaster { implicit session =>
       val slackTeamIdOpt = slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
       val useKifiBot = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
       (slackTeamIdOpt, useKifiBot)
@@ -130,7 +130,7 @@ class SlackController @Inject() (
   }
 
   def getOrgIntegrations(pubId: PublicId[Organization], max: Int = 100) = OrganizationUserAction(pubId, SlackIdentityCommander.slackSetupPermission) { implicit request =>
-    val result = db.readOnlyReplica { implicit s =>
+    val result = db.readOnlyMaster { implicit s =>
       slackInfoCommander.getOrganizationSlackInfo(request.orgId, request.request.userId, Some(max))
     }
     Ok(Json.toJson(result))
@@ -168,6 +168,23 @@ class SlackController @Inject() (
         handleAsAPIRequest(res)
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))
     }
+  }
+
+  def mirrorComments(organizationId: PublicId[Organization], turnOn: Boolean) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val (slackTeamIdOpt, hasExperiment) = db.readOnlyReplica { implicit session =>
+      val slackTeamIdOpt = slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+      val hasExperiment = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
+      (slackTeamIdOpt, hasExperiment)
+    }
+    if (hasExperiment) slackTeamIdOpt match {
+      case Some(slackTeamId) =>
+        val action = TurnCommentMirroring(turnOn)
+        val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, Some(slackTeamId), action)
+        handleAsAPIRequest(res)(request.request)
+      case _ => Future.successful(SlackActionFail.OrgNotConnected(request.orgId).asErrorResponse)
+    }
+    else Future.successful(Forbidden("Not cool!"))
   }
 
   // Always speaks JSON, should be on /site/ routes, cannot handle Redirects to HTML pages
