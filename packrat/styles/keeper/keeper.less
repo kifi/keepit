@@ -320,6 +320,23 @@
     background-color: @keepers-h-bg-color;
   }
 }
+.kifi-keepers-h-close {
+  float: right;
+  padding: 0 10px;
+  margin-right: -10px;
+  cursor: pointer;
+  color: #999;
+
+  &:hover {
+    color: #333;
+  }
+  &:active {
+    color: #999
+  }
+  &:before {
+    content: 'X';
+  }
+}
 .kifi-keepers-sources,
 .kifi-keepers-libs {
   min-width: 200px;
