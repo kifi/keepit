@@ -55,7 +55,7 @@ object CreateSlackTeam extends SlackAuthenticatedActionHelper[CreateSlackTeam]("
 }
 
 object SyncPublicChannels extends SlackAuthenticatedActionHelper[SyncPublicChannels]("sync_public_channels")
-case class SyncPublicChannels() extends SlackAuthenticatedAction {
+@json case class SyncPublicChannels(useKifiBot: Boolean) extends SlackAuthenticatedAction {
   type A = SyncPublicChannels
   def helper = SyncPublicChannels
 }
@@ -104,7 +104,7 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam => implicitly[Format[AddSlackTeam]]
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
-    case SyncPublicChannels => formatPure(SyncPublicChannels())
+    case SyncPublicChannels => implicitly[Format[SyncPublicChannels]]
     case Signup => formatPure(Signup())
     case Login => formatPure(Login())
   }
@@ -116,7 +116,7 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
-    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
+    case SyncPublicChannels(useKifiBot) => if (useKifiBot) SlackAuthScope.syncPublicChannelsWithKifiBot else SlackAuthScope.syncPublicChannels
     case Signup() => SlackAuthScope.userSignup
     case Login() => SlackAuthScope.userLogin
   }

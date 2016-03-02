@@ -143,7 +143,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
         }
       }
 
-      case SyncPublicChannels() => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
+      case SyncPublicChannels(_) => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
         case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
       }

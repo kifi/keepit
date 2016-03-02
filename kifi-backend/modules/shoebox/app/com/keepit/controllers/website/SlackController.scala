@@ -29,6 +29,7 @@ class SlackController @Inject() (
   userRepo: UserRepo,
   slackInfoCommander: SlackInfoCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  orgExperimentRepo: OrganizationExperimentRepo,
   val permissionCommander: PermissionCommander,
   val userActionsHelper: UserActionsHelper,
   val libraryAccessCommander: LibraryAccessCommander,
@@ -111,10 +112,12 @@ class SlackController @Inject() (
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+    val (slackTeamIdOpt, useKifiBot) = db.readOnlyReplica { implicit session =>
+      val slackTeamIdOpt = slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+      val useKifiBot = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
+      (slackTeamIdOpt, useKifiBot)
     }
-    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels()))
+    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels(useKifiBot)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
     handleAsAPIRequest(res)(request.request)
   }
