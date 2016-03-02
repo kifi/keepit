@@ -171,7 +171,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               friendsShown: params.keepers.length,
               friendsElided: params.numMore || undefined,
               librariesShown: params.libs.length,
-              sourcesShown: params.sources.length
+              sourcesShown: params.sources.length,
+              slackShown: params.sources.filter(isSlack).length,
+              twitterShown: params.sources.filter(isTwitter).length
             });
           });
         } else {
@@ -387,7 +389,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         friendsShown: params.keepers.length,
         friendsElided: params.numMore || undefined,
         librariesShown: params.libs.length,
-        sourcesShown: params.sources.length
+        sourcesShown: params.sources.length,
+        slackShown: params.sources.filter(isSlack).length,
+        twitterShown: params.sources.filter(isTwitter).length
       });
     })
     .hoverfu('.kifi-keepers-pic', function (configureHover) {
@@ -567,10 +571,18 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function idIs(id) {
-    return function (o) {return o.id === id};
+    return function (o) {
+      return o.id === id;
+    };
   }
   function getPromise(o) {
     return o.promise;
+  }
+  function isSlack(o) {
+    return o.slack;
+  }
+  function isTwitter(o) {
+    return o.twitter;
   }
 
   api.port.on({
@@ -687,7 +699,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   friendsShown: params.keepers.length,
                   friendsElided: params.numMore || undefined,
                   librariesShown: params.libs.length,
-                  sourcesShown: params.sources.length
+                  sourcesShown: params.sources.length,
+                  slackShown: params.sources.filter(isSlack).length,
+                  twitterShown: params.sources.filter(isTwitter).length
                 });
               });
             }).hoverfu('show');
