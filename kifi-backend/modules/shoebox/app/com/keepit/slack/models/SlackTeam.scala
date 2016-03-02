@@ -27,7 +27,8 @@ case class SlackTeam(
   lastDigestNotificationAt: Option[DateTime] = None,
   publicChannelsLastSyncedAt: Option[DateTime] = None,
   channelsSynced: Set[SlackChannelId] = Set.empty,
-  kifiBot: Option[KifiSlackBot])
+  kifiBot: Option[KifiSlackBot],
+  noPersonalDigestsBefore: Option[DateTime] = None)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -80,7 +81,8 @@ object SlackTeam {
     (__ \ 'lastDigestNotificationAt).formatNullable[DateTime] and
     (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime] and
     (__ \ 'channelsSynced).format[Set[SlackChannelId]] and
-    (__ \ 'kifiBot).formatNullable[KifiSlackBot]
+    (__ \ 'kifiBot).formatNullable[KifiSlackBot] and
+    (__ \ 'noPersonalDigestsBefore).formatNullable[DateTime]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -127,7 +129,8 @@ class SlackTeamRepoImpl @Inject() (
     publicChannelsLastSyncedAt: Option[DateTime],
     channelsSynced: Set[SlackChannelId],
     kifiBotUserId: Option[SlackUserId],
-    kifiBotToken: Option[SlackBotAccessToken]) = {
+    kifiBotToken: Option[SlackBotAccessToken],
+    noPersonalDigestsBefore: Option[DateTime]) = {
     SlackTeam(
       id,
       createdAt,
@@ -141,7 +144,8 @@ class SlackTeamRepoImpl @Inject() (
       lastDigestNotificationAt,
       publicChannelsLastSyncedAt,
       channelsSynced,
-      for { botId <- kifiBotUserId; botToken <- kifiBotToken } yield KifiSlackBot(botId, botToken)
+      for { botId <- kifiBotUserId; botToken <- kifiBotToken } yield KifiSlackBot(botId, botToken),
+      noPersonalDigestsBefore
     )
   }
 
@@ -159,7 +163,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.publicChannelsLastSyncedAt,
     slackTeam.channelsSynced,
     slackTeam.kifiBot.map(_.userId),
-    slackTeam.kifiBot.map(_.token)
+    slackTeam.kifiBot.map(_.token),
+    slackTeam.noPersonalDigestsBefore
   ))
 
   type RepoImpl = SlackTeamTable
@@ -175,7 +180,12 @@ class SlackTeamRepoImpl @Inject() (
     def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
     def kifiBotUserId = column[Option[SlackUserId]]("kifi_bot_user_id", O.Nullable)
     def kifiBotToken = column[Option[SlackBotAccessToken]]("kifi_bot_token", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt, generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsSynced, kifiBotUserId, kifiBotToken) <> ((teamFromDbRow _).tupled, teamToDbRow _)
+    def noPersonalDigestsBefore = column[Option[DateTime]]("no_personal_digests_before", O.Nullable)
+    def * = (
+      id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId, lastChannelCreatedAt,
+      generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsSynced,
+      kifiBotUserId, kifiBotToken, noPersonalDigestsBefore
+    ) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
@@ -239,7 +249,7 @@ class SlackTeamRepoImpl @Inject() (
 }
 
 case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 12
+  override val version = 13
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }

@@ -24,6 +24,7 @@ import scala.util.{ Failure, Success, Try }
 
 object SlackPersonalDigestConfig {
   val minPeriodBetweenPersonalDigests = Duration.standardDays(3)
+  val minDelayInsideTeam = Duration.standardMinutes(10)
   val minIngestedLinksForPersonalDigest = 10
 
   val delayAfterSuccessfulDigest = Duration.standardDays(3)
@@ -70,7 +71,12 @@ class SlackPersonalDigestNotificationActor @Inject() (
         val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_PERSONAL_DIGESTS).toSet
         slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
       }
-      val ripeIds = slackMembershipRepo.getRipeForPersonalDigest(limit = limit, overrideProcessesOlderThan = now minus maxProcessingDuration, vipTeams = vipTeams)
+      val ripeIds = slackMembershipRepo.getRipeForPersonalDigest(
+        limit = limit,
+        overrideProcessesOlderThan = now minus maxProcessingDuration,
+        upperBoundForTeam = now minus minDelayInsideTeam,
+        vipTeams = vipTeams
+      )
       ripeIds.filter(id => slackMembershipRepo.markAsProcessing(id, overrideProcessesOlderThan = now minus maxProcessingDuration))
     }
   }
@@ -96,6 +102,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, describePersonalDigest(digest)).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
+              slackMembershipRepo.updateLastPersonalDigest(membershipId)
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
           case Failure(fail) =>

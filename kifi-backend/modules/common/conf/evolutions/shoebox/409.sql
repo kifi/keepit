@@ -16,12 +16,17 @@ CREATE TABLE slack_team_membership (
   token VARCHAR(512) NOT NULL,
   scopes text NOT NULL,
   slack_user text DEFAULT NULL,
+  last_personal_digest_at DATETIME DEFAULT NULL,
+  last_processing_at DATETIME DEFAULT NULL,
+  last_processed_at DATETIME DEFAULT NULL,
+  next_personal_digest_at DATETIME DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
   INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
   INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id),
   INDEX slack_team_membership_i_seq (seq),
+  INDEX slack_team_membership_i_personal_digest (last_processing_at,next_personal_digest_at)
 );
 
 -- MySQL:
