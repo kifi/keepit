@@ -196,7 +196,7 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   private def augmentSettings(requesterIdOpt: Option[Id[User]], newSettings: OrganizationSettings, existingSettings: OrganizationSettings)(implicit session: RWSession) = {
-    // If we ever do tranformations on settings before persisting
+    // If we ever do transformations on settings before persisting
     def augmentBlacklist(blacklist: ClassFeature.Blacklist) = {
       import ClassFeature.{ Blacklist, BlacklistEntry, SlackIngestionDomainBlacklist }
       val existingList = existingSettings.settingFor(SlackIngestionDomainBlacklist).collect { case blk: Blacklist => blk.entries }.getOrElse(Seq.empty)

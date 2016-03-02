@@ -22,7 +22,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
-  def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE), drop: Int, take: Int)(implicit session: RSession): Seq[KeepToLibrary]
 
   def getByLibraryIdSorted(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Keep]]
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
@@ -207,8 +207,8 @@ class KeepToLibraryRepoImpl @Inject() (
     activeRows.filter(r => r.libraryId.inSet(libraryIds) && r.addedAt >= time).sortBy(r => (r.addedAt asc, r.id asc)).list
   }
 
-  def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    rows.filter(r => r.organizationId === orgId && r.state =!= excludeStateOpt.orNull).list
+  def getByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]], drop: Int, take: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
+    rows.filter(r => r.organizationId === orgId && r.state =!= excludeStateOpt.orNull).drop(drop).take(take).list
   }
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary] = {
