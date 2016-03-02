@@ -49,7 +49,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
 
   def getAuthLink(action: SlackAuthenticatedAction, teamId: Option[SlackTeamId], scopes: Set[SlackAuthScope], redirectUri: String): SlackAPI.Route = {
     val state = setNewSlackState(action)
-    SlackAPI.OAuthAuthorize(scopes, state, teamId, redirectUri)
+    SlackAPI.OAuthAuthorize(scopes + SlackAuthScope.Identify, state, teamId, redirectUri)
   }
 
   def getSlackAction(state: SlackAuthState): Option[SlackAuthenticatedAction] = {
