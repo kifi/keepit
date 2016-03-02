@@ -313,7 +313,7 @@ gulp.task('styles', function () {
     return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
   }
 
-  var ffBaseUri = 'resource://kifi' + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/kifi/data/images/';
+  var ffBaseUri = 'resource://kifi' + (listed ? '' : '-unlisted') + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/data/images/';
   function firefoxify(code) {
     return code.toString().replace(/\/images\//g, ffBaseUri);
   }
