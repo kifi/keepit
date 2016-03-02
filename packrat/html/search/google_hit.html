@@ -43,7 +43,10 @@
           {{/twitter.tweet}}
           {{#slack.message}}
             <span class="kifi-res-source-slack-icon"></span>
-            <a class="kifi-res-source-slack-channel" href="{{permalink}}">#{{channel.name}}</a>
+            <a class="kifi-res-source-slack-channel" href="{{permalink}}">
+              {{#channel.name}}#{{channel.name}}{{/channel.name}}
+              {{^channel.name}}@{{username}}{{/channel.name}}
+            </a>
           {{/slack.message}}
         </span>
       {{/sources}}
