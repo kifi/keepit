@@ -8,7 +8,7 @@ import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.social.{ UserIdentity, IdentityUserIdKey, IdentityUserIdCache }
-import org.joda.time.DateTime
+import org.joda.time.{ Duration, DateTime }
 import play.api.libs.json.{ Json, JsValue }
 
 case class SlackTeamMembershipInternRequest(
@@ -65,6 +65,7 @@ case class SlackTeamMembership(
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
   def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
   def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackUserAccessToken] = if (requiredScopes subsetOf scopes) token else None
+  def unnotifiedSince: DateTime = ???
 
   def revoked = this.copy(token = None, scopes = Set.empty)
   def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
@@ -74,6 +75,7 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 
 @ImplementedBy(classOf[SlackTeamMembershipRepoImpl])
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFunction[SlackTeamMembership] {
+  def getByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Map[Id[SlackTeamMembership], SlackTeamMembership]
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
@@ -81,6 +83,10 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership]
   def getByToken(token: SlackUserAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
+
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
+  def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
+  def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
 }
@@ -176,6 +182,9 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = deleteCache(membership)
 
+  def getByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Map[Id[SlackTeamMembership], SlackTeamMembership] = {
+    activeRows.filter(_.id.inSet(ids)).list.map(r => r.id.get -> r).toMap
+  }
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership] = {
     activeRows.filter(row => row.slackTeamId === slackTeamId).list.toSet
   }
@@ -230,6 +239,11 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership] = {
     activeRows.filter(_.userId === userId).list
   }
+
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = ???
+  def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = ???
+  def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit = ???
+
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
   }
