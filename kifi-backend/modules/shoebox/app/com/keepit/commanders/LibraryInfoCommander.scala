@@ -100,9 +100,9 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
-      val membershipsByLibraryId = viewerId.map { id =>
+      val membershipsByLibraryId = viewerId.fold(Map.empty[Id[Library], LibraryMembership]) { id =>
         libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, id)
-      } getOrElse Map.empty
+      }
 
       val permissionsById = permissionCommander.getLibrariesPermissions(libraryIds, viewerId)
       libraryRepo.getActiveByIds(libraryIds).map {
@@ -111,7 +111,7 @@ class LibraryInfoCommanderImpl @Inject() (
           val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(libId)) 0 else counts.readOnly
           val numCollaborators = counts.readWrite
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
-          val membershipOpt = membershipsByLibraryId.get(libId).flatten
+          val membershipOpt = membershipsByLibraryId.get(libId)
           val path = libPathCommander.pathForLibrary(lib)
           libId -> BasicLibraryDetails(
             lib.name,

@@ -99,9 +99,9 @@ class PermissionCommanderImpl @Inject() (
   @StatsdTiming("PermissionCommander.getLibrariesPermissions")
   def getLibrariesPermissions(libIds: Set[Id[Library]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Library], Set[LibraryPermission]] = {
     val libsById = libraryRepo.getActiveByIds(libIds)
-    val libMembershipsById = userIdOpt.map { userId =>
+    val libMembershipsById = userIdOpt.fold(Map.empty[Id[Library], LibraryMembership]) { userId =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, userId)
-    }.getOrElse(libIds.map(_ -> None).toMap)
+    }
     val invitesById = userIdOpt.map { userId =>
       libraryInviteRepo.getWithLibraryIdsAndUserId(libIds, userId)
     }.getOrElse(libIds.map(_ -> Seq.empty).toMap)
@@ -111,11 +111,9 @@ class PermissionCommanderImpl @Inject() (
       orgMembershipRepo.getByOrgIdsAndUserId(orgIds, userId)
     }.getOrElse(orgIds.map(_ -> None).toMap)
 
-    val libAccessById = libMembershipsById.map {
-      case (libId, memOpt) => memOpt match {
-        case Some(libMembership) => libId -> Some(libMembership.access)
-        case None =>
-          val lib = libsById(libId)
+    val libAccessById = libsById.map {
+      case (libId, lib) =>
+        libId -> libMembershipsById.get(libId).map(_.access).orElse {
           val viewerHasImplicitAccess = lib.visibility match {
             case LibraryVisibility.DISCOVERABLE =>
               val isOwner = userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
@@ -126,8 +124,8 @@ class PermissionCommanderImpl @Inject() (
             case _ => false
           }
           val userHasInvite = invitesById(libId).nonEmpty
-          libId -> Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
-      }
+          Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
+        }
     }
 
     val userPermissions = userIdOpt.map(computeUserPermissions).getOrElse(Set.empty)
