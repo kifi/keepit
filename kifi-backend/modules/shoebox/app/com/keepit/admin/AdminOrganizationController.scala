@@ -444,8 +444,7 @@ class AdminOrganizationController @Inject() (
 
     val enum = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
       FutureHelpers.iterate(Id[Organization](0))(fromId => db.readWriteAsync { implicit s =>
-        val orgs = orgRepo.adminGetActiveFromId(fromId, limit = 20)
-        channel.push(s"Processing orgs ${orgs.map(_.id.get).minMaxOpt}\n")
+        val orgs = orgRepo.adminGetActiveFromId(fromId, limit = 50)
         val numChanged = orgs.count { org =>
           val account = paidAccountRepo.getByOrgId(org.id.get)
           val plan = paidPlanRepo.get(account.planId)
@@ -463,8 +462,11 @@ class AdminOrganizationController @Inject() (
             true
           }
         }
-        channel.push(s"\tChanged $numChanged of them\n")
-        orgs.map(_.id.get).maxOpt
+        (orgs, numChanged)
+      }.map {
+        case (orgs, numChanged) =>
+          channel.push(s"Changed $numChanged/${orgs.length} in the range ${orgs.map(_.id.get).minMaxOpt}\n")
+          orgs.map(_.id.get).maxOpt
       }).andThen {
         case Success(finalOrgId) =>
           channel.push(s"Done! Final org processed was $finalOrgId\n")
