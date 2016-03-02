@@ -5,14 +5,17 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.util.DollarAmount
+import com.keepit.model.ClassFeature.{ Blacklist, SlackIngestionDomainBlacklist }
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
 import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 import com.keepit.common.core._
+import com.keepit.slack.SlackIngestingBlacklist
 
 import play.api.libs.json.{ Json, JsSuccess, JsError }
 
+import scala.collection.mutable.ListBuffer
 import scala.util.{ Success, Failure }
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -22,8 +25,6 @@ import org.joda.time.DateTime
 
 @Singleton
 class PaymentsController @Inject() (
-    orgCommander: OrganizationCommander,
-    orgInfoCommander: OrganizationInfoCommander,
     planCommander: PlanManagementCommander,
     paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,
@@ -181,41 +182,6 @@ class PaymentsController @Inject() (
               case Failure(ex) => Future.failed(ex)
             }
           }
-        }
-    }
-  }
-
-  def getAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
-  }
-
-  def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
-    request.body.validate[Seq[SimpleAccountContactSettingRequest]] match {
-      case JsSuccess(contacts, _) => {
-        val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-        contacts.foreach { contact =>
-          planCommander.updateUserContact(request.orgId, contact.id, contact.enabled, attribution)
-        }
-        Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
-      }
-      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
-    }
-  }
-
-  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS) { request =>
-    Ok(Json.toJson(orgInfoCommander.getExternalOrgConfiguration(request.orgId)))
-  }
-
-  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS)(parse.tolerantJson) { request =>
-    request.body.validate[OrganizationSettings](OrganizationSettings.siteFormat) match {
-      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
-      case JsSuccess(settings, _) =>
-        val settingsRequest = OrganizationSettingsRequest(request.orgId, request.request.userId, settings)
-        orgCommander.setAccountFeatureSettings(settingsRequest) match {
-          case Left(fail) => fail.asErrorResponse
-          case Right(response) =>
-            val config = db.readOnlyMaster { implicit session => orgInfoCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
-            Ok(Json.toJson(config))
         }
     }
   }

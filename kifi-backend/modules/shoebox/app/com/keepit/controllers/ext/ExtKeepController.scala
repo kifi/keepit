@@ -5,11 +5,12 @@ import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
+import com.keepit.discussion.{ MessageSource, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import play.api.libs.json.Json
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 @Singleton
 class ExtKeepController @Inject() (
@@ -42,5 +43,18 @@ class ExtKeepController @Inject() (
     response.successes.headOption.map { k =>
       Ok(Json.obj("id" -> Keep.publicId(k.id.get)))
     }.get // just throw exceptions if we fail
+  }
+
+  def sendMessageOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    val source = (request.body \ "source").asOpt[MessageSource]
+    (for {
+      text <- (request.body \ "text").asOpt[String].map(Future.successful).getOrElse(Future.failed(DiscussionFail.MISSING_MESSAGE_TEXT))
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+      msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source)
+    } yield {
+      Ok(Json.toJson(msg))
+    }).recover {
+      case fail: DiscussionFail => fail.asErrorResponse
+    }
   }
 }
