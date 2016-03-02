@@ -18,6 +18,18 @@ sealed trait SlackAuthenticatedAction { self =>
   def getMissingScopes(existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = SlackAuthenticatedActionHelper.getMissingScopes(this, existingScopes)
 }
 
+object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
+case class Signup() extends SlackAuthenticatedAction {
+  type A = Signup
+  def helper = Signup
+}
+
+object Login extends SlackAuthenticatedActionHelper[Login]("login")
+case class Login() extends SlackAuthenticatedAction {
+  type A = Login
+  def helper = Login
+}
+
 object SetupLibraryIntegrations extends SlackAuthenticatedActionHelper[SetupLibraryIntegrations]("setup_library_integrations")
 @json case class SetupLibraryIntegrations(libraryId: Id[Library], incomingWebhookId: Option[Long]) extends SlackAuthenticatedAction { // Long actually Id[SlackIncomingWebhookInfo]
   type A = SetupLibraryIntegrations
@@ -55,21 +67,15 @@ object CreateSlackTeam extends SlackAuthenticatedActionHelper[CreateSlackTeam]("
 }
 
 object SyncPublicChannels extends SlackAuthenticatedActionHelper[SyncPublicChannels]("sync_public_channels")
-case class SyncPublicChannels() extends SlackAuthenticatedAction {
+@json case class SyncPublicChannels(useKifiBot: Boolean) extends SlackAuthenticatedAction {
   type A = SyncPublicChannels
   def helper = SyncPublicChannels
 }
 
-object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
-case class Signup() extends SlackAuthenticatedAction {
-  type A = Signup
-  def helper = Signup
-}
-
-object Login extends SlackAuthenticatedActionHelper[Login]("login")
-case class Login() extends SlackAuthenticatedAction {
-  type A = Login
-  def helper = Login
+object TurnCommentMirroring extends SlackAuthenticatedActionHelper[TurnCommentMirroring]("turn_comment_mirroring")
+@json case class TurnCommentMirroring(turnOn: Boolean) extends SlackAuthenticatedAction {
+  type A = TurnCommentMirroring
+  def helper = TurnCommentMirroring
 }
 
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String) {
@@ -78,6 +84,8 @@ sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedActi
 object SlackAuthenticatedActionHelper {
 
   private val all: Set[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Set(
+    Signup,
+    Login,
     SetupLibraryIntegrations,
     TurnLibraryPush,
     TurnChannelIngestion,
@@ -85,8 +93,7 @@ object SlackAuthenticatedActionHelper {
     ConnectSlackTeam,
     CreateSlackTeam,
     SyncPublicChannels,
-    Signup,
-    Login
+    TurnCommentMirroring
   )
 
   implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
@@ -98,27 +105,29 @@ object SlackAuthenticatedActionHelper {
 
   private def formatPure[A <: SlackAuthenticatedAction](a: A) = Format(Reads.pure(a), Writes[A](_ => Json.obj()))
   def getInstanceFormat[A <: SlackAuthenticatedAction](actionHelper: SlackAuthenticatedActionHelper[A]): Format[A] = actionHelper match {
+    case Signup => formatPure(Signup())
+    case Login => formatPure(Login())
     case SetupLibraryIntegrations => implicitly[Format[SetupLibraryIntegrations]]
     case TurnLibraryPush => implicitly[Format[TurnLibraryPush]]
     case TurnChannelIngestion => implicitly[Format[TurnChannelIngestion]]
     case AddSlackTeam => implicitly[Format[AddSlackTeam]]
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
-    case SyncPublicChannels => formatPure(SyncPublicChannels())
-    case Signup => formatPure(Signup())
-    case Login => formatPure(Login())
+    case SyncPublicChannels => implicitly[Format[SyncPublicChannels]]
+    case TurnCommentMirroring => implicitly[Format[TurnCommentMirroring]]
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
+    case Signup() => SlackAuthScope.userSignup
+    case Login() => SlackAuthScope.userLogin
     case SetupLibraryIntegrations(_, incomingWebhookId) => if (incomingWebhookId.isDefined) Set.empty else SlackAuthScope.integrationSetup
     case TurnLibraryPush(_, isBroken: Boolean, turnOn: Boolean) => if (turnOn && isBroken) SlackAuthScope.brokenPush else Set.empty
     case TurnChannelIngestion(_, turnOn) => if (turnOn) SlackAuthScope.ingest else Set.empty
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
-    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
-    case Signup() => SlackAuthScope.userSignup
-    case Login() => SlackAuthScope.userLogin
+    case SyncPublicChannels(useKifiBot) => if (useKifiBot) SlackAuthScope.syncPublicChannelsWithKifiBot else SlackAuthScope.syncPublicChannels
+    case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushAnywhereWithKifiBot else Set.empty
   }
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {

@@ -143,9 +143,15 @@ class SlackAuthenticationCommanderImpl @Inject() (
         }
       }
 
-      case SyncPublicChannels() => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
+      case SyncPublicChannels(_) => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
         case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
+      }
+
+      case TurnCommentMirroring(turnOn) => Future.fromTry {
+        slackTeamCommander.turnCommentMirroring(userId, slackTeamId, turnOn).map { orgId =>
+          SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url)
+        }
       }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")

@@ -34,6 +34,7 @@ trait SlackTeamCommander {
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam]
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization]
   def syncPublicChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])]
+  def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]]
 }
 
 @Singleton
@@ -309,5 +310,23 @@ class SlackTeamCommanderImpl @Inject() (
     val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
     val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackIdentityCommander.slackSetupPermission))
     organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
+  }
+
+  def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]] = db.readWrite { implicit session =>
+    slackTeamRepo.getBySlackTeamId(slackTeamId) match {
+      case Some(team) =>
+        team.organizationId match {
+          case Some(orgId) =>
+            val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
+            if (hasOrgPermissions) {
+              val updatedSetting = if (turnOn) StaticFeatureSetting.ENABLED else StaticFeatureSetting.DISABLED
+              orgCommander.unsafeSetAccountFeatureSettings(orgId, OrganizationSettings(Map(StaticFeature.SlackCommentMirroring -> updatedSetting)), Some(userId))
+              Success(orgId)
+            } else Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          case None => Failure(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
+        }
+      case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
+    }
   }
 }
