@@ -557,6 +557,7 @@ POST          /site/organizations/:id/addDomain                 @com.keepit.cont
 POST          /site/organizations/:id/removeDomain              @com.keepit.controllers.website.OrganizationDomainOwnershipController.removeDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/addDomainAfterVerification  @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomainOwnershipAfterVerification(id: PublicId[Organization])
 POST          /site/organizations/:id/sendMemberConfirmationEmail @com.keepit.controllers.website.OrganizationDomainOwnershipController.sendMemberConfirmationEmail(id: PublicId[Organization])
+POST          /site/organizations/:id/sendOrganizationInviteViaSlack  @com.keepit.controllers.website.OrganizationInviteController.sendOrganizationInviteViaSlack(id: PublicId[Organization])
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])

@@ -13,10 +13,11 @@ import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
+import com.keepit.slack.models.{ SlackFail, SlackUsername }
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 @Singleton
 class OrganizationInviteController @Inject() (
@@ -129,5 +130,18 @@ class OrganizationInviteController @Inject() (
   def suggestMembers(pubId: PublicId[Organization], query: Option[String], limit: Int) = OrganizationUserAction(pubId).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit, request.request).map { members => Ok(Json.obj("members" -> members)) }
+  }
+
+  def sendOrganizationInviteViaSlack(pubId: PublicId[Organization]) = MaybeUserAction.async(parse.tolerantJson) { request =>
+    import com.keepit.common.core._
+    val errorOpt: Future[Unit] = for {
+      orgId <- Organization.decodePublicId(pubId).fold[Future[Id[Organization]]](Future.successful, _ => Future.failed(OrganizationFail.INVALID_PUBLIC_ID))
+      username <- (request.body \ "username").asOpt[SlackUsername].fold[Future[SlackUsername]](Future.failed(OrganizationFail.BAD_PARAMETERS))(Future.successful)
+      success <- orgInviteCommander.sendOrganizationInviteViaSlack(username, orgId, request.userIdOpt)
+    } yield success
+    errorOpt.map(_ => Ok).recover {
+      case fail: OrganizationFail => fail.asErrorResponse
+      case fail: SlackFail => fail.asResponse
+    }
   }
 }
