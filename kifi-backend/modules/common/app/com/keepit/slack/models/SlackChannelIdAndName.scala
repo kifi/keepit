@@ -12,7 +12,6 @@ sealed abstract class SlackChannelId(prefix: String) {
   def value: String
 }
 
-
 object SlackChannelId {
   case class Public(value: String) extends SlackChannelId("C")
   case class Private(value: String) extends SlackChannelId("G")
@@ -41,10 +40,20 @@ object SlackChannelId {
   )
 }
 
-@json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
-@json case class SlackChannelIdAndName(id: SlackChannelId, name: SlackChannelName)
+@json case class SlackChannelName(value: String)
 @json case class SlackChannelTopic(value: String)
 @json case class SlackChannelPurpose(value: String)
+
+@json case class SlackChannelIdAndName(id: SlackChannelId, name: SlackChannelName)
+@json case class SlackChannelIdAndPrettyName(id: SlackChannelId, name: Option[SlackChannelName])
+object SlackChannelIdAndPrettyName {
+  def from(channelId: SlackChannelId, name: SlackChannelName): SlackChannelIdAndPrettyName = channelId match {
+    case SlackChannelId.Public(_) | SlackChannelId.Private(_) => SlackChannelIdAndPrettyName(channelId, Some(name))
+    case _ => SlackChannelIdAndPrettyName(channelId, None)
+  }
+
+  def from(channelIdAndName: SlackChannelIdAndName): SlackChannelIdAndPrettyName = SlackChannelIdAndPrettyName.from(channelIdAndName.id, channelIdAndName.name)
+}
 
 // There is more stuff than just this returned
 case class SlackPublicChannelInfo(
