@@ -7,6 +7,7 @@ import com.keepit.classify.NormalizedHostname
 import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.commanders._
 import com.keepit.common.controller._
+import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
@@ -16,6 +17,7 @@ import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.SlackTeamRepo
 import com.keepit.slack.SlackClient
+import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
 import play.twirl.api.HtmlFormat
@@ -24,7 +26,7 @@ import views.html
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object AdminOrganizationController {
   val fakeOwnerId = Id[User](97543) // "Fake Owner", a special private Kifi user specifically for this purpose
@@ -62,14 +64,18 @@ class AdminOrganizationController @Inject() (
   // needed to coerce the passed in Int => Call to Int => Html
   def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
 
-  private def getOrgs(page: Int, orgFilter: Organization => Boolean = _ => true): Future[(Int, Seq[OrganizationStatisticsOverview])] = {
+  private def getOrgs(page: Int, orgFilter: Id[Organization] => Boolean = _ => true): Future[(Int, Seq[OrganizationStatisticsOverview])] = {
     val all = db.readOnlyReplica { implicit s =>
-      orgRepo.allActive
+      orgRepo.allActiveIds
     }
-    val filteredOrgs = all.filter(_.state == OrganizationStates.ACTIVE).filter(orgFilter).sortBy(_.id.get)(Ordering[Id[Organization]].reverse)
-    val orgsCount = filteredOrgs.length
+    val filteredOrgIds = all.filter(orgFilter).sorted(Ordering[Id[Organization]].reverse)
+    val orgsCount = filteredOrgIds.length
     val startingIndex = page * pageSize
-    val orgsPage = filteredOrgs.slice(startingIndex, startingIndex + pageSize)
+    val orgsPage = {
+      val orgIdsToFetch = filteredOrgIds.slice(startingIndex, startingIndex + pageSize)
+      val orgsById = db.readOnlyReplica { implicit s => orgRepo.getByIds(orgIdsToFetch.toSet) }
+      orgIdsToFetch.flatMap(orgsById.get)
+    }
     Future.sequence(orgsPage.map(org => orgStatsCommander.organizationStatisticsOverview(org))).map { orgsStats =>
       (orgsCount, orgsStats)
     }
@@ -109,8 +115,8 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  private def isFake(org: Organization): Boolean = db.readOnlyMaster { implicit session =>
-    orgExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE)
+  private def isFake(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>
+    orgExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
   }
 
   def realOrganizationsView(page: Int) = AdminUserPage.async { implicit request =>
@@ -435,29 +441,41 @@ class AdminOrganizationController @Inject() (
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)
-    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
-    val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
-      Try(db.readWrite { implicit s =>
-        val account = paidAccountRepo.getByOrgId(orgId)
-        val plan = paidPlanRepo.get(account.planId)
-        val config = orgConfigRepo.getByOrgId(orgId)
-        if (config.settings.features != plan.defaultSettings.features || deprecatedSettings.selections.nonEmpty) {
-          val newSettings = OrganizationSettings(plan.defaultSettings.selections.map {
-            case (f, default) =>
-              val updatedSetting =
-                if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default
-                else config.settings.settingFor(f).getOrElse(default)
-              f -> updatedSetting
-          })
-          orgConfigRepo.save(config.withSettings(newSettings))
+
+    val enum = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
+      FutureHelpers.iterate(Id[Organization](0))(fromId => db.readWriteAsync { implicit s =>
+        val orgs = orgRepo.adminGetActiveFromId(fromId, limit = 50)
+        val numChanged = orgs.count { org =>
+          val account = paidAccountRepo.getByOrgId(org.id.get)
+          val plan = paidPlanRepo.get(account.planId)
+          val config = orgConfigRepo.getByOrgId(org.id.get)
+          if (config.settings.features == plan.defaultSettings.features && deprecatedSettings.selections.isEmpty) false
+          else {
+            val newSettings = OrganizationSettings(plan.defaultSettings.selections.map {
+              case (f, default) =>
+                val updatedSetting =
+                  if (deprecatedSettings.settingFor(f) == config.settings.settingFor(f)) default
+                  else config.settings.settingFor(f).getOrElse(default)
+                f -> updatedSetting
+            })
+            orgConfigRepo.save(config.withSettings(newSettings))
+            true
+          }
         }
-        Json.stringify(Json.obj("orgId" -> orgId))
-      }).recover {
-        case error: Throwable =>
-          Json.stringify(Json.obj("orgId" -> orgId, "error" -> error.toString))
-      }.get
-    }
-    Ok.chunked(response)
+        (orgs, numChanged)
+      }.map {
+        case (orgs, numChanged) =>
+          channel.push(s"Changed $numChanged/${orgs.length} in the range ${orgs.map(_.id.get).minMaxOpt}\n")
+          orgs.map(_.id.get).maxOpt
+      }).andThen {
+        case Success(finalOrgId) =>
+          channel.push(s"Done! Final org processed was $finalOrgId\n")
+        case Failure(fail) =>
+          channel.push(s"Server error! ${fail.getMessage}\n")
+      }.onComplete { _ => channel.eofAndEnd() }
+    })
+
+    Ok.chunked(enum)
   }
 
   def cleanUpEmailAddresses() = AdminUserAction(parse.tolerantJson) { implicit request =>

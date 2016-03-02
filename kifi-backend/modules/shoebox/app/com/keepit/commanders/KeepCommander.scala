@@ -26,6 +26,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
+import com.keepit.slack.LibraryToSlackChannelPusher
 import com.keepit.social.{ BasicAuthor, Author }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import org.joda.time.DateTime
@@ -141,6 +142,7 @@ class KeepCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     userExperimentRepo: UserExperimentRepo,
+    slackPusher: LibraryToSlackChannelPusher,
     implicit val imageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
@@ -478,6 +480,7 @@ class KeepCommanderImpl @Inject() (
     val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
+      slackPusher.schedule(oldKeep.connections.libraries)
     }
     colls.foreach { c =>
       Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone

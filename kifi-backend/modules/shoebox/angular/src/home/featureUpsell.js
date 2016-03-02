@@ -17,13 +17,13 @@ angular.module('kifi')
         var hasFeatureUpsellExp = (profileService.me.experiments || []).indexOf('slack_upsell_widget') !== -1;
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
-        (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function (prefs) {
-          scope.showFeatureUpsell = hasFeatureUpsellExp && prefs.slack_int_promo;
+        (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs){
+          scope.showFeatureUpsell = hasFeatureUpsellExp && prefs.slack_upsell_widget;
         });
 
         scope.hide = function () {
           scope.showFeatureUpsell = false;
-          profileService.savePrefs({ slack_int_promo: false });
+          profileService.savePrefs({ slack_upsell_widget: false });
         };
 
         scope.clickedConnectSlack = function() {

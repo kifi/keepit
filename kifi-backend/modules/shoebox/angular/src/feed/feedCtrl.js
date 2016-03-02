@@ -44,6 +44,7 @@ angular.module('kifi')
       return { value: 'org', id: org.id, text: org.name, handle: org.handle };
     });
 
+    var canSeeMessageFilters = me.experiments && me.experiments.indexOf('discussion_feed_filters') !== -1;
     var messageFilters = [
       { value: 'all', text: 'All Discussions'},
       { value: 'unread', text: 'Unread' },
@@ -53,7 +54,7 @@ angular.module('kifi')
     $scope.feedFilter.options = [
       { value: '', text: 'Your Stream' },
       { value: 'own', text: 'Your Keeps' }
-    ].concat($scope.isAdmin ? messageFilters : []).concat(orgFilterOptions);
+    ].concat(canSeeMessageFilters ? messageFilters : []).concat(orgFilterOptions);
 
     function getFilterFromUrl() {
       return $scope.feedFilter.options.filter(function (filter) {

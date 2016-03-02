@@ -73,22 +73,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get an organization's configuration" in {
-      "use the correct format" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, _, _) = setup()
-          val publicId = Organization.publicId(org.id.get)
-          inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.getAccountFeatureSettings(publicId)
-          val response = controller.getAccountFeatureSettings(publicId)(request)
-          val payload = contentAsJson(response).as[JsObject]
-          (payload \ "showUpsells").as[Boolean] === true
-          ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "members"
-          ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "editable").as[Boolean] === true
-        }
-      }
-    }
-
     "get paid plans" in {
       "get active normal plans" in {
         withDb(controllerTestModules: _*) { implicit injector =>

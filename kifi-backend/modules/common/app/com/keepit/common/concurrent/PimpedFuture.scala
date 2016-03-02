@@ -130,6 +130,15 @@ object FutureHelpers {
     promised.future
   }
 
+  def iterate[T](x0: T)(next: T => Future[Option[T]])(implicit ec: ScalaExecutionContext): Future[T] = {
+    foldLeftUntil(Stream.continually(()))(x0) {
+      case (x, _) => next(x).imap {
+        case Some(xp) => (xp, false)
+        case None => (x, true)
+      }
+    }
+  }
+
   def exists[I](items: Iterable[I])(predicate: I => Future[Boolean])(implicit ec: ScalaExecutionContext): Future[Boolean] = {
     foldLeftUntil(items)(false) { case (_, item) => predicate(item).imap(found => (found, found)) }
   }

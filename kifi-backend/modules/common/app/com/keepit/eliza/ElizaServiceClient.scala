@@ -340,9 +340,10 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].unreadCount
     }
   }
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message] = {
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], sourceOpt: Option[MessageSource]): Future[Message] = {
     import SendMessageOnKeep._
-    val request = Request(userId, text, keepId, source.getOrElse(MessageSource.SITE))
+    val source = sourceOpt.getOrElse { airbrakeNotifier.notify(s"[messageSource] $userId sent a message on $keepId with no source"); MessageSource.UNKNOWN }
+    val request = Request(userId, text, keepId, source)
     call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].msg
     }
