@@ -513,7 +513,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     params.origin = o.origin;
     params.libs = o.libraries.slice(0, 2);
     params.oneLib = params.libs.length === 1;
-    params.sources = (o.sources || []).sort(prioritizeSlack).slice(0, 2).map(massageSlackMessage);
+    params.sources = (o.sources || []).sort(prioritizeSlack).slice(0, 5).map(massageSlackMessage);
     params.oneSource = params.sources.length === 1;
     params.getTeamName = getTeamName;
     return params;
