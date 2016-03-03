@@ -11,7 +11,7 @@ import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.slack.models.SlackTeamId
+import com.keepit.slack.models.{ SlackTeamMembership, SlackUserId, SlackTeamId }
 import com.keepit.social.BasicUser
 
 @Singleton
@@ -102,6 +102,8 @@ class PathCommander @Inject() (
    */
   def browserExtensionViaSlack(slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/i")
   def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
+  def slackPersonalDigestToggle(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean) =
+    Path(s"s/pd/${slackTeamId.value}/${slackUserId.value}/${SlackTeamMembership.encodeTeamAndUser(slackTeamId, slackUserId)}?turnOn=$turnOn")
 
   /**
    * I'd prefer if you just didn't use these routes
@@ -138,6 +140,7 @@ class PathCommander @Inject() (
 }
 
 object PathCommander {
+  val home = Path("")
   def tagSearchPath(tag: String) = Path("find?q=" + URLEncoder.encode(s"""tag:"$tag"""", "ascii"))
   val browserExtension = Path("install")
   val settingsPage = Path("settings")

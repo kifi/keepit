@@ -21,7 +21,7 @@ case class SlackTeamDigest(
 }
 
 case class SlackPersonalDigest(
-    slackTeam: SlackTeam,
+    slackMembership: SlackTeamMembership,
     digestPeriod: Duration,
     org: BasicOrganization,
     ingestedLinksByChannel: Map[SlackChannelId, Set[String]],

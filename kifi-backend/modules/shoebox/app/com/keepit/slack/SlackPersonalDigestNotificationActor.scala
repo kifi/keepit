@@ -146,7 +146,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
           channelId -> ingestedLinks
       }
       digest <- Some(SlackPersonalDigest(
-        slackTeam = slackTeam,
+        slackMembership = membership,
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedLinksByChannel = ingestedLinksByChannel,
@@ -158,18 +158,18 @@ class SlackPersonalDigestNotificationActor @Inject() (
   // "Pure" function
   private def describePersonalDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
-    val slackTeamId = digest.slackTeam.slackTeamId
+    val slackTeamId = digest.slackMembership.slackTeamId
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
       DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)),
-        "from", digest.slackTeam.slackTeamName.value, inTheLast(digest.digestPeriod),
-        SlackEmoji.gear, "Edit", "settings" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(digest.org, slackTeamId)), ".")
+        "from your messages", inTheLast(digest.digestPeriod),
+        SlackEmoji.speakNoEvil, "Stop these digests" --> LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false)), ".")
     ))
     val attachments = List(
       SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         "Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
         DescriptionElements.unwordsPretty {
-          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId))))
+          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId))))
         }
       )))).withFullMarkdown
     )

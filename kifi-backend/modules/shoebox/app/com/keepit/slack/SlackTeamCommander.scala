@@ -11,7 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -35,6 +35,7 @@ trait SlackTeamCommander {
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization]
   def syncPublicChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])]
   def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]]
+  def togglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit]
 }
 
 @Singleton
@@ -49,6 +50,7 @@ class SlackTeamCommanderImpl @Inject() (
   slackOnboarder: SlackOnboarder,
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
+  pathCommander: PathCommander,
   orgAvatarCommander: OrganizationAvatarCommander,
   libraryRepo: LibraryRepo,
   libraryCommander: LibraryCommander,
@@ -327,6 +329,26 @@ class SlackTeamCommanderImpl @Inject() (
           case None => Failure(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
         }
       case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
+    }
+  }
+  def togglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit] = {
+    val now = clock.now
+    val membershipOpt = db.readWrite { implicit s =>
+      slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map { membership =>
+        if (turnOn && membership.nextPersonalDigestAt.isEmpty) {
+          slackTeamMembershipRepo.save(membership.withNextPersonalDigestAt(now))
+        } else if (!turnOn && membership.nextPersonalDigestAt.isDefined) {
+          slackTeamMembershipRepo.save(membership.withNoNextPersonalDigest)
+        } else membership
+      }
+    }
+    import DescriptionElements._
+    membershipOpt.fold(Future.failed[Unit](SlackFail.NoSuchMembership(slackTeamId, slackUserId))) { membership =>
+      slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(Seq(
+        DescriptionElements(":+1: gotcha boss,", if (turnOn) "you should start getting digests again real soon" else "no more digests :speak_no_evil:", "."),
+        DescriptionElements("To", if (turnOn) "turn these off again" else "turn these back on", "click",
+          "here" --> LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = !turnOn)), ".")
+      ))))).map(_ => ())
     }
   }
 }
