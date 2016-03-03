@@ -689,7 +689,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   ignoreWheel: true
                 });
 
-                var hideAfterMs = 3000 + Math.max(3000 * o.sources.length, 1800 * o.libraries.length);
+                // Hide after waiting between 3000ms and 10000ms
+                var hideAfterMs = Math.min(3000 + 1800 * Math.max(o.sources.length, o.libraries.length), 10000);
                 socialTooltipTimeout = setTimeout(function () {
                   $tile.hoverfu('hide');
                 }, hideAfterMs);
