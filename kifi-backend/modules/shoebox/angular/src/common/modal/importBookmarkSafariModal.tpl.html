@@ -1,0 +1,60 @@
+<div kf-modal kf-width="560px" class="import-file-modal import-file-safari-modal">
+  <div kf-basic-modal-content title="Import your links to Kifi" without-buttons cancel="cancelBookmarkUpload()">
+    <div class="import-library-explanation">
+      <img src="/img/safari.png" class="import-file-safari-logo">
+      <div class="arrow-right-icon svg-arrow-right"></div>
+      <div class="kifi-clover-icon svg-kifi-clover-logo"></div>
+    </div>
+
+    <div class="import-library-how-to">
+      <p class="import-library-how-to-heading">3 easy steps to import your content into Kifi:</p>
+      <table>
+        <tr>
+          <td class="import-library-how-to-row-heading">Step 1</td>
+          <td class="import-library-how-to-row-content">
+            Export your bookmarks from Safari.
+          </td>
+        </tr>
+        <tr class="import-library-how-to-row">
+          <td colspan="2">
+            <img class="import-file-safari-demo" src="/img/safari-export-demo.gif" alt="A visual guide to exporting Safari bookmarks"/>
+          </td>
+        </tr>
+        <tr class="import-library-how-to-row">
+          <td class="import-library-how-to-row-heading">Step 2</td>
+          <td class="import-library-how-to-row-content">Select
+            <a ng-click="openBookmarkFileSelector($event)" href="javascript:">the file you exported</a>.
+            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip,.enex" kf-file-change="allowUpload">
+            <span ng-if="importFilename" class="bookmark-file-upload-name"><i ng-bind="importFilename"></i> selected.</span>
+          </td>
+        </tr>
+
+        <tr class="import-library-how-to-row">
+          <td class="import-library-how-to-row-heading">Step 3</td>
+          <td class="import-library-how-to-row-content">Choose a library to import to, and we’ll bring your links into Kifi.</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="import-library-selection">
+      <div class="add-keep-to-library-dropdown"
+        kf-keep-to-library-widget widget-action-text="Import keeps" library-select-action="onImportLibrarySelected(selectedLibrary)"
+        lib-select-down-offset="0" lib-select-max-up-offset="220" lib-select-left-offset="0">
+        <span class="keep-to-library-lib-icon-container" ng-if="!importLibrary.org">
+          <div class="kf-klw-library-card" ng-style="{'background-color': importLibrary.color}"></div>
+        </span>
+        <img class="kf-klw-library-org-pic" ng-if="importLibrary.org" ng-src="{{ importLibrary.org | pic }}" />
+        <svg class="kf-klw-star-icon" ng-if="importLibrary.kind === 'system_main'" kf-symbol-sprite icon="star"></svg>
+        <svg class="kf-klw-lock-icon" ng-if="importLibrary.visibility === 'secret'" kf-symbol-sprite icon="lock"></svg>
+        <span ng-bind="importLibrary.name"></span>
+        <span class="add-keep-to-library-dropdown-arrow"></span>
+      </div>
+    </div>
+
+    <div ng-if="importFileStatus" class="bookmark-file-upload-status" ng-bind="importFileStatus"></div>
+
+    <div class="dialog-buttons">
+      <button class="kf-button kf-button-large import-button" ng-class="{'disabled': disableBookmarkImport || !importFilename}" ng-click="importBookmarkFileToLibrary(importLibrary)">Import</button>
+    </div>
+  </div>
+</div>
