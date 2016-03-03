@@ -1,0 +1,14 @@
+<div kf-modal kf-width="550px">
+  <div kf-basic-modal-content with-cancel with-warning title="Are you sure?" action-text="Delete keeps" action="backfillBlacklistDelete()" ng-if="blacklist.numKeepsToDelete > 0">
+    Backfilling your blacklist will <b>delete {{blacklist.numKeepsToDelete}} keeps</b> from your team.
+    <span ng-if="blacklist.sampleKeepsToDelete.length > 0">
+      Here are some recent matching URLs:
+      <ul>
+        <li ng-repeat="url in blacklist.sampleKeepsToDelete"><input type="text" ng-value="url" class="kf-ts-blacklist-modal-url"></li>
+      </ul>
+    </span>
+  </div>
+  <div kf-basic-modal-content title="No keeps to delete" action-text="Sweet!" ng-if="blacklist.numKeepsToDelete === 0">
+    You’re up to date, and there are no additional keeps to delete.
+  </div>
+</div>

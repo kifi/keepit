@@ -47,6 +47,8 @@ angular.module('kifi')
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
+      blacklistBackfillWarning: post(shoebox, '/organizations/:id/blacklistBackfill'),
+      blacklistBackfillDelete: post(shoebox, '/organizations/:id/blacklistBackfill'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
