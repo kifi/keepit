@@ -27,6 +27,8 @@ case class OrganizationInfo(
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
+  private implicit val exTypeFormat = OrganizationExperimentType.format
+
   implicit val defaultWrites: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and

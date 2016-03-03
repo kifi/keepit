@@ -37,7 +37,7 @@ case class OrganizationExperimentOrganizationIdKey(orgId: Id[Organization]) exte
 class OrganizationExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrganizationExperimentOrganizationIdKey, Seq[OrganizationExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[OrganizationExperimentType])
 
-@json final case class OrganizationExperimentType(value: String) {
+@json case class OrganizationExperimentType(value: String) {
   override def toString = value
 }
 
