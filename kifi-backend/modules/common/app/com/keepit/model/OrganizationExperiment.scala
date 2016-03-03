@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheS
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
@@ -36,7 +37,7 @@ case class OrganizationExperimentOrganizationIdKey(orgId: Id[Organization]) exte
 class OrganizationExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrganizationExperimentOrganizationIdKey, Seq[OrganizationExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[OrganizationExperimentType])
 
-final case class OrganizationExperimentType(value: String) {
+@json final case class OrganizationExperimentType(value: String) {
   override def toString = value
 }
 
