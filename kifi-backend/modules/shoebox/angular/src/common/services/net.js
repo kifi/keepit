@@ -38,6 +38,7 @@ angular.module('kifi')
       getOrgLibraries: get(shoebox, '/organizations/:id/libraries', 30),
       getOrgBasicLibraries: get(shoebox, '/organizations/:id/basicLibraries?offset=:offset&limit=:limit'),
       sendOrgMemberInvite: post(shoebox, '/organizations/:id/members/invite'),
+      sendOrgMemberInviteViaSlack: post(shoebox, '/organizations/:id/sendOrganizationInviteViaSlack'),
       declineOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/decline'),
       acceptOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/accept?authToken=:authToken'),
       cancelOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/cancel'),
