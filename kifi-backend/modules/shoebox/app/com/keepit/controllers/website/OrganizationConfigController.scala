@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
+import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.Database
@@ -98,7 +99,13 @@ class OrganizationConfigController @Inject() (
       val sampleKeeps = blacklistedKeeps.filter(_.visibility != LibraryVisibility.SECRET).sortBy(-_.id.get.id).take(10)
       Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleKeeps.map(_.url)))
     } else {
-      // todo: Do keep deletion
+      val deletion = db.readWriteAsync { implicit session =>
+        blacklistedKeeps.map(keepRepo.deactivate).length
+      }
+      deletion.onComplete {
+        case a =>
+          log.info(s"[backfillSlackBlacklist] Deleted keeps for ${request.orgId} using blacklist. Result: $a")
+      }
       Ok(Json.obj("readonly" -> false, "keepCount" -> blacklistedKeeps.length))
     }
   }
