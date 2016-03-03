@@ -17,6 +17,7 @@ object SlackFail {
   case object NoValidPushMethod extends SlackFail(BAD_REQUEST, "no_valid_push_method")
   case object NoAuthCode extends SlackFail(BAD_REQUEST, "no_auth_code")
   case object InvalidAuthState extends SlackFail(BAD_REQUEST, "invalid_auth_state")
+  case class SlackUserNotFound(username: SlackUsername, teamId: SlackTeamId) extends SlackFail(NOT_FOUND, "slack_user_not_found", Json.obj("username" -> username.value, "teamId" -> teamId.value))
   case class MalformedPayload(payload: JsValue) extends SlackFail(BAD_REQUEST, "malformed_payload", payload)
   case class MalformedState(state: SlackAuthState) extends SlackFail(BAD_REQUEST, "malformed_state", JsString(state.state))
   case class SlackResponse(response: SlackAPIErrorResponse) extends SlackFail(response.status, response.error, Json.toJson(response))

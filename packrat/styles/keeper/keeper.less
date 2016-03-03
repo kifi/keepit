@@ -309,6 +309,7 @@
 @keepers-h-height: 36px;
 @keepers-h-bg-color: #f1f1f1;
 .kifi-keepers-h {
+  position: relative;
   padding: 0 20px;
   color: #3e4955;
   text-transform: uppercase;
@@ -318,6 +319,23 @@
   white-space: nowrap;
   &:not(:first-child) {
     background-color: @keepers-h-bg-color;
+  }
+}
+.kifi-keepers-h-close {
+  position: absolute;
+  right: 5px;
+  padding: 0 10px;
+  cursor: pointer;
+  color: #999;
+
+  &:hover {
+    color: #333;
+  }
+  &:active {
+    color: #999
+  }
+  &:before {
+    content: 'X';
   }
 }
 .kifi-keepers-sources,

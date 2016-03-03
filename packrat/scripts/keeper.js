@@ -155,7 +155,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         if (o.libraries.length || o.keepers.length || o.sources.length) {
           var params = setSocialParams(o, {
             cssClass: 'kifi-keepers-hover',
-            kept: o.kept
+            kept: o.kept,
+            noCloseButton: true
           });
           k.render('html/keeper/keepers', params, function (html) {
             configureHover(attachSocialToolTipHandlers($(html), params, 'keepButton'), {
@@ -366,9 +367,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function attachSocialToolTipHandlers($tip, params, subsource) {
-    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib,.kifi-keepers-source', function () {
+    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib,.kifi-keepers-source,.kifi-keepers-h-close', function () {
       var a = this, url = a.href;
-      if (url.indexOf('?') < 0) {
+      if (url && url.indexOf('?') < 0) {
         a.href = url + '?o=xst';
         setTimeout(function () {
           a.href = url;
@@ -379,9 +380,13 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         action = 'clickedSource';
       } else if (a.classList.contains('kifi-keepers-lib')) {
         action = 'clickedLibrary';
-      } else {
+      } else if (a.classList.contains('kifi-keepers-pic')) {
         action = 'clickedFriend';
+      } else if (a.classList.contains('kifi-keepers-h-close')) {
+        action = 'clickedClose';
+        $tip.hoverfu('hide');
       }
+
       api.port.emit('track_notification_click', {
         category: 'socialToolTip',
         action: action,
@@ -665,6 +670,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           if ((o.keepers.length || o.libraries.length || o.sources.length) && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
+              var socialTooltipTimeout;
               var params = setSocialParams(o, {cssClass: 'kifi-keepers-promo'});
               k.render('html/keeper/keepers', params, function (html) {
                 if (lastCreatedAt) return;
@@ -675,11 +681,19 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   $libs.css('width', $libs[0].offsetWidth);
                   $promo.detach();
                 }
-                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
+                configureHover($promo, {
+                  parent: $tile,
+                  mustHoverFor: 0,
+                  canLeaveFor: 1e9,
+                  canLeaveAnywhere: true,
+                  ignoreWheel: true
+                });
 
-                var socialTooltipTimeout = setTimeout(function () {
-                  $tile.hoverfu('hide')
-                }, 3000 + 1800 * o.libraries.length);
+                if (o.sources.filter(isSlack).length === 0) {
+                  socialTooltipTimeout = setTimeout(function () {
+                    $tile.hoverfu('hide')
+                  }, 3000 + 1800 * o.libraries.length);
+                }
 
                 attachSocialToolTipHandlers($promo, params, 'tile')
                 .data('timeout', socialTooltipTimeout)

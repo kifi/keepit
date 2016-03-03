@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import akka.actor.Status.Failure
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
@@ -19,6 +20,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.eliza.{ OrgPushNotificationRequest, OrgPushNotificationCategory, SimplePushNotificationCategory, ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
@@ -27,10 +29,13 @@ import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgMemberJoined, OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.{ SlackChannelMagnet, SlackClientWrapper, SlackActionFail }
+import com.keepit.slack.models.{ SlackMessageResponse, SlackChannelId, SlackUserInfo, SlackMessageRequest, SlackTeam, SlackFail, SlackTeamRepo, SlackTeamId, SlackUsername }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Success, Try }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
@@ -46,6 +51,7 @@ trait OrganizationInviteCommander {
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
   def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite]
+  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit]
 }
 
 @Singleton
@@ -68,6 +74,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
     userCommander: Provider[UserCommander],
+    slackTeamRepo: SlackTeamRepo,
+    slackClient: SlackClientWrapper,
+    pathCommander: PathCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -145,7 +154,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val inviter = userRepo.get(inviterId)
             (org, owner, inviter)
           }
-          val persistedInvites = invites.flatMap(persistInvitation)
+          val persistedInvites = invites.flatMap(persistInvitation(_))
 
           sendInvitationEmailsAndNotifications(persistedInvites, org, owner, inviter)
           organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
@@ -157,9 +166,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   // return whether the invitation was persisted or not.
-  def persistInvitation(invite: OrganizationInvite): Option[OrganizationInvite] = {
+  private def persistInvitation(invite: OrganizationInvite, force: Boolean = false): Option[OrganizationInvite] = {
     val OrganizationInvite(_, _, _, _, _, orgId, inviterId, recipientId, recipientEmail, _, _, _) = invite
-    val shouldInsert = db.readOnlyMaster { implicit s =>
+    val shouldInsert = force || db.readOnlyMaster { implicit s =>
       (recipientId, recipientEmail) match {
         case (Some(userId), _) =>
           organizationInviteRepo.getLastSentByOrgIdAndInviterIdAndUserId(orgId, inviterId, userId, Set(OrganizationInviteStates.ACTIVE))
@@ -444,5 +453,29 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByInviteeIdAndDecision(userId, decision) }
+  }
+
+  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit] = {
+    import DescriptionElements._
+    db.readOnlyReplica { implicit s =>
+      val org = organizationRepo.get(orgId)
+      slackTeamRepo.getByOrganizationId(orgId) match {
+        case None => Future.failed(SlackActionFail.OrgNotConnected(orgId))
+        case Some(slackTeam) =>
+          slackClient.getUsers(slackTeam.slackTeamId).flatMap { userInfos =>
+            userInfos.find(_.name == username) match {
+              case None => Future.failed(SlackFail.SlackUserNotFound(username, slackTeam.slackTeamId))
+              case Some(slackUser) =>
+                val invite: OrganizationInvite = persistInvitation(OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = userIdOpt, emailAddress = slackUser.profile.emailAddress), force = true)
+                  .getOrElse(throw new Exception(s"can't create org (${orgId.id}) invite for ${slackUser.id} on slack team ${slackTeam.id.get.id}"))
+                val message = SlackMessageRequest.fromKifi {
+                  DescriptionElements.formatForSlack(DescriptionElements(s"Here's your invitation to join ${org.name} on Kifi!",
+                    "Click here to accept it" --> LinkElement(s"${pathCommander.pathForOrganization(org).absolute}?authToken=${invite.authToken}")))
+                }
+                slackClient.sendToSlackHoweverPossible(slackTeam.slackTeamId, SlackChannelId.User(slackUser.id.value), message).map(_ => ())
+            }
+          }
+      }
+    }
   }
 }

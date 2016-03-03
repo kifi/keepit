@@ -214,13 +214,18 @@
       if (data.opts.hideAfter) {
         clearTimeout(data.hide), delete data.hide;
       }
-      if (data.opts.canLeaveFor && (edge = between(this, this === a ? h : a, e.clientX, e.clientY))) {
+
+      edge = between(this, this === a ? h : a, e.clientX, e.clientY);
+      if (data.opts.canLeaveFor && (edge || data.opts.canLeaveAnywhere)) {
         data.hide = setTimeout(function () {
           hide.call(a);
         }, data.opts.canLeaveFor);
-        data.x = e.clientX;
-        data.y = e.clientY;
-        $(doc).on("mousemove.hoverfu", onMouseMoveMaybeHide.bind(a, edge, data));
+
+        if (!data.opts.canLeaveAnywhere) {
+          data.x = e.clientX;
+          data.y = e.clientY;
+          $(doc).on("mousemove.hoverfu", onMouseMoveMaybeHide.bind(a, edge, data));
+        }
       } else {
         hide.call(a);
       }

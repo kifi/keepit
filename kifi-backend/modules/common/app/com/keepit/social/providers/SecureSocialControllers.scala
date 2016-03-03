@@ -85,7 +85,7 @@ object ProviderController extends Controller with Logging {
               log.error(s"[handleAuth] ${badRequest.header.status} from $provider with body ${badRequest.body}")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
                 "slackTeamId", "creditCode").map(DiscardingCookie(_))
-              Redirect(RoutesHelper.login()).discardingCookies(discardingCookies: _*)
+              Redirect(toUrl(badRequest.session), queryString = Map("error" -> Seq(badRequest.body.toString))).discardingCookies(discardingCookies: _*)
             case req => req
           }
         } catch {
