@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
+import com.keepit.commanders.{ KeepCommander, PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
@@ -24,6 +24,7 @@ class OrganizationConfigController @Inject() (
     planCommander: PlanManagementCommander,
     keepToLibraryRepo: KeepToLibraryRepo,
     keepRepo: KeepRepo,
+    keepCommander: KeepCommander,
     orgConfigRepo: OrganizationConfigurationRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -100,7 +101,7 @@ class OrganizationConfigController @Inject() (
       Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleKeeps.map(_.url)))
     } else {
       val deletion = db.readWriteAsync { implicit session =>
-        blacklistedKeeps.map(keepRepo.deactivate).length
+        blacklistedKeeps.map(keepCommander.deactivateKeep(_)(session)).length
       }
       deletion.onComplete {
         case a =>
