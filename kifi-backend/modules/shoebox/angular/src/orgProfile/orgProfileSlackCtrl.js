@@ -24,13 +24,14 @@ angular.module('kifi')
 
     $scope.sendInvite = function() {
       if ($scope.username) {
-        orgProfileService.sendOrgMemberInviteViaSlack(profile.organization.id, $scope.username).then(function(data){
+        var username = $scope.username[0] === '@' ? $scope.username.substring(1) : $scope.username;
+        orgProfileService.sendOrgMemberInviteViaSlack(profile.organization.id, username).then(function(data){
           if (data === '') {
-            $scope.inviteResult = true;
+            $scope.inviteResult = 'Your invite was successfully sent to @' + username + ', click on the link to accept it!';
           }
         })['catch'](function(resp) {
           if (resp.data.error === 'slack_user_not_found') {
-            $scope.$error = 'We can\'t find @' + $scope.username + ' in this team\'s Slack members';
+            $scope.$error = 'We can\'t find @' + username + ' in this team\'s Slack members';
           } else {
             $scope.$error = 'Something went wrong. Please try again later.';
           }

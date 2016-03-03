@@ -18,7 +18,7 @@
         <span class="kf-org-profile-slack-invite-error" ng-show="$error" ng-bind="$error"></span>
         <input class="kf-button kf-button-large" type="submit" ng-click="sendInvite()"/>
       </div>
-      <span class="kf-org-profile-slack-invite-success" ng-show="inviteResult">Your invite was successfully sent to @<span ng-bind="username"></span>, click on the link to accept it!</span>
+      <span class="kf-org-profile-slack-invite-success" ng-bind="inviteResult"></span>
     </div>
     <p ng-if="!userLoggedIn" class="kf-org-profile-slack-login">Already a Kifi member? <a class="kf-link kf-link-underline kf-link-blue" ng-href="{{ 'https://www.kifi.com/login/' }}" target="_self" ng-click="trackClick('clickedLogin')">Log in</a></p>
   </div>
