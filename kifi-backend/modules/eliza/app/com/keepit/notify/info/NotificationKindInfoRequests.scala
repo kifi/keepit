@@ -104,15 +104,13 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       val slackAttributionOpt = newKeep.attribution
 
       val body = {
-
-
         slackAttributionOpt.map { attr =>
-          val titleString = newKeep.title.map(title => s": $title") getOrElse("")
+          val titleString = newKeep.title.getOrElse(newKeep.url)
           attr.message.channel.name match {
-            case Some(prettyChannelName) => s"${author.name} just added in #$prettyChannelName" + titleString
+            case Some(prettyChannelName) => s"${author.name} just added in #${prettyChannelName.value}: " + titleString
             case None => s"${author.name} just shared" + titleString
           }
-        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse("a new keep")}")
+        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse(newKeep.url)}")
       }
 
       val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
