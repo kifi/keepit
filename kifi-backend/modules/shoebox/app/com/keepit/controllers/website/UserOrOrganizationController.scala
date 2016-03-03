@@ -33,7 +33,7 @@ class UserOrOrganizationController @Inject() (
     }
   }
 
-  def getHandleOwnerObjectOpt(handle: Handle): Option[(Either[Organization, User], Boolean)] = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
+  private def getHandleOwnerObjectOpt(handle: Handle): Option[(Either[Organization, User], Boolean)] = db.readOnlyReplica { implicit session => handleCommander.getByHandle(handle) }
 
   def getByHandle(handle: Handle, authToken: Option[String]) = MaybeUserAction.async { request =>
     val handleOwnerObjectOpt = getHandleOwnerObjectOpt(handle)

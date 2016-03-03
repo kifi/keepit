@@ -54,6 +54,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     airbrake: AirbrakeNotifier,
+    orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     planManagementCommander: PlanManagementCommander,
     basicOrganizationIdCache: BasicOrganizationIdCache,
@@ -159,6 +160,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val description = org.description
     val site = org.site
     val ownerId = userRepo.get(org.ownerId).externalId
+    val experiments = orgExperimentRepo.getOrganizationExperiments(org.id.get).toSeq
 
     val memberIds = {
       if (!viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) Seq.empty
@@ -188,7 +190,8 @@ class OrganizationInfoCommanderImpl @Inject() (
       numMembers = memberCount,
       numLibraries = numLibraries,
       config = config,
-      slackTeam = slackTeamOpt)
+      slackTeam = slackTeamOpt,
+      experiments = experiments)
   }
 
   private def countLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Int = {

@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheS
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
