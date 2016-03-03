@@ -54,14 +54,14 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
       FIREFOX_STATUS_CODE=0
       bin/publishFirefox.sh || FIREFOX_STATUS_CODE=$?
 
-      if [[ FIREFOX_STATUS_CODE -ne 0 ]]; then
+      if [[ $FIREFOX_STATUS_CODE -ne 0 ]]; then
 
         echo 'Firefox review failed. Exiting.'
         echo '(if it failed after after validation go to addons.mozilla.org to download the signed xpi)'
         echo '(then name it "kifi-signed.xpi", put it in "./out")'
         echo '(do not forget to publish Chrome)'
         echo '(and then bin/deploy.sh --skip-publish to upload to S3)'
-        exit FIREFOX_STATUS_CODE
+        exit $FIREFOX_STATUS_CODE
 
       fi
 
@@ -76,10 +76,10 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
       CHROME_STATUS_CODE=0
       bin/publishChrome.sh || CHROME_STATUS_CODE=$?
 
-      if [[ CHROME_STATUS_CODE -ne 0 ]]; then
+      if [[ $CHROME_STATUS_CODE -ne 0 ]]; then
 
         echo 'Chrome publish failed. Exiting.'
-        exit CHROME_STATUS_CODE
+        exit $CHROME_STATUS_CODE
 
       fi
 
