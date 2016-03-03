@@ -61,8 +61,7 @@ angular.module('kifi')
 
     $scope.onSlackIntegrationMirroringChanged = function() {
       profile.organization.config.settings.slack_comment_mirroring.setting = $scope.slackCommentMirroringModel.enabled ? 'enabled' : 'disabled';
-      orgProfileService.setOrgSettings(profile.organization.id, {
-        slack_comment_mirroring: profile.organization.config.settings.slack_comment_mirroring.setting})
+      orgProfileService.mirrorComments(profile.organization.id, $scope.slackCommentMirroringModel.enabled)
       .then(onSave, onError);
     };
 
