@@ -445,10 +445,11 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
+  def getBasicKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
-    val keepDataById = keepCommander.getBasicKeeps(keepIds)
-    Ok(Json.toJson(keepDataById))
+    keepCommander.getBasicKeeps(keepIds) map { keepDataById =>
+      Ok(Json.toJson(keepDataById))
+    }
   }
 
   def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
