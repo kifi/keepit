@@ -331,9 +331,9 @@ GET     /about/team.html            @com.keepit.controllers.website.HomeControll
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.moved(uri = "/")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
-GET     /about/love                 @com.keepit.controllers.website.HomeController.route(path = "/about/love")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
 GET     /integrations/slack         @com.keepit.controllers.website.HomeController.slackIntegration
+GET     /about/love                 @com.keepit.controllers.website.HomeController.route(path = "about/love")
 GET     /getting-started/slack      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
 GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
