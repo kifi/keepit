@@ -2123,21 +2123,24 @@ function kififyWithPageData(tab, d) {
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
-    tab.engaged = true;
     if (!d.kept && !hide) {
       if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
+        tab.engaged = true;
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
+        tab.engaged = true;
       } else if (d.keepers.length || d.libraries.length || d.sources.length) {
-        tab.keepersSec = 20;
+        tab.keepersSec = d.sources.filter(isSlack).length ? 0 : 20;
         if (api.tabs.isFocused(tab)) {
           scheduleAutoEngage(tab, 'keepers');
+          tab.engaged = true;
         }
       }
     }
   }
 }
+function isSlack(o) { return o.slack; }
 
 function gotPageDetailsFor(url, tab, resp) {
   var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
