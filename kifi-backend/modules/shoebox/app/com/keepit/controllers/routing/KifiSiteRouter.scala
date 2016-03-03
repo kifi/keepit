@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
+import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
@@ -170,8 +171,8 @@ class KifiSiteRouter @Inject() (
   private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
     case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
-      AngularApp.app()
-    case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
+      AngularApp.app().discardingCookies(PostRegIntent.discardingCookies: _*)
+    case r: NonUserRequest[_] => redirectToLogin(r.uri, r).discardingCookies(PostRegIntent.discardingCookies: _*)
   }
 
   def serveWebAppIfUserFound(username: Username) = WebAppPage { implicit request =>
