@@ -87,6 +87,7 @@ else
 
     STATUS_WAITING=''
 
+    printf "Publishing Firefox extension."
     printf "Fetching validation.."
 
     while true; do
@@ -158,4 +159,6 @@ else
 
   fi
 
+  printf $'\nSuccessfully published Firefox extension.'
+  printf $'\nCheck it out at https://addons.mozilla.org/en-US/developers/addons'
 fi
