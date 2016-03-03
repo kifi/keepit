@@ -5,7 +5,7 @@ set -o errexit
 pushd "$(dirname $0)/.." > /dev/null
 
 # allowed command line arguments are --skip-publish --skip-chrome --skip-firefox
-SKIP_PUBLISH=0; SKIP_CHROME=0; SKIP_FIREFOX=0
+SKIP_PUBLISH=""; SKIP_CHROME=""; SKIP_FIREFOX=""
 if [[ $@ == *"--skip-publish"* ]]; then
   SKIP_PUBLISH=1
 fi
