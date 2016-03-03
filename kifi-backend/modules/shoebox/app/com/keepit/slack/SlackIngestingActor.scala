@@ -154,7 +154,7 @@ class SlackIngestingActor @Inject() (
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
+            log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}: ${error.getMessage}")
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>

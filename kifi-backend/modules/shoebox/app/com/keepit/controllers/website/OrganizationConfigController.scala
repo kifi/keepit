@@ -94,7 +94,9 @@ class OrganizationConfigController @Inject() (
     }
 
     if (readOnly) {
-      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length))
+      // Just trying to avoid exposing private keeps
+      val sampleKeeps = blacklistedKeeps.filter(_.visibility != LibraryVisibility.SECRET).sortBy(-_.id.get.id).take(10)
+      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleKeeps.map(_.url)))
     } else {
       // todo: Do keep deletion
       Ok(Json.obj("readonly" -> false, "keepCount" -> blacklistedKeeps.length))
