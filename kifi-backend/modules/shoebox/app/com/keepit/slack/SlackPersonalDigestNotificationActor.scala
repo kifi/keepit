@@ -23,15 +23,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackPersonalDigestConfig {
-  val minPeriodBetweenPersonalDigests = Duration.standardDays(3)
+  val delayBeforeFirstDigest = Duration.standardMinutes(1)
+  val minDelayBetweenPersonalDigests = Duration.standardDays(3)
   val minDelayInsideTeam = Duration.standardMinutes(10)
-  val minIngestedLinksForPersonalDigest = 10
-
   val delayAfterSuccessfulDigest = Duration.standardDays(3)
   val delayAfterFailedDigest = Duration.standardDays(1)
   val delayAfterNoDigest = Duration.standardDays(3)
-
   val maxProcessingDuration = Duration.standardHours(1)
+  val minIngestedLinksForPersonalDigest = 10
 
   val minDigestConcurrency = 0
   val maxDigestConcurrency = 10
@@ -103,8 +102,12 @@ class SlackPersonalDigestNotificationActor @Inject() (
           case Success(_) =>
             db.readWrite { implicit s =>
               slackMembershipRepo.updateLastPersonalDigest(membershipId)
+              slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
+                slackTeamRepo.save(team.withNoPersonalDigestsBefore(now plus minDelayInsideTeam))
+              }
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
+            slackLog.info("Sent a personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
             db.readWrite { implicit s =>

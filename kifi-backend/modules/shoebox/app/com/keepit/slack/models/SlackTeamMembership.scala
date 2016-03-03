@@ -8,6 +8,7 @@ import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.time._
 import com.keepit.model.SortDirection.ASCENDING
 import com.keepit.model.{ SortDirection, User }
+import com.keepit.slack.SlackPersonalDigestConfig
 import com.keepit.social.{ UserIdentity, IdentityUserIdKey, IdentityUserIdCache }
 import org.joda.time.{ Duration, DateTime }
 import play.api.libs.json.{ Json, JsValue }
@@ -82,7 +83,6 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 
 @ImplementedBy(classOf[SlackTeamMembershipRepoImpl])
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFunction[SlackTeamMembership] {
-  def getByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Map[Id[SlackTeamMembership], SlackTeamMembership]
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
@@ -211,9 +211,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = deleteCache(membership)
 
-  def getByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Map[Id[SlackTeamMembership], SlackTeamMembership] = {
-    activeRows.filter(_.id.inSet(ids)).list.map(r => r.id.get -> r).toMap
-  }
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership] = {
     activeRows.filter(row => row.slackTeamId === slackTeamId).list.toSet
   }
@@ -247,7 +244,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackTeamName = request.slackTeamName,
           token = request.token,
           scopes = request.scopes,
-          slackUser = request.slackUser
+          slackUser = request.slackUser,
+          nextPersonalDigestAt = Some(clock.now plus SlackPersonalDigestConfig.delayBeforeFirstDigest)
         )
         (save(newMembership), true)
     }

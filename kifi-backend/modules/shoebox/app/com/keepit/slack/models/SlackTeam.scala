@@ -36,6 +36,7 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = Some(time))
+  def withNoPersonalDigestsBefore(time: DateTime) = this.copy(noPersonalDigestsBefore = Some(time))
   def withPublicChannelsSyncedAt(time: DateTime) = publicChannelsLastSyncedAt match {
     case Some(lastSync) if lastSync isAfter time => this
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
