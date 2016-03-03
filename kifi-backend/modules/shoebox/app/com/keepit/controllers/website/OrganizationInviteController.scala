@@ -134,14 +134,19 @@ class OrganizationInviteController @Inject() (
 
   def sendOrganizationInviteViaSlack(pubId: PublicId[Organization]) = MaybeUserAction.async(parse.tolerantJson) { request =>
     import com.keepit.common.core._
-    val errorOpt: Future[Unit] = for {
-      orgId <- Organization.decodePublicId(pubId).fold[Future[Id[Organization]]](Future.successful, _ => Future.failed(OrganizationFail.INVALID_PUBLIC_ID))
-      username <- (request.body \ "username").asOpt[SlackUsername].fold[Future[SlackUsername]](Future.failed(OrganizationFail.BAD_PARAMETERS))(Future.successful)
-      success <- orgInviteCommander.sendOrganizationInviteViaSlack(username, orgId, request.userIdOpt)
-    } yield success
-    errorOpt.map(_ => Ok).recover {
-      case fail: OrganizationFail => fail.asErrorResponse
-      case fail: SlackFail => fail.asResponse
+    Organization.decodePublicId(pubId) match {
+      case Failure(_) => Future.failed(OrganizationFail.INVALID_PUBLIC_ID)
+      case Success(orgId) =>
+        (request.body \ "username").asOpt[SlackUsername] match {
+          case None => Future.failed(OrganizationFail.BAD_PARAMETERS)
+          case Some(username) =>
+            orgInviteCommander.sendOrganizationInviteViaSlack(username, orgId, request.userIdOpt)
+              .imap { _ => NoContent }
+              .recover {
+                case fail: OrganizationFail => fail.asErrorResponse
+                case fail: SlackFail => fail.asResponse
+              }
+        }
     }
   }
 }
