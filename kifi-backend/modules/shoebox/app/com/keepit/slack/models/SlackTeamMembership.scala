@@ -1,6 +1,9 @@
 package com.keepit.slack.models
 
+import javax.crypto.spec.IvParameterSpec
+
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.crypto.{ CryptoSupport, Base62Long, Aes64BitCipher }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
@@ -33,6 +36,19 @@ object SlackTokenWithScopes {
 }
 
 object SlackTeamMembership {
+  private val ivSpec = new IvParameterSpec(Array(47, 64, 35, 93, -9, -110, 78, 70, -113, 109, 41, -76, -89, -95, 59, -51))
+  private val cryptoPrefix = "stm_crypt_"
+  private val cipher = Aes64BitCipher("asdf", ivSpec)
+  private val regex = """^([^ ]+)_([^ ]+)$""".r
+  def encodeTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId): String = {
+    cryptoPrefix + cipher.encrypt(s"${slackTeamId.value}_${slackUserId.value}")
+  }
+  def decodeTeamAndUser(hash: String): Option[(SlackTeamId, SlackUserId)] = {
+    cipher.decrypt(hash.stripPrefix(cryptoPrefix)) match {
+      case regex(teamId, userId) => Some((SlackTeamId(teamId), SlackUserId(userId)))
+      case _ => None
+    }
+  }
   def toUserIdentity(membership: SlackTeamMembership): UserIdentity = {
     UserIdentity(
       SlackIdentity(
