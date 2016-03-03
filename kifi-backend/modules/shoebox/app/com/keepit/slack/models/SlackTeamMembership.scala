@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.oauth.SlackIdentity
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.time._
 import com.keepit.model.SortDirection.ASCENDING
 import com.keepit.model.{ SortDirection, User }
@@ -269,6 +270,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     activeRows.filter(_.userId === userId).list
   }
 
+  @StatsdTiming("SlackTeamMembershipRepo.getRipeForPersonalDigest")
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val vipTeamsStr = vipTeams.map(id => s"'${id.value}'").mkString("(", ",", ")") // I hate myself and everyone else
