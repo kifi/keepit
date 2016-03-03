@@ -31,9 +31,11 @@ angular.module('kifi')
           }
         })['catch'](function(resp) {
           if (resp.data.error === 'slack_user_not_found') {
-            $scope.$error = 'We can\'t find @' + username + ' in this team\'s Slack members';
+            $scope.$error = 'We can\'t find @' + username + ' in this team\'s Slack members.';
+          } else if (resp.data.error === 'no_valid_token') {
+            $scope.$error = 'Your Slack admins have not allowed us to message their members.'
           } else {
-            $scope.$error = 'Something went wrong. Please try again later.';
+            $scope.$error = 'Something went wrong, please try again later.';
           }
         });
       }
