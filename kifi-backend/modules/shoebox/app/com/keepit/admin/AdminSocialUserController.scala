@@ -56,13 +56,6 @@ class AdminSocialUserController @Inject() (
     }
   }
 
-  def socialUsersView(page: Int) = AdminUserPage.async { implicit request =>
-    val PAGE_SIZE = 50
-    db.readOnlyReplicaAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
-      Ok(html.admin.socialUsers(socialUsers, page))
-    }
-  }
-
   def disconnectSocialUser(suiId: Id[SocialUserInfo], revoke: Boolean = false) = AdminUserPage { implicit request =>
     val sui = db.readOnlyMaster(socialUserInfoRepo.get(suiId)(_))
     if (revoke) {
