@@ -269,7 +269,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, upperBoundForTeam: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""
+    val take1 = sql"""
     SELECT stm.id
     FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
     WHERE stm.state = 'active' AND
@@ -278,6 +278,20 @@ class SlackTeamMembershipRepoImpl @Inject() (
     GROUP BY stm.slack_team_id
     ORDER BY stm.next_personal_digest_at ASC
     LIMIT $limit
+    """.as[Id[SlackTeamMembership]].list
+
+    val take2 = sql"""
+    SELECT stm.id
+    FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
+    WHERE (st.no_personal_digests_before IS NULL OR st.no_personal_digests_before < $upperBoundForTeam) AND
+          stm.id = ( SELECT sub.id FROM slack_team_membership sub
+                     WHERE sub.slack_team_id = stm.slack_team_id AND
+                           sub.state = 'active' AND sub.next_personal_digest_at IS NOT NULL AND
+                           (sub.last_processing_at IS NULL OR sub.last_processing_at < $overrideProcessesOlderThan)
+                     ORDER BY sub.next_personal_digest_at ASC
+                     LIMIT 1
+                   )
+    ORDER BY stm.next_personal_digest_at ASC
     """.as[Id[SlackTeamMembership]].list
   }
   def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = {
