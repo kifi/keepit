@@ -73,7 +73,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
       val ripeIds = slackMembershipRepo.getRipeForPersonalDigest(
         limit = limit,
         overrideProcessesOlderThan = now minus maxProcessingDuration,
-        upperBoundForTeam = now minus minDelayInsideTeam,
+        now = now,
         vipTeams = vipTeams
       )
       ripeIds.filter(id => slackMembershipRepo.markAsProcessing(id, overrideProcessesOlderThan = now minus maxProcessingDuration))
@@ -103,7 +103,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
             db.readWrite { implicit s =>
               slackMembershipRepo.updateLastPersonalDigest(membershipId)
               slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
-                slackTeamRepo.save(team.withNoPersonalDigestsBefore(now plus minDelayInsideTeam))
+                slackTeamRepo.save(team.withNoPersonalDigestsUntil(now plus minDelayInsideTeam))
               }
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }

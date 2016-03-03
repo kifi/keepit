@@ -75,6 +75,8 @@ case class SlackTeamMembership(
   def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackUserAccessToken] = if (requiredScopes subsetOf scopes) token else None
   def unnotifiedSince: DateTime = lastPersonalDigestAt getOrElse createdAt
 
+  def withNoNextPersonalDigest = this.copy(nextPersonalDigestAt = None)
+  def withNextPersonalDigestAt(time: DateTime) = this.copy(nextPersonalDigestAt = Some(time))
   def revoked = this.copy(token = None, scopes = Set.empty)
   def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
 }
@@ -91,7 +93,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getByToken(token: SlackUserAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
 
-  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, upperBoundForTeam: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
   def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def updateLastPersonalDigest(id: Id[SlackTeamMembership])(implicit session: RWSession): Unit
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
@@ -267,31 +269,22 @@ class SlackTeamMembershipRepoImpl @Inject() (
     activeRows.filter(_.userId === userId).list
   }
 
-  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, upperBoundForTeam: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val take1 = sql"""
+    sql"""
     SELECT stm.id
     FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
-    WHERE stm.state = 'active' AND
-          (st.no_personal_digests_before IS NULL OR st.no_personal_digests_before < $upperBoundForTeam) AND
-          (stm.last_processing_at IS NULL OR stm.last_processing_at < $overrideProcessesOlderThan)
-    GROUP BY stm.slack_team_id
-    ORDER BY stm.next_personal_digest_at ASC
-    LIMIT $limit
-    """.as[Id[SlackTeamMembership]].list
-
-    val take2 = sql"""
-    SELECT stm.id
-    FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
-    WHERE (st.no_personal_digests_before IS NULL OR st.no_personal_digests_before < $upperBoundForTeam) AND
+    WHERE (st.no_personal_digests_until IS NOT NULL AND st.no_personal_digests_until < $now) AND
           stm.id = ( SELECT sub.id FROM slack_team_membership sub
                      WHERE sub.slack_team_id = stm.slack_team_id AND
-                           sub.state = 'active' AND sub.next_personal_digest_at IS NOT NULL AND
+                           sub.state = 'active' AND
+                           (sub.next_personal_digest_at IS NOT NULL AND sub.next_personal_digest_at < $now) AND
                            (sub.last_processing_at IS NULL OR sub.last_processing_at < $overrideProcessesOlderThan)
-                     ORDER BY sub.next_personal_digest_at ASC
+                     ORDER BY sub.next_personal_digest_at ASC, sub.id ASC
                      LIMIT 1
                    )
-    ORDER BY stm.next_personal_digest_at ASC
+    ORDER BY stm.next_personal_digest_at ASC, stm.id ASC
+    LIMIT $limit
     """.as[Id[SlackTeamMembership]].list
   }
   def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = {
