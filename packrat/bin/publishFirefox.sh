@@ -87,7 +87,7 @@ else
 
     STATUS_WAITING=''
 
-    printf "Publishing Firefox extension."
+    echo "Publishing Firefox extension."
     printf "Fetching validation.."
 
     while true; do
