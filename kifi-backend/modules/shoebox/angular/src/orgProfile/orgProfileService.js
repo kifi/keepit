@@ -211,7 +211,15 @@ angular.module('kifi')
         attributes = _.extend(defaultAttributes, attributes || {});
         $analytics.eventTrack(eventName, attributes);
       },
-      invalidateOrgProfileCache: invalidateOrgProfileCache
+      invalidateOrgProfileCache: invalidateOrgProfileCache,
+      blacklistBackfillWarning: function (orgId) {
+        return net.blacklistBackfillWarning(orgId, {'confirm': false})
+        .then(getResponseData);
+      },
+      blacklistBackfillDelete: function (orgId) {
+        return net.blacklistBackfillDelete(orgId, {'confirm': true})
+        .then(getResponseData);
+      }
     };
 
     return api;
