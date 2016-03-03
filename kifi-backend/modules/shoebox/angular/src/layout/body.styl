@@ -10,6 +10,12 @@
     margin-top: appHeaderHeightWithNav
     overflow: auto
 
+  .kf-body-container-content.kf-user-logged-out
+    margin-top: appHeaderHeight2
+
+    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+      margin-top: appHeaderHeight1
+
   .kf-body-container-content-main
     width: 100%
     position: relative
