@@ -151,7 +151,7 @@ class AuthController @Inject() (
         res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
       }
     } else if (res.header.status == 400) {
-      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider, body=${res.body}")
+      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider")
       Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
     } else {
       res
@@ -193,7 +193,7 @@ class AuthController @Inject() (
             user => completeAuthentication(user, request.session)
           ) match {
               case result if result.header.status == 400 =>
-                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider, body=${result.body}")
+                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider")
                 Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
               case result => result
             }
@@ -350,7 +350,7 @@ class AuthController @Inject() (
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map {
       case badResult if badResult.header.status == 400 =>
-        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status} and body ${badResult.body}")
+        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status}")
         Redirect("/signup").discardingCookies(PostRegIntent.discardingCookies: _*)
       case result =>
         authHelper.transformResult(result) { (_, sess: Session) =>
@@ -595,15 +595,16 @@ class AuthController @Inject() (
   }
 
   def startWithSlack(slackTeamId: Option[SlackTeamId]) = MaybeUserAction { implicit request =>
+    val session = request.headers.get(REFERER).map(url => request.session + (SecureSocial.OriginalUrlKey -> url)).getOrElse(request.session)
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))
         val discardedCookie = DiscardingCookie(Slack.slackTeamIdKey)
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
-        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie)
+        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie).withSession(session)
       case nonUserRequest: NonUserRequest[_] =>
         val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
-        Redirect(signupUrl, SEE_OTHER).withSession(request.session)
+        Redirect(signupUrl, SEE_OTHER).withSession(session)
     }
   }
 }

@@ -82,10 +82,10 @@ object ProviderController extends Controller with Logging {
               completeAuthentication(user, request.session)
           }) match {
             case badRequest if badRequest.header.status == 400 =>
-              log.error(s"[handleAuth] ${badRequest.header.status} from $provider with body ${badRequest.body}")
+              log.error(s"[handleAuth] ${badRequest.header.status} from $provider")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
                 "slackTeamId", "creditCode").map(DiscardingCookie(_))
-              Redirect(toUrl(badRequest.session), queryString = Map("error" -> Seq(badRequest.body.toString))).discardingCookies(discardingCookies: _*)
+              Redirect(toUrl(badRequest.session), queryString = Map("error" -> Seq("access_denied"))).discardingCookies(discardingCookies: _*) //todo(cam): pass state around more smoothly
             case req => req
           }
         } catch {
