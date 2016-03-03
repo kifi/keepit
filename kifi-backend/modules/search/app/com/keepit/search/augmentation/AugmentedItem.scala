@@ -4,10 +4,11 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ Organization, NormalizedURI, Library, User }
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexable
+import com.keepit.slack.models.SlackTeamId
 import scala.collection.mutable.{ ListBuffer }
 import com.keepit.common.CollectionHelpers
 
-class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
+class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], val allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
   def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _)))
@@ -83,7 +84,7 @@ object AugmentedItem {
     (myKeeps.toList, moreKeeps.toList)
   }
 
-  def apply(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
-    new AugmentedItem(userId, allFriends, allOrganizations, allLibraries, scores)(item, info)
+  def apply(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
+    new AugmentedItem(userId, allFriends, allOrganizations, allSlackTeamIds, allLibraries, scores)(item, info)
   }
 }

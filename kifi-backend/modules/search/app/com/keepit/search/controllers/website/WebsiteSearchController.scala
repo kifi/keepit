@@ -212,7 +212,7 @@ class WebsiteSearchController @Inject() (
             } getOrElse (None, None, None, None)
           }
 
-          val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
+          val sources = getSources(augmentedItem, sourceAttributionByKeepId)
           val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
 
           val libraryIndex = libraryId.map(libraryIndexById(_))

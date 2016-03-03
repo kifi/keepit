@@ -23,6 +23,7 @@ import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.util.LongArraySet
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.slack.models.SlackTeamId
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.{ BooleanClause, BooleanQuery, TermQuery }
 import scala.concurrent._
@@ -184,6 +185,12 @@ class SearchFactory @Inject() (
         case Some(organization) if organization.authorized => orgIds + organization.id.id
         case None => orgIds
       }
+    }
+  }
+
+  def getSlackTeamIds(userId: Id[User], organizationScope: Option[OrganizationScope]): Future[Set[SlackTeamId]] = {
+    getOrganizations(userId, organizationScope).flatMap { orgIds =>
+      shoeboxClient.getSlackTeamIds(orgIds.map(Id[Organization](_))).imap(_.values.toSet)
     }
   }
 

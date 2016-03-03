@@ -173,7 +173,7 @@ class ExtSearchController @Inject() (
             case (libraryId, keeperId, _) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
           }.flatten
 
-          val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
+          val sources = getSources(augmentedItem, sourceAttributionByKeepId)
           val primaryKeepSource = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id)) orElse sources.headOption
 
           val secret = augmentedItem.isSecret(librarySearcher)
