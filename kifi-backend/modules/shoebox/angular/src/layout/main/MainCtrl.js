@@ -39,7 +39,7 @@ angular.module('kifi')
       $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
       if (installService.isValidSafari) {
-        return initBookmarkFileUpload({ safari: true })
+        return initBookmarkFileUpload({ safari: true });
       }
 
       if (!$scope.importLibrary) {
