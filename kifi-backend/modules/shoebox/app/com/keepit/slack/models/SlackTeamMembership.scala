@@ -271,10 +271,12 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val vipTeamsStr = vipTeams.map(id => s"'${id.value}'").mkString("(", ",", ")") // I hate myself and everyone else
     sql"""
     SELECT stm.id
     FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
-    WHERE (st.no_personal_digests_until IS NOT NULL AND st.no_personal_digests_until < $now) AND
+    WHERE st.slack_team_id IN #$vipTeamsStr AND
+          (st.no_personal_digests_until IS NOT NULL AND st.no_personal_digests_until < $now) AND
           stm.id = ( SELECT sub.id FROM slack_team_membership sub
                      WHERE sub.slack_team_id = stm.slack_team_id AND
                            sub.state = 'active' AND

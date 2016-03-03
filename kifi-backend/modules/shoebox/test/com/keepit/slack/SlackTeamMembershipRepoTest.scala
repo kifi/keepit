@@ -29,8 +29,12 @@ class SlackTeamMembershipRepoTest extends TestKitSupport with SpecificationLike 
         db.readWrite { implicit s =>
           val now = fakeClock.now
 
-          val teams = (1 to 5).map(_ => SlackTeamFactory.team().withNoPersonalDigestsUntil(now plusHours rand(-100, 100)).saved)
-          val memberships = teams.flatMap(team => (1 to 5).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
+          // These do not have the experiment, so we should never get results from these teams
+          val garbageTeams = (1 to 10).map(_ => SlackTeamFactory.team().withNoPersonalDigestsUntil(now plusHours rand(-100, 100)).saved)
+          val garbageMemberships = garbageTeams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
+
+          val teams = (1 to 10).map(_ => SlackTeamFactory.team().withNoPersonalDigestsUntil(now plusHours rand(-100, 100)).saved)
+          val memberships = teams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
 
           val expected = {
             val legalTeams = teams.filter(t => t.noPersonalDigestsUntil.exists(time => time isBefore now)).map(_.slackTeamId).toSet
@@ -39,8 +43,7 @@ class SlackTeamMembershipRepoTest extends TestKitSupport with SpecificationLike 
             bestByTeam.values.toList.sortBy(m => (m.nextPersonalDigestAt.get, m.id.get)).map(_.id.get).take(10)
           }
           val actual = {
-            val allTeams = teams.map(_.slackTeamId).toSet
-            inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now, vipTeams = allTeams).toList
+            inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now, vipTeams = teams.map(_.slackTeamId).toSet).toList
           }
           actual === expected
         }
