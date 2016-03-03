@@ -14,8 +14,11 @@ angular.module('kifi')
     var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
     var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
+    var mirroringSetting = settings.slack_comment_mirroring && settings.slack_comment_mirroring.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
+    $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
+    $scope.slackCommentMirroringEnabled = profile.organization.experiments.indexOf('slack_comment_mirroring') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -53,6 +56,13 @@ angular.module('kifi')
     $scope.onSlackIntegrationDigestChanged = function() {
       profile.organization.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
       orgProfileService.setOrgSettings(profile.organization.id, { slack_digest_notif: profile.organization.config.settings.slack_digest_notif.setting })
+      .then(onSave, onError);
+    };
+
+    $scope.onSlackIntegrationMirroringChanged = function() {
+      profile.organization.config.settings.slack_comment_mirroring.setting = $scope.slackCommentMirroringModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.setOrgSettings(profile.organization.id, {
+        slack_comment_mirroring: profile.organization.config.settings.slack_comment_mirroring.setting})
       .then(onSave, onError);
     };
 
