@@ -81,6 +81,11 @@
             <button class="kf-button-textonly kf-link" ng-click="expandBlacklist()">Show all <span ng-bind="blacklist.existing.length"></span> blacklisted paths</button>
           </td></tr>
         </table>
+        <div ng-if="blacklist.editable">
+          <span class="kf-ts-integrations-marketing-text">
+            As you change your blacklist, you can delete existing keeps shared via Slack which match the rules defined by the blacklist. <button type="submit" class="kf-button-textonly kf-link" ng-click="backfillBlacklistWarning()" ng-disabled="blacklist.backfillInProg">Delete blacklisted keeps.</button>
+          </span>
+        </div>
 
         <div ng-if="blacklist.editable">
           <h3 class="kf-ts-blacklist-header">Blacklist custom URLs</h3>

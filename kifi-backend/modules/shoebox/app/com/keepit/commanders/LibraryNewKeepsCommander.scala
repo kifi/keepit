@@ -60,7 +60,10 @@ class LibraryNewKeepsCommander @Inject() (
           case (_, Some(kifiUser)) => s"${kifiUser.fullName} kept to $libTrunc" + titleString
           case (attr: SlackAttribution, _) =>
             val name = attr.message.username.value
-            s"$name added to #${attr.message.channel.name.value}" + titleString
+            attr.message.channel.name match {
+              case Some(prettyChannelName) => s"$name added to #$prettyChannelName" + titleString
+              case None => s"$name shared" + titleString
+            }
         } getOrElse {
           val keepAdded = keeperOpt match {
             case Some(bu) => s"${bu.fullName} kept to"

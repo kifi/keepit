@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileSlackUpsell', [
-  '$window', '$rootScope', 'messageTicker', '$analytics', 'orgProfileService', 'slackService',
-  function ($window, $rootScope, messageTicker, $analytics, orgProfileService, slackService) {
+  '$window', '$rootScope', 'messageTicker', '$analytics', 'orgProfileService', 'slackService', 'installService',
+  function ($window, $rootScope, messageTicker, $analytics, orgProfileService, slackService, installService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -31,6 +31,9 @@ angular.module('kifi')
 
         $scope.cancel = function() {
           orgProfileService.trackEvent('user_clicked_page', $scope.getOrg(), { type: 'orgProfileSlackUpsell', action: 'clickedClose' });
+          if (!installService.installedVersion && installService.canInstall) {
+            $window.location = '/install';
+          }
         };
 
         orgProfileService.trackEvent('user_viewed_page', $scope.getOrg(), { type: 'orgProfileSlackUpsell' });

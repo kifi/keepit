@@ -95,10 +95,11 @@ object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 }
 
-case class BasicSlackMessage(channel: SlackChannelIdAndName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String, text: String)
+case class BasicSlackMessage(channel: SlackChannelIdAndPrettyName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String, text: String)
 object BasicSlackMessage {
+
   implicit val format = Json.format[BasicSlackMessage]
-  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(message.channel, message.userId, message.username, message.timestamp, message.permalink, message.text)
+  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, message.text)
 }
 
 case class SlackAttribution(message: BasicSlackMessage, teamId: SlackTeamId) extends SourceAttribution
@@ -107,7 +108,7 @@ object SlackAttribution {
 }
 
 case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
-  override val version = 4
+  override val version = 5
   val namespace = "source_attribution_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
