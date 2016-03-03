@@ -32,7 +32,11 @@
               {{#channel.name}}#{{channel.name}}{{/channel.name}}
               {{^channel.name}}@{{username}}{{/channel.name}}
             </span>
-            <p class="kifi-keepers-source-context">{{#channel.name}}@{{username}}: {{/channel.name}}{{#text}}{{text}}{{/text}}{{^text}} shared this page{{/text}}</p>
+            <p class="kifi-keepers-source-context">
+              {{#channel.name}}@{{username}}{{/channel.name}}{{!
+            }}{{#text}}{{#channel.name}}: {{/channel.name}}{{text}}{{/text}}{{!
+            }}{{^text}} shared this page{{/text}}
+            </p>
           </div>
         </a>
       {{/slack.message}}

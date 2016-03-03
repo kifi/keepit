@@ -689,7 +689,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   ignoreWheel: true
                 });
 
-                if (o.sources.filter(isSlack).length) {
+                if (o.sources.filter(isSlack).length === 0) {
                   socialTooltipTimeout = setTimeout(function () {
                     $tile.hoverfu('hide')
                   }, 3000 + 1800 * o.libraries.length);
