@@ -49,6 +49,7 @@ angular.module('kifi')
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
       blacklistBackfillWarning: post(shoebox, '/organizations/:id/blacklistBackfill'),
       blacklistBackfillDelete: post(shoebox, '/organizations/:id/blacklistBackfill'),
+      mirrorComments: post(shoebox, '/organizations/:id/slack/mirrorComments?turnOn=:turnOn'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),

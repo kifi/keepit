@@ -219,6 +219,10 @@ angular.module('kifi')
       blacklistBackfillDelete: function (orgId) {
         return net.blacklistBackfillDelete(orgId, {'confirm': true})
         .then(getResponseData);
+      },
+      mirrorComments: function (orgId, turnOn) {
+        return net.mirrorComments(orgId, !!turnOn)
+        .then(getResponseData);
       }
     };
 
