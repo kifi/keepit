@@ -89,7 +89,7 @@ object PostRegIntent {
   case object NoIntent extends PostRegIntent
 
   val intentKey = "intent"
-  val discardingCookies = Set(AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
+  val discardingCookies = Set(intentKey, AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
 
   def fromCookies(cookies: Set[Cookie])(implicit config: PublicIdConfiguration): PostRegIntent = {
     val cookieByName = cookies.groupBy(_.name).mapValuesStrict(_.head)

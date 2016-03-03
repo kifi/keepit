@@ -62,6 +62,11 @@ angular.module('kifi')
         .sendOrgMemberInvite(orgId, inviteFields)
         .then(getResponseData);
       },
+      sendOrgMemberInviteViaSlack: function(orgId, username) {
+        return net
+        .sendOrgMemberInviteViaSlack(orgId, { username: username })
+        .then(getResponseData);
+      },
       acceptOrgMemberInvite: function (orgId, authToken) {
         return net
         .acceptOrgMemberInvite(orgId, authToken)

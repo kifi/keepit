@@ -8,16 +8,8 @@ angular.module('kifi')
     $window.document.title = profile.organization.name + ' • Kifi <3 Slack';
     $scope.userLoggedIn = $rootScope.userLoggedIn;
     $scope.slackTeamId = $stateParams.slackTeamId;
-
-    $scope.linkSlack = function (e) {
-      var url = 'https://www.kifi.com/link/slack?slackTeamId=' + $scope.slackTeamId;
-      try {
-        e.target.href = url;
-      } catch (err) {
-        $window.location = url;
-      }
-      $scope.trackClick('clickedAuthSlack');
-    };
+    $scope.requestFailed = $stateParams.error === 'access_denied';
+    $scope.username = '';
 
     $scope.trackClick = function(action) {
       var eventName = ($rootScope.userLoggedIn ? 'user' : 'visitor') + '_clicked_page';
@@ -28,6 +20,23 @@ angular.module('kifi')
         slackTeamId: $stateParams.slackTeamId
       };
       orgProfileService.trackEvent(eventName, profile.organization, attributes);
+    };
+
+    $scope.sendInvite = function() {
+      if ($scope.username) {
+        orgProfileService.sendOrgMemberInviteViaSlack(profile.organization.id, $scope.username).then(function(data){
+          if (data === '') {
+            $scope.inviteResult = true;
+          }
+        })['catch'](function(resp) {
+          if (resp.data.error === 'slack_user_not_found') {
+            $scope.$error = 'We can\'t find @' + $scope.username + ' in this team\'s Slack members';
+          } else {
+            $scope.$error = 'Something went wrong. Please try again later.';
+          }
+        });
+      }
+      $scope.trackClick('clickedSendInvite');
     };
 
 
