@@ -4,7 +4,7 @@
     <span class="kf-org-profile-slack-title">Get access to your Slack team's libraries of links on Kifi</span>
     <a
       class="kf-button kf-button-large kf-org-profile-slack-button"
-      href="https://www.kifi.com/integrations/slack/start"
+      ng-href="{{ 'https://www.kifi.com/integrations/slack/start?slackTeamId=' + slackTeamId }}"
       target="_self"
       ng-click="linkSlack($event)"
       ng-show="!requestFailed"
