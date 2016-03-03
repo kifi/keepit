@@ -105,9 +105,9 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
 
       val body = {
         slackAttributionOpt.map { attr =>
-          val titleString = newKeep.title.map(title => s": $title").getOrElse(newKeep.url)
+          val titleString = newKeep.title.getOrElse(newKeep.url)
           attr.message.channel.name match {
-            case Some(prettyChannelName) => s"${author.name} just added in #$prettyChannelName" + titleString
+            case Some(prettyChannelName) => s"${author.name} just added in #$prettyChannelName: " + titleString
             case None => s"${author.name} just shared" + titleString
           }
         }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse(newKeep.url)}")
