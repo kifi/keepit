@@ -1,6 +1,6 @@
 .kf-lh
   line-height: 1.4
-  font-size: 12px
+  font-size: 11px
   overflow: hidden
 
   @media (min-width: 480px)
@@ -10,17 +10,17 @@
     font-size: 14px
 
   @media (min-width: 720px)
-    font-size: 16px
+    font-size: 15px
 
 colorBarHeight = .4em
 
 .kf-lh-cover
-  height: 22em
-  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0))
+  height: 20em
+  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0.07), rgba(0,0,0,0))
   position: relative
 
   @media (min-width: 480px)
-    height: 32em
+    height: 21em
 
     &.kf-system-main
     &.kf-system-secret
@@ -132,23 +132,28 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   max-width: appMaxWidth
   margin: 0 auto
   border: solid transparent
-  border-width: 1.6em appSidePad1 0
+  border-width: 0.8em appSidePad1 0
   position: relative
+  display: flex
+  align-items: center
+  z-index: 1
 
   @media (min-width: appSidePad2MinWidth)
-    border-width: 2em appSidePad2 0
+    border-width: 1.2em appSidePad2 0
 
-.kf-lh-followers
-  position: absolute
-  top: 0
-  right: 0
+  > * + *
+    margin-left: 0.7em
+
+.kf-lh-authors
+  margin-left: auto
+  position: relative
 
   @media (max-width: 479px)
     font-size: 1.5em
 
 followerPicDiam = 2.2em
 
-.kf-lh-followers-a
+.kf-lh-authors-a
   position: relative
   display: inline-block
   width: followerPicDiam + .4em
@@ -163,15 +168,24 @@ followerPicDiam = 2.2em
   &:active:hover
     box-shadow: none
 
+.kf-lh-organization-pic
+  height: followerPicDiam
+  width: followerPicDiam
+  border-radius: 16%
+  box-shadow: 0 0 .3em rgba(0,0,0,.16)
 
-.kf-lh-followers-pic
+.kf-lh-authors-pic
   height: followerPicDiam
   width: followerPicDiam
   border-radius: 50%
   box-shadow: 0 0 .3em rgba(0,0,0,.16)
 
-.kf-lh-followers-name
-  display: none
+.kf-lh-authors-name
+  display: block
+  position: absolute
+  width: 100%
+  margin-left: auto
+  margin-right: auto
   margin-top: .2em
   color: #fff
   font-size: .6em
@@ -180,9 +194,6 @@ followerPicDiam = 2.2em
   white-space: nowrap
   text-overflow: ellipsis
   font-smoothing: auto
-
-  @media (min-width: 480px)
-    display: block
 
 .kf-lh-view-members
   position: relative
@@ -216,7 +227,7 @@ followerPicDiam = 2.2em
     padding: 1px 10px
     font-size: 10px
 
-.kf-lh-followers-more
+.kf-lh-members-more
   display: inline-block
   vertical-align: top
   height: followerPicDiam
@@ -238,8 +249,8 @@ followerPicDiam = 2.2em
   &:focus
     outline: thin dotted alpha(#fff,.5)
 
-.kf-lh-followers-more-text
-  padding: 0 .2em
+.kf-lh-members-more-text
+  padding: 0 0.7em
   font-size: .75em
   text-shadow: 0 1px 1px rgba(0,0,0,.6)
   vertical-align: top
@@ -259,8 +270,8 @@ followerPicDiam = 2.2em
 
 .kf-lh-manage-btn
   vertical-align: top
-  width: 2em
-  height: 2em
+  width: 1.8em
+  height: 1.8em
   border: none
   background: center no-repeat
   background-size: contain
@@ -282,10 +293,7 @@ followerPicDiam = 2.2em
 .kf-lh-cover-menu-parent
   display: inline-block
   vertical-align: top
-  margin-left: .8em
   position: relative
-  width: 33%
-  margin-right: -33%
 
   menuGap = 2px
 
@@ -317,8 +325,8 @@ followerPicDiam = 2.2em
 
 .kf-lh-cover-menu-btn
   vertical-align: top
-  height: 2em
-  width: (2em * 32 / 28)
+  height: 1.8em
+  width: (1.8em * 32 / 28)
   border: none
   padding: 0
   background-color: transparent
@@ -338,21 +346,17 @@ followerPicDiam = 2.2em
     opacity: 1
 
 .kf-lh-subscribe-btn-wrap
-  display: inline-block
-  margin-left: 16px
-  vertical-align: top
+  display: flex
+  align-items: center
   position: relative // for .kf-lh-subscribed-msg
   opacity: .7
-
-  &.for-owner
-    margin-left: 3.3em
 
   &:hover
     opacity: .85
 
 .kf-lh-subscribe-btn
-  width: 1.8em
-  height: 2em
+  width: 1.6em
+  height: 1.8em
   border: 0
   padding: 0
   background-color: transparent
@@ -385,10 +389,10 @@ followerPicDiam = 2.2em
 .kf-lh-org-private
   display: inline-block
   vertical-align: middle
-  margin-right: 1em
   line-height: 2em
   border-radius: 15px
-  padding: 0 15px
+  margin-right: 0.5em
+  padding: 0
   background-position: .9em .46em
   background-size: .9em auto
   background-repeat: no-repeat
@@ -413,7 +417,6 @@ followerPicDiam = 2.2em
     content: 'Team'
 
 .kf-lh-public
-  padding: 0
 
   &::after
     content: 'Public'
@@ -543,7 +546,7 @@ coverDragShadeHeight = 3em
 
 .kf-lh-mid
   position: absolute
-  bottom: -5.5em
+  bottom: 3.5em
   left: 0
   width: 100%
   text-align: center
@@ -552,7 +555,7 @@ coverDragShadeHeight = 3em
     z-index: 1
 
   @media (min-width: 480px)
-    bottom: 9em
+    bottom: 8em
 
     .kf-system-main>&
     .kf-system-secret>&
@@ -569,33 +572,34 @@ coverDragShadeHeight = 3em
   background-position: center top
   background-size: contain
   opacity: .5
+  z-index: 0
 
 .kf-lh-name
   max-width: 96%
   width: 13.5em
   margin: 0 auto
-  font: bold 3.2em/1.1 Lato, Helvetica, Arial, sans-serif
+  font: bold 3.0em/1.1 Lato, Helvetica, Arial, sans-serif
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.5)
   word-break: break-word
 
   &.kf-long-1
     width: 14.5em
-    font-size: 2.8em
+    font-size: 2.5em
 
   &.kf-long-2
-    width: 16em
-    font-size: 2.6em
+    width: 18em
+    font-size: 2.3em
 
   @media (max-width: 479px)
     width: 94%
-    font-size: 2.6em
+    font-size: 2.5em
 
     &.kf-long-1
-      font-size: 2.4em
+      font-size: 2.3em
 
     &.kf-long-2
-      font-size: 2.2em
+      font-size: 2.1em
 
 .kf-lh-stats
   margin: 1.5em auto 0
@@ -603,7 +607,7 @@ coverDragShadeHeight = 3em
   white-space: nowrap
 
   @media (min-width: 480px)
-    margin: .75em auto 0
+    margin: .5em auto 0
     font-size: 1.2em
 
 .kf-lh-stat
@@ -864,9 +868,10 @@ collabImageDiam2 = 3.6em
   position: relative
   border-top: .4em solid transparent
   text-align: center
+  z-index: 2
 
   @media (max-width: 479px)
-    padding: 5em 1.5em 0
+    padding: 1em 1.5em 0
     transition: padding-bottom .2s
 
     &.kf-long
@@ -897,14 +902,14 @@ collabImageDiam2 = 3.6em
 
   @media (min-width: 480px)
     position: absolute
-    bottom: 0
+    bottom: 1.0em
     left: 50%
     transform: translate(-50%)
     width: width
     height: 5.2em
-    line-height: 1.8
+    line-height: 1.6
     border: solid transparent
-    border-width: 0 sideBorderWidth 3em
+    border-width: 0 sideBorderWidth 1.5em
     border-radius: 8px 8px 0 0
     color: #fff
     text-shadow: 1px 1px 1px rgba(0,0,0,.2)
@@ -912,7 +917,7 @@ collabImageDiam2 = 3.6em
     &.kf-expanded
     &.kf-expanded-add
     &.kf-expanded-remove
-      border-top-width: 2.4em
+      border-top-width: 0.0em
 
   @media (min-width: 480px) and (max-width: 539px)
     // shaving a total of 3em from sideBorderWidth and .kf-lh-desc sidePad in order to
@@ -930,7 +935,7 @@ collabImageDiam2 = 3.6em
 .kf-lh-desc
   sidePad = 2.2em
   @media (min-width: 480px)
-    max-height: 21em
+    max-height: 17em
     padding: 0 sidePad
     overflow: hidden
 
@@ -978,7 +983,7 @@ collabImageDiam2 = 3.6em
         background-color: #e4e4e4
 
   @media (min-width: 480px)
-    bottom: 1.3em
+    bottom: 1.2em
     color: #fff
     font-size: .75em
     text-shadow: 1px 1px 1px rgba(0,0,0,.2)
@@ -1005,7 +1010,7 @@ collabImageDiam2 = 3.6em
 
   @media (min-width: 480px)
     position: absolute
-    bottom: 2em
+    bottom: 1.3em
     left: 50%
     transform: translate(-50%)
     width: 30em
@@ -1020,9 +1025,14 @@ collabImageDiam2 = 3.6em
       &:active
         background-color: alpha(#fff, .05)
 
+.kf-lh-buttons-divider
+  margin: auto
+
 .kf-lh-buttons
   padding-top: 1.8em
   text-align: center
+  display: flex
+  align-items: center
 
   .kf-card-style-selector
     float: left
