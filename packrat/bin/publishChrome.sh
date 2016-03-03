@@ -76,6 +76,8 @@ if [[ $ERR -ne 0 ]]; then
 
 fi
 
+echo "Uploaded extension to the web store. Publishing..."
+
 # Publish it
 curl \
   -X POST \

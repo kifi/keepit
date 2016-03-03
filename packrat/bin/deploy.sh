@@ -130,7 +130,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
   fi
 
-  echo $'Done.\n\n!!'
+  echo $'Done!!\n\n'
 
 else
 
