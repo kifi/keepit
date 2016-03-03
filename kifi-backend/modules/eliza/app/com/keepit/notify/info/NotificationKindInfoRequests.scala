@@ -108,7 +108,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
           val titleString = newKeep.title.getOrElse(newKeep.url)
           attr.message.channel.name match {
             case Some(prettyChannelName) => s"${author.name} just added in #${prettyChannelName.value}: " + titleString
-            case None => s"${author.name} just shared" + titleString
+            case None => s"${author.name} just shared: " + titleString
           }
         }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse(newKeep.url)}")
       }
