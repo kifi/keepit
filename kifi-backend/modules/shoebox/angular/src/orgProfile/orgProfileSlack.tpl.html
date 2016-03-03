@@ -13,8 +13,8 @@
     </a>
     <div ng-show="requestFailed">
       <div ng-show="!inviteResult">
-        <label class="kf-org-profile-slack-invite-text">Can't sign up with Slack? Send yourself an invite!</label>
-        <input class="kf-textbox kf-org-profile-slack-invite-input" type="text" placeholder="Enter your @username to send a DM..." ng-model="username"/>
+        <label class="kf-org-profile-slack-invite-text">Can't sign up with Slack? Ask @Kifi bot for an invite!</label>
+        <input class="kf-textbox kf-org-profile-slack-invite-input" type="text" placeholder="Enter your @username to get a DM from @Kifi" ng-model="username"/>
         <span class="kf-org-profile-slack-invite-error" ng-show="$error" ng-bind="$error"></span>
         <input class="kf-button kf-button-large" type="submit" ng-click="sendInvite()"/>
       </div>
