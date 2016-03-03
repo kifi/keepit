@@ -41,6 +41,8 @@ object SlackTeamMembershipFactory {
     def withTeam(team: SlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.slackTeamId, slackTeamName = team.slackTeamName))
     def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
     def withScopes(scopes: Set[SlackAuthScope]) = this.copy(stm = stm.copy(scopes = scopes))
+
+    def withNextPersonalDigestAt(time: DateTime) = this.copy(stm = stm.withNextPersonalDigestAt(time))
   }
 
   def memberships(count: Int) = List.fill(count)(membership())
@@ -62,6 +64,8 @@ object SlackTeamFactory {
     def withName(newName: String) = this.copy(team = team.copy(slackTeamName = SlackTeamName(newName)))
     def withOrg(org: Organization) = this.copy(team = team.withOrganizationId(Some(org.id.get)))
     def withKifiBot(botUserId: SlackUserId, token: SlackBotAccessToken) = this.copy(team = team.withKifiBotIfDefined(Some(KifiSlackBot(botUserId, token))))
+
+    def withNoPersonalDigestsUntil(time: DateTime) = this.copy(team = team.withNoPersonalDigestsUntil(time))
   }
 }
 
