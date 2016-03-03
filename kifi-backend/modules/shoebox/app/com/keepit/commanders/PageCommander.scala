@@ -18,6 +18,7 @@ import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.models.SlackTeamRepo
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
@@ -40,6 +41,8 @@ class PageCommander @Inject() (
     keepDecorator: KeepDecorator,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    slackTeamRepo: SlackTeamRepo,
     basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
     normalizedURIInterner: NormalizedURIInterner,
@@ -233,8 +236,9 @@ class PageCommander @Inject() (
             qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
           }
           val sources = {
+            val slackTeamIds = slackTeamRepo.getSlackTeamIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toSet
             val allSources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1)
-            val slackSources = allSources.collect { case s: SlackAttribution => s }.distinctBy(s => (s.teamId, s.message.channel.id, s.message.timestamp))
+            val slackSources = allSources.collect { case s: SlackAttribution if slackTeamIds.contains(s.teamId) => s }.distinctBy(s => (s.teamId, s.message.channel.id, s.message.timestamp))
             val twitterSources = allSources.collect { case t: TwitterAttribution => t }.distinctBy(_.tweet.id)
             (slackSources ++ twitterSources).take(5).toSeq
           }
