@@ -87,7 +87,7 @@ angular.module('kifi')
           } else if (api.isValidFirefox) {
             platformName = 'Firefox';
           } else if (api.isValidSafari) {
-            platformName = 'Safari'
+            platformName = 'Safari';
           }
         }
         return platformName;
