@@ -33,7 +33,7 @@ angular.module('kifi')
           if (resp.data.error === 'slack_user_not_found') {
             $scope.$error = 'We can\'t find @' + username + ' in this team\'s Slack members.';
           } else if (resp.data.error === 'no_valid_token') {
-            $scope.$error = 'Your Slack admins have not allowed us to message their members.'
+            $scope.$error = 'Your Slack admins have not allowed us to message their members.';
           } else {
             $scope.$error = 'Something went wrong, please try again later.';
           }
