@@ -24,7 +24,7 @@ class FakeSlackClientImpl extends SlackClient {
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
   val channelLog: mutable.Map[(SlackTeamId, SlackChannelName), List[SlackMessage]] = mutable.Map.empty.withDefaultValue(List.empty)
   val membershipToken: mutable.Map[SlackAccessToken, (SlackTeamId, SlackUserId)] = mutable.Map.empty
-  val teamByToken: mutable.Map[SlackUserAccessToken, SlackTeamInfo] = mutable.Map.empty
+  val teamByToken: mutable.Map[SlackAccessToken, SlackTeamInfo] = mutable.Map.empty
   var isSlackDown = false
   var isSlackThrowingAFit = false
   private val inc = new AtomicLong(1442527939)
@@ -62,7 +62,7 @@ class FakeSlackClientImpl extends SlackClient {
     token.foreach { tk => membershipToken.put(tk, teamId -> userId) }
     channelLog.put(key, msg :: channelLog(key))
   }
-  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = () match {
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
     case _ if isSlackThrowingAFit => Future.failed(SlackAPIErrorResponse.TokenRevoked)
     case _ =>

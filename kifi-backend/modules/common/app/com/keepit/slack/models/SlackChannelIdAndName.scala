@@ -38,6 +38,11 @@ object SlackChannelId {
     Reads(_.validate[String].flatMap(parse[T](_).map(JsSuccess(_)).recover { case error => JsError(error.getMessage) }.get)),
     Writes(channelId => JsString(channelId.value))
   )
+
+  def isPublic(channelId: SlackChannelId): Boolean = channelId match {
+    case Public(_) => true
+    case _ => false
+  }
 }
 
 @json case class SlackChannelName(value: String)

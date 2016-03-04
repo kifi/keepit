@@ -167,7 +167,7 @@ class SlackIngestingActor @Inject() (
     val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
-        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
+        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
@@ -259,7 +259,7 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, teamId: SlackTeamId, channelId: Option[SlackChannelId], channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)
@@ -270,7 +270,11 @@ class SlackIngestingActor @Inject() (
     def getBatchedMessages(pageSize: PageSize, skipFailures: Boolean): Future[Seq[SlackMessage]] = FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
-        slackClient.searchMessages(token, request).map { response =>
+        val futureResponse = {
+          if (channelId.exists(SlackChannelId.isPublic)) slackClient.searchMessagesHoweverPossible(teamId, request, preferredTokens = Seq(token))
+          else slackClient.searchMessages(token, request)
+        }
+        futureResponse.map { response =>
           val allMessages = previousMessages ++ response.messages.matches.filterNot(m => lastMessageTimestamp.exists(m.timestamp <= _))
           val done = allMessages.length >= messagesPerIngestion || response.messages.paging.pages <= nextPage.page
           val messages = allMessages.take(messagesPerIngestion)
