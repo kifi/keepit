@@ -73,6 +73,7 @@ trait SlackClient {
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
+  def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence]
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit]
 }
 
@@ -169,6 +170,11 @@ class SlackClientImpl(
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
     slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
   }
+
+  def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence] = {
+    slackCall[SlackTeamInfo](SlackAPI.TeamInfo(token))((__ \ 'team).read)
+  }
+
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
     slackCall[Seq[SlackPublicChannelInfo]](SlackAPI.ChannelsList(token, excludeArchived), SlackClient.longTimeout)((__ \ 'channels).read)
   }
@@ -183,6 +189,7 @@ class SlackClientImpl(
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
     slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
   }
+
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = {
     slackCall[Unit](SlackAPI.InviteToChannel(token, invitee, channelId))(readUnit)
   }

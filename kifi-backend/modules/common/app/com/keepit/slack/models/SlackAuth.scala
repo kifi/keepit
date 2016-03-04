@@ -2,12 +2,14 @@ package com.keepit.slack.models
 
 import java.util.UUID
 import com.keepit.common.cache._
+import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
 import com.keepit.model.User
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -200,6 +202,36 @@ object SlackUserInfo {
   private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
 
   implicit val format: Format[SlackUserInfo] = Format(reads, writes)
+}
+
+sealed abstract class SlackUserPresenceState { val name: String }
+
+object SlackUserPresenceState {
+  case object Active extends SlackUserPresenceState("active")
+  case object Away extends SlackUserPresenceState("away")
+  case object Offline extends SlackUserPresenceState("offline")
+  case object Unknown extends SlackUserPresenceState("unknown")
+  val reads Reads[SlackUserPresenceState] = new Reads[SlackUserPresenceState] {
+    def reads(json: JsValue): JsResult[SlackUserPresenceState]
+  }
+
+}
+
+case class SlackUserPresence(
+  state: SlackUserPresenceState,
+  lastActivity: Option[DateTime],
+  originalJson: JsValue)
+
+object SlackUserPresence {
+  private val reads: Reads[SlackUserPresence] = (
+    (__ \ 'state).read[SlackUserPresenceState](SlackUserPresenceState.reads) and
+    (__ \ 'lastActivity).readNullable[DateTime](internalTime.DateTimeJsonLongFormat) and
+    Reads(JsSuccess(_))
+  )(SlackUserPresence.apply _)
+
+  private val writes: Writes[SlackUserPresence] = Writes(_.originalJson)
+
+  implicit val format: Format[SlackUserPresence] = Format(reads, writes)
 }
 
 case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {
