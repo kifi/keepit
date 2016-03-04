@@ -1,6 +1,8 @@
 package com.keepit.controllers.admin
 
+import akka.actor.ActorRef
 import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller._
 import com.keepit.common.db.Id
@@ -8,8 +10,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time.{Clock, _}
-import com.keepit.slack.{SlackClientWrapper, SlackOnboarder}
+import com.keepit.slack.{SlackPersonalDigestNotificationActor, SlackClientWrapper, SlackOnboarder}
 import com.keepit.slack.models._
+import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.Period
 import play.api.libs.json._
 
@@ -60,6 +63,7 @@ class AdminEventTriggerController @Inject() (
   libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
   slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   slackClient: SlackClientWrapper,
+  slackPersonalDigestActor: ActorInstance[SlackPersonalDigestNotificationActor],
   implicit val executionContext: ExecutionContext)
     extends AdminUserActions {
   import AdminEventTriggerController._
@@ -98,12 +102,13 @@ class AdminEventTriggerController @Inject() (
           slackTeamRepo.save(team.withNoPersonalDigestsUntil(now))
         }
         membership <- slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user).map { membership =>
-          slackMembershipRepo.save(membership.withNextPersonalDigestAt(now))
+          slackMembershipRepo.save(membership.withNextPersonalDigestAt(now minusYears 1))
         }
       } yield (team, membership)
     }.map {
       case Some((team, membership)) =>
         slackClient.sendToSlackHoweverPossible(trigger.team, trigger.user.asChannel, SlackMessageRequest.fromKifi("Forcing personal digest soon!"))
+        slackPersonalDigestActor.ref ! IfYouCouldJustGoAhead
         Json.obj("ok" -> true)
       case None =>
         Json.obj("ok" -> false, "err" -> "could not find team")
