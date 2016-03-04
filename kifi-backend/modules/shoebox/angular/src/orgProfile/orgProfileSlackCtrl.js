@@ -24,7 +24,7 @@ angular.module('kifi')
 
     $scope.sendInvite = function() {
       if ($scope.username) {
-        var username = $scope.username[0] === '@' ? $scope.username.substring(1) : $scope.username;
+        var username = $scope.username.replace(/@/g, '');
         orgProfileService.sendOrgMemberInviteViaSlack(profile.organization.id, username).then(function(data){
           if (data === '') {
             $scope.inviteResult = 'Your invite was successfully sent to @' + username + ', click on the link to accept it!';
