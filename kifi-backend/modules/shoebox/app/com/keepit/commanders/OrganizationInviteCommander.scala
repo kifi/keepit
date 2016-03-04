@@ -466,7 +466,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             userInfos.find(_.name == username) match {
               case None => Future.failed(SlackFail.SlackUserNotFound(username, slackTeam.slackTeamId))
               case Some(slackUser) =>
-                val invite: OrganizationInvite = persistInvitation(OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = userIdOpt, emailAddress = slackUser.profile.emailAddress), force = true)
+                val invite: OrganizationInvite = persistInvitation(OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = None, emailAddress = None), force = true)
                   .getOrElse(throw new Exception(s"can't create org (${orgId.id}) invite for ${slackUser.id} on slack team ${slackTeam.id.get.id}"))
                 val message = SlackMessageRequest.fromKifi {
                   DescriptionElements.formatForSlack(DescriptionElements(s"Here's your invitation to join ${org.name} on Kifi!",
