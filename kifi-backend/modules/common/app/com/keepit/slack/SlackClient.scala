@@ -65,7 +65,7 @@ trait SlackClient {
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
-  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
@@ -138,7 +138,7 @@ class SlackClientImpl(
     slackCall[Unit](SlackAPI.Test(token))(readUnit)
   }
 
-  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request), SlackClient.longTimeout)
   }
 

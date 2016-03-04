@@ -48,7 +48,7 @@ trait SlackClientWrapper {
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
   // These will potentially yield failed futures if the request cannot be completed
-  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
 
@@ -60,6 +60,8 @@ trait SlackClientWrapper {
   def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserInfo]
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
 
+  // *Dangerous* - these APIs are only token-agnostic for a subset of parameters  
+  def searchMessagesHoweverPossible(slackTeamId: SlackTeamId, request: SlackSearchRequest, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackSearchResponse]
 }
 
 @Singleton
@@ -209,7 +211,7 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
   }
 
-  def searchMessages(token: SlackUserAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
     slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
 
@@ -262,7 +264,7 @@ class SlackClientWrapperImpl @Inject() (
   private def withFirstValidToken[T](slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken], requiredScopes: Set[SlackAuthScope])(f: SlackAccessToken => Future[T]): Future[T] = {
     val tokens: Stream[SlackAccessToken] = {
       lazy val botTokenOpt = if (requiredScopes subsetOf SlackAuthScope.inheritableBotScopes) db.readOnlyMaster { implicit session =>
-        slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot.map(_.token))
+        slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot.map(_.token)).filter(!preferredTokens.contains(_))
       }
       else None
       lazy val userTokens = db.readOnlyMaster { implicit session =>
@@ -317,4 +319,11 @@ class SlackClientWrapperImpl @Inject() (
       slackClient.getUsers(token)
     }
   }
+
+  def searchMessagesHoweverPossible(slackTeamId: SlackTeamId, request: SlackSearchRequest, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackSearchResponse] = {
+    withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.SearchRead)) { token =>
+      slackClient.searchMessages(token, request)
+    }
+  }
+
 }
