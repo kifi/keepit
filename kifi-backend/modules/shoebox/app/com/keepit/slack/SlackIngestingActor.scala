@@ -63,6 +63,7 @@ class SlackIngestingActor @Inject() (
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
+  val ryanLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import SlackIngestionConfig._
 
   protected val minConcurrentTasks = minChannelIngestionConcurrency
@@ -208,7 +209,12 @@ class SlackIngestingActor @Inject() (
       ingestedMessages.headOption.foreach { msg =>
         slackChannelRepo.getOrCreate(slackTeam.slackTeamId, msg.channel.id, msg.channel.name)
       }
-      ingestedMessages.groupBy(_.userId)
+      ingestedMessages.groupBy(_.userId).foreach {
+        case (_, msgs) => slackTeamMembershipRepo.internWithMessage(slackTeam, msgs.maxBy(_.timestamp)) tap {
+          case (newMembership, true) => ryanLog.info("Created a new membership for user", newMembership.slackUsername.value, "in team", newMembership.slackTeamName.value, "by ingesting a message")
+          case _ =>
+        }
+      }
     }
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     lastMessageTimestamp.foreach { timestamp =>
