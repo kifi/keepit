@@ -24,15 +24,16 @@ import scala.util.{ Failure, Success, Try }
 
 object SlackPersonalDigestConfig {
   val delayBeforeFirstDigest = Duration.standardMinutes(1)
-  val minDelayBetweenPersonalDigests = Duration.standardDays(3)
   val minDelayInsideTeam = Duration.standardMinutes(10)
+  val immediateDigestAfterRecentMessageThreshold = Duration.standardMinutes(10)
+
   val delayAfterSuccessfulDigest = Duration.standardDays(3)
   val delayAfterFailedDigest = Duration.standardDays(1)
   val delayAfterNoDigest = Duration.standardDays(3)
   val maxProcessingDuration = Duration.standardHours(1)
-  val minIngestedLinksForPersonalDigest = 10
+  val minIngestedLinksForPersonalDigest = 2
 
-  val minDigestConcurrency = 0
+  val minDigestConcurrency = 1
   val maxDigestConcurrency = 10
 }
 
@@ -93,6 +94,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
     }
     digestOpt match {
       case None =>
+        slackLog.info(s"Considered sending a personal digest to ${membership.slackUsername} in ${membership.slackTeamName} but opted not to")
         db.readWrite { implicit s =>
           slackMembershipRepo.finishProcessing(membershipId, delayAfterNoDigest)
         }
@@ -107,7 +109,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
               }
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
-            slackLog.info("Sent a personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
+            slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
             db.readWrite { implicit s =>

@@ -190,21 +190,25 @@ class SlackIngestingActor @Inject() (
     val blacklist = settings.flatMap(_.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk })
     val (library, slackTeam, userBySlackIdentity) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
-      val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId)
+      val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId).getOrElse(throw new Exception(s"There is supposed to be a db-level integrity constraint for ${integration.slackTeamId}"))
       val usersBySlackIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities).flatMap { case (slackIdentity, stm) => stm.userId.map(slackIdentity -> _) }
       (lib, slackTeam, usersBySlackIdentity)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val rawBookmarksByUser = messages.groupBy(msg => userBySlackIdentity.get((integration.slackTeamId, msg.userId))).map {
-      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId, slackTeam, blacklist)).distinctBy(_.url)
+      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
         val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
-    messages.headOption.foreach { msg =>
-      db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
+    // Record a bit of information based on the messages we ingested: the channel, and any slack members
+    db.readWrite { implicit s =>
+      ingestedMessages.headOption.foreach { msg =>
+        slackChannelRepo.getOrCreate(slackTeam.slackTeamId, msg.channel.id, msg.channel.name)
+      }
+      ingestedMessages.groupBy(_.userId)
     }
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     lastMessageTimestamp.foreach { timestamp =>
@@ -227,8 +231,8 @@ class SlackIngestingActor @Inject() (
       urlClassifier.isSlackArchivedMessage(url)
   }
 
-  private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId, slackTeam: Option[SlackTeam], blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
-    if (ignoreMessage(message, slackTeam.flatMap(_.kifiBot.map(_.userId)).toSet)) Set.empty[RawBookmarkRepresentation]
+  private def toRawBookmarks(message: SlackMessage, slackTeam: SlackTeam, blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
+    if (ignoreMessage(message, slackTeam.kifiBot.map(_.userId).toSet)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
@@ -252,7 +256,7 @@ class SlackIngestingActor @Inject() (
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),
-            sourceAttribution = Some(RawSlackAttribution(message, slackTeamId)),
+            sourceAttribution = Some(RawSlackAttribution(message, slackTeam.slackTeamId)),
             note = None
           )
       }
