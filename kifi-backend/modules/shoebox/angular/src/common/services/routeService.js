@@ -113,7 +113,7 @@ angular.module('kifi')
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
       login: function(opts) {
-        return navRoute('/login/', opts);
+        return navRoute('/login', opts);
       },
 
       ////////////////////////////

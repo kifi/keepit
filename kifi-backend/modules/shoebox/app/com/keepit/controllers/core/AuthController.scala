@@ -15,6 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.time._
 import com.keepit.controllers.core.PostRegIntent._
+import com.keepit.controllers.website.HomeControllerRoutes
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -296,12 +297,12 @@ class AuthController @Inject() (
         val url = authHelper.processIntent(userRequest.userId, PostRegIntent.fromCookies(userRequest.cookies.toSet))
         val discardingCookies = PostRegIntent.discardingCookies
         val res = if (userRequest.user.state == UserStates.PENDING) { // todo(cam): kill UserStates.PENDING
-          Redirect(url)
+          Redirect(config.applicationBaseUrl + url)
         } else if (userRequest.user.state == UserStates.INCOMPLETE_SIGNUP) {
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
         } else {
           Future { inviteCommander.markPendingInvitesAsAccepted(userRequest.user.id.get, userRequest.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))) }
-          Redirect(url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
+          Redirect(config.applicationBaseUrl + url).withSession(userRequest.session - SecureSocial.OriginalUrlKey)
         }
         res.discardingCookies(discardingCookies: _*)
       case nonUserRequest: NonUserRequest[_] => {

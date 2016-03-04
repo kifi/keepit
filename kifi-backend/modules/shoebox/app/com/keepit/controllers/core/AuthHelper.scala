@@ -141,6 +141,7 @@ object PostRegIntent {
       case _ => None
     }
     def keepIntent = keepPubId.flatMap(Keep.decodePublicId(_).toOption).map(AutoJoinKeep(_, keepAuthToken))
+
     Stream(libIntent, orgIntent, keepIntent).flatten.headOption.getOrElse(NoIntent)
   }
   def requestToCookies(request: Request[_]): Seq[Cookie] = {
@@ -383,7 +384,7 @@ class AuthHelper @Inject() (
         BadRequest(Json.obj("error" -> formWithErrors.errors.head.message))
       }, {
         case sfi: SocialFinalizeInfo =>
-          handleSocialFinalizeInfo(sfi, NoIntent, isFinalizedImmediately = false)
+          handleSocialFinalizeInfo(sfi, PostRegIntent.fromCookies(request.cookies.toSet), isFinalizedImmediately = false)
       })
   }
 
@@ -430,7 +431,7 @@ class AuthHelper @Inject() (
         Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
       }, {
         case efi: EmailPassFinalizeInfo =>
-          handleEmailPassFinalizeInfo(efi, NoIntent)
+          handleEmailPassFinalizeInfo(efi, PostRegIntent.fromCookies(request.cookies.toSet))
       }
     )
   }
