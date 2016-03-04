@@ -36,7 +36,7 @@ object AdminEventTriggerController {
     case class SlackTeamDigest(team: SlackTeamId, user: SlackUserId) extends EventTrigger
     object SlackTeamDigest { val reads = Json.reads[SlackTeamDigest] }
 
-    case class SlackPersonalDigest(team: SlackTeamId, user: SlackUserId) extends EventTrigger
+    case class SlackPersonalDigest(team: SlackTeamId, user: SlackUserId, forceFirst: Boolean) extends EventTrigger
     object SlackPersonalDigest { val reads = Json.reads[SlackPersonalDigest] }
 
     case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
@@ -102,7 +102,7 @@ class AdminEventTriggerController @Inject() (
           slackTeamRepo.save(team.withNoPersonalDigestsUntil(now))
         }
         membership <- slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user).map { membership =>
-          slackMembershipRepo.save(membership.withNextPersonalDigestAt(now minusYears 1))
+          slackMembershipRepo.save(membership.withNextPersonalDigestAt(now minusYears 1).copy(lastPersonalDigestAt = if (trigger.forceFirst) None else membership.lastPersonalDigestAt))
         }
       } yield (team, membership)
     }.map {
