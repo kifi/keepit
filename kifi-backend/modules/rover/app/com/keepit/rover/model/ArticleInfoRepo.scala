@@ -185,7 +185,7 @@ class ArticleInfoRepoImpl @Inject() (
   def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, None)
 
   private def updateLastFetchingAt(ids: Seq[Id[RoverArticleInfo]], lastFetchingAt: Option[DateTime])(implicit session: RWSession): Unit = {
-    (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastFetchingAt).update(lastFetchingAt)
+    (for (r <- rows if r.id.inSet(ids.toSet)) yield (r.updatedAt, r.lastFetchingAt)).update((clock.now, lastFetchingAt))
   }
 
   def updateAfterFetch[A <: Article](url: String, kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
@@ -244,7 +244,7 @@ class ArticleInfoRepoImpl @Inject() (
   def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, None)
 
   private def updateLastImageProcessingAt(ids: Seq[Id[RoverArticleInfo]], lastImageProcessingAt: Option[DateTime])(implicit session: RWSession): Unit = {
-    (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastImageProcessingAt).update(lastImageProcessingAt)
+    (for (r <- rows if r.id.inSet(ids.toSet)) yield (r.updatedAt, r.lastImageProcessingAt)).update((clock.now, lastImageProcessingAt))
   }
 
   def updateAfterImageProcessing[A <: Article](url: String, kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit = {
