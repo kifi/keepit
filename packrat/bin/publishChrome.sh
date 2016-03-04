@@ -31,9 +31,13 @@ AUTH_URI=$(echo $CLIENT_SECRET_JSON | $JSON_CMD installed.auth_uri)
 TOKEN_URI=$(echo $CLIENT_SECRET_JSON | $JSON_CMD installed.token_uri)
 REDIRECT_URI=$(echo $CLIENT_SECRET_JSON | $JSON_CMD installed.redirect_uris.0)
 
-echo $'\nPublishing Chrome extension.'
+OAUTH_URL="$AUTH_URI?client_id=$CLIENT_ID&redirect_uri=$REDIRECT_URI&response_type=code&scope=https://www.googleapis.com/auth/chromewebstore"
 
-open "$AUTH_URI?client_id=$CLIENT_ID&redirect_uri=$REDIRECT_URI&response_type=code&scope=https://www.googleapis.com/auth/chromewebstore"
+echo $'\nPublishing Chrome extension.'
+echo "Opening OAUTH URL in default browser..."
+echo $'\n'$OAUTH_URL$'\n'
+
+open $OAUTH_URL
 read -p "Auth with dev@42go.com, then copy/paste the code here: " CODE
 
 OAUTH_RESPONSE=$(
