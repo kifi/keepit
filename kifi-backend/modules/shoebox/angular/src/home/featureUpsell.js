@@ -16,7 +16,7 @@ angular.module('kifi')
         scope.me = profileService.me;
         var hasFeatureUpsellExp = (scope.me.experiments || []).indexOf('slack_upsell_widget') !== -1;
         var orgToSync = scope.me.orgs.filter(function (org) {
-          return !org.slackTeam;
+          return !org.slackTeam || !org.slackTeam.publicChannelsLastSyncedAt;
         })[0];
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
