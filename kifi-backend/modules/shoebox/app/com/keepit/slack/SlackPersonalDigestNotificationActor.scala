@@ -100,7 +100,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
         }
         Future.successful(())
       case Some(digest) =>
-        slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, describePersonalDigest(digest)).map(_ => ()).andThen {
+        val message = if (membership.lastPersonalDigestAt.isEmpty) messageForFirstTimeDigest(digest) else messageForRegularDigest(digest)
+        slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, messageForRegularDigest(digest)).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
               slackMembershipRepo.updateLastPersonalDigest(membershipId)
@@ -157,8 +158,36 @@ class SlackPersonalDigestNotificationActor @Inject() (
     } yield digest
   }
 
-  // "Pure" function
-  private def describePersonalDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
+  // "Pure" functions
+  private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
+    import DescriptionElements._
+    val slackTeamId = digest.slackMembership.slackTeamId
+    val text = DescriptionElements(
+      SlackEmoji.wave,
+      "Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved of couple of links you shared.",
+      "I also scanned the text on those pages so you can search for them more easily.",
+      "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)), "to get:"
+    )
+    val attachments = List(
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.magnifyingGlass, "Google search integration", "-",
+        "See the pages your coworkers are shared on top of Google search results"
+      )))),
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.pencil, "On the page", "-",
+        "Ever wonder if your coworkers are already talking about an article you're looking at?",
+        "If they are, I'll give you a link to the conversation."
+      )))),
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.robotFace,
+        "Also, my binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to any messages you send my way  :zipper_mouth_face:.",
+        "You can still", "opt to stop receiving notifications" --> LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false)),
+        "or if you've got questions email my human friends at support@kifi.com."
+      ))))
+    )
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
+  }
+  private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }

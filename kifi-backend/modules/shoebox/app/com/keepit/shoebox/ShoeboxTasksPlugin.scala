@@ -57,7 +57,7 @@ class ShoeboxTasksPlugin @Inject() (
     scheduleTaskOnLeader(slackIngestingActor.system, 3 minute, 20 seconds, slackIngestingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackKeepAttributionActor.system, 1 minute, 30 minutes, slackKeepAttributionActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 5 minutes, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 1 minute, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop() {
