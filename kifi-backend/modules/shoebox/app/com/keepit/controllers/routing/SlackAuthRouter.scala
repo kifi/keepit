@@ -11,11 +11,13 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
 import com.keepit.model._
 import com.keepit.slack.SlackTeamCommander
 import com.keepit.slack.models._
-import play.api.mvc.Result
+import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
+import play.api.mvc.{ Cookie, Result }
 import securesocial.core.SecureSocial
 import views.html
 
@@ -173,7 +175,7 @@ class SlackAuthRouter @Inject() (
 
     val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack" + modelParams + s"&slackTeamId=${slackTeamId.value}"
 
-    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
+    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url)).withCookies(Cookie(PostRegIntent.onFailUrlKey, slackAuthPage.absolute))
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {
