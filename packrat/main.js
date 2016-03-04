@@ -476,7 +476,7 @@ var socketHandlers = {
       }
     }
     function updatePic(u) {
-      if (u.id === me.id) {
+      if (u && u.id === me.id) {
         u.pictureName = name;
       }
     }

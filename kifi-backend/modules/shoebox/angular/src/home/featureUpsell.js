@@ -4,8 +4,8 @@
 angular.module('kifi')
 
 .directive('kfFeatureUpsell', [
-  '$location', '$window', '$rootScope', '$state', '$analytics', '$q', 'profileService',
-  function($location, $window, $rootScope, $state, $analytics, $q, profileService) {
+  '$location', '$window', '$rootScope', '$state', '$analytics', '$q', 'profileService', 'slackService', 'messageTicker',
+  function($location, $window, $rootScope, $state, $analytics, $q, profileService, slackService, messageTicker) {
 
     return {
       restrict: 'A',
@@ -14,20 +14,31 @@ angular.module('kifi')
       templateUrl: 'home/featureUpsell.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
-        var hasFeatureUpsellExp = (profileService.me.experiments || []).indexOf('slack_upsell_widget') !== -1;
+        var hasFeatureUpsellExp = (scope.me.experiments || []).indexOf('slack_upsell_widget') !== -1;
+        scope.orgToSync = scope.me.orgs.filter(function (org) {
+          return !org.slackTeam || !org.slackTeam.publicChannelsLastSyncedAt;
+        })[0];
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
-        (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs){
-          scope.showFeatureUpsell = hasFeatureUpsellExp && prefs.slack_upsell_widget;
+        (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function (prefs) {
+          scope.showFeatureUpsell = scope.orgToSync && hasFeatureUpsellExp && prefs.slack_upsell_widget;
         });
 
         scope.hide = function () {
           scope.showFeatureUpsell = false;
           profileService.savePrefs({ slack_upsell_widget: false });
+          $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackHideUpsellWidget' });
         };
 
         scope.clickedConnectSlack = function() {
           $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackSyncAllChannels' });
+          slackService.publicSync(scope.orgToSync.id).then(function (resp) {
+            if (resp.redirect) {
+              $window.location = resp.redirect;
+            } else {
+              messageTicker({ text: 'Oops, that didn’t work. Try again?', type: 'red' });
+            }
+          });
         };
 
         scope.clickedLearnMore = function() {

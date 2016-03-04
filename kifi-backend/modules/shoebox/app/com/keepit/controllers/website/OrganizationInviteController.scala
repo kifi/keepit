@@ -137,9 +137,10 @@ class OrganizationInviteController @Inject() (
     Organization.decodePublicId(pubId) match {
       case Failure(_) => Future.failed(OrganizationFail.INVALID_PUBLIC_ID)
       case Success(orgId) =>
-        (request.body \ "username").asOpt[SlackUsername] match {
+        (request.body \ "username").asOpt[String] match {
           case None => Future.failed(OrganizationFail.BAD_PARAMETERS)
-          case Some(username) =>
+          case Some(rawUsername) =>
+            val username = SlackUsername(rawUsername.replaceAllLiterally("@", ""))
             orgInviteCommander.sendOrganizationInviteViaSlack(username, orgId, request.userIdOpt)
               .imap { _ => NoContent }
               .recover {

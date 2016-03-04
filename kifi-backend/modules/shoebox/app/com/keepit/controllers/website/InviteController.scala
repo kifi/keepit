@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.controllers.core.PostRegIntent._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ Invitation, _ }
 import com.keepit.payments._
@@ -248,7 +249,7 @@ class InviteController @Inject() (db: Database,
         Redirect(redirectUrl)
       case nur: NonUserRequest[_] =>
         val creditCode = CreditCode.normalize(creditCodeStr)
-        Redirect("/signup").withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
+        Redirect("/signup").withCookies(Cookie(intentKey, ApplyCreditCode.intentValue), Cookie(ApplyCreditCode.creditCodeKey, creditCode.value))
     }
   }
 

@@ -20,6 +20,7 @@ CREATE TABLE slack_team_membership (
   last_processing_at DATETIME DEFAULT NULL,
   last_processed_at DATETIME DEFAULT NULL,
   next_personal_digest_at DATETIME DEFAULT NULL,
+  last_ingested_message_timestamp VARCHAR(32) DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
