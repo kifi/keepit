@@ -181,15 +181,12 @@ class KeepCommanderImpl @Inject() (
       (attributions, keepInfos)
     }
     val twitterKeeps = keepInfos.map(_._2).filter { keep => TwitterHandle.fromTweetUrl(keep.url).nonEmpty }.toSeq
-    val twitterKeepsSummariesF: Future[Map[Id[NormalizedURI], RoverArticleSummary]] = if (twitterKeeps.isEmpty) {
-      Future.successful(Map.empty)
-    } else {
-      roverClient.getArticleSummaryByUris(twitterKeeps.map(_.uriId).toSet)
-    }
-    val basicKeeps = twitterKeepsSummariesF map { twitterKeepsSummaries =>
-      keepInfos map {
+    val twitterKeepsSummariesF = roverClient.getArticleSummaryByUris(twitterKeeps.map(_.uriId).toSet)
+
+    twitterKeepsSummariesF.map { twitterKeepsSummaries =>
+      keepInfos.map {
         case (kId, keep, author) =>
-          val title = if (twitterKeeps.contains(keep)) twitterKeepsSummaries(keep.uriId).description.map { desc => desc.abbreviate(256) } else keep.title
+          val title = twitterKeepsSummaries.get(keep.uriId).flatMap(_.description.map(_.abbreviate(256))) orElse keep.title
           kId -> BasicKeep(
             id = keep.externalId,
             title = title,
@@ -199,9 +196,8 @@ class KeepCommanderImpl @Inject() (
             author = author,
             attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
           )
-      }
+      }.toMap
     }
-    basicKeeps.map(_.toMap)
   }
 
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
