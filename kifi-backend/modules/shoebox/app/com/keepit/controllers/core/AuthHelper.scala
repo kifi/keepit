@@ -90,7 +90,7 @@ object PostRegIntent {
 
   val intentKey = "intent"
   val onFailUrlKey = "onFailUrl"
-  val discardingCookies = Set(Set(intentKey), AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
+  val discardingCookies = Set(Set(intentKey, onFailUrlKey), AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
 
   def fromCookies(cookies: Set[Cookie])(implicit config: PublicIdConfiguration): PostRegIntent = {
     val cookieByName = cookies.groupBy(_.name).mapValuesStrict(_.head)

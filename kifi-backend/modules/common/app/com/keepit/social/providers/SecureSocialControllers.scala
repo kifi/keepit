@@ -111,9 +111,9 @@ object ProviderController extends Controller with Logging {
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
         log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
-        val slackTeamIdCookie = IdentityHelpers.parseSlackIdMaybe(userIdentity.identityId).toOption.map {
-          case (slackTeamId, _) => Cookie("slackTeamId", slackTeamId.value)
-        }
+        val slackTeamIdCookies = IdentityHelpers.parseSlackIdMaybe(userIdentity.identityId).toOption.map {
+          case (slackTeamId, _) => Seq(Cookie("slackTeamId", slackTeamId.value), Cookie("intent", "slack"))
+        }.getOrElse(Seq.empty)
         val kifiCookies = Seq(
           request.cookies.get("intent"),
           request.cookies.get("publicOrgId"),
@@ -121,9 +121,8 @@ object ProviderController extends Controller with Logging {
           request.cookies.get("publicLibraryId"),
           request.cookies.get("libAuthToken"),
           request.cookies.get("publicKeepId"),
-          request.cookies.get("keepAuthToken"),
-          slackTeamIdCookie
-        ).flatten
+          request.cookies.get("keepAuthToken")
+        ).flatten ++ slackTeamIdCookies
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -

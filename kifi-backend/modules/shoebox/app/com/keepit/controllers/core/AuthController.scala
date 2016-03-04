@@ -597,7 +597,7 @@ class AuthController @Inject() (
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
         Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie).withSession(request.session)
       case nonUserRequest: NonUserRequest[_] =>
-        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", slackTeamId = slackTeamId.map(_.value)).url
+        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = slackTeamId.map(_ => PostRegIntent.Slack.intentValue), slackTeamId = slackTeamId.map(_.value)).url
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
     }
   }
