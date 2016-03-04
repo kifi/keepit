@@ -119,12 +119,12 @@ angular.module('kifi')
       };
 
       var params = $scope.userData ? {
-        libraryId : $scope.userData.libraryId,
+        publicLibraryId : $scope.userData.libraryId,
         intent : $scope.userData.intent,
         libAuthToken: $scope.userData.libAuthToken,
-        orgId : $scope.userData.orgId,
+        publicOrgid : $scope.userData.orgId,
         orgAuthToken: $scope.userData.orgAuthToken,
-        keepId: $scope.userData.keepId,
+        publicKeepId: $scope.userData.keepId,
         keepAuthToken: $scope.userData.keepAuthToken
       } : {};
       Object.keys(params).forEach(function (k) {
@@ -135,6 +135,7 @@ angular.module('kifi')
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);
       $scope.slackSignupPath = routeService.socialSignup('slack', params);
+      $scope.loginPath = routeService.login(params);
 
       $scope.emailSubmitted = false;
 
@@ -205,7 +206,7 @@ angular.module('kifi')
           password: $scope.userData.password,
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.userData.libraryId, // todo remove me
+          libraryPublicId: $scope.userData.libraryId,
           libAuthToken: $scope.userData.libAuthToken,
           orgPublicId: $scope.userData.orgId,
           orgAuthToken: $scope.userData.orgAuthToken,
@@ -214,7 +215,7 @@ angular.module('kifi')
           hook: $scope.userData.hook // todo implement
         };
 
-        ['modelPubId', 'authToken'].forEach(function (k) {
+        Object.keys(fields).forEach(function (k) {
           if (fields[k] === null || fields[k] === undefined || fields[k] === '') {
             delete fields[k];
           }
