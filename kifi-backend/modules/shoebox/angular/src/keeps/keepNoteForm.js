@@ -662,7 +662,7 @@ angular.module('kifi')
             .on('click', '.kf-knf-cancel', onCancelClick)
             .on('click', '.kf-knf-save', onSaveClick);
           var $note = $form.find('.kf-knf-editor')
-            .html($filter('noteHtml')(noteText))
+            .html($filter('noteHtml')(noteText, true))
             .data({
               libraryId: libraryId,
               keepId: keepId,

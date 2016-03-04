@@ -34,10 +34,12 @@
         </button>
       </div>
       <div class="kf-keep-card-note-container">
-        <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
-             ng-if="::keep.note || canEditKeep"></div>
+        <div class="kf-keep-card-note" ng-show="::displayNote && !noteAttribution" ng-bind-html="::displayNote|noteHtml"></div>
+        <div class="kf-keep-card-note" ng-if="::displayNote && noteAttribution === 'Slack'"><span ng-bind-html="::displayNote|slackText"></span> <span class="kf-keep-card-note-via">(via Slack)</span></div>
+        <div class="kf-keep-card-note" ng-if="::displayNote && noteAttribution === 'Twitter'"><span ng-bind="::displayNote"></span> <span class="kf-keep-card-note-via">(via Twitter)</span></div>
+
         <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
-                ng-if="canEditKeep && galleryView && !keep.note && keep.author.id === me.id">Add a note
+                ng-if="canEditKeep && galleryView && !displayNote && keep.author.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>

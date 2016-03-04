@@ -267,14 +267,15 @@ angular.module('kifi')
 })
 
 .filter('noteHtml', [
-  'HTML', '$filter',
-  function (HTML, $filter) {
+  'HTML', '$filter', 'emojiService',
+  function (HTML, $filter, emojiService) {
     var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
     var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
     var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
     var backslashUnescapeRe = /\\(.)/g;
     var tagUrl = $filter('tagUrl');
-    return function noteTextToHtml(text) {  // keep in sync with extension
+    return function noteTextToHtml(text, cleanText) {  // keep in sync with extension
+      // cleanText is whether stylization shouldn't happen, such as emoji
       if (!text) {
         return '';
       }
@@ -287,7 +288,43 @@ angular.module('kifi')
       for (i = 0; i < parts.length; i += 2) {
         parts[i] = HTML.escapeElementContent(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
       }
-      return parts.join('');
+      var html = parts.join('');
+      return cleanText ? html : emojiService.decode(html);
     };
+  }
+])
+
+.filter('slackText', [
+  'HTML', 'emojiService',
+  function (HTML, emojiService) {
+    var slackSpecialEntityRe = /<@[A-Z].*?>/g;
+
+    function massageSlackEntities(message) {
+
+      var matches = [];
+      var formatted = message || '';
+      formatted = formatted.replace(slackSpecialEntityRe, '');
+
+      // Fill an array with match objects from slackUrlEntityRe
+      for (var m, slackUrlEntityRe = /<(.*?)\|(.*?)>|<(.*?)>/g; m = slackUrlEntityRe.exec(formatted); matches.push(m)) {} // jshint ignore:line
+      matches.forEach(function (m) {
+        var fullMatch = m[0];
+        if (formatted === fullMatch) {
+          formatted = '';
+        } else {
+          var linkText = m[3] || m[2];
+          var linkUrl = m[3] || m[1];
+          var trimmedText = linkText.length < 30 ? linkText : linkText.slice(0, 25) + '…';
+          var entity = '<a href="' + HTML.escapeDoubleQuotedAttr(linkUrl) + '">' + HTML.escapeElementContent(trimmedText) + '</a>';
+
+          formatted = formatted.replace(fullMatch, entity);
+        }
+      });
+
+      var emojized = emojiService.decode(formatted);
+
+      return emojized;
+    }
+    return massageSlackEntities;
   }
 ]);
