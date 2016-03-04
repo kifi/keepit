@@ -300,7 +300,7 @@ angular.module('kifi')
               return textPortion.length > 0;
             };
 
-            if (noteMayHaveFallback && !noteHasSubstance(keep.note) && !scope.noteAttribution) {
+            if (noteMayHaveFallback && !noteHasSubstance(keep.note)) {
               if (keep.sourceAttribution.twitter) {
                 scope.displayNote = keep.sourceAttribution.twitter.tweet.text;
                 scope.noteAttribution = 'Twitter';
