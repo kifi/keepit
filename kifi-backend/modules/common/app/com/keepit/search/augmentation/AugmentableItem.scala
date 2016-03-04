@@ -19,7 +19,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: Id[Keep], externalId: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: Id[Keep], externalId: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], organizationId: Option[Id[Organization]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
@@ -83,8 +83,11 @@ object ItemAugmentationResponse {
   val empty = ItemAugmentationResponse(Map.empty, AugmentationScores.empty)
 }
 
+// todo(Léo): reconsider keeps, include sources
 case class LimitedAugmentationInfo(
   keep: Option[RestrictedKeepInfo],
+  keeps: Seq[RestrictedKeepInfo],
+  keepsOmitted: Int,
   keepers: Seq[(Id[User], DateTime)],
   keepersOmitted: Int,
   keepersTotal: Int,
@@ -101,7 +104,7 @@ object LimitedAugmentationInfo {
     Json.format[LimitedAugmentationInfo]
   }
 
-  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
+  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }
 
 case class SharingUserInfo(

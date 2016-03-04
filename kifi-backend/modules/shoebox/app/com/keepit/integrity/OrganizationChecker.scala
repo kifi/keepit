@@ -86,7 +86,7 @@ class OrganizationChecker @Inject() (
       val zombieLibs = libraryRepo.getBySpace(org.id.get, excludeState = Some(LibraryStates.INACTIVE))
       val zombieHandles = handleOwnershipRepo.getByOwnerId(Some(HandleOwner.fromOrganizationId(org.id.get)), excludeState = Some(HandleOwnershipStates.INACTIVE))
       val zombieConfig = Some(organizationConfigurationRepo.getByOrgId(org.id.get)).filter(_.state == OrganizationConfigurationStates.ACTIVE)
-      val zombieKtls = keepToLibraryRepo.getAllByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+      val zombieKtls = keepToLibraryRepo.getByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE), 0, 20000)
       val zombieSlackIngestions = slackChannelToLibraryRepo.getIntegrationsByOrg(org.id.get).filter(_.state == SlackChannelToLibraryStates.ACTIVE)
 
       zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined ||
@@ -143,7 +143,7 @@ class OrganizationChecker @Inject() (
           zombieConfig.foreach(organizationConfigurationRepo.deactivate)
         }
 
-        val zombieKtls = keepToLibraryRepo.getAllByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+        val zombieKtls = keepToLibraryRepo.getByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE), 0, 20000)
         if (zombieKtls.nonEmpty) {
           airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie ktls: ${zombieKtls.flatMap(_.id)}")
           zombieKtls.foreach(keepToLibraryRepo.deactivate)

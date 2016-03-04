@@ -15,6 +15,8 @@ angular.module('kifi')
     return {
       event: post(shoebox, '/events'),
 
+      fetchPrefs: get(shoebox, '/user/prefs', 30),
+
       getLibraryInfos: get(shoebox, '/libraries', 30),
       getBasicLibraries: get(shoebox, '/users/:id/basicLibraries?offset=:offset&limit=:limit'),
       getLibraryInfoById: get(shoebox, '/libraries/:id/summary', 30),
@@ -36,6 +38,7 @@ angular.module('kifi')
       getOrgLibraries: get(shoebox, '/organizations/:id/libraries', 30),
       getOrgBasicLibraries: get(shoebox, '/organizations/:id/basicLibraries?offset=:offset&limit=:limit'),
       sendOrgMemberInvite: post(shoebox, '/organizations/:id/members/invite'),
+      sendOrgMemberInviteViaSlack: post(shoebox, '/organizations/:id/sendOrganizationInviteViaSlack'),
       declineOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/decline'),
       acceptOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/accept?authToken=:authToken'),
       cancelOrgMemberInvite: post(shoebox, '/organizations/:id/members/invites/cancel'),
@@ -45,6 +48,9 @@ angular.module('kifi')
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
+      blacklistBackfillWarning: post(shoebox, '/organizations/:id/blacklistBackfill'),
+      blacklistBackfillDelete: post(shoebox, '/organizations/:id/blacklistBackfill'),
+      mirrorComments: post(shoebox, '/organizations/:id/slack/mirrorComments?turnOn=:turnOn'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
@@ -111,7 +117,6 @@ angular.module('kifi')
       connectSlack: post(shoebox, '/organizations/:teamId/slack/connect?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
 
-    // eliza
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
       getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),

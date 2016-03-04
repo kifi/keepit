@@ -1,15 +1,25 @@
 <div class="kf-org-profile-slack">
   <div ui-view></div>
   <div class="kf-org-profile-slack-box">
-    <p class="kf-org-profile-slack-title">Get access to your Slack team's libraries of links on Kifi</p>
+    <span class="kf-org-profile-slack-title">Get access to your Slack team's libraries of links on Kifi</span>
     <a
       class="kf-button kf-button-large kf-org-profile-slack-button"
-      href="https://www.kifi.com/link/slack"
+      ng-href="{{ 'https://www.kifi.com/signup/slack?slackTeamId=' + slackTeamId }}"
       target="_self"
       ng-click="linkSlack($event)"
+      ng-show="!requestFailed"
     >
       Continue with <img class="kf-org-profile-slack-image" src="/img/slack-monochrome-white.2x.png" />
     </a>
+    <div ng-show="requestFailed">
+      <div ng-show="!inviteResult">
+        <label class="kf-org-profile-slack-invite-text">Can't sign up with Slack? Ask @Kifi bot for an invite!</label>
+        <input class="kf-textbox kf-org-profile-slack-invite-input" type="text" placeholder="Enter your @username to get a DM from @Kifi" ng-model="username"/>
+        <span class="kf-org-profile-slack-invite-error" ng-show="$error" ng-bind="$error"></span>
+        <input class="kf-button kf-button-large" type="submit" ng-click="sendInvite()"/>
+      </div>
+      <span class="kf-org-profile-slack-invite-success" ng-bind="inviteResult"></span>
+    </div>
     <p ng-if="!userLoggedIn" class="kf-org-profile-slack-login">Already a Kifi member? <a class="kf-link kf-link-underline kf-link-blue" ng-href="{{ 'https://www.kifi.com/login/' }}" target="_self" ng-click="trackClick('clickedLogin')">Log in</a></p>
   </div>
 </div>

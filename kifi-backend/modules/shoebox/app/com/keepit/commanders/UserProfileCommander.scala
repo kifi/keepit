@@ -6,6 +6,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.social.BasicUserRepo
@@ -59,9 +60,9 @@ class UserProfileCommander @Inject() (
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
-      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
+      val membershipsByLibId = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
       val libraryInfos = libraryCardCommander.createLibraryCardInfos(libs, owners, user.id, true, idealSize) zip libs
-      val membershipInfos = libs.map { lib => lib.id.get -> memberships(lib.id.get).map(libraryMembershipCommander.createMembershipInfo) }.toMap
+      val membershipInfos = membershipsByLibId.mapValuesStrict(libraryMembershipCommander.createMembershipInfo)
       (libraryInfos, membershipInfos)
     }
     libraryInfos map {
@@ -83,7 +84,7 @@ class UserProfileCommander @Inject() (
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           following = Some(true),
-          membership = membershipInfosByLibrary(lib.id.get),
+          membership = membershipInfosByLibrary.get(lib.id.get),
           invite = None,
           permissions = info.permissions,
           modifiedAt = lib.updatedAt,

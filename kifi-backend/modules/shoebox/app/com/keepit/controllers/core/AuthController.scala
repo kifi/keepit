@@ -152,7 +152,7 @@ class AuthController @Inject() (
         res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
       }
     } else if (res.header.status == 400) {
-      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider, body=${res.body}")
+      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider")
       Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
     } else {
       res
@@ -194,7 +194,7 @@ class AuthController @Inject() (
             user => completeAuthentication(user, request.session)
           ) match {
               case result if result.header.status == 400 =>
-                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider, body=${result.body}")
+                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider")
                 Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
               case result => result
             }
@@ -343,23 +343,22 @@ class AuthController @Inject() (
     provider: String,
     publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String],
     publicOrgId: Option[String], orgAuthToken: Option[String],
-    publicKeepId: Option[String], keepAuthToken: Option[String]) = Action.async(parse.anyContent) { implicit request =>
+    publicKeepId: Option[String], keepAuthToken: Option[String], slackTeamId: Option[String]) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map {
       case badResult if badResult.header.status == 400 =>
-        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status} and body ${badResult.body}")
+        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status}")
         Redirect("/signup").discardingCookies(PostRegIntent.discardingCookies: _*)
       case result =>
         authHelper.transformResult(result) { (_, sess: Session) =>
           // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-          val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
-
+          val session = if (sess.get(SecureSocial.OriginalUrlKey).isEmpty) (sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId else sess
           // todo implement POST hook
           // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
           // ie, auto follow library, auto friend, etc
 
           val cookies = PostRegIntent.requestToCookies(request)
-          res.withCookies(cookies: _*)
+          result.withCookies(cookies: _*).withSession(session)
         }
     }
   }
@@ -595,9 +594,9 @@ class AuthController @Inject() (
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))
         val discardedCookie = DiscardingCookie(Slack.slackTeamIdKey)
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
-        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie)
+        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie).withSession(request.session)
       case nonUserRequest: NonUserRequest[_] =>
-        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = Some("slack")).url + slackTeamId.map(id => s"&slackTeamId=${id.value}").getOrElse("")
+        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", slackTeamId = slackTeamId.map(_.value)).url
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
     }
   }

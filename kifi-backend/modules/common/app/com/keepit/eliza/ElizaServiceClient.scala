@@ -13,7 +13,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.discussion.{CrossServiceMessage, Discussion, Message}
+import com.keepit.discussion.{MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -125,7 +125,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
   def getChangedMessagesFromKeeps(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message]): Future[Seq[CrossServiceMessage]]
   def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]]
@@ -318,6 +318,7 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].msgs
     }
   }
+
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
     import GetDiscussionsForKeeps._
     val request = Request(keepIds)
@@ -340,9 +341,10 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].unreadCount
     }
   }
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], sourceOpt: Option[MessageSource]): Future[Message] = {
     import SendMessageOnKeep._
-    val request = Request(userId, text, keepId)
+    val source = sourceOpt.getOrElse { airbrakeNotifier.notify(s"[messageSource] $userId sent a message on $keepId with no source"); MessageSource.UNKNOWN }
+    val request = Request(userId, text, keepId, source)
     call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].msg
     }
@@ -436,7 +438,7 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object SendMessageOnKeep {
-    case class Request(userId: Id[User], text: String, keepId: Id[Keep])
+    case class Request(userId: Id[User], text: String, keepId: Id[Keep], source: MessageSource)
     case class Response(msg: Message)
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]

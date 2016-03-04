@@ -152,10 +152,11 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     .hoverfu('.kifi-keep-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
-        if (o.libraries.length || o.keepers.length || o.related.length) {
+        if (o.libraries.length || o.keepers.length || o.sources.length) {
           var params = setSocialParams(o, {
             cssClass: 'kifi-keepers-hover',
-            kept: o.kept
+            kept: o.kept,
+            noCloseButton: true
           });
           k.render('html/keeper/keepers', params, function (html) {
             configureHover(attachSocialToolTipHandlers($(html), params, 'keepButton'), {
@@ -171,7 +172,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               friendsShown: params.keepers.length,
               friendsElided: params.numMore || undefined,
               librariesShown: params.libs.length,
-              relatedPagesShown: (params.pages || []).length
+              sourcesShown: params.sources.length,
+              slackShown: params.sources.filter(isSlack).length,
+              twitterShown: params.sources.filter(isTwitter).length
             });
           });
         } else {
@@ -364,22 +367,26 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function attachSocialToolTipHandlers($tip, params, subsource) {
-    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib,.kifi-keepers-page', function () {
+    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib,.kifi-keepers-source,.kifi-keepers-h-close', function () {
       var a = this, url = a.href;
-      if (url.indexOf('?') < 0) {
+      if (url && url.indexOf('?') < 0) {
         a.href = url + '?o=xst';
         setTimeout(function () {
           a.href = url;
         });
       }
       var action;
-      if (a.classList.contains('kifi-keepers-page')) {
-        action = 'clickedRelatedPage';
+      if (a.classList.contains('kifi-keepers-source')) {
+        action = 'clickedSource';
       } else if (a.classList.contains('kifi-keepers-lib')) {
-        action = 'clickedLibrary'
-      } else {
-        action = 'clickedFriend'
+        action = 'clickedLibrary';
+      } else if (a.classList.contains('kifi-keepers-pic')) {
+        action = 'clickedFriend';
+      } else if (a.classList.contains('kifi-keepers-h-close')) {
+        action = 'clickedClose';
+        $tip.hoverfu('hide');
       }
+
       api.port.emit('track_notification_click', {
         category: 'socialToolTip',
         action: action,
@@ -387,7 +394,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
         friendsShown: params.keepers.length,
         friendsElided: params.numMore || undefined,
         librariesShown: params.libs.length,
-        relatedPagesShown: (params.pages || []).length
+        sourcesShown: params.sources.length,
+        slackShown: params.sources.filter(isSlack).length,
+        twitterShown: params.sources.filter(isTwitter).length
       });
     })
     .hoverfu('.kifi-keepers-pic', function (configureHover) {
@@ -509,39 +518,76 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       params.keepers = o.keepers.slice(0, 4);
       params.numMore = o.keepersTotal - params.keepers.length;
     }
+    params.inMultipleTeams = k.me.orgs && k.me.orgs.length > 1;
     params.origin = o.origin;
     params.libs = o.libraries.slice(0, 2);
     params.oneLib = params.libs.length === 1;
-    params.pages = o.related.slice(0, 2).map(toRelatedPage);
-    params.onePage = params.pages.length === 1;
+    params.sources = (o.sources || []).sort(prioritizeSlack).slice(0, 5).map(massageSlackMessage);
+    params.oneSource = params.sources.length === 1;
+    params.getTeamName = getTeamName;
     return params;
   }
 
-  function toRelatedPage(o) {
-    var match = /^\w+:\/\/(?:www\.)?([^\/]+)/.exec(o.url);
-    var domain = match && match[1];
-    return $.extend({domain: domain}, o);
+  function getPlainText(htmlText) {
+    return k.formatting.parseStringToElement(htmlText).textContent;
+  }
+  function getTeamName() {
+    var subdomainRe = /https?:\/\/?(?:([^.]+)\.)?slack\.com/;
+    return function (templateText, render) {
+      var url = getPlainText(render(templateText));
+      var matches = subdomainRe.exec(url);
+      return matches ? matches[1] : '';
+    };
   }
 
-  function pick(arr, n) {
-    if (!arr) return;
-    if (n == null || n > arr.length) {
-      n = arr.length;
+  var slackSpecialEntityRe = /<@[A-Z].*?>/g; // TODO(carlos): process these entities instead of getting rid of them
+  function massageSlackEntities(message) {
+    var matches = [];
+    message = message.replace(slackSpecialEntityRe, '');
+
+    // Fill an array with match objects from slackUrlEntityRe
+    for (var m, slackUrlEntityRe = /<(.*?)\|(.*?)>|<(.*?)>/g; m = slackUrlEntityRe.exec(message); matches.push(m)) {}
+    matches.forEach(function (m) {
+      var fullMatch = m[0];
+      var url = m[3] || m[2] || m[1];
+      message = (message === fullMatch ? '' : message.replace(fullMatch, url.slice(0, 20)));
+    });
+    return message;
+  }
+
+  function prioritizeSlack(sourceA, sourceB) {
+    if (sourceA.slack && sourceB.twitter) {
+      // Slack is "smaller", because we want it at the beginning
+      return -1;
+    } else if (sourceB.slack && sourceA.twitter) {
+      // Twitter is "bigger", because we want it at the end
+      return 1;
+    } else {
+      return 0;
     }
-    arr = arr.slice();
-    for (var i = 0, j, v, N = arr.length; i < n; i++) {
-      j = i + Math.random() * (N - i) | 0;
-      v = arr[i], arr[i] = arr[j], arr[j] = v;
+  }
+
+  function massageSlackMessage(source) {
+    var message = source.slack && source.slack.message;
+    if (message) {
+      message.text = massageSlackEntities(message.text);
     }
-    arr.length = n;
-    return arr;
+    return source;
   }
 
   function idIs(id) {
-    return function (o) {return o.id == id};
+    return function (o) {
+      return o.id === id;
+    };
   }
   function getPromise(o) {
     return o.promise;
+  }
+  function isSlack(o) {
+    return o.slack;
+  }
+  function isTwitter(o) {
+    return o.twitter;
   }
 
   api.port.on({
@@ -621,9 +667,10 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       if (lastCreatedAt) return;
       var $tile = $(k.tile);
         api.port.emit('get_keepers', function (o) {
-          if ((o.keepers.length || o.libraries.length || o.related.length) && !lastCreatedAt) {
+          if ((o.keepers.length || o.libraries.length || o.sources.length) && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
+              var socialTooltipTimeout;
               var params = setSocialParams(o, {cssClass: 'kifi-keepers-promo'});
               k.render('html/keeper/keepers', params, function (html) {
                 if (lastCreatedAt) return;
@@ -634,11 +681,19 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   $libs.css('width', $libs[0].offsetWidth);
                   $promo.detach();
                 }
-                configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
+                configureHover($promo, {
+                  parent: $tile,
+                  mustHoverFor: 0,
+                  canLeaveFor: 1e9,
+                  canLeaveAnywhere: true,
+                  ignoreWheel: true
+                });
 
-                var socialTooltipTimeout = setTimeout(function () {
-                  $tile.hoverfu('hide')
-                }, 3000 + 1800 * o.libraries.length);
+                // Hide after waiting between 3000ms and 10000ms
+                var hideAfterMs = Math.min(3000 + 1800 * Math.max(o.sources.length, o.libraries.length), 10000);
+                socialTooltipTimeout = setTimeout(function () {
+                  $tile.hoverfu('hide');
+                }, hideAfterMs);
 
                 attachSocialToolTipHandlers($promo, params, 'tile')
                 .data('timeout', socialTooltipTimeout)
@@ -658,7 +713,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   friendsShown: params.keepers.length,
                   friendsElided: params.numMore || undefined,
                   librariesShown: params.libs.length,
-                  relatedPagesShown: (params.pages || []).length
+                  sourcesShown: params.sources.length,
+                  slackShown: params.sources.filter(isSlack).length,
+                  twitterShown: params.sources.filter(isTwitter).length
                 });
               });
             }).hoverfu('show');

@@ -49,6 +49,7 @@ case class SlackAttachment(
     markdownIn: Option[Set[String]] = None) {
   def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
   def withColor(newColor: String) = this.copy(color = Some(newColor))
+  def withImageUrl(newImageUrl: String) = this.copy(imageUrl = Some(newImageUrl))
 }
 
 object SlackAttachment {
@@ -178,6 +179,7 @@ object SlackEmoji {
   val magnifyingGlass = SlackEmoji(":mag_right:")
   val rocket = SlackEmoji(":rocket:")
   val speechBalloon = SlackEmoji(":speech_balloon:")
+  val speakNoEvil = SlackEmoji(":speak_no_evil:")
   val star = SlackEmoji(":star:")
   val sweatSmile = SlackEmoji(":sweat_smile:")
 }

@@ -25,6 +25,7 @@ var filenames = require('gulp-filenames');
 var sourcemaps = require('gulp-sourcemaps');
 var babel = require('gulp-babel');
 var explicitGlobals = require('explicit-globals');
+var pathSort = require('path-sort');
 
 var target = 'local';
 var listed = false;
@@ -313,7 +314,7 @@ gulp.task('styles', function () {
     return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
   }
 
-  var ffBaseUri = 'resource://kifi' + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/kifi/data/images/';
+  var ffBaseUri = 'resource://kifi' + (listed ? '' : '-unlisted') + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/data/images/';
   function firefoxify(code) {
     return code.toString().replace(/\/images\//g, ffBaseUri);
   }
@@ -474,10 +475,25 @@ gulp.task('meta', function () {
   var firefoxMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
       var data = JSON.parse(code.toString());
-      return 'exports.contentScripts =' + data[0] +
-        ';\nexports.styleDeps = ' + data[1] +
-        ';\nexports.scriptDeps = ' + data[2] +
-        ';\nexports.flatScriptDeps = ' + data[3] +
+      var contentScripts = data[0];
+      var styleDeps = JSON.parse(data[1]);
+      var scriptDeps = JSON.parse(data[2]);
+      var flatScriptDeps = JSON.parse(data[3]);
+
+      styleDeps = pathSort(Object.keys(styleDeps)).reduce(function (acc, k) {
+        acc[k] = pathSort(styleDeps[k]);
+        return acc;
+      }, {});
+      scriptDeps = pathSort(Object.keys(scriptDeps)).reduce(function (acc, k) {
+        acc[k] = pathSort(scriptDeps[k]);
+        return acc;
+      }, {});
+      flatScriptDeps = pathSort(flatScriptDeps);
+
+      return 'exports.contentScripts =' + contentScripts +
+        ';\nexports.styleDeps = ' + JSON.stringify(styleDeps, null, 2) +
+        ';\nexports.scriptDeps = ' + JSON.stringify(scriptDeps, null, 2) +
+        ';\nexports.flatScriptDeps = ' + JSON.stringify(flatScriptDeps, null, 2) +
         ";\nif (/^Mac/.test(require('sdk/system').platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));

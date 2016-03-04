@@ -208,14 +208,9 @@ angular.module('kifi')
 
         // Code for showing potential company name and create team dialogs
         var futureMe = (profileService.me && $q.when(profileService.me)) || profileService.fetchMe();
-        var companyNameP;
-        if (Object.keys(profileService.prefs).length === 0) {
-          companyNameP = profileService.fetchPrefs().then(function (prefs) {
-            return prefs.company_name;
-          });
-        } else {
-          companyNameP = $q.when(profileService.prefs.company_name);
-        }
+        var companyNameP = (Object.keys(profileService.prefs) === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs) {
+          return prefs.company_name;
+        });
 
         $q.all([
           futureMe,

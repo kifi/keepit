@@ -8,7 +8,7 @@ import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ ElizaFeedFilter, User, Keep }
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ MessageSource, Message }
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
@@ -78,7 +78,8 @@ class ElizaDiscussionController @Inject() (
     import SendMessageOnKeep._
     val input = request.body.as[Request]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
+    contextBuilder += ("source", input.source.value)
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = Some(input.source))(contextBuilder.build).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }

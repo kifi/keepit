@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileWidget', [
-  '$state', '$analytics', 'profileService', 'modalService', 'orgProfileService', '$q',
-  function ($state, $analytics, profileService, modalService, orgProfileService, $q) {
+  '$state', '$analytics', '$q', 'profileService', 'modalService', 'orgProfileService',
+  function ($state, $analytics, $q, profileService, modalService, orgProfileService) {
     return {
       replace: true,
       restrict: 'A',
@@ -31,19 +31,11 @@ angular.module('kifi')
           scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
-        var companyNameP;
-        if (Object.keys(profileService.prefs).length === 0) {
-          companyNameP = profileService.fetchPrefs().then(function (prefs) {
-            return prefs.company_name;
-          });
-        } else {
-          companyNameP = $q.when(profileService.prefs.company_name);
-        }
-        companyNameP.then(function (companyName) {
-          if (profileService.prefs.hide_company_name) {
+        (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function (prefs) {
+          if (prefs.hide_company_name) {
             scope.companyName = null;
           } else {
-            var potentialName = companyName;
+            var potentialName = prefs.company_name;
             if (!potentialName) {
               var emails = potentialCompanyEmails(me.emails);
               potentialName = emails && emails[0] && getEmailDomain(emails[0].address);

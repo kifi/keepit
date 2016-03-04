@@ -113,7 +113,7 @@ PageData.prototype = {
     this.keepers = o.keepers || [];
     this.keepersTotal = o.keepersTotal || this.keepers.length;
     this.libraries = o.libraries || [];
-    this.related = o.related || [];
+    this.sources = o.sources || [];
   },
   howKept: function () {
     var keeps = this.keeps;
@@ -650,7 +650,7 @@ api.port.on({
       keepers: d ? d.keepers : [],
       keepersTotal: d ? d.keepersTotal : 0,
       libraries: d ? d.libraries : [],
-      related: d ? d.related : [],
+      sources: d ? d.sources : [],
       origin: webBaseUri()
     });
   },
@@ -1081,7 +1081,7 @@ api.port.on({
     data.extVersion = api.version;
     data.source = api.browser.name;
     data.eip = eip;
-    ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
+    ajax('shoebox', 'POST', '/ext/keeps/' + threadId + '/messages', data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o);
       respond(o);
@@ -1544,8 +1544,9 @@ function unsilence(tab) {
   }
 }
 
-function standardizeUser(u) {
+function standardizeUser(u, o) {
   u.name = (u.firstName + ' ' + u.lastName).trim();
+  u.orgs = o;
   return u;
 }
 
@@ -2122,21 +2123,24 @@ function kififyWithPageData(tab, d) {
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
-    tab.engaged = true;
     if (!d.kept && !hide) {
       if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
+        tab.engaged = true;
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length || d.libraries.length || d.related.length) {
-        tab.keepersSec = d.related.length ? 10 : 20;
+        tab.engaged = true;
+      } else if (d.keepers.length || d.libraries.length || d.sources.length) {
+        tab.keepersSec = d.sources.filter(isSlack).length ? 0 : 20;
         if (api.tabs.isFocused(tab)) {
           scheduleAutoEngage(tab, 'keepers');
+          tab.engaged = true;
         }
       }
     }
   }
 }
+function isSlack(o) { return o.slack; }
 
 function gotPageDetailsFor(url, tab, resp) {
   var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
@@ -2712,7 +2716,7 @@ function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
     log('[gotPrefs]', o);
     if (me) {
-      me = standardizeUser(o.user);
+      me = standardizeUser(o.user, organizations);
       prefs = o.prefs;
       eip = o.eip;
       socket.send(['eip', eip]);
@@ -2791,7 +2795,7 @@ function authenticate(callback, retryMs) {
     unstore('logout');
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
-    me = standardizeUser(data.user);
+    me = standardizeUser(data.user, data.orgs);
     mySysLibIds = data.libraryIds;
     organizations = data.orgs;
     experiments = data.experiments;

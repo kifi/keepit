@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule }
+import com.keepit.common.concurrent.MonitoredExecutionContextModule
 import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
@@ -19,6 +20,7 @@ case class SearchProdModule() extends SearchModule with CommonProdModule {
   val cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
   val storeModule = SearchProdStoreModule()
   val userActionsModule = ProdRemoteUserActionsHelperModule()
+  override val executionContextModule = MonitoredExecutionContextModule()
 
   // Search Functional Modules
   val indexModule = ProdIndexModule()

@@ -81,12 +81,13 @@ object ProviderController extends Controller with Logging {
               log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
           }) match {
-            case badRequest if badRequest.header.status == 400 =>
-              log.error(s"[handleAuth] ${badRequest.header.status} from $provider with body ${badRequest.body}")
+            case badResult if badResult.header.status == 400 =>
+              log.error(s"[handleAuth] ${badResult.header.status} from $provider")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
                 "slackTeamId", "creditCode").map(DiscardingCookie(_))
-              Redirect(RoutesHelper.login()).discardingCookies(discardingCookies: _*)
-            case req => req
+              val failUrl = request.cookies.get("onFailUrl").map(_.value).getOrElse(toUrl(badResult.session))
+              Redirect(failUrl, queryString = Map("error" -> Seq("access_denied"))).discardingCookies(discardingCookies: _*)
+            case res => res
           }
         } catch {
           case ex: AccessDeniedException => {

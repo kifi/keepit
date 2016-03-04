@@ -5,7 +5,7 @@ import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.json._
 import com.keepit.common.util.DescriptionElements
-import com.keepit.discussion.{ CrossServiceMessage, Message }
+import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Message }
 import com.keepit.notify.model.Recipient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
@@ -78,30 +78,6 @@ object MessageSender {
 
   def toMessageSenderView(messageSender: MessageSender): MessageSenderView =
     messageSender.fold(MessageSenderSystemView(), MessageSenderUserView, nup => MessageSenderNonUserView(nup.identifier))
-}
-
-case class MessageSource(value: String)
-object MessageSource {
-  val CHROME = MessageSource("Chrome")
-  val FIREFOX = MessageSource("Firefox")
-  val EMAIL = MessageSource("Email")
-  val IPHONE = MessageSource("iPhone")
-  val IPAD = MessageSource("iPad")
-  val ANDROID = MessageSource("Android")
-  val SERVER = MessageSource("server")
-  val SITE = MessageSource("Kifi.com")
-
-  implicit val messageSourceFormat = new Format[MessageSource] {
-    def reads(json: JsValue): JsResult[MessageSource] = {
-      json.asOpt[String] match {
-        case Some(str) => JsSuccess(MessageSource(str))
-        case None => JsError()
-      }
-    }
-    def writes(kind: MessageSource): JsValue = {
-      JsString(kind.value)
-    }
-  }
 }
 
 sealed abstract class SystemMessageData(val kind: String)

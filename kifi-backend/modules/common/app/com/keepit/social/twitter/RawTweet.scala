@@ -33,6 +33,17 @@ object TwitterMediaId extends TwitterIdCompanion[TwitterMediaId]
   override def toString = value
 }
 
+object TwitterHandle {
+  val regFromTweetUrl = """https:\/\/twitter\.com\/(\w+)\/status\/[0-9]+""".r
+  def fromTweetUrl(url: String): Option[TwitterHandle] = {
+    url match {
+      case regFromTweetUrl(user) => Some(TwitterHandle(user))
+      case _ => None
+    }
+  }
+}
+
+
 case class RawTweet(
   id: TwitterStatusId,
   createdAt: DateTime,

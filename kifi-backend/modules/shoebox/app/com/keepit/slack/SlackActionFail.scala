@@ -14,10 +14,13 @@ sealed abstract class SlackActionFail(val code: String, val msg: String) extends
 }
 object SlackActionFail {
   case class TeamNotConnected(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName)
-    extends SlackActionFail("slack_team_without_org", s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is not connected to any organization.")
+    extends SlackActionFail("slack_team_not_connected", s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is not connected to any organization.")
 
   case class TeamAlreadyConnected(slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, connectedOrgId: Id[Organization])
     extends SlackActionFail("slack_team_already_connected", s"SlackTeam ${slackTeamName.value} (${slackTeamId.value}) is already connected to organization $connectedOrgId")
+
+  case class OrgNotConnected(orgId: Id[Organization])
+    extends SlackActionFail("kifi_org_not_connected", s"Organization $orgId is not connected to any Slack team.")
 
   case class OrgAlreadyConnected(orgId: Id[Organization], connectedTeam: SlackTeamId, failedToConnectTeam: SlackTeamId)
     extends SlackActionFail("kifi_org_already_connected", s"Organization $orgId is already connected to $connectedTeam so it cannot connect to $failedToConnectTeam")

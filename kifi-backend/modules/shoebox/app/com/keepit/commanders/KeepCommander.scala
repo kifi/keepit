@@ -19,13 +19,18 @@ import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.strings._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.RoverArticleSummary
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
+import com.keepit.slack.LibraryToSlackChannelPusher
+import com.keepit.social.twitter.TwitterHandle
 import com.keepit.social.{ BasicAuthor, Author }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import org.joda.time.DateTime
@@ -66,7 +71,7 @@ object BulkKeepSelection {
 trait KeepCommander {
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
-  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
+  def getBasicKeeps(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] // for notifications
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
@@ -141,6 +146,8 @@ class KeepCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     userExperimentRepo: UserExperimentRepo,
+    slackPusher: LibraryToSlackChannelPusher,
+    roverClient: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
@@ -150,8 +157,8 @@ class KeepCommanderImpl @Inject() (
     ids.map(idToKeepMap)
   }
 
-  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
-    db.readOnlyReplica { implicit session =>
+  def getBasicKeeps(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
+    val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
       val keeps = keepRepo.getByIds(ids)
       val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
       def getAuthor(keep: Keep): Option[BasicAuthor] = {
@@ -165,22 +172,34 @@ class KeepCommanderImpl @Inject() (
           }
         }
       }
-      for {
+      val keepInfos = for {
         (kId, keep) <- keeps
         author <- getAuthor(keep)
       } yield {
-        kId -> BasicKeep(
-          keep.externalId,
-          keep.title,
-          keep.url,
-          keep.visibility,
-          keep.libraryId.map(Library.publicId),
-          author,
-          attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
-        )
+        (kId, keep, author)
       }
+      (attributions, keepInfos)
+    }
+    val twitterKeeps = keepInfos.map(_._2).filter { keep => TwitterHandle.fromTweetUrl(keep.url).nonEmpty }.toSeq
+    val twitterKeepsSummariesF = roverClient.getArticleSummaryByUris(twitterKeeps.map(_.uriId).toSet)
+
+    twitterKeepsSummariesF.map { twitterKeepsSummaries =>
+      keepInfos.map {
+        case (kId, keep, author) =>
+          val title = twitterKeepsSummaries.get(keep.uriId).flatMap(_.description.map(_.abbreviate(256))) orElse keep.title
+          kId -> BasicKeep(
+            id = keep.externalId,
+            title = title,
+            url = keep.url,
+            visibility = keep.visibility,
+            libraryId = keep.libraryId.map(Library.publicId),
+            author = author,
+            attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
+          )
+      }.toMap
     }
   }
+
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
     val (keeps, users, libs) = db.readOnlyMaster { implicit s =>
       val keepsById = keepRepo.getByIds(ids)
@@ -478,6 +497,7 @@ class KeepCommanderImpl @Inject() (
     val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
+      slackPusher.schedule(oldKeep.connections.libraries)
     }
     colls.foreach { c =>
       Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone

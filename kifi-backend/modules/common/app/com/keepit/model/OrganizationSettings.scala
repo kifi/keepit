@@ -211,6 +211,12 @@ object StaticFeature extends Enumerator[StaticFeature] {
     val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
   }
+
+  case object SlackCommentMirroring extends StaticFeature {
+    val value = "slack_comment_mirroring"
+    val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
+    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
+  }
 }
 
 sealed trait ClassFeatureSetting extends FeatureSetting

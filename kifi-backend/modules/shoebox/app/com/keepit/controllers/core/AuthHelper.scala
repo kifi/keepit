@@ -89,7 +89,8 @@ object PostRegIntent {
   case object NoIntent extends PostRegIntent
 
   val intentKey = "intent"
-  val discardingCookies = Set(AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
+  val onFailUrlKey = "onFailUrl"
+  val discardingCookies = Set(Set(intentKey), AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten.map(DiscardingCookie(_)).toSeq
 
   def fromCookies(cookies: Set[Cookie])(implicit config: PublicIdConfiguration): PostRegIntent = {
     val cookieByName = cookies.groupBy(_.name).mapValuesStrict(_.head)
@@ -144,7 +145,7 @@ object PostRegIntent {
   }
   def requestToCookies(request: Request[_]): Seq[Cookie] = {
     val intentKeys = Set(AutoFollowLibrary.cookieKeys, AutoJoinOrganization.cookieKeys, AutoJoinKeep.cookieKeys, Slack.cookieKeys, ApplyCreditCode.cookieKeys).flatten + this.intentKey
-    intentKeys.flatMap { key => request.getQueryString(key).map(Cookie(key, _)) }.toSeq
+    intentKeys.flatMap(key => request.getQueryString(key).map(Cookie(key, _))).toSeq
   }
 }
 

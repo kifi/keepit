@@ -54,7 +54,7 @@ GET     /slack-connect              @com.keepit.controllers.core.AuthController.
 GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
 GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None, slackTeamId: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -114,6 +114,7 @@ DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthControlle
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
 POST    /ext/keeps/new              @com.keepit.controllers.ext.ExtKeepController.createKeep()
+POST    /ext/keeps/:id/messages     @com.keepit.controllers.ext.ExtKeepController.sendMessageOnKeep(id: PublicId[Keep])
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
@@ -332,6 +333,7 @@ GET     /about/join_us.html         @com.keepit.controllers.website.HomeControll
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.moved(uri = "/getting-started")
 GET     /integrations/slack         @com.keepit.controllers.website.HomeController.slackIntegration
+GET     /about/love                 @com.keepit.controllers.website.HomeController.route(path = "about/love")
 GET     /getting-started/slack      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
 GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
@@ -548,13 +550,15 @@ GET           /site/organizations/:id/members/suggest           @com.keepit.cont
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 GET           /site/organizations/:id/basicLibraries            @com.keepit.controllers.website.OrganizationController.getLHRLibrariesForOrg(id: PublicId[Organization], ordering: Option[String] ?= None, direction: Option[String] ?= None, offset: Int, limit: Int, windowSize: Option[Int] ?= None)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
-GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(id: PublicId[Organization])
-POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(id: PublicId[Organization])
+GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.OrganizationConfigController.getAccountFeatureSettings(id: PublicId[Organization])
+POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.OrganizationConfigController.setAccountFeatureSettings(id: PublicId[Organization])
+POST          /site/organizations/:id/blacklistBackfill         @com.keepit.controllers.website.OrganizationConfigController.backfillSlackBlacklist(id: PublicId[Organization])
 GET           /site/organizations/:id/getDomains                @com.keepit.controllers.website.OrganizationDomainOwnershipController.getDomains(id: PublicId[Organization])
 POST          /site/organizations/:id/addDomain                 @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/removeDomain              @com.keepit.controllers.website.OrganizationDomainOwnershipController.removeDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/addDomainAfterVerification  @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomainOwnershipAfterVerification(id: PublicId[Organization])
 POST          /site/organizations/:id/sendMemberConfirmationEmail @com.keepit.controllers.website.OrganizationDomainOwnershipController.sendMemberConfirmationEmail(id: PublicId[Organization])
+POST          /site/organizations/:id/sendOrganizationInviteViaSlack  @com.keepit.controllers.website.OrganizationInviteController.sendOrganizationInviteViaSlack(id: PublicId[Organization])
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
@@ -567,7 +571,7 @@ POST          /site/organizations/create/slack                  @com.keepit.cont
 POST          /site/organizations/:id/slack/connect             @com.keepit.controllers.website.SlackController.connectSlackTeam(id: PublicId[Organization], slackTeamId: Option[SlackTeamId] ?= None, slackState: Option[String] ?= None)
 GET           /site/organizations/:id/slack/list                @com.keepit.controllers.website.SlackController.getOrgIntegrations(id: PublicId[Organization], max: Int ?= 100)
 POST          /site/organizations/:id/slack/sync/public         @com.keepit.controllers.website.SlackController.syncPublicChannels(id: PublicId[Organization])
-
+POST          /site/organizations/:id/slack/mirrorComments      @com.keepit.controllers.website.SlackController.mirrorComments(id: PublicId[Organization], turnOn: Boolean)
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -582,10 +586,10 @@ POST          /site/admin/billing/ccToken                       @com.keepit.cont
 POST          /site/admin/billing/card/add                      @com.keepit.controllers.website.PaymentsController.addCreditCard(pubId: PublicId[Organization])
 POST          /site/admin/billing/card/default                  @com.keepit.controllers.website.PaymentsController.setDefaultCreditCard(pubId: PublicId[Organization])
 GET           /site/admin/billing/card/default                  @com.keepit.controllers.website.PaymentsController.getDefaultCreditCard(pubId: PublicId[Organization])
-GET           /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.getAccountContacts(pubId: PublicId[Organization])
-POST          /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.setAccountContacts(pubId: PublicId[Organization])
-GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(pubId: PublicId[Organization])
-POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
+GET           /site/admin/billing/contacts                      @com.keepit.controllers.website.OrganizationConfigController.getAccountContacts(pubId: PublicId[Organization])
+POST          /site/admin/billing/contacts                      @com.keepit.controllers.website.OrganizationConfigController.setAccountContacts(pubId: PublicId[Organization])
+GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.OrganizationConfigController.getAccountFeatureSettings(pubId: PublicId[Organization])
+POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.OrganizationConfigController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
 GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
 ##########################################
@@ -786,9 +790,8 @@ GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin
 
 POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
 POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
-GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
-POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
+POST    /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
@@ -918,8 +921,6 @@ GET           /admin/payments/refundCharge                 @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 
 GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)
-GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
-GET           /admin/payments/resetAllAccounts             @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
 GET           /admin/payments/activity   @com.keepit.controllers.admin.AdminPaymentsController.activityOverview(page: Int ?= 0, kind: Option[String] ?= None)
 POST          /admin/payments/createCode @com.keepit.controllers.admin.AdminPaymentsController.createCode()

@@ -6,8 +6,9 @@ angular.module('kifi')
   function ($window, $log, $rootScope) {
     var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
     var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
-    var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
-    var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20;
+    var isSafari = !isChrome && /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+    var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox|Safari)\/(\d+)/) || [null, 999])[1];
+    var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20 || isSafari && majorVersion >= 536;
 
     if (supported) {
       if (isChrome) {
@@ -77,6 +78,7 @@ angular.module('kifi')
       },
       isValidChrome: isChrome && supported,
       isValidFirefox: isFirefox && supported,
+      isValidSafari: isSafari && supported,
       getPlatformName: function () {
         var platformName;
         if (api.canInstall) {
@@ -84,6 +86,8 @@ angular.module('kifi')
             platformName = 'Chrome';
           } else if (api.isValidFirefox) {
             platformName = 'Firefox';
+          } else if (api.isValidSafari) {
+            platformName = 'Safari';
           }
         }
         return platformName;

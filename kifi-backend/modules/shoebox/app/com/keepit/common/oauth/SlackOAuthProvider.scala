@@ -7,6 +7,7 @@ import com.keepit.slack.SlackClient
 import com.keepit.slack.models._
 import com.keepit.social.IdentityHelpers
 import play.api.http.Status._
+import play.api.libs.json.Json
 import play.api.mvc.{ Results, Result, Request }
 import securesocial.core.IdentityId
 
@@ -43,7 +44,7 @@ class SlackOAuthProviderImpl @Inject() (
     getParameter("error") match {
       case Some(errorCode) =>
         if (!knownErrorCodes.contains(errorCode)) airbrake.notify(s"[SlackAuthError] unknown error code $errorCode from slack, query string = ${request.rawQueryString}")
-        Future.successful(Left(Results.BadRequest(errorCode)))
+        Future.successful(Left(Results.BadRequest(Json.obj("error" -> errorCode))))
       case None => getParameter("code") match {
         case None =>
           val slackTeamId = getParameter("slackTeamId").map(SlackTeamId(_))

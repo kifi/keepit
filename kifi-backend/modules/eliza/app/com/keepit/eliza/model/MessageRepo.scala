@@ -6,6 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
+import com.keepit.discussion.MessageSource
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ SequenceNumber, DbSequenceAssigner, Id }

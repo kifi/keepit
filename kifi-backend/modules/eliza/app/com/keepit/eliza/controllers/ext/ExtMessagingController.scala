@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.ext
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.discussion.{ DiscussionFail, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.{ ElizaThreadInfo, ElizaDiscussionCommander, MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
@@ -79,7 +79,7 @@ class ExtMessagingController @Inject() (
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "extension")
         (o \ "extVersion").asOpt[String].foreach { version => contextBuilder += ("extensionVersion", version) }
-        contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
+        contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip //
         discussionCommander.sendMessage(request.userId, text, keepId, source)(contextBuilder.build)
       }
     } yield {

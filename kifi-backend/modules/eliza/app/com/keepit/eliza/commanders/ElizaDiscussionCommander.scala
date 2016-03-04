@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.time._
-import com.keepit.discussion.{ DiscussionFail, Discussion, Message }
+import com.keepit.discussion.{ MessageSource, DiscussionFail, Discussion, Message }
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -92,16 +92,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
   }
 
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion] = getDiscussionsForKeeps(Set(keepId)).imap(dm => dm(keepId))
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
-    val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
-    val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
-    val recentsByKeep = keepIds.map { keepId =>
-      keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = MESSAGES_TO_INCLUDE)
-    }.toMap
+
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = {
+    val recentsByKeep = db.readOnlyReplica { implicit s =>
+      keepIds.map { keepId =>
+        keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = MESSAGES_TO_INCLUDE)
+      }.toMap
+    }
 
     val extMessageMapFut = externalizeMessages(recentsByKeep.values.toSeq.flatten)
 
-    extMessageMapFut.map { extMessageMap =>
+    val infoF = db.readOnlyReplicaAsync { implicit s =>
+      val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
+      val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
+      (threadsByKeep, countsByKeep)
+    }
+
+    for {
+      (threadsByKeep, countsByKeep) <- infoF
+      extMessageMap <- extMessageMapFut
+    } yield {
       threadsByKeep.map {
         case (kid, thread) =>
           kid -> Discussion(

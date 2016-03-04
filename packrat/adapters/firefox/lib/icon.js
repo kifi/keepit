@@ -11,6 +11,7 @@ exports.addToWindow = function(win, click) {
     const iconEl = domWin.document.createElementNS('http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul', 'image');
     tb.insertBefore(iconEl, tb.firstChild);
     iconEl.setAttribute('id', ICON_ID);
+    iconEl.setAttribute('width', 25);
     iconEl.setAttribute('height', 19);
     iconEl.setAttribute('class', 'urlbar-icon');
     iconEl.setAttribute('collapsed', true);

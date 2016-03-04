@@ -250,6 +250,7 @@
   100% {-webkit-transform: scale(1)}
 }
 
+@keepers-h-height-gradient: @keepers-h-height+1;
 .kifi-keepers {
   position: absolute;
   @right-space: 6px;
@@ -258,7 +259,7 @@
   border: 1px solid #ccc;
   border-radius: 10px !important;
   box-shadow: 1px 2px 8px rgba(0,0,0,.08);
-  background: linear-gradient(@keepers-h-bg-color @keepers-h-height, #fff @keepers-h-height);
+  background: linear-gradient(@keepers-h-bg-color @keepers-h-height-gradient, #fff @keepers-h-height-gradient);
   text-align: left;
   opacity: 0;
   transition: opacity, -webkit-transform;
@@ -308,6 +309,7 @@
 @keepers-h-height: 36px;
 @keepers-h-bg-color: #f1f1f1;
 .kifi-keepers-h {
+  position: relative;
   padding: 0 20px;
   color: #3e4955;
   text-transform: uppercase;
@@ -319,21 +321,81 @@
     background-color: @keepers-h-bg-color;
   }
 }
-.kifi-keepers-pages,
+.kifi-keepers-h-close {
+  position: absolute;
+  right: 5px;
+  padding: 0 10px;
+  cursor: pointer;
+  color: #999;
+
+  &:hover {
+    color: #333;
+  }
+  &:active {
+    color: #999
+  }
+  &:before {
+    content: 'X';
+  }
+}
+.kifi-keepers-sources,
 .kifi-keepers-libs {
   min-width: 200px;
   max-width: 300px;
   padding: 6px 0;
 }
+
+.kifi-keepers-source {
+  display: flex;
+  padding: 5px;
+}
+.kifi-keepers-source + .kifi-keepers-source {
+  border-top: 1px solid #eee;
+}
+.kifi-keepers-source-image {
+  align-self: flex-start;
+}
+.kifi-keepers-source-logo {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  margin: 3px;
+  background-size: 100% 100%;
+}
+.kifi-keepers-source-logo-slack {
+  background-image: url(/images/slackapp.png);
+}
+.kifi-keepers-source-logo-twitter {
+  background-image: url(/images/twitter-blue.svg);
+}
+.kifi-keepers-source-content {
+  flex: 1;
+  max-width: 100%;
+  margin-left: 5px;
+  overflow: hidden;
+}
+.kifi-keepers-source-content-head {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 14px;
+  color: #666;
+}
+.kifi-keepers-source-context {
+  max-height: 2.5em;
+  min-height: 2.2em;
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #999;
+}
+
 @pageTitleLineHeight: 16px;
 @import (reference) 'lib_icons.less';
-.kifi-keepers-page,
+.kifi-keepers-source,
 .kifi-keepers-lib {
-  display: block;
   line-height: @pageTitleLineHeight;
   font-size: 12px;
   font-weight: 300;
-  padding: 10px 13px;
   color: #333 !important;
   position: relative;
   &:hover,
@@ -344,43 +406,10 @@
     background-color: #e8e8e8 !important;
   }
 }
-.kifi-keepers-page {
-  display: flex-box;
-  flex-flow: column;
-  height: 44px;
-  padding-left: 74px;
-}
-.kifi-keepers-page-pic {
-  position: absolute;
-  top: 10px;
-  left: 13px;
-  width: 50px;
-  height: 44px;
-  border-radius: 4px;
-  background-size: cover;
-  box-shadow: 0 0 1px rgba(0,0,0,.2);
-}
-.kifi-keepers-page-title {
-  margin-top: auto;
-  max-height: 2 * @pageTitleLineHeight;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-.kifi-keepers-page-domain {
-  margin: 1px 0 auto;
-  line-height: 12px;
-  font-size: 10px;
-  color: #5ab166;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .kifi-keepers-lib {
+  display: block;
   height: 44px;
-  padding-left: 58px;
+  padding: 10px 13px 10px 58px;
 }
 .kifi-keepers-lib-icon {
   position: absolute;

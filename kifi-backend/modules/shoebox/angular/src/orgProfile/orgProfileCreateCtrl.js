@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', '$timeout', 'orgProfileService', '$state', '$stateParams',
+  '$scope', '$timeout', '$q', 'orgProfileService', '$state', '$stateParams',
   'initParams', 'profileService', 'modalService', 'billingService', '$analytics',
   'originTrackingService', '$location',
-  function($scope, $timeout, orgProfileService, $state, $stateParams,
+  function($scope, $timeout, $q, orgProfileService, $state, $stateParams,
            initParams, profileService, modalService, billingService, $analytics,
            originTrackingService, $location) {
     $scope.orgSlug = ''; // Not yet implemented.
@@ -15,26 +15,15 @@ angular.module('kifi')
     $scope.showSlackPromo = $stateParams.showSlackPromo || initParams.getAndClear('slack');
 
     var me = profileService.me;
-    $scope.$watch(function () {
-      return profileService.prefs.stored_credit_code;
-    }, function () {
-      if (profileService.prefs.stored_credit_code) {
-        $scope.redeemCode = profileService.prefs.stored_credit_code;
+    (Object.keys(profileService.prefs) === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function(prefs){
+      $scope.redeemCode = prefs.stored_credit_code;
+      if (prefs.company_name && !orgNameExists(prefs.company_name)) {
+        $scope.orgName = prefs.company_name;
+      } else {
+        var potentialEmails = potentialCompanyEmails(me.emails);
+        $scope.orgName = (potentialEmails[0] && getEmailDomain(potentialEmails[0].address)) || '';
       }
     });
-
-    if (!profileService.prefs.company_name) {
-      profileService.fetchPrefs().then(function (prefs) {
-        if (prefs.company_name && !orgNameExists(prefs.company_name)) {
-          $scope.orgName = prefs.company_name;
-        } else {
-          var potentialEmails = potentialCompanyEmails(me.emails);
-          $scope.orgName = potentialEmails[0] && getEmailDomain(potentialEmails[0].address);
-        }
-      });
-    } else {
-      $scope.orgName = (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name) || '';
-    }
 
     function potentialCompanyEmails(emails) {
       return emails.filter(function(email){
@@ -83,7 +72,7 @@ angular.module('kifi')
         }
         function next() {
           profileService.fetchMe();
-          profileService.fetchPrefs(); // To invalidate credit code, if any.
+          profileService.fetchPrefs(true); // To invalidate credit code, if any.
           $state.go('orgProfile.libraries', { handle: org.handle, forceSlackDialog: true });
         }
       })

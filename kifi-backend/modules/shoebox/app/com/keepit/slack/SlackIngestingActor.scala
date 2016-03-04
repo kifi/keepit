@@ -63,6 +63,7 @@ class SlackIngestingActor @Inject() (
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackChannelToLibrary]] {
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
+  val ryanLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
   import SlackIngestionConfig._
 
   protected val minConcurrentTasks = minChannelIngestionConcurrency
@@ -154,7 +155,7 @@ class SlackIngestingActor @Inject() (
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
-            log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}:" + error.getMessage)
+            log.error(s"[SLACK-INGEST] Failed to ingest from Slack via integration ${integration.id.get}: ${error.getMessage}")
             (Some(now plus nextIngestionDelayAfterFailure), None)
         }
         db.readWrite { implicit session =>
@@ -167,7 +168,7 @@ class SlackIngestingActor @Inject() (
     val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
-        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
+        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
@@ -190,21 +191,30 @@ class SlackIngestingActor @Inject() (
     val blacklist = settings.flatMap(_.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk })
     val (library, slackTeam, userBySlackIdentity) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
-      val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId)
+      val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId).getOrElse(throw new Exception(s"There is supposed to be a db-level integrity constraint for ${integration.slackTeamId}"))
       val usersBySlackIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities).flatMap { case (slackIdentity, stm) => stm.userId.map(slackIdentity -> _) }
       (lib, slackTeam, usersBySlackIdentity)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val rawBookmarksByUser = messages.groupBy(msg => userBySlackIdentity.get((integration.slackTeamId, msg.userId))).map {
-      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, integration.slackTeamId, slackTeam, blacklist)).distinctBy(_.url)
+      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
         val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
-    messages.headOption.foreach { msg =>
-      db.readWrite { implicit s => slackChannelRepo.getOrCreate(integration.slackTeamId, msg.channel.id, msg.channel.name) }
+    // Record a bit of information based on the messages we ingested: the channel, and any slack members
+    db.readWrite { implicit s =>
+      ingestedMessages.headOption.foreach { msg =>
+        slackChannelRepo.getOrCreate(slackTeam.slackTeamId, msg.channel.id, msg.channel.name)
+      }
+      ingestedMessages.groupBy(_.userId).foreach {
+        case (_, msgs) => slackTeamMembershipRepo.internWithMessage(slackTeam, msgs.maxBy(_.timestamp)) tap {
+          case (newMembership, true) => ryanLog.info("Created a new membership for user", newMembership.slackUsername.value, "in team", newMembership.slackTeamName.value, "by ingesting a message")
+          case _ =>
+        }
+      }
     }
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     lastMessageTimestamp.foreach { timestamp =>
@@ -227,8 +237,8 @@ class SlackIngestingActor @Inject() (
       urlClassifier.isSlackArchivedMessage(url)
   }
 
-  private def toRawBookmarks(message: SlackMessage, slackTeamId: SlackTeamId, slackTeam: Option[SlackTeam], blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
-    if (ignoreMessage(message, slackTeam.flatMap(_.kifiBot.map(_.userId)).toSet)) Set.empty[RawBookmarkRepresentation]
+  private def toRawBookmarks(message: SlackMessage, slackTeam: SlackTeam, blacklist: Option[ClassFeature.Blacklist]): Set[RawBookmarkRepresentation] = {
+    if (ignoreMessage(message, slackTeam.kifiBot.map(_.userId).toSet)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
@@ -252,14 +262,14 @@ class SlackIngestingActor @Inject() (
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),
-            sourceAttribution = Some(RawSlackAttribution(message, slackTeamId)),
+            sourceAttribution = Some(RawSlackAttribution(message, slackTeam.slackTeamId)),
             note = None
           )
       }
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, teamId: SlackTeamId, channelId: Option[SlackChannelId], channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)
@@ -270,7 +280,11 @@ class SlackIngestingActor @Inject() (
     def getBatchedMessages(pageSize: PageSize, skipFailures: Boolean): Future[Seq[SlackMessage]] = FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
-        slackClient.searchMessages(token, request).map { response =>
+        val futureResponse = {
+          if (channelId.exists(SlackChannelId.isPublic)) slackClient.searchMessagesHoweverPossible(teamId, request, preferredTokens = Seq(token))
+          else slackClient.searchMessages(token, request)
+        }
+        futureResponse.map { response =>
           val allMessages = previousMessages ++ response.messages.matches.filterNot(m => lastMessageTimestamp.exists(m.timestamp <= _))
           val done = allMessages.length >= messagesPerIngestion || response.messages.paging.pages <= nextPage.page
           val messages = allMessages.take(messagesPerIngestion)
