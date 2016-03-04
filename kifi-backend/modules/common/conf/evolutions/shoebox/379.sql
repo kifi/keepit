@@ -9,7 +9,7 @@ CREATE TABLE keep_to_user (
   state varchar(20) NOT NULL,
   keep_id bigint(20) NOT NULL,
   user_id bigint(20) NOT NULL,
-  added_by bigint(20) NOT NULL,
+  added_by bigint(20) DEFAULT NULL,
   added_at DATETIME NOT NULL,
   uri_id BIGINT(20) NOT NULL,
 

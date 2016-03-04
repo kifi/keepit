@@ -81,12 +81,13 @@ object ProviderController extends Controller with Logging {
               log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
           }) match {
-            case badRequest if badRequest.header.status == 400 =>
-              log.error(s"[handleAuth] ${badRequest.header.status} from $provider with body ${badRequest.body}")
+            case badResult if badResult.header.status == 400 =>
+              log.error(s"[handleAuth] ${badResult.header.status} from $provider")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
                 "slackTeamId", "creditCode").map(DiscardingCookie(_))
-              Redirect(RoutesHelper.login()).discardingCookies(discardingCookies: _*)
-            case req => req
+              val failUrl = request.cookies.get("onFailUrl").map(_.value).getOrElse(toUrl(badResult.session))
+              Redirect(failUrl, queryString = Map("error" -> Seq("access_denied"))).discardingCookies(discardingCookies: _*)
+            case res => res
           }
         } catch {
           case ex: AccessDeniedException => {
@@ -110,9 +111,9 @@ object ProviderController extends Controller with Logging {
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
         log.info(s"[completeAuthentication] Authentication [${authenticator.identityId}] completed for [${userIdentity.email}]")
-        val slackTeamIdCookie = IdentityHelpers.parseSlackIdMaybe(userIdentity.identityId).toOption.map {
-          case (slackTeamId, _) => Cookie("slackTeamId", slackTeamId.value)
-        }
+        val slackTeamIdCookies = IdentityHelpers.parseSlackIdMaybe(userIdentity.identityId).toOption.map {
+          case (slackTeamId, _) => Seq(Cookie("slackTeamId", slackTeamId.value), Cookie("intent", "slack"))
+        }.getOrElse(Seq.empty)
         val kifiCookies = Seq(
           request.cookies.get("intent"),
           request.cookies.get("publicOrgId"),
@@ -120,9 +121,8 @@ object ProviderController extends Controller with Logging {
           request.cookies.get("publicLibraryId"),
           request.cookies.get("libAuthToken"),
           request.cookies.get("publicKeepId"),
-          request.cookies.get("keepAuthToken"),
-          slackTeamIdCookie
-        ).flatten
+          request.cookies.get("keepAuthToken")
+        ).flatten ++ slackTeamIdCookies
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -

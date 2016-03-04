@@ -38,6 +38,10 @@ angular.module('kifi')
     function initBookmarkImport(opts) {
       $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
+      if (installService.isValidSafari) {
+        return initBookmarkFileUpload({ safari: true });
+      }
+
       if (!$scope.importLibrary) {
         libraryService
         .fetchLibraryInfos()
@@ -56,7 +60,14 @@ angular.module('kifi')
     }
 
     function initBookmarkFileUpload(opts) {
-      $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
+      opts = opts || {};
+      opts.library = opts.library || libraryService.getSysMainInfo();
+      opts.safari = opts.safari || false;
+
+      $scope.importLibrary = opts.library;
+      var template = opts.safari ?
+        'common/modal/importBookmarkSafariModal.tpl.html' :
+        'common/modal/importBookmarkFileModal.tpl.html';
 
       if (!$scope.importLibrary) {
         libraryService
@@ -71,7 +82,7 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
       modalService.open({
-        template: 'common/modal/importBookmarkFileModal.tpl.html',
+        template: template,
         scope: $scope
       });
     }

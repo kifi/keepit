@@ -52,9 +52,9 @@ class LibraryCardCommanderImpl @Inject() (
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfos")
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerIdOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
-    val membershipsToLibsMap = viewerIdOpt.map { viewerId =>
+    val membershipsToLibsMap = viewerIdOpt.fold(Map.empty[Id[Library], LibraryMembership]) { viewerId =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
-    } getOrElse Map.empty
+    }
     val orgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
     val libPermissionsById = permissionCommander.getLibrariesPermissions(libIds, viewerIdOpt)
     libs.par map { lib => // may want to optimize queries below into bulk queries
@@ -78,7 +78,7 @@ class LibraryCardCommanderImpl @Inject() (
       val orgViewOpt = lib.organizationId.map(orgViews.apply)
       val path = LibraryPathHelper.formatLibraryPath(owner, orgViewOpt.map(_.basicOrganization.handle), lib.slug)
 
-      val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
+      val membershipOpt = membershipsToLibsMap.get(lib.id.get)
       val membershipInfoOpt = membershipOpt.map(libraryMembershipCommander.createMembershipInfo)
       val inviteInfoOpt = libraryInviteCommander.createInviteInfo(lib.id.get, viewerIdOpt, None)
 

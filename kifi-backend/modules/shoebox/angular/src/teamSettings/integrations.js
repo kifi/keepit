@@ -4,8 +4,9 @@ angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
   '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
-  'slackService', 'profile',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService, profile) {
+  'slackService', 'profile', 'modalService',
+  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService,
+    profile, modalService) {
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
@@ -13,8 +14,11 @@ angular.module('kifi')
     var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
     var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
+    var mirroringSetting = settings.slack_comment_mirroring && settings.slack_comment_mirroring.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
+    $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
+    $scope.slackCommentMirroringEnabled = profile.organization.experiments.indexOf('slack_comment_mirroring') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -52,6 +56,12 @@ angular.module('kifi')
     $scope.onSlackIntegrationDigestChanged = function() {
       profile.organization.config.settings.slack_digest_notif.setting = $scope.slackIntegrationDigestModel.enabled ? 'enabled' : 'disabled';
       orgProfileService.setOrgSettings(profile.organization.id, { slack_digest_notif: profile.organization.config.settings.slack_digest_notif.setting })
+      .then(onSave, onError);
+    };
+
+    $scope.onSlackIntegrationMirroringChanged = function() {
+      profile.organization.config.settings.slack_comment_mirroring.setting = $scope.slackCommentMirroringModel.enabled ? 'enabled' : 'disabled';
+      orgProfileService.mirrorComments(profile.organization.id, $scope.slackCommentMirroringModel.enabled)
       .then(onSave, onError);
     };
 
@@ -105,6 +115,37 @@ angular.module('kifi')
         $scope.blacklist.existing = data.settings.slack_ingestion_domain_blacklist.setting;
       }, onError);
       $scope.blacklist.newPath = '';
+    };
+
+    $scope.backfillBlacklistWarning = function () {
+      $scope.blacklist.backfillInProg = true;
+      orgProfileService.blacklistBackfillWarning(profile.organization.id)
+      .then(function (resp) {
+        $scope.blacklist.numKeepsToDelete = resp.keepCount;
+        $scope.blacklist.sampleKeepsToDelete = resp.sampleKeeps;
+        modalService.open({
+          template: 'teamSettings/blacklistWarning.tpl.html',
+          scope: $scope
+        });
+      })['finally'](function () {
+        $scope.blacklist.backfillInProg = false;
+      });
+    };
+
+    $scope.backfillBlacklistDelete = function () {
+      $scope.blacklist.backfillInProg = true;
+      orgProfileService.blacklistBackfillDelete(profile.organization.id)
+      .then(function (resp) {
+        modalService.open({
+          template: 'common/modal/simpleModal.tpl.html',
+          modalDefaults: {
+            title: 'Done!',
+            content: resp.keepCount + ' keeps deleted based on your blacklist.',
+            centered: true,
+            actionText: 'Sweet!'
+          }
+        });
+      })['catch'](modalService.openGenericErrorModal);
     };
 
     function onSave(resp) {

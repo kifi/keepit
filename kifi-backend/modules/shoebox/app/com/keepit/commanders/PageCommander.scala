@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.cache.{ PrimitiveCacheImpl, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.google.inject.Inject
 
@@ -21,6 +21,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.{ AccessLog, Logging }
 import org.joda.time.DateTime
+import com.keepit.common.core._
 
 import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Await, Future }
@@ -182,7 +183,7 @@ class PageCommander @Inject() (
 
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
-    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
+    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getActiveByIds(libraryIds.toSet).filter(_._2.state == LibraryStates.ACTIVE)
     libraryIds.flatMap(libraryMap.get)
@@ -231,10 +232,12 @@ class PageCommander @Inject() (
             val fakeUsers = userCommander.getAllFakeUsers()
             qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
           }
-          val sources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1).toSeq.sortBy {
-            case _: SlackAttribution => 0
-            case _ => 1
-          }.take(5)
+          val sources = {
+            val allSources = keepSourceCommander.getSourceAttributionForKeeps(info.keeps.map(_.id).toSet).values.map(_._1)
+            val slackSources = allSources.collect { case s: SlackAttribution => s }.distinctBy(s => (s.teamId, s.message.channel.id, s.message.timestamp))
+            val twitterSources = allSources.collect { case t: TwitterAttribution => t }.distinctBy(_.tweet.id)
+            (slackSources ++ twitterSources).take(5).toSeq
+          }
           (basicUserMap, topLibs, sources)
         }
 

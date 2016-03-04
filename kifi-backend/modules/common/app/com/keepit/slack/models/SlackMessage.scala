@@ -177,10 +177,14 @@ object SlackEmoji {
   val gear = SlackEmoji(":gear:")
   val hourglass = SlackEmoji(":hourglass:")
   val magnifyingGlass = SlackEmoji(":mag_right:")
+  val pencil = SlackEmoji(":pencil:")
+  val robotFace = SlackEmoji(":robot_face:")
   val rocket = SlackEmoji(":rocket:")
   val speechBalloon = SlackEmoji(":speech_balloon:")
+  val speakNoEvil = SlackEmoji(":speak_no_evil:")
   val star = SlackEmoji(":star:")
   val sweatSmile = SlackEmoji(":sweat_smile:")
+  val wave = SlackEmoji(":wave:")
 }
 
 sealed abstract class SlackCommand(val value: String)

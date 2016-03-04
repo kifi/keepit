@@ -80,6 +80,7 @@ final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
 }
 
 final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
+  def minMaxOpt(implicit cmp: Ordering[A]): Option[(A, A)] = if (xs.isEmpty) None else Option((xs.min, xs.max))
   def maxOpt(implicit cmp: Ordering[A]): Option[A] = if (xs.isEmpty) None else Option(xs.max)
   def minOpt(implicit cmp: Ordering[A]): Option[A] = if (xs.isEmpty) None else Option(xs.min)
   def maxByOpt[B](f: A => B)(implicit cmp: Ordering[B]): Option[A] = {

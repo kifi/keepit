@@ -2,6 +2,7 @@ package com.keepit.controllers.routing
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -10,14 +11,17 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
 import com.keepit.model._
+import com.keepit.slack.SlackTeamCommander
+import com.keepit.slack.models._
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
-import play.api.mvc.Result
+import play.api.mvc.{ Cookie, Result }
 import securesocial.core.SecureSocial
 import views.html
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 @Singleton
 class SlackAuthRouter @Inject() (
@@ -32,6 +36,7 @@ class SlackAuthRouter @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   permissionCommander: PermissionCommander,
   pathCommander: PathCommander,
+  slackTeamCommander: SlackTeamCommander,
   val airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
   implicit val defaultContext: ExecutionContext,
@@ -140,6 +145,13 @@ class SlackAuthRouter @Inject() (
     }
   }
 
+  def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = MaybeUserAction { implicit request =>
+    if (SlackTeamMembership.decodeTeamAndUser(hash).safely.contains((slackTeamId, slackUserId))) {
+      slackTeamCommander.togglePersonalDigests(slackTeamId, slackUserId, turnOn = turnOn) // this can fail if there is no such membership! (should never happen)
+    }
+    Redirect(PathCommander.home.absolute)
+  }
+
   private def weWantThisUserToAuthWithSlack(userIdOpt: Option[Id[User]], org: Organization, slackTeamId: SlackTeamId)(implicit session: RSession): Boolean = {
     userIdOpt match {
       case None => true // always hand non-users over to the frontend to ask them to log in or sign up
@@ -163,7 +175,7 @@ class SlackAuthRouter @Inject() (
 
     val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack" + modelParams + s"&slackTeamId=${slackTeamId.value}"
 
-    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
+    Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url)).withCookies(Cookie(PostRegIntent.onFailUrlKey, slackAuthPage.absolute))
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {

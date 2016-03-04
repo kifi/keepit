@@ -1,7 +1,8 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
+import com.keepit.commanders.{ KeepCommander, PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
+import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.Database
@@ -23,6 +24,7 @@ class OrganizationConfigController @Inject() (
     planCommander: PlanManagementCommander,
     keepToLibraryRepo: KeepToLibraryRepo,
     keepRepo: KeepRepo,
+    keepCommander: KeepCommander,
     orgConfigRepo: OrganizationConfigurationRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -81,7 +83,7 @@ class OrganizationConfigController @Inject() (
         val keepIds = keepToLibraryRepo.getByOrganizationId(request.orgId, drop = pos, take = batchSize).map(_.keepId)
         if (keepIds.nonEmpty) {
           val blacklisted = keepRepo.getByIds(keepIds.toSet).values.filter { keep =>
-            SlackIngestingBlacklist.blacklistedUrl(keep.url, blacklist)
+            keep.source == KeepSource.slack && SlackIngestingBlacklist.blacklistedUrl(keep.url, blacklist)
           }.toSeq
           blacklistedKeeps ++= blacklisted
         } else {
@@ -94,9 +96,17 @@ class OrganizationConfigController @Inject() (
     }
 
     if (readOnly) {
-      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length))
+      // Just trying to avoid exposing private keeps
+      val sampleKeeps = blacklistedKeeps.filter(_.visibility != LibraryVisibility.SECRET).sortBy(-_.id.get.id).take(10)
+      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleKeeps.map(_.url)))
     } else {
-      // todo: Do keep deletion
+      val deletion = db.readWriteAsync { implicit session =>
+        blacklistedKeeps.map(keepCommander.deactivateKeep(_)(session)).length
+      }
+      deletion.onComplete {
+        case a =>
+          log.info(s"[backfillSlackBlacklist] Deleted keeps for ${request.orgId} using blacklist. Result: $a")
+      }
       Ok(Json.obj("readonly" -> false, "keepCount" -> blacklistedKeeps.length))
     }
   }

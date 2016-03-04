@@ -62,6 +62,11 @@ angular.module('kifi')
         .sendOrgMemberInvite(orgId, inviteFields)
         .then(getResponseData);
       },
+      sendOrgMemberInviteViaSlack: function(orgId, username) {
+        return net
+        .sendOrgMemberInviteViaSlack(orgId, { username: username })
+        .then(getResponseData);
+      },
       acceptOrgMemberInvite: function (orgId, authToken) {
         return net
         .acceptOrgMemberInvite(orgId, authToken)
@@ -211,7 +216,19 @@ angular.module('kifi')
         attributes = _.extend(defaultAttributes, attributes || {});
         $analytics.eventTrack(eventName, attributes);
       },
-      invalidateOrgProfileCache: invalidateOrgProfileCache
+      invalidateOrgProfileCache: invalidateOrgProfileCache,
+      blacklistBackfillWarning: function (orgId) {
+        return net.blacklistBackfillWarning(orgId, {'confirm': false})
+        .then(getResponseData);
+      },
+      blacklistBackfillDelete: function (orgId) {
+        return net.blacklistBackfillDelete(orgId, {'confirm': true})
+        .then(getResponseData);
+      },
+      mirrorComments: function (orgId, turnOn) {
+        return net.mirrorComments(orgId, !!turnOn)
+        .then(getResponseData);
+      }
     };
 
     return api;

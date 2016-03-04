@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheS
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
@@ -61,9 +62,10 @@ object OrganizationExperimentType {
 
   val FAKE = OrganizationExperimentType("fake")
   val SLACK_COMMENT_MIRRORING = OrganizationExperimentType("slack_comment_mirroring")
+  val SLACK_PERSONAL_DIGESTS = OrganizationExperimentType("slack_personal_digests")
 
   val _ALL = List(
-    FAKE, SLACK_COMMENT_MIRRORING
+    FAKE, SLACK_COMMENT_MIRRORING, SLACK_PERSONAL_DIGESTS
   )
 
   def get(str: String): OrganizationExperimentType = OrganizationExperimentType(str.toLowerCase.trim)

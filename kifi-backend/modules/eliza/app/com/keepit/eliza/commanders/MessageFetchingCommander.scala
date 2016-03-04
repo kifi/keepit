@@ -51,7 +51,7 @@ class MessageFetchingCommander @Inject() (
       message.from match {
         case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
         case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-        case MessageSender.System => None
+        case MessageSender.System => Some(BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"))))
       },
       participants
     )

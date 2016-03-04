@@ -4,12 +4,19 @@ set -o errexit
 
 pushd "$(dirname $0)/.." > /dev/null
 
-if [[ ! -f FortyTwo.pem ]]; then
+# allowed command line arguments are --skip-publish --skip-chrome --skip-firefox
+SKIP_PUBLISH=""; SKIP_CHROME=""; SKIP_FIREFOX=""
+if [[ $@ == *"--skip-publish"* ]]; then
+  SKIP_PUBLISH=1
+fi
+if [[ $@ == *"--skip-chrome"* ]]; then
+  SKIP_CHROME=1
+fi
+if [[ $@ == *"--skip-firefox"* ]]; then
+  SKIP_FIREFOX=1
+fi
 
-  echo $'\nERROR: need FortyTwo.pem in '$(pwd)' (ask Carlos or Andrew)'
-  exit 1
-
-elif [[ ! -f amo_secret.key ]]; then
+if [[ ! -f amo_secret.key ]]; then
 
   echo $'\nERROR: need amo_secret.key in '$(pwd)' (ask Carlos or Andrew)'
   echo $'\n(it\'s just a plaintext file with the secret key from addons.mozilla.com)'
@@ -20,14 +27,6 @@ elif [[ ! -f certs/privatekey.pem ]]; then
   echo $'\nERROR: need certs/*.pem for signing Safari extensions (ask Carlos or Andrew).'
   echo '  Good instructions are here:'
   echo '  https://github.com/robertknight/xar-js#building-a-safari-extension'
-  exit 1
-
-elif ! which -s xpisign; then
-
-  echo $'\nERROR: need to install xpisign'
-  which -s swig || echo '  brew install swig'
-  which -s pip || echo '  sudo easy_install pip'
-  echo '  sudo pip install https://github.com/nmaier/xpisign.py/zipball/master'
   exit 1
 
 elif [[ ! -f node_modules/xar-js/xarjs ]]; then
@@ -48,14 +47,53 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   echo $'\nDeploying REAL extensions to kifi.com'
   read -p 'Press Enter or Ctrl-C'
 
-  REVIEW_STATUS_CODE=0
-  bin/review.sh || REVIEW_STATUS_CODE=$?
+  if [[ -z $SKIP_PUBLISH ]]; then
 
-  if [[ REVIEW_STATUS_CODE -ne 0 ]]; then
-    echo 'Firefox review failed. Exiting.'
-    echo '(if it failed after after validation go to addons.mozilla.org to download the signed xpi)'
-    echo '(then name it "kifi-signed.xpi", put it in "./out" and re-run this script to upload it to S3)'
-    exit $?
+    if [[ -z $SKIP_FIREFOX ]]; then
+
+      FIREFOX_STATUS_CODE=0
+      bin/publishFirefox.sh || FIREFOX_STATUS_CODE=$?
+
+      if [[ $FIREFOX_STATUS_CODE -ne 0 ]]; then
+
+        echo 'Firefox review failed. Exiting.'
+        echo '(if it failed after after validation go to addons.mozilla.org to download the signed xpi)'
+        echo '(then name it "kifi-signed.xpi", put it in "./out")'
+        echo '(do not forget to publish Chrome)'
+        echo '(and then bin/deploy.sh --skip-publish to upload to S3)'
+        exit $FIREFOX_STATUS_CODE
+
+      fi
+
+    else
+
+      echo 'Skipping Firefox...'
+
+    fi
+
+    if [[ -z $SKIP_CHROME ]]; then
+
+      CHROME_STATUS_CODE=0
+      bin/publishChrome.sh || CHROME_STATUS_CODE=$?
+
+      if [[ $CHROME_STATUS_CODE -ne 0 ]]; then
+
+        echo 'Chrome publish failed. Exiting.'
+        exit $CHROME_STATUS_CODE
+
+      fi
+
+    else
+
+      echo 'Skipping Chrome...'
+
+    fi
+
+  else
+
+    echo 'Skipping webstore publishes.'
+    echo 'You can publish individually with bin/publishFirefox.sh and bin/publishChrome.sh'
+
   fi
 
   if [[ -f out/kifi-signed.xpi ]]; then
@@ -71,7 +109,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
   else
 
-    echo 'Not uploading to S3: listed addons are hosted by Mozilla'
+    echo 'Not uploading to S3: The Firefox addon must be signed and named kifi-signed.xpi'
 
   fi
 
@@ -92,29 +130,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
   fi
 
-  echo $'Done.\n\n!! Please upload kifi.zip to the Chrome Web Store at https://chrome.google.com/webstore/developer/dashboard'
-
-elif [[ -f out/kifi-dev.crx && -f out/kifi-dev.xml && -f out/kifi-dev.xpi && -f out/kifi-dev.update.rdf ]]; then
-
-  echo $'\nDeploying DEV extensions to kifi.com'
-  read -p 'Press Enter or Ctrl-C '
-
-  xpisign -k FortyTwo.pem out/kifi-dev.xpi out/kifi-dev-signed.xpi
-
-  echo 'Uploading to S3...'
-  aws s3api put-object --bucket kifi-bin --key ext/chrome/kifi-dev.crx \
-    --content-type 'application/x-chrome-extension' --body out/kifi-dev.crx \
-    --cache-control 'no-cache, no-store'
-  aws s3api put-object --bucket kifi-bin --key ext/chrome/kifi-dev.xml \
-    --content-type 'application/xml' --body out/kifi-dev.xml \
-    --cache-control 'no-cache, no-store'
-  aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-dev.xpi \
-    --content-type 'application/x-xpinstall' --body out/kifi-dev-signed.xpi \
-    --cache-control 'no-cache, no-store'
-  aws s3api put-object --bucket kifi-bin --key ext/firefox/kifi-dev.update.rdf \
-    --content-type 'application/rdf+xml' --body out/kifi-dev.update.rdf \
-    --cache-control 'no-cache, no-store'
-  echo 'Done.'
+  echo $'Done!!\n\n'
 
 else
 

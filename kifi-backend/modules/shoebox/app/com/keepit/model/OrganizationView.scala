@@ -22,10 +22,13 @@ case class OrganizationInfo(
     numMembers: Int,
     numLibraries: Int,
     config: Option[ExternalOrganizationConfiguration],
-    slackTeam: Option[OrganizationSlackTeamInfo]) {
+    slackTeam: Option[OrganizationSlackTeamInfo],
+    experiments: Seq[OrganizationExperimentType]) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
+  private implicit val exTypeFormat = OrganizationExperimentType.format
+
   implicit val defaultWrites: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
     (__ \ 'ownerId).write[ExternalId[User]] and
@@ -38,7 +41,8 @@ object OrganizationInfo {
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
     (__ \ 'config).writeNullable[ExternalOrganizationConfiguration] and
-    (__ \ 'slackTeam).writeNullable[OrganizationSlackTeamInfo]
+    (__ \ 'slackTeam).writeNullable[OrganizationSlackTeamInfo] and
+    (__ \ 'experiments).write[Seq[OrganizationExperimentType]]
   )(unlift(OrganizationInfo.unapply))
 }
 

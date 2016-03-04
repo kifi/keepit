@@ -103,21 +103,7 @@ angular.module('kifi')
       // User registration      //
       ////////////////////////////
       socialSignup: function (provider, opts) {
-        var params = {
-          publicLibraryId : opts.libraryId || [],
-          intent: opts.intent || [],
-          libAuthToken: opts.libAuthToken || [],
-          publicOrgId: opts.orgId || [],
-          orgAuthToken: opts.orgAuthToken || [],
-          publicKeepId: opts.keepId || [],
-          keepAuthToken: opts.keepAuthToken || []
-        };
-        Object.keys(params).forEach(function (k) {
-          if (params[k] === null || params[k] === undefined || params[k] === '') {
-            delete params[k];
-          }
-        });
-        return navRoute('/signup/' + provider, params);
+        return navRoute('/signup/' + provider, opts);
       },
 
       socialSignupWithToken: function (provider) {
@@ -126,6 +112,9 @@ angular.module('kifi')
 
       socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
+      login: function(opts) {
+        return navRoute('/login', opts);
+      },
 
       ////////////////////////////
       // Libraries              //

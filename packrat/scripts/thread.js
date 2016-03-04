@@ -255,8 +255,10 @@ k.panes.thread = k.panes.thread || function () {
       m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});
     }
     m.formatLocalDate = formatLocalDate;
-    m.sender = m.user;
-    formatParticipant(m.sender);
+    if (m.user) {
+      m.sender = m.user;
+      formatParticipant(m.sender);
+    }
     if (m.source && m.source !== "server") {
       m.displayedSource = m.source;
     }

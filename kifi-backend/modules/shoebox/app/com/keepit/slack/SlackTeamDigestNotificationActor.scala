@@ -258,7 +258,7 @@ class SlackTeamDigestNotificationActor @Inject() (
         generalChannel <- generalChannelOpt
       } yield {
         slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map { sent =>
-          slackLog.info("Pushed a digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
+          slackLog.info("Team digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
           ()
         }.recover {
           case SlackFail.NoValidPushMethod =>

@@ -61,6 +61,10 @@
           <input class="kf-ts-integrations-checkbox" ng-model="slackIntegrationDigestModel.enabled" ng-change="onSlackIntegrationDigestChanged()"  type="checkbox" />
           <span ng-bind="'Receive a welcome message & updates about ' + slackTeam.name + '\'s usage in the #general channel (max 2 times per week)'"></span>
         </div>
+        <div class="kf-ts-integrations-checkrow" ng-if="slackCommentMirroringEnabled">
+          <input class="kf-ts-integrations-checkbox" ng-model="slackCommentMirroringModel.enabled" ng-change="onSlackIntegrationMirroringChanged()"  type="checkbox" />
+          <span>Send comments on Keeps to Slack channels.</span>
+        </div>
       </div>
 
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam">
@@ -73,17 +77,22 @@
             <tr><th>URL path</th><th>Added at</th><th></th></tr>
           </thead>
           <tr ng-repeat="entry in blacklist.existing | limitTo: blacklist.limit">
-            <td ng-bind="::entry.path"></td>
-            <td><time am-time-ago="entry.createdAt"></time></td>
+            <td ng-bind="::entry.path" class="kf-ts-slack-url"></td>
+            <td><time am-time-ago="entry.createdAt" ng-if="entry.createdAt"></time><span ng-if="!entry.createdAt" class="kf-ts-slack-default">default</span></td>
             <td><button class="kf-link" ng-click="removeBlacklistEntry(entry.path)" ng-show="blacklist.editable">×</button></td>
           </tr>
           <tr ng-if="blacklist.existing.length > blacklist.limit"><td colspan="3">
             <button class="kf-button-textonly kf-link" ng-click="expandBlacklist()">Show all <span ng-bind="blacklist.existing.length"></span> blacklisted paths</button>
           </td></tr>
         </table>
+        <div ng-if="blacklist.editable">
+          <span class="kf-ts-integrations-marketing-text">
+            As you change your blacklist, you can delete existing keeps shared via Slack which match the rules defined by the blacklist. <button type="submit" class="kf-button-textonly kf-link" ng-click="backfillBlacklistWarning()" ng-disabled="blacklist.backfillInProg">Delete blacklisted keeps.</button>
+          </span>
+        </div>
 
         <div ng-if="blacklist.editable">
-          <h3>Blacklist custom URLs</h3>
+          <h3 class="kf-ts-blacklist-header">Blacklist custom URLs</h3>
           <div>
             <form ng-submit="addBlacklistEntry()">
               <input type="text" class="kf-textbox kf-textbox-auto kf-ts-integations-blacklist-input" placeholder="URL path to blacklist" ng-model="blacklist.newPath">

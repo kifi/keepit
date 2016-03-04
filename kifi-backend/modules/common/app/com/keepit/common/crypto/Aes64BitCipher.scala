@@ -21,7 +21,7 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
   def encrypt(value: String): String = {
     val in = value.getBytes(Charset.forName("UTF-8"))
     val arr = crypt(in, ecipher)
-    CryptoSupport.toBase64(arr).replaceAllLiterally("\n", "")
+    CryptoSupport.toBase64(arr).replaceAllLiterally("\n", "").replaceAllLiterally("\r", "")
   }
   def decrypt(value: String): String = {
     val in = CryptoSupport.fromBase64(value)
@@ -55,7 +55,7 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
 
 }
 
-private object Aes64BitCipher {
+object Aes64BitCipher {
   // added sources of randomness generated using SecureRandom
   val keySalt: Array[Byte] = Array(-112, 67, 64, 26, -122, -43, 55, -61)
   val keyIterationCount = 19

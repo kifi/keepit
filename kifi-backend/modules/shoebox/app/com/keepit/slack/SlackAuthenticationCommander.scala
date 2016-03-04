@@ -143,9 +143,15 @@ class SlackAuthenticationCommanderImpl @Inject() (
         }
       }
 
-      case SyncPublicChannels() => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
+      case SyncPublicChannels(_) => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
         case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
+      }
+
+      case TurnCommentMirroring(turnOn) => Future.fromTry {
+        slackTeamCommander.turnCommentMirroring(userId, slackTeamId, turnOn).map { orgId =>
+          SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url)
+        }
       }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
@@ -156,8 +162,9 @@ class SlackAuthenticationCommanderImpl @Inject() (
     getIdentityAndMissingScopes(Some(userId), slackTeamIdOpt, action).flatMap {
       case (Some((slackTeamId, slackUserId)), missingScopes) if missingScopes.isEmpty =>
         processAuthorizedAction(userId, slackTeamId, slackUserId, action, None)
-      case (_, missingScopes) =>
-        val authUrl = getAuthLink(action, slackTeamIdOpt, missingScopes, SlackOAuthController.REDIRECT_URI).url
+      case (identityOpt, missingScopes) =>
+        val scopes = if (identityOpt.isDefined) missingScopes else missingScopes + SlackAuthScope.Identify
+        val authUrl = getAuthLink(action, slackTeamIdOpt, scopes, SlackOAuthController.REDIRECT_URI).url
         Future.successful(SlackResponse.RedirectClient(authUrl))
     }
   }

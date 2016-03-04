@@ -174,10 +174,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
 
     slackMessageOpt match {
-      case Some(post) =>
+      case Some(message) =>
+        val origin = message.channel.name match {
+          case Some(prettyChannelName) => s"#${prettyChannelName.value}"
+          case None => s"@${message.username.value}"
+        }
         DescriptionElements(
           keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
-          "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          "from", origin --> LinkElement(message.permalink),
           "was added to", lib.name --> libLink,
           addComment
         )

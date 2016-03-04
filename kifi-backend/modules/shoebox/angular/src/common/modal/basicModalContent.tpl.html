@@ -2,7 +2,7 @@
   <a class="dialog-x" ng-click="closeAndCancel()"></a>
   <div class="dialog-body-wrap">
     <h1 class="dialog-header" ng-if="title.length" ng-bind-html="title"></h1>
-    <div class="dialog-body" ng-transclude ng-class="{ 'dialog-centered': centered }"></div>
+    <div class="dialog-body" kf-wheel-allow ng-transclude ng-class="{ 'dialog-centered': centered }"></div>
   </div>
   <div class="dialog-buttons" ng-if="!withoutButtons">
     <button

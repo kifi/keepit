@@ -1,5 +1,7 @@
 package com.keepit.notify.info
 
+import com.keepit.common.strings._
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
@@ -105,9 +107,12 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
 
       val body = {
         slackAttributionOpt.map { attr =>
-          s"${author.name} just added in #${attr.message.channel.name.value}" +
-            newKeep.title.map(title => s": $title").getOrElse("")
-        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse("a new keep")}")
+          val titleString = newKeep.title.getOrElse(newKeep.url.abbreviate(30))
+          attr.message.channel.name match {
+            case Some(prettyChannelName) => s"${author.name} just added in #${prettyChannelName.value}: " + titleString
+            case None => s"${author.name} just shared: " + titleString
+          }
+        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse(newKeep.url.abbreviate(30))}")
       }
 
       val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
