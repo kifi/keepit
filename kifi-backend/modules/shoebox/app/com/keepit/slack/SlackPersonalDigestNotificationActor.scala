@@ -101,7 +101,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         Future.successful(())
       case Some(digest) =>
         val message = if (membership.lastPersonalDigestAt.isEmpty) messageForFirstTimeDigest(digest) else messageForRegularDigest(digest)
-        slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, messageForRegularDigest(digest)).map(_ => ()).andThen {
+        slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
               slackMembershipRepo.updateLastPersonalDigest(membershipId)
