@@ -24,7 +24,8 @@
     "Scripts": {
       "Start": [
         "listeners.js",
-        "scripts/api.js"
+        "scripts/api.js",
+        "scripts/google_inject.js"
       ]
     }
   },

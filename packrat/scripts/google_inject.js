@@ -29,14 +29,13 @@ var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[
 
 var pageSession = Math.random().toString(16).slice(2);
 
-
-$.fn.layout = function () {
-  return this.each(function () {this.clientHeight});  // forces layout
-};
-
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function () {
   log('[google_inject]');
+
+  $.fn.layout = function () {
+    return this.each(function () {this.clientHeight});  // forces layout
+  };
 
   var origin = location.origin;
   var $res = $(k.render('html/search/google'));   // a reference to our search results (kept so that we can reinsert when removed)
