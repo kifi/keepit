@@ -44,9 +44,14 @@ class SlackOAuthController @Inject() (
     }
 
     resultFut.recover {
-      case fail =>
+      case fail: SlackActionFail =>
+        log.error(s"[SlackActionFail] Slack authorization failed for user ${request.userId} with state $state, code $codeOpt, error code ${fail.code}, and message ${fail.msg}")
         airbrake.notify(s"Slack authorization failed for user ${request.userId} with state $state and code $codeOpt", fail)
-        Redirect("/", SEE_OTHER) // we could have an explicit error page here
+        Redirect(s"/?error=${fail.code}", SEE_OTHER) // we could have an explicit error page here
+      case fail =>
+        log.error(s"[SlackActionFail] Slack authorization failed for user ${request.userId} with state $state, code $codeOpt")
+        airbrake.notify(s"Slack authorization failed for user ${request.userId} with state $state and code $codeOpt", fail)
+        Redirect(s"/?error=unknown", SEE_OTHER)
     }
   }
 
@@ -66,10 +71,10 @@ class SlackOAuthController @Inject() (
     }.recover {
       case fail: SlackActionFail =>
         log.warn(s"[SlackOAuthController#handleAsBrowserRequest] Error: ${fail.code}")
-        Redirect(fail.bestEffortRedirect.fold("/")(_.absolute))
+        Redirect(fail.bestEffortRedirect.fold(s"/?error=${fail.code}")(_.absolute))
       case badFail =>
         airbrake.notify("Uncategorized failure for SlackAction", badFail)
-        Redirect("/")
+        Redirect("/?error=unknown")
     }
   }
 }
