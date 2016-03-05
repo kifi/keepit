@@ -22,7 +22,8 @@ import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.models.{ SlackChannelToLibraryRepo, SlackTeamMembershipStates, SlackTeamMembershipRepo }
+import com.keepit.slack.{ SlackClientWrapper, SlackClient }
+import com.keepit.slack.models.{ SlackUserPresenceState, SlackChannelToLibraryRepo, SlackTeamMembershipStates, SlackTeamMembershipRepo }
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -67,6 +68,7 @@ class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    slackClient: SlackClientWrapper,
     userRepo: UserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
@@ -994,5 +996,13 @@ class AdminUserController @Inject() (
 
   def flushClients(id: Id[User]) = AdminUserPage.async { implicit request =>
     eliza.flush(id).map(_ => Ok)
+  }
+
+  //return true if at least one of its slack users is active
+  def slackUserOnline(id: Id[User]) = AdminUserPage.async { implicit request =>
+    val presence = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) } map { membership =>
+      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId)
+    }
+    Future.sequence(presence).map(_.exists(_.state == SlackUserPresenceState.Active)).map { active => Ok(JsBoolean(active)) }
   }
 }

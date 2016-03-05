@@ -8,6 +8,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
 import com.keepit.model.User
+import com.keepit.slack.models.SlackUserPresenceState.{ Away, Active }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -204,17 +205,12 @@ object SlackUserInfo {
   implicit val format: Format[SlackUserInfo] = Format(reads, writes)
 }
 
-sealed abstract class SlackUserPresenceState { val name: String }
+sealed abstract class SlackUserPresenceState(val name: String)
 
 object SlackUserPresenceState {
   case object Active extends SlackUserPresenceState("active")
   case object Away extends SlackUserPresenceState("away")
-  case object Offline extends SlackUserPresenceState("offline")
   case object Unknown extends SlackUserPresenceState("unknown")
-  val reads Reads[SlackUserPresenceState] = new Reads[SlackUserPresenceState] {
-    def reads(json: JsValue): JsResult[SlackUserPresenceState]
-  }
-
 }
 
 case class SlackUserPresence(
@@ -223,11 +219,21 @@ case class SlackUserPresence(
   originalJson: JsValue)
 
 object SlackUserPresence {
-  private val reads: Reads[SlackUserPresence] = (
-    (__ \ 'state).read[SlackUserPresenceState](SlackUserPresenceState.reads) and
-    (__ \ 'lastActivity).readNullable[DateTime](internalTime.DateTimeJsonLongFormat) and
-    Reads(JsSuccess(_))
-  )(SlackUserPresence.apply _)
+  val reads: Reads[SlackUserPresence] = new Reads[SlackUserPresence] {
+    def reads(jsVal: JsValue): JsResult[SlackUserPresence] = {
+      val json = jsVal.as[JsObject]
+      val state = (json \ "presence").asOpt[String] map { stateString =>
+        stateString match {
+          case Active.name => Active
+          case Away.name => Away
+        }
+      } getOrElse SlackUserPresenceState.Unknown
+      val lastActivity = (json \ "last_activity").asOpt[DateTime]
+      JsSuccess(SlackUserPresence(state, lastActivity, json))
+    }
+  }
+
+  val UnknownPresence = SlackUserPresence(SlackUserPresenceState.Unknown, None, JsObject(Seq.empty))
 
   private val writes: Writes[SlackUserPresence] = Writes(_.originalJson)
 
