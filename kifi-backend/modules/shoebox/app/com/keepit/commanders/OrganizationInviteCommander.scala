@@ -29,7 +29,7 @@ import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgMemberJoined, OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.{ SlackChannelMagnet, SlackClientWrapper, SlackActionFail }
+import com.keepit.slack.{ SlackClientWrapper, SlackActionFail }
 import com.keepit.slack.models.{ SlackMessageResponse, SlackChannelId, SlackUserInfo, SlackMessageRequest, SlackTeam, SlackFail, SlackTeamRepo, SlackTeamId, SlackUsername }
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json

@@ -212,7 +212,7 @@ class SlackTeamCommanderImpl @Inject() (
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
-            slackChannelId = Some(channel.channelId),
+            slackChannelId = channel.channelId,
             slackChannelName = channel.channelName,
             status = SlackIntegrationStatus.On
           ))
@@ -222,7 +222,7 @@ class SlackTeamCommanderImpl @Inject() (
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
-            slackChannelId = Some(channel.channelId),
+            slackChannelId = channel.channelId,
             slackChannelName = channel.channelName,
             status = SlackIntegrationStatus.On
           ))
@@ -268,7 +268,7 @@ class SlackTeamCommanderImpl @Inject() (
           case Some(orgId) =>
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == team.slackTeamId)
-              val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).flatMap(_.slackChannelId).toSet
+              val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).map(_.slackChannelId).toSet
               val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }

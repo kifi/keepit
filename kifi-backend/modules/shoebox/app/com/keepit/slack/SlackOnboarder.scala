@@ -77,7 +77,7 @@ class SlackOnboarderImpl @Inject() (
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
       debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
-        slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId.get, welcomeMsg).map(_ => ())
+        slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId, welcomeMsg).map(_ => ())
       }
     }.getOrElse {
       log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")

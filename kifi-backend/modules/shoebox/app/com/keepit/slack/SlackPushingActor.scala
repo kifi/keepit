@@ -25,7 +25,6 @@ import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import org.joda.time.{ DateTime, Duration }
 
-import scala.concurrent.duration.{ Duration => ScalaDuration }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
@@ -202,7 +201,7 @@ class SlackPushingActor @Inject() (
                 ))
                 // call the SlackClient to try and update the message
                 log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
-                slackClient.updateMessage(botToken, integration.slackChannelId.get, oldKeepTimestamp, updatedKeepMessage).andThen {
+                slackClient.updateMessage(botToken, integration.slackChannelId, oldKeepTimestamp, updatedKeepMessage).andThen {
                   case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
                   case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
                 }.imap(_ => ()).recover {
@@ -222,7 +221,7 @@ class SlackPushingActor @Inject() (
                   // regenerate the slack message if there is some text to push
                   val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                   // call the SlackClient to try and update the message
-                  slackClient.updateMessage(botToken, integration.slackChannelId.get, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
+                  slackClient.updateMessage(botToken, integration.slackChannelId, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
                     case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
                       slackLog.warn(s"Failed to update comment ${msg.id} because Slack says it's uneditable, removing it from the cache")
                       slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
@@ -239,7 +238,7 @@ class SlackPushingActor @Inject() (
       // Now push new things, updating the integration state as we go
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
         slackMessageForItem(item, settings).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
-          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId.get, itemMsg).recoverWith {
+          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg).recoverWith {
             case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
           }
         }.map { pushedMessageOpt =>
@@ -251,16 +250,12 @@ class SlackPushingActor @Inject() (
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { pushedMessage =>
-                  if (integration.slackChannelId.isDefined) {
-                    slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
-                  }
+                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
               case PushItem.MessageToPush(k, kifiMsg) =>
                 pushedMessageOpt.foreach { pushedMessage =>
-                  if (integration.slackChannelId.isDefined) {
-                    slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
-                  }
+                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
                 }
                 integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }
@@ -291,7 +286,7 @@ class SlackPushingActor @Inject() (
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
       def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
-        case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
+        case sa: SlackAttribution => lts.slackChannelId == sa.message.channel.id
         case _ => false
       }
 
