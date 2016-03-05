@@ -25,7 +25,7 @@ angular.module('kifi')
     // Set up the states.
     $stateProvider
       .state('home', {
-        url: '/?openImportModal',
+        url: '/?openImportModal&error',
         controller: 'HomeCtrl',
         templateUrl: 'home/home.tpl.html',
         'abstract': true
