@@ -94,7 +94,7 @@ class SlackClientWrapperImpl @Inject() (
     }
     bot match {
       case Some(kifiBot) =>
-        slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser)
+        slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(kifiBot.token))
           .recoverWith {
             case botFail @ SlackErrorCode(NOT_IN_CHANNEL) =>
               slackLog.warn(s"Kifi-bot for $slackTeamId is not in channel $slackChannel so it can't post. Trying to invite it in now")
@@ -104,9 +104,9 @@ class SlackClientWrapperImpl @Inject() (
               }.recoverWith {
                 case fail =>
                   slackLog.error(s"Could not invite kifi-bot to $slackChannel in $slackTeamId", fail.getMessage)
-                  Future.failed(botFail) // I'm a little worried about accidentally propagating a `TokenRevoked` error from a user to the bot here
+                  Future.failed(botFail)
               }
-          }.andThen(onRevokedBotToken(kifiBot.token))
+          }
       case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }
