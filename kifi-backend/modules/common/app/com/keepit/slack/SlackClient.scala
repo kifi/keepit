@@ -172,7 +172,7 @@ class SlackClientImpl(
   }
 
   def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence] = {
-    slackCall[SlackUserPresence](SlackAPI.TeamInfo(token))(__.read)
+    slackCall[SlackUserPresence](SlackAPI.TeamInfo(token))
   }
 
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
