@@ -1,6 +1,7 @@
 package com.keepit.search.index.article
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.performance.{ StatsdTimingAsync, StatsdTiming }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index._
@@ -84,11 +85,9 @@ class ShardedArticleIndexer(
   //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
   @StatsdTimingAsync("ShardedArticleIndexer.processIndexables")
   private def processIndexables(indexables: Seq[ArticleIndexable], maxSeq: SequenceNumber[NormalizedURI]): Future[Int] = updateLock.synchronized {
-    val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
-    Future.sequence(futureCounts).map { counts =>
-      sequenceNumber = maxSeq
-      counts.sum
-    }
+    val counts = indexShards.values.toSeq.map { indexer => indexer.processIndexables(indexables) }
+    sequenceNumber = maxSeq
+    Future.successful(counts.sum)
   }
 
   override def getDbHighestSeqNum(): SequenceNumber[NormalizedURI] = {
