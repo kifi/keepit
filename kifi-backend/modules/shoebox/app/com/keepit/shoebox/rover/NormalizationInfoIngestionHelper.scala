@@ -29,7 +29,7 @@ class NormalizationInfoIngestionHelper @Inject() (
       val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
       normalizationService.update(currentReference, scrapedCandidates).map { newReferenceUriIdOption =>
         processAlternateUrls(newReferenceUriIdOption getOrElse uriId, destinationUrl, info)
-        newReferenceUriIdOption.isDefined
+        newReferenceUriIdOption.exists(_ != uriId)
       }
     } catch {
       case e: Exception => throw new Exception(s"failed processing normalization info for uri $uriId, of kind $articleKind $info : $destinationUrl", e)
