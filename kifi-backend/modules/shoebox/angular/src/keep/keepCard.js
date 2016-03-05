@@ -304,9 +304,12 @@ angular.module('kifi')
               if (keep.sourceAttribution.twitter) {
                 scope.displayNote = keep.sourceAttribution.twitter.tweet.text;
                 scope.noteAttribution = 'Twitter';
-              } else if (keep.sourceAttribution.slack && $filter('slackText')(keep.sourceAttribution.slack.message.text)) {
-                scope.displayNote = keep.sourceAttribution.slack.message.text;
-                scope.noteAttribution = 'Slack';
+              } else if (keep.sourceAttribution.slack) {
+                var html = $filter('slackText')(keep.sourceAttribution.slack.message.text);
+                if (html) {
+                  scope.displayNote = html;
+                  scope.noteAttribution = 'Slack';
+                }
               }
             } else {
               scope.displayNote = keep.note;
