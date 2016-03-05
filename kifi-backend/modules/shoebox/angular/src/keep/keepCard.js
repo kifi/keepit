@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfKeepCard', [
   '$state', '$analytics', '$q', 'extensionLiaison', 'util', 'installService', 'libraryService',
   'modalService', 'keepActionService', '$location', 'undoService', '$rootScope', 'profileService',
-  '$injector',
+  '$injector', '$filter',
   function ($state, $analytics, $q, extensionLiaison, util, installService, libraryService,
       modalService, keepActionService, $location, undoService, $rootScope, profileService,
-      $injector) {
+      $injector, $filter) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -129,7 +129,7 @@ angular.module('kifi')
           if (!editor.length) {
             var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, keep.pubId, function update(noteText) {
+            $injector.get('keepNoteForm').init(noteEl, scope.displayNote, keepLibraryId, keep.pubId, function update(noteText) {
               keep.note = noteText;
             });
           } else {
@@ -290,6 +290,33 @@ angular.module('kifi')
           // Don't change until the link is updated to be a bit more secure:
           scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
           scope.globalGalleryView = scope.galleryView;
+          var updateNote = function () {
+            var noteMayHaveFallback = keep.sourceAttribution && (keep.sourceAttribution.twitter || keep.sourceAttribution.slack);
+            var noteHasSubstance = function (note) {
+              if (!note) { return false; }
+              var parts = note.split(/\[#((?:\\.|[^\]])*)\]/g); // splitting on hashtags
+              var textPortion = '';
+              for (var i = 0; i < parts.length; i += 2) { textPortion += parts[i].trim(); }
+              return textPortion.length > 0;
+            };
+
+            if (noteMayHaveFallback && !noteHasSubstance(keep.note)) {
+              if (keep.sourceAttribution.twitter) {
+                scope.displayNote = keep.sourceAttribution.twitter.tweet.text;
+                scope.noteAttribution = 'Twitter';
+              } else if (keep.sourceAttribution.slack) {
+                var html = $filter('slackText')(keep.sourceAttribution.slack.message.text);
+                if (html) {
+                  scope.displayNote = html;
+                  scope.noteAttribution = 'Slack';
+                }
+              }
+            } else {
+              scope.displayNote = keep.note;
+              scope.noteAttribution = '';
+            }
+          };
+          scope.$watch('keep.note', updateNote);
 
           var libraryPermissions = (keep.library && keep.library.permissions) || [];
           var keepPermissions = keep.permissions || [];
@@ -348,7 +375,7 @@ angular.module('kifi')
                 action: scope.editKeepTitle.bind(scope)
               });
               scope.menuItems.push({
-                title: keep.note ? 'Edit Note' : 'Add Note',
+                title: scope.displayNote ? 'Edit Note' : 'Add Note',
                 action: scope.editKeepNote.bind(scope)
               });
               var removeImageCallback = scope.removeImageCallback();
