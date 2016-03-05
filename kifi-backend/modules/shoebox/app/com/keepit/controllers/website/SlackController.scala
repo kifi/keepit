@@ -117,8 +117,7 @@ class SlackController @Inject() (
       val useKifiBot = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
       (slackTeamIdOpt, useKifiBot)
     }
-    val syncAction = SyncPublicChannels(useKifiBot)
-    val action = if (slackTeamIdOpt.isDefined) syncAction else ConnectSlackTeam(request.orgId, andThen = Some(syncAction))
+    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels(useKifiBot)))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
     handleAsAPIRequest(res)(request.request)
   }
