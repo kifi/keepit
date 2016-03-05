@@ -269,7 +269,7 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, teamId: SlackTeamId, channelId: Option[SlackChannelId], channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackUserAccessToken, teamId: SlackTeamId, channelId: SlackChannelId, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackTimestamp]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
     val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
     val query = Query(Query.in(channelName), Query.hasLink, after)
@@ -281,7 +281,7 @@ class SlackIngestingActor @Inject() (
       case (previousMessages, nextPage) =>
         val request = SlackSearchRequest(query, Sort.ByTimestamp, SortDirection.Ascending, pageSize, nextPage)
         val futureResponse = {
-          if (channelId.exists(SlackChannelId.isPublic)) slackClient.searchMessagesHoweverPossible(teamId, request, preferredTokens = Seq(token))
+          if (SlackChannelId.isPublic(channelId)) slackClient.searchMessagesHoweverPossible(teamId, request, preferredTokens = Seq(token))
           else slackClient.searchMessages(token, request)
         }
         futureResponse.map { response =>

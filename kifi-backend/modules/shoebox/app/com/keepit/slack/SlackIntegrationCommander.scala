@@ -29,7 +29,6 @@ trait SlackIntegrationCommander {
   def turnChannelIngestion(integrationId: Id[SlackChannelToLibrary], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Id[Library]
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
-  def fetchMissingChannelIds(): Future[Unit]
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
 }
 
@@ -67,7 +66,7 @@ class SlackIntegrationCommanderImpl @Inject() (
           team.organizationId match {
             case Some(orgId) =>
               val webhook = webhookInfo.webhook
-              webhook.channelId.map { channelId => channelRepo.getOrCreate(slackTeamId, channelId, webhook.channelName) }
+              channelRepo.getOrCreate(slackTeamId, webhook.channelId, webhook.channelName)
 
               val space = LibrarySpace.fromOrganizationId(orgId)
               val ltsc = libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
@@ -221,44 +220,6 @@ class SlackIntegrationCommanderImpl @Inject() (
     request.libToSlack.foreach { ltsId => libToChannelRepo.deactivate(libToChannelRepo.get(ltsId)) }
     request.slackToLib.foreach { stlId => channelToLibRepo.deactivate(channelToLibRepo.get(stlId)) }
     SlackIntegrationDeleteResponse(request.libToSlack.size + request.slackToLib.size)
-  }
-
-  def fetchMissingChannelIds(): Future[Unit] = {
-    log.info("Fetching missing Slack channel ids.")
-    val (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId) = db.readOnlyMaster { implicit session =>
-      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId() ++ slackIncomingWebhookInfoRepo.getWithMissingChannelId()
-      val uniqueUserIdAndTeamIds = channelsWithMissingIds.map { case (userId, teamId, channelName) => (userId, teamId) }
-      val tokensWithScopesByUserIdAndTeamId = uniqueUserIdAndTeamIds.map {
-        case (userId, teamId) => (userId, teamId) ->
-          slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, userId).flatMap(m => m.token.map((_, m.scopes)))
-      }.toMap
-      (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId)
-    }
-    log.info(s"Fetching ${channelsWithMissingIds.size} missing channel ids.")
-    FutureHelpers.sequentialExec(channelsWithMissingIds) {
-      case (userId, teamId, channelName) =>
-        log.info(s"Fetching channelId for Slack channel $channelName via user $userId in team $teamId")
-        tokensWithScopesByUserIdAndTeamId(userId, teamId) match {
-          case Some((token, scopes)) if scopes intersect Set(SlackAuthScope.SearchRead, SlackAuthScope.ChannelsRead) nonEmpty => slackClient.getChannelId(token, channelName).map {
-            case Some(channelId) =>
-              log.info(s"Found channelId $channelId for Slack channel $channelName via user $userId in team $teamId")
-              db.readWrite { implicit session =>
-                libToChannelRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
-                channelToLibRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
-                slackIncomingWebhookInfoRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
-              }
-            case None =>
-          } recover {
-            case error =>
-              airbrake.notify(s"Unexpected error while fetching channelId for Slack channel $channelName via user $userId in team $teamId", error)
-              ()
-          }
-          case Some((invalidToken, invalidScopes)) =>
-            Future.successful(())
-          case None =>
-            Future.successful(())
-        }
-    }
   }
 
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>

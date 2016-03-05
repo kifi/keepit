@@ -33,7 +33,7 @@ trait SlackIntegration {
   def space: LibrarySpace
   def slackUserId: SlackUserId
   def slackTeamId: SlackTeamId
-  def slackChannelId: Option[SlackChannelId]
+  def slackChannelId: SlackChannelId
   def slackChannelName: SlackChannelName
   def libraryId: Id[Library]
   def status: SlackIntegrationStatus
@@ -50,7 +50,7 @@ case class SlackIntegrationCreateRequest(
     space: LibrarySpace,
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
-    slackChannelId: Option[SlackChannelId],
+    slackChannelId: SlackChannelId,
     slackChannelName: SlackChannelName,
     libraryId: Id[Library],
     status: SlackIntegrationStatus) extends SlackIntegrationRequest {

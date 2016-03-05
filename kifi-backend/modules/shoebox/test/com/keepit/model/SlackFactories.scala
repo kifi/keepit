@@ -79,10 +79,10 @@ object SlackIncomingWebhookFactory {
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
-      slackChannelId = Some(slackChannelId),
+      slackChannelId = slackChannelId,
       webhook = SlackIncomingWebhook(
         channelName = slackChannelName,
-        channelId = Some(slackChannelId),
+        channelId = slackChannelId,
         url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
         configUrl = s"https://${ra(5)}.slack.com/services/$botStr"
       ),
@@ -91,7 +91,7 @@ object SlackIncomingWebhookFactory {
   }
   case class PartialSlackIncomingWebhook(siw: SlackIncomingWebhookInfo) {
     def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
-    def withChannelName(cn: String) = this.copy(siw = siw.copy(webhook = siw.webhook.copy(channelName = SlackChannelName(cn))))
+    def withChannel(channelId: SlackChannelId, channelName: SlackChannelName) = this.copy(siw = siw.copy(slackChannelId = channelId, webhook = siw.webhook.copy(channelId = channelId, channelName = channelName)))
   }
   def webhooks(count: Int) = List.fill(count)(webhook())
 }
@@ -104,7 +104,7 @@ object SlackChannelToLibraryFactory {
       space = LibrarySpace.fromUserId(Id(-idx.incrementAndGet())),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
-      slackChannelId = None,
+      slackChannelId = SlackChannelId("C" + ra(8)),
       slackChannelName = SlackChannelName(ra(10)),
       libraryId = Id[Library](idx.incrementAndGet()),
       status = SlackIntegrationStatus.Off
@@ -130,7 +130,7 @@ object LibraryToSlackChannelFactory {
       space = LibrarySpace.fromUserId(Id(-idx.incrementAndGet())),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
-      slackChannelId = None,
+      slackChannelId = SlackChannelId("C" + ra(8)),
       slackChannelName = SlackChannelName(ra(10)),
       libraryId = Id[Library](idx.incrementAndGet()),
       status = SlackIntegrationStatus.Off

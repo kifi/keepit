@@ -241,7 +241,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val hasBeenPushed = describeKeeps(keepsToPush) match {
       case None => Future.successful(true)
       case Some(futureMessage) => futureMessage.flatMap { message =>
-        slackClient.sendToSlackViaUser(lts.slackUserId, lts.slackTeamId, lts.channel, message.quiet).imap(_ => true)
+        slackClient.sendToSlackViaUser(lts.slackUserId, lts.slackTeamId, lts.slackChannelId, message.quiet).imap(_ => true)
           .recover {
             case f: SlackFail =>
               log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
@@ -307,7 +307,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
     val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
     def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
-      case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
+      case sa: SlackAttribution => lts.slackChannelId == sa.message.channel.id
       case _ => false
     }
     val relevantKeeps = keeps.filter(keep => !comesFromDestinationChannel(keep.id.get))

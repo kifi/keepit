@@ -33,7 +33,7 @@ object SlackPushForKeep {
   def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], pushedMessage: SlackMessageResponse): SlackPushForKeep = {
     SlackPushForKeep(
       slackTeamId = integration.slackTeamId,
-      slackChannelId = integration.slackChannelId.get,
+      slackChannelId = integration.slackChannelId,
       integrationId = integration.id.get,
       keepId = keepId,
       timestamp = pushedMessage.timestamp,

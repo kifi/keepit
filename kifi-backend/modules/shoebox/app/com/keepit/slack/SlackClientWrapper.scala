@@ -16,28 +16,9 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try, Failure }
 import scala.concurrent.duration._
 
-sealed abstract class SlackChannelMagnet
-object SlackChannelMagnet {
-  case class Id(id: SlackChannelId) extends SlackChannelMagnet
-  implicit def fromId(id: SlackChannelId): SlackChannelMagnet = Id(id)
-
-  case class Name(name: SlackChannelName) extends SlackChannelMagnet
-  implicit def fromName(name: SlackChannelName): SlackChannelMagnet = Name(name)
-
-  case class NameAndId(name: SlackChannelName, id: SlackChannelId) extends SlackChannelMagnet
-  implicit def fromBoth(idAndName: (SlackChannelId, SlackChannelName)): SlackChannelMagnet =
-    NameAndId(idAndName._2, idAndName._1)
-
-  implicit def fromNameAndMaybeId(nameAndMaybeId: (SlackChannelName, Option[SlackChannelId])): SlackChannelMagnet =
-    nameAndMaybeId match {
-      case (name, Some(id)) => fromBoth(id, name)
-      case (name, None) => fromName(name)
-    }
-}
-
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
-  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
+  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
 
@@ -83,16 +64,9 @@ class SlackClientWrapperImpl @Inject() (
   val debouncer = new Debouncing.Dropper[Unit]
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
-  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannel: SlackChannelMagnet, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
-    slackChannel match {
-      case SlackChannelMagnet.Name(name) =>
-        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg).map(_ => None)
-      case SlackChannelMagnet.Id(id) =>
-        pushToSlackUsingToken(slackUserId, slackTeamId, id, msg).map(v => Some(v))
-      case SlackChannelMagnet.NameAndId(name, id) =>
-        pushToSlackViaWebhook(slackUserId, slackTeamId, name, msg).map(_ => None).recoverWith {
-          case _ => pushToSlackUsingToken(slackUserId, slackTeamId, id, msg).map(v => Some(v))
-        }
+  def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
+    pushToSlackViaWebhook(slackTeamId, slackChannelId, msg).map(_ => None).recoverWith {
+      case _ => pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v))
     }
   }
 
@@ -100,13 +74,11 @@ class SlackClientWrapperImpl @Inject() (
     import SlackErrorCode._
     sendToSlackViaBot(slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
       case SlackFail.NoValidBotToken | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(NOT_IN_CHANNEL) =>
-        val (slackChannel, slackTeamMembers) = db.readOnlyMaster { implicit s =>
-          val slackChannel = slackChannelRepo.getByChannelId(slackTeamId, slackChannelId)
-          val memberships = slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
-          (slackChannel, memberships)
+        val slackTeamMembers = db.readOnlyMaster { implicit s =>
+          slackTeamMembershipRepo.getBySlackTeam(slackTeamId).map(_.slackUserId)
         }
         FutureHelpers.collectFirst(slackTeamMembers) { slackUserId =>
-          sendToSlackViaUser(slackUserId, slackTeamId, slackChannel.map(ch => SlackChannelMagnet.fromBoth(ch.idAndName)) getOrElse slackChannelId, msg).map(v => Some(v)).recover {
+          sendToSlackViaUser(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v)).recover {
             case SlackFail.NoValidWebhooks | SlackFail.NoValidToken | SlackErrorCode(NOT_IN_CHANNEL) | SlackErrorCode(CHANNEL_NOT_FOUND) | SlackErrorCode(RESTRICTED_ACTION) => None
           }
         }.flatMap {
@@ -144,10 +116,10 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  private def pushToSlackViaWebhook(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, msg: SlackMessageRequest): Future[Unit] = {
+  private def pushToSlackViaWebhook(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Unit] = {
     FutureHelpers.doUntil {
       val firstWorkingWebhook = db.readOnlyMaster { implicit s =>
-        slackIncomingWebhookInfoRepo.getForChannelByName(slackUserId, slackTeamId, slackChannelName).headOption
+        slackIncomingWebhookInfoRepo.getByChannel(slackTeamId, slackChannelId).headOption
       }
       firstWorkingWebhook match {
         case None => Future.failed(SlackFail.NoValidWebhooks)
@@ -155,10 +127,9 @@ class SlackClientWrapperImpl @Inject() (
           val now = clock.now
           val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
-              for {
-                channelId <- webhookInfo.webhook.channelId
-                channel <- slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, channelId)
-              } slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+              slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, webhookInfo.slackChannelId).foreach { channel =>
+                slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
+              }
 
               slackIncomingWebhookInfoRepo.save(
                 slackIncomingWebhookInfoRepo.get(webhookInfo.id.get).withCleanSlate.withLastPostedAt(now)

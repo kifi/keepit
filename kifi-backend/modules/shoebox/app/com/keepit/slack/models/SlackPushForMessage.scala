@@ -35,7 +35,7 @@ object SlackPushForMessage {
   def fromMessage(integration: LibraryToSlackChannel, messageId: Id[Message], pushedMessage: SlackMessageResponse): SlackPushForMessage = {
     SlackPushForMessage(
       slackTeamId = integration.slackTeamId,
-      slackChannelId = integration.slackChannelId.get,
+      slackChannelId = integration.slackChannelId,
       integrationId = integration.id.get,
       messageId = messageId,
       timestamp = pushedMessage.timestamp,

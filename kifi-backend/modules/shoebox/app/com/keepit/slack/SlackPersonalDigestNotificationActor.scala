@@ -127,8 +127,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
       librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
         val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
-        teamIntegrations.groupBy(_.slackChannelId).collect {
-          case (Some(channelId), integrations) =>
+        teamIntegrations.groupBy(_.slackChannelId).map {
+          case (channelId, integrations) =>
             channelId -> integrations.flatMap(sctl => librariesById.get(sctl.libraryId)).filter { lib =>
               (lib.visibility, lib.organizationId) match {
                 case (LibraryVisibility.PUBLISHED, _) => true

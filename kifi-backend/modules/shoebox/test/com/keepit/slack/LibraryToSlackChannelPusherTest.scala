@@ -54,7 +54,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             (user, lib, lts)
           }
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
@@ -75,7 +75,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextPushAt(fakeClock.now).saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             (owner, user, lib, lts)
           }
           // First time is fine, since they have view permissions
@@ -101,7 +101,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             (user, lib, lts, siw)
           }
           slackClient.isSlackThrowingAFit = true // pretend Slack hates us and rejects all our webhooks
@@ -141,8 +141,8 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             (user, lib, lts, siw.webhook)
           }
 
@@ -185,8 +185,8 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").on().withNextIngestionAt(fakeClock.now).saved
             (user, lib, stm, lts, stl, siw.webhook)
           }
@@ -220,8 +220,8 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannel(lts.slackChannelId, lts.slackChannelName).saved
             KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep Without Note").saved
             KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep With Note").withNote("My [#favorite] keep [#in the world] is this one").saved
             libToSlackPusher.pushLibraryAtLatest(lib.id.get, fakeClock.now)
