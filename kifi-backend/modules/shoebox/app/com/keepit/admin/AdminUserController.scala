@@ -1000,9 +1000,9 @@ class AdminUserController @Inject() (
 
   //return true if at least one of its slack users is active
   def slackUserOnline(id: Id[User]) = AdminUserPage.async { implicit request =>
-    val presence = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) } map { membership =>
-      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId)
-    }
-    Future.sequence(presence).map(_.exists(_.state == SlackUserPresenceState.Active)).map { active => Ok(JsBoolean(active)) }
+    val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
+    FutureHelpers.exists(memberships) { membership =>
+      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).map(_.state == SlackUserPresenceState.Active)
+    } map { active => Ok(JsBoolean(active)) }
   }
 }
