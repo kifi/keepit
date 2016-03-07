@@ -15,6 +15,7 @@ import com.keepit.social.{ Author, BasicUser, SocialNetworks, SocialId }
 import com.keepit.social.twitter.TwitterUserId
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[KeepSourceCommanderImpl])
 trait KeepSourceCommander {
@@ -97,9 +98,9 @@ class KeepSourceAugmentor @Inject() (
 
   private val slackIdentifier = """<[@#][A-Z].*?>""".r
   private def genBasicSlackMessage(teamId: SlackTeamId, message: SlackMessage)(implicit session: RSession) = {
-    val improvedText = slackIdentifier.findMatchesAndInterstitials(message.text).map {
+    val improvedText = Try(slackIdentifier.findMatchesAndInterstitials(message.text).map {
       case Right(identifier) =>
-        val whole = identifier.group(1)
+        val whole = identifier.group(0)
         val id = whole.substring(2, whole.length - 1)
         SlackChannelId.parse[SlackChannelId](id).toOption.collect {
           case SlackChannelId.User(username) => slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value + ">")
@@ -109,7 +110,10 @@ class KeepSourceAugmentor @Inject() (
           ""
         }
       case Left(literal) => literal
-    }.mkString("")
+    }.mkString("")).getOrElse {
+      log.warn(s"[genBasicSlackMessage] Unable to parse identifiers $message")
+      ""
+    }
     PrettySlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, improvedText)
   }
 }
