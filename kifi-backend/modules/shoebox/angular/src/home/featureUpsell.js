@@ -14,14 +14,13 @@ angular.module('kifi')
       templateUrl: 'home/featureUpsell.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
-        var hasFeatureUpsellExp = (scope.me.experiments || []).indexOf('slack_upsell_widget') !== -1;
         scope.orgToSync = scope.me.orgs.filter(function (org) {
           return !org.slackTeam || !org.slackTeam.publicChannelsLastSyncedAt;
         })[0];
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
         (Object.keys(profileService.prefs).length === 0 ? profileService.fetchPrefs() : $q.when(profileService.prefs)).then(function (prefs) {
-          scope.showFeatureUpsell = scope.orgToSync && hasFeatureUpsellExp && prefs.slack_upsell_widget;
+          scope.showFeatureUpsell = scope.orgToSync && prefs.slack_upsell_widget;
         });
 
         scope.hide = function () {

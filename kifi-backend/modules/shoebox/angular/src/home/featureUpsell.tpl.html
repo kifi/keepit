@@ -1,8 +1,9 @@
 <div class="kf-feature-upsell" ng-show="showFeatureUpsell">
   <div class="kf-fu-slack">
-    <span class="kf-fu-hide" ng-click="hide()">X</span>
-    <span class="kf-fu-header kf-flex-row">
-      <span class="svg-slack kf-fu-slack-icon"></span><b>Integrate <span ng-bind="orgToSync.name"></span> with Slack</b>
+    <svg class="kf-fu-hide symbol-sprite" kf-symbol-sprite icon="error" ng-click="hide()"></svg>
+    <span class="svg-slack kf-fu-slack-icon"></span>
+    <span class="kf-fu-header">
+      Integrate <span ng-bind="orgToSync.name"></span> with Slack
     </span>
     <div class="kf-fu-body">
       <span class="kf-fu-body-line">Automatically keep links from Slack.</span>
@@ -10,6 +11,6 @@
       <span class="kf-fu-body-line">Get your team on Kifi easily.</span>
     </div>
     <a class="kf-fu-slack-start-btn" ng-click="clickedConnectSlack()">Connect Slack</a>
-    <a class="kf-fu-slack-learn-link kf-link" href="https://www.kifi.com/integrations/slack?loggedIn">Learn more</a>
+    <a class="kf-fu-slack-learn-link kf-link" href="https://www.kifi.com/integrations/slack?loggedIn" target="_self">Learn more</a>
   </div>
 </div>
