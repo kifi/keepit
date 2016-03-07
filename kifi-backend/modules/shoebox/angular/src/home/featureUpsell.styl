@@ -17,11 +17,14 @@ section-border-radius = 10px
       opacity: .7
 
 .kf-fu-hide
-  position: relative
+  position: absolute
   float: right
-  top: -12px
-  right: -5px
+  top: 50px
+  right: 120px
+  height: 12px
+  width: 12px
   opacity: 0
+  fill: black
 
   &:hover
     cursor: pointer
@@ -31,18 +34,24 @@ section-border-radius = 10px
   margin-top: 10px
   margin-bottom: 10px
   font-size: 15px
+  font-weight: bold
   text-align: center
-  margin-left: 16px
 
 .kf-fu-slack-icon
+  position: relative
+  top: 2px
   display: inline-block
   height: 15px
   width: 15px
 
+.kf-fu-slack-icon + .kf-fu-header
+  margin-left: 1px
+
 .kf-fu-body
   display: inline-block
   color: alpha(black, .8)
-  margin-bottom: 14px
+  margin-top: 7px
+  margin-bottom: 10px
 
 .kf-fu-body-line
   display: inline-block
