@@ -27,7 +27,8 @@ angular.module('kifi')
         var username = $scope.username.replace(/@/g, '');
         orgProfileService.sendOrgMemberInviteViaSlack(profile.organization.id, username).then(function(data){
           if (data === '') {
-            $scope.inviteResult = 'Your invite was successfully sent to @' + username + ', click on the link to accept it!';
+            $scope.inviteResult = 'Visit Slack and check your direct messages from Kifi bot.' +
+             ' Click on the invitation link to join ' + profile.organization.name + '!';
           }
         })['catch'](function(resp) {
           if (resp.data.error === 'slack_user_not_found') {
