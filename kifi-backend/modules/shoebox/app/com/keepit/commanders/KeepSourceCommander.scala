@@ -101,9 +101,9 @@ class KeepSourceAugmentor @Inject() (
       case Right(identifier) =>
         val whole = identifier.group(1)
         val id = whole.substring(2, whole.length - 1)
-        id.headOption.collect {
-          case 'U' => slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(id)).map(s => "<@" + s.slackUsername.value + ">")
-          case 'C' => slackChannelRepo.getByChannelId(teamId, SlackChannelId(id)).map(s => "<#" + s.slackChannelName.value + ">")
+        Option(SlackChannelId(id)).collect {
+          case SlackChannelId.User(username) => slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value + ">")
+          case channel: SlackChannelId => slackChannelRepo.getByChannelId(teamId, channel).map(s => "<#" + s.slackChannelName.value + ">")
         }.getOrElse {
           log.warn(s"[genBasicSlackMessage] Unknown Slack id $whole")
           ""
