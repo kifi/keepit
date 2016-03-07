@@ -7,7 +7,7 @@ import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.time._
 import com.keepit.macros.Location
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
-import com.keepit.slack.models.SlackEmoji
+import com.keepit.slack.models.{ SlackUsername, SlackEmoji }
 import com.keepit.social.BasicUser
 import org.joda.time.{ Duration, DateTime, Period }
 import org.ocpsoft.prettytime.PrettyTime
@@ -69,6 +69,7 @@ object DescriptionElements {
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
   implicit def fromLocation(location: Location): BasicElement = s"${location.context}: ${location.line}"
   implicit def fromSlackEmoji(emoji: SlackEmoji): BasicElement = emoji.value
+  implicit def fromSlackUsername(name: SlackUsername): BasicElement = fromText("@" + name.value.stripPrefix("@"))
 
   implicit def fromDateTime(time: DateTime): BasicElement = new PrettyTime().format(time.toDate)
   def inTheLast(x: Duration): BasicElement = {

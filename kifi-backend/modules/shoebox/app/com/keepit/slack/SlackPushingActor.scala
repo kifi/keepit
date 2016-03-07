@@ -196,9 +196,7 @@ class SlackPushingActor @Inject() (
               // lookup k in a cache to find a slack message timestamp
               slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
                 // regenerate the slack message
-                val updatedKeepMessage = SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-                  keepAsDescriptionElements(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                ))
+                val updatedKeepMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
                 // call the SlackClient to try and update the message
                 log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
                 slackClient.updateMessage(botToken, integration.slackChannelId, oldKeepTimestamp, updatedKeepMessage).andThen {
@@ -337,54 +335,57 @@ class SlackPushingActor @Inject() (
         },
         "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
       ))))
-      case PushItem.KeepToPush(k, ktl) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-        keepAsDescriptionElements(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get))
-      )))
-      case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty &&
-        orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
+      case PushItem.KeepToPush(k, ktl) =>
+        Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
+      case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
         Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get)))
-      case messageToSwallow: PushItem.MessageToPush => None
+      case messageToSwallow: PushItem.MessageToPush =>
+        None
     }
   }
-  private def keepAsDescriptionElements(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): DescriptionElements = {
+  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
     import DescriptionElements._
 
-    val slackMessageOpt = attribution.collect { case sa: SlackAttribution => sa.message }
     val shouldSmartRoute = canSmartRoute(slackTeamId)
-
-    val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-    val addComment = {
-      DescriptionElements("(", "Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId)), ")")
+    val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    val keepElement = {
+      val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
+      keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
     }
-    val libLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId).absolute)
+    val keepElementWithReply = DescriptionElements(
+      keepElement,
+      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
+      "|",
+      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+    )
 
-    slackMessageOpt match {
-      case Some(message) =>
-        val origin = message.channel.name match {
-          case Some(prettyChannelName) => s"#${prettyChannelName.value}"
-          case None => s"@${message.username.value}"
-        }
-        DescriptionElements(
-          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink,
-          "from", origin --> LinkElement(message.permalink),
-          "was added to", lib.name --> libLink, addComment
-        )
-      case None =>
-        val userElement: Option[DescriptionElements] = {
-          if (lib.organizationId.isEmpty || !shouldSmartRoute) user.map(fromBasicUser)
-          else user.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
-        }
-        val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
-        DescriptionElements(
-          userElement.map(ue => DescriptionElements(ue, "added", keepElement)) getOrElse DescriptionElements(keepElement, "was added"),
-          "to", lib.name --> libLink,
-          keep.note.map(note => DescriptionElements(
-            "— “",
+    (keep.note, attribution) match {
+      case (None, None) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(
+          userElement, "sent", keepElementWithReply
+        )))
+      case (Some(note), _) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElementWithReply),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(
+            userElement, ":",
             // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
             DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
             "”"
-          )), addComment
-        )
+          ))))
+      case (None, Some(attr)) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElementWithReply),
+          attachments = Seq(SlackAttachment.simple(
+            attr match {
+              case TwitterAttribution(tweet) => DescriptionElements(
+                tweet.user.name, ":",
+                DescriptionElements.unlines(tweet.text.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") })
+              )
+              case SlackAttribution(msg, team) => DescriptionElements(
+                msg.username, ":",
+                DescriptionElements.unlines(msg.text.lines.toSeq.map { ln => DescriptionElements("_", ln, "_") })
+              )
+            }
+          )))
     }
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
@@ -393,24 +394,32 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
 
     val shouldSmartRoute = canSmartRoute(slackTeamId)
-    val userElement: Option[DescriptionElements] = {
-      if (lib.organizationId.isEmpty || !shouldSmartRoute) user.map(fromBasicUser)
-      else user.map(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    val keepElement = {
+      val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
+      keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
     }
-    val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-    val keepElement = keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
+    val keepElementWithReply = DescriptionElements(
+      keepElement,
+      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
+      "|",
+      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+    )
 
+    val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
     SlackMessageRequest.fromKifi(
-      text = DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.speechBalloon, userElement getOrElse "Someone", "on", keepElement)),
-      attachments = if (msg.isDeleted) Seq(SlackAttachment.simple("[deleted]")) else CrossServiceMessage.splitOutLookHeres(msg.text).collect {
-        case Left(text) => SlackAttachment.simple(DescriptionElements.unlines(text.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))).withFullMarkdown
-        case Right(Success((pointer, ref))) =>
-          val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
-          imageUrlRegex.findFirstIn(ref).fold(attachment)(attachment.withImageUrl)
-        case Right(Failure(fail)) =>
-          slackLog.error(s"Failed to process a look-here in ${msg.text} because ${fail.getMessage}")
-          SlackAttachment.simple("look here")
-      }
+      text = DescriptionElements.formatForSlack(keepElementWithReply),
+      attachments =
+        if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
+        else SlackAttachment.simple(DescriptionElements(userElement, ":", textAndLookHeres.map {
+          case Left(str) => str
+          case Right(Success((pointer, ref))) => pointer
+          case Right(Failure(fail)) => "look here"
+        })) +: textAndLookHeres.collect {
+          case Right(Success((pointer, ref))) =>
+            val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
+            imageUrlRegex.findFirstIn(ref).fold(attachment)(attachment.withImageUrl)
+        }
     )
   }
 }
