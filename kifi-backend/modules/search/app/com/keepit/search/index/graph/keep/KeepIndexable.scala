@@ -49,7 +49,6 @@ object KeepFields {
   object Source {
     def apply(teamId: SlackTeamId, channelId: SlackChannelId): String = s"slack|${channelId.value}" // TODO(Léo): this should be "slack|teamId_channelId"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
-    def apply(source: RawSourceAttribution): String = Source(SourceAttribution.fromRawSourceAttribution(source))
     def apply(source: SourceAttribution): String = source match {
       case TwitterAttribution(tweet) => Source(tweet.user.screenName)
       case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)

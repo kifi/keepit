@@ -28,11 +28,6 @@ object SourceAttribution {
     }
   }
 
-  def fromRawSourceAttribution(source: RawSourceAttribution): SourceAttribution = source match {
-    case RawTwitterAttribution(tweet) => TwitterAttribution(BasicTweet.fromRawTweet(tweet))
-    case RawSlackAttribution(message, teamId) => SlackAttribution(BasicSlackMessage.fromSlackMessage(message), teamId)
-  }
-
   val internalFormat = new OFormat[SourceAttribution] {
     def writes(source: SourceAttribution) = {
       val (attrType, attrJs) = toJson(source)
@@ -99,7 +94,6 @@ case class BasicSlackMessage(channel: SlackChannelIdAndPrettyName, userId: Slack
 object BasicSlackMessage {
 
   implicit val format = Json.format[BasicSlackMessage]
-  def fromSlackMessage(message: SlackMessage): BasicSlackMessage = BasicSlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, message.text)
 }
 
 case class SlackAttribution(message: BasicSlackMessage, teamId: SlackTeamId) extends SourceAttribution
@@ -108,7 +102,7 @@ object SlackAttribution {
 }
 
 case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
-  override val version = 5
+  override val version = 6
   val namespace = "source_attribution_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
