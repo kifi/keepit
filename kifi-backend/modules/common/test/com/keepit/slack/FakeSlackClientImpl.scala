@@ -21,6 +21,7 @@ case class FakeSlackClientModule() extends SlackClientModule {
 }
 
 class FakeSlackClientImpl extends SlackClient {
+  def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence] = Future.successful(SlackUserPresence.UnknownPresence)
   val pushedMessagesByWebhook: mutable.Map[String, List[SlackMessageRequest]] = mutable.Map.empty.withDefaultValue(List.empty)
   val channelLog: mutable.Map[(SlackTeamId, SlackChannelName), List[SlackMessage]] = mutable.Map.empty.withDefaultValue(List.empty)
   val membershipToken: mutable.Map[SlackAccessToken, (SlackTeamId, SlackUserId)] = mutable.Map.empty

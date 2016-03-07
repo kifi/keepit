@@ -2,12 +2,15 @@ package com.keepit.slack.models
 
 import java.util.UUID
 import com.keepit.common.cache._
+import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.ValidInt
 import com.keepit.model.User
+import com.keepit.slack.models.SlackUserPresenceState.{ Away, Active }
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -200,6 +203,41 @@ object SlackUserInfo {
   private val writes: Writes[SlackUserInfo] = Writes(_.originalJson)
 
   implicit val format: Format[SlackUserInfo] = Format(reads, writes)
+}
+
+sealed abstract class SlackUserPresenceState(val name: String)
+
+object SlackUserPresenceState {
+  case object Active extends SlackUserPresenceState("active")
+  case object Away extends SlackUserPresenceState("away")
+  case object Unknown extends SlackUserPresenceState("unknown")
+}
+
+case class SlackUserPresence(
+  state: SlackUserPresenceState,
+  lastActivity: Option[DateTime],
+  originalJson: JsValue)
+
+object SlackUserPresence {
+  val reads: Reads[SlackUserPresence] = new Reads[SlackUserPresence] {
+    def reads(jsVal: JsValue): JsResult[SlackUserPresence] = {
+      val json = jsVal.as[JsObject]
+      val state = (json \ "presence").asOpt[String] map { stateString =>
+        stateString match {
+          case Active.name => Active
+          case Away.name => Away
+        }
+      } getOrElse SlackUserPresenceState.Unknown
+      val lastActivity = (json \ "last_activity").asOpt[DateTime]
+      JsSuccess(SlackUserPresence(state, lastActivity, json))
+    }
+  }
+
+  val UnknownPresence = SlackUserPresence(SlackUserPresenceState.Unknown, None, JsObject(Seq.empty))
+
+  private val writes: Writes[SlackUserPresence] = Writes(_.originalJson)
+
+  implicit val format: Format[SlackUserPresence] = Format(reads, writes)
 }
 
 case class SlackTeamMembersKey(slackTeamId: SlackTeamId) extends Key[Seq[SlackUserInfo]] {

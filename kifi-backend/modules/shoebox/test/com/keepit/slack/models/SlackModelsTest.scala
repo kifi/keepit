@@ -3,7 +3,9 @@ package com.keepit.slack.models
 import java.io.File
 
 import com.keepit.common.strings._
+import com.keepit.common.time._
 import com.keepit.model.OrganizationSettings
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 
@@ -23,6 +25,44 @@ class SlackModelsTest extends Specification {
             |  "user_id": "U054D149J"
             |}
           """.stripMargin).validate[SlackIdentifyResponse] must haveClass[JsSuccess[_]]
+      }
+      "presence away" in {
+        val res = Json.parse(
+          """
+            |{
+            |    "ok": true,
+            |    "presence": "away"
+            |}
+          """.stripMargin).validate[SlackUserPresence].get
+        res.state === SlackUserPresenceState.Away
+        res.lastActivity === None
+      }
+      "presence active" in {
+        val res = Json.parse(
+          """
+            |{
+            |    "ok": true,
+            |    "presence": "active",
+            |    "online": true,
+            |    "auto_away": false,
+            |    "manual_away": false,
+            |    "connection_count": 1,
+            |    "last_activity": 1457138486
+            |}
+          """.stripMargin).validate[SlackUserPresence].get
+        res.state === SlackUserPresenceState.Active
+        res.lastActivity === Some(new DateTime(1457138486L, DEFAULT_DATE_TIME_ZONE))
+      }
+      "presence error" in {
+        val res = Json.parse(
+          """
+            |{
+            |    "ok": false,
+            |    "error": "user_not_found"
+            |}
+          """.stripMargin).validate[SlackUserPresence].get
+        res.state === SlackUserPresenceState.Unknown
+        res.lastActivity === None
       }
       "users.list" in {
         val raw = io.Source.fromFile(new File("test/data/slack_kifi.json"), UTF8).mkString
