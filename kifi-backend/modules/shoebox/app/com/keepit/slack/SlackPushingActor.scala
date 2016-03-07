@@ -366,11 +366,10 @@ class SlackPushingActor @Inject() (
       case (Some(note), _) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(
-            userElement, ":",
+            userElement, ": ",
             // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
-            DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") }),
-            "”"
-          ))))
+            DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") })
+          )).withFullMarkdown))
       case (None, Some(attr)) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(
@@ -418,7 +417,7 @@ class SlackPushingActor @Inject() (
         })) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
-            imageUrlRegex.findFirstIn(ref).fold(attachment)(attachment.withImageUrl)
+            imageUrlRegex.findFirstIn(ref).fold(attachment)(url => attachment.withText("").withImageUrl(url))
         }
     )
   }
