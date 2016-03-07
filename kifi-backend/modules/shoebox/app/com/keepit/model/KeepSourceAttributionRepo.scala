@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.KeepSourceAugmentor
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
@@ -23,6 +24,7 @@ trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
 @Singleton
 class KeepSourceAttributionRepoImpl @Inject() (
     sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache,
+    keepSourceAugmentor: KeepSourceAugmentor,
     val db: DataBaseComponent,
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[KeepSourceAttribution] with KeepSourceAttributionRepo with Logging {
@@ -59,7 +61,7 @@ class KeepSourceAttributionRepoImpl @Inject() (
   initTable()
 
   def invalidateCache(model: KeepSourceAttribution)(implicit session: RSession): Unit = {
-    sourceAttributionByKeepIdCache.set(SourceAttributionKeepIdKey(model.keepId), SourceAttribution.fromRawSourceAttribution(model.attribution))
+    sourceAttributionByKeepIdCache.set(SourceAttributionKeepIdKey(model.keepId), keepSourceAugmentor.rawToSourceAttribution(model.attribution))
   }
 
   def deleteCache(model: KeepSourceAttribution)(implicit session: RSession): Unit = {
@@ -70,7 +72,7 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
     sourceAttributionByKeepIdCache.bulkGetOrElse(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
-      getRawByKeepIds(missingKeys.map(_.keepId)).map { case (keepId, rawAttribution) => SourceAttributionKeepIdKey(keepId) -> SourceAttribution.fromRawSourceAttribution(rawAttribution) }
+      getRawByKeepIds(missingKeys.map(_.keepId)).map { case (keepId, rawAttribution) => SourceAttributionKeepIdKey(keepId) -> keepSourceAugmentor.rawToSourceAttribution(rawAttribution) }
     }.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution }
   }
 

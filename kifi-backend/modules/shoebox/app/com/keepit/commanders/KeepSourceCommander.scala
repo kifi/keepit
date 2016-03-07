@@ -5,11 +5,12 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.core.mapExtensionOps
-import com.keepit.common.util.MapHelpers
+import com.keepit.common.core._
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackTeamId, SlackUserId, SlackTeamMembershipRepo }
+import com.keepit.slack.models._
 import com.keepit.social.{ Author, BasicUser, SocialNetworks, SocialId }
 import com.keepit.social.twitter.TwitterUserId
 
@@ -34,7 +35,7 @@ class KeepSourceCommanderImpl @Inject() (
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
   implicit val defaultContext: ExecutionContext)
-    extends KeepSourceCommander {
+    extends KeepSourceCommander with Logging {
 
   // Get the source attribution for the provided keeps
   // then look at the a couple of tables to see if any of those attributions can be re-assigned to an actual Kifi user
@@ -81,5 +82,34 @@ class KeepSourceCommanderImpl @Inject() (
         }
       }
     }.toSet
+  }
+}
+
+@Singleton
+class KeepSourceAugmentor @Inject() (
+    slackTeamMembershipRepo: SlackTeamMembershipRepo,
+    slackChannelRepo: SlackChannelRepo) extends Logging {
+
+  def rawToSourceAttribution(source: RawSourceAttribution)(implicit session: RSession): SourceAttribution = source match {
+    case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
+    case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
+  }
+
+  private val slackIdentifier = """<[@#][A-Z].*?>""".r
+  private def genBasicSlackMessage(teamId: SlackTeamId, message: SlackMessage)(implicit session: RSession) = {
+    val improvedText = slackIdentifier.findMatchesAndInterstitials(message.text).map {
+      case Right(identifier) =>
+        val whole = identifier.group(1)
+        val id = whole.substring(2, whole.length - 1)
+        SlackChannelId.parse[SlackChannelId](id).toOption.collect {
+          case SlackChannelId.User(username) => slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value + ">")
+          case channel: SlackChannelId => slackChannelRepo.getByChannelId(teamId, channel).map(s => "<#" + s.slackChannelName.value + ">")
+        }.getOrElse {
+          log.warn(s"[genBasicSlackMessage] Unknown Slack id $whole")
+          ""
+        }
+      case Left(literal) => literal
+    }.mkString("")
+    PrettySlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, improvedText)
   }
 }
