@@ -26,7 +26,7 @@ import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ SlackClientWrapper, SlackActionFail }
-import com.keepit.slack.models.{ SlackMessage, SlackSearchRequest, SlackChannelRepo, SlackChannelId, SlackMessageRequest, SlackFail, SlackTeamRepo, SlackUsername }
+import com.keepit.slack.models.{ SlackEmoji, SlackMessage, SlackSearchRequest, SlackChannelRepo, SlackChannelId, SlackMessageRequest, SlackFail, SlackTeamRepo, SlackUsername }
 import com.keepit.social.BasicUser
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -460,8 +460,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           val userInfosFut = slackClient.getUsers(slackTeam.slackTeamId)
           val invite: OrganizationInvite = OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = None, emailAddress = None)
           val message: SlackMessageRequest = SlackMessageRequest.fromKifi {
-            DescriptionElements.formatForSlack(DescriptionElements(s"Here's your invitation to join ${org.name} on Kifi!",
-              "Click here to accept it" --> LinkElement(s"${pathCommander.pathForOrganization(org).absolute}?authToken=${invite.authToken}")))
+            DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.mailboxWithMail, s" Here's the invitation access link you just requested!",
+              "Click here to access this team on Kifi!" --> LinkElement(s"${pathCommander.pathForOrganization(org).absolute}?authToken=${invite.authToken}"),
+              "\n", "... now back to watching \"The Big Bot Theory\""))
           }
           userInfosFut.flatMap { userInfos =>
             userInfos.find(_.name == username) match {
