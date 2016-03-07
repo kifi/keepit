@@ -351,7 +351,7 @@ class SlackPushingActor @Inject() (
       val shouldSmartRoute = canSmartRoute(slackTeamId)
       val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
       DescriptionElements(
-        keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)),
+        "“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”",
         "View Article" --> keepLink,
         "|",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
@@ -398,7 +398,7 @@ class SlackPushingActor @Inject() (
     }
     val keepElement = {
       DescriptionElements(
-        keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)),
+        "“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”",
         "View Article" --> keepLink,
         "|",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
