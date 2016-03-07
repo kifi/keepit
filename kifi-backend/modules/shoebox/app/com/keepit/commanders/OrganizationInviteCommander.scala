@@ -26,7 +26,7 @@ import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ SlackClientWrapper, SlackActionFail }
-import com.keepit.slack.models.{ SlackChannelRepo, SlackMessageResponse, SlackChannelId, SlackMessageRequest, SlackFail, SlackTeamRepo, SlackUsername }
+import com.keepit.slack.models.{ SlackMessage, SlackSearchRequest, SlackChannelRepo, SlackChannelId, SlackMessageRequest, SlackFail, SlackTeamRepo, SlackUsername }
 import com.keepit.social.BasicUser
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -45,7 +45,7 @@ trait OrganizationInviteCommander {
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
   def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite]
-  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit]
+  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Option[SlackMessage]]
 }
 
 @Singleton
@@ -450,7 +450,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     db.readOnlyReplica { implicit session => organizationInviteRepo.getByInviteeIdAndDecision(userId, decision) }
   }
 
-  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit] = {
+  def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Option[SlackMessage]] = {
     import DescriptionElements._
     db.readOnlyReplica { implicit s =>
       val org = organizationRepo.get(orgId)
@@ -469,7 +469,17 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               case Some(slackUser) =>
                 persistInvitation(invite, force = true).getOrElse(throw new Exception(s"can't create org (${orgId.id}) invite for ${slackUser.id} on slack team ${slackTeam.id.get.id}"))
                 log.info(s"[OrgDMInvite] sending to slack team ${slackTeam.id}, user ${slackUser.id.value}")
-                slackClient.sendToSlackHoweverPossible(slackTeam.slackTeamId, SlackChannelId.User(slackUser.id.value), message).map(_ => ())
+                slackClient.sendToSlackHoweverPossible(slackTeam.slackTeamId, SlackChannelId.User(slackUser.id.value), message).flatMap {
+                  case None => Future.successful(None)
+                  case Some(messageResponse) =>
+                    import SlackSearchRequest._
+                    val channelName = slackChannelRepo.getByChannelId(slackTeam.slackTeamId, messageResponse.slackChannelId).map(_.slackChannelName)
+                    val searchRequest = SlackSearchRequest(Query(Query.from(messageResponse.from), channelName.map(name => Query.in(name))), Sort.ByTimestamp, SortDirection.Descending, PageSize(1))
+                    slackClient.searchMessagesHoweverPossible(slackTeam.slackTeamId, searchRequest).map { searchResponse =>
+                      if (searchResponse.messages.matches.isEmpty) airbrake.notify(s"[OrgDMInvite] can't retrieve message in $channelName from ${messageResponse.from} that we just sent! try improving the search query")
+                      searchResponse.messages.matches.headOption
+                    }
+                }
             }
           }
       }

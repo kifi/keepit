@@ -77,11 +77,13 @@ object SlackMessageRequest {
 case class SlackMessageResponse(
   slackChannelId: SlackChannelId,
   timestamp: SlackTimestamp,
-  text: String)
+  text: String,
+  from: SlackUsername)
 object SlackMessageResponse {
   implicit val reads: Reads[SlackMessageResponse] = (
     (__ \ 'channel).read[SlackChannelId] and
     (__ \ 'ts).read[SlackTimestamp] and
-    (__ \ 'message \ 'text).read[String]
+    (__ \ 'message \ 'text).read[String] and
+    (__ \ 'message \ 'username).read[SlackUsername]
   )(SlackMessageResponse.apply _)
 }
