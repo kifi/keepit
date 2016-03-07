@@ -346,26 +346,25 @@ class SlackPushingActor @Inject() (
   private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
     import DescriptionElements._
 
-    val shouldSmartRoute = canSmartRoute(slackTeamId)
     val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
     val keepElement = {
+      val shouldSmartRoute = canSmartRoute(slackTeamId)
       val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-      keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
+      DescriptionElements(
+        keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)),
+        "View Article" --> keepLink,
+        "|",
+        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+      )
     }
-    val keepElementWithReply = DescriptionElements(
-      keepElement,
-      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
-      "|",
-      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
-    )
 
     (keep.note, attribution) match {
       case (None, None) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(
-          userElement, "sent", keepElementWithReply
+          userElement, "sent", keepElement
         )))
       case (Some(note), _) =>
-        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElementWithReply),
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(
             userElement, ":",
             // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
@@ -373,7 +372,7 @@ class SlackPushingActor @Inject() (
             "”"
           ))))
       case (None, Some(attr)) =>
-        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElementWithReply),
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(
             attr match {
               case TwitterAttribution(tweet) => DescriptionElements(
@@ -393,28 +392,29 @@ class SlackPushingActor @Inject() (
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
-    val shouldSmartRoute = canSmartRoute(slackTeamId)
     val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
-    val keepElement = {
-      val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-      keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> keepLink
+    val keepLink = {
+      val shouldSmartRoute = canSmartRoute(slackTeamId)
+      LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
     }
-    val keepElementWithReply = DescriptionElements(
-      keepElement,
-      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
-      "|",
-      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
-    )
+    val keepElement = {
+      DescriptionElements(
+        keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)),
+        "View Article" --> keepLink,
+        "|",
+        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+      )
+    }
 
     val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
     SlackMessageRequest.fromKifi(
-      text = DescriptionElements.formatForSlack(keepElementWithReply),
+      text = DescriptionElements.formatForSlack(keepElement),
       attachments =
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
         else SlackAttachment.simple(DescriptionElements(userElement, ":", textAndLookHeres.map {
-          case Left(str) => str
-          case Right(Success((pointer, ref))) => pointer
-          case Right(Failure(fail)) => "look here"
+          case Left(str) => DescriptionElements(str)
+          case Right(Success((pointer, ref))) => pointer --> keepLink
+          case Right(Failure(fail)) => "look here" --> keepLink
         })) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
