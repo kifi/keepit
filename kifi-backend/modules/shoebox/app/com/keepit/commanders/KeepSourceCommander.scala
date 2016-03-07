@@ -91,7 +91,7 @@ class KeepSourceAugmentor @Inject() (
     slackChannelRepo: SlackChannelRepo) extends Logging {
 
   def rawToSourceAttribution(source: RawSourceAttribution)(implicit session: RSession): SourceAttribution = source match {
-    case RawTwitterAttribution(tweet) => TwitterAttribution(BasicTweet.fromRawTweet(tweet))
+    case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
     case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
   }
 
@@ -110,6 +110,6 @@ class KeepSourceAugmentor @Inject() (
         }
       case Left(literal) => literal
     }.mkString("")
-    BasicSlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, improvedText)
+    PrettySlackMessage(SlackChannelIdAndPrettyName.from(message.channel), message.userId, message.username, message.timestamp, message.permalink, improvedText)
   }
 }

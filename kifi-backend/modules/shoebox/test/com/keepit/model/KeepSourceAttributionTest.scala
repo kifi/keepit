@@ -37,7 +37,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
     }
 
     "twitter source attribution is backward compatible" in {
-      val attr = TwitterAttribution(BasicTweet.fromRawTweet(tweetJs.as[RawTweet]))
+      val attr = TwitterAttribution(PrettyTweet.fromRawTweet(tweetJs.as[RawTweet]))
       val obj = SourceAttribution.deprecatedWrites.writes((attr, None))
       (obj \ "twitter" \ "idString").as[String] === "505809542656303104"
       (obj \ "twitter" \ "screenName").as[TwitterHandle] === connerdelights

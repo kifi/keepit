@@ -58,7 +58,7 @@ object SourceAttribution {
     val updatedValue = for {
       obj <- value.validate[JsObject]
       tweeterObj <- (value \ "twitter").validate[JsObject]
-      tweet <- (tweeterObj \ "tweet").validate(BasicTweet.format)
+      tweet <- (tweeterObj \ "tweet").validate(PrettyTweet.format)
     } yield {
       (obj - "twitter") + ("twitter" -> (tweeterObj ++ Json.obj("idString" -> tweet.id.id.toString, "screenName" -> tweet.user.screenName.value)))
     }
@@ -66,8 +66,8 @@ object SourceAttribution {
   }
 }
 
-case class BasicTweet(id: TwitterStatusId, user: RawTweet.User, permalink: String, text: String)
-object BasicTweet {
+case class PrettyTweet(id: TwitterStatusId, user: RawTweet.User, permalink: String, text: String)
+object PrettyTweet {
   private val userFormat: Format[RawTweet.User] = (
     (__ \ 'name).format[String] and
     (__ \ 'screen_name).format[TwitterHandle] and
@@ -80,23 +80,22 @@ object BasicTweet {
     (__ \ 'user).format(userFormat) and
     (__ \ 'permalink).format[String] and
     (__ \ 'text).format[String]
-  )(BasicTweet.apply _, unlift((BasicTweet.unapply)))
+  )(PrettyTweet.apply _, unlift((PrettyTweet.unapply)))
 
-  def fromRawTweet(tweet: RawTweet): BasicTweet = BasicTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text)
+  def fromRawTweet(tweet: RawTweet): PrettyTweet = PrettyTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text)
 }
 
-case class TwitterAttribution(tweet: BasicTweet) extends SourceAttribution
+case class TwitterAttribution(tweet: PrettyTweet) extends SourceAttribution
 object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 }
 
-case class BasicSlackMessage(channel: SlackChannelIdAndPrettyName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String, text: String)
-object BasicSlackMessage {
-
-  implicit val format = Json.format[BasicSlackMessage]
+case class PrettySlackMessage(channel: SlackChannelIdAndPrettyName, userId: SlackUserId, username: SlackUsername, timestamp: SlackTimestamp, permalink: String, text: String)
+object PrettySlackMessage {
+  implicit val format = Json.format[PrettySlackMessage]
 }
 
-case class SlackAttribution(message: BasicSlackMessage, teamId: SlackTeamId) extends SourceAttribution
+case class SlackAttribution(message: PrettySlackMessage, teamId: SlackTeamId) extends SourceAttribution
 object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
 }
