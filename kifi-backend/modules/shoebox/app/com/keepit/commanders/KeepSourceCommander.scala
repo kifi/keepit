@@ -101,7 +101,7 @@ class KeepSourceAugmentor @Inject() (
       case Right(identifier) =>
         val whole = identifier.group(1)
         val id = whole.substring(2, whole.length - 1)
-        Option(SlackChannelId(id)).collect {
+        SlackChannelId.parse[SlackChannelId](id).toOption.collect {
           case SlackChannelId.User(username) => slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value + ">")
           case channel: SlackChannelId => slackChannelRepo.getByChannelId(teamId, channel).map(s => "<#" + s.slackChannelName.value + ">")
         }.getOrElse {
