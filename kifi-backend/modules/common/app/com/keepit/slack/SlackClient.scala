@@ -52,6 +52,7 @@ object SlackAPI {
   def DeleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp) =
     Route(GET, "https://slack.com/api/chat.delete", Seq[Param](token, channelId, timestamp): _*)
   def TeamInfo(token: SlackAccessToken) = Route(GET, "https://slack.com/api/team.info", token)
+  def UserPresence(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.getPresence", token)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
   def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
   def InviteToChannel(token: SlackAccessToken, userId: SlackUserId, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.invite", token, userId, channelId)
@@ -172,7 +173,7 @@ class SlackClientImpl(
   }
 
   def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence] = {
-    slackCall[SlackUserPresence](SlackAPI.TeamInfo(token))
+    slackCall[SlackUserPresence](SlackAPI.UserPresence(token))
   }
 
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = {
