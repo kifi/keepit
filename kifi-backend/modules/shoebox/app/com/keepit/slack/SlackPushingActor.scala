@@ -346,7 +346,7 @@ class SlackPushingActor @Inject() (
   private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
     import DescriptionElements._
 
-    val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       val shouldSmartRoute = canSmartRoute(slackTeamId)
       val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
@@ -361,12 +361,12 @@ class SlackPushingActor @Inject() (
     (keep.note, attribution) match {
       case (None, None) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(
-          userElement, "sent", keepElement
+          userStr, "sent", keepElement
         )))
       case (Some(note), _) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(
-            userElement, ": ",
+            "*", userStr, ":* ",
             // Slack breaks italics over newlines, so we have to split into lines and italicize each independently :shakefist:
             DescriptionElements.unlines(note.lines.toSeq.map { ln => DescriptionElements("_", Hashtags.format(ln), "_") })
           )).withFullMarkdown))
@@ -391,7 +391,7 @@ class SlackPushingActor @Inject() (
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
-    val userElement = user.fold[DescriptionElements]("Someone")(basicUser => basicUser.firstName --> LinkElement(pathCommander.userPageViaSlack(basicUser, slackTeamId)))
+    val userStr = user.fold[String]("Someone")(_.firstName)
     val keepLink = {
       val shouldSmartRoute = canSmartRoute(slackTeamId)
       LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
@@ -410,7 +410,7 @@ class SlackPushingActor @Inject() (
       text = DescriptionElements.formatForSlack(keepElement),
       attachments =
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
-        else SlackAttachment.simple(DescriptionElements("*", userElement, ":*", textAndLookHeres.map {
+        else SlackAttachment.simple(DescriptionElements("*", userStr, ":*", textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> keepLink
           case Right(Failure(fail)) => "look here" --> keepLink
