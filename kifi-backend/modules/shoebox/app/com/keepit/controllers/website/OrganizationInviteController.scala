@@ -142,8 +142,10 @@ class OrganizationInviteController @Inject() (
           case Some(rawUsername) =>
             val username = SlackUsername(rawUsername.replaceAllLiterally("@", ""))
             orgInviteCommander.sendOrganizationInviteViaSlack(username, orgId, request.userIdOpt)
-              .imap { _ => NoContent }
-              .recover {
+              .imap {
+                case None => NoContent
+                case Some(message) => Ok(Json.obj("permalink" -> message.permalink))
+              }.recover {
                 case fail: OrganizationFail => fail.asErrorResponse
                 case fail: SlackFail => fail.asResponse
               }
