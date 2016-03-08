@@ -25,8 +25,9 @@ object PaidPlanFactory {
     StaticFeature.ViewSettings -> StaticFeatureSetting.MEMBERS,
     StaticFeature.JoinByVerifying -> StaticFeatureSetting.NONMEMBERS,
     StaticFeature.SlackIngestionReaction -> StaticFeatureSetting.DISABLED,
-    StaticFeature.SlackNotifications -> StaticFeatureSetting.ENABLED,
+    StaticFeature.SlackTeamDigest -> StaticFeatureSetting.ENABLED,
     StaticFeature.SlackCommentMirroring -> StaticFeatureSetting.DISABLED,
+    StaticFeature.SlackPersonalDigestDefault -> StaticFeatureSetting.DISABLED,
     ClassFeature.SlackIngestionDomainBlacklist -> ClassFeature.Blacklist(Seq.empty)
   ))
 

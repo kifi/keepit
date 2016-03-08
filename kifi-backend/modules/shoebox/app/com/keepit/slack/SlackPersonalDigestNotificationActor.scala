@@ -3,35 +3,33 @@ package com.keepit.slack
 import com.google.inject.Inject
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
+import com.keepit.social.Author
 import com.kifi.juggle._
-import org.joda.time.{ Duration, Period }
+import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
 object SlackPersonalDigestConfig {
-  val delayBeforeFirstDigest = Duration.standardMinutes(1)
   val minDelayInsideTeam = Duration.standardMinutes(10)
-  val immediateDigestAfterRecentMessageThreshold = Duration.standardMinutes(10)
 
   val delayAfterSuccessfulDigest = Duration.standardDays(3)
   val delayAfterFailedDigest = Duration.standardDays(1)
   val delayAfterNoDigest = Duration.standardDays(3)
   val maxProcessingDuration = Duration.standardHours(1)
-  val minIngestedLinksForPersonalDigest = 2
+  val minIngestedMessagesForPersonalDigest = 2
 
   val minDigestConcurrency = 1
   val maxDigestConcurrency = 10
@@ -120,48 +118,46 @@ class SlackPersonalDigestNotificationActor @Inject() (
     }
   }
 
+  @StatsdTiming("SlackPersonalDigestNotificationActor.createPersonalDigest")
   private def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): Option[SlackPersonalDigest] = {
     for {
       slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId)
-      org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
-      librariesByChannel = {
-        val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
-        val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)
-        teamIntegrations.groupBy(_.slackChannelId).map {
-          case (channelId, integrations) =>
-            channelId -> integrations.flatMap(sctl => librariesById.get(sctl.libraryId)).filter { lib =>
-              (lib.visibility, lib.organizationId) match {
-                case (LibraryVisibility.PUBLISHED, _) => true
-                case (LibraryVisibility.ORGANIZATION, Some(orgId)) if slackTeam.organizationId.contains(orgId) => true
-                case _ => false
-              }
-            }.toSet
+      orgId <- slackTeam.organizationId
+      org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
+      _ <- Some(true) if (membership.personalDigestSetting match {
+        case SlackPersonalDigestSetting.On => true
+        case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
+        case _ => false
+      })
+      numIngestedMessagesByChannel = {
+        val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
+        val messages = attributionRepo.getByKeepIds(keepsForThisMembership).values.collect {
+          case SlackAttribution(msg, _) => msg
+        }
+        val messagesByChannel = messages.groupBy(_.channel)
+        val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
+          integrations.map(_.createdAt).min
+        }
+        messagesByChannel.flatMap {
+          case (channel, msgs) =>
+            oldestIntegrationByChannel.get(channel.id).map { baseTimestamp => channel -> messages.count(_.timestamp.toDateTime isAfter baseTimestamp) }
         }
       }
-      ingestedLinksByChannel = librariesByChannel.map {
-        case (channelId, libs) =>
-          val newKeepIds = ktlRepo.getByLibrariesAddedSince(libs.map(_.id.get), membership.unnotifiedSince).map(_.keepId).toSet
-          val newSlackKeepsById = keepRepo.getByIds(newKeepIds).filter { case (_, keep) => keep.source == KeepSource.slack }
-          val ingestedLinks = attributionRepo.getByKeepIds(newSlackKeepsById.keySet).collect {
-            case (kId, SlackAttribution(msg, teamId)) if teamId == slackTeam.slackTeamId && msg.channel.id == channelId && msg.userId == membership.slackUserId =>
-              newSlackKeepsById.get(kId).map(_.url)
-          }.flatten.toSet
-          channelId -> ingestedLinks
-      }
-      digest <- Some(SlackPersonalDigest(
+      digest = SlackPersonalDigest(
         slackMembership = membership,
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
-        ingestedLinksByChannel = ingestedLinksByChannel,
-        librariesByChannel = librariesByChannel
-      )).filter(_.numIngestedLinks >= minIngestedLinksForPersonalDigest)
-    } yield digest
+        numIngestedMessagesByChannel = numIngestedMessagesByChannel
+      )
+      relevantDigest <- Some(digest).filter(_.numIngestedMessages >= minIngestedMessagesForPersonalDigest)
+    } yield relevantDigest
   }
 
   // "Pure" functions
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
+    val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
     val text = DescriptionElements(
       SlackEmoji.wave,
       "Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved of couple of links you shared.",
@@ -181,7 +177,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.robotFace,
         "Also, my binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to any messages you send my way  :zipper_mouth_face:.",
-        "You can still", "opt to stop receiving notifications" --> LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false)),
+        "You can still", "opt to stop receiving notifications" --> linkToSquelch,
         "or if you've got questions email my human friends at support@kifi.com."
       ))))
     )
@@ -189,21 +185,13 @@ class SlackPersonalDigestNotificationActor @Inject() (
   }
   private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
-    val slackTeamId = digest.slackMembership.slackTeamId
-    val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
+    val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPage)
+    val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
     val text = DescriptionElements.unlines(List(
-      DescriptionElements("We have collected", s"${digest.numIngestedLinks} links" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)),
-        "from your messages", inTheLast(digest.digestPeriod),
-        SlackEmoji.speakNoEvil, "Stop these digests" --> LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false)), ".")
+      DescriptionElements("You've sent", digest.numIngestedMessages, "links", inTheLast(digest.digestPeriod), ".",
+        "I", "archived them" --> linkToFeed, "for you, and indexed the pages so you can search for them more easily."),
+      DescriptionElements("If you don't want to get any more of these notifications,", "click here" --> linkToUnsubscribe)
     ))
-    val attachments = List(
-      SlackAttachment(color = Some(LibraryColor.GREEN.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        "Your most active", if (topLibraries.length > 1) "libraries are" else "library is",
-        DescriptionElements.unwordsPretty {
-          topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeamId))))
-        }
-      )))).withFullMarkdown
-    )
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text))
   }
 }
