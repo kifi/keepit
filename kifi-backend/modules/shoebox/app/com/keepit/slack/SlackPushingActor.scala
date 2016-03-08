@@ -36,7 +36,7 @@ object SlackPushingActor {
   val delayFromSuccessfulPush = Duration.standardMinutes(30)
   val delayFromFailedPush = Duration.standardMinutes(5)
   val MAX_ITEMS_TO_PUSH = 7
-  val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+  val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
   def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
 
   val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)""".r
@@ -351,7 +351,7 @@ class SlackPushingActor @Inject() (
       val shouldSmartRoute = canSmartRoute(slackTeamId)
       val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
       DescriptionElements(
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
+        "_“", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "”_",
         " View Article" --> keepLink,
         "|",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
@@ -386,7 +386,7 @@ class SlackPushingActor @Inject() (
     }
     val keepElement = {
       DescriptionElements(
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
         " View Article" --> keepLink,
         "•",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
