@@ -14,7 +14,7 @@ k.tile = k.tile || (function () {
     loadCspCheck(onCspCheckLoaded);
 
     function loadCspCheck(cb) {
-      var CSP_CHECK_URL = '//djty7jcqog9qu.cloudfront.net/assets/1x1.png';
+      var CSP_CHECK_URL = 'https://djty7jcqog9qu.cloudfront.net/assets/1x1.png';
       var cspCheckImage = new Image();
       cspCheckImage.addEventListener('load', cb.bind(null, false));
       cspCheckImage.addEventListener('error', cb.bind(null, true));
