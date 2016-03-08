@@ -470,7 +470,7 @@ var socketHandlers = {
       for (var thId in notificationsById) {
         var th = notificationsById[thId];
         if (th.category === 'message') {
-          updatePic(th.author);
+          th.author && updatePic(th.author);
           th.participants.forEach(updatePic);
         }
       }
