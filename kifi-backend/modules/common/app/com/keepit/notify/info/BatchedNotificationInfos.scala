@@ -1,9 +1,11 @@
 package com.keepit.notify.info
 
+import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.notify.info.NotificationInfoRequest._
+import com.keepit.rover.model.RoverUriSummary
 import com.keepit.social.BasicUser
 
 import scala.concurrent.Future
@@ -13,13 +15,15 @@ class BatchedNotificationInfos(
     private val usersExternal: Map[ExternalId[User], BasicUser],
     private val libraries: Map[Id[Library], LibraryCardInfo],
     private val keeps: Map[Id[Keep], BasicKeep],
-    private val orgs: Map[Id[Organization], BasicOrganization]) {
+    private val orgs: Map[Id[Organization], BasicOrganization],
+    private val summaries: Map[Id[Keep], RoverUriSummary]) {
 
   def lookup[M, R](request: NotificationInfoRequest[M, R]): R = {
     // If intellij shows red underlines here, don't listen, it's lying.
     // It cannot detect that the result type R varies based on the pattern match here,
     // but the Scala compiler can.
     request match {
+      case RequestUriSummary(id) => summaries(id)
       case RequestUser(id) => users(id)
       case RequestUserExternal(id) => usersExternal(id)
       case RequestLibrary(id) => libraries(id)
@@ -42,6 +46,7 @@ object NotificationInfoRequest {
   case class RequestUserExternal(id: ExternalId[User]) extends NotificationInfoRequest[User, BasicUser]
   case class RequestLibrary(id: Id[Library]) extends NotificationInfoRequest[Library, LibraryCardInfo]
   case class RequestKeep(id: Id[Keep]) extends NotificationInfoRequest[Keep, BasicKeep]
+  case class RequestUriSummary(id: Id[Keep]) extends NotificationInfoRequest[RoverUriSummary, RoverUriSummary]
   case class RequestOrganization(id: Id[Organization]) extends NotificationInfoRequest[Organization, BasicOrganization]
 
 }

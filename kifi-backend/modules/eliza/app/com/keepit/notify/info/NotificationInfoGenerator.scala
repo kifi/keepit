@@ -2,9 +2,12 @@ package com.keepit.notify.info
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
+import com.keepit.model.Keep
 import com.keepit.notify.model.{ Recipient, UserRecipient }
+import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -50,10 +53,16 @@ class NotificationInfoGenerator @Inject() (
         case r: NotificationInfoRequest.RequestUser => r.id
       }
     }.toSet
+    val summaryRequests = infoRequests.flatMap { infoRequest =>
+      infoRequest.requests.collect {
+        case r: NotificationInfoRequest.RequestUriSummary => r.id
+      }
+    }
 
     val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
+    val summaryF = Future.successful(Map.empty[Id[Keep], RoverUriSummary])
 
     val userIdByExternalIdFut = for {
       orgs <- orgsF
@@ -69,13 +78,15 @@ class NotificationInfoGenerator @Inject() (
       userIds = userRequests ++ userIdByExternalId.values.toSet
       userById <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
       userByExternalId = userIdByExternalId.mapValues(userById.get(_).get)
+      summariesById <- summaryF
     } yield {
       new BatchedNotificationInfos(
         userById,
         userByExternalId,
         libById,
         keepByid,
-        orgById
+        orgById,
+        summariesById
       )
     }
 

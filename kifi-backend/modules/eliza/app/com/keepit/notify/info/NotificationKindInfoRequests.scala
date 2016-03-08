@@ -132,8 +132,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
             "id" -> newKeep.id,
             "url" -> newKeep.url,
             "attr" -> newKeep.attribution
-          ),
-          "uriSummary" -> newKeep.uriSummary
+          )
         )),
         category = NotificationCategory.User.NEW_KEEP
       )
