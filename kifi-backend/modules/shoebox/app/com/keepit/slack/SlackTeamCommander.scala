@@ -354,7 +354,7 @@ class SlackTeamCommanderImpl @Inject() (
           ":+1: Roger that, I'll keep quiet from here on out.",
           "If you'd like to hear from me again, you can power my notifications back on", "here" --> toggleLink, "."
         )
-      )))
+      ))).map(_ => ())
     }
   }
 }
