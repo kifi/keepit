@@ -1252,6 +1252,24 @@ api.port.on({
       socket.send(['set_all_notifications_visited', msgId]);
     }
   },
+  load_image: function (path, respond, tab) {
+    // The Firefox worker XHR dislikes protocol-less URLs, so prefix with the tab's protocol.
+    path = (path.indexOf('//') === 0 ? tab.url.slice(0, tab.url.indexOf(':') + 1) + path : path);
+    var imageType = path.slice(path.lastIndexOf('.') + 1);
+    var xhr = new api.xhr();
+    xhr.open('GET', path, true);
+    xhr.responseType = 'arraybuffer';
+
+    xhr.onload = function (e) {
+      if (this.status === 200) {
+        respond({ uri: 'data:image/' + imageType + ';base64,' + arrayBufferToBase64(this.response) });
+      } else {
+        respond({ error: 'Status ' + this.status + ' did not equal 200 for ' + path });
+      }
+    };
+    xhr.onerror = respond.bind(null, { error: 'Couldn\'t load image ' + path });
+    xhr.send();
+  },
   me: function(_, respond) {
     respond(me);
   },
@@ -2763,6 +2781,16 @@ function throttle(func, wait, opts) {  // underscore.js
     }
     return result;
   };
+}
+
+function arrayBufferToBase64(buffer) {
+  var binary = '';
+  var bytes = new Uint8Array(buffer);
+  var len = bytes.byteLength;
+  for (var i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return api.util.btoa(binary);
 }
 
 //                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
