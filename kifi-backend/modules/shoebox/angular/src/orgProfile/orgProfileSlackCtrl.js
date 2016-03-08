@@ -10,6 +10,8 @@ angular.module('kifi')
     $scope.slackTeamId = $stateParams.slackTeamId;
     $scope.requestFailed = $stateParams.error === 'access_denied';
     $scope.username = '';
+    var trackingType = 'orgLanding';
+    var errorCount = 0;
 
     $scope.trackClick = function(action) {
       var eventName = ($rootScope.userLoggedIn ? 'user' : 'visitor') + '_clicked_page';
@@ -37,6 +39,13 @@ angular.module('kifi')
           } else {
             $scope.$error = 'Something went wrong, please try again later.';
           }
+          $rootScope.$emit('trackOrgProfileEvent', 'view', {
+            type: trackingType,
+            version: 'teamSpecificSlackDMInvite',
+            errorCount: ++errorCount,
+            errorType: (resp.data && resp.data.error) || 'unknown',
+            username: username
+          });
         });
       }
       $scope.trackClick('clickedSendInvite');
@@ -45,9 +54,17 @@ angular.module('kifi')
 
     $timeout(function () {
       $rootScope.$emit('trackOrgProfileEvent', 'view', {
-        type: 'orgLanding',
-        version: 'teamSpecificSlack'
+        type: trackingType,
+        version: 'teamSpecificSlack',
+        slackTeamId: $stateParams.slackTeamId
       });
+      if ($scope.requestFailed) {
+        $rootScope.$emit('trackOrgProfileEvent', 'view', {
+          type: trackingType,
+          version: 'teamSpecificSlackDMInvite',
+          slackTeamId: $stateParams.slackTeamId
+        });
+      }
     });
   }
 ]);
