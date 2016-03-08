@@ -1000,9 +1000,13 @@ class AdminUserController @Inject() (
 
   //return true if at least one of its slack users is active
   def slackUserOnline(id: Id[User]) = AdminUserPage.async { implicit request =>
-    val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
+    val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id).filter(_.state == SlackTeamMembershipStates.ACTIVE) }
     FutureHelpers.exists(memberships) { membership =>
-      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).map(_.state == SlackUserPresenceState.Active).recover { case _ => false }
+      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).map(_.state == SlackUserPresenceState.Active).recover {
+        case error: Throwable =>
+          log.error(s"error fetching presence using ${membership.id.get} or slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
+          false
+      }
     } map { active => Ok(JsBoolean(active)) }
   }
 }
