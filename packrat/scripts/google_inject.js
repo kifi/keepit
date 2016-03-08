@@ -183,7 +183,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.cutPoint && (resp.prefs.maxResults && !(inDoc && time.google.shown >= time.kifi.queried) || resp.context === 'guide') || newFilter);
+      var showAny = Boolean(resp.cutPoint && (resp.prefs.maxResults && !(inDoc && time.google.shown >= time.kifi.shown) || resp.context === 'guide') || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] cutPoint:', resp.cutPoint, 'inDoc:', inDoc);
       unpack(resp);
