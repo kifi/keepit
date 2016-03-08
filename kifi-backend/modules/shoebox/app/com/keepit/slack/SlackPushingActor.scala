@@ -348,9 +348,16 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
+<<<<<<< HEAD
         "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
         " View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
         "|",
+=======
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "  ",
+        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
+        "•",
+>>>>>>> 38657712159b9fb825c80c9ed642e2ada403ae10
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
     }
@@ -380,8 +387,9 @@ class SlackPushingActor @Inject() (
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
     val keepElement = {
       DescriptionElements(
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
-        " View Article" --> keepLink,
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "  ",
+        "View Article" --> keepLink,
         "•",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
@@ -396,7 +404,7 @@ class SlackPushingActor @Inject() (
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> keepLink
           case Right(Failure(fail)) => "look here" --> keepLink
-        })).withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>

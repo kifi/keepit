@@ -344,11 +344,17 @@ class SlackTeamCommanderImpl @Inject() (
     }
     import DescriptionElements._
     membershipOpt.fold(Future.failed[Unit](SlackFail.NoSuchMembership(slackTeamId, slackUserId))) { membership =>
-      slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements.unlines(Seq(
-        DescriptionElements(":+1: gotcha boss,", if (turnOn) "you should start getting digests again real soon" else "no more digests :speak_no_evil:", "."),
-        DescriptionElements("To", if (turnOn) "turn these off again" else "turn these back on", "click",
-          "here" --> LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = !turnOn)), ".")
-      ))))).map(_ => ())
+      val toggleLink = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = !turnOn))
+      slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+        if (turnOn) DescriptionElements(
+          ":tada: Thanks for having me back! I'll gather some of your stats and update you about once a week if I have things to share.",
+          "If you want to power me back down, you can silence me", "here" --> toggleLink, "."
+        )
+        else DescriptionElements(
+          ":+1: Roger that, I'll keep quiet from here on out.",
+          "If you'd like to hear from me again, you can power my notifications back on", "here" --> toggleLink, "."
+        )
+      ))).map(_ => ())
     }
   }
 }
