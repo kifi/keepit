@@ -17,7 +17,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import com.keepit.eliza.ElizaServiceClient
@@ -180,13 +180,18 @@ class KeepCommanderImpl @Inject() (
       }
       (attributions, keepInfos)
     }
-    val twitterKeeps = keepInfos.map(_._2).filter { keep => TwitterHandle.fromTweetUrl(keep.url).nonEmpty }.toSeq
-    val twitterKeepsSummariesF = roverClient.getArticleSummaryByUris(twitterKeeps.map(_.uriId).toSet)
 
-    twitterKeepsSummariesF.map { twitterKeepsSummaries =>
+    val uriSummariesF = roverClient.getUriSummaryByUris(keepInfos.map(_._2.uriId).toSet)
+      .map(_.mapValues(_.toUriSummary(ImageSize(65, 95))))
+
+    uriSummariesF.map { uriSummaries =>
       keepInfos.map {
         case (kId, keep, author) =>
-          val title = twitterKeepsSummaries.get(keep.uriId).flatMap(_.description.map(_.abbreviate(256))) orElse keep.title
+          val title = if (TwitterHandle.fromTweetUrl(keep.url).nonEmpty) {
+            uriSummaries.get(keep.uriId).flatMap(_.description.map(_.abbreviate(256))) orElse keep.title
+          } else {
+            keep.title
+          }
           kId -> BasicKeep(
             id = keep.externalId,
             title = title,
@@ -194,7 +199,8 @@ class KeepCommanderImpl @Inject() (
             visibility = keep.visibility,
             libraryId = keep.libraryId.map(Library.publicId),
             author = author,
-            attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
+            attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
+            uriSummary = uriSummaries.get(keep.uriId)
           )
       }.toMap
     }

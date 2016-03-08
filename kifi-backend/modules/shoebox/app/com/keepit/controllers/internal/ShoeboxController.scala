@@ -75,7 +75,6 @@ class ShoeboxController @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   emailTemplateSender: EmailTemplateSender,
-  newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   libraryInfoCommander: LibraryInfoCommander,
   libraryCardCommander: LibraryCardCommander,
   libraryMembershipCommander: LibraryMembershipCommander,
