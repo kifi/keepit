@@ -307,7 +307,7 @@ object PersonalKeep {
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 5
+  override val version = 4
   val namespace = "basic_keep_by_id"
   def toKey(): String = id.id.toString
 }
