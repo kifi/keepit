@@ -410,14 +410,18 @@ class SlackPushingActor @Inject() (
       text = DescriptionElements.formatForSlack(keepElement),
       attachments =
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
-        else SlackAttachment.simple(DescriptionElements(userElement, ":", textAndLookHeres.map {
+        else SlackAttachment.simple(DescriptionElements("*", userElement, ":*", textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> keepLink
           case Right(Failure(fail)) => "look here" --> keepLink
-        })) +: textAndLookHeres.collect {
+        })).withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
-            val attachment = SlackAttachment.simple(ref).withColor(LibraryColor.MAGENTA.hex)
-            imageUrlRegex.findFirstIn(ref).fold(attachment)(url => attachment.withText("").withImageUrl(url))
+            imageUrlRegex.findFirstIn(ref) match {
+              case Some(url) =>
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink)).withImageUrl(url)
+              case None =>
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink, ":", ref))
+            }
         }
     )
   }
