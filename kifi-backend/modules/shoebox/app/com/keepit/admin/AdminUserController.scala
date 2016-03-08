@@ -1002,9 +1002,11 @@ class AdminUserController @Inject() (
   def slackUserOnline(id: Id[User]) = AdminUserPage.async { implicit request =>
     val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id).filter(_.state == SlackTeamMembershipStates.ACTIVE) }
     FutureHelpers.exists(memberships) { membership =>
-      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).map(_.state == SlackUserPresenceState.Active).recover {
+      val presence = slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId)
+      presence.foreach(prez => log.info(s"found presence info $prez for membership ${membership.id.get} or slack user ${membership.slackUsername} team ${membership.slackTeamName} "))
+      presence.map(_.state == SlackUserPresenceState.Active).recover {
         case error: Throwable =>
-          log.error(s"error fetching presence using ${membership.id.get} or slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
+          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
           false
       }
     } map { active => Ok(JsBoolean(active)) }
