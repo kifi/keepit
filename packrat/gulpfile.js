@@ -26,6 +26,7 @@ var sourcemaps = require('gulp-sourcemaps');
 var babel = require('gulp-babel');
 var explicitGlobals = require('explicit-globals');
 var pathSort = require('path-sort');
+var _ = require('lodash');
 
 var target = 'local';
 var listed = false;
@@ -60,12 +61,12 @@ var scriptDeps = {};
 var asap = {};
 
 livereload.options.port = 35719;
-var reload = function (file) {
+var reload = _.debounce(function (file) {
   var match = file.path.match(/\/(.*)$/);
   gutil.log('Changed ' + (match ? gutil.colors.green(match[1]) : file.path));
   // Reload the whole extension (partial reload not supported)
   livereload.changed('*', livereload.options.port);
-};
+}, 500);
 
 // gulp-json-editor but with prettier printing
 var jeditor = (function () {
