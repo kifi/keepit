@@ -96,7 +96,7 @@ class SlackTeamCommanderImpl @Inject() (
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeamOpt, membershipOpt) = db.readOnlyMaster { implicit session =>
       val slackTeamOpt = slackTeamRepo.getBySlackTeamId(slackTeamId)
-      val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId)
+      val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId)
       (slackTeamOpt, membershipOpt)
     }
 
@@ -146,7 +146,7 @@ class SlackTeamCommanderImpl @Inject() (
             case Some(otherOrg) => Failure(SlackActionFail.TeamAlreadyConnected(team.slackTeamId, team.slackTeamName, team.organizationId.get))
             case None => slackTeamRepo.getByOrganizationId(newOrganizationId) match {
               case Some(orgTeam) => Failure(SlackActionFail.OrgAlreadyConnected(newOrganizationId, orgTeam.slackTeamId, failedToConnectTeam = slackTeamId))
-              case None => slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId) match {
+              case None => slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId) match {
                 case None => Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
                 case Some(validMembership) => Success(slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId))))
               }
@@ -267,7 +267,7 @@ class SlackTeamCommanderImpl @Inject() (
         team.organizationId match {
           case Some(orgId) =>
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
-              val membershipOpt = slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == team.slackTeamId)
+              val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, team.slackTeamId)
               val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).map(_.slackChannelId).toSet
               val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)

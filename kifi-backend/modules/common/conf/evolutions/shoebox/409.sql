@@ -25,8 +25,7 @@ CREATE TABLE slack_team_membership (
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
-  INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
-  INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id),
+  UNIQUE KEY slack_team_membership_u_user_id_slack_team_id (user_id, slack_team_id),
   INDEX slack_team_membership_i_seq (seq),
   INDEX slack_team_membership_i_personal_digest (last_processing_at,next_personal_digest_at)
 );
@@ -54,7 +53,8 @@ CREATE TABLE slack_incoming_webhook_info (
 
   PRIMARY KEY(id),
   INDEX slack_incoming_webhook_info_i_team_id_channel_id (slack_team_id, slack_channel_id),
-  CONSTRAINT slack_incoming_webhook_info_f_slack_team_membership FOREIGN KEY (slack_user_id, slack_team_id) REFERENCES slack_team_membership(slack_user_id, slack_team_id)
+  INDEX slack_incoming_webhook_info_i_team_id_user_id (slack_team_id, slack_user_id),
+  CONSTRAINT slack_incoming_webhook_info_f_slack_team_membership FOREIGN KEY (slack_team_id, slack_user_id) REFERENCES slack_team_membership(slack_team_id, slack_user_id)
 );
 
 CREATE TABLE library_to_slack_channel (
