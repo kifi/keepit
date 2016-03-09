@@ -1,0 +1,11 @@
+<div class="kf-org-profile-slack-library">
+  <a ui-sref="userProfile.libraries.own({handle:owner.username})" ng-if="owner"><img class="kf-org-profile-slack-user-image kf-org-profile-slack-library-user" ng-src="{{owner|pic}}"></a>
+  <p ng-show="owner" class="kf-org-profile-slack-library-message">
+    <a class="kf-link kf-link-black kf-org-profile-slack-library-owner" ng-bind="owner.firstName" ng-href="{{owner|profileUrl}}"></a>
+    created a
+    <span class="kf-org-profile-slack-library-name" ng-bind="library|name"></span>
+    library, but you haven't joined
+    <a class="kf-link kf-link-black kf-org-profile-slack-library-team" ng-href="{{profile|profileUrl}}" ng-bind="profile|name"></a>
+    yet.
+  </p>
+</div>
