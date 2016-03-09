@@ -131,16 +131,22 @@ class SlackPersonalDigestNotificationActor @Inject() (
       })
       numIngestedMessagesByChannel = {
         val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
-        val messages = attributionRepo.getByKeepIds(keepsForThisMembership).values.collect {
-          case SlackAttribution(msg, _) => msg
+        val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
+          case (keepId, slack: SlackAttribution) => keepId -> slack
         }
-        val messagesByChannel = messages.groupBy(_.channel)
+        val keepsById = keepRepo.getByIds(keepsForThisMembership)
+        val messagesByChannel = attributions.groupBy(_._2.message.channel)
         val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
           integrations.map(_.createdAt).min
         }
         messagesByChannel.flatMap {
-          case (channel, msgs) =>
-            oldestIntegrationByChannel.get(channel.id).map { baseTimestamp => channel -> messages.count(_.timestamp.toDateTime isAfter baseTimestamp) }
+          case (channel, attrsAndKeeps) => oldestIntegrationByChannel.get(channel.id).map { baseTimestamp =>
+            channel -> attrsAndKeeps.count {
+              case (kId, attr) =>
+                attr.message.timestamp.toDateTime.isAfter(baseTimestamp) &&
+                  keepsById.get(kId).exists(k => !membership.lastPersonalDigestAt.exists(lastTime => lastTime isAfter k.createdAt))
+            }
+          }
         }
       }
       digest = SlackPersonalDigest(
