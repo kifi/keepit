@@ -127,17 +127,6 @@ class NotificationKindInfoRequests @Inject()(
 
       val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
 
-      val uriSummary = summaryOpt.map { summary =>
-        val image = summary.images.get(ImageSize(65, 95))
-        Json.obj( // Same as NotificationJsonMaker.makeOpt's
-          "title" -> summary.article.title,
-          "description" -> summary.article.description,
-          "imageUrl" -> image.map(_.path.getUrl),
-          "imageWidth" -> image.map(_.size.width),
-          "imageHeight" -> image.map(_.size.height)
-        )
-      }
-
       import com.keepit.common._
       StandardNotificationInfo(
         url = newKeep.url,
@@ -154,7 +143,16 @@ class NotificationKindInfoRequests @Inject()(
             "url" -> newKeep.url,
             "attr" -> newKeep.attribution
           ),
-          "uriSummary" -> uriSummary
+          "uriSummary" -> summaryOpt.map { summary =>
+            val image = summary.images.get(ImageSize(65, 95))
+            Json.obj( // Same as NotificationJsonMaker.makeOpt's
+              "title" -> summary.article.title,
+              "description" -> summary.article.description,
+              "imageUrl" -> image.map(_.path.getUrl),
+              "imageWidth" -> image.map(_.size.width),
+              "imageHeight" -> image.map(_.size.height)
+            )
+          }
         )),
         category = NotificationCategory.User.NEW_KEEP
       )

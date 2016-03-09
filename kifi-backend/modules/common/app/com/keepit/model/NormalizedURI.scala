@@ -54,7 +54,7 @@ object NormalizedURI extends PublicIdGenerator[NormalizedURI] {
   implicit val extIdFormat = ExternalId.format[NormalizedURI]
   implicit val stateFormat = State.format[NormalizedURI]
 
-  protected[this] val publicIdPrefix = "n"
+  protected[this] val publicIdPrefix = "uri"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(77, 113, -61, 56, 26, 56, -112, -59, -103, 90, -70, -65, 56, 10, 81, 71))
 
   val TitleMaxLen = 2040
