@@ -116,6 +116,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getBySlackIdentities(identities: Set[(SlackTeamId, SlackUserId)])(implicit session: RSession): Map[(SlackTeamId, SlackUserId), SlackTeamMembership]
   def getByToken(token: SlackUserAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
+  def getByUserIdAndSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit session: RSession): Option[SlackTeamMembership]
 
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
   def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
@@ -318,6 +319,10 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership] = {
     activeRows.filter(_.userId === userId).list
+  }
+
+  def getByUserIdAndSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit session: RSession): Option[SlackTeamMembership] = {
+    activeRows.filter(r => r.userId === userId && r.slackTeamId === slackTeamId).firstOption
   }
 
   @StatsdTiming("SlackTeamMembershipRepo.getRipeForPersonalDigest")
