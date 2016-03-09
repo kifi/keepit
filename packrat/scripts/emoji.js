@@ -850,24 +850,22 @@ var emoji = (function () {
 
   var supported;
 
-  function isSupported() {
-    if (supported == null) {
-      var c = document.createElement('canvas').getContext('2d');
-      c.textBaseline = 'top';
-      c.font = '32px Arial';
-      c.fillText('😄', 0, 0);
-      supported = c.getImageData(16, 16, 1, 1).data[0] !== 0;
-    }
-    return supported;
-  }
-
   return {
     encode: function (s) {
       return s.replace(encodeRe, encodeReplace);
     },
     decode: function (s) {
-      return isSupported() ? s.replace(decodeRe, decodeReplace) : s;
+      return s.replace(decodeRe, decodeReplace);
     },
-    supported: isSupported
+    supported: function () {
+      if (supported == null) {
+        var c = document.createElement('canvas').getContext('2d');
+        c.textBaseline = 'top';
+        c.font = '32px Arial';
+        c.fillText('😄', 0, 0);
+        supported = c.getImageData(16, 16, 1, 1).data[0] !== 0;
+      }
+      return supported;
+    }
   };
 })();

@@ -870,7 +870,7 @@ angular.module('kifi')
           return s.replace(encodeRe, encodeReplace);
         },
         decode: function (s) {
-          return isSupported() ? s.replace(decodeRe, decodeReplace) : s;
+          return isSupported ? s.replace(decodeRe, decodeReplace) : s;
         },
         supported: isSupported
       };

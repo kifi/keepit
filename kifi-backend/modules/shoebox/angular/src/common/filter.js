@@ -306,7 +306,7 @@ angular.module('kifi')
       formatted = formatted.replace(slackSpecialEntityRe, '');
 
       // Fill an array with match objects from slackUrlEntityRe
-      for (var m, slackUrlEntityRe = /<(\S*?)\|(.*?)>|<(\S*?)>/g; m = slackUrlEntityRe.exec(formatted); matches.push(m)) {} // jshint ignore:line
+      for (var m, slackUrlEntityRe = /<(.*?)\|(.*?)>|<(.*?)>/g; m = slackUrlEntityRe.exec(formatted); matches.push(m)) {} // jshint ignore:line
       matches.forEach(function (m) {
         var fullMatch = m[0];
         if (formatted === fullMatch) {
