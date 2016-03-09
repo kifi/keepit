@@ -276,22 +276,8 @@ k.panes.notices = k.panes.notices || function () {
 
   function renderTriggered(notice) {
     if (notice.fullCategory === 'new_keep') {
-      if (!notice.extra.uriSummary) {  // Backwards compatibility, can be removed once all include the right fields.
-        var title, keptIdx = notice.bodyHtml.indexOf(' just kept ');
-        if (keptIdx !== -1) {
-          title = notice.bodyHtml.substring(keptIdx + 11);
-        } else {
-          var addedIdx = notice.bodyHtml.indexOf(' just added ');
-          if (addedIdx !== -1) {
-            title = notice.bodyHtml.substring(notice.bodyHtml.indexOf(':', addedIdx) + 3);
-          } else {
-            title = notice.bodyHtml.substring(notice.bodyHtml.indexOf(' just shared: ') + 14);
-          }
-        }
-        notice.extra.uriSummary = {
-          title: title
-        };
-        notice.text = message;
+      if (!(notice.extra.uriSummary && notice.extra.uriSummary.title)) {
+        notice.extra.uriSummary = { title: notice.url };
       }
 
       var message;
