@@ -74,6 +74,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   }
   val keepPermissions = KeepPermission.all
 
+  def toSimpleKeepMembers(keep: Keep, owner: BasicUser, library: LibraryCardInfo): KeepMembers = {
+    import KeepMember._
+    KeepMembers(Seq(Library(library, keep.keptAt, Some(owner))), Seq(User(owner, keep.keptAt, Some(owner))), Seq.empty)
+  }
+
   "allKeeps" in {
     withDb(controllerTestModules: _*) { implicit injector =>
       val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -155,6 +160,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "libraryId":"${pubLibId1.id}",
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
+            "members": ${Json.toJson(toSimpleKeepMembers(bookmark2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
             "permissions": ${Json.toJson(keepPermissions)}
             },
           {
@@ -185,6 +191,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "libraryId":"${pubLibId1.id}",
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
+            "members": ${Json.toJson(toSimpleKeepMembers(bookmark1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
             "permissions": ${Json.toJson(keepPermissions)}
             }
         ]}

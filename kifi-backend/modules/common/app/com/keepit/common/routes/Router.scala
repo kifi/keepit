@@ -279,6 +279,8 @@ object Eliza extends Service {
     def deleteThreadsForKeeps() = ServiceRoute(POST, "/internal/eliza/deleteThreadsForKeeps")
     def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
+
+    def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
   }
 }
 
