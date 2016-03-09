@@ -191,7 +191,7 @@ class KeepCommanderImpl @Inject() (
           libraryId = keep.libraryId.map(Library.publicId),
           author = author,
           attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
-          uriId = Some(NormalizedURI.publicId(keep.uriId))
+          uriId = NormalizedURI.publicId(keep.uriId)
         )
     }.toMap
   }

@@ -66,7 +66,7 @@ class NotificationInfoGenerator @Inject() (
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
     val summaryF = keepsF.flatMap { keeps =>
-      val uriToKeepIds = keeps.flatMap { case (id, bk) => bk.uriId.map(_ -> id) }.groupBy(_._1).mapValues(_.values)
+      val uriToKeepIds = keeps.toSeq.map { case (id, bk) => bk.uriId -> id }.groupBy(_._1).mapValues(_.map(_._2))
         .flatMap { case (id, ks) => NormalizedURI.decodePublicId(id).toOption.map(_ -> ks) }
       roverServiceClient.getUriSummaryByUris(uriToKeepIds.keys.toSet).map { s => s.flatMap { case (uriId, summary) => uriToKeepIds(uriId).map(_ -> summary) } }
     }
