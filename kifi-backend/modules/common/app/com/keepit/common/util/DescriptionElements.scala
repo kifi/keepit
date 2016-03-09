@@ -61,7 +61,8 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
-  implicit def fromInt(x: Int): BasicElement = x.toString
+  implicit def fromInt(x: Int): BasicElement = fromText(x.toString)
+  implicit def fromLong(x: Long): BasicElement = fromText(x.toString)
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address

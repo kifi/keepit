@@ -19,6 +19,7 @@ CREATE TABLE slack_team_membership (
   last_personal_digest_at DATETIME DEFAULT NULL,
   last_processing_at DATETIME DEFAULT NULL,
   last_processed_at DATETIME DEFAULT NULL,
+  personal_digest_setting VARCHAR(32) DEFAULT NULL,
   next_personal_digest_at DATETIME DEFAULT NULL,
   last_ingested_message_timestamp VARCHAR(32) DEFAULT NULL,
 
