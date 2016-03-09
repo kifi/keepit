@@ -405,7 +405,7 @@ class SlackPushingActor @Inject() (
                 SlackAttachment.simple(DescriptionElements(
                   SlackEmoji.magnifyingGlass, pointer --> keepLink, ": ",
                   DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))
-                ))
+                )).withFullMarkdown
             }
         }
     )
