@@ -350,7 +350,7 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
-        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
         "  ",
         "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
         "•",
