@@ -111,8 +111,11 @@ trait SearchControllerUtil {
       case Failure(e) => Future.failed(e)
     }
   }
-
-  def getDistinctSources(augmentedItem: AugmentedItem, sourceAttributionByKeepId: Map[Id[Keep], SourceAttribution]): Seq[SourceAttribution] = {
-    augmentedItem.keeps.flatMap(keep => sourceAttributionByKeepId.get(keep.id)).distinctBy(KeepFields.Source(_))
+  // todo(Léo): include enough source info in RestrictedKeepInfo and introduce AugmentedItem.hasRelevantSource
+  def getSources(augmentedItem: AugmentedItem, sourceAttributionByKeepId: Map[Id[Keep], SourceAttribution]): Seq[SourceAttribution] = {
+    augmentedItem.keeps.flatMap(keep => sourceAttributionByKeepId.get(keep.id)).filter {
+      case s: SlackAttribution => augmentedItem.allSlackTeamIds.contains(s.teamId)
+      case _ => true
+    } distinctBy (KeepFields.Source(_))
   }
 }

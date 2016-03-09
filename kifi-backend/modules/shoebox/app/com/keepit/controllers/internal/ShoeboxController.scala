@@ -605,6 +605,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(attributions))
   }
 
+  def getSlackTeamIds() = Action(parse.tolerantJson) { request =>
+    val orgIds = (request.body \ "orgIds").as[Set[Id[Organization]]]
+    val slackTeamIds = db.readOnlyMaster { implicit session =>
+      slackTeamRepo.getSlackTeamIds(orgIds)
+    }
+    Ok(Json.toJson(slackTeamIds))
+  }
+
   def getSlackTeamInfo(slackTeamId: SlackTeamId) = Action { request =>
     db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).map { slackTeam =>

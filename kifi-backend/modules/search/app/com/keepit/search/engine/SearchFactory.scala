@@ -23,6 +23,7 @@ import com.keepit.search.index.phrase.PhraseDetector
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.util.LongArraySet
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.slack.models.SlackTeamId
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.{ BooleanClause, BooleanQuery, TermQuery }
 import scala.concurrent._
@@ -58,7 +59,7 @@ class SearchFactory @Inject() (
   private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
   private[this] val configReqConsolidator = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
   private[this] val fakeUserIdsReqConsolidator = new RequestConsolidator[this.type, Set[Long]](3 seconds)
-  private[this] val orgIdsReqConsolidater = new RequestConsolidator[Id[User], Set[Long]](3 seconds)
+  private[this] val orgIdsReqConsolidator = new RequestConsolidator[Id[User], Set[Long]](3 seconds)
 
   def getUriSearches(
     shards: Set[Shard[NormalizedURI]],
@@ -174,7 +175,7 @@ class SearchFactory @Inject() (
   }
 
   def getOrganizations(userId: Id[User], organizationScope: Option[OrganizationScope]): Future[Set[Long]] = {
-    orgIdsReqConsolidater(userId) { userId =>
+    orgIdsReqConsolidator(userId) { userId =>
       SafeFuture {
         val searcher = orgMemembershipIndexer.getSearcher
         OrganizationMembershipIndexable.getOrgsByMember(searcher, userId)
@@ -184,6 +185,12 @@ class SearchFactory @Inject() (
         case Some(organization) if organization.authorized => orgIds + organization.id.id
         case None => orgIds
       }
+    }
+  }
+
+  def getSlackTeamIds(userId: Id[User], organizationScope: Option[OrganizationScope]): Future[Set[SlackTeamId]] = {
+    getOrganizations(userId, organizationScope).flatMap { orgIds =>
+      shoeboxClient.getSlackTeamIds(orgIds.map(Id[Organization](_))).imap(_.values.toSet)
     }
   }
 
