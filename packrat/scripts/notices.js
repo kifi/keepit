@@ -13,6 +13,7 @@
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js
+// @require scripts/slack_message.js
 // @require scripts/title_from_url.js
 // @require scripts/prevent_ancestor_scroll.js
 
@@ -281,8 +282,8 @@ k.panes.notices = k.panes.notices || function () {
       }
 
       var message;
-      if (notice.extra.keep.attr && notice.extra.keep.attr.message) {
-        message = notice.extra.keep.attr.message.text;
+      if (notice.extra.keep.attr && notice.extra.keep.attr.teamId) { // Heuristic to identify Slack
+        message = slackFormat.plain(notice.extra.keep.attr.message.text, false);
       } else {
         message = 'New keep in ' + notice.extra.library.name;
       }
