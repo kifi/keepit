@@ -102,8 +102,12 @@ case class SlackTeamMembership(
     )
   }
 
+  // These modify the personal digest setting, so they should be initiated by user actions
   def withNoNextPersonalDigest = this.copy(personalDigestSetting = SlackPersonalDigestSetting.Off, nextPersonalDigestAt = None)
   def withNextPersonalDigestAt(time: DateTime) = this.copy(personalDigestSetting = SlackPersonalDigestSetting.On, nextPersonalDigestAt = Some(time))
+  // This just schedules the digest, it doesn't guarantee that it will happen
+  def scheduledForDigestAtLatest(time: DateTime) = this.copy(nextPersonalDigestAt = Some(nextPersonalDigestAt.filter(_ isBefore time).getOrElse(time)))
+
   def revoked = this.copy(token = None, scopes = Set.empty)
   def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
 }
