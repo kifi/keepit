@@ -101,12 +101,7 @@ class SlackPushingActor @Inject() (
 
   protected def pullTasks(limit: Int): Future[Seq[Id[LibraryToSlackChannel]]] = {
     db.readWrite { implicit session =>
-      val newActorTeams = {
-        val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_COMMENT_MIRRORING).toSet
-        slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
-      }
-
-      val integrationIds = integrationRepo.getRipeForPushingViaNewActor(limit, pushTimeout, newActorTeams)
+      val integrationIds = integrationRepo.getRipeForPushing(limit, pushTimeout)
       Future.successful(integrationIds.filter(integrationRepo.markAsPushing(_, pushTimeout)))
     }
   }
@@ -134,7 +129,8 @@ class SlackPushingActor @Inject() (
     integrationsByIds.map {
       case (integrationId, integration) =>
         integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getSettings)).map {
-          case Success(_) => ()
+          case Success(_) =>
+            ()
           case Failure(fail) =>
             slackLog.warn(s"Failed to push to $integrationId because ${fail.getMessage}")
             ()
@@ -350,10 +346,10 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
-        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
         "  ",
         "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
-        "•",
+        "|",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
     }
@@ -386,7 +382,7 @@ class SlackPushingActor @Inject() (
         "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
         "  ",
         "View Article" --> keepLink,
-        "•",
+        "|",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
     }
@@ -406,7 +402,10 @@ class SlackPushingActor @Inject() (
               case Some(url) =>
                 SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink)).withImageUrl(url)
               case None =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink, ":", ref))
+                SlackAttachment.simple(DescriptionElements(
+                  SlackEmoji.magnifyingGlass, pointer --> keepLink, ": ",
+                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))
+                ))
             }
         }
     )
