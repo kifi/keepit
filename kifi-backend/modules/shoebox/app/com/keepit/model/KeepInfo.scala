@@ -37,6 +37,7 @@ case class KeepInfo(
     libraries: Option[Seq[(BasicLibraryWithKeptAt, BasicUser)]] = None,
     librariesOmitted: Option[Int] = None,
     librariesTotal: Option[Int] = None,
+    sources: Option[Seq[SourceAttribution]] = None,
     collections: Option[Set[String]] = None, // deprecated
     tags: Option[Set[BasicCollection]] = None, // deprecated
     hashtags: Option[Set[Hashtag]] = None,
@@ -62,7 +63,7 @@ case class KeepInfo(
     keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
-    libraries = library.toSet,
+    libraries = members.libraries.map(_.library).toSet,
     permissions = permissions
   )
 }

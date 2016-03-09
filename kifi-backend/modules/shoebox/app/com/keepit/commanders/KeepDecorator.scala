@@ -19,6 +19,7 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
@@ -54,6 +55,8 @@ class KeepDecoratorImpl @Inject() (
   eliza: ElizaServiceClient,
   rover: RoverServiceClient,
   airbrake: AirbrakeNotifier,
+  slackTeamRepo: SlackTeamRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
   implicit val imageConfig: S3ImageConfig,
   implicit val s3: S3ImageStore,
   implicit val executionContext: ExecutionContext,
@@ -134,6 +137,14 @@ class KeepDecoratorImpl @Inject() (
 
       val sourceAttrsFut = db.readOnlyReplicaAsync { implicit s => keepSourceCommander.getSourceAttributionForKeeps(keepIds) }
 
+      val additionalSourcesFuture = augmentationFuture.map { infos =>
+        val keepIdsByUriId = (keeps zip infos).map {
+          case (keep, info) =>
+            keep.uriId -> info.keeps.map(_.id).filter(_ != keep.id.get)
+        }.toMap
+        getAdditionalSources(viewerIdOpt, keepIdsByUriId)
+      }
+
       val allMyKeeps = viewerIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
 
       val librariesWithWriteAccess = viewerIdOpt.map { userId =>
@@ -156,6 +167,7 @@ class KeepDecoratorImpl @Inject() (
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
         sourceAttrs <- sourceAttrsFut
+        additionSourcesByUriId <- additionalSourcesFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
@@ -222,6 +234,7 @@ class KeepDecoratorImpl @Inject() (
                 libraries = Some(libraries),
                 librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
                 librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
+                sources = additionSourcesByUriId.get(keep.uriId).map(_.take(5)),
                 collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
                 tags = Some(collsForKeep.toSet), // Used by site
                 hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
@@ -316,6 +329,22 @@ class KeepDecoratorImpl @Inject() (
           uriId -> Set.empty[PersonalKeep]
       }
     }.toMap
+  }
+
+  def getAdditionalSources(viewerIdOpt: Option[Id[User]], keepsByUriId: Map[Id[NormalizedURI], Seq[Id[Keep]]]): Map[Id[NormalizedURI], Seq[SourceAttribution]] = {
+    db.readOnlyMaster { implicit session =>
+      val slackTeamIds = viewerIdOpt match {
+        case None => Set.empty[SlackTeamId]
+        case Some(userId) => slackTeamRepo.getSlackTeamIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toSet
+      }
+      val sourcesByKeepId = keepSourceCommander.getSourceAttributionForKeeps(keepsByUriId.values.flatten.toSet).mapValues(_._1)
+      keepsByUriId.mapValues { keepIds =>
+        val allSources = keepIds.flatMap(sourcesByKeepId.get)
+        val slackSources = allSources.collect { case s: SlackAttribution if slackTeamIds.contains(s.teamId) => s }.distinctBy(s => (s.teamId, s.message.channel.id, s.message.timestamp))
+        val twitterSources = allSources.collect { case t: TwitterAttribution => t }.distinctBy(_.tweet.id)
+        (slackSources ++ twitterSources).toSeq
+      }
+    }
   }
 }
 
