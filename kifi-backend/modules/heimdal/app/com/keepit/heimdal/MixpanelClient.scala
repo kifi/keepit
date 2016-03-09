@@ -31,7 +31,7 @@ class MixpanelClientImpl(projectToken: String) extends MixpanelClient with Loggi
     properties += ("time", event.time.getMillis / 1000)
     if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
-    if (event.eventType == UserEventTypes.SEARCHED) log.info(s"[searchedUserStatus] sending searched event with data ${Json.stringify(data)}")
+    if (event.eventType == UserEventTypes.SEARCHED && properties.build.data.get("source").contains(ContextStringData("Slack"))) log.info(s"[searchedUserStatus] sending searched event with data ${Json.stringify(data)}")
     sendData("http://api.mixpanel.com/track", data) map (_ => ())
   }
 
