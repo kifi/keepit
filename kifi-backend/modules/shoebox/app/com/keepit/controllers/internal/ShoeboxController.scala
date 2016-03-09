@@ -75,7 +75,6 @@ class ShoeboxController @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   emailTemplateSender: EmailTemplateSender,
-  newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   libraryInfoCommander: LibraryInfoCommander,
   libraryCardCommander: LibraryCardCommander,
   libraryMembershipCommander: LibraryMembershipCommander,
@@ -445,11 +444,9 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action.async(parse.tolerantJson) { request =>
+  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
-    keepCommander.getBasicKeeps(keepIds) map { keepDataById =>
-      Ok(Json.toJson(keepDataById))
-    }
+    Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
   }
 
   def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>

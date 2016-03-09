@@ -2,9 +2,12 @@ package com.keepit.notify.info
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
+import com.keepit.model.NormalizedURI
 import com.keepit.notify.model.{ Recipient, UserRecipient }
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -12,7 +15,9 @@ import scala.util.{ Failure, Try }
 
 class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
+    roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
+    implicit val config: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends Logging {
 
   def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
@@ -42,6 +47,7 @@ class NotificationInfoGenerator @Inject() (
     }.toSet
     val keepRequests = infoRequests.flatMap { infoRequest =>
       infoRequest.requests.collect {
+        case r: NotificationInfoRequest.RequestUriSummary => r.id // because `RequestUriSummary` needs basicKeep.uriId
         case r: NotificationInfoRequest.RequestKeep => r.id
       }
     }.toSet
@@ -50,10 +56,20 @@ class NotificationInfoGenerator @Inject() (
         case r: NotificationInfoRequest.RequestUser => r.id
       }
     }.toSet
+    val summaryRequests = infoRequests.flatMap { infoRequest =>
+      infoRequest.requests.collect {
+        case r: NotificationInfoRequest.RequestUriSummary => r.id
+      }
+    }
 
     val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
+    val summaryF = keepsF.flatMap { keeps =>
+      val uriToKeepIds = keeps.flatMap { case (id, bk) => bk.uriId.map(_ -> id) }.groupBy(_._1).mapValues(_.values)
+        .flatMap { case (id, ks) => NormalizedURI.decodePublicId(id).toOption.map(_ -> ks) }
+      roverServiceClient.getUriSummaryByUris(uriToKeepIds.keys.toSet).map { s => s.flatMap { case (uriId, summary) => uriToKeepIds(uriId).map(_ -> summary) } }
+    }
 
     val userIdByExternalIdFut = for {
       orgs <- orgsF
@@ -69,13 +85,15 @@ class NotificationInfoGenerator @Inject() (
       userIds = userRequests ++ userIdByExternalId.values.toSet
       userById <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
       userByExternalId = userIdByExternalId.mapValues(userById.get(_).get)
+      summariesById <- summaryF
     } yield {
       new BatchedNotificationInfos(
         userById,
         userByExternalId,
         libById,
         keepByid,
-        orgById
+        orgById,
+        summariesById
       )
     }
 

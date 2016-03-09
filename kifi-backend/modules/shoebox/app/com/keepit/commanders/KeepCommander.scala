@@ -17,7 +17,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import com.keepit.eliza.ElizaServiceClient
@@ -71,7 +71,7 @@ object BulkKeepSelection {
 trait KeepCommander {
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
-  def getBasicKeeps(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] // for notifications
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
@@ -157,7 +157,7 @@ class KeepCommanderImpl @Inject() (
     ids.map(idToKeepMap)
   }
 
-  def getBasicKeeps(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
+  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
       val keeps = keepRepo.getByIds(ids)
       val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
@@ -180,24 +180,20 @@ class KeepCommanderImpl @Inject() (
       }
       (attributions, keepInfos)
     }
-    val twitterKeeps = keepInfos.map(_._2).filter { keep => TwitterHandle.fromTweetUrl(keep.url).nonEmpty }.toSeq
-    val twitterKeepsSummariesF = roverClient.getArticleSummaryByUris(twitterKeeps.map(_.uriId).toSet)
 
-    twitterKeepsSummariesF.map { twitterKeepsSummaries =>
-      keepInfos.map {
-        case (kId, keep, author) =>
-          val title = twitterKeepsSummaries.get(keep.uriId).flatMap(_.description.map(_.abbreviate(256))) orElse keep.title
-          kId -> BasicKeep(
-            id = keep.externalId,
-            title = title,
-            url = keep.url,
-            visibility = keep.visibility,
-            libraryId = keep.libraryId.map(Library.publicId),
-            author = author,
-            attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr }
-          )
-      }.toMap
-    }
+    keepInfos.map {
+      case (kId, keep, author) =>
+        kId -> BasicKeep(
+          id = keep.externalId,
+          title = keep.title,
+          url = keep.url,
+          visibility = keep.visibility,
+          libraryId = keep.libraryId.map(Library.publicId),
+          author = author,
+          attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
+          uriId = Some(NormalizedURI.publicId(keep.uriId))
+        )
+    }.toMap
   }
 
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {

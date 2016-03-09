@@ -55,7 +55,7 @@ class NotificationJsonFormat @Inject() (
             "category" -> Json.toJson(
               NotificationCategory.User.kifiMessageFormattingCategory.getOrElse(info.category, "global")
             ),
-            "fullCategory" -> info.category.category, // todo replace
+            "fullCategory" -> info.category.category,
             "title" -> info.title,
             "bodyHtml" -> info.body,
             "linkText" -> info.linkText,
