@@ -62,7 +62,7 @@ case class KeepInfo(
     keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
-    libraries = library.toSet,
+    libraries = members.libraries.map(_.library).toSet,
     permissions = permissions
   )
 }
