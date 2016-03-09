@@ -38,7 +38,7 @@ object SlackPushingActor {
   val MAX_ITEMS_TO_PUSH = 7
   val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
 
-  val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)""".r
+  val imageUrlRegex = """^https?://[^\s]*\.(png|jpg|jpeg|gif)""".r
 
   sealed abstract class PushItem(val time: DateTime)
   object PushItem {
