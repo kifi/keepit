@@ -121,7 +121,7 @@ object DescriptionElements {
     interpolatePunctuation(description.flatten).map { be =>
       be.url
         .map(u => s"<$u|${escapeSegment(be.text)}>")
-        .getOrElse(be.text)
+        .getOrElse(escapeSegment(be.text))
     }.mkString
   }
 
