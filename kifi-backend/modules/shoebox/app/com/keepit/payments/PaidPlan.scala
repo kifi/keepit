@@ -67,6 +67,9 @@ case class PaidPlan(
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
   def withState(state: State[PaidPlan]): PaidPlan = this.copy(state = state)
 
+  def withNewEditableFeature(f: Feature) = this.copy(editableFeatures = editableFeatures + f)
+  def withNewDefaultSetting(fs: (Feature, FeatureSetting)) = this.copy(defaultSettings = defaultSettings.withFeatureSetTo(fs))
+
   def isActive: Boolean = state == PaidPlanStates.ACTIVE
 
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
