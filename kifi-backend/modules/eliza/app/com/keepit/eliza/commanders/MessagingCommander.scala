@@ -21,7 +21,7 @@ import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUser, BasicUserLikeEntity, NonUserKinds}
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
 import play.api.libs.json._
 

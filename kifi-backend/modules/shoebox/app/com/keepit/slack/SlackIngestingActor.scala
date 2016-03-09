@@ -204,6 +204,7 @@ class SlackIngestingActor @Inject() (
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     // Record a bit of information based on the messages we ingested: the channel, and any slack members
+    val now = clock.now
     db.readWrite { implicit s =>
       ingestedMessages.headOption.foreach { msg =>
         slackChannelRepo.getOrCreate(slackTeam.slackTeamId, msg.channel.id, msg.channel.name)
@@ -212,8 +213,10 @@ class SlackIngestingActor @Inject() (
         case (senderId, latestMsg) =>
           val (sender, isNew) = slackTeamMembershipRepo.internWithMessage(slackTeam, latestMsg)
           if (sender.lastPersonalDigestAt.isEmpty && latestMsg.timestamp.toDateTime.isAfter(integration.createdAt)) {
-            slackLog.info("Ingested a message from", senderId.value, "with timestamp", latestMsg.timestamp.value, "=", latestMsg.timestamp.toDateTime.getMillis, "so we're scheduling a digest")
-            slackTeamMembershipRepo.save(sender.withNextPersonalDigestAt(clock.now))
+            slackTeamMembershipRepo.save(sender.scheduledForDigestAtLatest(now))
+            if (integration.slackTeamId == KifiSlackApp.BrewstercorpTeamId) {
+              slackLog.info("Ingested a message from", senderId.value, "with timestamp", latestMsg.timestamp.value, "=", latestMsg.timestamp.toDateTime.getMillis, "so we're scheduling a digest")
+            }
           }
       }
     }
