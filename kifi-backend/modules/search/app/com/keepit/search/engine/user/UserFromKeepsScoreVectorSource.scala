@@ -65,8 +65,9 @@ class UserFromKeepsScoreVectorSource(
           val libId = libraryIdDocValues.get(docId)
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
           val inverseLibraryFrequencyBoost = {
-            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
-            libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)
+            /*            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
+                        libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)*/
+            1L
           }
           val boost = recencyBoost * inverseLibraryFrequencyBoost
 

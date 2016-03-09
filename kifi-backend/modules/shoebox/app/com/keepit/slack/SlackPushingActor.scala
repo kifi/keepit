@@ -36,8 +36,7 @@ object SlackPushingActor {
   val delayFromSuccessfulPush = Duration.standardMinutes(30)
   val delayFromFailedPush = Duration.standardMinutes(5)
   val MAX_ITEMS_TO_PUSH = 7
-  val KEEP_URL_MAX_DISPLAY_LENGTH = 60
-  def canSmartRoute(slackTeamId: SlackTeamId) = slackTeamId == KifiSlackApp.KifiSlackTeamId
+  val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
 
   val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)""".r
 
@@ -348,12 +347,11 @@ class SlackPushingActor @Inject() (
 
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
-      val shouldSmartRoute = canSmartRoute(slackTeamId)
-      val keepLink = LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
       DescriptionElements(
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
-        " View Article" --> keepLink,
-        "|",
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "  ",
+        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
+        "•",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
     }
@@ -380,14 +378,12 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)
-    val keepLink = {
-      val shouldSmartRoute = canSmartRoute(slackTeamId)
-      LinkElement(if (shouldSmartRoute) pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).absolute else keep.url)
-    }
+    val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
     val keepElement = {
       DescriptionElements(
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
-        " View Article" --> keepLink,
+        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "  ",
+        "View Article" --> keepLink,
         "•",
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
@@ -402,7 +398,7 @@ class SlackPushingActor @Inject() (
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> keepLink
           case Right(Failure(fail)) => "look here" --> keepLink
-        })).withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>

@@ -219,7 +219,7 @@ angular.module('kifi', [
           // TODO: The above statement is now false, so we may want to standardize tracking of those page views.
           // This whole process up here ^^^ and down here vvv is all a bit bogus, should be refactored
           // to be able to have better page tracking with metadata
-          var ignore = ['library', 'userOrOrg', 'getStarted'];
+          var ignore = ['library', 'userOrOrg', 'getStarted', 'orgProfile'];
           // if base state is not in the ignore list
           if (ignore.indexOf(toStateParts[0]) === -1) {
             var url = $analytics.settings.pageTracking.basePath + $location.url();

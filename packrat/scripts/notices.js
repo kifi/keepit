@@ -217,6 +217,7 @@ k.panes.notices = k.panes.notices || function () {
     notice.title = notice.title || formatTitleFromUrl(notice.url);
     var participants = notice.participants;
     var nParticipants = participants.length;
+    var isSystem = !notice.author || notice.author.id === '42424242-4242-4242-4242-000000000001';
     if (notice.authors === 1) {
       notice[nParticipants === 1 ? 'isSelf' : (notice.author && notice.author.id) === k.me.id ? 'isSent' : 'isReceived'] = true;
     } else if (notice.firstAuthor > 1) {
@@ -263,6 +264,8 @@ k.panes.notices = k.panes.notices || function () {
         notice.multiple = notice.messages > 1;
       }
       notice.authorShortName = 'Me';
+    } else if (isSystem) {
+      notice.authorShortName = '';
     } else if (notice.author && nParticipants > 2) {
       notice.authorShortName = notice.author.firstName;
     }
@@ -290,7 +293,6 @@ k.panes.notices = k.panes.notices || function () {
         };
         notice.text = message;
       }
-      console.log(notice.extra.uriSummary);
 
       var message;
       if (notice.extra.keep.attr && notice.extra.keep.attr.message) {
