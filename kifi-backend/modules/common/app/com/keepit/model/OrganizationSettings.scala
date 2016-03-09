@@ -206,7 +206,7 @@ object StaticFeature extends Enumerator[StaticFeature] {
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
   }
 
-  case object SlackNotifications extends StaticFeature {
+  case object SlackTeamDigest extends StaticFeature {
     val value = "slack_digest_notif"
     val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
@@ -214,6 +214,11 @@ object StaticFeature extends Enumerator[StaticFeature] {
 
   case object SlackCommentMirroring extends StaticFeature {
     val value = "slack_comment_mirroring"
+    val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
+    val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
+  }
+  case object SlackPersonalDigestDefault extends StaticFeature {
+    val value = "slack_personal_digest_default"
     val settings: Set[StaticFeatureSetting] = Set(DISABLED, ENABLED)
     val editableWith = OrganizationPermission.CREATE_SLACK_INTEGRATION
   }

@@ -199,4 +199,8 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def sourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SourceAttributionKeepIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def slackTeamIdOrgIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackTeamIdOrgIdCache(stats, accessLog, (outerRepo, 7 days))
 }

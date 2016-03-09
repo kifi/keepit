@@ -132,6 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
+  def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
@@ -167,6 +168,7 @@ case class ShoeboxCacheProvider @Inject() (
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
   slackIntegrationsCache: SlackChannelIntegrationsCache,
+  slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
   sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
@@ -844,7 +846,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {
     cacheProvider.sourceAttributionByKeepIdCache.bulkGetOrElseFuture(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
-      val payload = Json.obj("keepIds" -> keepIds)
+      val payload = Json.obj("keepIds" -> missingKeys.map(_.keepId))
       implicit val reads = SourceAttribution.internalFormat
       call(Shoebox.internal.getSourceAttributionForKeeps, payload).map {
         _.json.as[Map[Id[Keep], SourceAttribution]].map {
@@ -852,6 +854,16 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
+  }
+
+  def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = {
+    cacheProvider.slackTeamIdByOrganizationIdCache.bulkGetOrElseFutureOpt(orgIds.map(SlackTeamIdOrgIdKey(_))) { missingKeys =>
+      val payload = Json.obj("orgIds" -> missingKeys.map(_.organizationId))
+      call(Shoebox.internal.getSlackTeamIds, payload).map { res =>
+        val existing = res.json.as[Map[Id[Organization], SlackTeamId]]
+        missingKeys.map(key => key -> existing.get(key.organizationId)).toMap
+      }
+    }.imap(_.collect { case (SlackTeamIdOrgIdKey(orgId), Some(slackTeamId)) => orgId -> slackTeamId })
   }
 
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = {

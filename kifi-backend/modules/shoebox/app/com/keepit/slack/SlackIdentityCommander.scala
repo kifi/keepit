@@ -64,6 +64,17 @@ class SlackIdentityCommanderImpl @Inject() (
 
   def internSlackIdentity(userIdOpt: Option[Id[User]], identity: SlackIdentity)(implicit session: RWSession): Boolean = {
     slackTeamRepo.internSlackTeam(identity.teamId, identity.teamName, botAuth = None)
+
+    // Disconnect previous identity (enforce 1 Slack User <=> Kifi User x Slack Team)
+    userIdOpt.foreach { userId =>
+      slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, identity.teamId).foreach { existingMembership =>
+        if (existingMembership.slackUserId != identity.userId) {
+          slackTeamMembershipRepo.save(existingMembership.copy(userId = None))
+        }
+      }
+    }
+
+    // Intern identity
     val (membership, isNewIdentityOwner) = slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
       userId = userIdOpt,
       slackUserId = identity.userId,
@@ -127,7 +138,7 @@ class SlackIdentityCommanderImpl @Inject() (
       userId <- userIdOpt
       slackTeamId <- slackTeamIdOpt
       slackTeamMembership <- db.readOnlyMaster { implicit session =>
-        slackTeamMembershipRepo.getByUserId(userId).find(_.slackTeamId == slackTeamId)
+        slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId)
       }
       tokenWithScopes <- slackTeamMembership.tokenWithScopes
     } yield (slackTeamId, slackTeamMembership.slackUserId, tokenWithScopes)

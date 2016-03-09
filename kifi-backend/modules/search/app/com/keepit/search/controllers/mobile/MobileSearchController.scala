@@ -274,7 +274,7 @@ class MobileSearchController @Inject() (
               val keepId = hit.keepId.map(Id[Keep](_))
               val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               val note = limitedInfo.keep.map(_.note)
-              val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
+              val sources = getSources(augmentedItem, sourceAttributionByKeepId)
               val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
 
               Json.obj(
