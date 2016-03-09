@@ -3,9 +3,12 @@ package com.keepit.notify.info
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.core._
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ Keep, NormalizedURI }
 import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -17,6 +20,7 @@ class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
+    implicit val airbrake: AirbrakeNotifier,
     implicit val config: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends Logging {
 
@@ -66,9 +70,12 @@ class NotificationInfoGenerator @Inject() (
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
     val summaryF = keepsF.flatMap { keeps =>
-      val uriToKeepIds = keeps.map { case (id, bk) => id -> bk.uriId }.groupBy(_._2).mapValues(_.keySet)
-        .flatMap { case (id, ks) => NormalizedURI.decodePublicId(id).toOption.map(_ -> ks) }
-      roverServiceClient.getUriSummaryByUris(uriToKeepIds.keys.toSet).map { s => s.flatMap { case (uriId, summary) => uriToKeepIds(uriId).map(_ -> summary) } }
+      val uriIdByKeep = summaryRequests.flatAugmentWith { kId =>
+        keeps.get(kId).flatMap(k => NormalizedURI.decodePublicId(k.uriId).safeOption)
+      }.toMap
+      roverServiceClient.getUriSummaryByUris(uriIdByKeep.values.toSet).map { summaries =>
+        uriIdByKeep.flatMapValues(summaries.get)
+      }
     }
 
     val userIdByExternalIdFut = for {
