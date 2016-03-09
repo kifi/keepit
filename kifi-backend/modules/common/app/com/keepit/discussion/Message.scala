@@ -5,6 +5,8 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
+import com.keepit.common.json.{ TraversableFormat, TupleFormat }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.common.core.{ regexExtensionOps, tryExtensionOps }
@@ -64,14 +66,20 @@ case class Discussion(
   startedAt: DateTime,
   numMessages: Int,
   locator: DeepLocator,
+  emailParticipants: Map[EmailAddress, (Id[User], DateTime)], // todo(Léo): remove once KeepToEmail is in Shoebox
   messages: Seq[Message])
 object Discussion {
-  implicit val format: Format[Discussion] = (
-    (__ \ 'startedAt).format[DateTime] and
-    (__ \ 'numMessages).format[Int] and
-    (__ \ 'locator).format[DeepLocator] and
-    (__ \ 'messages).format[Seq[Message]]
-  )(Discussion.apply, unlift(Discussion.unapply))
+  implicit val format: Format[Discussion] = {
+    implicit val tupleFormat: Format[(Id[User], DateTime)] = TupleFormat.tuple2Format[Id[User], DateTime]
+    implicit val mapFormat: Format[Map[EmailAddress, (Id[User], DateTime)]] = TraversableFormat.mapFormat(_.address, EmailAddress.validate(_).toOption)
+    (
+      (__ \ 'startedAt).format[DateTime] and
+      (__ \ 'numMessages).format[Int] and
+      (__ \ 'locator).format[DeepLocator] and
+      (__ \ 'emailParticipants).formatNullable[Map[EmailAddress, (Id[User], DateTime)]].inmap[Map[EmailAddress, (Id[User], DateTime)]](_.getOrElse(Map.empty), Some(_)) and
+      (__ \ 'messages).format[Seq[Message]]
+    )(Discussion.apply, unlift(Discussion.unapply))
+  }
 }
 
 // God forgive me, I'm creating yet another "_____-info" model

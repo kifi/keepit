@@ -20,7 +20,9 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
 
-  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[NonUserThread]
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[NonUserThread]
+
+  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[NonUserThread]]
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
@@ -92,8 +94,13 @@ class NonUserThreadRepoImpl @Inject() (
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread] =
     (for (row <- rows if row.lastNotifiedAt.isEmpty || (row.lastNotifiedAt < lastNotifiedBefore && row.threadUpdatedByOtherAt > threadUpdatedByOtherAfter && row.lastNotifiedAt < row.threadUpdatedByOtherAt && !row.muted)) yield row).list
 
-  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[NonUserThread] =
-    (for (row <- rows if row.keepId === keepId) yield row).list
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[NonUserThread] = {
+    getByKeepIds(Set(keepId)).getOrElse(keepId, Set.empty)
+  }
+
+  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[NonUserThread]] = {
+    (for (row <- rows if row.keepId.inSet(keepIds)) yield row).list.toSet.groupBy(_.keepId)
+  }
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit =
     updates.foreach {

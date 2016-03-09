@@ -104,21 +104,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
     val infoF = db.readOnlyReplicaAsync { implicit s =>
       val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
+      val nonUserThreadsByKeep = nonUserThreadRepo.getByKeepIds(keepIds)
       val countsByKeep = messageRepo.getAllMessageCounts(keepIds)
-      (threadsByKeep, countsByKeep)
+      (threadsByKeep, nonUserThreadsByKeep, countsByKeep)
     }
 
     for {
-      (threadsByKeep, countsByKeep) <- infoF
+      (threadsByKeep, nonUserThreadsByKeep, countsByKeep) <- infoF
       extMessageMap <- extMessageMapFut
     } yield {
       threadsByKeep.map {
-        case (kid, thread) =>
-          kid -> Discussion(
+        case (keepId, thread) =>
+          val emailParticipants = nonUserThreadsByKeep.getOrElse(keepId, Set.empty).map(t => (t.participant, t.createdBy, t.createdAt)).collect {
+            case (NonUserEmailParticipant(address), addedBy, addedAt) => address -> (addedBy, addedAt)
+          }.toMap
+          keepId -> Discussion(
             startedAt = thread.createdAt,
-            numMessages = countsByKeep.getOrElse(kid, 0),
+            numMessages = countsByKeep.getOrElse(keepId, 0),
             locator = thread.deepLocator,
-            messages = recentsByKeep(kid).flatMap(em => extMessageMap.get(em.id.get))
+            emailParticipants = emailParticipants,
+            messages = recentsByKeep(keepId).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
     }
