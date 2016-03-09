@@ -56,12 +56,6 @@ object KeepMember {
 
 case class KeepMembers(libraries: Seq[KeepMember.Library], users: Seq[KeepMember.User], emails: Seq[KeepMember.Email])
 object KeepMembers {
-  implicit val writes: OWrites[KeepMembers] = OWrites { members =>
-    Json.obj(
-      "libraries" -> members.libraries,
-      "users" -> members.users,
-      "emails" -> members.emails
-    )
-  }
+  implicit val writes = Json.writes[KeepMembers]
   val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
 }
