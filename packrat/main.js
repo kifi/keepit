@@ -1837,7 +1837,7 @@ function awaitDeepLink(link, tabId, retrySec) {
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     var linkUrl = link.url || link.nUri;
-    if (tab && ((tab.nUri && sameOrLikelyRedirected(linkUrl, tab.nUri)) || (tab.url && sameOrLikelyRedirected(linkUrl, tab.url)))) {
+    if (tab && ((tab.nUri && sameOrSimilarBaseDomain(linkUrl, tab.nUri)) || (tab.url && sameOrSimilarBaseDomain(linkUrl, tab.url)))) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         var step = +loc.substr(7, 1);
@@ -2793,7 +2793,7 @@ function arrayBufferToBase64(buffer) {
 
 //                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
 var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
-function sameOrLikelyRedirected(url1, url2) {
+function sameOrSimilarBaseDomain(url1, url2) {
   if (url1 === url2) {
     return true;
   }
