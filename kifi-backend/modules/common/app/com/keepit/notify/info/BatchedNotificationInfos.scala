@@ -19,7 +19,7 @@ class BatchedNotificationInfos(
     // It cannot detect that the result type R varies based on the pattern match here,
     // but the Scala compiler can.
     request match {
-      case RequestUriSummary(id) => summaries(id)
+      case RequestUriSummary(id) => summaries.get(id)
       case RequestUser(id) => users(id)
       case RequestUserExternal(id) => usersExternal(id)
       case RequestLibrary(id) => libraries(id)
@@ -42,7 +42,7 @@ object NotificationInfoRequest {
   case class RequestUserExternal(id: ExternalId[User]) extends NotificationInfoRequest[User, BasicUser]
   case class RequestLibrary(id: Id[Library]) extends NotificationInfoRequest[Library, LibraryCardInfo]
   case class RequestKeep(id: Id[Keep]) extends NotificationInfoRequest[Keep, BasicKeep]
-  case class RequestUriSummary(id: Id[Keep]) extends NotificationInfoRequest[RoverUriSummary, RoverUriSummary]
+  case class RequestUriSummary(id: Id[Keep]) extends NotificationInfoRequest[RoverUriSummary, Option[RoverUriSummary]]
   case class RequestOrganization(id: Id[Organization]) extends NotificationInfoRequest[Organization, BasicOrganization]
 
 }
