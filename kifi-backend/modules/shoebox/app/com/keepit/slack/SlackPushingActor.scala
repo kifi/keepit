@@ -330,7 +330,9 @@ class SlackPushingActor @Inject() (
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
-          case (m, n) => DescriptionElements(m, "new keeps and", n, "new comments since", since, ".")
+          case (numKeeps, numMsgs) if numMsgs < 2 => DescriptionElements(numKeeps, "new keeps since", since, ".")
+          case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
+          case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
         },
         "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
       ))))
@@ -381,7 +383,7 @@ class SlackPushingActor @Inject() (
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
     val keepElement = {
       DescriptionElements(
-        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
         "  ",
         "View Article" --> keepLink,
         "•",
