@@ -90,6 +90,15 @@ object NotificationCategory {
     val ORGANIZATION_INVITATION = NotificationCategory("visitor_organization_invitation")
     val BILLING = NotificationCategory("billing")
 
+    val INTEGRATION_WELCOME = NotificationCategory("integration_welcome")
+    val INTEGRATOR_PRESYNC = NotificationCategory("integrator_presync")
+    val INTEGRATOR_POSTSYNC = NotificationCategory("integrator_postsync")
+    val TEAM_DIGEST = NotificationCategory("team_digest")
+    val PERSONAL_DIGEST = NotificationCategory("personal_digest")
+    val LIBRARY_DIGEST = NotificationCategory("library_digest")
+    val NEW_KEEP = NotificationCategory("new_keep")
+    val MIRRORED_COMMENT = NotificationCategory("mirrored_comment")
+
     val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION, BILLING)
 
     // Formatting Categories used in the extension

@@ -75,6 +75,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   pushingActor: ActorInstance[SlackPushingActor],
+  slackAnalytics: SlackAnalytics,
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
@@ -126,7 +127,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         case (lib, Failure(fail)) =>
           airbrake.notify(s"Pushing slack updates to library $lib failed because of $fail")
       }
-      results.collect { case (k, Success(v)) => k.id.get -> v }
+      results.collect {
+        case (k, Success(v)) =>
+          slackAnalytics.trackNotificationSent(k.slackTeamId, k.slackChannelId, k.slackChannelName, NotificationCategory.NonUser.NEW_KEEP)
+          k.id.get -> v
+      }
     }
   }
 

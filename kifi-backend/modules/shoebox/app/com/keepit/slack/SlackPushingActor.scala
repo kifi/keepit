@@ -16,6 +16,7 @@ import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models.SlackErrorCode._
@@ -36,7 +37,7 @@ object SlackPushingActor {
   val delayFromSuccessfulPush = Duration.standardMinutes(30)
   val delayFromFailedPush = Duration.standardMinutes(5)
   val MAX_ITEMS_TO_PUSH = 7
-  val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+  val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
 
   val imageUrlRegex = """^https?://.*?\.(png|jpg|jpeg|gif|gifv)""".r
 
@@ -88,6 +89,8 @@ class SlackPushingActor @Inject() (
   slackPushForMessageRepo: SlackPushForMessageRepo,
   orgExperimentRepo: OrganizationExperimentRepo,
   eliza: ElizaServiceClient,
+  slackAnalytics: SlackAnalytics,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[LibraryToSlackChannel]] {
@@ -235,9 +238,23 @@ class SlackPushingActor @Inject() (
       // Now push new things, updating the integration state as we go
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
         slackMessageForItem(item, settings).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
-          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg).recoverWith {
-            case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
-          }
+          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg)
+            .tap { _ =>
+              implicit val contextBuilder = heimdalContextBuilder()
+              val category = item match {
+                case _: PushItem.Digest => NotificationCategory.NonUser.LIBRARY_DIGEST
+                case PushItem.KeepToPush(k, ktl) =>
+                  contextBuilder += ("keepId", k.id.get.id)
+                  contextBuilder += ("libraryId", ktl.libraryId.id)
+                  NotificationCategory.NonUser.NEW_KEEP
+                case PushItem.MessageToPush(k, _) =>
+                  contextBuilder += ("threadId", k.id.get.id)
+                  NotificationCategory.NonUser.MIRRORED_COMMENT
+              }
+              slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, category, contextBuilder.build)
+            }.recoverWith {
+              case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+            }
         }.map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {
@@ -348,16 +365,10 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
-<<<<<<< HEAD
-        "_“", keep.title.getOrElse[String](keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)), "”_",
-        " View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
-        "|",
-=======
         "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
         "  ",
         "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
         "•",
->>>>>>> 38657712159b9fb825c80c9ed642e2ada403ae10
         "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
       )
     }

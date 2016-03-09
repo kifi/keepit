@@ -11,6 +11,7 @@ import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.common.util.{ Debouncing, DescriptionElements, LinkElement }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.SlackOnboarder.TeamOnboardingAgent
 import com.keepit.slack.models._
@@ -61,7 +62,9 @@ class SlackOnboarderImpl @Inject() (
   orgRepo: OrganizationRepo,
   orgConfigRepo: OrganizationConfigurationRepo,
   attributionRepo: KeepSourceAttributionRepo,
+  slackAnalytics: SlackAnalytics,
   clock: Clock,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val executionContext: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackOnboarder with Logging {
@@ -77,7 +80,10 @@ class SlackOnboarderImpl @Inject() (
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
       debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
         slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
-        slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId, welcomeMsg).map(_ => ())
+        slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId, welcomeMsg).map { _ =>
+          slackAnalytics.trackNotificationSent(integ.slackTeamId, integ.slackChannelId, integ.slackChannelName, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+          ()
+        }
       }
     }.getOrElse {
       log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")
@@ -193,7 +199,13 @@ class SlackOnboarderImpl @Inject() (
           }
         )))).filter(_ => agent.isWorking)
       } yield {
-        slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+        slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map { _ =>
+          val contextBuilder = heimdalContextBuilder()
+          contextBuilder += ("numChannelMembers", 1)
+          contextBuilder += ("slackTeamName", agent.membership.slackTeamName.value)
+          slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, agent.membership.slackUsername.asChannelName, NotificationCategory.NonUser.INTEGRATOR_PRESYNC)
+          ()
+        }
       }) getOrElse {
         slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
         Future.successful(Unit)
@@ -256,7 +268,15 @@ class SlackOnboarderImpl @Inject() (
           ))).filter(_ => agent.isWorking)
         } yield {
           agent.dieIf(channels.isEmpty)
-          slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+          slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg)
+            .andThen(logFTUI(agent, msg))
+            .map { _ =>
+              val contextBuilder = heimdalContextBuilder()
+              contextBuilder += ("numChannelMembers", 1)
+              contextBuilder += ("slackTeamName", agent.membership.slackTeamName.value)
+              slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, agent.membership.slackUsername.asChannelName, NotificationCategory.NonUser.INTEGRATOR_POSTSYNC, contextBuilder.build)
+              ()
+            }
         }) getOrElse {
           slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
           Future.successful(Unit)

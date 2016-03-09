@@ -14,6 +14,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.RandomChoice._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
@@ -45,6 +46,8 @@ class SlackTeamDigestNotificationActor @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   orgInfoCommander: OrganizationInfoCommander,
+  slackAnalytics: SlackAnalytics,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Set[Id[SlackTeam]]] {
@@ -259,6 +262,9 @@ class SlackTeamDigestNotificationActor @Inject() (
       } yield {
         slackClient.sendToSlackHoweverPossible(team.slackTeamId, generalChannel, msg).map { sent =>
           slackLog.info("Team digest to", team.slackTeamName.value, "(", team.slackTeamId.value, ")")
+          val contextBuilder = heimdalContextBuilder()
+          contextBuilder += ("slackTeamName", team.slackTeamName.value)
+          slackAnalytics.trackNotificationSent(team.slackTeamId, generalChannel, SlackChannelName("general"), NotificationCategory.NonUser.TEAM_DIGEST)
           ()
         }.recover {
           case SlackFail.NoValidPushMethod =>

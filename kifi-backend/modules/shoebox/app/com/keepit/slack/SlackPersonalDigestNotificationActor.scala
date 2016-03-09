@@ -14,6 +14,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.RandomChoice._
 import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
@@ -54,6 +55,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
   airbrake: AirbrakeNotifier,
   orgInfoCommander: OrganizationInfoCommander,
   orgExperimentRepo: OrganizationExperimentRepo,
+  slackAnalytics: SlackAnalytics,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackTeamMembership]] {
@@ -110,6 +113,10 @@ class SlackPersonalDigestNotificationActor @Inject() (
               }
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
+            val contextBuilder = heimdalContextBuilder()
+            contextBuilder += ("numChannelMembers", 1)
+            contextBuilder += ("slackTeamName", membership.slackTeamName.value)
+            slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
             slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
