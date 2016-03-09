@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
+import org.joda.time.DateTime
 import play.api.libs.json.{JsArray, JsObject}
 
 import scala.collection.mutable
@@ -92,9 +93,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(true)
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
-    Future.successful(Map.empty)
-  }
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = Future.successful(Map.empty)
+  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]] = Future.successful(Map.empty)
   def deleteMessage(msgId: Id[Message]): Future[Unit] = ???
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit] = Future.successful(Unit)
   def editMessage(msgId: Id[Message], newText: String): Future[Message] = ???

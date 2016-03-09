@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.discussion.{ DiscussionKeep, Discussion }
@@ -48,6 +49,7 @@ case class KeepInfo(
     note: Option[String] = None,
     discussion: Option[Discussion],
     participants: Seq[BasicUser],
+    members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {
 
   def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
@@ -102,6 +104,7 @@ object KeepInfo {
         "note" -> o.note,
         "discussion" -> o.discussion,
         "participants" -> o.participants,
+        "members" -> o.members,
         "permissions" -> o.permissions
       ).nonNullFields
     }
@@ -110,6 +113,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relative, bookmark.isPrivate, user = None, author = BasicAuthor.Fake, libraryId = bookmark.libraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, participants = Seq.empty, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }

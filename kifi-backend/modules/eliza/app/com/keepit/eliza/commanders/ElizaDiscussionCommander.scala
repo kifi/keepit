@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, DiscussionFail, Discussion, Message }
 import com.keepit.eliza.model._
@@ -16,6 +16,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
+import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
@@ -25,6 +26,7 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
@@ -113,14 +115,24 @@ class ElizaDiscussionCommanderImpl @Inject() (
       extMessageMap <- extMessageMapFut
     } yield {
       threadsByKeep.map {
-        case (kid, thread) =>
-          kid -> Discussion(
+        case (keepId, thread) =>
+          keepId -> Discussion(
             startedAt = thread.createdAt,
-            numMessages = countsByKeep.getOrElse(kid, 0),
+            numMessages = countsByKeep.getOrElse(keepId, 0),
             locator = thread.deepLocator,
-            messages = recentsByKeep(kid).flatMap(em => extMessageMap.get(em.id.get))
+            messages = recentsByKeep(keepId).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
+    }
+  }
+
+  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]] = {
+    db.readOnlyMaster { implicit session =>
+      nonUserThreadRepo.getByKeepIds(keepIds)
+    }.mapValues {
+      _.map(t => (t.participant, t.createdBy, t.createdAt)).collect {
+        case (NonUserEmailParticipant(address), addedBy, addedAt) => address -> (addedBy, addedAt)
+      }.toMap
     }
   }
 

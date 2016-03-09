@@ -12,6 +12,7 @@ import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
+import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -22,7 +23,6 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import scala.concurrent.duration._
-
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepDecoratorImpl])
@@ -78,10 +78,18 @@ class KeepDecoratorImpl @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(viewerIdOpt, showPublishedLibraries, 0, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
-      val ktusByKeep = db.readOnlyMaster(implicit s => ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet))
-      val entitiesFutures = augmentationFuture.map { augmentationInfos =>
+      val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
+
+      val (ktusByKeep, ktlsByKeep) = db.readOnlyMaster { implicit s =>
+        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds))
+      }
+
+      val entitiesFutures = for {
+        augmentationInfos <- augmentationFuture
+        emailParticipantsByKeep <- emailParticipantsByKeepFuture
+      } yield {
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId))
           db.readOnlyMaster { implicit s => libraryRepo.getActiveByIds(librariesShown) } //cached
         }
 
@@ -98,7 +106,8 @@ class KeepDecoratorImpl @Inject() (
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
           val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers) } //cached
+          val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy) } //cached
         }
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
@@ -116,6 +125,7 @@ class KeepDecoratorImpl @Inject() (
 
         (idToBasicUser, idToBasicLibrary, libraryCardByLibId, basicOrgByLibId)
       }
+
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
       val colls = db.readOnlyMaster { implicit s =>
@@ -148,9 +158,11 @@ class KeepDecoratorImpl @Inject() (
         sourceAttrs <- sourceAttrsFut
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
+        emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.flatMap {
           case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+            val keepId = keep.id.get
             val keepers = viewerIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.getOrElse(keep.uriId, Set.empty)
             val libraries = {
@@ -167,14 +179,35 @@ class KeepDecoratorImpl @Inject() (
               case _ => keep.path.relative
             }
 
+            val keepMembers = {
+              val libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).flatMap { ktl =>
+                idToLibraryCard.get(ktl.libraryId).map { library =>
+                  KeepMember.Library(library, ktl.addedAt, ktl.addedBy.flatMap(idToBasicUser.get))
+                }
+              }.sortBy(_.addedAt)
+
+              val users = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap { ktu =>
+                idToBasicUser.get(ktu.userId).map { user =>
+                  KeepMember.User(user, ktu.addedAt, ktu.addedBy.flatMap(idToBasicUser.get))
+                }
+              }.sortBy(_.addedAt)
+
+              val emails = emailParticipantsByKeep.getOrElse(keepId, Map.empty).map {
+                case (emailAddress, (addedBy, addedAt)) =>
+                  KeepMember.Email(emailAddress, addedAt, idToBasicUser.get(addedBy))
+              }.toSeq.sortBy(_.addedAt)
+
+              KeepMembers(libraries, users, emails)
+            }
+
             (for {
-              author <- sourceAttrs.get(keep.id.get).map {
+              author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
               KeepInfo(
                 id = Some(keep.externalId),
-                pubId = Some(Keep.publicId(keep.id.get)),
+                pubId = Some(Keep.publicId(keepId)),
                 title = keep.title,
                 url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
                 path = bestEffortPath,
@@ -197,11 +230,12 @@ class KeepDecoratorImpl @Inject() (
                 libraryId = keep.libraryId.map(Library.publicId),
                 library = keep.libraryId.flatMap(idToLibraryCard.get),
                 organization = keep.libraryId.flatMap(idToBasicOrg.get),
-                sourceAttribution = sourceAttrs.get(keep.id.get),
+                sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
-                discussion = discussionsByKeep.get(keep.id.get),
-                participants = ktusByKeep.getOrElse(keep.id.get, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
-                permissions = permissionsByKeep.getOrElse(keep.id.get, Set.empty)
+                discussion = discussionsByKeep.get(keepId),
+                participants = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
+                members = keepMembers,
+                permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
               )
             }) tap {
               case None => slackLog.warn(s"Could not generate an author for keep ${keep.id.get}")

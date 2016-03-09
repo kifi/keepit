@@ -173,12 +173,9 @@ class ElizaEmailCommander @Inject() (
       }
 
       // Intentionally sequential execution
-
-      def notify(toBeNotified: Seq[NonUserThread]): Unit = toBeNotified match {
-        case Seq() => // done
-        case Seq(nut, moreNuts @ _*) => notifyEmailParticipant(nut, threadEmailData) onComplete { _ => notify(moreNuts) }
+      FutureHelpers.sequentialExec(nuts) { nut =>
+        notifyEmailParticipant(nut, threadEmailData)
       }
-      notify(nuts)
     }
   }
 

@@ -147,4 +147,11 @@ class ElizaDiscussionController @Inject() (
     val lastActivityByKeepId = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
     Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
   }
+
+  def getEmailParticipantsForKeeps() = Action(parse.tolerantJson) { request =>
+    import GetEmailParticipantsForKeep._
+    val keepIds = request.body.as[Request].keepIds
+    val emailParticipantsByKeepIds = discussionCommander.getEmailParticipantsForKeeps(keepIds)
+    Ok(Json.toJson(Response(emailParticipantsByKeepIds)))
+  }
 }
