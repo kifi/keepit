@@ -25,9 +25,9 @@ import scala.util.{ Failure, Success }
 object SlackPersonalDigestConfig {
   val minDelayInsideTeam = Duration.standardMinutes(10)
 
-  val delayAfterSuccessfulDigest = Duration.standardDays(3)
+  val delayAfterSuccessfulDigest = Duration.standardDays(7)
   val delayAfterFailedDigest = Duration.standardDays(1)
-  val delayAfterNoDigest = Duration.standardDays(3)
+  val delayAfterNoDigest = Duration.standardHours(6)
   val maxProcessingDuration = Duration.standardHours(1)
   val minIngestedMessagesForPersonalDigest = 2
 
@@ -129,23 +129,23 @@ class SlackPersonalDigestNotificationActor @Inject() (
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
       })
-      numIngestedMessagesByChannel = {
+      messagesByChannel = {
         val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
         val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
           case (keepId, slack: SlackAttribution) => keepId -> slack
         }
         val keepsById = keepRepo.getByIds(keepsForThisMembership)
-        val messagesByChannel = attributions.groupBy(_._2.message.channel)
+        val attributionsByChannel = attributions.groupBy(_._2.message.channel)
         val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
           integrations.map(_.createdAt).min
         }
-        messagesByChannel.flatMap {
+        attributionsByChannel.flatMap {
           case (channel, attrsAndKeeps) => oldestIntegrationByChannel.get(channel.id).map { baseTimestamp =>
-            channel -> attrsAndKeeps.count {
+            channel -> attrsAndKeeps.filter {
               case (kId, attr) =>
                 attr.message.timestamp.toDateTime.isAfter(baseTimestamp) &&
                   keepsById.get(kId).exists(k => !membership.lastPersonalDigestAt.exists(lastTime => lastTime isAfter k.createdAt))
-            }
+            }.values.map(_.message).toSeq
           }
         }
       }
@@ -153,7 +153,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         slackMembership = membership,
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
-        numIngestedMessagesByChannel = numIngestedMessagesByChannel
+        ingestedMessagesByChannel = messagesByChannel
       )
       relevantDigest <- Some(digest).filter(_.numIngestedMessages >= minIngestedMessagesForPersonalDigest)
     } yield relevantDigest
@@ -163,10 +163,12 @@ class SlackPersonalDigestNotificationActor @Inject() (
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
+    val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy(_.timestamp)
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
     val text = DescriptionElements(
       SlackEmoji.wave,
-      "Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved of couple of links you shared.",
+      s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I've saved of couple of links you shared",
+      mostRecentIngestedMsg.channel.name.map(chName => DescriptionElements(s"(most recently one from #${chName.value})")), ".",
       "I also scanned the text on those pages so you can search for them more easily.",
       "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)), "to get:"
     )

@@ -1,6 +1,6 @@
 package com.keepit.slack.models
 
-import com.keepit.model.{ BasicOrganization, Library }
+import com.keepit.model.{ PrettySlackMessage, BasicOrganization, Library }
 import org.joda.time.{ Duration, Period }
 
 case class SlackTeamDigest(
@@ -24,6 +24,7 @@ case class SlackPersonalDigest(
     slackMembership: SlackTeamMembership,
     digestPeriod: Duration,
     org: BasicOrganization,
-    numIngestedMessagesByChannel: Map[SlackChannelIdAndPrettyName, Int]) {
+    ingestedMessagesByChannel: Map[SlackChannelIdAndPrettyName, Seq[PrettySlackMessage]]) {
+  lazy val numIngestedMessagesByChannel = ingestedMessagesByChannel.mapValues(_.length)
   lazy val numIngestedMessages = numIngestedMessagesByChannel.values.sum
 }
