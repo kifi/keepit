@@ -1,14 +1,10 @@
 package com.keepit.notify.info
 
-import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.social.BasicUser
-
-import scala.concurrent.Future
 
 class BatchedNotificationInfos(
     private val users: Map[Id[User], BasicUser],

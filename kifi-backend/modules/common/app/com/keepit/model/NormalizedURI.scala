@@ -1,5 +1,8 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.PublicIdGenerator
 import com.keepit.common.net.URI
 import play.api.mvc.PathBindable
 
@@ -46,10 +49,13 @@ case class NormalizedURI(
   def withContentRequest(contentWanted: Boolean) = if (contentWanted) copy(shouldHaveContent = true) else this
 }
 
-object NormalizedURI {
+object NormalizedURI extends PublicIdGenerator[NormalizedURI] {
   implicit val nIdFormat = Id.format[NormalizedURI]
   implicit val extIdFormat = ExternalId.format[NormalizedURI]
   implicit val stateFormat = State.format[NormalizedURI]
+
+  protected[this] val publicIdPrefix = "n"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(77, 113, -61, 56, 26, 56, -112, -59, -103, 90, -70, -65, 56, 10, 81, 71))
 
   val TitleMaxLen = 2040
   val UrlMaxLen = 3000

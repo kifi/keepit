@@ -1,5 +1,6 @@
 package com.keepit.notify.info
 
+import com.keepit.common.store.{S3ImageConfig, ImageSize}
 import com.keepit.common.strings._
 
 import com.google.inject.{Inject, Singleton}
@@ -13,7 +14,10 @@ import com.keepit.social.ImageUrls
 import play.api.libs.json.Json
 
 @Singleton
-class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {
+class NotificationKindInfoRequests @Inject()(
+  implicit val pubIdConfig: PublicIdConfiguration,
+  implicit val imageConfig: S3ImageConfig
+) {
   private def genericInfoFn[N <: NotificationEvent](
     fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
@@ -98,10 +102,12 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
   def infoForLibraryNewKeep(events: Set[LibraryNewKeep]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
-      RequestLibrary(event.libraryId), RequestKeep(event.keepId)
+      RequestLibrary(event.libraryId), RequestKeep(event.keepId), RequestUriSummary(event.keepId)
     )) { batched =>
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
+      val summary = RequestUriSummary(event.keepId).lookup(batched) // todo send to client
+
       val author = newKeep.author
       val slackAttributionOpt = newKeep.attribution
 
@@ -116,6 +122,15 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
       }
 
       val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
+
+      val image = summary.images.get(ImageSize(65, 95))
+      val uriSummary = Json.obj( // Same as NotificationJsonMaker.makeOpt's
+        "title" -> summary.article.title,
+        "description" -> summary.article.description,
+        "imageUrl" -> image.map(_.path.getUrl),
+        "imageWidth" -> image.map(_.size.width),
+        "imageHeight" -> image.map(_.size.height)
+      )
 
       import com.keepit.common._
       StandardNotificationInfo(
@@ -132,7 +147,8 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
             "id" -> newKeep.id,
             "url" -> newKeep.url,
             "attr" -> newKeep.attribution
-          )
+          ),
+          "uriSummary" -> uriSummary
         )),
         category = NotificationCategory.User.NEW_KEEP
       )

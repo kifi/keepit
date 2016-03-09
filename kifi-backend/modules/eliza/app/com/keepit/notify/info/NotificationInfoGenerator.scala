@@ -2,12 +2,12 @@ package com.keepit.notify.info
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
-import com.keepit.common.db.Id
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
-import com.keepit.model.Keep
+import com.keepit.model.NormalizedURI
 import com.keepit.notify.model.{ Recipient, UserRecipient }
-import com.keepit.rover.model.RoverUriSummary
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -15,7 +15,9 @@ import scala.util.{ Failure, Try }
 
 class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
+    roverServiceClient: RoverServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
+    implicit val config: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends Logging {
 
   def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
@@ -45,6 +47,7 @@ class NotificationInfoGenerator @Inject() (
     }.toSet
     val keepRequests = infoRequests.flatMap { infoRequest =>
       infoRequest.requests.collect {
+        case r: NotificationInfoRequest.RequestUriSummary => r.id // because `RequestUriSummary` needs basicKeep.uriId
         case r: NotificationInfoRequest.RequestKeep => r.id
       }
     }.toSet
@@ -62,7 +65,16 @@ class NotificationInfoGenerator @Inject() (
     val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
-    val summaryF = Future.successful(Map.empty[Id[Keep], RoverUriSummary])
+    val summaryF = keepsF.flatMap { keeps =>
+      val uriToKeepId = (for {
+        keepId <- summaryRequests
+        keep <- keeps.get(keepId)
+        uriId <- keep.uriId.flatMap(u => NormalizedURI.decodePublicId(u).toOption)
+      } yield uriId -> keepId).toMap
+      roverServiceClient.getUriSummaryByUris(uriToKeepId.keys.toSet).map { s =>
+        s.map(sv => uriToKeepId(sv._1) -> sv._2)
+      }
+    }
 
     val userIdByExternalIdFut = for {
       orgs <- orgsF
