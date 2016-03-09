@@ -142,7 +142,10 @@ angular.module('kifi')
         }
       });
     };
-    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
+
+    if (!$stateParams.signUpWithSlack) { // orgProfile.libraries is the default controller, orgProfile.slack may be routed to after it's initialized
+      $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
+    }
 
     var slackIntPromoP;
     // query param handling
