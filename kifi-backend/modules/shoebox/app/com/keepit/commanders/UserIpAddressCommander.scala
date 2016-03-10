@@ -210,9 +210,9 @@ class UserIpAddressEventLogger @Inject() (
       user.fullName --> LinkElement(s"http://admin.kifi.com/admin/user/${user.id.get}"),
       primaryMail,
       s"joined ${STANDARD_DATE_FORMAT.print(user.createdAt)}",
-      if (orgs.nonEmpty) { "\torgs " + orgs.map(linkToOrg("")).mkString(" ") } else "",
-      if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(linkToOrg("~")).mkString(" ") } else "",
-      s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
+      if (orgs.nonEmpty) DescriptionElements("\torgs ", orgs.map(linkToOrg(""))) else None,
+      if (candOrgs.nonEmpty) DescriptionElements("\tcands ", candOrgs.map(linkToOrg("~"))) else None,
+      if (newMember) DescriptionElements("*NEW CLUSTER MEMBER*") else None
     )
   }
 
