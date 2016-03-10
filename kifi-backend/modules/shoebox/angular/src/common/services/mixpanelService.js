@@ -79,6 +79,7 @@
   }
 
   function trackPage(path, attributes) {
+    //$log.log(path, attributes);
     attributes = attributes || {};
     var origin = attributes.origin || $window.location.origin;
 
