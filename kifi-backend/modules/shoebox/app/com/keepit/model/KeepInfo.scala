@@ -93,6 +93,7 @@ object KeepInfo {
         "libraries" -> o.libraries,
         "librariesOmitted" -> o.librariesOmitted,
         "librariesTotal" -> o.librariesTotal,
+        "sources" -> o.sources.map(_.map(SourceAttribution.externalWrites.writes(_))),
         "collections" -> o.collections,
         "tags" -> o.tags,
         "hashtags" -> o.hashtags,

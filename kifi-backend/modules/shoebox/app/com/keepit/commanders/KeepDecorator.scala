@@ -234,7 +234,7 @@ class KeepDecoratorImpl @Inject() (
                 libraries = Some(libraries),
                 librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
                 librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
-                sources = additionSourcesByUriId.get(keep.uriId).map(_.take(5)),
+                sources = additionSourcesByUriId.get(keep.uriId).collect { case sources if sources.nonEmpty => sources.take(5) },
                 collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
                 tags = Some(collsForKeep.toSet), // Used by site
                 hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
