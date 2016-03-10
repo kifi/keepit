@@ -34,7 +34,7 @@ object GoogleNormalizer extends StaticNormalizer {
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(file(_, fileKey, _)), query, fragment) =>
         URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None)
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(spreadsheet(_, spreadKey, _)), Some(query), fragment) =>
-        val newQuery = Query(query.params.filter { q => q.name == "key" || q.name == "authkey" })
+        val newQuery = Query(query.params.filter { q => q.name == "key" || q.name == "authkey" }: _*)
         URI(scheme, userInfo, host, port, Some(spreadKey), Some(newQuery), None)
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "mail")), port, Some(gmail(_, addr)), _, Some(fragment)) =>
         val msgFragments = fragment.replaceAll("%2F", "/").split("/")
@@ -61,9 +61,9 @@ object GoogleNormalizer extends StaticNormalizer {
               case None =>
                 URIParserUtil.normalizeParams(newParams)
             }
-            Some(Query(finalParams))
+            Some(Query(finalParams: _*))
           case _ =>
-            query.map { qry => Query(qry.params.filterNot { case Param(name, _) => searchParamsToDrop.contains(name) }) }
+            query.map { qry => Query(qry.params.filterNot { case Param(name, _) => searchParamsToDrop.contains(name) }: _*) }
         }
         URI(scheme, userInfo, host, port, path, q, None)
       case _ => uri

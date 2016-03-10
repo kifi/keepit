@@ -5,18 +5,19 @@ import com.keepit.commanders._
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.controller._
 import com.keepit.common.core._
-import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, CryptoSupport, PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ KifiUrlRedirectHelper, CryptoSupport, PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
+import com.keepit.common.net.{ Param, Query }
 import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
+import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilderFactory, EventType, HeimdalContext, HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model._
-import com.keepit.slack.models.SlackTeamId
+import com.keepit.slack.models.{ SlackUserId, SlackTeamId }
 import com.keepit.social.{ IdentityHelpers, NonUserKinds }
 import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.{ ActionFilter, Result }
@@ -47,10 +48,10 @@ class KifiSiteRouter @Inject() (
   keepMetadataCache: KeepMetadataCache,
   airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
-  kifiUrlRedirectHelper: KifiUrlRedirectHelper,
   deepLinkRouter: DeepLinkRouter,
   eliza: ElizaServiceClient,
   heimdal: HeimdalServiceClient,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -89,7 +90,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def urlRedirect(signedUrl: String, signedTrackingParams: Option[String]) = MaybeUserAction { implicit request =>
-    kifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, signedTrackingParams) match {
+    KifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, signedTrackingParams) match {
       case None =>
         log.warn(s"[kifiUrlRedirect] unable to parse kifi url redirect signedUrl=$signedUrl, signedParams=$signedTrackingParams")
         Redirect("/")
@@ -99,23 +100,21 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  private def trackUrlRedirect(trackingParams: RedirectTrackingParameters)(implicit request: MaybeUserRequest[_]): Unit = {
-    val RedirectTrackingParameters(eventType, action, slackUserId, slackTeamId) = trackingParams
-
-    val contextBuilder = new HeimdalContextBuilder
-    contextBuilder += ("action", action)
-    contextBuilder += ("slackUserId", slackUserId.value)
-    contextBuilder += ("slackTeamId", slackTeamId.value)
-    contextBuilder += ("source", "slack")
-    val context = contextBuilder.build
-
-    val event = request.userIdOpt match {
-      case None =>
-        NonUserEvent(slackUserId.value, NonUserKinds.slack, context, eventType) // needs to be refactored outside of slack
-      case Some(userId) =>
-        UserEvent(userId, context, eventType)
+  private def trackUrlRedirect(trackingParams: Query)(implicit request: MaybeUserRequest[_]): Unit = {
+    val paramContext = HeimdalContext(trackingParams.params.map { case Param(k, Some(v)) => k -> ContextStringData(v) }.toMap)
+    paramContext.get[String]("eventType").foreach { eventType =>
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder.addExistingContext(paramContext)
+      contextBuilder.addRequestInfo(request)
+      val context = contextBuilder.build
+      val event = request.userIdOpt match {
+        case None =>
+          NonUserEvent(context.get[String]("slackUserId").getOrElse("unknown"), NonUserKinds.slack, context, EventType(eventType)) // needs to be developed if used outside of slack
+        case Some(userId) =>
+          UserEvent(userId, context, EventType(eventType))
+      }
+      heimdal.trackEvent(event)
     }
-    heimdal.trackEvent(event)
   }
 
   def generalRedirect(dataStr: String) = MaybeUserAction { implicit request =>

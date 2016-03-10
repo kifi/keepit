@@ -6,8 +6,9 @@ import com.keepit.commanders.{PathCommander, LibraryCommander, UserCommander}
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{RedirectTrackingParameters, PublicIdConfiguration, FakeCryptoModule}
+import com.keepit.common.crypto.{KifiUrlRedirectHelper, PublicIdConfiguration, FakeCryptoModule}
 import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.{Param, Query}
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -361,11 +362,11 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
           implicit val testConfig = FakeFortyTwoModule().fortytwoConfig
 
           // encrypt/decrypt extra params correctly
-          val trackingParams = RedirectTrackingParameters(
-            eventType = UserEventTypes.CLICKED_SEARCH_RESULT,
-            action = "clickedSomething",
-            slackUserId = SlackUserId("slacker"),
-            slackTeamId = SlackTeamId("slackers")
+          val trackingParams = Query(
+            "eventType" -> UserEventTypes.CLICKED_SEARCH_RESULT.name,
+            "action" -> "clickedSomething",
+            "slackUserId" -> "slacker",
+            "slackTeamId" -> "slackers"
           )
 
           Seq(
@@ -375,7 +376,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
             "https://www.kifi.com/kifi/general",
             "http://usepanda.com/"
           ).foreach { url =>
-            val wrappedUrl = kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
+            val wrappedUrl = KifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
               .drop(testConfig.applicationBaseUrl.length) // omit host to route properly from test
 
             // route correctly
@@ -385,10 +386,10 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
             val request = FakeRequest("GET", wrappedUrl)
             val signedUrl = request.queryString("s").head
             val signedParams = request.queryString("t").head
-            kifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, Some(signedParams)).map {
+            KifiUrlRedirectHelper.parseKifiUrlRedirect(signedUrl, Some(signedParams)).map {
               case (confirmedUrl, trackingParamsOpt) =>
                 confirmedUrl must beEqualTo(url)
-                trackingParamsOpt must beSome(trackingParams)
+                trackingParamsOpt.map(_.params.toSet) === Some(trackingParams.params.toSet)
             }
           }
 

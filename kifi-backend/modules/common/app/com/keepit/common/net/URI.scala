@@ -156,7 +156,8 @@ class Host(val domain: Seq[String]) {
 object Query {
   def parse(query: String): Query = URIParser.parseAll(URIParser.query, query.trim).get
 
-  def apply(params: Seq[Param]) = new Query(params)
+  def apply[T](params: T*)(implicit toParam: T => Param) = new Query(params.map(toParam))
+  def empty = Query()
 
   def unapplySeq(query: Query): Option[Seq[Param]] = Some(query.params)
   def unapplySeq(query: String): Option[Seq[Param]] = {
@@ -165,9 +166,7 @@ object Query {
   }
 }
 class Query(val params: Seq[Param]) {
-  override def toString() = {
-    if (params.size > 0) params.mkString("&") else ""
-  }
+  override def toString() = if (params.nonEmpty) params.mkString("&") else ""
 
   override def hashCode() = params.hashCode()
   override def equals(o: Any) = o match {
@@ -176,6 +175,8 @@ class Query(val params: Seq[Param]) {
   }
   def containsParam(name: String) = params.exists(_.name == name)
   def getParam(name: String) = params.find(_.name == name)
+  def +(p: Param) = Query(params :+ p: _*)
+  def ++(q: Query) = Query(params ++ q.params: _*)
 }
 
 case class Param(name: String, value: Option[String]) {
@@ -186,5 +187,9 @@ case class Param(name: String, value: Option[String]) {
   def isEmpty: Boolean = (name == "" && !value.isDefined)
 
   def decodedValue: Option[String] = value.map { v => java.net.URLDecoder.decode(v, UTF8) }
+}
+object Param {
+  implicit def fromKeyValueOpt(kv: (String, Option[String])): Param = Param(kv._1, kv._2)
+  implicit def fromKeyValue(kv: (String, String)): Param = Param(kv._1, Some(kv._2))
 }
 
