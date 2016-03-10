@@ -11,6 +11,7 @@
     "gulp": "~3.8.6",
     "gulp-babel": "^6.1.2",
     "gulp-cached": "~1.0.1",
+    "gulp-cheerio": "^0.6.2",
     "gulp-clone": "~1.0.0",
     "gulp-concat": "~2.3.4",
     "gulp-filenames": "^2.0.0",

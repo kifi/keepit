@@ -24,6 +24,7 @@ var map = require('./gulp/vinyl-map.js');
 var filenames = require('gulp-filenames');
 var sourcemaps = require('gulp-sourcemaps');
 var babel = require('gulp-babel');
+var cheerio = require('gulp-cheerio');
 var explicitGlobals = require('explicit-globals');
 var pathSort = require('path-sort');
 var _ = require('lodash');
@@ -194,6 +195,15 @@ gulp.task('copy', function () {
   var resources = es.merge(
       gulp.src(resourceFiles, { base: './' }),
       gulp.src(symbolSpritesFiles)
+        .pipe(cheerio({
+          run: function ($) {
+            $('symbol').each(function () {
+              var $this = $(this);
+              $this.attr('id', 'kifi-' + $this.attr('id'));
+            });
+          },
+          parserOptions: {xmlMode: true}
+        }))
         .pipe(rename(function (path) {
           path.dirname = 'images'
         }))
