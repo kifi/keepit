@@ -633,7 +633,7 @@ var api = (function createApi() {
       anyAt: function (url) {
         for (var id in pages) {
           var page = pages[id];
-          if (page.url == url) {
+          if (page.url === url || page.nUri === url) {
             return page;
           }
         }

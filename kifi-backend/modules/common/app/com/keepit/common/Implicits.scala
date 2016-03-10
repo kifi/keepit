@@ -77,6 +77,17 @@ final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
     }
     (acc, builder.result())
   }
+
+  def flatAugmentWith[Acc, B, That](fn: A => Option[B])(implicit cbf: CanBuildFrom[Repr, (A, B), That]): That = {
+    val builder = cbf(xs.repr)
+    xs.foreach { x =>
+      fn(x).foreach { y => builder += x -> y }
+    }
+    builder.result()
+  }
+  def augmentWith[Acc, B, That](fn: A => B)(implicit cbf: CanBuildFrom[Repr, (A, B), That]): That = {
+    flatAugmentWith(x => Option(fn(x)))
+  }
 }
 
 final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
@@ -98,6 +109,7 @@ final class TraversableExtensionOps[A](xs: Traversable[A]) {
 
 final class MapExtensionOps[A, B](xs: Map[A, B]) {
   def mapValuesStrict[C](fn: B => C): Map[A, C] = xs.map { case (k, v) => k -> fn(v) }
+  def flatMapValues[C](fn: B => Option[C]): Map[A, C] = xs.flatMap { case (k, v) => fn(v).map(k -> _) }
   def filterValues(predicate: B => Boolean): Map[A, B] = xs.filter { case (k, v) => predicate(v) }
 }
 

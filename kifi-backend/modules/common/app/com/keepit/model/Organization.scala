@@ -12,6 +12,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.OrganizationPermission._
+import com.keepit.slack.models.SlackTeamId
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -215,3 +216,11 @@ case class BasicOrganizationIdKey(id: Id[Organization]) extends Key[BasicOrganiz
 
 class BasicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[BasicOrganizationIdKey, BasicOrganization](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class SlackTeamIdOrgIdKey(organizationId: Id[Organization]) extends Key[SlackTeamId] {
+  override val version = 1
+  val namespace = "slack_team_id_by_organization_id"
+  def toKey(): String = organizationId.id.toString
+}
+class SlackTeamIdOrgIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackTeamIdOrgIdKey, SlackTeamId](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

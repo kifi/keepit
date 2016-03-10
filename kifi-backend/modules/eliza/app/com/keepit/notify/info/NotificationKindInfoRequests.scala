@@ -1,5 +1,6 @@
 package com.keepit.notify.info
 
+import com.keepit.common.store.{S3ImageConfig, ImageSize}
 import com.keepit.common.strings._
 
 import com.google.inject.{Inject, Singleton}
@@ -10,10 +11,14 @@ import com.keepit.model.{LibraryPermission, SourceAttribution, SlackAttribution,
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import com.keepit.social.ImageUrls
+import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.json.Json
 
 @Singleton
-class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {
+class NotificationKindInfoRequests @Inject()(
+  implicit val pubIdConfig: PublicIdConfiguration,
+  implicit val imageConfig: S3ImageConfig
+) {
   private def genericInfoFn[N <: NotificationEvent](
     fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
@@ -98,21 +103,26 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
   def infoForLibraryNewKeep(events: Set[LibraryNewKeep]): RequestingNotificationInfos[StandardNotificationInfo] = {
     val event = requireOne(events)
     RequestingNotificationInfos(Requests(
-      RequestLibrary(event.libraryId), RequestKeep(event.keepId)
+      RequestLibrary(event.libraryId), RequestKeep(event.keepId), RequestUriSummary(event.keepId)
     )) { batched =>
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
+      val summaryOpt = RequestUriSummary(event.keepId).lookup(batched)
+
       val author = newKeep.author
       val slackAttributionOpt = newKeep.attribution
+      val displayTitle = if (TwitterHandle.fromTweetUrl(newKeep.url).nonEmpty) {
+        summaryOpt.flatMap(_.article.description.map(_.abbreviate(256))).orElse(newKeep.title)
+      } else newKeep.title
 
       val body = {
         slackAttributionOpt.map { attr =>
-          val titleString = newKeep.title.getOrElse(newKeep.url.abbreviate(30))
+          val titleString = displayTitle.getOrElse(newKeep.url.abbreviate(30))
           attr.message.channel.name match {
             case Some(prettyChannelName) => s"${author.name} just added in #${prettyChannelName.value}: " + titleString
             case None => s"${author.name} just shared: " + titleString
           }
-        }.getOrElse(s"${author.name} just kept ${newKeep.title.getOrElse(newKeep.url.abbreviate(30))}")
+        }.getOrElse(s"${author.name} just kept ${displayTitle.getOrElse(newKeep.url.abbreviate(30))}")
       }
 
       val locator = if (libraryKept.permissions.contains(LibraryPermission.ADD_COMMENTS)) Some(MessageThread.locator(Keep.publicId(event.keepId))) else None // don't deep link in ext if user can't comment
@@ -132,7 +142,17 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
             "id" -> newKeep.id,
             "url" -> newKeep.url,
             "attr" -> newKeep.attribution
-          )
+          ),
+          "uriSummary" -> summaryOpt.map { summary =>
+            val image = summary.images.get(ImageSize(65, 95))
+            Json.obj( // Same as NotificationJsonMaker.makeOpt's
+              "title" -> summary.article.title,
+              "description" -> summary.article.description,
+              "imageUrl" -> image.map(_.path.getUrl),
+              "imageWidth" -> image.map(_.size.width),
+              "imageHeight" -> image.map(_.size.height)
+            )
+          }
         )),
         category = NotificationCategory.User.NEW_KEEP
       )

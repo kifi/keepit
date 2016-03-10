@@ -21,7 +21,7 @@ import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -315,7 +315,7 @@ class MessagingCommander @Inject() (
       message.from match {
         case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
         case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
-        case _ => None
+        case _ => Some(BasicUserLikeEntity(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"))))
       },
       participantSet.toSeq.map(u => BasicUserLikeEntity(id2BasicUser(u))) ++ basicNonUserParticipants
     )

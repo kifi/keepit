@@ -6,6 +6,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
@@ -39,7 +40,7 @@ class EventTrackingController @Inject() (
     airbrake: AirbrakeNotifier,
     eventContextHelper: EventContextHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
-    implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
+    implicit val defaultContext: ExecutionContext) extends HeimdalServiceController with Logging {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
@@ -57,6 +58,7 @@ class EventTrackingController @Inject() (
   }
 
   private def clientTrackEvent[E <: HeimdalEvent](event: E)(implicit heimdalEventCompanion: HeimdalEventCompanion[E]): Unit = {
+    if (event.eventType == EventType("searched") && event.context.data.get("source").contains(ContextStringData("Slack"))) log.info(s"[searchUserStatus] event = ${event.context.data}")
     try {
       mixpanelClient.track(event)
     } catch {

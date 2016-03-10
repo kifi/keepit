@@ -5,6 +5,7 @@ import java.security.MessageDigest
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.model.{ User, UserExperimentType }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -88,7 +89,7 @@ case class AmplitudeEventSkipped(eventType: String) extends AmplitudeEventResult
 case class AmplitudeApiError(message: String) extends AmplitudeEventResult
 case class AmplitudeEventSent(eventData: JsObject) extends AmplitudeEventResult
 
-class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClient {
+class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClient with Logging {
   val eventApiEndpoint = "https://api.amplitude.com/httpapi"
   val identityApiEndpoint = "https://api.amplitude.com/identify"
 
@@ -99,6 +100,7 @@ class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClien
     else new SafeFuture({
       val eventData = eventBuilder.build()
       val eventJson = Json.stringify(eventData)
+      if (event.eventType == UserEventTypes.SEARCHED && (eventData \ "source").asOpt[String].contains("Slack")) log.info(s"[searchedUserStatus] tracking searched event with data ${eventJson}")
       val request = ws.url(eventApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
 
       request.get() map {

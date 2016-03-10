@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.model.Organization
+import com.keepit.model.{ SlackTeamIdOrgIdKey, SlackTeamIdOrgIdCache, Organization }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -93,6 +93,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam]
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam]
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]]
+  def getSlackTeamIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], SlackTeamId]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam]
@@ -104,6 +105,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 @Singleton
 class SlackTeamRepoImpl @Inject() (
     slackTeamIdCache: SlackTeamIdCache,
+    slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
 
@@ -193,11 +195,19 @@ class SlackTeamRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === SlackTeamStates.ACTIVE)
   def table(tag: Tag) = new SlackTeamTable(tag)
   initTable()
+
+  override def save(model: SlackTeam)(implicit session: RWSession): SlackTeam = {
+    model.id.foreach(id => deleteCache(get(id))) // proper cache invalidation requires fields from the old model
+    super.save(model)
+  }
+
   override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
     slackTeamIdCache.remove(SlackTeamIdKey(model.slackTeamId))
+    model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.remove(SlackTeamIdOrgIdKey(orgId)))
   }
   override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
     slackTeamIdCache.set(SlackTeamIdKey(model.slackTeamId), model)
+    model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.set(SlackTeamIdOrgIdKey(orgId), model.slackTeamId))
   }
 
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam] = {
@@ -211,6 +221,12 @@ class SlackTeamRepoImpl @Inject() (
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]] = {
     val existing = activeRows.filter(row => row.organizationId.inSet(orgIds)).list
     orgIds.map(orgId => orgId -> existing.find(_.organizationId.contains(orgId))).toMap
+  }
+
+  def getSlackTeamIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], SlackTeamId] = {
+    slackTeamIdByOrganizationIdCache.bulkGetOrElseOpt(orgIds.map(SlackTeamIdOrgIdKey(_))) { missingKeys =>
+      getByOrganizationIds(missingKeys.map(_.organizationId)).map { case (orgId, slackTeamOpt) => SlackTeamIdOrgIdKey(orgId) -> slackTeamOpt.map(_.slackTeamId) }
+    }.collect { case (SlackTeamIdOrgIdKey(orgId), Some(slackTeamId)) => orgId -> slackTeamId }
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {

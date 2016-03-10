@@ -241,7 +241,8 @@ case class BasicKeep(
   visibility: LibraryVisibility,
   libraryId: Option[PublicId[Library]],
   author: BasicAuthor,
-  attribution: Option[SlackAttribution])
+  attribution: Option[SlackAttribution],
+  uriId: PublicId[NormalizedURI])
 
 object BasicKeep {
   private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
@@ -252,7 +253,8 @@ object BasicKeep {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'libraryId).formatNullable[PublicId[Library]] and
     (__ \ 'author).format[BasicAuthor] and
-    (__ \ 'slackAttribution).formatNullable[SlackAttribution]
+    (__ \ 'slackAttribution).formatNullable[SlackAttribution] and
+    (__ \ 'uriId).format[PublicId[NormalizedURI]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
@@ -305,7 +307,7 @@ object PersonalKeep {
 }
 
 case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 4
+  override val version = 5
   val namespace = "basic_keep_by_id"
   def toKey(): String = id.id.toString
 }

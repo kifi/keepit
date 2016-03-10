@@ -28,18 +28,12 @@ class ShoeboxTasksPlugin @Inject() (
     slackKeepAttributionActor: ActorInstance[SlackKeepAttributionActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
-    slackIntegrationCommander: SlackIntegrationCommander,
-    libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
     log.info("ShoeboxTasksPlugin onStart")
     scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
       twitterSyncCommander.syncAll()
-    }
-
-    scheduleTaskOnOneMachine(system, 1 minute, 20 seconds, "slack pushing") {
-      libToSlackPusher.findAndPushUpdatesForRipestIntegrations()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {

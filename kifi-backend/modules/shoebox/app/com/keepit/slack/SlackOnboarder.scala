@@ -96,7 +96,7 @@ class SlackOnboarderImpl @Inject() (
     val slackTeamOpt = slackTeamRepo.getBySlackTeamId(integ.slackTeamId)
     val allowedToSendToSlackTeam = slackTeamOpt.exists { team =>
       team.organizationId.map(orgConfigRepo.getByOrgId).exists { config =>
-        config.settings.settingFor(StaticFeature.SlackNotifications).contains(StaticFeatureSetting.ENABLED)
+        config.settings.settingFor(StaticFeature.SlackTeamDigest).contains(StaticFeatureSetting.ENABLED)
       }
     }
     if (!allowedToSendToSlackTeam) None

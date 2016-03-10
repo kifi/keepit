@@ -9,6 +9,7 @@
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/formatting.js
+// @require scripts/slack_message.js
 // @require scripts/repair_transitionend.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keeper.js
@@ -540,21 +541,6 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     };
   }
 
-  var slackSpecialEntityRe = /<@[A-Z].*?>/g; // TODO(carlos): process these entities instead of getting rid of them
-  function massageSlackEntities(message) {
-    var matches = [];
-    message = message.replace(slackSpecialEntityRe, '');
-
-    // Fill an array with match objects from slackUrlEntityRe
-    for (var m, slackUrlEntityRe = /<(.*?)\|(.*?)>|<(.*?)>/g; m = slackUrlEntityRe.exec(message); matches.push(m)) {}
-    matches.forEach(function (m) {
-      var fullMatch = m[0];
-      var url = m[3] || m[2] || m[1];
-      message = (message === fullMatch ? '' : message.replace(fullMatch, url.slice(0, 20)));
-    });
-    return message;
-  }
-
   function prioritizeSlack(sourceA, sourceB) {
     if (sourceA.slack && sourceB.twitter) {
       // Slack is "smaller", because we want it at the beginning
@@ -570,7 +556,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   function massageSlackMessage(source) {
     var message = source.slack && source.slack.message;
     if (message) {
-      message.text = massageSlackEntities(message.text);
+      message.text = slackFormat.plain(message.text, true);
     }
     return source;
   }

@@ -43,20 +43,23 @@ class AugmentationCommanderImpl @Inject() (
     libraryQualityEvaluator: LibraryQualityEvaluator,
     val searchClient: DistributedSearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
+  // todo(Léo): update to use search scopes
   def getAugmentedItems(itemAugmentationRequest: ItemAugmentationRequest): Future[Map[AugmentableItem, AugmentedItem]] = {
     val futureAugmentationResponse = augmentation(itemAugmentationRequest)
     val userId = itemAugmentationRequest.context.userId
     val futureFriends = searchFactory.getSearchFriends(userId).imap(_.map(Id[User](_)))
     val futureLibraries = searchFactory.getLibraryIdsFuture(userId, None).imap(_._2.map(Id[Library](_)))
     val futureOrganizations = searchFactory.getOrganizations(userId, None).imap(_.map(Id[Organization](_)))
+    val futureSlackTeamIds = searchFactory.getSlackTeamIds(userId, None)
 
     for {
       augmentationResponse <- futureAugmentationResponse
       friends <- futureFriends
       libraries <- futureLibraries
       organizations <- futureOrganizations
+      slackTeamIds <- futureSlackTeamIds
     } yield {
-      augmentationResponse.infos.map { case (item, info) => item -> AugmentedItem(userId, friends, organizations, libraries, augmentationResponse.scores)(item, info) }
+      augmentationResponse.infos.map { case (item, info) => item -> AugmentedItem(userId, friends, organizations, slackTeamIds, libraries, augmentationResponse.scores)(item, info) }
     }
   }
 

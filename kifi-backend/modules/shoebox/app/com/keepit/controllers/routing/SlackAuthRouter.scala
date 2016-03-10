@@ -159,7 +159,7 @@ class SlackAuthRouter @Inject() (
         slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
           val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
           val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
-          val userHasNotGivenUsTheirSlackInfo = !slackTeamMembershipRepo.getByUserId(userId).exists(_.slackTeamId == slackTeamId)
+          val userHasNotGivenUsTheirSlackInfo = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId).isEmpty
           orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)
         }
     }

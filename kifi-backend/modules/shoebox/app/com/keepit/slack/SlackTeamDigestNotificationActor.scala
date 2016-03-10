@@ -79,7 +79,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       val orgConfigById = orgConfigRepo.getByOrgIds(orgIds)
       def canSendDigestTo(team: SlackTeam) = {
         val teamHasDigestsEnabled = team.organizationId.flatMap(orgConfigById.get).exists { config =>
-          config.settings.settingFor(StaticFeature.SlackNotifications).contains(StaticFeatureSetting.ENABLED)
+          config.settings.settingFor(StaticFeature.SlackTeamDigest).contains(StaticFeatureSetting.ENABLED)
         }
         val teamHasValidTokens = slackMembershipRepo.getBySlackTeam(team.slackTeamId).flatMap(_.tokenWithScopes).exists(_.scopes.contains(SlackAuthScope.ChatWriteBot))
         val creatorHadTimeToTurnUsOff = team.lastDigestNotificationAt.isDefined || team.publicChannelsLastSyncedAt.exists(_ isBefore now.minus(initialDelayForWelcomeMessage))
