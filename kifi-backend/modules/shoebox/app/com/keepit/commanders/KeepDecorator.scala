@@ -28,7 +28,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepDecoratorImpl])
 trait KeepDecorator {
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]]
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, maxMessagesShown: Int, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]]
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
   def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]]
@@ -65,7 +65,7 @@ class KeepDecoratorImpl @Inject() (
     extends KeepDecorator with Logging {
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
-  def decorateKeepsIntoKeepInfos(viewerIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(viewerIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, maxMessagesShown: Int, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
       case k: List[Keep] => k
       case other =>
@@ -151,7 +151,7 @@ class KeepDecoratorImpl @Inject() (
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
-      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds).recover {
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, maxMessagesShown).recover {
         case fail =>
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
           Map.empty[Id[Keep], Discussion]

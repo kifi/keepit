@@ -466,6 +466,7 @@ class ShoeboxController @Inject() (
       showPublishedLibraries = true,
       keepsSeq = keepsSeq,
       idealImageSize = ProcessedImageSize.Medium.idealSize,
+      maxMessagesShown = 0,
       sanitizeUrls = true
     )
 

@@ -528,15 +528,15 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeepsV1(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, true)
+  def getKeepsV1(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, maxMessagesShown, true)
   }
 
-  def getKeepsV2(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, false)
+  def getKeepsV2(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, maxMessagesShown, false)
   }
 
-  private def getKeeps(userIdOpt: Option[Id[User]], pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean) = {
+  private def getKeeps(userIdOpt: Option[Id[User]], pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int, v1: Boolean) = {
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -548,7 +548,7 @@ class MobileLibraryController @Inject() (
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
         val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
-        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, sanitizeUrls = true).map { keepInfos =>
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, maxMessagesShown, sanitizeUrls = true).map { keepInfos =>
           val editedKeepInfos = keepInfos.map { kInfo =>
             kInfo.copy(note = Hashtags.formatMobileNote(kInfo.note, v1))
           }

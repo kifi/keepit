@@ -78,7 +78,7 @@ class MobileRecommendationsController @Inject() (
     feedFromStream(req.uriContext, req.libContext, request.userId)
   }
 
-  private def getKeepStreamAsRecos(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]]) = keepsCommander.getKeepStream(userId, limit, beforeExtId, None, sanitizeUrls = true).map { updatedKeepsWithOptId =>
+  private def getKeepStreamAsRecos(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]]) = keepsCommander.getKeepStream(userId, limit, beforeExtId, None, maxMessagesShown = 0, sanitizeUrls = true).map { updatedKeepsWithOptId =>
     val updatedKeeps = updatedKeepsWithOptId.filterNot(k => k.id.isEmpty || k.summary.isEmpty)
     val keepIdToUriId = db.readOnlyReplica { implicit session =>
       val allKeeps: Map[ExternalId[Keep], Option[Keep]] = keepRepo.getByExtIds(updatedKeeps.map(k => k.id.get).toSet)
@@ -129,7 +129,7 @@ class MobileRecommendationsController @Inject() (
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
 
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, sanitizeUrls = true).map { updatedKeeps =>
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, maxMessagesShown = 0, sanitizeUrls = true).map { updatedKeeps =>
       Ok(Json.obj("updatedKeeps" -> updatedKeeps))
     }
   }

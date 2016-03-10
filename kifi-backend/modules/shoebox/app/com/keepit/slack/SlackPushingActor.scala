@@ -368,7 +368,7 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
-        "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
+        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some("viewArticle")))),
         "|",
@@ -382,7 +382,7 @@ class SlackPushingActor @Inject() (
       case (Some(note), _) =>
         SlackMessageRequest.fromKifi(
           text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withFullMarkdown)
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
         )
       case (None, Some(attr)) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
@@ -404,7 +404,7 @@ class SlackPushingActor @Inject() (
 
     val keepElement = {
       DescriptionElements(
-        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
+        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View Article" --> keepLink("viewArticle"),
         "|",
@@ -429,7 +429,7 @@ class SlackPushingActor @Inject() (
               case None =>
                 SlackAttachment.simple(DescriptionElements(
                   SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHere"), ": ",
-                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))
+                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
                 )).withFullMarkdown
             }
         }

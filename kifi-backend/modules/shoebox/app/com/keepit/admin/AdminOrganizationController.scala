@@ -490,17 +490,6 @@ class AdminOrganizationController @Inject() (
     Ok.chunked(enum)
   }
 
-  def cleanUpEmailAddresses() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    require((request.body \ "secret").as[String] == "shhhhh")
-    val emails = db.readOnlyMaster { implicit session => userEmailAddressRepo.getByDomain(NormalizedHostname("ERROR_IN_ADDRESS")) }
-    db.readWrite { implicit s =>
-      emails.foreach { email =>
-        userEmailAddressRepo.save(email.sanitizedForDelete.withState(UserEmailAddressStates.INACTIVE))
-      }
-    }
-    Ok
-  }
-
   def unsyncSlackLibraries(orgId: Id[Organization], doIt: Boolean = false) = AdminUserAction.async { implicit request =>
     val slackLibraryIds = db.readOnlyMaster { implicit session =>
       libRepo.getBySpaceAndKind(OrganizationSpace(orgId), LibraryKind.SLACK_CHANNEL).map(_.id.get)

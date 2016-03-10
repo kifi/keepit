@@ -108,12 +108,12 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], authTokenOpt: Option[String]) = MaybeUserAction.async { request =>
+  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], maxMessagesShown: Int, authTokenOpt: Option[String]) = MaybeUserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
       case Failure(ex) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(idOrExtId) =>
-        keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt, authTokenOpt)
+        keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt, maxMessagesShown, authTokenOpt)
           .map(keepInfo => Ok(Json.toJson(keepInfo)))
           .recover { case fail: KeepFail => fail.asErrorResponse }
     }
@@ -224,12 +224,12 @@ class KeepsController @Inject() (
     }
   }
 
-  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String]) = UserAction.async { request =>
+  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String], maxMessagesShown: Int) = UserAction.async { request =>
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
 
     val filter = filterKind.flatMap(FeedFilter(_, filterId))
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, sanitizeUrls = false, filterOpt = filter).map { keeps =>
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, maxMessagesShown = maxMessagesShown, sanitizeUrls = false, filterOpt = filter).map { keeps =>
       Ok(Json.obj("keeps" -> keeps))
     }
   }
