@@ -75,8 +75,8 @@ trait KeepCommander {
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Future[KeepInfo]
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -261,7 +261,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Future[KeepInfo] = {
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo] = {
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
@@ -284,7 +284,7 @@ class KeepCommanderImpl @Inject() (
     }
 
     keepFut.flatMap { keep =>
-      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
         .imap { case Seq(keepInfo) => keepInfo }
     }
   }
@@ -380,7 +380,7 @@ class KeepCommanderImpl @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), showPublishedLibraries = false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), showPublishedLibraries = false, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown = 8, sanitizeUrls = false)
     }
   }
 
@@ -877,7 +877,7 @@ class KeepCommanderImpl @Inject() (
   }
 
   @StatsdTiming("KeepCommander.getKeepStream")
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean, filterOpt: Option[FeedFilter]): Future[Seq[KeepInfo]] = {
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter]): Future[Seq[KeepInfo]] = {
     val keepsAndTimesFut = filterOpt match {
       case Some(filter: ElizaFeedFilter) =>
         val beforeId = beforeExtId.flatMap(extId => db.readOnlyReplica(implicit s => keepRepo.get(extId).id))
@@ -911,6 +911,7 @@ class KeepCommanderImpl @Inject() (
         keeps,
         ProcessedImageSize.Large.idealSize,
         sanitizeUrls = sanitizeUrls,
+        maxMessagesShown = maxMessagesShown,
         getTimestamp = getKeepTimestamp
       )
     }

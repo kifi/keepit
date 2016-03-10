@@ -87,15 +87,15 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { implicit request =>
-    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, true)
+  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int) = UserAction.async { implicit request =>
+    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, maxMessagesShown, true)
   }
 
-  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { implicit request =>
-    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, false)
+  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int) = UserAction.async { implicit request =>
+    getKeepInfo(id, withFullInfo, idealImageWidth, idealImageHeight, maxMessagesShown, false)
   }
 
-  private def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean)(implicit request: UserRequest[_]) = {
+  private def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], maxMessagesShown: Int, v1: Boolean)(implicit request: UserRequest[_]) = {
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
     } match {
@@ -107,7 +107,7 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(request.userId), false, Seq(keep), idealImageSize, sanitizeUrls = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(request.userId), false, Seq(keep), idealImageSize, maxMessagesShown, sanitizeUrls = true).imap {
           case Seq(keepInfo) =>
             Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }
@@ -141,12 +141,12 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String]) = UserAction.async { request =>
+  def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String], filterKind: Option[String], filterId: Option[String], maxMessagesShown: Int) = UserAction.async { request =>
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
     val filter = filterKind.flatMap(FeedFilter(_, filterId))
 
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, sanitizeUrls = true, filterOpt = filter).map { keeps =>
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, maxMessagesShown = maxMessagesShown, sanitizeUrls = true, filterOpt = filter).map { keeps =>
       Ok(Json.obj("keeps" -> keeps))
     }
   }

@@ -158,7 +158,7 @@ class RecommendationsCommander @Inject() (
 
   private def createFullLibraryInfos(userId: Id[User], libraries: Seq[Library], explainer: Id[Library] => Option[String] = noopLibRecoExplainer): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     libraryInfoCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
-      maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, libraries,
+      maxKeepsShown = 0, maxMessagesShown = 8, ProcessedImageSize.Large.idealSize, libraries,
       ProcessedImageSize.Large.idealSize, sanitizeUrls = false).map { fullLibraryInfos =>
         fullLibraryInfos.map {
           case (id, libInfo) => id -> FullLibRecoInfo(metaData = None, itemInfo = libInfo, explain = explainer(id))

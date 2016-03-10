@@ -366,7 +366,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, showPublishedLibraries: Boolean) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, showPublishedLibraries: Boolean, maxMessagesShown: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -374,7 +374,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryInfoCommander.getKeepsCount(libraryId)
         val keeps = libraryInfoCommander.getKeeps(libraryId, offset, limit)
         for {
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, maxMessagesShown, sanitizeUrls = false)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))

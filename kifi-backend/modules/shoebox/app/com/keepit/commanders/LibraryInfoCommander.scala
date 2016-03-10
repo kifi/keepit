@@ -33,7 +33,7 @@ trait LibraryInfoCommander {
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, maxMessagesShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
@@ -174,7 +174,7 @@ class LibraryInfoCommanderImpl @Inject() (
     library.id.get -> info
   }.toMap
 
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, maxMessagesShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, sanitizeUrls: Boolean, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val libIds = libraries.map(_.id.get).toSet
@@ -189,7 +189,7 @@ class LibraryInfoCommanderImpl @Inject() (
             }
             ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
           }
-          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, sanitizeUrls)
+          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, maxMessagesShown, sanitizeUrls)
         } else Future.successful(Seq.empty)
       }
     }.toMap
@@ -324,7 +324,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], sanitizeUrls: Boolean): Future[FullLibraryInfo] = {
     val maxMembersShown = 10
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, sanitizeUrls, authToken.map(library.id.get -> _).toMap).imap {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, maxMessagesShown = 8, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, sanitizeUrls, authToken.map(library.id.get -> _).toMap).imap {
       case Seq((_, info)) =>
         val followers = info.followers
         val sortedFollowers = sortUsersByImage(followers)

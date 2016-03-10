@@ -124,7 +124,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
@@ -321,9 +321,9 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
     import GetDiscussionsForKeeps._
-    val request = Request(keepIds)
+    val request = Request(keepIds, maxMessagesShown)
     call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
       response.json.as[Response].discussions
     }
@@ -436,7 +436,7 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object GetDiscussionsForKeeps {
-    case class Request(keepIds: Set[Id[Keep]])
+    case class Request(keepIds: Set[Id[Keep]], maxMessagesShown: Int)
     case class Response(discussions: Map[Id[Keep], Discussion])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
