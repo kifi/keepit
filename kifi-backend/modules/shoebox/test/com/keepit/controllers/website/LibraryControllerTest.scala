@@ -1002,7 +1002,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getKeeps(pubId1, 0, 10, false)(request1)
+        val result1 = libraryController.getKeeps(pubId1, 0, 10, false, 8)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 

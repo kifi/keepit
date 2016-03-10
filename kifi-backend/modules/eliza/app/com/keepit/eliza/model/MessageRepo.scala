@@ -171,12 +171,15 @@ class MessageRepoImpl @Inject() (
     MessageCount(total, unread)
   }
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
-    val threads = getByThreadHelper(keepId, fromId, dir)
-    val sortedThreads = dir match {
-      case SortDirection.ASCENDING => threads.sortBy(r => (r.createdAt asc, r.id asc))
-      case SortDirection.DESCENDING => threads.sortBy(r => (r.createdAt desc, r.id desc))
+    if (limit <= 0) Seq.empty
+    else {
+      val threads = getByThreadHelper(keepId, fromId, dir)
+      val sortedThreads = dir match {
+        case SortDirection.ASCENDING => threads.sortBy(r => (r.createdAt asc, r.id asc))
+        case SortDirection.DESCENDING => threads.sortBy(r => (r.createdAt desc, r.id desc))
+      }
+      sortedThreads.take(limit).list
     }
-    sortedThreads.take(limit).list
   }
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage] = {
     activeRows.filter(_.keepId === keepId).list

@@ -174,10 +174,10 @@ POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.Mobil
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 
-GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
+GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
 
-GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
-GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
+GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
 POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV2(id: ExternalId[Keep])
 
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
@@ -275,8 +275,8 @@ POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/joinMultiple             @com.keepit.controllers.mobile.MobileLibraryController.joinLibraries()
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
-GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
-GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
+GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None, maxMessagesShown: Int ?= 8)
 POST    /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV2(id: PublicId[Library])
 DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
 DELETE  /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.revokeLibraryInvitation(id: PublicId[Library])
@@ -390,7 +390,7 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None)
+GET     /site/keeps/stream                    @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String], filterKind: Option[String] ?= None, filterId: Option[String] ?= None, maxMessagesShown: Int ?= 8)
 POST    /site/keeps/personalExport            @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport        @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 POST    /site/keeps/markAsRead                @com.keepit.controllers.website.DiscussionController.markKeepsAsRead()
@@ -402,7 +402,7 @@ POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.Di
 POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/title             @com.keepit.controllers.website.KeepsController.updateKeepTitle(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/note              @com.keepit.controllers.website.KeepsController.editKeepNote(keepId: PublicId[Keep])
-GET     /site/keeps/:id                       @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], authToken: Option[String] ?= None)
+GET     /site/keeps/:id                       @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep], maxMessagesShown: Int ?= 8, authToken: Option[String] ?= None)
 
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
@@ -444,7 +444,7 @@ POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/subscription @com.keepit.controllers.website.LibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
 
-GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, showPublishedLibraries: Boolean ?= false)
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, showPublishedLibraries: Boolean ?= false, maxMessagesShown: Int ?= 8)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
