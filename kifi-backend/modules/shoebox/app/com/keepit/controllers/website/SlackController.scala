@@ -112,12 +112,10 @@ class SlackController @Inject() (
 
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val (slackTeamIdOpt, useKifiBot) = db.readOnlyMaster { implicit session =>
-      val slackTeamIdOpt = slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
-      val useKifiBot = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
-      (slackTeamIdOpt, useKifiBot)
+    val slackTeamIdOpt = db.readOnlyMaster { implicit session =>
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
     }
-    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels(useKifiBot)))
+    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels()))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
     handleAsAPIRequest(res)(request.request)
   }
@@ -172,19 +170,16 @@ class SlackController @Inject() (
 
   def mirrorComments(organizationId: PublicId[Organization], turnOn: Boolean) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val (slackTeamIdOpt, hasExperiment) = db.readOnlyReplica { implicit session =>
-      val slackTeamIdOpt = slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
-      val hasExperiment = orgExperimentRepo.hasExperiment(request.orgId, OrganizationExperimentType.SLACK_COMMENT_MIRRORING)
-      (slackTeamIdOpt, hasExperiment)
+    val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
     }
-    if (hasExperiment) slackTeamIdOpt match {
+    slackTeamIdOpt match {
       case Some(slackTeamId) =>
         val action = TurnCommentMirroring(turnOn)
         val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, Some(slackTeamId), action)
         handleAsAPIRequest(res)(request.request)
       case _ => Future.successful(SlackActionFail.OrgNotConnected(request.orgId).asErrorResponse)
     }
-    else Future.successful(Forbidden("Not cool!"))
   }
 
   // Always speaks JSON, should be on /site/ routes, cannot handle Redirects to HTML pages

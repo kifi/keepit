@@ -1,8 +1,8 @@
 package com.keepit.slack
 
 import com.google.inject.Injector
-import com.keepit.common.actor.{ActorInstance, TestKitSupport}
-import com.keepit.common.concurrent.{FakeExecutionContextModule, WatchableExecutionContext}
+import com.keepit.common.actor.{ ActorInstance, TestKitSupport }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
