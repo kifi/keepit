@@ -780,8 +780,6 @@ POST    /admin/organizations/create                          @com.keepit.control
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 POST    /admin/organizations/applyDefaultSettingsToOrgConfigs           @com.keepit.controllers.admin.AdminOrganizationController.applyDefaultSettingsToOrgConfigs()
-POST    /admin/organizations/cleanUpEmailAddresses           @com.keepit.controllers.admin.AdminOrganizationController.cleanUpEmailAddresses()
-
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
 GET     /admin/usersPotentialOrgs       @com.keepit.controllers.admin.AdminUserController.allUsersPotentialOrgsView
@@ -910,7 +908,6 @@ GET           /admin/goodies/testRegexFilled                                    
 POST          /admin/goodies/performRegexTest                                        @com.keepit.controllers.admin.AdminGoodiesController.performRegexTest
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
-POST          /admin/goodies/fixAuthors                                              @com.keepit.controllers.admin.AdminGoodiesController.fixAuthors()
 
 POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
