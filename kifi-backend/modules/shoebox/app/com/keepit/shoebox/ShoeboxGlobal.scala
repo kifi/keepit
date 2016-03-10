@@ -9,7 +9,6 @@ import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.common.mail.{ MailSenderPlugin, MailToKeepPlugin }
 import com.keepit.integrity.{ DataIntegrityPlugin, UriIntegrityPlugin }
 import com.keepit.model._
-import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.reports._
 import com.keepit.shoebox.cron.ActivityEmailCronPlugin
 import com.keepit.social.SocialGraphPlugin
@@ -32,7 +31,6 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
     require(injector.instance[ForkJoinExecContextPlugin] != null)
-    require(injector.instance[NormalizationUpdaterPlugin] != null)
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded
