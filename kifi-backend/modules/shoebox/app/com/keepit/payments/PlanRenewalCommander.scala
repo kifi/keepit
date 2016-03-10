@@ -5,7 +5,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.slack.models.SlackChannelName
+import com.keepit.common.util.DescriptionElements
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.slack.models.{ SlackMessageRequest, SlackChannelName }
 import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext }
@@ -28,20 +30,21 @@ class PlanRenewalCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   airbrake: AirbrakeNotifier,
   eventCommander: AccountEventTrackingCommander,
-  implicit val defaultContext: ExecutionContext)
+  implicit val defaultContext: ExecutionContext,
+  inhouseSlackClient: InhouseSlackClient)
     extends PlanRenewalCommander with Logging {
 
   def processDueRenewals(): Unit = synchronized {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRenewable() }
-    if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.", SlackChannelName("#billing-alerts"))
+    if (relevantAccounts.nonEmpty) {
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(s"Renewing plans for ${relevantAccounts.length} accounts.")))
       val renewed = relevantAccounts.count(renewPlan(_) match {
         case Success(_) => true
         case Failure(error) =>
           airbrake.notify(error)
           false
       })
-      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.", SlackChannelName("#billing-alerts"))
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(s"$renewed/${relevantAccounts.length} plans were successfully renewed.")))
     }
   }
 

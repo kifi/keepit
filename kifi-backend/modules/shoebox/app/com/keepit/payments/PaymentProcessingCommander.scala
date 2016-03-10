@@ -4,14 +4,15 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.common.util.DollarAmount
+import com.keepit.common.util.{DescriptionElements, DollarAmount}
 import com.keepit.model._
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.slack.models.SlackChannelName
+import com.keepit.slack.{InhouseSlackChannel, InhouseSlackClient}
+import com.keepit.slack.models.{SlackMessageRequest, SlackChannelName}
 import org.joda.time.DateTime
 
 import play.api.libs.json.{ JsNull }
@@ -50,7 +51,8 @@ class PaymentProcessingCommanderImpl @Inject() (
   airbrake: AirbrakeNotifier,
   eventCommander: AccountEventTrackingCommander,
   orgExperimentRepo: OrganizationExperimentRepo,
-  implicit val defaultContext: ExecutionContext)
+  implicit val defaultContext: ExecutionContext,
+  inhouseSlackClient: InhouseSlackClient)
     extends PaymentProcessingCommander with Logging {
 
   private[payments] val MAX_BALANCE = DollarAmount.dollars(500)
@@ -69,8 +71,8 @@ class PaymentProcessingCommanderImpl @Inject() (
 
   def processDuePayments(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getPayable(MAX_BALANCE) }
-    if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Processing payments for ${relevantAccounts.length} accounts.", SlackChannelName("#billing-alerts"))
+    if (relevantAccounts.nonEmpty) {
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements("Processing payments for", relevantAccounts.length, "accounts.")))
       FutureHelpers.foldLeft(relevantAccounts)(0) {
         case (processed, account) =>
           processAccount(account).imap(_ => processed + 1) recover {
@@ -82,7 +84,7 @@ class PaymentProcessingCommanderImpl @Inject() (
             }
           }
       } imap { processed =>
-        eventCommander.reportToSlack(s"Processed $processed/${relevantAccounts.length} due payments.", SlackChannelName("#billing-alerts"))
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(s"Processed $processed/${relevantAccounts.length} due payments.")))
       }
     } else Future.successful(())
   }
