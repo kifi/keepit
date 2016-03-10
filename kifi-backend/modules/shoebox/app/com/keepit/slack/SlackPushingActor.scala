@@ -346,7 +346,7 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
-        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
+        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
         "|",
@@ -379,7 +379,7 @@ class SlackPushingActor @Inject() (
     val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
     val keepElement = {
       DescriptionElements(
-        "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
+        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
         "View Article" --> keepLink,
         "|",
@@ -404,7 +404,7 @@ class SlackPushingActor @Inject() (
               case None =>
                 SlackAttachment.simple(DescriptionElements(
                   SlackEmoji.magnifyingGlass, pointer --> keepLink, ": ",
-                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))
+                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
                 )).withFullMarkdown
             }
         }
