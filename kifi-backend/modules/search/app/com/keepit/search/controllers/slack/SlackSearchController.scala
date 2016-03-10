@@ -223,7 +223,7 @@ class SlackSearchController @Inject() (
           contextBuilder += ("slackUsername", command.username.value)
           contextBuilder += ("slackChannelId", command.channelId.value)
           val experiments = request match {
-            case ur: UserRequest => ur.experiments
+            case ur: UserRequest[_] => ur.experiments
             case _ => Set.empty[UserExperimentType]
           }
           log.info(s"[searchedUserStatus] experiments = $experiments")
