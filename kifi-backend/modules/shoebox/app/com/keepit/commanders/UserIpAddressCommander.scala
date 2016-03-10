@@ -15,7 +15,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
-import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.slack.models.SlackMessageRequest
@@ -198,36 +198,43 @@ class UserIpAddressEventLogger @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  private def linkToOrg(flag: String = "")(org: Organization): String =
-    s"<https://admin.kifi.com/admin/organization/${org.id.get.id}|${org.name}$flag>"
-
-  private def formatUser(user: User, email: Option[EmailAddress], candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
-    val primaryMail = email.map(_.address).getOrElse("No Primary Mail")
-    s"<http://admin.kifi.com/admin/user/${user.id.get}|${user.fullName}>" +
-      s"\t$primaryMail" +
-      s"\tjoined ${STANDARD_DATE_FORMAT.print(user.createdAt)}" +
-      (if (orgs.nonEmpty) { "\torgs " + orgs.map(linkToOrg("")).mkString(" ") } else "") +
-      (if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(linkToOrg("~")).mkString(" ") } else "") +
-      s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
+  private def linkToOrg(flag: String = "")(org: Organization): DescriptionElements = {
+    import DescriptionElements._
+    fromText(s"${org.name}$flag") --> LinkElement(s"https://admin.kifi.com/admin/organization/${org.id.get.id}")
   }
 
-  private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
+  private def formatUser(user: User, email: Option[EmailAddress], candOrgs: Seq[Organization], orgs: Seq[Organization], newMember: Boolean = false) = {
+    import DescriptionElements._
+    val primaryMail = email.map(_.address).getOrElse("No Primary Mail")
+    DescriptionElements(
+      user.fullName --> LinkElement(s"http://admin.kifi.com/admin/user/${user.id.get}"),
+      primaryMail,
+      s"joined ${STANDARD_DATE_FORMAT.print(user.createdAt)}",
+      if (orgs.nonEmpty) { "\torgs " + orgs.map(linkToOrg("")).mkString(" ") } else "",
+      if (candOrgs.nonEmpty) { "\tcands " + candOrgs.map(linkToOrg("~")).mkString(" ") } else "",
+      s"\t${if (newMember) "*NEW CLUSTER MEMBER*" else ""}"
+    )
+  }
+
+  private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network").map(_.toLowerCase)
+  private def isGenericISP(org: String) = GenericISP.exists(isp => org.toLowerCase.contains(isp))
 
   private def describeCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Id[User]): SlackMessageRequest = {
-    val clusterDeclaration = Seq(
-      s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
-      s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
-      ip.org.collect {
-        case org if GenericISP.exists(isp => org.toLowerCase.contains(isp)) => "Generic ISP"
-        case maybeCompany => s"ISP name is '$maybeCompany' (may be company name)"
-      }.getOrElse("ISP name not found")
+    import DescriptionElements._
+    val clusterDeclaration = DescriptionElements(
+      "Found a cluster of", users.length, "at", ip.ip.ip --> LinkElement("http://ip-api.com/${ip.ip.ip}"), ".",
+      "I think the company is in", ip.region.map(_ + ", "), ip.country, ".", ip.org match {
+        case Some(org) if isGenericISP(org) => "Generic ISP"
+        case Some(maybeCompany) => s"ISP name is '$maybeCompany' (may be company name)"
+        case None => "ISP name not found"
+      }
     )
 
     val userDeclarations = users.map {
       case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id.get == newUserId)
     }
 
-    SlackMessageRequest.inhouse(DescriptionElements((clusterDeclaration ++ userDeclarations).mkString("\n")))
+    SlackMessageRequest.inhouse(DescriptionElements.unlines(clusterDeclaration +: userDeclarations))
   }
 
   private def heuristicsSayThisClusterIsRelevant(ipInfo: RichIpAddress): Boolean = {

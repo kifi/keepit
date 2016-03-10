@@ -26,7 +26,6 @@ import scala.util.{ Failure, Try }
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
 trait AccountEventTrackingCommander {
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent
-  def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] // todo(Léo): *temporary* :)
 }
 
 @Singleton
@@ -79,9 +78,9 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
-  def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] = {
+  private def reportToSlack(msg: DescriptionElements, channel: SlackChannelName): Future[Unit] = {
     reportingLock.withLockFuture {
-      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(msg))).imap(_ => ())
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, SlackMessageRequest.inhouse(msg)).imap(_ => ())
     }
   }
 
@@ -114,10 +113,10 @@ class AccountEventTrackingCommanderImpl @Inject() (
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        DescriptionElements.formatForSlack(DescriptionElements(
+        DescriptionElements(
           "[", org.name --> LinkElement(s"https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0"), "]",
           info.description, info.creditChange
-        ))
+        )
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
         reportToSlack(msg, channel).imap(_ => channel)
