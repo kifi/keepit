@@ -17,7 +17,7 @@
     "start": "gulp"
   },
   "dependencies": {
-    "bower": "1.3.12"
+    "bower": "1.3.12",
   },
   "devDependencies": {
     "bower": "1.3.12",
@@ -70,6 +70,7 @@
     "requirejs": "2.1.14",
     "run-sequence": "0.3.6",
     "shelljs": "^0.5.1",
+    "symbol-sprites": "github:kifi/symbol-sprites",
     "through": "2.3.4",
     "vinyl-map": "1.0.1"
   }

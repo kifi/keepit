@@ -38,6 +38,7 @@ var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.jso
 var safariAdapterFiles = ['adapters/safari/**', '!adapters/safari/*.plist.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var symbolSpritesFiles = ['node_modules/symbol-sprites/dist/symbol-sprite.svg'];
 var firefoxScriptModuleFiles = ['**/scripts/**/*.js', '!scripts/lib/jquery.js', '!scripts/lib/mustache.js', '!scripts/lib/underscore.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
@@ -190,7 +191,13 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  var resources = gulp.src(resourceFiles, { base: './' })
+  var resources = es.merge(
+      gulp.src(resourceFiles, { base: './' }),
+      gulp.src(symbolSpritesFiles)
+        .pipe(rename(function (path) {
+          path.dirname = 'images'
+        }))
+    )
     .pipe(cache('resources'));
 
   var firefoxResources = resources.pipe(clone())

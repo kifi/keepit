@@ -3,6 +3,7 @@
   border-bottom: 1px lightgray solid;
 }
 
+.kifi-message-keepscussion-header-lib-add,
 .kifi-message-keepscussion-header-count {
   padding: 5px 0;
   font-size: 13px;
@@ -10,9 +11,87 @@
   font-smoothing: antialiased;
 }
 
-.kifi-message-keepscussion-header-lib {
+.kifi-message-keepscussion-header-lib-wrapper {
+  display: flex;
   margin: 0 -10px;
   border-top: 1px lightgray solid;
-  border-top: 1px lightgray solid;
+  border-bottom: 1px lightgray solid;
   background-color: #fff;
+}
+
+.kifi-message-keepscussion-header-lib {
+  flex: 1;
+}
+
+.kifi-message-keepscussion-header-lib-edit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+
+  &:hover {
+    opacity: .6;
+  }
+
+  &:active {
+    opacity: 1.0
+  }
+}
+
+.kifi-message-keepscussion-header-lib-edit-icon {
+  width: 24px;
+  height: 24px;
+
+  use,
+  use path {
+    fill: #999;
+  }
+}
+
+.kifi-message-keepscussion-header-lib-add {
+  position: relative;
+  display: block;
+  padding: 10px 32px;
+
+  &:hover {
+    color: #444;
+  }
+
+  &:active {
+    color: #999;
+  }
+}
+
+.kifi-message-keepscussion-header-lib-add-icon {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  margin: auto;
+
+
+  use,
+  use path {
+    transition: color 1s;
+    fill: #999;
+  }
+}
+
+.kifi-message-keepscussion-header-lib-add-icon-dummy {
+  visibility: hidden;
+}
+
+.kifi-message-keepscussion-header-lib-add-icon-clicked {
+  visibility: visible;
+
+  transform: translateY(-25px) scale(1.25);
+  opacity: 0;
+  transition: transform 1s, opacity .8s;
+  z-index: 1000;
+  use,
+  use path {
+    fill: #F00;
+  }
 }

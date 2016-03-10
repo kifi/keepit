@@ -1,8 +1,22 @@
 <div class="kifi-message-keepscussion-header">
+  {{#keep.libraries.length}}
   <p class="kifi-message-keepscussion-header-count">
     Kept in {{keep.libraries.length}} {{#librariesPlural}}libraries{{/librariesPlural}}{{^librariesPlural}}library{{/librariesPlural}}
   </p>
-  <div class="kifi-message-keepscussion-header-lib">
-    {{#keep.libraries.0}}{{>keep_box_lib}}{{/keep.libraries.0}}
+  <div class="kifi-message-keepscussion-header-lib-wrapper">
+    <div class="kifi-message-keepscussion-header-lib">
+      {{#keep.libraries.0}}{{>keep_box_lib}}{{/keep.libraries.0}}
+    </div>
+    <a href="javascript:" class="kifi-message-keepscussion-header-lib-edit">
+      <svg class="kifi-message-keepscussion-header-lib-edit-icon"><use xlink:href="#pencil"/></svg>
+    </a>
   </div>
+  {{/keep.libraries.length}}
+  {{^keep.libraries.length}}
+    <a href="javascript:" class="kifi-message-keepscussion-header-lib-add">
+      <svg class="kifi-message-keepscussion-header-lib-add-icon"><use xlink:href="#hearts-plus"/></svg>
+      <svg class="kifi-message-keepscussion-header-lib-add-icon kifi-message-keepscussion-header-lib-add-icon-dummy"><use xlink:href="#hearts-plus"/></svg>
+      Keep this to a library
+    </a>
+  {{/keep.libraries.length}}
 </div>

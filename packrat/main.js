@@ -1261,7 +1261,7 @@ api.port.on({
     xhr.responseType = 'arraybuffer';
 
     xhr.onload = function (e) {
-      if (this.status === 200) {
+      if (this.status === 200 || this.status === 0) {
         respond({ uri: 'data:image/' + imageType + ';base64,' + arrayBufferToBase64(this.response) });
       } else {
         respond({ error: 'Status ' + this.status + ' did not equal 200 for ' + path });

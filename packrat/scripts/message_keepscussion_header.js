@@ -4,6 +4,7 @@
 // @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
+// @require scripts/keep_box.js
 
 /**
  * --------------------------
@@ -70,26 +71,26 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
      */
     renderContent: function () {
       var keep = this.parent.keep;
-      var libraries;
-      var $rendered;
-      var html = '';
+      var library = keep && keep.libraries && keep.libraries[0];
+      var $rendered = $(k.render('html/keeper/message_keepscussion_header', this.getView(), {  'keep_box_lib': 'keep_box_lib' }));
 
-      if (keep && keep.libraries && keep.libraries.length > 0) {
-        $rendered = $(k.render('html/keeper/message_keepscussion_header', this.getView(), {  'keep_box_lib': 'keep_box_lib' }));
-
-        // Change the :javascript link to be an actual link to the library.
-        libraries = keep.libraries;
-        if (libraries && libraries[0]) {
-          $rendered
-          .find('.kifi-keep-box-lib')
-          .attr('href', 'https://www.kifi.com' + libraries[0].path)
-          .attr('target','_blank');
+      $rendered
+      .on('click', '.kifi-message-keepscussion-header-lib-add,.kifi-message-keepscussion-header-lib-edit', function () {
+        k.keeper.showKeepBox('keepscussion');
+        var $dummy = this.querySelector('.kifi-message-keepscussion-header-lib-add-icon-dummy');
+        if ($dummy) {
+          $dummy.addEventListener('transitionend', function transitionend() {
+            $dummy.removeEventListener('transitionend', transitionend);
+            $dummy.classList.remove('kifi-message-keepscussion-header-lib-add-icon-clicked');
+          });
+          $dummy.classList.add('kifi-message-keepscussion-header-lib-add-icon-clicked');
         }
+      })
+      .find('.kifi-keep-box-lib')
+      .attr('href', 'https://www.kifi.com' + (library && library.path))
+      .attr('target','_blank');
 
-        html = $rendered;
-      }
-
-      return html;
+      return $rendered;
     },
 
     /**
