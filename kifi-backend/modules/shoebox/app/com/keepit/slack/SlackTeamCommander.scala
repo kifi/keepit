@@ -57,6 +57,7 @@ class SlackTeamCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   organizationInfoCommander: OrganizationInfoCommander,
   basicUserRepo: BasicUserRepo,
+  slackAnalytics: SlackAnalytics,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
@@ -344,8 +345,10 @@ class SlackTeamCommanderImpl @Inject() (
     }
     import DescriptionElements._
     membershipOpt.fold(Future.failed[Unit](SlackFail.NoSuchMembership(slackTeamId, slackUserId))) { membership =>
-      val toggleLink = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = !turnOn))
-      slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+      val channelId = membership.slackUserId.asChannel
+      val trackingParams = slackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.SETTINGS_TOGGLE, Some((!turnOn).toString))
+      val toggleLink = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = false).withQuery(trackingParams))
+      slackClient.sendToSlackHoweverPossible(membership.slackTeamId, channelId, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         if (turnOn) DescriptionElements(
           ":tada: Thanks for having me back! I'll gather some of your stats and update you about once a week if I have things to share.",
           "If you want to power me back down, you can silence me", "here" --> toggleLink, "."

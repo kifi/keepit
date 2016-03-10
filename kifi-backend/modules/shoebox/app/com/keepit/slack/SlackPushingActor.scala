@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
+import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.Id.ord
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -16,7 +17,7 @@ import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.slack.models.SlackErrorCode._
@@ -183,6 +184,7 @@ class SlackPushingActor @Inject() (
   }
 
   private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
+    implicit val channelId = integration.slackChannelId
     getPushItems(integration).flatMap { implicit pushItems =>
       // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
       // We do not keep track of whether this succeeds, we just assume that it does
@@ -215,7 +217,7 @@ class SlackPushingActor @Inject() (
               FutureHelpers.sequentialExec(msgs) { msg =>
                 slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).fold(Future.successful(())) { oldCommentTimestamp =>
                   // regenerate the slack message if there is some text to push
-                  val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+                  val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))(integration.slackChannelId)
                   // call the SlackClient to try and update the message
                   slackClient.updateMessage(botToken, integration.slackChannelId, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
                     case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
@@ -338,8 +340,9 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems, channelId: SlackChannelId): Option[SlackMessageRequest] = {
     import DescriptionElements._
+    val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(slackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
@@ -347,7 +350,7 @@ class SlackPushingActor @Inject() (
           case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
           case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
         },
-        "It's a bit too much to post here, but you can check it all out", "here" --> LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId))
+        "It's a bit too much to post here, but you can check it all out", "here" --> libraryLink
       ))))
       case PushItem.KeepToPush(k, ktl) =>
         Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
@@ -357,17 +360,19 @@ class SlackPushingActor @Inject() (
         None
     }
   }
-  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
+  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit slackChannelId: SlackChannelId): SlackMessageRequest = {
     import DescriptionElements._
+
+    val category = NotificationCategory.NonUser.NEW_KEEP
 
     val userStr = user.fold[String]("Someone")(_.firstName)
     val keepElement = {
       DescriptionElements(
         "“_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_”",
         "  ",
-        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId)),
+        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some("viewArticle")))),
         "|",
-        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some("reply"))))
       )
     }
 
@@ -387,20 +392,23 @@ class SlackPushingActor @Inject() (
           })))
     }
   }
-  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser]): SlackMessageRequest = {
+  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit slackChannelId: SlackChannelId): SlackMessageRequest = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)
-    val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
+
+    val category = NotificationCategory.NonUser.NEW_COMMENT
+    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some(subaction))))
+
     val keepElement = {
       DescriptionElements(
         "_", keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH), "_",
         "  ",
-        "View Article" --> keepLink,
+        "View Article" --> keepLink("viewArticle"),
         "|",
-        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
+        "Reply to Thread" --> keepLink("reply")
       )
     }
 
@@ -411,16 +419,16 @@ class SlackPushingActor @Inject() (
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
         else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
-          case Right(Success((pointer, ref))) => pointer --> keepLink
-          case Right(Failure(fail)) => "look here" --> keepLink
+          case Right(Success((pointer, ref))) => pointer --> keepLink("lookHere")
+          case Right(Failure(fail)) => "look here" --> keepLink("lookHere")
         })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink)).withImageUrl(url)
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHereImage"))).withImageUrl(url)
               case None =>
                 SlackAttachment.simple(DescriptionElements(
-                  SlackEmoji.magnifyingGlass, pointer --> keepLink, ": ",
+                  SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHere"), ": ",
                   DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements("_", ln, "_")))
                 )).withFullMarkdown
             }

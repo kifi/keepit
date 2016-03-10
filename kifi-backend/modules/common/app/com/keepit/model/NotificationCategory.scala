@@ -97,7 +97,8 @@ object NotificationCategory {
     val PERSONAL_DIGEST = NotificationCategory("personal_digest")
     val LIBRARY_DIGEST = NotificationCategory("library_digest")
     val NEW_KEEP = NotificationCategory("new_keep")
-    val MIRRORED_COMMENT = NotificationCategory("mirrored_comment")
+    val NEW_COMMENT = NotificationCategory("new_comment")
+    val SETTINGS_TOGGLE = NotificationCategory("settings_toggle")
 
     val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION, BILLING)
 
