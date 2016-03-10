@@ -69,6 +69,7 @@ case class KeepInfo(
 }
 
 object KeepInfo {
+  val maxKeepsShown = 10
   val maxKeepersShown = 20
   val maxLibrariesShown = 10
 

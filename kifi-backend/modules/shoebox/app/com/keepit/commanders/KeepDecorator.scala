@@ -79,7 +79,7 @@ class KeepDecoratorImpl @Inject() (
     else {
       val augmentationFuture = {
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
-        searchClient.augment(viewerIdOpt, showPublishedLibraries, 0, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
+        searchClient.augment(viewerIdOpt, showPublishedLibraries, KeepInfo.maxKeepsShown, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
       val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
 
