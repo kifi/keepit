@@ -18,12 +18,11 @@ class ProbabilisticMultiQueue[T](weights: Map[SQSQueue[T], Double]) extends Logg
     sortedQueues.zipWithIndex.foreach { case (queue, index) => builder.add(index, weights(queue)) }
     builder.build()
   }
-  def nextBatchWithLock(n: Int, lockTimeout: FiniteDuration)(implicit ec: ExecutionContext): Future[Seq[SQSMessage[T]]] = {
+  def nextBatchWithLock(limit: Int, lockTimeout: FiniteDuration)(implicit ec: ExecutionContext): Future[Seq[SQSMessage[T]]] = {
     val offset = offsetDensity.sample(Random.nextDouble()).get
-    // not using foldLeftWhile on purpose: it doesn't return the last accumulator, which may lock tasks without returning them
     FutureHelpers.foldLeftUntil(sortedQueues.cycle(offset))(Seq.empty[SQSMessage[T]]) {
       case (tasks, nextQueue) =>
-        val numberOfMissingTasks = n - tasks.length
+        val numberOfMissingTasks = limit - tasks.length
         if (numberOfMissingTasks <= 0) Future.successful((tasks, true))
         else {
           nextQueue.nextBatchWithLock(numberOfMissingTasks, lockTimeout).imap { moreTasks =>

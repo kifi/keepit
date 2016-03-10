@@ -14,7 +14,7 @@ import com.kifi.juggle._
 import scala.concurrent.{ Future, ExecutionContext }
 
 object NormalizationUpdatingActor {
-  val maxBatchSize = 50
+  val maxBatchSize = 100
   val lockTasksFor = 10 minutes
 }
 
