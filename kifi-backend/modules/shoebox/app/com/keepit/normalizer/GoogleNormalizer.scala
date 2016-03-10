@@ -30,7 +30,8 @@ object GoogleNormalizer extends StaticNormalizer {
   def apply(uri: URI) = {
     uri match {
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(document(_, docKey, _)), query, fragment) =>
-        URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, None)
+        val newQuery = query.map(q => Query(q.params.filter(_.name != "ts")))
+        URI(scheme, userInfo, host, port, Some(docKey + "edit"), newQuery, None)
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(file(_, fileKey, _)), query, fragment) =>
         URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None)
       case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(spreadsheet(_, spreadKey, _)), Some(query), fragment) =>
