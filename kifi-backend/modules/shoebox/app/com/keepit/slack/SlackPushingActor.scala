@@ -360,7 +360,7 @@ class SlackPushingActor @Inject() (
       case (Some(note), _) =>
         SlackMessageRequest.fromKifi(
           text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withFullMarkdown)
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
         )
       case (None, Some(attr)) =>
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
