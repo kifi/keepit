@@ -172,6 +172,7 @@ case class SlackEmoji(value: String)
 object SlackEmoji {
   val arrowsCounterclockwise = SlackEmoji(":arrows_counterclockwise:")
   val bee = SlackEmoji(":bee:")
+  val books = SlackEmoji(":books:")
   val clipboard = SlackEmoji(":clipboard:")
   val constructionWorker = SlackEmoji(":construction_worker:")
   val fireworks = SlackEmoji(":fireworks:")

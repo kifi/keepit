@@ -330,7 +330,7 @@ exports.storage = require('sdk/simple-storage').storage;
 exports.tabs = {
   anyAt: function(url) {
     for each (let page in pages) {
-      if (page.url === url) {
+      if (page.url === url || page.nUri === url) {
         return page;
       }
     }

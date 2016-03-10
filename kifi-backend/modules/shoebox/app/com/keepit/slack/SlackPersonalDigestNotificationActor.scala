@@ -129,50 +129,65 @@ class SlackPersonalDigestNotificationActor @Inject() (
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
       })
-      messagesByChannel = {
-        val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
-        val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
-          case (keepId, slack: SlackAttribution) => keepId -> slack
-        }
-        val keepsById = keepRepo.getByIds(keepsForThisMembership)
-        val attributionsByChannel = attributions.groupBy(_._2.message.channel)
-        val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
-          integrations.map(_.createdAt).min
-        }
-        attributionsByChannel.flatMap {
-          case (channel, attrsAndKeeps) => oldestIntegrationByChannel.get(channel.id).map { baseTimestamp =>
-            channel -> attrsAndKeeps.filter {
-              case (kId, attr) =>
-                attr.message.timestamp.toDateTime.isAfter(baseTimestamp) &&
-                  keepsById.get(kId).exists(k => !membership.lastPersonalDigestAt.exists(lastTime => lastTime isAfter k.createdAt))
-            }.values.map(_.message).toSeq
-          }
-        }
-      }
       digest = SlackPersonalDigest(
         slackMembership = membership,
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
-        ingestedMessagesByChannel = messagesByChannel
+        ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
       )
       relevantDigest <- Some(digest).filter(_.numIngestedMessages >= minIngestedMessagesForPersonalDigest)
     } yield relevantDigest
+  }
+
+  private def getIngestedMessagesForSlackUser(membership: SlackTeamMembership)(implicit session: RSession): Map[SlackChannelIdAndPrettyName, Seq[(Keep, PrettySlackMessage)]] = {
+    // I'm so sorry that this function exists
+    // This grabs the (keep, message) pairs that are a result of ingestion that:
+    //     1. Are from this slack user
+    //     2. Are marked as having been sent (in Slack) AFTER at least one of the ingestions in that channel was created
+    //     3. Were ingested (and thus turned into a keep) since the last time we sent a personal digest to this user (if ever)
+    val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
+    val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
+      case (keepId, slack: SlackAttribution) => keepId -> slack
+    }
+    val keepsById = keepRepo.getByIds(keepsForThisMembership)
+    val attributionsByChannel = attributions.groupBy(_._2.message.channel)
+    val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
+      integrations.map(_.createdAt).min
+    }
+    attributionsByChannel.flatMap {
+      case (channel, attrsAndKeeps) => oldestIntegrationByChannel.get(channel.id).map { baseTimestamp =>
+        channel -> attrsAndKeeps.flatMap {
+          case (kId, attr) => keepsById.get(kId).map(_ -> attr.message).filter {
+            case (k, msg) => msg.timestamp.toDateTime.isAfter(baseTimestamp) && !membership.lastPersonalDigestAt.exists(lastTime => lastTime isAfter k.createdAt)
+          }
+        }.toSeq
+      }
+    }
   }
 
   // "Pure" functions
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
-    val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy(_.timestamp)
+    val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
+    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentIngestedMsg._1, slackTeamId))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
-    val text = DescriptionElements(
-      SlackEmoji.wave,
-      s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I've saved of couple of links you shared",
-      mostRecentIngestedMsg.channel.name.map(chName => DescriptionElements(s"(most recently one from #${chName.value})")), ".",
-      "I also scanned the text on those pages so you can search for them more easily.",
-      "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)), "to get:"
-    )
+    val text = DescriptionElements.unlines(Seq(
+      DescriptionElements(
+        SlackEmoji.wave, s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I've saved of couple of links you shared.",
+        "I also scanned the text on those pages so you can search for them more easily."
+      ),
+      DescriptionElements(
+        "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)), "to get:"
+      )
+    ))
     val attachments = List(
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.books, "Access to your archived links", "-",
+        "For example, check out the archive of your latest message",
+        mostRecentIngestedMsg._2.channel.name.map(chName => DescriptionElements("in", s"#${chName.value}")),
+        "here" --> linkToMostRecentKeep
+      )))),
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.magnifyingGlass, "Google search integration", "-",
         "See the pages your coworkers are shared on top of Google search results"

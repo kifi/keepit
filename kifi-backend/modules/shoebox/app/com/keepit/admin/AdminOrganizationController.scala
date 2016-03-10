@@ -438,6 +438,18 @@ class AdminOrganizationController @Inject() (
     }
   }
 
+  def addFeatureToPlans() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    require((request.body \ "confirmation").as[String] == "really do it")
+    val feature = (request.body \ "feature").as[Feature](Feature.reads)
+    val setting = (request.body \ "setting").as[FeatureSetting](feature.settingReads)
+
+    val newPlans = db.readWrite { implicit s =>
+      paidPlanRepo.all.map { plan =>
+        paidPlanRepo.save(plan.withNewEditableFeature(feature).withNewDefaultSetting(feature -> setting))
+      }
+    }
+    Ok(Json.obj("changed" -> newPlans.map(_.id.get)))
+  }
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     val deprecatedSettings = (request.body \ "deprecatedSettings").asOpt[OrganizationSettings](OrganizationSettings.dbFormat).getOrElse(OrganizationSettings.empty)

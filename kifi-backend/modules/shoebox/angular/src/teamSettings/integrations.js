@@ -18,7 +18,6 @@ angular.module('kifi')
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
-    $scope.slackCommentMirroringEnabled = profile.organization.experiments.indexOf('slack_comment_mirroring') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {

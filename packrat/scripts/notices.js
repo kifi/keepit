@@ -4,6 +4,7 @@
 // @require scripts/html/keeper/notices.js
 // @require scripts/html/keeper/notice_global.js
 // @require scripts/html/keeper/notice_triggered.js
+// @require scripts/html/keeper/notice_new_keep.js
 // @require scripts/html/keeper/notice_message.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/lib/jquery-ui-position.min.js
@@ -12,6 +13,7 @@
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/formatting.js
+// @require scripts/slack_message.js
 // @require scripts/title_from_url.js
 // @require scripts/prevent_ancestor_scroll.js
 
@@ -192,8 +194,8 @@ k.panes.notices = k.panes.notices || function () {
     api.port.emit('pane', {old: locatorOld, new: locatorNew, how: 'menu'});
   }
 
+  var partials = { 'kifi_mustache_tags': 'kifi_mustache_tags' };
   function renderOne(notice) {
-    var partials = { 'kifi_mustache_tags': 'kifi_mustache_tags' };
 
     notice.isVisited = !notice.unread;
     notice.formatLocalDate = formatLocalDate;
@@ -201,74 +203,102 @@ k.panes.notices = k.panes.notices || function () {
 
     switch (notice.category) {
     case 'message':
-      notice.title = notice.title || formatTitleFromUrl(notice.url);
-      var participants = notice.participants;
-      var nParticipants = participants.length;
-      var isSystem = !notice.author || notice.author.id === '42424242-4242-4242-4242-000000000001';
-      if (notice.authors === 1) {
-        notice[nParticipants === 1 ? 'isSelf' : (notice.author && notice.author.id) === k.me.id ? 'isSent' : 'isReceived'] = true;
-      } else if (notice.firstAuthor > 1) {
-        participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
-      }
-      var nPicsMax = 3;
-      notice.picturedParticipants = nParticipants <= nPicsMax ?
-        notice.isReceived && nParticipants === 2 ? notice.author && [notice.author] || [] : participants :
-        participants.slice(0, nPicsMax);
-      notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
-      var nNamesMax = 4;
-      if (notice.isReceived) {
-        notice.namedParticipant = notice.author;
-      } else if (notice.isSent) {
-        if (nParticipants === 2) {
-          notice.namedParticipant = participants[1];
-        } else if (nParticipants - 1 <= nNamesMax) {
-          notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
-        } else {
-          notice.namedParticipants = participants.slice(1, nNamesMax);
-          notice.otherParticipants = participants.slice(nNamesMax);
-          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-        }
-      } else {
-        if (nParticipants === 2) {
-          notice.namedParticipant = participants.filter(idIsNot(k.me.id))[0];
-        } else if (nParticipants <= nNamesMax) {
-          notice.namedParticipants = participants.map(makeFirstNameYou(k.me.id));
-        } else {
-          notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(k.me.id));
-          notice.otherParticipants = participants.slice(nNamesMax - 1);
-          notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
-        }
-        if (notice.namedParticipants) {
-          notice.namedParticipants.push(notice.namedParticipants.shift());
-        }
-      }
-      if (notice.namedParticipants) {
-        notice.nameIndex = counter();
-        notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
-      }
-      if (notice.author && notice.author.id === k.me.id) {
-        if (notice.isSelf) {
-          notice.multiple = notice.messages > 1;
-        }
-        notice.authorShortName = 'Me';
-      } else if (isSystem) {
-        notice.authorShortName = '';
-      } else if (notice.author && nParticipants > 2) {
-        notice.authorShortName = notice.author.firstName;
-      }
-      notice.picturedParticipants.map(formatParticipant);
-      notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
-      return k.render('html/keeper/notice_message', notice, partials);
+      return renderMessage(notice);
     case 'triggered':
-      notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml);
-      return k.render('html/keeper/notice_triggered', notice, partials);
+      return renderTriggered(notice);
     case 'global':
-      notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
-      return k.render('html/keeper/notice_global', notice, partials);
+      return renderGlobal(notice);
     default:
       log('#a00', '[renderOne] unrecognized category', notice.category);
       return '';
     }
+  }
+
+  function renderMessage(notice) {
+    notice.title = notice.title || formatTitleFromUrl(notice.url);
+    var participants = notice.participants;
+    var nParticipants = participants.length;
+    var isSystem = !notice.author || notice.author.id === '42424242-4242-4242-4242-000000000001';
+    if (notice.authors === 1) {
+      notice[nParticipants === 1 ? 'isSelf' : (notice.author && notice.author.id) === k.me.id ? 'isSent' : 'isReceived'] = true;
+    } else if (notice.firstAuthor > 1) {
+      participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
+    }
+    var nPicsMax = 3;
+    notice.picturedParticipants = nParticipants <= nPicsMax ?
+      notice.isReceived && nParticipants === 2 ? notice.author && [notice.author] || [] : participants :
+      participants.slice(0, nPicsMax);
+    notice.picIndex = notice.picturedParticipants.length === 1 ? 0 : counter();
+    var nNamesMax = 4;
+    if (notice.isReceived) {
+      notice.namedParticipant = notice.author;
+    } else if (notice.isSent) {
+      if (nParticipants === 2) {
+        notice.namedParticipant = participants[1];
+      } else if (nParticipants - 1 <= nNamesMax) {
+        notice.namedParticipants = participants.slice(1, 1 + nNamesMax);
+      } else {
+        notice.namedParticipants = participants.slice(1, nNamesMax);
+        notice.otherParticipants = participants.slice(nNamesMax);
+        notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+      }
+    } else {
+      if (nParticipants === 2) {
+        notice.namedParticipant = participants.filter(idIsNot(k.me.id))[0];
+      } else if (nParticipants <= nNamesMax) {
+        notice.namedParticipants = participants.map(makeFirstNameYou(k.me.id));
+      } else {
+        notice.namedParticipants = participants.slice(0, nNamesMax - 1).map(makeFirstNameYou(k.me.id));
+        notice.otherParticipants = participants.slice(nNamesMax - 1);
+        notice.otherParticipantsJson = toNamesJson(notice.otherParticipants);
+      }
+      if (notice.namedParticipants) {
+        notice.namedParticipants.push(notice.namedParticipants.shift());
+      }
+    }
+    if (notice.namedParticipants) {
+      notice.nameIndex = counter();
+      notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
+    }
+    if (notice.author && notice.author.id === k.me.id) {
+      if (notice.isSelf) {
+        notice.multiple = notice.messages > 1;
+      }
+      notice.authorShortName = 'Me';
+    } else if (isSystem) {
+      notice.authorShortName = '';
+    } else if (notice.author && nParticipants > 2) {
+      notice.authorShortName = notice.author.firstName;
+    }
+    notice.picturedParticipants.map(formatParticipant);
+    notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
+    return k.render('html/keeper/notice_message', notice, partials);
+  }
+
+  function renderTriggered(notice) {
+    if (notice.fullCategory === 'new_keep') {
+      if (!(notice.extra.uriSummary && notice.extra.uriSummary.title)) {
+        notice.extra.uriSummary = { title: notice.url };
+      }
+
+      var message;
+      if (notice.extra.keep.attr && notice.extra.keep.attr.teamId) { // Heuristic to identify Slack
+        message = slackFormat.plain(notice.extra.keep.attr.message.text, false);
+      } else {
+        message = 'New keep in ' + notice.extra.library.name;
+      }
+      notice.text = message;
+
+      return k.render('html/keeper/notice_new_keep', notice, partials);
+    } else {
+      notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml);
+      return k.render('html/keeper/notice_triggered', notice, partials);
+    }
+  }
+
+  function renderGlobal(notice) {
+    notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
+    return k.render('html/keeper/notice_global', notice, partials);
   }
 
   function showNew(th) {

@@ -1,0 +1,17 @@
+<div class="kifi-notice kifi-notice-message kifi-notice-lines-1{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-thread="{{thread}}" data-locator="{{locator}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="triggered">
+  <div class="kifi-notice-state"></div>
+  <div class="kifi-notice-mosaic kifi-notice-mosaic-1">
+    <div class="kifi-notice-pic kifi-notice-pic-0 kifi-notice-pic-user" style="background-image:url({{image}})"></div>
+  </div>
+  {{#extra.uriSummary.imageUrl}}
+  <div class="kifi-notice-site-img" style="background-image:url({{extra.uriSummary.imageUrl}})"></div>
+  {{/extra.uriSummary.imageUrl}}
+  <div class="kifi-notice-names">
+    <span class="kifi-notice-name">{{extra.keeper.name}}</span>
+  </div>
+  <div class="kifi-notice-blurb">
+    <span>{{text}}</span>
+  </div>
+  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+  <a class="kifi-notice-link" href="{{url}}" target="_blank">{{extra.uriSummary.title}}</a>
+</div>
