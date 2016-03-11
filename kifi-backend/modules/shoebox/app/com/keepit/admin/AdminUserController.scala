@@ -1023,16 +1023,21 @@ class AdminUserController @Inject() (
         case error: Throwable =>
           log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
           SlackUserPresence(SlackUserPresenceState.ERROR, None, JsNull)
+      } map { p =>
+        membership -> p
       }
     }
     Future.sequence(presencesF).map { presences =>
-      val presencesJson = presences.map { presence =>
-        JsObject.apply(Seq(
-          "state" -> JsString(presence.state.name),
-          "since" -> (presence.lastActivity.map { date =>
-            val minutes = Minutes.minutesBetween(date, clock.now())
-            JsString(s"${minutes}M")
-          }).getOrElse(JsNull)))
+      val presencesJson = presences.map {
+        case (membership, presence) =>
+          JsObject.apply(Seq(
+            "user" -> JsString(membership.slackUsername.value),
+            "team" -> JsString(membership.slackTeamName.value),
+            "state" -> JsString(presence.state.name),
+            "since" -> (presence.lastActivity.map { date =>
+              val minutes = Minutes.minutesBetween(date, clock.now())
+              JsString(s"${minutes.getMinutes}M")
+            }).getOrElse(JsNull)))
       }
       Ok(JsArray.apply(presencesJson))
     }
