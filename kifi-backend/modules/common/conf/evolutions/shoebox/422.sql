@@ -13,6 +13,7 @@ CREATE TABLE slack_team (
   last_channel_created_at VARCHAR(32) DEFAULT NULL,
   general_channel_id VARCHAR(32) DEFAULT NULL,
   last_digest_notification_at DATETIME DEFAULT NULL,
+  public_channels_last_syncing_at DATETIME DEFAULT NULL,
   public_channels_last_synced_at DATETIME DEFAULT NULL,
   channels_synced MEDIUMTEXT NOT NULL DEFAULT '',
   kifi_bot_user_id VARCHAR(32) DEFAULT NULL,
