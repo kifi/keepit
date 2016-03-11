@@ -51,10 +51,17 @@
 .kifi-message-keepscussion-header-lib-add {
   position: relative;
   display: block;
-  padding: 10px 32px;
+  padding: 10px 40px;
 
   &:hover {
     color: #444;
+  }
+
+  &:hover .kifi-message-keepscussion-header-lib-add-icon:not(.kifi-message-keepscussion-header-lib-add-icon-dummy) {
+    use,
+    use path {
+      fill: #bbb;
+    }
   }
 
   &:active {
@@ -69,7 +76,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  margin: auto;
+  margin: auto 2px;
 
 
   use,
