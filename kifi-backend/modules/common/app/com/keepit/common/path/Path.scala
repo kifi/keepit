@@ -1,6 +1,6 @@
 package com.keepit.common.path
 
-import com.keepit.common.net.Query
+import com.keepit.common.net.{ Param, Query }
 import com.keepit.common.strings._
 
 import java.net.{ URLDecoder, URLEncoder }
@@ -13,24 +13,26 @@ sealed class Path(private val value: String, private val query: Query) {
 
   def isEncoded: Boolean = false
 
-  def absolute: String = {
-    if (relative.startsWith("/")) {
-      Path.base + relative.drop(1) + (if (query != Query.empty) s"?$query" else "")
-    } else {
-      Path.base + relative + (if (query != Query.empty) s"?$query" else "")
-    }
-  }
+  def absolute: String = Path.base + relative.stripPrefix("/") + query.toUrlString
 
-  def relative: String = value + (if (query != Query.empty) s"?$query" else "")
+  def relative: String = value
+  def queryString: String = query.toUrlString
 
   override def toString: String = value
 
-  def +(segment: String) = Path(value + segment)
+  def +(segment: String) = {
+    val (segmentValue, segmentQuery) = {
+      if (segment.startsWith("&")) Path.splitQuery(segment.replaceFirst("&", "?"))
+      else Path.splitQuery(segment)
+    }
+    new Path(value + segmentValue, query ++ segmentQuery)
+  }
 
-  def withQuery(query: Query, overwrite: Boolean = false) = new Path(value, if (overwrite) query else this.query ++ query)
+  def withQuery(query: Query, overwrite: Boolean = false): Path = new Path(value, if (overwrite) query else this.query ++ query)
+  def withQueryString(str: String, overwrite: Boolean = false): Path = withQuery(Query.parse(str), overwrite)
 }
 
-class EncodedPath(private val value: String, private val query: Query) extends Path(URLEncoder.encode(value, UTF8), query) {
+class EncodedPath(private val value: String, private val query: Query) extends Path(URLEncoder.encode(value, UTF8), Query.parse(URLEncoder.encode(query.toString, UTF8))) {
 
   override def encode: EncodedPath = this
 
@@ -44,11 +46,27 @@ object Path {
 
   def base: String = "https://www.kifi.com/"
 
-  def apply(value: String): Path = new Path(value, Query.empty)
+  private def splitQuery(str: String): (String, Query) = str.split('?').toList match {
+    case relative :: params :: Nil => (relative, Query.parse(params))
+    case relative :: Nil => (relative, Query.empty)
+    case relative :: params => (relative, params.map(Query.parse).reduce(_ ++ _))
+    case Nil => ("", Query.empty)
+  }
 
-  def encode(value: String): EncodedPath = new EncodedPath(value, Query.empty)
+  def apply(value: String): Path = {
+    val (path, query) = splitQuery(value)
+    new Path(path, query)
+  }
 
-  def alreadyEncoded(value: String): EncodedPath = new EncodedPath(URLDecoder.decode(value, UTF8), Query.empty)
+  def encode(value: String): EncodedPath = {
+    val (path, query) = splitQuery(value)
+    new EncodedPath(path, query)
+  }
+
+  def alreadyEncoded(value: String): EncodedPath = {
+    val (path, query) = splitQuery(URLDecoder.decode(value, UTF8))
+    new EncodedPath(path, query)
+  }
 
   implicit val format: Format[Path] = Format(
     __.read[String].map(str => Path(str.substring(base.length))),

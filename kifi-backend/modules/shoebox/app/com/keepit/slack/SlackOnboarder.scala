@@ -164,7 +164,7 @@ class SlackOnboarderImpl @Inject() (
   private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
 
-    val trackingParams = slackAnalytics.generateTrackingParams(sctl.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    implicit val trackingParams = slackAnalytics.generateTrackingParams(sctl.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val welcomeLink = LinkElement(pathCommander.welcomePageViaSlack(owner, sctl.slackTeamId).withQuery(trackingParams))
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).withQuery(trackingParams))
 

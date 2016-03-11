@@ -154,7 +154,7 @@ class Host(val domain: Seq[String]) {
 }
 
 object Query {
-  def parse(query: String): Query = URIParser.parseAll(URIParser.query, query.trim).get
+  def parse(query: String): Query = URIParser.parseAll(URIParser.query, query.trim.stripPrefix("?")).get
 
   def apply[T](params: T*)(implicit toParam: T => Param) = new Query(params.map(toParam))
   def empty = Query()
@@ -167,6 +167,7 @@ object Query {
 }
 class Query(val params: Seq[Param]) {
   override def toString() = if (params.nonEmpty) params.mkString("&") else ""
+  def toUrlString = if (params.nonEmpty) "?" + params.mkString("&") else ""
 
   override def hashCode() = params.hashCode()
   override def equals(o: Any) = o match {
@@ -183,6 +184,8 @@ case class Param(name: String, value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }
+
+  def fromString(str: String) = URIParser.parseAll(URIParser.param, str.trim).getOrElse(Param("", None))
 
   def isEmpty: Boolean = (name == "" && !value.isDefined)
 

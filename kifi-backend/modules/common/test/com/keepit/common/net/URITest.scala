@@ -1,5 +1,6 @@
 package com.keepit.common.net
 
+import com.keepit.common.path.Path
 import org.specs2.mutable.Specification
 import java.net.{ URI => JavaURI }
 
@@ -171,6 +172,40 @@ class URITest extends Specification {
       }
 
       "All Good" === "All Good"
+    }
+  }
+
+  "Path" should {
+    "work basically" in {
+      val baseUrl = "https://www.kifi.com/"
+      val basePath = Path("")
+      baseUrl === basePath.absolute
+      basePath.relative === ""
+      basePath.queryString === Query.empty.toUrlString
+
+      val simpleUrl = baseUrl + "kifi"
+      val simplePath = Path("kifi")
+      simpleUrl === simplePath.absolute
+      simplePath.queryString === Query.empty.toUrlString
+
+      val complexUrl = simpleUrl + "/general"
+      val complexPath = simplePath + "/general"
+      complexUrl === complexPath.absolute
+      complexPath.queryString === Query.empty.toUrlString
+
+      val simpleQuery = "?a=b"
+      val queriedUrl = simpleUrl + simpleQuery
+      val queriedPath = simplePath.withQuery(Query.parse(simpleQuery))
+      simplePath + simpleQuery
+      URI.parse(queriedUrl) === URI.parse(queriedPath.absolute)
+      queriedPath.queryString === simpleQuery
+
+      val complexQuery = "&b=c&c=d&d=e"
+      val complexQueriedUrl = queriedUrl + complexQuery
+      val complexQueriedPath = queriedPath.withQuery(Query.parse(complexQuery))
+      complexQueriedUrl === (queriedPath + complexQuery).absolute
+      complexQueriedUrl === complexQueriedPath.absolute
+      complexQueriedPath.queryString === simpleQuery + complexQuery
     }
   }
 }
