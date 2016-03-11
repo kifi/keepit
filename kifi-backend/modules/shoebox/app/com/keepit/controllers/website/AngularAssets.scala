@@ -61,11 +61,13 @@ object AngularApp extends Controller with Logging {
     val (idx1, idx2) = maybeCachedIndex
     val noncedIdx2 = idx2.map { body =>
       body.replaceAllLiterally(NONCE_STRING, nonce)
-    }(ExecutionContext.immediate)
-    val fullHead = if (feet.nonEmpty) {
-      head.map(_ + preloadStub)(immediate)
-    } else head
-    idx1 andThen enumerateFuture(fullHead) andThen noncedIdx2 andThen enumerateFutures(feet) andThen Enumerator.eof
+    }(immediate)
+    val (fullHead, noncedFeet) = if (feet.nonEmpty) {
+      val fullHead = head.map(_ + preloadStub(nonce))(immediate)
+      val noncedFeet = feet.map(_.map(_.replaceAllLiterally(NONCE_STRING, nonce))(immediate))
+      (fullHead, noncedFeet)
+    } else (head, feet)
+    idx1 andThen enumerateFuture(fullHead) andThen noncedIdx2 andThen enumerateFutures(noncedFeet) andThen Enumerator.eof
   }
 
   def app(metaGenerator: Option[() => Future[String]] = None, feet: Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Result = {
@@ -83,7 +85,7 @@ object AngularApp extends Controller with Logging {
 
   def app(metaGenerator: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(metaGenerator))
 
-  private val preloadStub = "<script>window.preload=function(p,d){preload.data=preload.data||{};preload.data[p] = d};</script>\n"
+  private def preloadStub(nonce: String) = s"""<script nonce="$nonce">window.preload=function(p,d){preload.data=preload.data||{};preload.data[p] = d};</script>\n"""
 
 }
 
