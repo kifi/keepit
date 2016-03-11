@@ -247,7 +247,7 @@ class SlackPushingActor @Inject() (
                   NotificationCategory.NonUser.NEW_KEEP
                 case PushItem.MessageToPush(k, _) =>
                   contextBuilder += ("threadId", k.id.get.id)
-                  NotificationCategory.NonUser.MIRRORED_COMMENT
+                  NotificationCategory.NonUser.NEW_COMMENT
               }
               slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, category, contextBuilder.build)
             }.recoverWith {

@@ -521,7 +521,6 @@ angular.module('kifi')
     }
 
     libraryService.getRelatedLibraries(library.id).then(function (libraries) {
-      trackPageView({libraryRecCount: libraries.length});
       $scope.relatedLibraries = libraries;
       if (initParams.getAndClear('install') === '1' && !installService.installedVersion) {
         showInstallModal();
@@ -537,9 +536,10 @@ angular.module('kifi')
     $timeout(function() {
       libraryService.trackEvent('user_viewed_page', $scope.library, {
         type: 'library',
-        keepView: $scope.galleryView ? 'gallery' : 'list'
+        keepView: $scope.galleryView ? 'gallery' : 'list',
+        libraryRecCount: $scope.relatedLibraries && $scope.relatedLibraries.length
       });
-    });
+    }, 500);
 
     var deregisterUpdateLibrary;
     var knownUpdatesPending = 0;

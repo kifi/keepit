@@ -40,6 +40,8 @@ angular.module('kifi')
     $state.go('orgProfile.slack.welcome', $stateParams);
   } else if ($stateParams.signUpWithSlack === 'keep'){
     $state.go('orgProfile.slack.keep', $stateParams);
+  } else if ($stateParams.signUpWithSlack === 'library') {
+    $state.go('orgProfile.slack.library', $stateParams);
   } else if ($stateParams.signUpWithSlack === '' || $stateParams.signUpWithSlack){
     $state.go('orgProfile.slack.basic', $stateParams);
   }

@@ -72,7 +72,7 @@ angular.module('kifi')
       })
       .state('userOrOrg', {
         // Any params you want passed to redirected states need to be listed here
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&error',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&libraryId&error',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -90,7 +90,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&error',
+        url: '/:handle?authToken&openCreateLibrary&signUpWithSlack&slackTeamId&userId&keepId&libraryId&error',
         params: {
           organization: null
         },
@@ -150,6 +150,12 @@ angular.module('kifi')
         },
         controller: 'OrgProfileSlackKeepCtrl',
         templateUrl: 'orgProfile/orgProfileSlackKeep.tpl.html',
+        activetab: null
+      })
+      .state('orgProfile.slack.library', {
+        url: '',
+        controller: 'OrgProfileSlackLibraryCtrl',
+        templateUrl: 'orgProfile/orgProfileSlackLibrary.tpl.html',
         activetab: null
       })
       .state('orgProfile.members', {

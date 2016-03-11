@@ -22,7 +22,7 @@ angular.module('kifi')
     };
 
     function trackPageView() {
-      var keepSource = $scope.keep.sourceAttribution.twitter ? 'twitterSync' : ($scope.keep.sourceAttribution.slack ? 'slack' : null);
+      var keepSource = !$scope.keep.sourceAttribution ? null : ($scope.keep.sourceAttribution.twitter ? 'twitterSync' : 'slack');
       var props = {
         type: 'keepPage',
         keepSource: keepSource,
