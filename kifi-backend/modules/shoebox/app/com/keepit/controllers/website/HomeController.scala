@@ -11,7 +11,7 @@ import com.keepit.common.http._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ RichRequestHeader, UserAgent }
 import com.keepit.common.time._
-import com.keepit.controllers.routing.KifiSiteRouter
+import com.keepit.controllers.routing.{ PreloadSet, KifiSiteRouter }
 import com.keepit.heimdal._
 import com.keepit.model._
 import play.api.Play
@@ -43,7 +43,7 @@ class HomeController @Inject() (
     val special = promoCodeHandler(request)
     request match {
       case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
-      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request)
+      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(PreloadSet.userHome)(request)
     }
   }
 

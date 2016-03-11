@@ -19,7 +19,10 @@ class SitePreloader @Inject() (
 
   def preload(requests: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Seq[Future[String]] = {
     requests.map { r =>
-      requestToData(r)(request).map(m => m.map(buildPayload(r.path, _)).getOrElse(""))
+      requestToData(r)(request).map(m => m.map(buildPayload(r.path, _)).getOrElse("")).map { data =>
+        log.info(s"[SitePreloader] Preloaded ${r.path} for ${request.userIdOpt}. ${data.length}")
+        data
+      }
     }
   }
 
@@ -49,7 +52,7 @@ class SitePreloader @Inject() (
 
   private def noExplode[T](f: => Future[Option[T]]) = {
     def recoverAll[S](v: S): PartialFunction[Throwable, S] = {
-      case ex: Throwable => log.warn("[SitePreloader] Fail", ex); v
+      case ex: Throwable => log.warn("[SitePreloader] Error", ex); v
     }
     Try(f.recover(recoverAll(None))).recover(recoverAll(Future.successful(None))).get
   }
@@ -84,7 +87,7 @@ object PreloadSet {
   type SP = Seq[PreloadRequest]
   import PreloadRequest._
 
-  def apply(preloads: SP*)(implicit request: MaybeUserRequest[_]) = {
+  def filter(preloads: SP*)(implicit request: MaybeUserRequest[_]) = {
     val baseline = request match {
       case ur: UserRequest[_] =>
         (userLoggedIn +: preloads.collect { case lipr: LoggedInPreloadRequest => lipr }).flatten
