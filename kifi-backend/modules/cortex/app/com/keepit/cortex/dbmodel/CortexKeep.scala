@@ -55,5 +55,5 @@ object CortexKeep {
       source = keep.source,
       seq = keep.seq,
       libraryId = keep.libraryId,
-      visibility = Some(keep.visibility))
+      visibility = LibraryVisibility.PUBLISHED)
 }

@@ -104,7 +104,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val libraryChecker = inject[LibraryChecker]
         db.readWrite { implicit session =>
           LibraryFactory.library().withId(Id[Library](1)).discoverable().saved
-          KeepFactory.keep().withId(Id[Keep](1)).published().withLibrary(Id[Library](1)).saved
+          KeepFactory.keep().withId(Id[Keep](1)).withLibraryId((Id[Library](1), LibraryVisibility.PUBLISHED, None)).saved
 
           inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.PUBLISHED
         }
