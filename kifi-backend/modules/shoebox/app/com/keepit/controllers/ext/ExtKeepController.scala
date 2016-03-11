@@ -17,6 +17,7 @@ class ExtKeepController @Inject() (
   discussionCommander: DiscussionCommander,
   val userActionsHelper: UserActionsHelper,
   val db: Database,
+  userRepo: UserRepo,
   libRepo: LibraryRepo,
   keepInterner: KeepInterner,
   permissionCommander: PermissionCommander,
@@ -53,6 +54,23 @@ class ExtKeepController @Inject() (
       msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source)
     } yield {
       Ok(Json.toJson(msg))
+    }).recover {
+      case fail: DiscussionFail => fail.asErrorResponse
+    }
+  }
+
+  def modifyConnectionsForKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    (for {
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
+      input <- request.body.validate[ExternalKeepConnectionsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      diff <- db.readOnlyReplicaAsync { implicit s =>
+        val userIdMap = userRepo.convertExternalIds(input.users.all)
+        val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
+        KeepConnectionsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)))
+      }
+      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff)
+    } yield {
+      NoContent
     }).recover {
       case fail: DiscussionFail => fail.asErrorResponse
     }
