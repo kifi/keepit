@@ -25,6 +25,7 @@ import scala.util.{ Failure, Success, Try }
 object SlackTeamCommander {
   type SlackChannelLibraries = Map[SlackChannelIdAndName, Either[LibraryFail, Library]]
   val channelSyncTimeout = 20 minutes
+  val channelSyncBuffer = 10 seconds
 }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
@@ -75,7 +76,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, connectableOrgs) = db.readWrite { implicit session =>
-      (slackTeamRepo.getBySlackTeamId(slackTeamId).get, getOrganizationsToConnectToSlackTeam(userId))
+      (slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId).get, getOrganizationsToConnectToSlackTeam(userId))
     }
     organizationId match {
       case Some(orgId) => Future.fromTry(connectSlackTeamToOrganization(userId, slackTeamId, orgId))
@@ -86,7 +87,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(SlackTeam, Boolean)] = {
     val (teamOpt, connectableOrgs) = db.readOnlyMaster { implicit session =>
-      (slackTeamRepo.getBySlackTeamId(slackTeamId), getOrganizationsToConnectToSlackTeam(userId))
+      (slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId), getOrganizationsToConnectToSlackTeam(userId))
     }
     teamOpt match {
       case Some(team) if team.organizationId.isEmpty && connectableOrgs.isEmpty => createOrganizationForSlackTeam(userId, slackTeamId).imap((_, true))
@@ -97,7 +98,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeamOpt, membershipOpt) = db.readOnlyMaster { implicit session =>
-      val slackTeamOpt = slackTeamRepo.getBySlackTeamId(slackTeamId)
+      val slackTeamOpt = slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId)
       val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId)
       (slackTeamOpt, membershipOpt)
     }
@@ -141,7 +142,7 @@ class SlackTeamCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       permissionCommander.getOrganizationPermissions(newOrganizationId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission) match {
         case false => Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        case true => slackTeamRepo.getBySlackTeamId(slackTeamId) match {
+        case true => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId) match {
           case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
           case Some(team) => team.organizationId match {
             case Some(connectedOrg) if connectedOrg == newOrganizationId => Success(team)
@@ -236,9 +237,6 @@ class SlackTeamCommanderImpl @Inject() (
     val markedAsSyncing = db.readWrite { implicit session => slackTeamRepo.markAsSyncing(team.slackTeamId, SlackTeamCommander.channelSyncTimeout) }
 
     if (markedAsSyncing) {
-      if (team.slackTeamId.value == "T02A81H50") {
-        throw new Exception(s"Just Léo testing in production.")
-      }
 
       val libCreationsByChannel = channels.map { channel =>
         channel.channelIdAndName -> setupSlackChannel(team, membership, channel)
@@ -267,7 +265,7 @@ class SlackTeamCommanderImpl @Inject() (
   }
 
   def syncPublicChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])] = {
-    val teamOpt = db.readOnlyMaster { implicit session => slackTeamRepo.getBySlackTeamId(slackTeamId) }
+    val teamOpt = db.readOnlyMaster { implicit session => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId) }
     teamOpt match {
       case Some(team) =>
         team.organizationId match {
@@ -281,8 +279,13 @@ class SlackTeamCommanderImpl @Inject() (
             if (hasOrgPermissions) {
               membershipOpt match {
                 case Some(membership) =>
-                  val alreadySyncing = team.publicChannelsLastSyncingAt.exists(_ isAfter (clock.now().minusMinutes(SlackTeamCommander.channelSyncTimeout.toMinutes.toInt)))
-                  if (!alreadySyncing) {
+                  val shouldSync = {
+                    val now = clock.now()
+                    val alreadySyncing = team.publicChannelsLastSyncingAt.exists(_ isAfter now.minusSeconds(SlackTeamCommander.channelSyncTimeout.toSeconds.toInt))
+                    val syncedRecently = team.publicChannelsLastSyncedAt.exists(_ isAfter now.minusSeconds(SlackTeamCommander.channelSyncBuffer.toSeconds.toInt))
+                    !alreadySyncing && !syncedRecently
+                  }
+                  if (shouldSync) {
                     val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
                     val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
                     onboardingAgent.intro().flatMap { _ =>
@@ -326,7 +329,7 @@ class SlackTeamCommanderImpl @Inject() (
   }
 
   def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]] = db.readWrite { implicit session =>
-    slackTeamRepo.getBySlackTeamId(slackTeamId) match {
+    slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId) match {
       case Some(team) =>
         team.organizationId match {
           case Some(orgId) =>
