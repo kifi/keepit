@@ -5,7 +5,7 @@ import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ MaybeUserRequest, NonUserRequest, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.website.{ KeepsController, UserController }
+import com.keepit.controllers.website.{ AngularApp, KeepsController, UserController }
 import com.keepit.model.User
 import play.api.libs.json.{ JsObject, Json }
 
@@ -46,8 +46,8 @@ class SitePreloader @Inject() (
     }
   }
 
-  private def buildPayload(path: String, payload: JsObject) = {
-    s"<script>preload('$path', ${Json.stringify(payload)});</script>"
+  private def buildPayload(path: String, payload: JsObject)(implicit request: MaybeUserRequest[_]) = {
+    s"""<script nonce="${AngularApp.NONCE_STRING}">preload('$path', ${Json.stringify(payload)});</script>"""
   }
 
   private def noExplode[T](f: => Future[Option[T]]) = {
@@ -83,21 +83,22 @@ object PreloadRequest {
   }
 }
 
-object PreloadSet {
+object PreloadSet extends Logging {
   type SP = Seq[PreloadRequest]
   import PreloadRequest._
 
-  def filter(preloads: SP*)(implicit request: MaybeUserRequest[_]) = {
+  def filter(preloads: SP*)(implicit request: MaybeUserRequest[_]): Seq[PreloadRequest] = {
+    val all = preloads.flatten
     val baseline = request match {
       case ur: UserRequest[_] =>
-        (userLoggedIn +: preloads.collect { case lipr: LoggedInPreloadRequest => lipr }).flatten
+        userLoggedIn ++ all.collect { case lipr: LoggedInPreloadRequest => lipr }
       case nur: NonUserRequest[_] => empty
     }
     baseline.distinct
   }
 
   def userLoggedIn: SP = Seq(Me, Prefs)
-  def userHome: SP = userLoggedIn ++ Seq(Stream)
+  def userHome: SP = Seq(Stream)
   def library: SP = Seq()
   def team: SP = Seq()
   def keepPage: SP = Seq()
