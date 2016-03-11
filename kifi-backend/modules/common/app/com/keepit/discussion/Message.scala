@@ -5,10 +5,13 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
+import com.keepit.common.json.{ TraversableFormat, TupleFormat }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.common.core.{ regexExtensionOps, tryExtensionOps }
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

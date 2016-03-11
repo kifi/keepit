@@ -106,8 +106,8 @@ object DescriptionElements {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n", "[", "(", "`", " ", "“", "_")
-    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`", " ", "”", "_", ":")
+    val leftEnds = Set("'", "\n", "[", "(", "`", " ", "“")
+    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`", " ", "”", ":")
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "

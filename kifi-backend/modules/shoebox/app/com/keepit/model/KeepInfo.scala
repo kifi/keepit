@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.discussion.{ DiscussionKeep, Discussion }
@@ -36,6 +37,7 @@ case class KeepInfo(
     libraries: Option[Seq[(BasicLibraryWithKeptAt, BasicUser)]] = None,
     librariesOmitted: Option[Int] = None,
     librariesTotal: Option[Int] = None,
+    sources: Option[Seq[SourceAttribution]] = None,
     collections: Option[Set[String]] = None, // deprecated
     tags: Option[Set[BasicCollection]] = None, // deprecated
     hashtags: Option[Set[Hashtag]] = None,
@@ -48,6 +50,7 @@ case class KeepInfo(
     note: Option[String] = None,
     discussion: Option[Discussion],
     participants: Seq[BasicUser],
+    members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {
 
   def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
@@ -60,12 +63,13 @@ case class KeepInfo(
     keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
-    libraries = library.toSet,
+    libraries = members.libraries.map(_.library).toSet,
     permissions = permissions
   )
 }
 
 object KeepInfo {
+  val maxKeepsShown = 10
   val maxKeepersShown = 20
   val maxLibrariesShown = 10
 
@@ -90,6 +94,7 @@ object KeepInfo {
         "libraries" -> o.libraries,
         "librariesOmitted" -> o.librariesOmitted,
         "librariesTotal" -> o.librariesTotal,
+        "sources" -> o.sources.map(_.map(SourceAttribution.externalWrites.writes(_))),
         "collections" -> o.collections,
         "tags" -> o.tags,
         "hashtags" -> o.hashtags,
@@ -102,6 +107,7 @@ object KeepInfo {
         "note" -> o.note,
         "discussion" -> o.discussion,
         "participants" -> o.participants,
+        "members" -> o.members,
         "permissions" -> o.permissions
       ).nonNullFields
     }
@@ -110,6 +116,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relative, bookmark.isPrivate, user = None, author = BasicAuthor.Fake, libraryId = bookmark.libraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, participants = Seq.empty, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }

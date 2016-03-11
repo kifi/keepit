@@ -51,6 +51,7 @@ class KifiSiteRouter @Inject() (
   deepLinkRouter: DeepLinkRouter,
   eliza: ElizaServiceClient,
   heimdal: HeimdalServiceClient,
+  sitePreloader: SitePreloader,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -171,7 +172,11 @@ class KifiSiteRouter @Inject() (
   private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
     case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
-      AngularApp.app().discardingCookies(PostRegIntent.discardingCookies: _*)
+      if (ur.getQueryString("preload").isDefined) {
+        AngularApp.app(None, preload(PreloadRequest.Me))
+      } else {
+        AngularApp.app().discardingCookies(PostRegIntent.discardingCookies: _*)
+      }
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r).discardingCookies(PostRegIntent.discardingCookies: _*)
   }
 
@@ -208,12 +213,12 @@ class KifiSiteRouter @Inject() (
           }
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app(() => metadata(handleOwner))
+          AngularApp.app(() => handleMetadata(handleOwner))
         }
     } getOrElse notFound(request)
   }
 
-  private def metadata(handle: Either[Organization, User]): Future[String] = handle match {
+  private def handleMetadata(handle: Either[Organization, User]): Future[String] = handle match {
     case Left(org) => orgMetadata(org)
     case Right(user) => userMetadata(user, UserProfileTab.Libraries)
   }
@@ -416,6 +421,10 @@ class KifiSiteRouter @Inject() (
     case e: Throwable =>
       airbrake.notify(s"on getting keep metadata for keep ${keep.id.get}", e)
       Future.successful("")
+  }
+
+  private def preload(reqs: PreloadRequest*)(implicit request: MaybeUserRequest[_]) = {
+    sitePreloader.preload(reqs)
   }
 
 }

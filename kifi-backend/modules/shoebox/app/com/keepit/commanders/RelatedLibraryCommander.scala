@@ -61,7 +61,7 @@ class RelatedLibraryCommanderImpl @Inject() (
         val t1 = System.currentTimeMillis
         val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
         // why full library info!?!?
-        val fullInfosFut = libraryInfoCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, sanitizeUrls = false).map { _.map { _._2 } }
+        val fullInfosFut = libraryInfoCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, 8, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, sanitizeUrls = false).map { _.map { _._2 } }
         fullInfosFut.map { info =>
           val t2 = System.currentTimeMillis
           statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)

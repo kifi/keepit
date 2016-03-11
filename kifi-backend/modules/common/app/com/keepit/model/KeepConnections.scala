@@ -1,6 +1,9 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
+import com.keepit.social.BasicUser
+import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -34,4 +37,25 @@ case class ParticipantsHash(value: Int) extends AnyVal
 object ParticipantsHash {
   def apply(users: Set[Id[User]]): ParticipantsHash = ParticipantsHash(MurmurHash3.setHash(users))
   implicit val format: Format[ParticipantsHash] = Format(Reads(_.validate[Int].map(ParticipantsHash(_))), Writes(o => JsNumber(o.value)))
+}
+
+sealed trait KeepMember {
+  def addedAt: DateTime
+  def addedBy: Option[BasicUser]
+}
+
+object KeepMember {
+  case class Library(library: LibraryCardInfo, addedAt: DateTime, addedBy: Option[BasicUser]) extends KeepMember
+  case class User(user: BasicUser, addedAt: DateTime, addedBy: Option[BasicUser]) extends KeepMember
+  case class Email(email: EmailAddress, addedAt: DateTime, addedBy: Option[BasicUser]) extends KeepMember
+
+  implicit val libraryWrites = Json.writes[Library]
+  implicit val userWrites = Json.writes[User]
+  implicit val emailWrites = Json.writes[Email]
+}
+
+case class KeepMembers(libraries: Seq[KeepMember.Library], users: Seq[KeepMember.User], emails: Seq[KeepMember.Email])
+object KeepMembers {
+  implicit val writes = Json.writes[KeepMembers]
+  val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
 }

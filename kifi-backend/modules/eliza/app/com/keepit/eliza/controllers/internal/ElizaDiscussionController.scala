@@ -31,7 +31,7 @@ class ElizaDiscussionController @Inject() (
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     import GetDiscussionsForKeeps._
     val input = request.body.as[Request]
-    discussionCommander.getDiscussionsForKeeps(input.keepIds).map { discussions =>
+    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.maxMessagesShown).map { discussions =>
       val output = Response(discussions)
       Ok(Json.toJson(output))
     }
@@ -146,5 +146,12 @@ class ElizaDiscussionController @Inject() (
     val beforeKeepId = beforeId.map(Id[Keep])
     val lastActivityByKeepId = db.readOnlyMaster(implicit s => userThreadRepo.getThreadStream(userId, limit, beforeKeepId, filter))
     Ok(Json.obj("lastActivityByKeepId" -> Json.toJson(lastActivityByKeepId)))
+  }
+
+  def getEmailParticipantsForKeeps() = Action(parse.tolerantJson) { request =>
+    import GetEmailParticipantsForKeep._
+    val keepIds = request.body.as[Request].keepIds
+    val emailParticipantsByKeepIds = discussionCommander.getEmailParticipantsForKeeps(keepIds)
+    Ok(Json.toJson(Response(emailParticipantsByKeepIds)))
   }
 }

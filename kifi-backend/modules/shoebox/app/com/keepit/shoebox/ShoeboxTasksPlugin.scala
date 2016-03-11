@@ -5,6 +5,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.normalizer.NormalizationUpdatingActor
 import com.keepit.payments.{ PaymentProcessingCommander, PlanRenewalCommander }
 import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
@@ -26,20 +27,15 @@ class ShoeboxTasksPlugin @Inject() (
     slackPushingActor: ActorInstance[SlackPushingActor],
     slackIngestingActor: ActorInstance[SlackIngestingActor],
     slackKeepAttributionActor: ActorInstance[SlackKeepAttributionActor],
+    normalizationUpdatingActor: ActorInstance[NormalizationUpdatingActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
-    slackIntegrationCommander: SlackIntegrationCommander,
-    libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
     log.info("ShoeboxTasksPlugin onStart")
     scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
       twitterSyncCommander.syncAll()
-    }
-
-    scheduleTaskOnOneMachine(system, 1 minute, 20 seconds, "slack pushing") {
-      libToSlackPusher.findAndPushUpdatesForRipestIntegrations()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
@@ -54,10 +50,19 @@ class ShoeboxTasksPlugin @Inject() (
     scheduleTaskOnLeader(slackKeepAttributionActor.system, 1 minute, 30 minutes, slackKeepAttributionActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackTeamDigestActor.system, 3 minute, 5 minutes, slackTeamDigestActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(slackPersonalDigestActor.system, 3 minute, 1 minute, slackPersonalDigestActor.ref, IfYouCouldJustGoAhead)
+
+    scheduleTaskOnAllMachines(normalizationUpdatingActor.system, 3 minute, 1 minute, normalizationUpdatingActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop() {
-    Seq(messageIngestionActor, slackIngestingActor, slackKeepAttributionActor, slackTeamDigestActor, slackPersonalDigestActor).foreach(_.ref ! Close)
+    Seq(
+      messageIngestionActor,
+      slackIngestingActor,
+      slackKeepAttributionActor,
+      slackTeamDigestActor,
+      slackPersonalDigestActor,
+      normalizationUpdatingActor
+    ).foreach(_.ref ! Close)
     super.onStop()
   }
 

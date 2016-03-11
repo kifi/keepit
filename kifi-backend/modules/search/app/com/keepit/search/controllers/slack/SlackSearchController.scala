@@ -3,7 +3,7 @@ package com.keepit.search.controllers.slack
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ UserRequest, MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
@@ -222,20 +222,15 @@ class SlackSearchController @Inject() (
           contextBuilder += ("slackTeamId", command.teamId.value)
           contextBuilder += ("slackUsername", command.username.value)
           contextBuilder += ("slackChannelId", command.channelId.value)
-          request match {
-            case ur: UserRequest[_] => contextBuilder.addExperiments(ur.experiments)
-            case _ =>
-          }
-          val heimdalContext = contextBuilder.build
           val endedWith = "unload"
 
-          request.userIdOpt
-            .map(userId => Future.successful(Some(userId)))
-            .getOrElse(shoeboxClient.getUserIdByIdentityId(IdentityHelpers.toIdentityId(command.teamId, command.userId)))
-            .recover { case _ => None }
-            .foreach { userIdOpt =>
-              searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, heimdalContext)
-            }
+          for {
+            userIdOpt <- if (request.userIdOpt.isDefined) Future.successful(request.userIdOpt) else shoeboxClient.getUserIdByIdentityId(IdentityHelpers.toIdentityId(command.teamId, command.userId))
+            experiments <- userIdOpt.map(uid => userActionsHelper.getUserExperiments(uid)(request)).getOrElse(Future.successful(Set.empty[UserExperimentType]))
+          } yield {
+            contextBuilder.addExperiments(experiments)
+            searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, contextBuilder.build)
+          }
         }
 
         val text = {

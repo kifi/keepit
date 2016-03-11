@@ -30,6 +30,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def checkRecommendable(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def getFromId(fromId: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
   def getByRegex(regex: String)(implicit session: RSession): Seq[NormalizedURI]
+  def getByIds(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], NormalizedURI]
 }
 
 @Singleton
@@ -190,5 +191,9 @@ class NormalizedURIRepoImpl @Inject() (
 
   def getByRegex(regex: String)(implicit session: RSession): Seq[NormalizedURI] = {
     (for (u <- rows if (u.url like regex)) yield u).list
+  }
+
+  def getByIds(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], NormalizedURI] = {
+    rows.filter(_.id.inSet(uriIds)).list.map(uri => uri.id.get -> uri).toMap
   }
 }

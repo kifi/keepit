@@ -137,8 +137,6 @@ class PrenormalizerTest extends Specification {
       prenormalize("https://mail.google.com/mail/u/0/#sent") ===
         "https://mail.google.com/mail/u/0/#sent"
       // google drive
-      prenormalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
-        "https://docs.google.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
       prenormalize("https://drive.google.com/a/42go.com/#folders/0B_SswQqUaqw6c1dteUNRUkdLRGs") ===
         "https://drive.google.com#folders/0B_SswQqUaqw6c1dteUNRUkdLRGs"
       prenormalize("https://drive.google.com/a/42go.com/#search/spec") ===
@@ -151,12 +149,16 @@ class PrenormalizerTest extends Specification {
         "https://drive.google.com#shared-with-me"
 
       // google docs
+      prenormalize("https://docs.google.com/a/42go.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit") ===
+        "https://docs.google.com/document/d/1hrI0OWyPpe34NTMbkOq939nvF_4UwfWtc8b1LxV-mjk/edit"
       prenormalize("https://docs.google.com/document/d/1pFRKQtcZFqBYRdfcRbYT3TQaZaFqI1PgeOHEacF57q8/edit") ===
         "https://docs.google.com/document/d/1pFRKQtcZFqBYRdfcRbYT3TQaZaFqI1PgeOHEacF57q8/edit"
       prenormalize("https://docs.google.com/a/fuks.co.il/document/d/1Va2VsQwZqIgB73Eb0cWqPSF-bClwEBVCdgE3Nyik0sI/edit") ===
         "https://docs.google.com/document/d/1Va2VsQwZqIgB73Eb0cWqPSF-bClwEBVCdgE3Nyik0sI/edit"
       prenormalize("https://docs.google.com/a/42go.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit") === "https://docs.google.com/file/d/0B17Ux0DwquOwOVNWRGJLcEt6SW8/edit"
       prenormalize("https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&hl=en_US&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE&ndplr=1") === "https://docs.google.com/spreadsheet/ccc?authkey=CKqfiacO&key=0AmrEm2VP6NfgdGU5czBIdnBYUHBYSE9wRzd6Q3VvakE"
+      prenormalize("https://docs.google.com/document/d/1Gvv_9PzsqRoU_LaJo_MjdxxpgAggaGK-QZX6prnWVJU/edit?ts=56ba2849") === "https://docs.google.com/document/d/1Gvv_9PzsqRoU_LaJo_MjdxxpgAggaGK-QZX6prnWVJU/edit"
+      prenormalize("https://docs.google.com/document/d/1Gvv_9PzsqRoU_LaJo_MjdxxpgAggaGK-QZX6prnWVJU/edit?untouchable=true") === "https://docs.google.com/document/d/1Gvv_9PzsqRoU_LaJo_MjdxxpgAggaGK-QZX6prnWVJU/edit?untouchable=true"
 
       // google search
       prenormalize("https://www.google.com/search?q=kifi&oq=kifi&aqs=chrome..69i57j69i60l3j69i65l2.3958j0j7&sourceid=chrome&espv=210&es_sm=91&ie=UTF-8&safe=active") ===

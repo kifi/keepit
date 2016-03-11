@@ -13,6 +13,7 @@ import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
+import org.joda.time.DateTime
 import play.api.libs.json.{JsArray, JsObject}
 
 import scala.collection.mutable
@@ -92,15 +93,14 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(true)
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
-    Future.successful(Map.empty)
-  }
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = Future.successful(Map.empty)
+  def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]] = Future.successful(Map.empty)
   def deleteMessage(msgId: Id[Message]): Future[Unit] = ???
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit] = Future.successful(Unit)
   def editMessage(msgId: Id[Message], newText: String): Future[Message] = ???
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message],CrossServiceMessage]] = ???
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]] = ???
-  def getChangedMessagesFromKeeps(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message]): Future[Seq[CrossServiceMessage]] = ???
+  def getChangedMessagesFromKeeps(keepIds: Set[Id[Keep]], seq: SequenceNumber[Message]): Future[Seq[CrossServiceMessage]] = Future.successful(Seq.empty)
   def getMessageCountsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]] = Future.successful(keepIds.map(_ -> 1).toMap)
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter) = ???
   def markKeepsAsReadForUser(userId: Id[User], lastSeen: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep],Int]] = ???

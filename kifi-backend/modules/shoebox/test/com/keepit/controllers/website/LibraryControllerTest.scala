@@ -91,6 +91,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  def toSimpleKeepMembers(keep: Keep, owner: BasicUser, library: LibraryCardInfo): KeepMembers = {
+    import KeepMember._
+    KeepMembers(Seq(Library(library, keep.keptAt, Some(owner))), Seq(User(owner, keep.keptAt, Some(owner))), Seq.empty)
+  }
+
   "LibraryController" should {
 
     "create libraries" in {
@@ -997,7 +1002,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getKeeps(pubId1, 0, 10, false)(request1)
+        val result1 = libraryController.getKeeps(pubId1, 0, 10, false, 8)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -1031,6 +1036,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "libraryId": "l7jlKlnA36Su",
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
+                "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions)}
               },
               {
@@ -1058,6 +1064,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "libraryId": "l7jlKlnA36Su",
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
+                "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions)}
               }
             ],

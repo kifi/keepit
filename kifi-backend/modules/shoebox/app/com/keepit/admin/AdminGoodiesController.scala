@@ -90,34 +90,4 @@ class AdminGoodiesController @Inject() (
         (companion, a, b)
     }
   }
-  def fixAuthors() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    val usersToClear = (request.body \ "users").as[Set[Id[User]]]
-    if (!(request.body \ "doIt").asOpt[Boolean].contains(true)) Ok(s"Parsed $usersToClear, if you want to go ahead include doIt: true")
-    else {
-      val response: Enumerator[String] = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
-        channel.push(s"Clearing the user id from slack keeps for ${usersToClear.size} users\n")
-        FutureHelpers.sequentialExec(usersToClear) { user =>
-          channel.push(s"Clearing user $user\n")
-          db.readWriteAsync { implicit s =>
-            val userKeeps = keepRepo.getByUser(user)
-            val userSlackKeeps = userKeeps.filter(_.source == KeepSource.slack)
-            val keepAttributions = keepSourceAttributionRepo.getByKeepIds(userSlackKeeps.map(_.id.get).toSet)
-            val fixedKeeps = userSlackKeeps.filter(k => keepAttributions.contains(k.id.get)).map { keep =>
-              keepRepo.save(keep.copy(userId = None))
-            }
-            (userKeeps.length, userSlackKeeps.length, fixedKeeps.length)
-          }.andThen {
-            case Success((total, slack, fixed)) =>
-              channel.push(s"User $user has $total total keeps and $slack from slack. We fixed $fixed of them with attributions\n")
-          }
-        }.andThen {
-          case res =>
-            if (res.isFailure) channel.push("server error\n")
-            if (res.isSuccess) channel.push("Finished!\n")
-            channel.eofAndEnd()
-        }
-      })
-      Ok.chunked(response)
-    }
-  }
 }
