@@ -5,6 +5,7 @@ import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ MaybeUserRequest, NonUserRequest, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.time.Clock
 import com.keepit.controllers.website.{ AngularApp, KeepsController, UserController }
 import com.keepit.model.User
 import play.api.libs.json.{ JsObject, Json }
@@ -15,12 +16,16 @@ import scala.util.Try
 class SitePreloader @Inject() (
     userController: UserController,
     keepCommander: KeepCommander,
+    clock: Clock,
     implicit val ec: ExecutionContext) extends Logging {
 
   def preload(requests: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Seq[Future[String]] = {
+    val startTime = clock.now.getMillis
     requests.map { r =>
       requestToData(r)(request).map(m => m.map(buildPayload(r.path, _)).getOrElse("")).map { data =>
-        log.info(s"[SitePreloader] Preloaded ${r.path} for ${request.userIdOpt}. ${data.length}")
+        if (request.getQueryString("logPreload").isDefined) {
+          log.info(s"[SitePreloader] Preloaded ${r.path} for ${request.userIdOpt} in ${clock.now.getMillis - startTime}. ${data.length}")
+        }
         data
       }
     }
@@ -47,7 +52,7 @@ class SitePreloader @Inject() (
   }
 
   private def buildPayload(path: String, payload: JsObject)(implicit request: MaybeUserRequest[_]) = {
-    s"""<script nonce="${AngularApp.NONCE_STRING}">preload('$path', ${Json.stringify(payload)});</script>"""
+    s"""<script nonce="${AngularApp.NONCE_STRING}">preload('$path', ${Json.stringify(payload)}, ${clock.now.getMillis});</script>"""
   }
 
   private def noExplode[T](f: => Future[Option[T]]) = {
