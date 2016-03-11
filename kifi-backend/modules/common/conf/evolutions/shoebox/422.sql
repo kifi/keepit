@@ -10,7 +10,6 @@ CREATE TABLE slack_team (
   slack_team_id VARCHAR(32) NOT NULL,
   slack_team_name VARCHAR(512) NOT NULL,
   organization_id BIGINT(20) DEFAULT NULL,
-  last_channel_created_at VARCHAR(32) DEFAULT NULL,
   general_channel_id VARCHAR(32) DEFAULT NULL,
   last_digest_notification_at DATETIME DEFAULT NULL,
   public_channels_last_syncing_at DATETIME DEFAULT NULL,

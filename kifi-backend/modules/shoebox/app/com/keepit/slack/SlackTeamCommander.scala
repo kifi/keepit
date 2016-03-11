@@ -243,10 +243,7 @@ class SlackTeamCommanderImpl @Inject() (
       val newLibraries = libCreationsByChannel.collect { case (channel, Right(lib)) => channel -> lib }
       val failedChannels = libCreationsByChannel.collect { case (channel, Left(fail)) => channel -> fail }
 
-      val updatedTeam = team
-        .withPublicChannelsSyncedAt(clock.now)
-        .withSyncedChannels(newLibraries.keySet.map(_.id))
-        .copy(lastChannelCreatedAt = channels.map(_.createdAt).maxOpt orElse team.lastChannelCreatedAt)
+      val updatedTeam = team.withPublicChannelsSyncedAt(clock.now).withSyncedChannels(newLibraries.keySet.map(_.id))
       db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
 
       if (failedChannels.nonEmpty) slackLog.warn(
@@ -291,7 +288,7 @@ class SlackTeamCommanderImpl @Inject() (
                           val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
                           if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
                         }
-                        def shouldBeIgnored(channel: SlackPublicChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId) || team.lastChannelCreatedAt.exists(channel.createdAt <= _)
+                        def shouldBeIgnored(channel: SlackPublicChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId)
                         val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
                         val futureSlackChannelLibraries = SafeFuture {
                           setupPublicSlackChannels(updatedTeam, membership, channelsToIntegrate)
