@@ -1018,8 +1018,7 @@ class AdminUserController @Inject() (
   def slackUserPresence(id: Id[User]) = AdminUserPage.async { implicit request =>
     val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
     val presencesF = memberships.map { membership =>
-      val presence = slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId)
-      presence.recover {
+      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).recover {
         case error: Throwable =>
           log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
           SlackUserPresence(SlackUserPresenceState.ERROR, None, JsNull)
@@ -1035,6 +1034,7 @@ class AdminUserController @Inject() (
             "slackUserId" -> JsString(membership.slackUserId.value),
             "team" -> JsString(membership.slackTeamName.value),
             "state" -> JsString(presence.state.name),
+            "origJson" -> presence.originalJson,
             "since" -> (presence.lastActivity.map { date =>
               val minutes = Minutes.minutesBetween(date, clock.now())
               JsString(s"${minutes.getMinutes}M")
