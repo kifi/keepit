@@ -57,28 +57,33 @@ object AngularApp extends Controller with Logging {
   }
 
   @inline
-  private def augmentPage(nonce: String, head: Future[String], feet: => Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Enumerator[String] = {
+  private def augmentPage(nonce: String, head: Future[String], feet: Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Enumerator[String] = {
     val (idx1, idx2) = maybeCachedIndex
     val noncedIdx2 = idx2.map { body =>
       body.replaceAllLiterally(NONCE_STRING, nonce)
     }(ExecutionContext.immediate)
-    idx1 andThen enumerateFuture(head) andThen noncedIdx2 andThen enumerateFutures(feet) andThen Enumerator.eof
+    val fullHead = if (feet.nonEmpty) {
+      head.map(_ + preloadStub)(immediate)
+    } else head
+    idx1 andThen enumerateFuture(fullHead) andThen noncedIdx2 andThen enumerateFutures(feet) andThen Enumerator.eof
   }
 
-  def app(makeBotMetadata: Option[() => Future[String]] = None)(implicit request: MaybeUserRequest[_]): Result = {
+  def app(metaGenerator: Option[() => Future[String]] = None, feet: Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Result = {
     val head = request match {
       case r: UserRequest[_] =>
         Future.successful(s"""<title id="kf-authenticated">Kifi</title>""") // a temporary silly way to indicate to the app that a user is authenticated
-      case r: NonUserRequest[_] if makeBotMetadata.isDefined && r.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).exists(_.possiblyBot) =>
-        makeBotMetadata.get()
+      case r: NonUserRequest[_] if metaGenerator.isDefined && r.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).exists(_.possiblyBot) =>
+        metaGenerator.get()
       case _ =>
         Future.successful("<title>Kifi</title>")
     }
     val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id).take(16)
-    Ok.chunked(augmentPage(nonce, head)).as(HTML).withHeaders("X-Nonce" -> nonce)
+    Ok.chunked(augmentPage(nonce, head, feet)).as(HTML).withHeaders("X-Nonce" -> nonce)
   }
 
-  def app(makeBotMetadata: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(makeBotMetadata))
+  def app(metaGenerator: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(metaGenerator))
+
+  private val preloadStub = "<script>window.preload=function(p,d){preload.data=preload.data||{};preload.data[p] = d};</script>\n"
 
 }
 
