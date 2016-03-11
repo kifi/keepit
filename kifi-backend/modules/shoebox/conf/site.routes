@@ -5,7 +5,7 @@
 # Let's keep these routes alphabetized.
 
 GET     /connections               @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /find                      @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /find                      @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /friends                   @com.keepit.controllers.routing.KifiSiteRouter.redirectFromFriends(friend: Option[String])
 GET     /friends/invite            @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/invite")
 GET     /friends/requests          @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
@@ -21,14 +21,14 @@ GET     /me/libraries              @com.keepit.controllers.routing.KifiSiteRoute
 GET     /me/libraries/following    @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
 GET     /me/libraries/invited      @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
 GET     /profile                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/settings")
-GET     /settings                  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /settings                  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /teams/new                 @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /integrations/slack/teams  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /integrations/slack/teams  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /pricing                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
 GET     /credits                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
 GET     /organizations             @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/")
-GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser()
 GET     /redir                     @com.keepit.controllers.routing.KifiSiteRouter.generalRedirect(data: String)
 GET     /url                       @com.keepit.controllers.routing.KifiSiteRouter.urlRedirect(s: String, t: Option[String] ?= None)
 

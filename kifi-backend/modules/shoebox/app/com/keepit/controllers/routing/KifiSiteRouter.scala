@@ -140,7 +140,7 @@ class KifiSiteRouter @Inject() (
   }
 
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
-    redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2
+    redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2()
   }
 
   private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = {
@@ -162,22 +162,17 @@ class KifiSiteRouter @Inject() (
     request match {
       case ur: UserRequest[_] =>
         userIpAddressCommander.logUserByRequest(ur)
-        AngularApp.app()
+        app()
       case r: NonUserRequest[_] => redirectToSignup(r.uri, r)
     }
   }
 
-  def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2)
+  def serveWebAppToUser(dependencies: Seq[PreloadRequest] = Seq.empty) = WebAppPage(implicit request => serveWebAppToUser2(dependencies))
 
-  private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
+  private def serveWebAppToUser2(dependencies: Seq[PreloadRequest] = Seq.empty)(implicit request: MaybeUserRequest[_]): Result = request match {
     case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
-      if (ur.getQueryString("preload").isDefined) {
-        val userHome = if (request.path.length <= 1) PreloadSet.userHome else PreloadSet.empty
-        AngularApp.app(None, preload(PreloadSet(userHome)))
-      } else {
-        AngularApp.app().discardingCookies(PostRegIntent.discardingCookies: _*)
-      }
+      app(dependencies).discardingCookies(PostRegIntent.discardingCookies: _*)
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r).discardingCookies(PostRegIntent.discardingCookies: _*)
   }
 
@@ -187,7 +182,7 @@ class KifiSiteRouter @Inject() (
         redirectStatusOpt map { status =>
           Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app(() => userMetadata(user, UserProfileTab(request.path)))
+          app(() => userMetadata(user, UserProfileTab(request.path)))
         }
     } getOrElse notFound(request)
   }
@@ -199,7 +194,7 @@ class KifiSiteRouter @Inject() (
           val foundHandle = Handle.fromOrganizationHandle(org.handle)
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app(() => orgMetadata(org))
+          app(() => orgMetadata(org))
         }
     } getOrElse notFound(request)
   }
@@ -214,7 +209,7 @@ class KifiSiteRouter @Inject() (
           }
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app(() => handleMetadata(handleOwner))
+          app(() => handleMetadata(handleOwner))
         }
     } getOrElse notFound(request)
   }
@@ -231,7 +226,7 @@ class KifiSiteRouter @Inject() (
           case (user, redirectStatusOpt) =>
             redirectStatusOpt map { status =>
               Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
-            } getOrElse AngularApp.app()
+            } getOrElse app()
         } getOrElse notFound(request)
       case r: NonUserRequest[_] =>
         redirectToLogin(s"/me${dropPathSegment(request.uri)}", r)
@@ -264,7 +259,7 @@ class KifiSiteRouter @Inject() (
 
               Redirect(uri, status)
             } else {
-              AngularApp.app(() => libMetadata(library))
+              app(() => libMetadata(library))
             }
         }
     } getOrElse notFound(request)
@@ -295,7 +290,7 @@ class KifiSiteRouter @Inject() (
             }
             else None
           }
-          keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
+          keepOpt.map(keep => app(() => keepMetadata(keep))).getOrElse(notFound(request))
         }
       }
     }
@@ -422,6 +417,21 @@ class KifiSiteRouter @Inject() (
     case e: Throwable =>
       airbrake.notify(s"on getting keep metadata for keep ${keep.id.get}", e)
       Future.successful("")
+  }
+
+  private def app()(implicit request: MaybeUserRequest[_]): Result =
+    app(None, Seq.empty)
+  private def app(dependencies: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Result =
+    app(None, dependencies)
+  private def app(metaGenerator: () => Future[String])(implicit request: MaybeUserRequest[_]): Result =
+    app(Some(metaGenerator), Seq.empty)
+  private def app(metaGenerator: () => Future[String], dependencies: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Result =
+    app(Some(metaGenerator), dependencies)
+  private def app(metaGeneratorOpt: Option[() => Future[String]], dependencies: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Result = {
+    val toPreload = if (request.getQueryString("preload").isDefined) {
+      PreloadSet.filter(dependencies)
+    } else Seq.empty
+    AngularApp.app(metaGeneratorOpt, preload(toPreload))
   }
 
   private def preload(reqs: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]) = {
