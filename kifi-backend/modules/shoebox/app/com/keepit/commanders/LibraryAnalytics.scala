@@ -343,7 +343,6 @@ class LibraryAnalytics @Inject() (
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     contextBuilder += ("tagId", tag.id.get.toString)
-    if (action == "taggedPage") keep.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
     heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, changedAt))
 
     // Anonymized event with tag information

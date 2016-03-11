@@ -159,7 +159,6 @@ class KeepInternerImpl @Inject() (
       keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-      organizationId = libraryOpt.flatMap(_.organizationId),
       connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet),
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
