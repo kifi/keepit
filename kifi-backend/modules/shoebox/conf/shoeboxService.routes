@@ -748,6 +748,7 @@ POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.A
 POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
 POST    /admin/experiment/:exp/add  @com.keepit.controllers.admin.AdminUserController.addExperimentForUsers(exp: String)
 GET    /admin/user/:id/slack/online          @com.keepit.controllers.admin.AdminUserController.slackUserOnline(id: Id[User])
+GET    /admin/user/:id/slack/presence        @com.keepit.controllers.admin.AdminUserController.slackUserPresence(id: Id[User])
 
 
 GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
@@ -778,7 +779,6 @@ GET     /admin/findOrganizationByName                        @com.keepit.control
 GET     /admin/findOrganizationByNameJson                    @com.keepit.controllers.admin.AdminOrganizationController.findOrganizationByNameJson(orgName: String)
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
-POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 POST    /admin/organizations/applyDefaultSettingsToOrgConfigs           @com.keepit.controllers.admin.AdminOrganizationController.applyDefaultSettingsToOrgConfigs()
 POST    /admin/organizations/addFeatureToPlans                          @com.keepit.controllers.admin.AdminOrganizationController.addFeatureToPlans()
 
