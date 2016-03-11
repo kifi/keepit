@@ -109,42 +109,42 @@
           @for(userStatistics <- userData.users) {
             <tr>
               <td>
-                <span class="badge">@userStatistics.user.id.get.id</span>
+                <span class="badge" user_id="@userStatistics.user.id.get.id">@userStatistics.user.id.get.id</span>
                 @if(userData.usersOnline(userStatistics.user.id.get)) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/status-online.png">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/status-online.png">
                 } else {
                   @if(userStatistics.kifiInstallations.isEmpty) {
-                    <img src="https://d120ofs0tant1t.cloudfront.net/img/status-busy.png">
+                    <img src="//d120ofs0tant1t.cloudfront.net/img/status-busy.png">
                   } else {
-                    <img src="https://d120ofs0tant1t.cloudfront.net/img/status-offline.png">
+                    <img src="//d120ofs0tant1t.cloudfront.net/img/status-offline.png">
                   }
                 }
                 @if(userStatistics.kifiInstallations.firefox) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/firefox.png" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/firefox.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.chrome) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/chrome.png" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/chrome.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.safari) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/safari.png" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/safari.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.yandex) {
-                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/yandex.png" width="16" height="16">
+                <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/yandex.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.windows) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/icon_win.gif" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/icon_win.gif" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.mac) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/osx.png" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/osx.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.linux) {
-                  <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/linux.png" width="16" height="16">
+                  <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/linux.png" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.iphone) {
-                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/iphone.jpg" width="16" height="16">
+                <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/iphone.jpg" width="16" height="16">
                 }
                 @if(userStatistics.kifiInstallations.android) {
-                <img src="https://d120ofs0tant1t.cloudfront.net/img/os_logos/android.png" width="16" height="16">
+                <img src="//d120ofs0tant1t.cloudfront.net/img/os_logos/android.png" width="16" height="16">
                 }
               </td>
               <td>@adminHelper.userDisplay(userStatistics.user)</td>
@@ -166,7 +166,21 @@
         $(function(){
           $("#users").tablesorter({ theme : "green", widgets : ['zebra']  });
         });
-
+        [].forEach.call(document.querySelectorAll(".badge"), function(userIdDiv){
+          var id = userIdDiv.getAttribute("user_id");
+          if (id) {
+            console.log(id);
+            $.get("/admin/user/"+id+"/slack/online", function(online){
+              if(online) {
+                var i = document.createElement('img');
+                i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-logo-color.png";
+                i.height=16;
+                i.width=16;
+                userIdDiv.parentNode.appendChild(i);
+              }
+            });
+          }
+        });
       </script>
 
   }
