@@ -108,12 +108,14 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
       doc.add(buildKeywordField(userField, userId.id.toString))
     }
 
+    /* TODO(ryan): figure out the correct thing to do here
     if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
       doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString))
       keep.userId.foreach { userId =>
         doc.add(buildKeywordField(userDiscoverableField, userId.id.toString))
       }
     }
+    */
 
     /* TODO(ryan): figure out the correct thing to do here
     keep.organizationId.foreach { orgId =>
@@ -133,8 +135,7 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
     // TODO(ryan): fix this
     // doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
-
-    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
+    // doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))

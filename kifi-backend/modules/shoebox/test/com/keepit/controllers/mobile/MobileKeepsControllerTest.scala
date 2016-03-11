@@ -351,7 +351,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
           val lib = LibraryFactory.library().saved
           collections.map { c =>
-            val k = KeepFactory.keep().withLibrary(lib.id.get).saved
+            val k = KeepFactory.keep().withLibrary(lib).saved
             inject[KeepToCollectionRepo].save(KeepToCollection(keepId = k.id.get, collectionId = c.id.get))
           }
           (user, collections)
