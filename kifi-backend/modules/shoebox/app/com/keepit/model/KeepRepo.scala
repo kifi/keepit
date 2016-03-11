@@ -60,7 +60,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter])(implicit session: RSession): Seq[(Keep, DateTime)]
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)]
@@ -107,7 +106,6 @@ class KeepRepoImpl @Inject() (
   KeepConnections, // connections
   Option[Id[Library]], // libraryId
   LibraryVisibility, // visibility
-  Option[Id[Organization]], // organizationId
   Option[Boolean], // isPrimary
   LibrariesHash, // librariesHash
   ParticipantsHash // participantsHash
@@ -132,7 +130,6 @@ class KeepRepoImpl @Inject() (
       connections: KeepConnections,
       libraryId: Option[Id[Library]],
       visibility: LibraryVisibility,
-      organizationId: Option[Id[Organization]],
       // These fields are discarded, they are DB-only
       isPrimary: Option[Boolean],
       lh: LibrariesHash,
@@ -156,8 +153,7 @@ class KeepRepoImpl @Inject() (
         messageSeq,
         connections,
         libraryId,
-        visibility,
-        organizationId
+        visibility
       )
   }
 
@@ -182,7 +178,6 @@ class KeepRepoImpl @Inject() (
         k.connections,
         k.libraryId,
         k.visibility,
-        k.organizationId,
         if (k.isActive) Some(true) else None,
         k.connections.librariesHash,
         k.connections.participantsHash
@@ -204,7 +199,6 @@ class KeepRepoImpl @Inject() (
     def connections = column[KeepConnections]("connections", O.NotNull)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
-    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
     // Used only within the DB to ensure integrity and make queries more efficient
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -214,7 +208,7 @@ class KeepRepoImpl @Inject() (
     def * = (
       (id.?, createdAt, updatedAt, state, seq, externalId, title, note, uriId, url),
       (userId, originalKeeperId, source, keptAt, lastActivityAt, messageSeq,
-        connections, libraryId, visibility, organizationId,
+        connections, libraryId, visibility,
         isPrimary, librariesHash, participantsHash)
     ).shaped <> ((fromDbRow _).tupled, toDbRow)
 
@@ -258,7 +252,6 @@ class KeepRepoImpl @Inject() (
         r.<<[KeepConnections],
         r.<<[Option[Id[Library]]],
         r.<<[LibraryVisibility],
-        r.<<[Option[Id[Organization]]],
         r.<<[Option[Boolean]],
         r.<<[LibrariesHash],
         r.<<[ParticipantsHash])
@@ -569,13 +562,6 @@ class KeepRepoImpl @Inject() (
 
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.lastActivityAt desc, r.id desc)).drop(offset).take(limit).list
-  }
-
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]] = {
-    expectedOrgId match {
-      case None => (for (b <- rows if b.libraryId === libraryId && b.organizationId.isDefined) yield b.id).take(limit.value).list.toSet
-      case Some(orgId) => (for (b <- rows if b.libraryId === libraryId && (b.organizationId.isEmpty || b.organizationId =!= orgId)) yield b.id).take(limit.value).list.toSet
-    }
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {

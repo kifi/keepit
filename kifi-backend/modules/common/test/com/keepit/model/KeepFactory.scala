@@ -53,7 +53,6 @@ object KeepFactory {
     def withLibrary(library: Id[Library]) = this.copy(keep = keep.copy(libraryId = Some(library)))
     def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
-    def withOrganizationId(orgId: Option[Id[Organization]]) = this.copy(keep = keep.copy(organizationId = orgId))
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
     def withUri(uri: NormalizedURI) = this.copy(keep = keep.copy(uriId = uri.id.get, url = uri.url))
     def withUrl(url: String) = this.copy(keep = keep.copy(url = url))

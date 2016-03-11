@@ -140,32 +140,5 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         }
       }
     }
-
-    "fix broken keep.organizationIds" in {
-      withDb(modules: _*) { implicit injector =>
-        val (keep, organization) = db.readWrite { implicit session =>
-          val user = UserFactory.user().saved
-          val organization = OrganizationFactory.organization().withOwner(user).saved
-          val library = LibraryFactory.library().withOwner(user).withOrganization(organization).saved
-          val keep = KeepFactory.keep().withUser(user).withLibrary(library).saved
-          // the above should not set brokenKeep.organizationId properly
-
-          val brokenKeep = keepRepo.save(keep.copy(organizationId = None))
-
-          (brokenKeep, organization)
-        }
-
-        db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).organizationId !=== organization.id
-        }
-
-        inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
-        keepChecker.check()
-
-        db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).organizationId === organization.id
-        }
-      }
-    }
   }
 }

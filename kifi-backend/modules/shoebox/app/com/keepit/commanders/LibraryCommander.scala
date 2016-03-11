@@ -337,14 +337,13 @@ class LibraryCommanderImpl @Inject() (
       val (keeps, lib, curViz) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(library.id.get)
         val viz = lib.visibility // It may have changed, re-check
-        val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ keepRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500))
+        val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ ktlRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500)).map(_.keepId)
         val keeps = keepRepo.getByIds(keepIds).values.toSeq
         (keeps, lib, viz)
       }
       if (keeps.nonEmpty && curViz == changedVisibility) {
         db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
-          implicit val session: RWSession = s
-          keepCommander.syncWithLibrary(k, lib)
+          keepCommander.syncWithLibrary(k, lib)(s)
         }
         if (iter < 200) {
           // to prevent infinite loops if there's an issue updating keeps.

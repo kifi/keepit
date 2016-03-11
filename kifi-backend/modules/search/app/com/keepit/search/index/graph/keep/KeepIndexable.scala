@@ -115,12 +115,14 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
       }
     }
 
+    /* TODO(ryan): figure out the correct thing to do here
     keep.organizationId.foreach { orgId =>
       doc.add(buildKeywordField(orgField, orgId.id.toString))
       if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
         doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
       }
     }
+    */
 
     keep.libraryId.foreach { libId =>
       doc.add(buildDataPayloadField(new Term(libraryField, libId.id.toString), titleLang.lang.getBytes(UTF8)))
@@ -129,7 +131,8 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.userId.getOrElse(Id[User](-1))))
     doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
-    doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
+    // TODO(ryan): fix this
+    // doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 

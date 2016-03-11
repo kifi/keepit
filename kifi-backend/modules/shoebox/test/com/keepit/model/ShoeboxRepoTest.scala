@@ -41,10 +41,9 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
         // KeepRepo
         val keep: Keep = db.readWrite { implicit session =>
-          KeepFactory.keep().withLibrary(lib).withUser(user).withOrganizationId(org.id).saved
+          KeepFactory.keep().withLibrary(lib).withUser(user).saved
         }
         keep.id must beSome
-        keep.organizationId === org.id
 
         // OrganizationMembershipRepo
         val organizationMembershipRepo = inject[OrganizationMembershipRepo]

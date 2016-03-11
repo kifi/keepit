@@ -860,7 +860,6 @@ class KeepCommanderImpl @Inject() (
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
-      organizationId = toLibrary.organizationId,
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),

@@ -148,32 +148,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "keeps by library without orgId" in {
-      withDb() { implicit injector =>
-        val orgId1 = Some(Id[Organization](1))
-        val orgId2 = Some(Id[Organization](2))
-        val library = db.readWrite { implicit s =>
-          val lib = libraryRepo.save(Library(name = "Kifi", ownerId = Id[User](1), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = 1))
-          keeps(20).map(_.withLibrary(lib).withOrganizationId(orgId1)).saved
-          keeps(20).map(_.withLibrary(lib).withOrganizationId(orgId2)).saved
-          keeps(10).map(_.withLibrary(lib)).saved
-          lib
-        }
-
-        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(library.id.get, 0, 50) }.length === 50
-
-        val keepsWithOrgIdSet = db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, None, Limit(50))
-        }
-
-        keepsWithOrgIdSet.size === 40
-
-        val keepsWithoutOrgId1 = db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, orgId1, Limit(50))
-        }
-        keepsWithoutOrgId1.size === 30
-      }
-    }
     "format the sql query for getPrivateCountByTimeAndSource" in {
       withDb() { implicit injector =>
         db.readOnlyMaster { implicit session => keepRepo.getPrivateCountByTimeAndSource(currentDateTime, currentDateTime, KeepSource.keeper) }

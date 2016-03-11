@@ -69,7 +69,6 @@ case class Keep(
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
     visibility = lib.visibility,
-    organizationId = lib.organizationId,
     connections = connections.withLibraries(Set(lib.id.get))
   )
   def withNoLibrary = this.copy(libraryId = None, visibility = LibraryVisibility.SECRET, organizationId = None)

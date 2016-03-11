@@ -94,11 +94,11 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
         var fixedInPreviousBatch = 0
         do {
           db.readWrite { implicit session =>
-            val invalidKeepIds = keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, library.organizationId, limit = Limit(100))
-            invalidKeepIds.foreach { invalidKeepId =>
-              updateKeep(invalidKeepId, _.copy(organizationId = library.organizationId))
+            val invalidKtls = ktlRepo.getByLibraryWithInconsistentOrgId(library.id.get, library.organizationId, limit = Limit(100))
+            invalidKtls.foreach { ktl =>
+              ktlRepo.save(ktl.withOrganizationId(library.organizationId))
             }
-            fixedInPreviousBatch = invalidKeepIds.size
+            fixedInPreviousBatch = invalidKtls.size
           }
         } while (fixedInPreviousBatch > 0)
       }
