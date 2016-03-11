@@ -236,6 +236,10 @@ class SlackTeamCommanderImpl @Inject() (
     val markedAsSyncing = db.readWrite { implicit session => slackTeamRepo.markAsSyncing(team.slackTeamId, SlackTeamCommander.channelSyncTimeout) }
 
     if (markedAsSyncing) {
+      if (team.slackTeamId.value == "T02A81H50") {
+        throw new Exception(s"Just Léo testing in production.")
+      }
+
       val libCreationsByChannel = channels.map { channel =>
         channel.channelIdAndName -> setupSlackChannel(team, membership, channel)
       }.toMap
