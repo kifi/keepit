@@ -1032,7 +1032,7 @@ class AdminUserController @Inject() (
         case (membership, presence) =>
           JsObject.apply(Seq(
             "user" -> JsString(membership.slackUsername.value),
-            "slackUserId" -> JsString(membership.slackUsername.value),
+            "slackUserId" -> JsString(membership.slackUserId.value),
             "team" -> JsString(membership.slackTeamName.value),
             "state" -> JsString(presence.state.name),
             "since" -> (presence.lastActivity.map { date =>
