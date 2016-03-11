@@ -31,12 +31,8 @@ angular.module('kifi')
 
     var meService = new Clutch(function () {
       var oldMeId = me.id;
-      var promise = !$window.initialMePromise ? $http.get(routeService.profileUrl) : $q.when($window.initialMePromise).then(function (data) {
-        delete $window.initialMePromise;
-        return { data : data };
-      });
 
-      return promise
+      $http.get(routeService.profileUrl)
       .then(function (res) {
         updateMe(res.data);
         updateLoginState(true, me.id !== oldMeId);
