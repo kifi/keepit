@@ -172,7 +172,8 @@ class KifiSiteRouter @Inject() (
   private def serveWebAppToUser2(dependencies: Seq[PreloadRequest] = Seq.empty)(implicit request: MaybeUserRequest[_]): Result = request match {
     case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
-      app(dependencies).discardingCookies(PostRegIntent.discardingCookies: _*)
+      val discardingCookies = PostRegIntent.discardingCookies.filter { dc => request.cookies.get(dc.name).isDefined }
+      app(dependencies).discardingCookies(discardingCookies: _*)
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r).discardingCookies(PostRegIntent.discardingCookies: _*)
   }
 
