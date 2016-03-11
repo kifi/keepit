@@ -14,7 +14,8 @@ import com.kifi.juggle._
 import scala.concurrent.{ Future, ExecutionContext }
 
 object NormalizationUpdatingActor {
-  val maxBatchSize = 100
+  val minConcurrentUpdates = 10
+  val maxConcurrentUpdates = 50
   val lockTasksFor = 10 minutes
 }
 
@@ -24,27 +25,27 @@ class NormalizationUpdatingActor @Inject() (
     airbrake: AirbrakeNotifier,
     queue: SQSQueue[NormalizationUpdateTask],
     normalizationService: NormalizationService,
-    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[SQSMessage[NormalizationUpdateTask]] {
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[SQSMessage[NormalizationUpdateTask]] {
 
   import NormalizationUpdatingActor._
 
-  protected val logger = log.logger
+  protected val minConcurrentTasks = minConcurrentUpdates
+  protected val maxConcurrentTasks = maxConcurrentUpdates
 
-  protected def nextBatch: Future[Seq[SQSMessage[NormalizationUpdateTask]]] = {
-    queue.nextBatchWithLock(maxBatchSize, lockTasksFor)
+  protected def pullTasks(limit: Int): Future[Seq[SQSMessage[NormalizationUpdateTask]]] = {
+    queue.nextBatchWithLock(limit, lockTasksFor)
   }
 
-  protected def processBatch(batch: Seq[SQSMessage[NormalizationUpdateTask]]): Future[Unit] = {
+  protected def processTasks(messages: Seq[SQSMessage[NormalizationUpdateTask]]): Map[SQSMessage[NormalizationUpdateTask], Future[Unit]] = {
     val uriById = db.readOnlyMaster { implicit session =>
-      uriRepo.getByIds(batch.map(_.body.uriId).toSet)
+      uriRepo.getByIds(messages.map(_.body.uriId).toSet)
     }
-    FutureHelpers.sequentialExec(batch) { message =>
-      val task = message.body
-      val update = uriById.get(task.uriId) match {
+    messages.map { message =>
+      val update = uriById.get(message.body.uriId) match {
         case None => Future.successful(())
-        case Some(uri) => normalizationService.update(NormalizationReference(uri, task.isNew), task.candidates).imap(_ => ())
+        case Some(uri) => normalizationService.update(NormalizationReference(uri, message.body.isNew), message.body.candidates).imap(_ => ())
       }
-      update.imap(_ => message.consume)
-    }
+      message -> update.imap(_ => message.consume())
+    }.toMap
   }
 }
