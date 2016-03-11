@@ -131,7 +131,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 
-POST    /ext/keeps/:id/connections  @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
+POST    /ext/keeps/:id/recipients   @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries(allowOpenCollab: Boolean ?= false)
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
