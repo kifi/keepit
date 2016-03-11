@@ -87,11 +87,11 @@ object PreloadSet extends Logging {
   type SP = Seq[PreloadRequest]
   import PreloadRequest._
 
-  def filter(preloads: SP*)(implicit request: MaybeUserRequest[_]) = {
+  def filter(preloads: SP*)(implicit request: MaybeUserRequest[_]): Seq[PreloadRequest] = {
     val all = preloads.flatten
     val baseline = request match {
       case ur: UserRequest[_] =>
-        (userLoggedIn +: all.collect { case lipr: LoggedInPreloadRequest => lipr }).flatten
+        userLoggedIn ++ all.collect { case lipr: LoggedInPreloadRequest => lipr }
       case nur: NonUserRequest[_] => empty
     }
     baseline.distinct
