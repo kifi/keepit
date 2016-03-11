@@ -72,8 +72,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
     }
   }
-  val keepPermissions = KeepPermission.all
-
   def toSimpleKeepMembers(keep: Keep, owner: BasicUser, library: LibraryCardInfo): KeepMembers = {
     import KeepMember._
     KeepMembers(Seq(Library(library, keep.keptAt, Some(owner))), Seq(User(owner, keep.keptAt, Some(owner))), Seq.empty)
@@ -128,6 +126,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       status(result) must equalTo(OK)
       contentType(result) must beSome("application/json")
 
+      def permissions(keepId: Id[Keep]) = db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keepId = keepId, userIdOpt = Some(user1.id.get)) }
+
       val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
       val expected = Json.parse(s"""
         {
@@ -161,7 +161,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "members": ${Json.toJson(toSimpleKeepMembers(bookmark2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-            "permissions": ${Json.toJson(keepPermissions)}
+            "permissions": ${Json.toJson(permissions(bookmark2.id.get))}
             },
           {
             "author":${Json.toJson(author)},
@@ -192,7 +192,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "members": ${Json.toJson(toSimpleKeepMembers(bookmark1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-            "permissions": ${Json.toJson(keepPermissions)}
+            "permissions": ${Json.toJson(permissions(bookmark1.id.get))}
             }
         ]}
       """)
