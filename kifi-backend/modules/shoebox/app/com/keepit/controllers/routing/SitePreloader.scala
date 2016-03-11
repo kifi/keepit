@@ -5,10 +5,10 @@ import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ MaybeUserRequest, NonUserRequest, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
 import com.keepit.controllers.website.{ AngularApp, KeepsController, UserController }
 import com.keepit.model.User
 import play.api.libs.json.{ JsObject, Json }
+import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
