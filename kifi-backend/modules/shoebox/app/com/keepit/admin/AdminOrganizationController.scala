@@ -186,65 +186,6 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def importOrgsFromLinkedIn() = Action { implicit request =>
-    val allLines = request.body.asText.get
-    try {
-      val users = new AtomicInteger(0)
-      val createdOrgs = new AtomicInteger(0)
-      val existedOrgs = new AtomicInteger(0)
-      val createdCand = new AtomicInteger(0)
-      val activatedCand = new AtomicInteger(0)
-      val existedCand = new AtomicInteger(0)
-      allLines.split("\\r?\\n") foreach { line =>
-        try {
-          val args = line.split(",").map(_.trim).filterNot(arg => arg.matches("""[\s]*?"[\s]*"[\s]*""")).filterNot(_.isEmpty)
-          if (args.size < 2) {
-            throw new Exception(s"less then two args: ${args.mkString(",")}")
-          }
-          val userId = Id[User](args.head.toLong)
-          val orgNames = args.drop(1)
-          db.readWrite { implicit s =>
-            val user = userRepo.get(userId) //just to make sure we can...
-            users.incrementAndGet()
-            orgNames.foreach { orgName =>
-              val org = orgRepo.getOrgByName(orgName) match {
-                case Some(orgByName) =>
-                  existedOrgs.incrementAndGet()
-                  orgByName
-                case None =>
-                  implicit val context = HeimdalContext.empty
-                  orgCommander.createOrganization(OrganizationCreateRequest(requesterId = fakeOwnerId, initialValues = OrganizationInitialValues(name = orgName))) match {
-                    case Left(fail) =>
-                      throw new Exception(s"failed creating org $orgName for user $user: $fail")
-                    case Right(success) =>
-                      createdOrgs.incrementAndGet()
-                      log.info(success.toString)
-                      success.newOrg
-                  }
-              }
-              orgMembershipCandidateRepo.getByUserAndOrg(userId, org.id.get) match {
-                case Some(cand) if cand.state == OrganizationMembershipCandidateStates.INACTIVE =>
-                  orgMembershipCandidateRepo.save(cand.copy(state = OrganizationMembershipCandidateStates.ACTIVE))
-                  activatedCand.incrementAndGet()
-                case Some(cand) =>
-                  existedCand.incrementAndGet()
-                case None =>
-                  orgMembershipCandidateRepo.save(OrganizationMembershipCandidate(organizationId = org.id.get, userId = userId))
-              }
-            }
-          }
-        } catch {
-          case e: Exception => throw new Exception(s"error on line: $line $e", e)
-        }
-      }
-      Ok(s"for ${users.get} users: created ${createdOrgs.get} orgs, reviewed ${existedOrgs.get}, created ${createdCand.get} connections, activated ${activatedCand.get} connections and reviewed ${existedCand.get} connections")
-    } catch {
-      case e: Exception =>
-        log.error(allLines, e)
-        InternalServerError(e.toString)
-    }
-  }
-
   def findOrganizationByName(orgName: String) = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit session =>
       orgRepo.searchOrgsByNameFuzzy(orgName).sortBy(_.id.get)(Ordering[Id[Organization]].reverse).filter(_.state == OrganizationStates.ACTIVE)
