@@ -211,6 +211,7 @@ object SlackUserPresenceState {
   case object Active extends SlackUserPresenceState("active")
   case object Away extends SlackUserPresenceState("away")
   case object Unknown extends SlackUserPresenceState("unknown")
+  case object ERROR extends SlackUserPresenceState("error")
 }
 
 case class SlackUserPresence(
