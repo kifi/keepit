@@ -173,7 +173,8 @@ class KifiSiteRouter @Inject() (
     case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
       if (ur.getQueryString("preload").isDefined) {
-        AngularApp.app(None, preload(PreloadRequest.Me))
+        val userHome = if (request.path.length <= 1) PreloadSet.userHome else PreloadSet.empty
+        AngularApp.app(None, preload(PreloadSet(userHome)))
       } else {
         AngularApp.app().discardingCookies(PostRegIntent.discardingCookies: _*)
       }
@@ -423,7 +424,7 @@ class KifiSiteRouter @Inject() (
       Future.successful("")
   }
 
-  private def preload(reqs: PreloadRequest*)(implicit request: MaybeUserRequest[_]) = {
+  private def preload(reqs: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]) = {
     sitePreloader.preload(reqs)
   }
 
