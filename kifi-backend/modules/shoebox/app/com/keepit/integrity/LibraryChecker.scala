@@ -230,10 +230,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       var done = false
       val LIMIT = 500
       while (!done) {
-        val keepsToFix = keepRepo.getByLibraryIdAndExcludingVisibility(libId, excludeVisibility = Some(lib.visibility), limit = LIMIT)
-        total += keepsToFix.size
-        keepsToFix.foreach { keep => keepRepo.save(keep.copy(visibility = lib.visibility)) }
-        if (keepsToFix.size < LIMIT) done = true
+        val ktlsToFix = ktlRepo.getByLibraryWithInconsistentVisibility(libId, expectedVisibility = lib.visibility, Limit(LIMIT))
+        total += ktlsToFix.length
+        ktlsToFix.foreach { ktl => ktlCommander.syncWithLibrary(ktl, lib) }
+        if (ktlsToFix.isEmpty) done = true
       }
       total
     }

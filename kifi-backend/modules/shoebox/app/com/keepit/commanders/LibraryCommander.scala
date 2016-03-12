@@ -334,16 +334,18 @@ class LibraryCommanderImpl @Inject() (
     // Update visibility of keeps
     // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
     def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
-      val (keeps, lib, curViz) = db.readOnlyMaster { implicit s =>
+      val (ktls, lib, curViz) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(library.id.get)
         val viz = lib.visibility // It may have changed, re-check
-        val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ ktlRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500)).map(_.keepId)
-        val keeps = keepRepo.getByIds(keepIds).values.toSeq
-        (keeps, lib, viz)
+        val ktls = {
+          ktlRepo.getByLibraryWithInconsistentVisibility(lib.id.get, expectedVisibility = viz, Limit(500)) ++
+            ktlRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500))
+        }
+        (ktls, lib, viz)
       }
-      if (keeps.nonEmpty && curViz == changedVisibility) {
-        db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
-          keepCommander.syncWithLibrary(k, lib)(s)
+      if (ktls.nonEmpty && curViz == changedVisibility) {
+        db.readWriteBatch(ktls, attempts = 5) { (s, ktl) =>
+          ktlCommander.syncWithLibrary(ktl, lib)(s)
         }
         if (iter < 200) {
           // to prevent infinite loops if there's an issue updating keeps.

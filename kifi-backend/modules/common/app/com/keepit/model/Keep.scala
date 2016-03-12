@@ -42,18 +42,12 @@ case class Keep(
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
   connections: KeepConnections,
-  libraryId: Option[Id[Library]], // deprecated, prefer connections.libraries
-  visibility: LibraryVisibility, // deprecated, prefer KeepToLibrary.visibility
-  organizationId: Option[Id[Organization]] = None)
+  libraryId: Option[Id[Library]])
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
-
-  // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
-  //@deprecated("Use `visibility` instead", "2014-08-25")
-  def isPrivate = Keep.visibilityToIsPrivate(visibility)
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -68,7 +62,6 @@ case class Keep(
   // Hopefully this goes away soon, it manually forces the keep to be in exactly one library
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
-    visibility = lib.visibility,
     connections = connections.withLibraries(Set(lib.id.get))
   )
   def withNoLibrary = this.copy(libraryId = None, visibility = LibraryVisibility.SECRET, organizationId = None)
@@ -131,9 +124,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
     (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'libraryId).formatNullable[Id[Library]] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'organizationId).formatNullable[Id[Organization]]
+    (__ \ 'libraryId).formatNullable[Id[Library]]
   )(Keep.apply, unlift(Keep.unapply))
 }
 
