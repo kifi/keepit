@@ -218,6 +218,7 @@ class LibraryAnalytics @Inject() (
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder += ("libraryId", library.id.get.toString)
     contextBuilder += ("libraryOwnerId", library.ownerId.toString)
+    contextBuilder += ("isPrivate", library.isSecret)
     contextBuilder += ("libraryKeepCount", numKeepsInLibrary)
     contextBuilder += ("daysSinceLibraryCreated", numDays)
     library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
@@ -234,7 +235,6 @@ class LibraryAnalytics @Inject() (
         contextBuilder.data ++= existingContext.data
         contextBuilder += ("action", "keptPage")
         contextBuilder += ("source", bookmark.source.value)
-        contextBuilder += ("isPrivate", bookmark.isPrivate)
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
@@ -279,7 +279,6 @@ class LibraryAnalytics @Inject() (
         contextBuilder.data ++= context.data
         contextBuilder += ("action", "unkeptPage")
         contextBuilder += ("keepSource", keep.source.value)
-        contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)
         library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
@@ -299,7 +298,6 @@ class LibraryAnalytics @Inject() (
         contextBuilder.data ++= context.data
         contextBuilder += ("action", "rekeptPage")
         contextBuilder += ("keepSource", keep.source.value)
-        contextBuilder += ("isPrivate", keep.isPrivate)
         contextBuilder += ("hasTitle", keep.title.isDefined)
         contextBuilder += ("uriId", keep.uriId.toString)
         heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.KEPT, rekeptAt))
@@ -339,7 +337,6 @@ class LibraryAnalytics @Inject() (
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder.data ++= context.data
     contextBuilder += ("action", action)
-    contextBuilder += ("isPrivate", keep.isPrivate)
     contextBuilder += ("hasTitle", keep.title.isDefined)
     contextBuilder += ("uriId", keep.uriId.toString)
     contextBuilder += ("tagId", tag.id.get.toString)

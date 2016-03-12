@@ -35,6 +35,7 @@ class PageCommander @Inject() (
     domainRepo: DomainRepo,
     userToDomainRepo: UserToDomainRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     keepSourceCommander: KeepSourceCommander,
@@ -68,7 +69,7 @@ class PageCommander @Inject() (
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     // use the master. Keep, KeepToCollection, and Collection are heavily cached.
-    val (nUriStr, nUri, keepersFutureOpt, keep, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
+    val (nUriStr, nUri, keepersFutureOpt, keep, ktls, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
@@ -80,6 +81,7 @@ class PageCommander @Inject() (
       val keep: Option[Keep] = nUri.flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, userId)
       }
+      val ktls = keep.map(k => ktlRepo.getAllByKeepId(k.id.get))
       val tags: Seq[Collection] = keep.map { bm =>
         keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>
           collectionRepo.get(collId)
@@ -93,7 +95,7 @@ class PageCommander @Inject() (
         val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
         (position, neverShow)
       }.getOrElse((None, false))
-      (nUriStr, nUri, getKeepersFutureOpt, keep, tags, position, neverOnSite, host)
+      (nUriStr, nUri, getKeepersFutureOpt, keep, ktls, tags, position, neverOnSite, host)
     }
 
     val shown = nUri exists { uri =>
@@ -104,7 +106,7 @@ class PageCommander @Inject() (
 
     KeeperInfo(
       nUriStr,
-      keep.map { k => if (k.isPrivate) "private" else "public" },
+      if (ktls.exists(_.exists(_.visibility > LibraryVisibility.SECRET))) "public" else "private", // TODO(ryan): what is this even doing?
       keep.map(_.externalId),
       tags.map { t => SendableTag.from(t.summary) },
       position, neverOnSite, shown, keepers, keeps)
@@ -219,7 +221,7 @@ class PageCommander @Inject() (
       maxTagsShown = 0,
       items = Seq(AugmentableItem(normUri.id.get)))
 
-    val keepDatas = keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+    val keepDatas = keepDecorator.getPersonalKeeps(userId, Set(normUri.id.get)).getOrElse(normUri.id.get, Set.empty).toSeq.map(KeepData(_))
 
     augmentFuture map {
       case Seq(info) =>

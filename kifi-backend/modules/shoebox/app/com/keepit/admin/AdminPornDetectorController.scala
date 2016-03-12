@@ -1,6 +1,8 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.util.Ord._
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.rover.RoverServiceClient
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.Json
@@ -10,11 +12,8 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIRepo
+import com.keepit.model._
 import views.html
-import com.keepit.model.Restriction
-import com.keepit.model.KeepRepo
 import scala.collection.mutable.ArrayBuffer
 
 class AdminPornDetectorController @Inject() (
@@ -22,6 +21,7 @@ class AdminPornDetectorController @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
     bmRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext) extends AdminUserActions {
 
@@ -39,38 +39,35 @@ class AdminPornDetectorController @Inject() (
     val numBlocks = tokenize(text).sliding(10, 10).size
     rover.detectPorn(text).map { badTexts =>
       val badInfo = badTexts.map { x => x._1 + " ---> " + x._2 }.mkString("\n")
-      val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
+      val msg = if (badTexts.isEmpty) "input text is clean" else s"${badTexts.size} out of $numBlocks blocks look suspicious:\n" + badInfo
       Ok(msg.replaceAll("\n", "\n<br>"))
     }
   }
 
   def pornUrisView(page: Int, publicOnly: Boolean) = AdminUserPage { implicit request =>
-    val uris = db.readOnlyReplica { implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT) }.sortBy(-_.updatedAt.getMillis())
+    val uris = db.readOnlyReplica { implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT) }.sortBy(_.updatedAt)(descending)
     val PAGE_SIZE = 100
 
-    val retUris = publicOnly match {
-      case false => uris.toArray
-      case true => {
-        val need = (page + 1) * PAGE_SIZE
-        val buf = new ArrayBuffer[NormalizedURI]()
-        var (i, cnt) = (0, 0)
-        db.readOnlyReplica { implicit s =>
-          while (i < uris.size && cnt < need) {
-            val bms = bmRepo.getByUri(uris(i).id.get)
-            if (bms.exists(_.isPrivate == false)) {
-              buf.append(uris(i))
-              cnt += 1
-            }
-            i += 1
+    val retUris = if (!publicOnly) uris.toArray else {
+      val need = (page + 1) * PAGE_SIZE
+      val buf = new ArrayBuffer[NormalizedURI]()
+      var (i, cnt) = (0, 0)
+      db.readOnlyReplica { implicit s =>
+        while (i < uris.size && cnt < need) {
+          val ktls = ktlRepo.adminGetByUri(uris(i).id.get)
+          if (ktls.exists(!_.isPrivate)) {
+            buf.append(uris(i))
+            cnt += 1
           }
+          i += 1
         }
-        buf.toArray
       }
+      buf.toArray
     }
 
-    val pageCount = (retUris.size * 1.0 / PAGE_SIZE).ceil.toInt
+    val pageCount = (retUris.length * 1.0 / PAGE_SIZE).ceil.toInt
 
-    Ok(html.admin.pornUris(retUris.drop(page * PAGE_SIZE).take(PAGE_SIZE), retUris.size, page, pageCount, publicOnly))
+    Ok(html.admin.pornUris(retUris.drop(page * PAGE_SIZE).take(PAGE_SIZE), retUris.length, page, pageCount, publicOnly))
   }
 
   def removeRestrictions() = AdminUserPage { implicit request =>
@@ -79,10 +76,10 @@ class AdminPornDetectorController @Inject() (
     db.readWrite { implicit s =>
       ids.foreach { id =>
         val uri = uriRepo.get(id)
-        if (uri.restriction == Some(Restriction.ADULT)) uriRepo.save(uri.copy(restriction = None))
+        if (uri.restriction.safely.contains(Restriction.ADULT)) uriRepo.save(uri.copy(restriction = None))
       }
     }
-    Ok(s"${ids.size} uris' adult restriction removed")
+    Ok(s"${ids.length} uris' adult restriction removed")
   }
 
   def whitelist() = AdminUserPage.async { implicit request =>

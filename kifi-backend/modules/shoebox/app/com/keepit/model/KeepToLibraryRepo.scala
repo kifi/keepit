@@ -42,13 +42,15 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[KeepToLibrary]
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary]
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary]
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryWithInconsistentVisibility(libraryId: Id[Library], expectedVisibility: LibraryVisibility, limit: Limit)(implicit session: RSession): Seq[KeepToLibrary]
   def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
   def publishedLibrariesWithMostKeepsSince(limit: Limit, since: DateTime)(implicit session: RSession): Map[Id[Library], Int]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount
+  def adminGetByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Set[KeepToLibrary]
 }
 
 @Singleton
@@ -241,11 +243,14 @@ class KeepToLibraryRepoImpl @Inject() (
     activeRows.filter(ktl => ktl.uriId === uriId && ktl.libraryId === libId).firstOption
   }
 
-  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[KeepToLibrary] = {
+  def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Seq[KeepToLibrary] = {
     expectedOrgId match {
-      case None => (for (ktl <- rows if ktl.libraryId === libraryId && ktl.organizationId.isDefined) yield ktl).take(limit.value).list.toSet
-      case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl).take(limit.value).list.toSet
+      case None => (for (ktl <- rows if ktl.libraryId === libraryId && ktl.organizationId.isDefined) yield ktl).take(limit.value).list
+      case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl).take(limit.value).list
     }
+  }
+  def getByLibraryWithInconsistentVisibility(libraryId: Id[Library], expectedVisibility: LibraryVisibility, limit: Limit)(implicit session: RSession): Seq[KeepToLibrary] = {
+    rows.filter(ktl => ktl.libraryId === libraryId && ktl.visibility =!= expectedVisibility).take(limit.value).list
   }
 
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
@@ -312,5 +317,9 @@ class KeepToLibraryRepoImpl @Inject() (
       published = counts(LibraryVisibility.PUBLISHED),
       organization = counts(LibraryVisibility.ORGANIZATION),
       discoverable = counts(LibraryVisibility.DISCOVERABLE))
+  }
+
+  def adminGetByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Set[KeepToLibrary] = {
+    activeRows.filter(_.uriId === uriId).list.toSet
   }
 }
