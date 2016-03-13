@@ -1,0 +1,32 @@
+- hosts: ec2
+  become: yes
+  tasks:
+    - name: download YourKit
+      get_url:
+        url: https://www.yourkit.com/download/yjp-2016.02-b26-linux.tar.bz2
+        dest: /opt/yjp-2016.02-b26-linux.tar.bz2
+        mode: 0440
+    - name: unarchive YourKit
+      unarchive:
+        copy: no
+        src: /opt/yjp-2016.02-b26-linux.tar.bz2
+        dest: /opt
+        creates: /opt/yjp-2016.02
+    - name: symlink YourKit directory
+      file: src=/opt/yjp-2016.02 dest=/opt/yjp state=link
+    - name: download vmtouch
+      get_url:
+        url: https://github.com/hoytech/vmtouch/archive/vmtouch-1.0.2.tar.gz
+        dest: /opt/vmtouch-1.0.2.tar.gz
+        mode: 0440
+    - name: unarchive vmtouch tar
+      unarchive:
+        copy: no
+        src: /opt/vmtouch-1.0.2.tar.gz
+        dest: /opt
+        creates: /opt/vmtouch-vmtouch-1.0.2
+    - name: install vmtouch
+      shell: make && make install
+      args:
+        creates: /usr/local/bin/vmtouch
+        chdir: /opt/vmtouch-vmtouch-1.0.2
