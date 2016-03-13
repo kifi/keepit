@@ -1,31 +1,30 @@
 package com.keepit.commanders
-
 import com.google.inject.{ ImplementedBy, Inject, Provider }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.LibraryInviteEmailSender
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
-import com.keepit.common.time._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageConfig, S3ImageStore }
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
-import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model._
 import com.keepit.notify.model.event._
 import com.keepit.social.BasicUser
+import org.joda.time.ReadableDuration
 import play.api.http.Status._
-import play.api.libs.json.Json
-import scala.util.Try
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[LibraryInviteCommanderImpl])
 trait LibraryInviteCommander {
@@ -40,12 +39,15 @@ trait LibraryInviteCommander {
   def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
   def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String]
   def createInviteInfo(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String])(implicit session: RSession): Option[LibraryInviteInfo]
+  def sendInviteReminders(durationOfNoResponse: ReadableDuration, maxRemindersSent: Int): Future[Int]
+  def sendInviteReminder(invite: LibraryInvite): Future[Option[ElectronicMail]]
 
   type LibraryInviteeUser = { def isCollaborator: Boolean }
 }
 
 class LibraryInviteCommanderImpl @Inject() (
     db: Database,
+    clock: Clock,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -439,5 +441,29 @@ class LibraryInviteCommanderImpl @Inject() (
         (invite.createdAt, basicInviter)
       }
     } yield LibraryInviteInfo(access, lastInvitedAt, inviter)
+  }
+
+  // returns the # of invite reminder emails sent
+  def sendInviteReminders(durationOfNoResponse: ReadableDuration, maxRemindersSent: Int): Future[Int] = {
+    // do not send multiple emails in parallel (it's okay to take our time here)
+    val lock: ReactiveLock = new ReactiveLock
+    val maxLastReminderSentAt = clock.now().minus(durationOfNoResponse)
+
+    val pendingLibraryInvites = db.readOnlyReplica { implicit session =>
+      libraryInviteRepo.getAllByLastReminderSentAt(maxLastReminderSentAt, maxRemindersSent)
+    }
+
+    val emailRemindersF = pendingLibraryInvites.map { invite =>
+      lock.withLockFuture { sendInviteReminder(invite) }
+    }
+
+    Future.fold(emailRemindersF)(0) {
+      case (emailsSent, Some(_)) => emailsSent + 1
+      case (emailsSent, _) => emailsSent
+    }
+  }
+
+  def sendInviteReminder(invite: LibraryInvite): Future[Option[ElectronicMail]] = {
+    libraryInviteSender.get.sendInviteReminder(invite)
   }
 }
