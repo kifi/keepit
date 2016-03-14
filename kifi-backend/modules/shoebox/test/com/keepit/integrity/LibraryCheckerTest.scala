@@ -106,12 +106,12 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
           LibraryFactory.library().withId(Id[Library](1)).discoverable().saved
           KeepFactory.keep().withId(Id[Keep](1)).withLibraryId((Id[Library](1), LibraryVisibility.PUBLISHED, None)).saved
 
-          inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.PUBLISHED
+          ktlRepo.getAllByKeepId(Id[Keep](1)).head.visibility === LibraryVisibility.PUBLISHED
         }
 
         libraryChecker.keepVisibilityCheck(Id[Library](1)) === 1
 
-        db.readOnlyReplica { implicit s => inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.DISCOVERABLE }
+        db.readOnlyReplica { implicit s => ktlRepo.getAllByKeepId(Id[Keep](1)).head.visibility === LibraryVisibility.DISCOVERABLE }
       }
     }
     "fix deleted libraries" in {

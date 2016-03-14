@@ -21,7 +21,6 @@ object KeepFactory {
       userId = Some(userId),
       source = KeepSource.keeper,
       libraryId = None,
-      visibility = LibraryVisibility.PUBLISHED,
       note = None,
       connections = KeepConnections(Set.empty, Set(userId)),
       originalKeeperId = Some(userId),
@@ -46,7 +45,7 @@ object KeepFactory {
     def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
     def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
     def withLibrary(library: Library) = this.copy(keep = keep.withLibrary(library))
-    def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) = this.copy(keep = keep.copy(libraryId = Some(idAndInfo._1), visibility = idAndInfo._2))
+    def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) = this.copy(keep = keep.copy(libraryId = Some(idAndInfo._1)))
     def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
