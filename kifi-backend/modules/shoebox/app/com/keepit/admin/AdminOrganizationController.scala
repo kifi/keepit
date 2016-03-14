@@ -59,6 +59,7 @@ class AdminOrganizationController @Inject() (
     userStatsCommander: UserStatisticsCommander,
     orgStatsCommander: OrgStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
+    pathCommander: PathCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
@@ -471,10 +472,9 @@ class AdminOrganizationController @Inject() (
   }
 
   private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Unit] = {
-    import SlackAuthScope._
     import DescriptionElements._
     FutureHelpers.chunkySequentialExec(members, chunkSize = 100) { mem =>
-      val authLink = com.keepit.controllers.core.routes.AuthController.startWithSlack(Some(mem.slackTeamId), extraScopes = Some(SlackAuthScope.stringifySet(pushAnywhereWithKifiBot))).url
+      val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushAnywhereWithKifiBot)))
       val text = DescriptionElements.formatForSlack(DescriptionElements(
         "Kifi team here - we made some major upgrades by creating a bot. To take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), "here.",
         "\n\n", "Learn about the new features including a bot & personal stats on your usage ", "here" --> LinkElement("https://www.kifi.com/") // todo(Cam): use the blog post link when it's ready
