@@ -48,6 +48,7 @@ class AdminLibraryController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
+    ktlRepo: KeepToLibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -125,7 +126,7 @@ class AdminLibraryController @Inject() (
       } else Seq()
 
       val topDailyKeeps = if (page == 0) {
-        keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24))
+        ktlRepo.publishedLibrariesWithMostKeepsSince(Limit(topListSize), clock.now().minusHours(24)).toSeq
       } else Seq()
 
       val pagePublished = libraryRepo.pagePublished(Paginator(page, pageSize))

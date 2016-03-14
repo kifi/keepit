@@ -106,7 +106,7 @@ class PageCommander @Inject() (
 
     KeeperInfo(
       nUriStr,
-      if (ktls.exists(_.exists(_.visibility > LibraryVisibility.SECRET))) "public" else "private", // TODO(ryan): what is this even doing?
+      ktls.map(x => if (x.exists(_.visibility > LibraryVisibility.SECRET)) "public" else "private"),
       keep.map(_.externalId),
       tags.map { t => SendableTag.from(t.summary) },
       position, neverOnSite, shown, keepers, keeps)
