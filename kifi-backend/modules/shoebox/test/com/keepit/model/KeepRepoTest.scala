@@ -40,38 +40,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         1 === 1
       }
     }
-    "getPrivate" in {
-      withDb() { implicit injector =>
-        val (user1, user2, keep1, keep2, keep3) = db.readWrite { implicit s =>
-          val user1 = user().saved
-          val user2 = user().saved
-
-          val user1MainLib = LibraryFactory.library().withOwner(user1).discoverable().saved
-          val user1PrivateLib = LibraryFactory.library().withOwner(user1).secret().saved
-          val user1PublicLib = LibraryFactory.library().withOwner(user1).published().saved
-
-          val user2MainLib = LibraryFactory.library().withOwner(user2).discoverable().saved
-          val user2PrivateLib = LibraryFactory.library().withOwner(user2).secret().saved
-          val user2PublicLib = LibraryFactory.library().withOwner(user2).published().saved
-
-          val user1Keeps = keep().withUser(user1).withLibrary(user1MainLib).saved ::
-            keep().withUser(user1).withLibrary(user1PrivateLib).saved ::
-            keep().withUser(user1).withLibrary(user1PublicLib).saved :: Nil
-          keeps(20).map(_.withUser(user2).withLibrary(user2PublicLib)).saved
-          keeps(20).map(_.withUser(user2).withLibrary(user2PrivateLib)).saved
-          (user1, user2, user1Keeps(0), user1Keeps(1), user1Keeps(2))
-        }
-        db.readOnlyMaster { implicit s =>
-          val privates = inject[KeepRepo].getPrivate(user1.id.get, 0, 10)
-          privates.map(_.id.get) === Seq(keep2.id.get)
-          val public = inject[KeepRepo].getNonPrivate(user1.id.get, 0, 10)
-          public.map(_.id.get) === Seq(keep3.id.get, keep1.id.get)
-          inject[KeepRepo].getPrivate(user2.id.get, 0, 8).size === 8
-          inject[KeepRepo].getPrivate(user2.id.get, 10, 100).size === 10
-          inject[KeepRepo].getNonPrivate(user2.id.get, 0, 8).size === 8
-        }
-      }
-    }
     "getCountByLibrariesSince" in {
       withDb() { implicit injector =>
         val date = inject[FakeClock].now
@@ -145,13 +113,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           secondPage.forall { case (_, time) => time.getMillis > thirdPage.head._2.getMillis } === true
           1 === 1
         }
-      }
-    }
-
-    "format the sql query for getPrivateCountByTimeAndSource" in {
-      withDb() { implicit injector =>
-        db.readOnlyMaster { implicit session => keepRepo.getPrivateCountByTimeAndSource(currentDateTime, currentDateTime, KeepSource.keeper) }
-        1 === 1
       }
     }
 

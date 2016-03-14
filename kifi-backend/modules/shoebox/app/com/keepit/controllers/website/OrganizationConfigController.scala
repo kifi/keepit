@@ -3,9 +3,12 @@ package com.keepit.controllers.website
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ KeepCommander, PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
 import com.keepit.common.akka.TimeoutFuture
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.util.Ord
 import com.keepit.model.ClassFeature.{ Blacklist, SlackIngestionDomainBlacklist }
 import com.keepit.model._
 import com.keepit.payments._
@@ -97,11 +100,16 @@ class OrganizationConfigController @Inject() (
 
     if (readOnly) {
       // Just trying to avoid exposing private keeps
-      val sampleKeeps = blacklistedKeeps.filter(_.visibility != LibraryVisibility.SECRET).sortBy(-_.id.get.id).take(10)
-      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleKeeps.map(_.url)))
+      val sampleUrls = db.readOnlyReplica { implicit s =>
+        val visibleKeepIds = keepToLibraryRepo.getAllByKeepIds(blacklistedKeeps.map(_.id.get).toSet).filterValues(ktls => ktls.exists(_.visibility > LibraryVisibility.SECRET)).keySet
+        val aFewRecentKeepIds = visibleKeepIds.toSeq.sorted(Ord.descending[Id[Keep]]).take(10)
+        val visibleUrls = aFewRecentKeepIds.flatMap(kId => blacklistedKeeps.find(_.id.get == kId).map(_.url))
+        visibleUrls
+      }
+      Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleUrls))
     } else {
       val deletion = db.readWriteAsync { implicit session =>
-        blacklistedKeeps.map(keepCommander.deactivateKeep(_)(session)).length
+        blacklistedKeeps.foreach(keepCommander.deactivateKeep)
       }
       deletion.onComplete {
         case a =>

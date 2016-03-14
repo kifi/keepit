@@ -126,15 +126,6 @@ class OrphanCleaner @Inject() (
           val uri = normUriRepo.get(bookmark.uriId)
           uriIntegrityHelpers.improveKeepSafely(uri, bookmark)
         }
-
-        val correctVisibility = bookmark.libraryId.map(libraryRepo.get(_).visibility) getOrElse bookmark.visibility
-        if (correctVisibility != bookmark.visibility) {
-          log.error(s"Keep ${bookmark.id.get} has inconsistent visibility with its library ${bookmark.libraryId}. Expected: ${bookmark.visibility} Actual: ${correctVisibility}")
-        }
-
-        val updatedBookmark = improvedBookmark.copy(visibility = correctVisibility)
-        if (bookmark != updatedBookmark) { keepRepo.save(updatedBookmark) }
-
         hasUpdatedUri
       }
       if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq) // update high watermark
