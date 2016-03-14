@@ -72,8 +72,8 @@ case class Keep(
     connections = connections.withLibraries(Set(lib.id.get))
   )
 
-  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
+  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections, libraryId = libraryId orElse connections.libraries.headOption)
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries), libraryId = libraryId orElse libraries.headOption)
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater

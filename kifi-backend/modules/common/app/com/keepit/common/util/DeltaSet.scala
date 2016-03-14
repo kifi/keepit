@@ -26,8 +26,8 @@ object DeltaSet {
 
   private def fromSets[T](added: Set[T], removed: Set[T]): DeltaSet[T] = DeltaSet.empty.addAll(added).removeAll(removed)
   implicit def reads[T](implicit tReads: Reads[T]): Reads[DeltaSet[T]] = (
-    (__ \ 'add).read[Set[T]] and
-    (__ \ 'remove).read[Set[T]]
+    (__ \ 'add).readNullable[Set[T]].map(_ getOrElse Set.empty) and
+    (__ \ 'remove).readNullable[Set[T]].map(_ getOrElse Set.empty)
   )(fromSets[T] _)
 }
 
