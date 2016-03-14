@@ -2,7 +2,6 @@ package com.keepit.controllers.website
 
 import java.io.StringWriter
 
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.{ MaybeUserRequest, UserRequest, NonUserRequest }
 import com.keepit.common.core._
@@ -62,11 +61,9 @@ object AngularApp extends Controller with Logging {
     val noncedIdx2 = idx2.map { body =>
       body.replaceAllLiterally(NONCE_STRING, nonce)
     }(immediate)
-    val (fullHead, noncedFeet) = if (feet.nonEmpty) {
-      val fullHead = head.map(_ + preloadStub(nonce))(immediate)
-      val noncedFeet = feet.map(_.map(_.replaceAllLiterally(NONCE_STRING, nonce))(immediate))
-      (fullHead, noncedFeet)
-    } else (head, feet)
+    val fullHead = head.map(_ + preloadStub(nonce))(immediate)
+    val noncedFeet = feet.map(_.map(_.replaceAllLiterally(NONCE_STRING, nonce))(immediate))
+
     idx1 andThen enumerateFuture(fullHead) andThen noncedIdx2 andThen enumerateFutures(noncedFeet) andThen Enumerator.eof
   }
 

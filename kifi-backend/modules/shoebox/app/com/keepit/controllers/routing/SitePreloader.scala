@@ -12,6 +12,7 @@ import com.keepit.common.time._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
+import com.keepit.common.concurrent.ExecutionContext.immediate
 
 class SitePreloader @Inject() (
     userController: UserController,
@@ -21,13 +22,23 @@ class SitePreloader @Inject() (
 
   def preload(requests: Seq[PreloadRequest])(implicit request: MaybeUserRequest[_]): Seq[Future[String]] = {
     val startTime = clock.now.getMillis
+    val debugDelayMs = request.getQueryString("preloadDebug").flatMap(i => Try(i.toInt).toOption).getOrElse(0)
+    val debug = request.getQueryString("preloadDebug").isDefined
+
+    def debugDelay() = {
+      if (debug) Thread.sleep(debugDelayMs)
+    }
+
+    debugDelay()
+
     requests.map { r =>
       requestToData(r)(request).map(m => m.map(buildPayload(r.path, _)).getOrElse("")).map { data =>
-        if (request.getQueryString("logPreload").isDefined) {
+        if (debug) {
           log.info(s"[SitePreloader] Preloaded ${r.path} for ${request.userIdOpt} in ${clock.now.getMillis - startTime}. ${data.length}")
         }
+        debugDelay()
         data
-      }
+      }(immediate)
     }
   }
 
