@@ -106,6 +106,7 @@ class PathCommander @Inject() (
     Path(s"s/pd/${slackTeamId.value}/${slackUserId.value}/${SlackTeamMembership.encodeTeamAndUser(slackTeamId, slackUserId)}?turnOn=$turnOn")
   def welcomePageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/welcome/${basicUser.externalId.id}")
   def ownKeepsFeedPage: Path = Path(s"/?filter=own")
+  def startWithSlackPath(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]): Path = Path(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId, extraScopes).url)
 
   /**
    * I'd prefer if you just didn't use these routes
