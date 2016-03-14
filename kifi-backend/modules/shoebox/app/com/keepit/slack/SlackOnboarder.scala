@@ -41,8 +41,8 @@ object SlackOnboarder {
     def isWorking = working
     def dieIf(b: Boolean) = if (b) working = false
 
-    def intro() = parent.teamAgent.intro(this)()
-    def channels(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.channels(this)(membership, channels)
+    def syncingPublicChannels() = parent.teamAgent.syncingPublicChannels(this)()
+    def syncedPublicChannels(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.syncedPublicChannels(this)(membership, channels)
   }
 }
 
@@ -180,7 +180,7 @@ class SlackOnboarderImpl @Inject() (
     new TeamOnboardingAgent(team, membership, forceOverride)(this)
   }
   object teamAgent {
-    def intro(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
+    def syncingPublicChannels(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
       (for {
         msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
           SlackEmoji.arrowsCounterclockwise,
@@ -199,7 +199,8 @@ class SlackOnboarderImpl @Inject() (
         Future.successful(Unit)
       }
     }
-    def channels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+
+    def syncedPublicChannels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
       import DescriptionElements._
       FutureHelpers.accumulateRobustly(channels) { ch =>
         import SlackSearchRequest._
