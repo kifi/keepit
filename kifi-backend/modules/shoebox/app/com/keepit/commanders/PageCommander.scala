@@ -140,13 +140,27 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId, useMultilibLogic).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.sources, info.keeps)
+          if (filteredPage(normUri)) {
+            KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], info.keeps)
+          } else {
+            KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.sources, info.keeps)
+          }
         }
       }.getOrElse {
         Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[SourceAttribution], Seq.empty[KeepData]))
       }
     }
     infoF.flatten
+  }
+
+  private def filteredPage(uri: NormalizedURI): Boolean = {
+    // Hides social tooltip on popular domains: if URL is top-level and all domain segments are in HandleOps.topDomains, hide.
+    val domainSegments = for {
+      uri <- URI.parse(uri.url).toOption.toSeq if !uri.path.exists(_.length > 1) && uri.fragment.isEmpty && uri.query.isEmpty
+      host <- uri.host.toSeq
+      sig <- host.domain.drop(1).reverse // www.kifi.co.uk → List(www, kifi, co)
+    } yield sig
+    domainSegments.isEmpty || !domainSegments.exists(!HandleOps.topDomains.contains(_))
   }
 
   private val doNotMoveKeeperDomains = Set(

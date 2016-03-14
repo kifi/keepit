@@ -6,8 +6,4 @@
 - include: service.yml
 - include: eddie.yml
 - include: log_stats.yml
-
-# - get_url: url=https://www.yourkit.com/download/yjp-2014-build-14120-linux.tar.bz2 dest=/opt
-# - unarchive: copy=no src=/opt/yjp-2014-build-14120-linux.tar.bz2 dest=/opt/
-# - file: state=link src=/opt/yjp-2014-build-14120 dest=/opt/yjp
-
+- include: yourkit.yml

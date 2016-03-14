@@ -191,15 +191,24 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    val (uts, mts) = db.readOnlyReplica { implicit session =>
-      val uts = userThreadRepo.getThreadsForUser(userId, utq)
-      val mtMap = threadRepo.getByKeepIds(uts.map(_.keepId).toSet)
-      (uts, mtMap)
-    }
-    val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, mts.keySet)
-    notifJsonsByThreadFut.flatMap { notifJsonsByThread =>
-      val inputs = uts.flatMap { ut => notifJsonsByThread.get(ut.keepId).map(notif => (Json.toJson(notif), ut.unread, ut.uriId)) }
-      notificationJsonMaker.make(inputs, includeUriSummary)
+    utq.onUri.collect {
+      case nUriId if Set(3, 32, 128).contains(userId.id.toInt) => shoebox.getRelevantKeepsByUserAndUri(userId, nUriId)
+    }.getOrElse(Future.successful(Seq.empty)).flatMap { otherKeeps =>
+      val uts = db.readOnlyReplica { implicit session =>
+        userThreadRepo.getThreadsForUser(userId, utq)
+      }
+      val keeps = uts.map { ut =>
+        (ut.keepId, ut.unread, ut.uriId)
+      } ++ otherKeeps.collect {
+        case b if !uts.exists(_.keepId == b.id) =>
+          (b.id, false, NormalizedURI.decodePublicId(b.keep.uriId).toOption)
+      }
+      val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet)
+
+      notifJsonsByThreadFut.flatMap { notifJsonsByKeep =>
+        val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).map(notif => (Json.toJson(notif), b._2, b._3)) }
+        notificationJsonMaker.make(inputs, includeUriSummary)
+      }
     }
   }
 

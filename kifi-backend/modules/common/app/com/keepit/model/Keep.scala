@@ -5,14 +5,15 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db._
-import com.keepit.common.json.{ EnumFormat, TraversableFormat, TupleFormat }
+import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.{ BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicAuthor }
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -71,8 +72,8 @@ case class Keep(
     connections = connections.withLibraries(Set(lib.id.get))
   )
 
-  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
+  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections, libraryId = libraryId orElse connections.libraries.headOption)
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries), libraryId = libraryId orElse libraries.headOption)
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
@@ -257,6 +258,9 @@ object BasicKeep {
     (__ \ 'uriId).format[PublicId[NormalizedURI]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
+
+@json
+case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
 
 // All the important parts of a Keep to send across services
 // NOT to be sent to clients

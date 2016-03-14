@@ -77,6 +77,7 @@ trait KeepCommander {
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI]): Seq[BasicKeepWithId]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -120,6 +121,7 @@ class KeepCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
+    basicKeepCache: BasicKeepByIdCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionCommander: CollectionCommander,
     keepRepo: KeepRepo,
@@ -287,6 +289,19 @@ class KeepCommanderImpl @Inject() (
       keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
         .imap { case Seq(keepInfo) => keepInfo }
     }
+  }
+
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI]): Seq[BasicKeepWithId] = {
+    val keepIds = db.readOnlyReplica { implicit session =>
+      val libs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
+      val libKeeps = ktlRepo.getByLibraryIdsAndUriIds(libs, Set(nUriId)).map(_.keepId)
+      val userKeeps = ktuRepo.getByUserIdAndUriIds(userId, Set(nUriId)).map(_.keepId)
+      libKeeps.toSet ++ userKeeps
+    }
+
+    basicKeepCache.bulkGetOrElse(keepIds.map(BasicKeepIdKey)) { missingKeys =>
+      getBasicKeeps(missingKeys.map(_.id)).map { case (k, v) => BasicKeepIdKey(k) -> v }
+    }.toSeq.map(s => BasicKeepWithId(s._1.id, s._2))
   }
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
