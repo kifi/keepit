@@ -606,6 +606,13 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(attributions))
   }
 
+  def getRelevantKeepsByUserAndUri() = Action(parse.tolerantJson) { request =>
+    val userId = (request.body \ "userId").as[Id[User]]
+    val uriId = (request.body \ "uriId").as[Id[NormalizedURI]]
+    val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId)
+    Ok(Json.toJson(keeps))
+  }
+
   def getSlackTeamIds() = Action(parse.tolerantJson) { request =>
     val orgIds = (request.body \ "orgIds").as[Set[Id[Organization]]]
     val slackTeamIds = db.readOnlyMaster { implicit session =>
