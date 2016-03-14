@@ -455,12 +455,12 @@ class AdminOrganizationController @Inject() (
 
   def sendBackfillScopesDMToOwnersWithoutKifiBot = AdminUserAction.async(parse.tolerantJson) { implicit request =>
     val members = (request.body \ "members").as[Set[Id[SlackTeamMembership]]] // if defined, only send to these org owners
-    val slackUsersToSendTo = db.readOnlyMaster { implicit s =>
-      slackMembershipRepo.getAllByIds(members)
+    val (slackUsersToSendTo, slackUsersWeWouldveSentTo) = db.readOnlyMaster { implicit s =>
+      (slackMembershipRepo.getAllByIds(members), getOwnersToSendTo())
       //if (members.isDefined) slackMembershipRepo.getAllByIds(members.get)
       //else getOwnersToSendTo()
     }
-    sendBackfillScopesDM(slackUsersToSendTo).map(_ => Ok(Json.toJson(slackUsersToSendTo.map(_.slackTeamId))))
+    sendBackfillScopesDM(slackUsersToSendTo).map(_ => Ok(Json.toJson(slackUsersWeWouldveSentTo.map(_.id.get))))
   }
 
   private def getOwnersToSendTo()(implicit session: RSession): Set[SlackTeamMembership] = {
