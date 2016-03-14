@@ -10,13 +10,15 @@ import com.keepit.common.controller._
 import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
-import com.keepit.slack.models.SlackTeamRepo
-import com.keepit.slack.SlackClient
+import com.keepit.slack.models.{ SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
+import com.keepit.slack.{ SlackClientWrapper, SlackClient }
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
@@ -45,7 +47,8 @@ class AdminOrganizationController @Inject() (
     libRepo: LibraryRepo,
     libCommander: LibraryCommander,
     slackTeamRepo: SlackTeamRepo,
-    slackClient: SlackClient,
+    slackMembershipRepo: SlackTeamMembershipRepo,
+    slackClient: SlackClientWrapper,
     userEmailAddressRepo: UserEmailAddressRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgCommander: OrganizationCommander,
@@ -447,6 +450,37 @@ class AdminOrganizationController @Inject() (
     } else {
       val team = db.readOnlyMaster { implicit session => slackTeamRepo.getByOrganizationId(orgId) }
       Future.successful(Ok(s"Should we doIt? We'll delete ${slackLibraryIds.size} libraries for team $team."))
+    }
+  }
+
+  def sendBackfillScopesDMToOwnersWithoutKifiBot = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val members = (request.body \ "members").as[Set[Id[SlackTeamMembership]]] // if defined, only send to these org owners
+    val slackUsersToSendTo = db.readOnlyMaster { implicit s =>
+      slackMembershipRepo.getAllByIds(members)
+      //if (members.isDefined) slackMembershipRepo.getAllByIds(members.get)
+      //else getOwnersToSendTo()
+    }
+    sendBackfillScopesDM(slackUsersToSendTo).map(_ => Ok(Json.toJson(slackUsersToSendTo.map(_.slackTeamId))))
+  }
+
+  private def getOwnersToSendTo()(implicit session: RSession): Set[SlackTeamMembership] = {
+    val teams = slackTeamRepo.getAllActiveWithOrgAndWithoutKifiBotToken()
+    val orgs = orgRepo.getByIds(teams.flatMap(_.organizationId).toSet)
+    val teamIdByOwnerId = teams.flatMap { t => t.organizationId.flatMap(orgs.get).map(_.ownerId -> t.slackTeamId) }.toMap
+    slackMembershipRepo.getByUserIdsAndSlackTeams(teamIdByOwnerId).toSet
+  }
+
+  private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Unit] = {
+    import SlackAuthScope._
+    import DescriptionElements._
+    FutureHelpers.chunkySequentialExec(members, chunkSize = 100) { mem =>
+      val authLink = com.keepit.controllers.core.routes.AuthController.startWithSlack(Some(mem.slackTeamId), extraScopes = Some(SlackAuthScope.stringifySet(pushAnywhereWithKifiBot))).url
+      val text = DescriptionElements.formatForSlack(DescriptionElements(
+        "Kifi team here - we made some major upgrades by creating a bot. To take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), "here.",
+        "\n\n", "Learn about the new features including a bot & personal stats on your usage ", "here" --> LinkElement("https://www.kifi.com/") // todo(Cam): use the blog post link when it's ready
+      ))
+      val msg = SlackMessageRequest.fromKifi(text)
+      slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg).map(s => mem.id.get -> true).recover { case _ => mem.id.get -> false }
     }
   }
 }
