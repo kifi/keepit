@@ -292,17 +292,16 @@ class KeepCommanderImpl @Inject() (
   }
 
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI]): Seq[(Id[Keep], BasicKeep)] = {
-    val keeps = db.readOnlyReplica { implicit session =>
+    val keepIds = db.readOnlyReplica { implicit session =>
       val libs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
       val libKeeps = ktlRepo.getByLibraryIdsAndUriIds(libs, Set(nUriId)).map(_.keepId)
       val userKeeps = ktuRepo.getByUserIdAndUriIds(userId, Set(nUriId)).map(_.keepId)
-      val keepIds = libKeeps.toSet ++ userKeeps
-      keepRepo.getByIds(keepIds).values.toSeq
+      libKeeps.toSet ++ userKeeps
     }
 
-
-
-    ???
+    basicKeepCache.bulkGetOrElse(keepIds.map(BasicKeepIdKey)) { missingKeys =>
+      getBasicKeeps(missingKeys.map(_.id)).map { case (k, v) => BasicKeepIdKey(k) -> v }
+    }.toSeq.map(s => s._1.id -> s._2)
   }
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
