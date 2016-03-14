@@ -344,7 +344,7 @@ class AuthController @Inject() (
     provider: String,
     publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String],
     publicOrgId: Option[String], orgAuthToken: Option[String],
-    publicKeepId: Option[String], keepAuthToken: Option[String], slackTeamId: Option[String]) = Action.async(parse.anyContent) { implicit request =>
+    publicKeepId: Option[String], keepAuthToken: Option[String], slackTeamId: Option[String], slackExtraScopes: Option[String]) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map {
       case badResult if badResult.header.status == 400 =>
@@ -384,7 +384,7 @@ class AuthController @Inject() (
 
   def loginPage(
     intent: Option[String] = None, publicLibraryId: Option[String] = None, libAuthToken: Option[String] = None, publicOrgId: Option[String] = None,
-    orgAuthToken: Option[String] = None, publicKeepId: Option[String] = None, keepAuthToken: Option[String] = None) = MaybeUserAction { implicit request =>
+    orgAuthToken: Option[String] = None, publicKeepId: Option[String] = None, keepAuthToken: Option[String] = None, slackExtraScopes: Option[String] = None) = MaybeUserAction { implicit request =>
     val cookies = PostRegIntent.requestToCookies(request)
     request match {
       case ur: UserRequest[_] =>
@@ -589,15 +589,15 @@ class AuthController @Inject() (
     Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None).url, SEE_OTHER)
   }
 
-  def startWithSlack(slackTeamId: Option[SlackTeamId]) = MaybeUserAction { implicit request =>
+  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = MaybeUserAction { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))
-        val discardedCookie = DiscardingCookie(Slack.slackTeamIdKey)
+        val discardedCookies = Slack.cookieKeys.map(DiscardingCookie(_)).toSeq
         val slackTeamIdThatWasAroundForSomeMysteriousReason = slackTeamId orElse slackTeamIdFromCookie
-        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason).url, SEE_OTHER).discardingCookies(discardedCookie).withSession(request.session)
+        Redirect(com.keepit.controllers.website.routes.SlackOAuthController.addSlackTeam(slackTeamIdThatWasAroundForSomeMysteriousReason, extraScopes).url, SEE_OTHER).discardingCookies(discardedCookies: _*).withSession(request.session)
       case nonUserRequest: NonUserRequest[_] =>
-        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = slackTeamId.map(_ => PostRegIntent.Slack.intentValue), slackTeamId = slackTeamId.map(_.value)).url
+        val signupUrl = com.keepit.controllers.core.routes.AuthController.signup(provider = "slack", intent = slackTeamId.map(_ => PostRegIntent.Slack.intentValue), slackTeamId = slackTeamId.map(_.value), slackExtraScopes = extraScopes).url
         Redirect(signupUrl, SEE_OTHER).withSession(request.session)
     }
   }

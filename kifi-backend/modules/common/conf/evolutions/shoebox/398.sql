@@ -27,7 +27,7 @@ INSERT INTO `paid_plan` (`id`, `created_at`, `updated_at`, `state`, `name`, `bil
 VALUES
   (1, '2015-08-19 21:50:48', '2015-08-19 21:50:48', 'active', 'Test', 1, 0, 'normal',
   '["force_edit_libraries","invite_members","group_messaging","edit_organization","view_organization","remove_libraries","create_slack_integration","export_keeps","publish_libraries","view_members", "view_settings", "join_by_verifying", "slack_ingestion_reaction", "slack_digest_notif"]',
-  '{"publish_libraries":"members","group_messaging":"members","force_edit_libraries":"disabled","export_keeps":"admins","view_members":"anyone","create_slack_integration":"disabled","edit_organization":"admins",
+  '{"publish_libraries":"members","group_messaging":"members","force_edit_libraries":"disabled","export_keeps":"admins","view_members":"anyone","create_slack_integration":"members","edit_organization":"admins",
   "remove_libraries":"members","invite_members":"members","view_organization":"anyone", "view_settings":"members", "join_by_verifying":"nonmembers", "slack_ingestion_reaction": "disabled", "slack_digest_notif": "enabled", "slack_ingestion_domain_blacklist": [] }'
   );
 

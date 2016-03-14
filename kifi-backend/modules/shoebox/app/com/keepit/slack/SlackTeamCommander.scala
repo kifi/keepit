@@ -31,6 +31,7 @@ object SlackTeamCommander {
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
   def getSlackTeams(userId: Id[User]): Set[SlackTeam]
+  def getSlackTeamOpt(slackTeamId: SlackTeamId): Option[SlackTeam]
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(SlackTeam, Boolean)]
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam]
@@ -73,6 +74,8 @@ class SlackTeamCommanderImpl @Inject() (
       slackTeamRepo.getBySlackTeamIds(slackTeamIds).values.toSet
     }
   }
+
+  def getSlackTeamOpt(slackTeamId: SlackTeamId): Option[SlackTeam] = db.readOnlyMaster(implicit s => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId))
 
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeam, connectableOrgs) = db.readWrite { implicit session =>
