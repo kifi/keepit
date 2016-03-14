@@ -223,7 +223,7 @@ object KeepSource {
   )
 }
 
-case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
+case class KeepAndTags(keep: CrossServiceKeep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
   implicit val sourceFormat = SourceAttribution.internalFormat
@@ -265,21 +265,35 @@ case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
 //     2. Indirectly, via a library (keep -> library -> library-membership -> user)
 //     3. Indirectly, via an organization (keep -> library -> organization -> organization-membership -> user)
 case class CrossServiceKeep(
-  id: Id[Keep],
-  owner: Option[Id[User]], // the person who "owns" the keep, if any
-  users: Set[Id[User]], // all the users directly connected to the keep
-  libraries: Set[Id[Library]], // all the libraries directly connected to the keep
-  url: String,
-  uriId: Id[NormalizedURI],
-  keptAt: DateTime,
-  title: Option[String],
-  note: Option[String])
+    id: Id[Keep],
+    externalId: ExternalId[Keep],
+    state: State[Keep],
+    seq: SequenceNumber[Keep],
+    owner: Option[Id[User]], // the person who "owns" the keep, if any
+    users: Set[Id[User]], // all the users directly connected to the keep
+    libraries: Set[CrossServiceKeep.LibraryInfo], // all the libraries directly connected to the keep
+    url: String,
+    uriId: Id[NormalizedURI],
+    keptAt: DateTime,
+    title: Option[String],
+    note: Option[String]) {
+  def isActive: Boolean = state == KeepStates.ACTIVE
+}
 object CrossServiceKeep {
+  case class LibraryInfo(id: Id[Library], visibility: LibraryVisibility, organizationId: Option[Id[Organization]])
+  object LibraryInfo {
+    def fromLibrary(lib: Library) = LibraryInfo(lib.id.get, lib.visibility, lib.organizationId)
+    def fromKTL(ktl: KeepToLibrary) = LibraryInfo(ktl.libraryId, ktl.visibility, ktl.organizationId)
+  }
+  private implicit val libraryFormat = Json.format[LibraryInfo]
   implicit val format: Format[CrossServiceKeep] = (
     (__ \ 'id).format[Id[Keep]] and
+    (__ \ 'externalId).format[ExternalId[Keep]] and
+    (__ \ 'state).format[State[Keep]] and
+    (__ \ 'seq).format[SequenceNumber[Keep]] and
     (__ \ 'owner).formatNullable[Id[User]] and
     (__ \ 'users).format[Set[Id[User]]] and
-    (__ \ 'libraries).format[Set[Id[Library]]] and
+    (__ \ 'libraries).format[Set[CrossServiceKeep.LibraryInfo]] and
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'keptAt).format[DateTime] and

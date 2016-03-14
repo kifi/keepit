@@ -707,7 +707,7 @@ GET      /internal/shoebox/image/getUserImageUrl                   @com.keepit.c
 POST     /internal/shoebox/database/canViewLibrary                 @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 POST     /internal/shoebox/database/getPersonalKeeps               @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicKeepsByIds             @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
-POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxController.getCrossServiceKeepsByIds()
+POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxDataPipeController.getCrossServiceKeepsByIds()
 POST     /internal/shoebox/database/getDiscussionKeepsByIds        @com.keepit.controllers.internal.ShoeboxController.getDiscussionKeepsByIds()
 POST     /internal/shoebox/database/getBasicLibraryDetails         @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getLibraryCardInfos            @com.keepit.controllers.internal.ShoeboxController.getLibraryCardInfos()

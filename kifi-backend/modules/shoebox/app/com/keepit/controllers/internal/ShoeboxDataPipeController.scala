@@ -25,6 +25,8 @@ class ShoeboxDataPipeController @Inject() (
     normUriRepo: NormalizedURIRepo,
     collectionRepo: CollectionRepo,
     keepRepo: KeepRepo,
+    ktuRepo: KeepToUserRepo,
+    ktlRepo: KeepToLibraryRepo,
     sourceRepo: KeepSourceAttributionRepo,
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
@@ -187,6 +189,30 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
+  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
+    val (keeps, ktus, ktls) = db.readOnlyMaster { implicit s =>
+      val keepsById = keepRepo.getByIds(ids)
+      val ktusByKeep = ktuRepo.getAllByKeepIds(keepsById.keySet)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(keepsById.keySet)
+      (keepsById, ktusByKeep, ktlsByKeep)
+    }
+    keeps.map {
+      case (keepId, keep) => keepId -> CrossServiceKeep(
+        id = keepId,
+        externalId = keep.externalId,
+        state = keep.state,
+        seq = keep.seq,
+        owner = keep.userId,
+        users = ktus.getOrElse(keepId, Seq.empty).map(_.userId).toSet,
+        libraries = ktls.getOrElse(keepId, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet,
+        url = keep.url,
+        uriId = keep.uriId,
+        keptAt = keep.keptAt,
+        title = keep.title,
+        note = keep.note
+      )
+    }
+  }
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
