@@ -743,8 +743,7 @@ api.port.on({
         libraries: libraries,
         organizations: organizations,
         me: me,
-        experiments: experiments,
-        posting: experiments.indexOf('explicit_social_posting') >= 0
+        experiments: experiments
       });
 
       // preload keep details
