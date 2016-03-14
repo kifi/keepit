@@ -102,6 +102,9 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
   def markAsSyncing(slackTeamId: SlackTeamId, maxSyncingFor: Duration)(implicit session: RWSession): Boolean
+
+  //admin
+  def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam]
 }
 
 @Singleton
@@ -275,6 +278,8 @@ class SlackTeamRepoImpl @Inject() (
     val syncTimeoutAt = now.minusSeconds(syncTimeout.toSeconds.toInt)
     rows.filter(r => r.slackTeamId === slackTeamId && (r.publicChannelsLastSyncingAt.isEmpty || r.publicChannelsLastSyncingAt <= syncTimeoutAt)).map(r => (r.updatedAt, r.publicChannelsLastSyncingAt)).update((now, Some(now))) > 0
   }
+
+  def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam] = activeRows.filter(r => r.kifiBotToken.isEmpty && r.organizationId.isDefined).list
 
 }
 
