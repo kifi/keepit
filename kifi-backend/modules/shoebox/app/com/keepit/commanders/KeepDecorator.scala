@@ -223,7 +223,7 @@ class KeepDecoratorImpl @Inject() (
                 title = keep.title,
                 url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
                 path = bestEffortPath,
-                isPrivate = ktlsByKeep.getOrElse(keepId, Seq.empty).exists(_.visibility > LibraryVisibility.SECRET),
+                isPrivate = !ktlsByKeep.getOrElse(keepId, Seq.empty).exists(_.visibility > LibraryVisibility.SECRET),
                 user = keep.userId.flatMap(idToBasicUser.get),
                 author = author,
                 createdAt = Some(getTimestamp(keep)),

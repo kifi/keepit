@@ -25,12 +25,12 @@ object KeepFactory {
       connections = KeepConnections(Set.empty, Set(userId)),
       originalKeeperId = Some(userId),
       lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
-    ))
+    ), explicitLibs = Seq.empty, implicitLibs = Seq.empty)
   }
 
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
-  case class PartialKeep private[KeepFactory] (keep: Keep) {
+  case class PartialKeep private[KeepFactory] (keep: Keep, explicitLibs: Seq[Library], implicitLibs: Seq[(Id[Library], LibraryVisibility, Option[Id[Organization]])]) {
     def withNoUser() = this.copy(keep = keep.copy(userId = None, connections = keep.connections.copy(users = Set.empty)))
     def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
     def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
@@ -44,8 +44,9 @@ object KeepFactory {
     def withRandomTitle() = this.copy(keep = keep.copy(title = Some(RandomStringUtils.randomAlphabetic(25))))
     def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
     def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
-    def withLibrary(library: Library) = this.copy(keep = keep.withLibrary(library))
-    def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) = this.copy(keep = keep.copy(libraryId = Some(idAndInfo._1)))
+    def withLibrary(library: Library) = this.copy(keep = keep.withLibrary(library), explicitLibs = explicitLibs :+ library)
+    def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) =
+      this.copy(keep = keep.copy(libraryId = Some(idAndInfo._1)), implicitLibs = implicitLibs :+ idAndInfo)
     def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
