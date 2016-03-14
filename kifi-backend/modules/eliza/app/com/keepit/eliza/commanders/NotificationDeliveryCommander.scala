@@ -192,15 +192,16 @@ class NotificationDeliveryCommander @Inject() (
 
   def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     utq.onUri.collect {
-      case nUriId if Set(3,32,128).contains(userId.id.toInt) => shoebox.getRelevantKeepsByUserAndUri(userId, nUriId)
+      case nUriId if Set(3, 32, 128).contains(userId.id.toInt) => shoebox.getRelevantKeepsByUserAndUri(userId, nUriId)
     }.getOrElse(Future.successful(Seq.empty)).flatMap { otherKeeps =>
       val uts = db.readOnlyReplica { implicit session =>
         userThreadRepo.getThreadsForUser(userId, utq)
       }
       val keeps = uts.map { ut =>
         (ut.keepId, ut.unread, ut.uriId)
-      } ++ otherKeeps.map { case (kId, bk) =>
-        (kId, false, NormalizedURI.decodePublicId(bk.uriId).toOption)
+      } ++ otherKeeps.collect {
+        case b if !uts.exists(_.keepId == b.id) =>
+          (b.id, false, NormalizedURI.decodePublicId(b.keep.uriId).toOption)
       }
       val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet)
 
