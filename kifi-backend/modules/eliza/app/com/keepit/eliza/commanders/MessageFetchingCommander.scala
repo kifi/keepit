@@ -100,9 +100,4 @@ class MessageFetchingCommander @Inject() (
         } yield (BasicDiscussion(discussionKeep.url, nUrl, discussionKeep.keptBy.map(BasicUserLikeEntity(_)).toSet, Seq.empty), discussionKeep)
     }
   }
-
-  def getDiscussionsForUri(userId: Id[User], nUriId: Id[NormalizedURI]): Future[(BasicDiscussion, DiscussionKeep)] = {
-    // todo
-    ???
-  }
 }
