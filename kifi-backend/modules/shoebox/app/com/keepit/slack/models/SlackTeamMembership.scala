@@ -142,6 +142,10 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
+
+  //admin
+  def getAllByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Set[SlackTeamMembership]
+  def getByUserIdsAndSlackTeams(keys: Map[Id[User], SlackTeamId])(implicit session: RSession): Seq[SlackTeamMembership]
 }
 
 @Singleton
@@ -392,6 +396,15 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
+  }
+
+  def getAllByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Set[SlackTeamMembership] = activeRows.filter(r => r.id.inSet(ids)).list.toSet
+
+  def getByUserIdsAndSlackTeams(teamByUserId: Map[Id[User], SlackTeamId])(implicit session: RSession): Seq[SlackTeamMembership] = {
+    val userIds = teamByUserId.keySet
+    activeRows.filter(r => r.userId.inSet(userIds))
+      .list
+      .filter { stm => stm.userId.isDefined && stm.slackTeamId == teamByUserId(stm.userId.get) }
   }
 }
 
