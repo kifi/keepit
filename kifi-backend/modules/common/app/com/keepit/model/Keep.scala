@@ -65,16 +65,21 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
+  // Hopefully this goes away soon, it manually forces the keep to be in exactly one library
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
     visibility = lib.visibility,
     organizationId = lib.organizationId,
     connections = connections.withLibraries(Set(lib.id.get))
   )
+  def withNoLibrary = this.copy(libraryId = None, visibility = LibraryVisibility.SECRET, organizationId = None)
 
-  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections, libraryId = libraryId orElse connections.libraries.headOption)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries), libraryId = libraryId orElse libraries.headOption)
-  def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
+  def withConnections(newConnections: KeepConnections): Keep = {
+    if (newConnections.libraries.isEmpty) this.copy(connections = newConnections).withNoLibrary
+    else this.copy(connections = newConnections)
+  }
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withConnections(connections.withLibraries(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.withConnections(connections.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
   def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this

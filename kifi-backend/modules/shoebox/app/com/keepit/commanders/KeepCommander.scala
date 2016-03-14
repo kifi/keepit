@@ -725,7 +725,9 @@ class KeepCommanderImpl @Inject() (
   }
   def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
-    keepRepo.save(oldKeep.withConnections(oldKeep.connections.diffed(diff))) tap { newKeep =>
+    val libOpt = diff.libraries.added.headOption.map(libId => libraryRepo.get(libId))
+    val updatedKeep = libOpt.fold(oldKeep)(oldKeep.withLibrary).withConnections(oldKeep.connections.diffed(diff))
+    keepRepo.save(updatedKeep) tap { newKeep =>
       diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
       diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
       libraryRepo.getActiveByIds(diff.libraries.added).values.foreach { newLib =>
