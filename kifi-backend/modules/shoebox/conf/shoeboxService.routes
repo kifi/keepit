@@ -16,7 +16,7 @@ GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/slack               @com.keepit.controllers.website.SlackOAuthController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
 
 # These really need to be non-site endpoints
-GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None, extraScopes: Option[String] ?= None)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -52,9 +52,9 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
 GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
-GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None)
+GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None, extraScopes: Option[String] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None, slackTeamId: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None, slackTeamId: Option[String] ?= None, slackExtraScopes: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
