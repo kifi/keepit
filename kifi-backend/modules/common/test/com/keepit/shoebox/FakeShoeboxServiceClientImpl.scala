@@ -700,7 +700,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[BasicKeepWithId]] = Future.successful(Seq.empty)
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = Future.successful(Seq.empty)
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = Future.successful(Map.empty)
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = Future.successful(None)
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
