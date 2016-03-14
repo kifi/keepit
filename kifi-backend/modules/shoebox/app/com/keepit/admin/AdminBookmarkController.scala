@@ -169,7 +169,7 @@ class AdminBookmarksController @Inject() (
   def userBookmarkKeywords = AdminUserPage.async { implicit request =>
     val user = request.userId
     val uris = db.readOnlyReplica { implicit s =>
-      keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
+      keepRepo.getLatestKeepsURIByUser(user, 500)
     }.sortBy(x => x.id) // sorting helps s3 performance
 
     val word2vecFut = keywordSummaryCommander.batchGetWord2VecKeywords(uris)
