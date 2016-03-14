@@ -145,7 +145,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test1"},
             "createdAt":"${bookmark2.keptAt.toStandardTimeString}",
-            "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"${pubLibId1.id}"}],
+            "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${lib1.visibility.value}","libraryId":"${pubLibId1.id}"}],
             "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
             "keepersOmitted": 0,
             "keepersTotal": 3,
@@ -174,8 +174,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test1"},
             "createdAt":"${bookmark1.keptAt.toStandardTimeString}",
             "keeps":[
-              {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"},
-              {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${bookmark3.visibility.value}", "libraryId":"${pubLibId1.id}"}
+              {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${lib1.visibility.value}", "libraryId":"${pubLibId1.id}"},
+              {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${lib1.visibility.value}", "libraryId":"${pubLibId1.id}"}
             ],
             "keepers":[],
             "keepersOmitted": 0,

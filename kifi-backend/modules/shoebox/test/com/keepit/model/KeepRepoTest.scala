@@ -22,7 +22,6 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val savedKeep = keepRepo.save(Keep(
             uriId = Id[NormalizedURI](1),
             url = "http://www.kifi.com",
-            visibility = LibraryVisibility.ORGANIZATION,
             userId = Some(Id[User](3)),
             originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
@@ -33,7 +32,7 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           val cacheKeep = keepRepo.get(savedKeep.id.get)
 
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
-          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.visibility, k.userId, k.source, k.libraryId, k.connections)
+          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.userId, k.source, k.libraryId, k.connections)
           f(dbKeep) === f(savedKeep)
           f(dbKeep) === f(cacheKeep)
         }

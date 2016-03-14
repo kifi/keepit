@@ -171,9 +171,10 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
             keeps.map(_.uriId).toSet === origUris.map(_.id.get).toSet
             keeps.foreach { keep =>
               val Seq(ktl) = ktlRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None)
+              val lib = libraryRepo.get(ktl.libraryId)
               ktl.state === keep.state
               ktl.uriId === keep.uriId
-              ktl.visibility === keep.visibility
+              ktl.visibility === lib.visibility
             }
           }
           1 === 1

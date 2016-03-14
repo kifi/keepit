@@ -59,7 +59,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           keepRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
           keepRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
 
-          def activityCount(uriId: Id[NormalizedURI]) = keepRepo.all.count(k => k.uriId == uriId && !k.isPrivate)
+          def activityCount(uriId: Id[NormalizedURI]) = keepRepo.all.count(k => k.uriId == uriId)
           activityCount(uri1.id.get) === 2
           activityCount(uri2.id.get) === 1
           activityCount(uri3.id.get) === 0
