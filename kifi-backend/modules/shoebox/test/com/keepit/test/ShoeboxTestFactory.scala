@@ -94,28 +94,28 @@ class ShoeboxTestFactory @Inject() (
       Seq(
         KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(20)).withKeptAt(t1.plusMinutes(20))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libShield).saved,
+          .withLibrary(libShield).saved,
         KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(100)).withKeptAt(t1.plusMinutes(100))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libShield).saved,
+          .withLibrary(libShield).saved,
         KeepFactory.keep().withTitle("McDonalds").withUser(userIron).withUri(uri3)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(15)).withKeptAt(t1.plusMinutes(15))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+          .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds1").withUser(userIron).withUri(uri4)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(25)).withKeptAt(t1.plusMinutes(25))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+          .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds2").withUser(userIron).withUri(uri5)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(35)).withKeptAt(t1.plusMinutes(35))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+          .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds3").withUser(userIron).withUri(uri6)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(45)).withKeptAt(t1.plusMinutes(45))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+          .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds4").withUser(userIron).withUri(uri7)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(55)).withKeptAt(t1.plusMinutes(55))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+          .withLibrary(libMurica).saved,
         KeepFactory.keep().withTitle("McDonalds5").withUser(userIron).withUri(uri8)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(65)).withKeptAt(t1.plusMinutes(65))
-          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved
+          .withLibrary(libMurica).saved
       )
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience, keeps)

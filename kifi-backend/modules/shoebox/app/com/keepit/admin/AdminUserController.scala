@@ -9,6 +9,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -289,7 +290,13 @@ class AdminUserController @Inject() (
 
     val (user, bookmarks) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = keepRepo.getByUser(userId, Set(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val keepIds = {
+        val allKeepIds = ktuRepo.getAllByUserId(userId).map(_.keepId).toSet
+        if (showPrivates) allKeepIds else {
+          ktlRepo.getAllByKeepIds(allKeepIds).filterValues(_.exists(!_.isPrivate)).keySet
+        }
+      }
+      val bookmarks = keepRepo.getByIds(keepIds).values
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }

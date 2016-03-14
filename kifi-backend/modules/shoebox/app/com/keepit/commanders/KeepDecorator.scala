@@ -223,7 +223,7 @@ class KeepDecoratorImpl @Inject() (
                 title = keep.title,
                 url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
                 path = bestEffortPath,
-                isPrivate = keep.isPrivate,
+                isPrivate = ktlsByKeep.getOrElse(keepId, Seq.empty).exists(_.visibility > LibraryVisibility.SECRET),
                 user = keep.userId.flatMap(idToBasicUser.get),
                 author = author,
                 createdAt = Some(getTimestamp(keep)),
@@ -296,38 +296,30 @@ class KeepDecoratorImpl @Inject() (
   }
 
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]] = {
-    val allKeeps = db.readOnlyReplica { implicit session =>
+    val (keepsById, ktlsByKeep) = db.readOnlyReplica { implicit session =>
       val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
-      val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).toSet
-      val newWay = {
-        val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
-        val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
-        (direct ++ indirectViaLibraries) |> keepRepo.getByIds |> (_.values.toSet)
-      }
-      if (newWay.map(_.id.get) != oldWay.map(_.id.get)) {
-        log.error(s"[KTL-MATCH] getBasicKeeps($userId, $uriIds): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
-      }
-      if (useMultilibLogic) newWay else oldWay
+      val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
+      val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
+      val keepIds = direct ++ indirectViaLibraries
+      val keepsById = keepRepo.getByIds(keepIds)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+      (keepsById, ktlsByKeep)
     }
-    val grouped = allKeeps.groupBy(_.uriId)
-    uriIds.map { uriId =>
-      grouped.get(uriId) match {
-        case Some(keeps) =>
-          val userKeeps = keeps.map { keep =>
-            val mine = keep.userId.contains(userId)
-            val removable = true // all keeps here are writeable
-            PersonalKeep(
-              id = keep.externalId,
-              mine = mine,
-              removable = removable,
-              visibility = keep.visibility,
-              libraryId = keep.libraryId.map(Library.publicId)
-            )
-          }
-          uriId -> userKeeps
-        case _ =>
-          uriId -> Set.empty[PersonalKeep]
-      }
+    keepsById.groupBy { case (kId, k) => k.uriId }.map {
+      case (uriId, relevantKeeps) =>
+        val userKeeps = relevantKeeps.values.map { keep =>
+          val mine = keep.userId.safely.contains(userId)
+          val removable = true // all keeps here are writeable
+          val bestKtl = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).maxByOpt(_.visibility)
+          PersonalKeep(
+            id = keep.externalId,
+            mine = mine,
+            removable = removable,
+            visibility = bestKtl.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+            libraryId = bestKtl.map(ktl => Library.publicId(ktl.libraryId))
+          )
+        }.toSet
+        uriId -> userKeeps
     }.toMap
   }
 

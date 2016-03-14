@@ -19,11 +19,11 @@ class SuggestedSearchTermUpdaterTest extends Specification with ShoeboxTestInjec
     val keeps = KeepFactory.keeps(N)
     var hashtag = ""
     db.readWrite { implicit session =>
-      LibraryFactory.library().withId(Id[Library](1)).saved
+      val lib = LibraryFactory.library().withId(Id[Library](1)).saved
 
       (0 until N).map { i =>
         hashtag = Hashtags.addHashtagsToString(hashtag, Seq(Hashtag(s"h${i + 1}")))
-        keeps(i).withNote(hashtag).withLibrary(Id[Library](1)).withUser(Id[User](1)).saved
+        keeps(i).withNote(hashtag).withLibrary(lib).withUser(Id[User](1)).saved
       }
     }
   }

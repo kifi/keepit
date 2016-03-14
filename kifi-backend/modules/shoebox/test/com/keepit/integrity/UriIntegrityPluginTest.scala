@@ -47,9 +47,9 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
-            val bm1 = KeepFactory.keep().withUser(user).withUri(nuri0).withLibrary(main.id.get).saved
-            val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main.id.get).saved
-            val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main.id.get).saved
+            val bm1 = KeepFactory.keep().withUser(user).withUri(nuri0).withLibrary(main).saved
+            val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main).saved
+            val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main).saved
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -221,7 +221,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUsers * numUrisPerUser
           for ((user, uris) <- urisByUser) {
             val keptAt = inject[FakeClock].now.minusHours(Random.nextInt(1000))
-            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib.id.get).withUri(uri).withKeptAt(keptAt).saved }
+            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib).withUri(uri).withKeptAt(keptAt).saved }
           }
 
           val allUris = Random.shuffle(urisByUser.values.toSeq.flatten)

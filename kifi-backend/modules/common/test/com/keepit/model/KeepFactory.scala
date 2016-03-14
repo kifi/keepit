@@ -16,7 +16,6 @@ object KeepFactory {
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
-      visibility = LibraryVisibility.SECRET,
       title = None,
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = Some(userId),
@@ -45,15 +44,10 @@ object KeepFactory {
     def withRandomTitle() = this.copy(keep = keep.copy(title = Some(RandomStringUtils.randomAlphabetic(25))))
     def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
     def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
-    def withVisibility(visibility: LibraryVisibility) = this.copy(keep = keep.copy(visibility = visibility))
-    def discoverable() = this.copy(keep = keep.copy(visibility = LibraryVisibility.DISCOVERABLE))
-    def published() = this.copy(keep = keep.copy(visibility = LibraryVisibility.PUBLISHED))
-    def secret() = this.copy(keep = keep.copy(visibility = LibraryVisibility.SECRET))
     def withLibrary(library: Library) = this.copy(keep = keep.withLibrary(library))
-    def withLibrary(library: Id[Library]) = this.copy(keep = keep.copy(libraryId = Some(library)))
+    def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) = this.copy(keep = keep.copy(libraryId = Some(idAndInfo._1)))
     def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
-    def withOrganizationId(orgId: Option[Id[Organization]]) = this.copy(keep = keep.copy(organizationId = orgId))
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
     def withUri(uri: NormalizedURI) = this.copy(keep = keep.copy(uriId = uri.id.get, url = uri.url))
     def withUrl(url: String) = this.copy(keep = keep.copy(url = url))

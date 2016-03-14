@@ -161,8 +161,9 @@ class KeepCommanderImpl @Inject() (
 
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
-      val keeps = keepRepo.getByIds(ids)
-      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
+      val keepsById = keepRepo.getByIds(ids)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(ids)
+      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keepsById.values.flatMap(_.id).toSet)
       def getAuthor(keep: Keep): Option[BasicAuthor] = {
         attributions.get(keep.id.get).map {
           case (_, Some(user)) => BasicAuthor.fromUser(user)
@@ -175,22 +176,22 @@ class KeepCommanderImpl @Inject() (
         }
       }
       val keepInfos = for {
-        (kId, keep) <- keeps
+        (kId, keep) <- keepsById
         author <- getAuthor(keep)
       } yield {
-        (kId, keep, author)
+        (kId, keep, author, ktlsByKeep.getOrElse(kId, Seq.empty))
       }
       (attributions, keepInfos)
     }
 
     keepInfos.map {
-      case (kId, keep, author) =>
+      case (kId, keep, author, ktls) =>
         kId -> BasicKeep(
           id = keep.externalId,
           title = keep.title,
           url = keep.url,
-          visibility = keep.visibility,
-          libraryId = keep.libraryId.map(Library.publicId),
+          visibility = ktls.headOption.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+          libraryId = ktls.headOption.map(ktl => Library.publicId(ktl.libraryId)),
           author = author,
           attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
           uriId = NormalizedURI.publicId(keep.uriId)
@@ -857,8 +858,6 @@ class KeepCommanderImpl @Inject() (
       url = k.url,
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
-      visibility = toLibrary.visibility,
-      organizationId = toLibrary.organizationId,
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),

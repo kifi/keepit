@@ -111,7 +111,7 @@ class AdminBookmarksController @Inject() (
     val userMap = mutable.Map[Id[User], User]()
 
     def bookmarksInfos() = {
-      Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>
+      Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>
         val usersFuture = Future {
           timing("load user") {
             db.readOnlyMaster { implicit s =>
@@ -148,19 +148,10 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val privateKeeperKeepCountFuture = Future {
-      timing("load private keeper counts from today") {
-        db.readOnlyReplica { implicit s =>
-          keepRepo.getPrivateCountByTimeAndSource(clock.now().minusDays(1), clock.now(), KeepSource.keeper)
-        }
-      }
-    }
-
     for {
       bookmarksAndUsers <- bookmarksInfos()
       overallCount <- bookmarkTotalCountFuture
       counts <- bookmarkTodayAllCountsFuture
-      privateKeeperKeepCount <- privateKeeperKeepCountFuture
     } yield {
       val pageCount: Int = overallCount / PAGE_SIZE + 1
       val keeperKeepCount = counts.find(_._1 == KeepSource.keeper).map(_._2)
@@ -171,7 +162,7 @@ class AdminBookmarksController @Inject() (
         case cnt if cnt._1 == KeepSource.default => ("Default new user keeps", cnt._2)
         case cnt => (cnt._1.value, cnt._2)
       }.sortBy(v => -v._2)
-      Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, privateKeeperKeepCount, tweakedCounts, total))
+      Ok(html.admin.bookmarks(bookmarksAndUsers, page, overallCount, pageCount, keeperKeepCount, tweakedCounts, total))
     }
   }
 
@@ -205,7 +196,7 @@ class AdminBookmarksController @Inject() (
   def bookmarksKeywordsPageView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
-    val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
+    val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, Set(KeepStates.INACTIVE)) } }
     val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
       case ex: Throwable => -1
     }

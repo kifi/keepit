@@ -94,11 +94,11 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
         var fixedInPreviousBatch = 0
         do {
           db.readWrite { implicit session =>
-            val invalidKeepIds = keepRepo.getByLibraryWithInconsistentOrgId(library.id.get, library.organizationId, limit = Limit(100))
-            invalidKeepIds.foreach { invalidKeepId =>
-              updateKeep(invalidKeepId, _.copy(organizationId = library.organizationId))
+            val invalidKtls = ktlRepo.getByLibraryWithInconsistentOrgId(library.id.get, library.organizationId, limit = Limit(100))
+            invalidKtls.foreach { ktl =>
+              ktlRepo.save(ktl.withOrganizationId(library.organizationId))
             }
-            fixedInPreviousBatch = invalidKeepIds.size
+            fixedInPreviousBatch = invalidKtls.size
           }
         } while (fixedInPreviousBatch > 0)
       }
@@ -230,10 +230,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       var done = false
       val LIMIT = 500
       while (!done) {
-        val keepsToFix = keepRepo.getByLibraryIdAndExcludingVisibility(libId, excludeVisibility = Some(lib.visibility), limit = LIMIT)
-        total += keepsToFix.size
-        keepsToFix.foreach { keep => keepRepo.save(keep.copy(visibility = lib.visibility)) }
-        if (keepsToFix.size < LIMIT) done = true
+        val ktlsToFix = ktlRepo.getByLibraryWithInconsistentVisibility(libId, expectedVisibility = lib.visibility, Limit(LIMIT))
+        total += ktlsToFix.length
+        ktlsToFix.foreach { ktl => ktlCommander.syncWithLibrary(ktl, lib) }
+        if (ktlsToFix.isEmpty) done = true
       }
       total
     }

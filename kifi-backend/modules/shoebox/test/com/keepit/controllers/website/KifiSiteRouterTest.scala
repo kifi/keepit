@@ -286,7 +286,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         val (lib, keep) = db.readWrite { implicit s =>
           val lib = LibraryFactory.library().withName("Lincoln's Speeches").withOwner(user1.id.get).withVisibility(LibraryVisibility.PUBLISHED).saved
           val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).withTitle("The Gettysburg Address").withNote("Four score and seven years ago...")
-            .withUrl("www.lincoln.gov/speeches/gettysburg").withVisibility(LibraryVisibility.PUBLISHED).saved
+            .withUrl("www.lincoln.gov/speeches/gettysburg").saved
           (lib, keep)
         }
 
