@@ -1,0 +1,14 @@
+- name: download YourKit
+  get_url:
+    # signed URL expires 2017-03-16; can't use yourkit.com download because it changes every time a new release comes out
+    url: https://fortytwo-ansible-builds.s3.amazonaws.com/yjp-2016.02-b30-linux.tar.bz2?AWSAccessKeyId=AKIAJIQ2G4RBQROB5O2Q&Expires=1489426022&Signature=FkS5sdcQ1R02%2BgmuS4Fu0iksc80%3D
+    dest: /opt/yjp-2016.02-b30-linux.tar.bz2
+    mode: 0440
+- name: unarchive YourKit
+  unarchive:
+    copy: no
+    src: /opt/yjp-2016.02-b30-linux.tar.bz2
+    dest: /opt
+    creates: /opt/yjp-2016.02
+- name: symlink YourKit directory
+  file: src=/opt/yjp-2016.02 dest=/opt/yjp state=link
