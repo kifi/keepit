@@ -1,0 +1,16 @@
+- name: download vmtouch
+  get_url:
+    url: https://github.com/hoytech/vmtouch/archive/vmtouch-1.0.2.tar.gz
+    dest: /opt/vmtouch-1.0.2.tar.gz
+    mode: 0440
+- name: unarchive vmtouch tar
+  unarchive:
+    copy: no
+    src: /opt/vmtouch-1.0.2.tar.gz
+    dest: /opt
+    creates: /opt/vmtouch-vmtouch-1.0.2
+- name: install vmtouch
+  shell: make && make install
+  args:
+    creates: /usr/local/bin/vmtouch
+    chdir: /opt/vmtouch-vmtouch-1.0.2

@@ -5,6 +5,16 @@
   vars_files:
     - vars/ec2.yml
   tasks:
+    # check is java7 was already installed by apt; if it is then we can't use the williamyeh.oracle-java role
+    - name: is oracle-java7 already installed via apt?
+      shell: dpkg -s oracle-java7-installer 1>/dev/null 2>/dev/null
+      register: apt_java7_installer
+      changed_when: False
+      ignore_errors: True
+
+    - name: set java7_installed_with_apt
+      set_fact: "java7_installed_with_apt={{ apt_java7_installer.rc == 0 }}"
+
     # remove old init.d script
     - name: remove init.d/kifi-register-host service
       file: state=absent path=/etc/init.d/kifi-register-host

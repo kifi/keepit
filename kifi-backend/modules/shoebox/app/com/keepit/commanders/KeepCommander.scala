@@ -83,9 +83,9 @@ trait KeepCommander {
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
+  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
@@ -724,12 +724,16 @@ class KeepCommanderImpl @Inject() (
 
     newKeep
   }
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
-    val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
-
-    newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
-    newKeep
+    keepRepo.save(oldKeep.withConnections(oldKeep.connections.diffed(diff))) tap { newKeep =>
+      diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
+      diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
+      libraryRepo.getActiveByIds(diff.libraries.added).values.foreach { newLib =>
+        ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
+      }
+      diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
+    }
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)

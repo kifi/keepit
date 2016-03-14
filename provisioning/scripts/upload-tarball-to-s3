@@ -15,5 +15,6 @@ tar \
   --exclude ".*.sw?" \
   --exclude ".git/" \
   --exclude ".vagrant/" \
+  --exclude ".envrc" \
   -cvjf tarballs/ansible.tar.bz2 ./
 aws --profile $AWSCLI_PROFILE s3 cp tarballs/ansible.tar.bz2 s3://fortytwo-ansible-builds/ansible.tar.bz2

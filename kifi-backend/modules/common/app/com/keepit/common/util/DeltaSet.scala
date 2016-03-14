@@ -1,5 +1,8 @@
 package com.keepit.common.util
 
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
 case class DeltaSet[T](djs: DisjointSets[T, DeltaSet.AddOrRemove]) {
   def addAll(items: Set[T]) = this.copy(djs = djs.add(items, DeltaSet.Add))
   def removeAll(items: Set[T]) = this.copy(djs = djs.add(items, DeltaSet.Remove))
@@ -9,6 +12,9 @@ case class DeltaSet[T](djs: DisjointSets[T, DeltaSet.AddOrRemove]) {
 
   def added: Set[T] = djs.getSet(DeltaSet.Add)
   def removed: Set[T] = djs.getSet(DeltaSet.Remove)
+  def all: Set[T] = djs.elems.keySet
+
+  def map[S](f: T => S): DeltaSet[S] = this.copy(djs = djs.map(f))
 }
 
 object DeltaSet {
@@ -17,5 +23,11 @@ object DeltaSet {
   case object Remove extends AddOrRemove
 
   def empty[T]: DeltaSet[T] = DeltaSet(DisjointSets.empty[T, AddOrRemove])
+
+  private def fromSets[T](added: Set[T], removed: Set[T]): DeltaSet[T] = DeltaSet.empty.addAll(added).removeAll(removed)
+  implicit def reads[T](implicit tReads: Reads[T]): Reads[DeltaSet[T]] = (
+    (__ \ 'add).read[Set[T]] and
+    (__ \ 'remove).read[Set[T]]
+  )(fromSets[T] _)
 }
 

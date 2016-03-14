@@ -94,6 +94,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getByOrganizationId(orgId: Id[Organization])(implicit session: RSession): Option[SlackTeam]
   def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Option[SlackTeam]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], SlackTeamId]
+  def getBySlackTeamIdNoCache(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam]
@@ -228,6 +229,10 @@ class SlackTeamRepoImpl @Inject() (
     slackTeamIdByOrganizationIdCache.bulkGetOrElseOpt(orgIds.map(SlackTeamIdOrgIdKey(_))) { missingKeys =>
       getByOrganizationIds(missingKeys.map(_.organizationId)).map { case (orgId, slackTeamOpt) => SlackTeamIdOrgIdKey(orgId) -> slackTeamOpt.map(_.slackTeamId) }
     }.collect { case (SlackTeamIdOrgIdKey(orgId), Some(slackTeamId)) => orgId -> slackTeamId }
+  }
+
+  def getBySlackTeamIdNoCache(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
+    rows.filter(row => row.slackTeamId === slackTeamId && row.state =!= excludeState.orNull).firstOption
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
