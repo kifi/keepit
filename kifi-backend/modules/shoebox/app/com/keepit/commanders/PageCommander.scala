@@ -162,7 +162,7 @@ class PageCommander @Inject() (
       host <- uri.host.toSeq
       sig <- host.domain.drop(1).reverse // www.kifi.co.uk → List(www, kifi, co)
     } yield sig
-    !domainSegments.exists(!HandleOps.topDomains.contains(_))
+    domainSegments.nonEmpty && !domainSegments.exists(!HandleOps.topDomains.contains(_))
   }
 
   private val doNotMoveKeeperDomains = Set(
