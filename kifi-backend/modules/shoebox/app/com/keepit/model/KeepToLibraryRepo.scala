@@ -113,7 +113,7 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select organization_id, count(*) from keep_to_library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state = 'inactive' or experiment_type = 'fake') and state = 'active' and kept_at > DATE_SUB(NOW(), INTERVAL 3 DAY)  group by organization_id order by count(*) desc"""
+    val q = sql"""select organization_id, count(*) from keep_to_library where organization_id is not null and organization_id != 9 and organization_id not in (select organization_id from organization_experiment where state != 'inactive' and experiment_type = 'fake') and state = 'active' and added_at > DATE_SUB(NOW(), INTERVAL 3 DAY)  group by organization_id order by count(*) desc"""
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
