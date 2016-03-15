@@ -86,10 +86,10 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getUsersByAddresses(addresses: Set[EmailAddress], excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Map[EmailAddress, Id[User]] = {
-    val hashesByEmail = addresses.map(address => address -> EmailAddressHash.hashEmailAddress(address)).toMap
-    val candidates = rows.filter(row => row.address.inSet(addresses) && row.state =!= excludeState.orNull).list.groupBy(_.address)
+    val hashes = addresses.map(EmailAddressHash.hashEmailAddress)
+    val candidates = rows.filter(row => row.hash.inSet(hashes) && row.state =!= excludeState.orNull).list.groupBy(_.address)
     candidates.collect {
-      case (email, Seq(userEmail)) if hashesByEmail.get(email).safely.contains(userEmail.hash) => email -> userEmail.userId
+      case (email, Seq(userEmail)) if addresses.exists(_ equalsIgnoreCase email) => email -> userEmail.userId
     }
   }
 
