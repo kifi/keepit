@@ -133,7 +133,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[BasicKeepWithId]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
@@ -864,8 +864,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
 
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[BasicKeepWithId]] = {
-    val payload = Json.obj("userId" -> userId, "uriId" -> uriId)
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = {
+    val payload = Json.obj("userId" -> userId, "uriId" -> uriId, "before" -> before, "limit" -> limit)
     call(Shoebox.internal.getRelevantKeepsByUserAndUri(), payload).map { j =>
       j.json.asOpt[Seq[BasicKeepWithId]].getOrElse(Seq.empty)
     }
