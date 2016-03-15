@@ -31,7 +31,6 @@ trait SlackClientWrapper {
   // These will potentially yield failed futures if the request cannot be completed
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
 
   // These are APIs token-agnostic - will first try preferred tokens first then whichever they can find
   def getChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]]
@@ -189,10 +188,6 @@ class SlackClientWrapperImpl @Inject() (
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
     slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
-  }
-
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
-    slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
   }
 
   private def getSlackTeamId(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamId] = {

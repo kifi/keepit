@@ -84,7 +84,6 @@ class FakeSlackClientImpl extends SlackClient {
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = Future.successful(None)
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = Future.successful(Seq.range(1, 10).map { x =>
     SlackPublicChannelInfo(

@@ -68,7 +68,6 @@ trait SlackClient {
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo]
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]]
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo]
@@ -150,22 +149,6 @@ class SlackClientImpl(
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
     slackCall[JsValue](SlackAPI.AddReaction(token, reaction, channelId, messageTimestamp)).imap(_ => ())
-  }
-
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
-    val searchChannelIdFuture = token match {
-      case userToken: SlackUserAccessToken =>
-        val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
-        searchMessages(userToken, searchRequest).map(_.messages.matches.headOption.map(_.channel.id))
-      case botToken: SlackBotAccessToken => Future.successful(None)
-    }
-
-    searchChannelIdFuture.flatMap {
-      case Some(channelId) => Future.successful(Some(channelId))
-      case None => getPublicChannels(token, excludeArchived = false).map { channels =>
-        channels.collectFirst { case channel if channel.channelName == channelName => channel.channelId }
-      }
-    }
   }
 
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = {
