@@ -126,8 +126,8 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
-    case SyncPublicChannels() => SlackAuthScope.syncPublicChannelsWithKifiBot
-    case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushAnywhereWithKifiBot else Set.empty
+    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
+    case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushToPublicChannels else Set.empty
   }
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {

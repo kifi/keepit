@@ -281,8 +281,44 @@ class SlackTeamCommanderImpl @Inject() (
                 case Some(membership) =>
                   val shouldSync = {
                     val now = clock.now()
-                    val alreadySyncing = team.publicChannelsLastSyncingAt.exists(_ isAfter now.minusSeconds(SlackTeamCommander.channelSyncTimeout.toSeconds.toInt))
-                    val syncedRecently = team.publicChannelsLastSyncedAt.exists(_ isAfter now.minusSeconds(SlackTeamCommander.channelSyncBuffer.toSeconds.toInt))
+                    val alreadySyncing = team.publicChannelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
+                    val syncedRecently = team.publicChannelsLastSyncedAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncBuffer))
+                    !alreadySyncing && !syncedRecently
+                  }
+                  if (shouldSync) {
+                    val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
+                    val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
+                    onboardingAgent.syncingPublicChannels().flatMap { _ =>
+                      slackClient.getChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
+                        val updatedTeam = {
+                          val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
+                          val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
+                          if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
+                        }
+                        def shouldBeIgnored(channel: SlackPublicChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId)
+                        val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
+                        val futureSlackChannelLibraries = SafeFuture {
+                          setupPublicSlackChannels(updatedTeam, membership, channelsToIntegrate)
+                        } flatMap { slackChannelLibraries =>
+                          onboardingAgent.syncedPublicChannels(membership, channelsToIntegrate).map { _ =>
+                            slackChannelLibraries
+                          }
+                        }
+                        (orgId, channelsToIntegrate.map(_.channelIdAndName).toSet, futureSlackChannelLibraries)
+                      }
+                    }
+                  } else {
+                    Future.successful((orgId, Set.empty[SlackChannelIdAndName], Future.successful(Map.empty[SlackChannelIdAndName, Either[LibraryFail, Library]])))
+                  }
+                case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+              }
+            } else Future.failed(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          case None => Future.failed(SlackActionFail.TeamNotConnected(team.slackTeamId, team.slackTeamName))
+        }
+      case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
+    }
+  }
                     !alreadySyncing && !syncedRecently
                   }
                   if (shouldSync) {
