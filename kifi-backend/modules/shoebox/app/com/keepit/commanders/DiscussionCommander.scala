@@ -5,9 +5,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
+import com.keepit.discussion.{ DiscussionFail, Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -29,6 +28,7 @@ trait DiscussionCommander {
 class DiscussionCommanderImpl @Inject() (
   db: Database,
   keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
   keepCommander: KeepCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
@@ -115,14 +115,17 @@ class DiscussionCommanderImpl @Inject() (
     }
   }
   def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepConnectionsDiff): Future[Unit] = {
-    val keepPermissions = db.readOnlyReplica { implicit s =>
-      permissionCommander.getKeepPermissions(keepId, Some(userId))
+    val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
+      val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
+      val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
+      (keepPermissions, uriCollisionsByLib)
     }
     val errs: Stream[DiscussionFail] = Stream(
       (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
       (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
       (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS
+      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+      uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
     ).collect { case (true, fail) => fail }
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
