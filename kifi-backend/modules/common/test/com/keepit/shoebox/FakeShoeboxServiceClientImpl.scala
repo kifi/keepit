@@ -562,7 +562,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
     val changedKeeps = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
     val flattenTags: (Id[Collection], Set[Id[Keep]]) => Set[(Id[Keep], Hashtag)] = {
@@ -575,6 +575,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     Future.successful(changedKeepsAndTags)
   }
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = Future.successful(Seq.empty)
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
 
