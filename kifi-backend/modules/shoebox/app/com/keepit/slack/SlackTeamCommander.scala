@@ -289,7 +289,7 @@ class SlackTeamCommanderImpl @Inject() (
                     val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
                     val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
                     onboardingAgent.syncingPublicChannels().flatMap { _ =>
-                      slackClient.getChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
+                      slackClient.getPublicChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
                         val updatedTeam = {
                           val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
                           val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
