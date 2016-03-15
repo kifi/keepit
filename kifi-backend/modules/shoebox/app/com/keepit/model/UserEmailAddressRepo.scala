@@ -2,9 +2,9 @@ package com.keepit.model
 
 import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.ActorInstance
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
-import com.keepit.payments.RewardKind
 import com.keepit.social.{ IdentityUserIdKey, IdentityUserIdCache }
 import org.joda.time.DateTime
 
@@ -89,7 +89,7 @@ class UserEmailAddressRepoImpl @Inject() (
     val hashesByEmail = addresses.map(address => address -> EmailAddressHash.hashEmailAddress(address)).toMap
     val candidates = rows.filter(row => row.address.inSet(addresses) && row.state =!= excludeState.orNull).list.groupBy(_.address)
     candidates.collect {
-      case (email, Seq(userEmail)) if hashesByEmail(email) == userEmail.hash => email -> userEmail.userId
+      case (email, Seq(userEmail)) if hashesByEmail.get(email).safely.contains(userEmail.hash) => email -> userEmail.userId
     }
   }
 
