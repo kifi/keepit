@@ -449,12 +449,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
   }
 
-  def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    val keepDataById = keepCommander.getCrossServiceKeeps(keepIds)
-    Ok(Json.toJson(keepDataById))
-  }
-
   def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
@@ -635,11 +629,10 @@ class ShoeboxController @Inject() (
     val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
     implicit val context = HeimdalContext.empty
     val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, source = KeepSource.discussion)
-    val keep = internResponse.newKeeps.head
-    db.readWrite { implicit s =>
-      keepCommander.persistKeep(keep.withParticipants(input.users))
+    val csKeep = db.readWrite { implicit s =>
+      val keep = keepCommander.persistKeep(internResponse.newKeeps.head.withParticipants(input.users))
+      CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty)
     }
-    val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).values.head
     Ok(Json.toJson(csKeep))
   }
 

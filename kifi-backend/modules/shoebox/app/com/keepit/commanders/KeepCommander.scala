@@ -198,7 +198,6 @@ class KeepCommanderImpl @Inject() (
     }.toMap
   }
 
-
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchClient.indexInfoList()).map { results =>

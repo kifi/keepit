@@ -59,12 +59,11 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
-  // Hopefully this goes away soon, it manually forces the keep to be in exactly one library
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
     connections = connections.withLibraries(Set(lib.id.get))
   )
-  def withNoLibrary = this.copy(libraryId = None, visibility = LibraryVisibility.SECRET, organizationId = None)
+  def withNoLibrary = this.copy(libraryId = None)
 
   def withConnections(newConnections: KeepConnections): Keep = {
     if (newConnections.libraries.isEmpty) this.copy(connections = newConnections).withNoLibrary
@@ -300,6 +299,23 @@ object CrossServiceKeep {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
+
+  def fromKeepAndRecipients(keep: Keep, users: Set[Id[User]], libraries: Set[LibraryInfo]): CrossServiceKeep = {
+    CrossServiceKeep(
+      id = keep.id.get,
+      externalId = keep.externalId,
+      state = keep.state,
+      seq = keep.seq,
+      owner = keep.userId,
+      users = users,
+      libraries = libraries,
+      url = keep.url,
+      uriId = keep.uriId,
+      keptAt = keep.keptAt,
+      title = keep.title,
+      note = keep.note
+    )
+  }
 }
 
 case class PersonalKeep(

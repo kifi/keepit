@@ -189,39 +189,40 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
+  def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
+    val ids = request.body.as[Set[Id[Keep]]]
     val (keeps, ktus, ktls) = db.readOnlyMaster { implicit s =>
       val keepsById = keepRepo.getByIds(ids)
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepsById.keySet)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepsById.keySet)
       (keepsById, ktusByKeep, ktlsByKeep)
     }
-    keeps.map {
-      case (keepId, keep) => keepId -> CrossServiceKeep(
-        id = keepId,
-        externalId = keep.externalId,
-        state = keep.state,
-        seq = keep.seq,
-        owner = keep.userId,
+    val keepDataById = keeps.map {
+      case (keepId, keep) => keepId -> CrossServiceKeep.fromKeepAndRecipients(
+        keep = keep,
         users = ktus.getOrElse(keepId, Seq.empty).map(_.userId).toSet,
-        libraries = ktls.getOrElse(keepId, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet,
-        url = keep.url,
-        uriId = keep.uriId,
-        keptAt = keep.keptAt,
-        title = keep.title,
-        note = keep.note
+        libraries = ktls.getOrElse(keepId, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
       )
     }
+    Ok(Json.toJson(keepDataById))
   }
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-        val attributionById = sourceRepo.getByKeepIds(changedKeeps.flatMap(_.id).toSet)
+        val keepIds = changedKeeps.flatMap(_.id).toSet
+        val attributionById = sourceRepo.getByKeepIds(keepIds)
+        val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+        val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
         changedKeeps.map { keep =>
+          val csKeep = CrossServiceKeep.fromKeepAndRecipients(
+            keep = keep,
+            users = ktusByKeep.getOrElse(keep.id.get, Seq.empty).map(_.userId).toSet,
+            libraries = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
+          )
           val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
           val source = attributionById.get(keep.id.get)
-          KeepAndTags(keep, source, tags)
+          KeepAndTags(csKeep, source, tags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))
