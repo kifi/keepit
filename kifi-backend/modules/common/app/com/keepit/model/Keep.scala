@@ -230,7 +230,10 @@ object KeepAndTags {
   val helperFormat = Json.format[Helper]
   implicit val format: Format[KeepAndTags] = Format(
     Reads { j => helperFormat.reads(j).map(h => KeepAndTags(h.keep, (LibraryVisibility.SECRET, Option.empty), h.source, h.tags)) },
-    Writes { kts => helperFormat.writes(Helper(kts.keep, kts.source, kts.tags)).as[JsObject] ++ Json.obj("visibility" -> kts.deprecated._1, "organizationId" -> kts.deprecated._2) }
+    Writes { kts =>
+      val obj = helperFormat.writes(Helper(kts.keep, kts.source, kts.tags)).as[JsObject]
+      obj deepMerge Json.obj("keep" -> Json.obj("visibility" -> kts.deprecated._1, "organizationId" -> kts.deprecated._2))
+    }
   )
 }
 
