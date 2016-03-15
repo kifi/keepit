@@ -48,7 +48,7 @@ class ShardedKeepIndexer(
   }
 
   private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Seq[KeepIndexable], SequenceNumber[Keep], Boolean)]] = {
-    shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
+    shoebox.getCrossServiceKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
       if (changedKeepsAndTags.nonEmpty) {
         val indexables = changedKeepsAndTags.map { case CrossServiceKeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags) }
         val exhausted = changedKeepsAndTags.isEmpty

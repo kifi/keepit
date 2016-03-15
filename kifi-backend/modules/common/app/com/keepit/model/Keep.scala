@@ -95,7 +95,6 @@ case class Keep(
 }
 
 object Keep extends PublicIdGenerator[Keep] {
-
   protected[this] val publicIdPrefix = "k"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))
 
@@ -105,6 +104,7 @@ object Keep extends PublicIdGenerator[Keep] {
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
+
   implicit val format: Format[Keep] = (
     (__ \ 'id).formatNullable[Id[Keep]] and
     (__ \ 'createdAt).format[DateTime] and
@@ -146,7 +146,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 15
+  override val version = 17
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -164,7 +164,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 6
+  override val version = 8
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -222,11 +222,16 @@ object KeepSource {
   )
 }
 
-case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
+case class KeepAndTags(keep: Keep, deprecated: (LibraryVisibility, Option[Id[Organization]]), source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  case class Helper(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
   implicit val sourceFormat = SourceAttribution.internalFormat
-  implicit val format = Json.format[KeepAndTags]
+  val helperFormat = Json.format[Helper]
+  implicit val format: Format[KeepAndTags] = Format(
+    Reads { j => helperFormat.reads(j).map(h => KeepAndTags(h.keep, (LibraryVisibility.SECRET, Option.empty), h.source, h.tags)) },
+    Writes { kts => helperFormat.writes(Helper(kts.keep, kts.source, kts.tags)).as[JsObject] ++ Json.obj("visibility" -> kts.deprecated._1, "organizationId" -> kts.deprecated._2) }
+  )
 }
 
 case class CrossServiceKeepAndTags(keep: CrossServiceKeep, source: Option[SourceAttribution], tags: Set[Hashtag])
