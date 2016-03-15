@@ -236,8 +236,12 @@ class SlackPushingActor @Inject() (
       // Now push new things, updating the integration state as we go
       FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
         slackMessageForItem(item, settings).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
-          slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg)
-            .tap { _ =>
+          val messageFut = slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg)
+            .recoverWith {
+              case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+            }
+          messageFut.onSuccess {
+            case _ =>
               implicit val contextBuilder = heimdalContextBuilder()
               val category = item match {
                 case _: PushItem.Digest => NotificationCategory.NonUser.LIBRARY_DIGEST
@@ -250,9 +254,9 @@ class SlackPushingActor @Inject() (
                   NotificationCategory.NonUser.NEW_COMMENT
               }
               slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, category, contextBuilder.build)
-            }.recoverWith {
-              case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
-            }
+              ()
+          }
+          messageFut
         }.map { pushedMessageOpt =>
           db.readWrite { implicit s =>
             item match {

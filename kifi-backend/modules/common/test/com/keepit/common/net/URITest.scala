@@ -177,35 +177,44 @@ class URITest extends Specification {
 
   "Path" should {
     "work basically" in {
-      val baseUrl = "https://www.kifi.com/"
+      val baseUrlString = "https://www.kifi.com/"
       val basePath = Path("")
-      baseUrl === basePath.absolute
+      baseUrlString === basePath.absolute
       basePath.relative === ""
       basePath.queryString === Query.empty.toUrlString
 
-      val simpleUrl = baseUrl + "kifi"
+      val simpleUrlString = baseUrlString + "kifi"
       val simplePath = Path("kifi")
-      simpleUrl === simplePath.absolute
+      simpleUrlString === simplePath.absolute
       simplePath.queryString === Query.empty.toUrlString
 
-      val complexUrl = simpleUrl + "/general"
+      // combine relative paths
+      val complexUrlString = simpleUrlString + "/general"
       val complexPath = simplePath + "/general"
-      complexUrl === complexPath.absolute
+      complexUrlString === complexPath.absolute
       complexPath.queryString === Query.empty.toUrlString
 
-      val simpleQuery = "?a=b"
-      val queriedUrl = simpleUrl + simpleQuery
-      val queriedPath = simplePath.withQuery(Query.parse(simpleQuery))
-      simplePath + simpleQuery
-      URI.parse(queriedUrl) === URI.parse(queriedPath.absolute)
-      queriedPath.queryString === simpleQuery
+      // add query strings
+      val simpleQueryString = "?a=b"
+      val queriedUrlString = simpleUrlString + simpleQueryString
+      val queriedPath = simplePath.withQuery(Query.parse(simpleQueryString))
+      URI.parse(queriedUrlString) === URI.parse(queriedPath.absolute)
+      queriedPath.queryString === simpleQueryString
 
-      val complexQuery = "&b=c&c=d&d=e"
-      val complexQueriedUrl = queriedUrl + complexQuery
-      val complexQueriedPath = queriedPath.withQuery(Query.parse(complexQuery))
-      complexQueriedUrl === (queriedPath + complexQuery).absolute
-      complexQueriedUrl === complexQueriedPath.absolute
-      complexQueriedPath.queryString === simpleQuery + complexQuery
+      // normalize added query strings
+      val complexQueryString = "&b=c&c=d&d=e"
+      val complexQueriedUrlString = queriedUrlString + complexQueryString
+      val complexQueriedPath = queriedPath.withQuery(Query.parse(complexQueryString))
+      complexQueriedUrlString === (queriedPath + complexQueryString).absolute
+      complexQueriedUrlString === complexQueriedPath.absolute
+      complexQueriedPath.queryString === simpleQueryString + complexQueryString
+
+      val complexQueryString2 = "?e=f&f=g"
+      val complexQueriedUrlString2 = complexQueriedUrlString + "&" + complexQueryString2.stripPrefix("?")
+      val complexQueriedPath2 = complexQueriedPath.withQuery(Query.parse(complexQueryString2))
+      complexQueriedUrlString2 === (complexQueriedPath + complexQueryString2).absolute
+      complexQueriedUrlString2 === complexQueriedPath2.absolute
+      complexQueriedPath2.queryString === simpleQueryString + complexQueryString + "&" + complexQueryString2.stripPrefix("?")
     }
   }
 }

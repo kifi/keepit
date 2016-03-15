@@ -47,10 +47,7 @@ object Path {
   def base: String = "https://www.kifi.com/"
 
   private def splitQuery(str: String): (String, Query) = str.split('?').toList match {
-    case relative :: params :: Nil => (relative, Query.parse(params))
-    case relative :: Nil => (relative, Query.empty)
-    case relative :: params => (relative, params.map(Query.parse).reduce(_ ++ _))
-    case Nil => ("", Query.empty)
+    case relative :: params => (relative, params.map(Query.parse).foldLeft(Query.empty)(_ ++ _))
   }
 
   def apply(value: String): Path = {
