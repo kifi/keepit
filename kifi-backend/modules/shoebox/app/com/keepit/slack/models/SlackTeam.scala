@@ -8,11 +8,11 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.model.{ SlackTeamIdOrgIdKey, SlackTeamIdOrgIdCache, Organization }
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, Duration }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration => ConcurrentDuration }
 
 case class SlackTeam(
   id: Option[Id[SlackTeam]] = None,
@@ -101,7 +101,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[SlackBotUserAuthorization])(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
-  def markAsSyncing(slackTeamId: SlackTeamId, maxSyncingFor: Duration)(implicit session: RWSession): Boolean
+  def markAsSyncingChannels(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -270,9 +270,9 @@ class SlackTeamRepoImpl @Inject() (
     activeRows.filter(row => row.lastDigestNotificationAt.isEmpty || row.lastDigestNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
-  def markAsSyncing(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean = {
+  def markAsSyncingChannels(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean = {
     val now = clock.now()
-    val syncTimeoutAt = now.minusSeconds(syncTimeout.toSeconds.toInt)
+    val syncTimeoutAt = now minus syncTimeout
     rows.filter(r => r.slackTeamId === slackTeamId && (r.publicChannelsLastSyncingAt.isEmpty || r.publicChannelsLastSyncingAt <= syncTimeoutAt)).map(r => (r.updatedAt, r.publicChannelsLastSyncingAt)).update((now, Some(now))) > 0
   }
 
@@ -283,6 +283,6 @@ case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }
-class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration)*)
   extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
 

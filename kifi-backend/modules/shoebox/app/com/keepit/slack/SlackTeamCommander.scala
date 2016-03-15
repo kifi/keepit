@@ -17,15 +17,15 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.SlackTeamCommander.SlackChannelLibraries
 import com.keepit.slack.models._
-import scala.concurrent.duration._
+import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackTeamCommander {
   type SlackChannelLibraries = Map[SlackChannelIdAndName, Either[LibraryFail, Library]]
-  val channelSyncTimeout = 20 minutes
-  val channelSyncBuffer = 10 seconds
+  val channelSyncTimeout = Duration.standardMinutes(20)
+  val channelSyncBuffer = Duration.standardSeconds(10)
 }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
@@ -234,7 +234,7 @@ class SlackTeamCommanderImpl @Inject() (
   }
 
   private def setupPublicSlackChannels(team: SlackTeam, membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo])(implicit context: HeimdalContext): SlackChannelLibraries = {
-    val markedAsSyncing = db.readWrite { implicit session => slackTeamRepo.markAsSyncing(team.slackTeamId, SlackTeamCommander.channelSyncTimeout) }
+    val markedAsSyncing = db.readWrite { implicit session => slackTeamRepo.markAsSyncingChannels(team.slackTeamId, SlackTeamCommander.channelSyncTimeout) }
 
     if (markedAsSyncing) {
 
@@ -255,7 +255,7 @@ class SlackTeamCommanderImpl @Inject() (
 
       if (newLibraries.nonEmpty) {
         SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-          "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "channels",
+          "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "public channels",
           team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
         ))))
       }
