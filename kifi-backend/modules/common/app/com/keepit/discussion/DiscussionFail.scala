@@ -5,9 +5,7 @@ import play.api.http.Status._
 import play.api.libs.json._
 import play.api.mvc.Results.Status
 
-import scala.util.control.NoStackTrace
-
-sealed abstract class DiscussionFail(val status: Int, val err: String) extends Exception(err) with NoStackTrace {
+sealed abstract class DiscussionFail(val status: Int, val err: String) extends Exception(err) {
   def asErrorResponse = Status(status)(Json.obj("error" -> err))
 }
 
@@ -16,6 +14,7 @@ object DiscussionFail extends Enumerator[DiscussionFail] {
   case object INVALID_KEEP_ID extends DiscussionFail(BAD_REQUEST, "specified_keep_does_not_exist")
   case object INVALID_MESSAGE_ID extends DiscussionFail(BAD_REQUEST, "specified_message_does_not_exist")
   case object MESSAGE_DOES_NOT_EXIST_ON_KEEP extends DiscussionFail(BAD_REQUEST, "message_does_not_exist_on_specified_keep")
+  case object URI_COLLISION extends DiscussionFail(BAD_REQUEST, "uri_collision_in_library")
 
   // The most generic input failure. As we create new endpoints we should create specific failures
   // This is here strictly because I'm lazy
