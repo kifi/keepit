@@ -283,7 +283,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       case Some(membership) if membership.isActive =>
         membership.userId.foreach { ownerId =>
           request.userId.foreach { requesterId =>
-            if (requesterId != ownerId) SlackActionFail.MembershipExists(requesterId, ownerId, request.slackTeamId, request.slackTeamName, request.slackUserId, membership)
+            if (requesterId != ownerId) throw SlackActionFail.MembershipExists(requesterId, ownerId, request.slackTeamId, request.slackTeamName, request.slackUserId, membership)
           }
         }
         val updated = membership.copy(
