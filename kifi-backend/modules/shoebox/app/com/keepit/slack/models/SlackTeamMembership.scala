@@ -12,6 +12,8 @@ import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
+import com.keepit.slack.SlackActionFail
+import com.keepit.slack.SlackActionFail._
 import com.keepit.model.User
 import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey, UserIdentity }
 import org.joda.time.{ DateTime, Duration }
@@ -281,7 +283,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       case Some(membership) if membership.isActive =>
         membership.userId.foreach { ownerId =>
           request.userId.foreach { requesterId =>
-            if (requesterId != ownerId) throw new IllegalStateException(s"SlackMembership requested by user $requesterId is already owned by user $ownerId: $membership")
+            if (requesterId != ownerId) SlackActionFail.MembershipExists(requesterId, ownerId, request.slackTeamId, request.slackTeamName, request.slackUserId, membership)
           }
         }
         val updated = membership.copy(
