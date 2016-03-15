@@ -300,7 +300,7 @@ class SlackTeamCommanderImpl @Inject() (
                         val futureSlackChannelLibraries = SafeFuture {
                           setupPublicSlackChannels(updatedTeam, membership, channelsToIntegrate)
                         } flatMap { slackChannelLibraries =>
-                          onboardingAgent.syncedPublicChannels(membership, channelsToIntegrate).map { _ =>
+                          onboardingAgent.syncedPublicChannels(channelsToIntegrate).map { _ =>
                             slackChannelLibraries
                           }
                         }

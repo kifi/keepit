@@ -42,7 +42,7 @@ object SlackOnboarder {
     def dieIf(b: Boolean) = if (b) working = false
 
     def syncingPublicChannels() = parent.teamAgent.syncingPublicChannels(this)()
-    def syncedPublicChannels(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.syncedPublicChannels(this)(membership, channels)
+    def syncedPublicChannels(channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.syncedPublicChannels(this)(channels)
   }
 }
 
@@ -200,12 +200,12 @@ class SlackOnboarderImpl @Inject() (
       }
     }
 
-    def syncedPublicChannels(agent: TeamOnboardingAgent)(membership: SlackTeamMembership, channels: Seq[SlackPublicChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+    def syncedPublicChannels(agent: TeamOnboardingAgent)(channels: Seq[SlackPublicChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
       import DescriptionElements._
       FutureHelpers.accumulateRobustly(channels) { ch =>
         import SlackSearchRequest._
         val query = Query(Query.in(ch.channelName), Query.hasLink)
-        slackClient.searchMessages(membership.token.get, SlackSearchRequest(query)).map { response =>
+        slackClient.searchMessages(agent.membership.token.get, SlackSearchRequest(query)).map { response =>
           response.messages.total
         }
       }.flatMap { msgsByChannel =>
@@ -213,7 +213,7 @@ class SlackOnboarderImpl @Inject() (
           case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
           case results =>
             slackLog.error(
-              "Failed to predict the number of ingestable links for", membership.slackTeamName.value,
+              "Failed to predict the number of ingestable links for", agent.membership.slackTeamName.value,
               results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
             )
             None
