@@ -125,7 +125,7 @@ class SlackOnboarderImpl @Inject() (
 
   private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
-    val trackingParams = slackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    val trackingParams = SlackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
       owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId).withQuery(trackingParams)), "set up a Kifi integration.",
       "Keeps from", lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, ltsc.slackTeamId).withQuery(trackingParams)), "will be posted to this channel."
@@ -135,7 +135,7 @@ class SlackOnboarderImpl @Inject() (
   }
   private def explicitPushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
-    val trackingParams = slackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    val trackingParams = SlackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val welcomeLink = LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId).withQuery(trackingParams))
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).withQuery(trackingParams))
 
@@ -164,7 +164,7 @@ class SlackOnboarderImpl @Inject() (
   private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
 
-    implicit val trackingParams = slackAnalytics.generateTrackingParams(sctl.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    implicit val trackingParams = SlackAnalytics.generateTrackingParams(sctl.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val welcomeLink = LinkElement(pathCommander.welcomePageViaSlack(owner, sctl.slackTeamId).withQuery(trackingParams))
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).withQuery(trackingParams))
 
@@ -244,7 +244,7 @@ class SlackOnboarderImpl @Inject() (
           org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
           sendTo = agent.membership.slackUserId.asChannel
           category = NotificationCategory.NonUser.INTEGRATOR_POSTSYNC
-          integrationsLink = LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId).withQuery(slackAnalytics.generateTrackingParams(sendTo, category)))
+          integrationsLink = LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(sendTo, category)))
           msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
             if (channels.nonEmpty) {
               DescriptionElements.unlines(Seq(

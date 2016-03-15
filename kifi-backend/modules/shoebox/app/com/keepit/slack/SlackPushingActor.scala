@@ -342,7 +342,7 @@ class SlackPushingActor @Inject() (
 
   private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems, channelId: SlackChannelId): Option[SlackMessageRequest] = {
     import DescriptionElements._
-    val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(slackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
+    val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
         items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
@@ -370,9 +370,9 @@ class SlackPushingActor @Inject() (
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
-        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some("viewArticle")))),
+        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some("viewArticle")))),
         "|",
-        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some("reply"))))
+        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some("reply"))))
       )
     }
 
@@ -400,7 +400,7 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
-    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(slackAnalytics.generateTrackingParams(slackChannelId, category, Some(subaction))))
+    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some(subaction))))
 
     val keepElement = {
       DescriptionElements(

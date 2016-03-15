@@ -179,7 +179,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
-    def trackingParams(subaction: String) = slackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
+    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentIngestedMsg._1, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
@@ -219,7 +219,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
   }
   private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
-    def trackingParams(subaction: String) = slackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
+    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPage)
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(List(

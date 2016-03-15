@@ -11,6 +11,13 @@ import com.keepit.social.NonUserKinds
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+object SlackAnalytics {
+  def generateTrackingParams(slackChannelId: SlackChannelId, category: NotificationCategory, subaction: Option[String] = None): Query = {
+    val queryParams = Query("slackChannelId" -> Some(slackChannelId.value), "category" -> Some(category.category), "subaction" -> subaction)
+    Query(Param("t", Some(KifiUrlRedirectHelper.signTrackingParams(queryParams))))
+  }
+}
+
 @Singleton
 class SlackAnalytics @Inject() (
     db: Database,
@@ -65,10 +72,5 @@ class SlackAnalytics @Inject() (
     contextBuilder += ("action", "click")
     contextBuilder += ("subaction", subaction)
     trackSlackNotificationEvent(slackTeamId, slackChannelId, category)
-  }
-
-  def generateTrackingParams(slackChannelId: SlackChannelId, category: NotificationCategory, subaction: Option[String] = None): Query = {
-    val queryParams = Query("slackChannelId" -> Some(slackChannelId.value), "category" -> Some(category.category), "subaction" -> subaction)
-    Query(Param("t", Some(KifiUrlRedirectHelper.signTrackingParams(queryParams))))
   }
 }

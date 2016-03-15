@@ -111,7 +111,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   }
   private def createTeamIntroMessage(slackTeam: SlackTeam)(implicit session: RSession, slackChannelId: SlackChannelId): Option[SlackMessageRequest] = {
     import DescriptionElements._
-    val trackingParams = slackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    val trackingParams = SlackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     for {
       ownerId <- slackMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.userId.isDefined).minBy(_.createdAt).userId // TODO(ryan): this might be stupid...
       owner <- basicUserRepo.loadActive(ownerId)
@@ -220,7 +220,7 @@ class SlackTeamDigestNotificationActor @Inject() (
 
   private def kifiSlackTipAttachments(slackTeamId: SlackTeamId)(implicit slackChannelId: SlackChannelId): IndexedSeq[SlackAttachment] = {
     import DescriptionElements._
-    val trackingParams = slackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+    val trackingParams = SlackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     IndexedSeq(
       SlackAttachment(color = Some(LibraryColor.SKY_BLUE.hex), text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.magnifyingGlass, "Search them using the `/kifi` Slack command"
@@ -234,7 +234,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   private def describeTeamDigest(digest: SlackTeamDigest)(implicit session: RSession, slackChannelId: SlackChannelId): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackTeam.slackTeamId
-    val trackingParams = slackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.TEAM_DIGEST)
+    val trackingParams = SlackAnalytics.generateTrackingParams(slackChannelId, NotificationCategory.NonUser.TEAM_DIGEST)
     val topLibraries = digest.numIngestedLinksByLibrary.toList.sortBy { case (lib, numLinks) => numLinks }(Ord.descending).take(3).collect { case (lib, numLinks) if numLinks > 0 => lib }
     val text = DescriptionElements.unlines(List(
       prng.choice(kifiHellos(digest.numIngestedLinks)),
