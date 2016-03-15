@@ -206,7 +206,7 @@ class ShoeboxDataPipeController @Inject() (
     }
     Ok(Json.toJson(keepDataById))
   }
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
@@ -222,7 +222,22 @@ class ShoeboxDataPipeController @Inject() (
           )
           val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
           val source = attributionById.get(keep.id.get)
-          KeepAndTags(csKeep, source, tags)
+          CrossServiceKeepAndTags(csKeep, source, tags)
+        }
+      }
+      Ok(Json.toJson(keepAndTagsChanged))
+    }
+  }
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
+        val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
+        val keepIds = changedKeeps.flatMap(_.id).toSet
+        val attributionById = sourceRepo.getByKeepIds(keepIds)
+        changedKeeps.map { keep =>
+          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+          val source = attributionById.get(keep.id.get)
+          KeepAndTags(keep, source, tags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))

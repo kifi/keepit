@@ -562,7 +562,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
     val changedKeeps = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
     val flattenTags: (Id[Collection], Set[Id[Keep]]) => Set[(Id[Keep], Hashtag)] = {
@@ -571,7 +571,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
     val changedKeepsAndTags = changedKeeps.map { keep =>
-      KeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
     }
     Future.successful(changedKeepsAndTags)
   }

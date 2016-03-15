@@ -222,11 +222,18 @@ object KeepSource {
   )
 }
 
-case class KeepAndTags(keep: CrossServiceKeep, source: Option[SourceAttribution], tags: Set[Hashtag])
+case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
   implicit val sourceFormat = SourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
+}
+
+case class CrossServiceKeepAndTags(keep: CrossServiceKeep, source: Option[SourceAttribution], tags: Set[Hashtag])
+
+object CrossServiceKeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
+  implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
 case class BasicKeep(
