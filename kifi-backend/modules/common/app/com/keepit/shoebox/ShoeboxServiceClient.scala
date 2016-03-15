@@ -96,7 +96,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]]
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
@@ -623,8 +624,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
     call(Shoebox.internal.getKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
+      r.json.as[Seq[KeepAndTags]]
+    }
+  }
+
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
+    call(Shoebox.internal.getCrossServiceKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[CrossServiceKeepAndTags]]
     }
   }

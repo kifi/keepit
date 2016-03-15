@@ -234,10 +234,14 @@ class ShoeboxDataPipeController @Inject() (
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
         val keepIds = changedKeeps.flatMap(_.id).toSet
         val attributionById = sourceRepo.getByKeepIds(keepIds)
+        val libByKeep = {
+          ktlRepo.getAllByKeepIds(keepIds).flatMapValues(_.headOption.map(ktl => libraryRepo.get(ktl.libraryId)))
+        }
         changedKeeps.map { keep =>
           val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
           val source = attributionById.get(keep.id.get)
-          KeepAndTags(keep, source, tags)
+          val lib = libByKeep.get(keep.id.get)
+          KeepAndTags(keep, (lib.map(_.visibility).getOrElse(LibraryVisibility.SECRET), lib.flatMap(_.organizationId)), source, tags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))
