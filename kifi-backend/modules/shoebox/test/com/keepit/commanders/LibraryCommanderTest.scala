@@ -602,9 +602,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           Await.result(res2.keepChanges, Duration.Inf)
           val lib2 = res2.modifiedLibrary
           db.readOnlyMaster { implicit session =>
-            keepRepo.getByLibrary(lib2.id.get, 0, Int.MaxValue).foreach { keep =>
-              keep.visibility === lib2.visibility
-              keep.organizationId === lib2.organizationId
+            ktlRepo.getAllByLibraryId(lib2.id.get).foreach { ktl =>
+              ktl.visibility === lib2.visibility
+              ktl.organizationId === lib2.organizationId
             }
           }
 
@@ -612,9 +612,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           Await.result(res3.keepChanges, Duration.Inf)
           val lib3 = res3.modifiedLibrary
           db.readOnlyMaster { implicit session =>
-            keepRepo.getByLibrary(lib3.id.get, 0, Int.MaxValue).foreach { keep =>
-              keep.visibility === lib3.visibility
-              keep.organizationId === lib3.organizationId
+            ktlRepo.getAllByLibraryId(lib3.id.get).foreach { ktl =>
+              ktl.visibility === lib3.visibility
+              ktl.organizationId === lib3.organizationId
             }
           }
 
@@ -622,9 +622,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           Await.result(res4.keepChanges, Duration.Inf)
           val lib4 = res4.modifiedLibrary
           db.readOnlyMaster { implicit session =>
-            keepRepo.getByLibrary(lib4.id.get, 0, Int.MaxValue).foreach { keep =>
-              keep.visibility === lib4.visibility
-              keep.organizationId === lib4.organizationId
+            ktlRepo.getAllByLibraryId(lib4.id.get).foreach { ktl =>
+              ktl.visibility === lib4.visibility
+              ktl.organizationId === lib4.organizationId
             }
           }
 
@@ -632,9 +632,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           Await.result(res5.keepChanges, Duration.Inf)
           val lib5 = res5.modifiedLibrary
           db.readOnlyMaster { implicit session =>
-            keepRepo.getByLibrary(lib5.id.get, 0, Int.MaxValue).foreach { keep =>
-              keep.visibility === lib5.visibility
-              keep.organizationId === lib5.organizationId
+            ktlRepo.getAllByLibraryId(lib5.id.get).foreach { ktl =>
+              ktl.visibility === lib5.visibility
+              ktl.organizationId === lib5.organizationId
             }
           }
           1 === 1

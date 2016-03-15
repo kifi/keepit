@@ -48,6 +48,7 @@ class AdminLibraryController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
+    ktlRepo: KeepToLibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -125,7 +126,7 @@ class AdminLibraryController @Inject() (
       } else Seq()
 
       val topDailyKeeps = if (page == 0) {
-        keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24))
+        ktlRepo.publishedLibrariesWithMostKeepsSince(Limit(topListSize), clock.now().minusHours(24)).toSeq
       } else Seq()
 
       val pagePublished = libraryRepo.pagePublished(Paginator(page, pageSize))
@@ -189,7 +190,7 @@ class AdminLibraryController @Inject() (
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
       val keepCount = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !lib.isSecret)
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)

@@ -257,7 +257,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
           uriId = uri.id.get,
           url = url.url,
           source = source,
-          visibility = library.visibility,
           libraryId = Some(library.id.get),
           originalKeeperId = Some(user.id.get),
           connections = KeepConnections(Set(library.id.get), Set(user.id.get))
@@ -563,7 +562,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
     val changedKeeps = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
     val flattenTags: (Id[Collection], Set[Id[Keep]]) => Set[(Id[Keep], Hashtag)] = {
@@ -571,7 +570,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keepIds.collect { case keepId if changedKeepIds.contains(keepId) => (keepId, allCollections(collectionId).name) }
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
-    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, None, tagsByChangedKeep(keep.id.get)) }
+    val changedKeepsAndTags = changedKeeps.map { keep =>
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+    }
     Future.successful(changedKeepsAndTags)
   }
 
@@ -631,7 +632,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keep.externalId,
         keep.userId.safely.contains(userId),
         removable = true,
-        keep.visibility,
+        LibraryVisibility.PUBLISHED,
         keep.libraryId.map(Library.publicId)
       )
     })
@@ -680,9 +681,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
     ids.map(id => id -> CrossServiceKeep(
       id = id,
+      externalId = ExternalId(),
+      seq = SequenceNumber.ZERO,
+      state = KeepStates.ACTIVE,
       owner = Some(Id[User](1)),
       users = Set(Id[User](1)),
-      libraries = Set(Id[Library](1)),
+      libraries = Set.empty,
       url = "http://www.kifi.com",
       uriId = Id[NormalizedURI](1),
       keptAt = currentDateTime.minusHours(10),
@@ -706,6 +710,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     Future.successful(CrossServiceKeep(
       id = nextBookmarkId(),
+      externalId = ExternalId(),
+      seq = SequenceNumber.ZERO,
+      state = KeepStates.ACTIVE,
       owner = Some(creator),
       users = users,
       libraries = Set.empty,

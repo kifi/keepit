@@ -72,7 +72,6 @@ trait KeepCommander {
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
@@ -161,8 +160,9 @@ class KeepCommanderImpl @Inject() (
 
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
-      val keeps = keepRepo.getByIds(ids)
-      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
+      val keepsById = keepRepo.getByIds(ids)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(ids)
+      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keepsById.values.flatMap(_.id).toSet)
       def getAuthor(keep: Keep): Option[BasicAuthor] = {
         attributions.get(keep.id.get).map {
           case (_, Some(user)) => BasicAuthor.fromUser(user)
@@ -175,49 +175,27 @@ class KeepCommanderImpl @Inject() (
         }
       }
       val keepInfos = for {
-        (kId, keep) <- keeps
+        (kId, keep) <- keepsById
         author <- getAuthor(keep)
       } yield {
-        (kId, keep, author)
+        (kId, keep, author, ktlsByKeep.getOrElse(kId, Seq.empty))
       }
       (attributions, keepInfos)
     }
 
     keepInfos.map {
-      case (kId, keep, author) =>
+      case (kId, keep, author, ktls) =>
         kId -> BasicKeep(
           id = keep.externalId,
           title = keep.title,
           url = keep.url,
-          visibility = keep.visibility,
-          libraryId = keep.libraryId.map(Library.publicId),
+          visibility = ktls.headOption.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+          libraryId = ktls.headOption.map(ktl => Library.publicId(ktl.libraryId)),
           author = author,
           attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
           uriId = NormalizedURI.publicId(keep.uriId)
         )
     }.toMap
-  }
-
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
-    val (keeps, users, libs) = db.readOnlyMaster { implicit s =>
-      val keepsById = keepRepo.getByIds(ids)
-      val usersById = ktuRepo.getAllByKeepIds(keepsById.keySet).map { case (keepId, ktus) => keepId -> ktus.map(_.userId).toSet }
-      val libsById = ktlRepo.getAllByKeepIds(keepsById.keySet).map { case (keepId, ktls) => keepId -> ktls.map(_.libraryId).toSet }
-      (keepsById, usersById, libsById)
-    }
-    keeps.map {
-      case (keepId, keep) => keepId -> CrossServiceKeep(
-        id = keepId,
-        owner = keep.userId,
-        users = users.getOrElse(keepId, Set.empty),
-        libraries = libs.getOrElse(keepId, Set.empty),
-        url = keep.url,
-        uriId = keep.uriId,
-        keptAt = keep.keptAt,
-        title = keep.title,
-        note = keep.note
-      )
-    }
   }
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -859,8 +837,6 @@ class KeepCommanderImpl @Inject() (
       url = k.url,
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
-      visibility = toLibrary.visibility,
-      organizationId = toLibrary.organizationId,
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),

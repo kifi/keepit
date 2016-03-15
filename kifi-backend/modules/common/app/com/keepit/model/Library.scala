@@ -298,13 +298,15 @@ object LibrarySlug {
   }
 }
 
-sealed abstract class LibraryVisibility(val value: String)
+sealed abstract class LibraryVisibility(val value: String, val amountOfVisibility: Int) extends Ordered[LibraryVisibility] {
+  def compare(that: LibraryVisibility) = this.amountOfVisibility compare that.amountOfVisibility
+}
 
 object LibraryVisibility extends Enumerator[LibraryVisibility] {
-  case object PUBLISHED extends LibraryVisibility("published") // published library, is discoverable
-  case object DISCOVERABLE extends LibraryVisibility("discoverable") // "help my friends", is discoverable
-  case object ORGANIZATION extends LibraryVisibility("organization") // private to everyone but members of organization
-  case object SECRET extends LibraryVisibility("secret") // secret, not discoverable
+  case object PUBLISHED extends LibraryVisibility("published", 10) // published library, is discoverable
+  case object ORGANIZATION extends LibraryVisibility("organization", 9) // private to everyone but members of organization
+  case object DISCOVERABLE extends LibraryVisibility("discoverable", 8) // "help my friends", is discoverable
+  case object SECRET extends LibraryVisibility("secret", 1) // secret, not discoverable
 
   def all = _all.toSet
   def get(str: String) = all.find(_.value == str)

@@ -15,12 +15,10 @@ case class CortexKeep(
     keepId: Id[Keep],
     userId: Option[Id[User]],
     uriId: Id[NormalizedURI],
-    isPrivate: Boolean,
     state: State[CortexKeep],
     source: KeepSource,
     seq: SequenceNumber[CortexKeep],
-    libraryId: Option[Id[Library]] = None,
-    visibility: Option[LibraryVisibility] = None) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
+    libraryId: Option[Id[Library]] = None) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
   def withId(id: Id[CortexKeep]): CortexKeep = copy(id = Some(id))
   def withUpdateTime(now: DateTime): CortexKeep = copy(updatedAt = now)
 }
@@ -36,12 +34,10 @@ object CortexKeep {
     (__ \ 'keepId).format(Id.format[Keep]) and
     (__ \ 'userId).formatNullable[Id[User]] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'state).format(State.format[CortexKeep]) and
     (__ \ 'source).format(Json.format[KeepSource]) and
     (__ \ 'seq).format(SequenceNumber.format[CortexKeep]) and
-    (__ \ 'libraryId).formatNullable(Id.format[Library]) and
-    (__ \ 'visibility).formatNullable[LibraryVisibility]
+    (__ \ 'libraryId).formatNullable[Id[Library]]
   )(CortexKeep.apply, unlift(CortexKeep.unapply))
 
   def fromKeep(keep: Keep): CortexKeep =
@@ -50,10 +46,9 @@ object CortexKeep {
       keepId = keep.id.get,
       userId = keep.userId,
       uriId = keep.uriId,
-      isPrivate = keep.isPrivate,
       state = keep.state,
       source = keep.source,
       seq = keep.seq,
-      libraryId = keep.libraryId,
-      visibility = Some(keep.visibility))
+      libraryId = keep.libraryId
+    )
 }
