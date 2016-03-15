@@ -119,7 +119,7 @@ class SuggestedSearchTermUpdater @Inject() (
 
   private def librariesNeedUpdate(keeps: Seq[Keep]): Seq[Id[Library]] = {
 
-    val groupedKeeps = keeps.filter(_.libraryId.isDefined).groupBy(_.libraryId.get)
+    val groupedKeeps = keeps.filter(_.lowestLibraryId.isDefined).groupBy(_.lowestLibraryId.get)
     val libMaxKeepMap: Map[Id[Library], SequenceNumber[Keep]] = db.readOnlyReplica { implicit s => keepRepo.getMaxKeepSeqNumForLibraries(groupedKeeps.keySet) }
 
     groupedKeeps

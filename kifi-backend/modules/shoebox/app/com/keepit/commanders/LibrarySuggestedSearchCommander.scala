@@ -22,6 +22,7 @@ trait LibrarySuggestedSearchCommander {
 class LibrarySuggestedSearchCommanderImpl @Inject() (
     val db: Database,
     val keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
     val suggestedSearchRepo: LibrarySuggestedSearchRepo) extends LibrarySuggestedSearchCommander with Logging {
 
   def getSuggestedTermsForLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind): SuggestedSearchTerms = {
@@ -65,7 +66,7 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
 
   def aggregateHashtagsForLibrary(libId: Id[Library], maxKeeps: Int, maxTerms: Int): SuggestedSearchTerms = {
     val notes = db.readOnlyReplica { implicit s =>
-      keepRepo.recentKeepNotes(libId, limit = maxKeeps)
+      ktlRepo.recentKeepNotes(libId, limit = maxKeeps)
     }
     val mapped: Seq[(String, Int)] = notes.map { note => Hashtags.findAllHashtagNames(note).map { tag => (tag.toLowerCase, 1) } }.flatten.filter(!_._1.startsWith("imported from"))
     val reduced = mapped.groupBy(_._1).map { case (tag, cnts) => ("#" + tag) -> 1f * cnts.size }.filter(_._2 > 1f).toArray.sortBy(-_._2).take(maxTerms).toMap

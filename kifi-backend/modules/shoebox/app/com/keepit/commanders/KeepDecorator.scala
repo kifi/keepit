@@ -119,7 +119,7 @@ class KeepDecoratorImpl @Inject() (
             libId -> BasicLibrary(library, user, orgOpt.map(_.handle))
         }
         val libraryCardByLibId = {
-          val libraries = keeps.flatMap(_.libraryId.map(idToLibrary(_)))
+          val libraries = keeps.flatMap(_.lowestLibraryId.map(idToLibrary(_)))
           val cards = db.readOnlyMaster { implicit s =>
             libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, viewerIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
           }
@@ -240,9 +240,9 @@ class KeepDecoratorImpl @Inject() (
                 hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
                 summary = Some(pageInfoForKeep),
                 siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-                libraryId = keep.libraryId.map(Library.publicId),
-                library = keep.libraryId.flatMap(idToLibraryCard.get),
-                organization = keep.libraryId.flatMap(idToBasicOrg.get),
+                libraryId = keep.lowestLibraryId.map(Library.publicId),
+                library = keep.lowestLibraryId.flatMap(idToLibraryCard.get),
+                organization = keep.lowestLibraryId.flatMap(idToBasicOrg.get),
                 sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
                 discussion = discussionsByKeep.get(keepId),

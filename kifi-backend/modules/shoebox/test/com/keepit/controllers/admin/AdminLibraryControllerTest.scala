@@ -87,15 +87,15 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
             val lib2 = LibraryFactory.library().withOwner(owner).saved
             KeepFactory.keeps(20).map(_.withLibrary(lib1).withUser(owner).saved)
 
-            inject[KeepRepo].getCountByLibrary(lib1.id.get) === 20
-            inject[KeepRepo].getCountByLibrary(lib2.id.get) === 0
+            ktlRepo.getCountByLibraryId(lib1.id.get) === 20
+            ktlRepo.getCountByLibraryId(lib2.id.get) === 0
 
             (admin, lib1, lib2, owner)
           }
 
           inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
           val payload: JsValue = Json.obj("fromLibrary" -> lib1.id.get, "toLibrary" -> lib2.id.get)
-          val request = route.unsafeMoveLibraryKeeps.withBody(payload)
+          val request = route.unsafeMoveLibraryKeeps().withBody(payload)
           val result = controller.unsafeMoveLibraryKeeps(request)
           status(result) === OK
 
@@ -106,8 +106,8 @@ class AdminLibraryControllerTest extends Specification with ShoeboxTestInjector 
           failed.length === 0
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getCountByLibrary(lib1.id.get) === 0
-            inject[KeepRepo].getCountByLibrary(lib2.id.get) === 20
+            ktlRepo.getCountByLibraryId(lib1.id.get) === 0
+            ktlRepo.getCountByLibraryId(lib2.id.get) === 20
           }
         }
       }

@@ -102,7 +102,7 @@ class PageMetaTagsCommander @Inject() (
 
   def selectKeepsDescription(libraryId: Id[Library]): Future[Option[String]] = {
     val futureKeeps = db.readOnlyMasterAsync { implicit session =>
-      keepRepo.getByLibrary(libraryId, 0, 50)
+      keepRepo.pageByLibrary(libraryId, 0, 50)
     }
     futureKeeps.flatMap { keeps =>
 
@@ -142,7 +142,7 @@ class PageMetaTagsCommander @Inject() (
       val metaInfoF = db.readOnlyMasterAsync { implicit s =>
         val facebookId: Option[String] = socialUserInfoRepo.getByUser(library.ownerId).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
 
-        val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
+        val keeps = keepRepo.pageByLibrary(library.id.get, 0, 50)
         val imageUrls = libraryImages(library, keeps)
 
         val url = {

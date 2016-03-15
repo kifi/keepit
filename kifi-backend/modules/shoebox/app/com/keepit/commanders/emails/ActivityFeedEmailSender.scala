@@ -381,7 +381,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     def getNewKeepsFromFollowedLibraries(): Future[Seq[(LibraryInfoView, Seq[KeepInfoView])]] = {
       val libraryKeeps = db.readOnlyReplica { implicit session =>
         followedLibraries map { library =>
-          val keeps = keepRepo.getByLibrary(library.id.get, 0, maxNewKeepsPerLibrary) filter { keep =>
+          val keeps = keepRepo.pageByLibrary(library.id.get, 0, maxNewKeepsPerLibrary) filter { keep =>
             keep.createdAt > minRecordAge
           }
           library -> keeps

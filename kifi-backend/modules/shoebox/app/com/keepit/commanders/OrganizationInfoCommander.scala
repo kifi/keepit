@@ -51,6 +51,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     slackInfoCommander: SlackInfoCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     airbrake: AirbrakeNotifier,
@@ -218,7 +219,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       val libraries = libraryRepo.getOrganizationLibraries(orgId)
       val libraryCount = libraries.length
-      val keepCount = keepRepo.getByLibraryIds(libraries.map(_.id.get).toSet).count(keep => !KeepSource.imports.contains(keep.source))
+      val keepCount = ktlRepo.countNonImportedKeepsInOrg(orgId)
       val inviteCount = orgInviteRepo.getCountByOrganization(orgId, decisions = Set(InvitationDecision.PENDING))
       val collabLibCount = libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_WRITE).count { case (_, memberCount) => memberCount > 0 }
       OrgTrackingValues(libraryCount, keepCount, inviteCount, collabLibCount)

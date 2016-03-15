@@ -39,7 +39,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val libraryChecker = inject[LibraryChecker]
         val libRepo = inject[LibraryRepo]
         val library = db.readWrite { implicit session =>
-          val library = LibraryFactory.library().withId(Id[Library](1)).saved
+          val library = LibraryFactory.library().saved
           KeepFactory.keeps(20).map(_.withLibrary(library)).saved
           // Uh oh, looks like the count is wrong!
           libRepo.save(library.copy(keepCount = 5))
@@ -57,7 +57,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val libraryChecker = inject[LibraryChecker]
         val libRepo = inject[LibraryRepo]
         val (library, keeps) = db.readWrite { implicit session =>
-          val library = LibraryFactory.library().withId(Id[Library](1)).saved
+          val library = LibraryFactory.library().saved
           val keeps = KeepFactory.keeps(20).map(_.withLibrary(library)).saved
           // Uh oh, looks like the lastKept time is wrong!
           (libRepo.save(library.copy(lastKept = tenYearsAgo)), keeps)
@@ -76,7 +76,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val libraryChecker = inject[LibraryChecker]
         val libRepo = inject[LibraryRepo]
         val library = db.readWrite { implicit session =>
-          val library = LibraryFactory.library().withId(Id[Library](1)).saved
+          val library = LibraryFactory.library().saved
           val user = UserFactory.user().saved
           LibraryMembershipFactory.memberships(19).map(_.withLibraryFollower(library, user)).saved
           // Uh oh, looks like the count is wrong!
@@ -102,16 +102,20 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
     "check visibility" in {
       withDb(modules: _*) { implicit injector =>
         val libraryChecker = inject[LibraryChecker]
-        db.readWrite { implicit session =>
-          LibraryFactory.library().withId(Id[Library](1)).discoverable().saved
-          KeepFactory.keep().withId(Id[Keep](1)).withLibraryId((Id[Library](1), LibraryVisibility.PUBLISHED, None)).saved
-
-          ktlRepo.getAllByKeepId(Id[Keep](1)).head.visibility === LibraryVisibility.PUBLISHED
+        val (lib, keep) = db.readWrite { implicit session =>
+          val lib = LibraryFactory.library().discoverable().saved
+          val keep = KeepFactory.keep().withLibrary(lib).saved
+          (lib, keep)
+        }
+        db.readWrite { implicit s =>
+          val ktls = ktlRepo.getAllByKeepId(keep.id.get)
+          ktls.map(_.visibility).toSet === Set(LibraryVisibility.DISCOVERABLE) // initially all correct
+          ktls.foreach { ktl => ktlRepo.save(ktl.withVisibility(LibraryVisibility.PUBLISHED)) } // break it
         }
 
-        libraryChecker.keepVisibilityCheck(Id[Library](1)) === 1
+        libraryChecker.keepVisibilityCheck(lib.id.get) === 1
 
-        db.readOnlyReplica { implicit s => ktlRepo.getAllByKeepId(Id[Keep](1)).head.visibility === LibraryVisibility.DISCOVERABLE }
+        db.readOnlyReplica { implicit s => ktlRepo.getAllByKeepId(keep.id.get).head.visibility === LibraryVisibility.DISCOVERABLE }
       }
     }
     "fix deleted libraries" in {

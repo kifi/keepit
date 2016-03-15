@@ -98,7 +98,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
-          bookmarks.count(k => k.libraryId == lib.id) === 5
+          bookmarks.count(k => k.connections.libraries.contains(lib.id.get)) === 5
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
           // println(bookmarks) // can be removed?
           oneUrl.size === 1
