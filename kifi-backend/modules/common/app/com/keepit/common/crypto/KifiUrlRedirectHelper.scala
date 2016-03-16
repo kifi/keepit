@@ -15,17 +15,23 @@ object KifiUrlRedirectHelper {
   // returns a "www.kifi.com/url?url=www.foo.com&s={{encryptedValue}}" url such that we can redirect home from third party clients (e.g. Slack search results)
   def generateKifiUrlRedirect(url: String, trackingParams: Query)(implicit appConfig: FortyTwoConfig): String = {
     val signedUrl = URLEncoder.encode(Crypto.signToken(url), "ascii")
-    val signedParams = URLEncoder.encode(signTrackingParams(trackingParams), "ascii")
+    val signedParams = signTrackingParams(trackingParams, Some("ascii"))
     val completeUrl = appConfig.applicationBaseUrl + s"/url?s=$signedUrl&t=$signedParams"
     completeUrl
   }
   def parseKifiUrlRedirect(signedUrl: String, signedTrackingParams: Option[String]): Option[(String, Option[Query])] = {
     val urlOpt = Crypto.extractSignedToken(URLDecoder.decode(signedUrl, "ascii"))
-    val trackingParams = signedTrackingParams.map(params => extractTrackingParams(URLDecoder.decode(params, "ascii")))
+    val trackingParams = signedTrackingParams.map(params => extractTrackingParams(params, Some("ascii")))
     urlOpt.map((_, trackingParams))
   }
 
-  def signTrackingParams(params: Query): String = cipher.encrypt(params.toString())
-  def extractTrackingParams(signedTrackingParams: String): Query = Query.parse(cipher.decrypt(signedTrackingParams))
+  def signTrackingParams(params: Query, encoding: Option[String]): String = {
+    val encrypted = cipher.encrypt(params.toString())
+    encoding.map(URLEncoder.encode(encrypted, _)).getOrElse(encrypted)
+  }
+  def extractTrackingParams(signedTrackingParams: String, encoding: Option[String]): Query = {
+    val maybeDecoded = encoding.map(URLDecoder.decode(signedTrackingParams, _)).getOrElse(signedTrackingParams)
+    Query.parse(maybeDecoded)
+  }
 
 }
