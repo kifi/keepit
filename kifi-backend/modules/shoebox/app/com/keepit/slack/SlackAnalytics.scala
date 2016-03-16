@@ -70,13 +70,13 @@ class SlackAnalytics @Inject() (
     val contextBuilder = heimdalContextBuilder().addExistingContext(existingContext)
     contextBuilder += ("action", "delivered")
     contextBuilder += ("slackChannelName", slackChannelName.value)
-    trackSlackNotificationEvent(slackTeamId, slackChannelId, category, existingContext)
+    trackSlackNotificationEvent(slackTeamId, slackChannelId, category, contextBuilder.build)
   }
 
   def trackNotificationClicked(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, category: NotificationCategory, subaction: String): Future[Unit] = Future {
     val contextBuilder = heimdalContextBuilder()
     contextBuilder += ("action", "click")
     contextBuilder += ("subaction", subaction)
-    trackSlackNotificationEvent(slackTeamId, slackChannelId, category)
+    trackSlackNotificationEvent(slackTeamId, slackChannelId, category, contextBuilder.build)
   }
 }
