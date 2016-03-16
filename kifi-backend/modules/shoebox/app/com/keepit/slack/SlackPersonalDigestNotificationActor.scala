@@ -21,6 +21,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.Author
 import com.kifi.juggle._
+import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -225,10 +226,29 @@ class SlackPersonalDigestNotificationActor @Inject() (
     val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPageViaSlack(digest.slackMembership.slackTeamId).withQuery(trackingParams("ownFeed")))
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(List(
+      prng.choice(puns),
       DescriptionElements("You've sent", digest.numIngestedMessages, "links", inTheLast(digest.digestPeriod), ".",
         "I", "archived them" --> linkToFeed, "for you, and indexed the pages so you can search for them more easily."),
       DescriptionElements("If you don't want to get any more of these notifications,", "click here" --> linkToUnsubscribe)
     ))
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text))
   }
+
+  private val prng = new MersenneTwister(System.currentTimeMillis())
+  private val puns = IndexedSeq[DescriptionElements](
+    DescriptionElements("Look at this boatload :rowboat: of links!"),
+    DescriptionElements("Surprise! I brought you a gift :gift:! It's all the links you messaged to your team this week. I'm bad at keeping secrets"),
+    DescriptionElements("You're turning into a link finding factory :factory:!"),
+    DescriptionElements("Man, you really hit the links :golf: hard this week! See what I mean?!"),
+    DescriptionElements("You're making it rain :umbrella:! Check out all these links!"),
+    DescriptionElements("Since you stashed so many links, I think you should watch cat :cat: videos the rest of the day. Go ahead, you earned it."),
+    DescriptionElements("You must love The Legend of Zelda :princess: because this link obsession is obvi."),
+    DescriptionElements("You might wanna cool it on the caffeine :coffee:! I mean, this is a lot of hyperlinks."),
+    DescriptionElements("You're turning link capturing into a science :microscope:!"),
+    DescriptionElements("You racked up a baker's dozen :doughnut: links this week. Reward yourself with donut!"),
+    DescriptionElements("Wow! You've added more links than you can shake a stick at :ice_hockey_stick_and_puck:"),
+    DescriptionElements("No need to :fishing_pole_and_fish: for your links.  We've got your summary right here."),
+    DescriptionElements("Don't worry!  We didn't :maple_leaf: your links behind.  Here they are!"),
+    DescriptionElements("You've gotta be :cat2: kitten me, right meow.  Did you really save all those links?!")
+  )
 }
