@@ -469,15 +469,15 @@ class SlackTeamCommanderImpl @Inject() (
     membershipOpt.fold(Future.failed[Unit](SlackFail.NoSuchMembership(slackTeamId, slackUserId))) { membership =>
       val channelId = membership.slackUserId.asChannel
       val trackingParams = SlackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.SETTINGS_TOGGLE, Some((!turnOn).toString))
-      val toggleLink = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = false).withQuery(trackingParams))
+      def toggleLink(on: Boolean) = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, slackUserId, turnOn = on).withQuery(trackingParams))
       slackClient.sendToSlackHoweverPossible(membership.slackTeamId, channelId, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
         if (turnOn) DescriptionElements(
           ":tada: Thanks for having me back! I'll gather some of your stats and update you about once a week if I have things to share.",
-          "If you want to power me back down, you can silence me", "here" --> toggleLink, "."
+          "If you want to power me back down, you can silence me", "here" --> toggleLink(false), "."
         )
         else DescriptionElements(
           ":+1: Roger that, I'll keep quiet from here on out.",
-          "If you'd like to hear from me again, you can power my notifications back on", "here" --> toggleLink, "."
+          "If you'd like to hear from me again, you can power my notifications back on", "here" --> toggleLink(true), "."
         )
       ))).map(_ => ())
     }

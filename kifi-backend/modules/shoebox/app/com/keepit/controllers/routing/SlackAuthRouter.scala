@@ -172,13 +172,13 @@ class SlackAuthRouter @Inject() (
 
   private def redirectThroughSlackAuth(org: Organization, slackTeamId: SlackTeamId, url: String, keepId: Option[PublicId[Keep]] = None, libraryId: Option[PublicId[Library]] = None, userId: Option[ExternalId[User]] = None)(implicit request: MaybeUserRequest[_]): Result = {
     val modelParams = (keepId, libraryId, userId) match {
-      case (Some(keepId), _, _) => s"=keep&keepId=${keepId.id}"
-      case (_, Some(libraryId), _) => s"=library&libraryId=${libraryId.id}"
-      case (_, _, Some(userId)) => s"=welcome&userId=${userId.id}"
-      case _ => "=true"
+      case (Some(keepId), _, _) => s"signUpWithSlack=keep&keepId=${keepId.id}"
+      case (_, Some(libraryId), _) => s"signUpWithSlack=library&libraryId=${libraryId.id}"
+      case (_, _, Some(userId)) => s"signUpWithSlack=welcome&userId=${userId.id}"
+      case _ => "signUpWithSlack=true"
     }
 
-    val slackAuthPage = pathCommander.orgPage(org) + s"?signUpWithSlack=$modelParams&slackTeamId=${slackTeamId.value}"
+    val slackAuthPage = pathCommander.orgPage(org) + s"?$modelParams&slackTeamId=${slackTeamId.value}"
 
     Redirect(slackAuthPage.absolute).withSession(request.session + (SecureSocial.OriginalUrlKey -> url)).withCookies(Cookie(PostRegIntent.onFailUrlKey, slackAuthPage.absolute))
   }

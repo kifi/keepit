@@ -3,11 +3,13 @@ package com.keepit.slack
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ Param, Query }
 import com.keepit.heimdal.{ HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model.NotificationCategory
 import com.keepit.slack.models._
 import com.keepit.social.NonUserKinds
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -25,44 +27,48 @@ class SlackAnalytics @Inject() (
     slackClient: SlackClientWrapper,
     heimdal: HeimdalServiceClient,
     val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    implicit val ec: ExecutionContext) {
+    implicit val ec: ExecutionContext) extends Logging {
   private def trackSlackNotificationEvent(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, category: NotificationCategory, existingContext: HeimdalContext = HeimdalContext.empty): Future[Unit] = {
     val contextBuilder = heimdalContextBuilder().addExistingContext(existingContext)
 
     val teamFut = {
       if (existingContext.get[String]("slackTeamName").isEmpty) {
         db.readOnlyReplicaAsync { implicit s =>
-          slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { team =>
-            contextBuilder += ("slackTeamName", team.slackTeamName.value)
-          }
+          slackTeamRepo.getBySlackTeamId(slackTeamId)
         }
-      } else Future.successful(())
+      } else Future.successful(None)
     }
-    val membersFut = {
+    val channelFut = {
       if (existingContext.get[Double]("numChannelMembers").isEmpty || existingContext.get[String]("slackChannelName").isEmpty) {
-        val channelInfoFuture = slackChannelId match {
-          case publicChannelId: SlackChannelId.Public => slackClient.getPublicChannelInfo(slackTeamId, publicChannelId)
-          case privateChannelId: SlackChannelId.Private => slackClient.getPrivateChannelInfo(slackTeamId, privateChannelId)
-          case _ => Future.failed(new UnsupportedOperationException(s"Cannot get information for Slack channel $slackChannelId"))
+        slackChannelId match {
+          case publicChannelId: SlackChannelId.Public => slackClient.getPublicChannelInfo(slackTeamId, publicChannelId).imap(Some(_))
+          case privateChannelId: SlackChannelId.Private => slackClient.getPrivateChannelInfo(slackTeamId, privateChannelId).imap(Some(_))
+          case _ => Future.successful(None)
         }
-        channelInfoFuture map { info =>
-          contextBuilder += ("numChannelMembers", info.members.size)
-          contextBuilder += ("slackChannelName", info.channelName.value)
-          ()
-        }
-      } else Future.successful(())
+      } else Future.successful(None)
     }
-
-    contextBuilder += ("category", category.category)
-    contextBuilder += ("channel", "slack")
-    contextBuilder += ("slackTeamId", slackTeamId.value)
-    contextBuilder += ("slackChannelId", slackChannelId.value)
-    val nonUserIdentifier = s"${slackTeamId.value}:${slackChannelId.value}"
 
     for {
-      _ <- teamFut
-      _ <- membersFut
-    } yield heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
+      teamOpt <- teamFut.recover { case _ => None }
+      channelOpt <- channelFut.recover { case _ => None }
+    } yield {
+      teamOpt.foreach { team =>
+        contextBuilder += ("slackTeamName", team.slackTeamName.value)
+      }
+
+      channelOpt.foreach { info =>
+        contextBuilder += ("numChannelMembers", info.members.size)
+        contextBuilder += ("slackChannelName", info.channelName.value)
+      }
+
+      contextBuilder += ("category", category.category)
+      contextBuilder += ("channel", "slack")
+      contextBuilder += ("slackTeamId", slackTeamId.value)
+      contextBuilder += ("slackChannelId", slackChannelId.value)
+      log.info(s"[clickTracking] processed slack $category, $slackTeamId, $slackChannelId, sending to heimdal")
+      val nonUserIdentifier = s"${slackTeamId.value}:${slackChannelId.value}"
+      heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
+    }
   }
 
   def trackNotificationSent(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName, category: NotificationCategory, existingContext: HeimdalContext = HeimdalContext.empty): Future[Unit] = Future {
