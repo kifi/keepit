@@ -20,14 +20,14 @@ import org.specs2.mutable.SpecificationLike
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class SlackTeamCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class SlackChannelCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeSocialGraphModule()
   )
 
-  "SlackTeamCommander" should {
+  "SlackChannelCommander" should {
     "sync public channels correctly" in {
       withDb(modules: _*) { implicit injector =>
         val (user, org, slackTeam) = db.readWrite { implicit s =>
@@ -37,7 +37,7 @@ class SlackTeamCommanderTest extends TestKitSupport with SpecificationLike with 
           val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withScopes(SlackAuthScope.syncPublicChannels).saved
           (user, org, slackTeam)
         }
-        val futureSyncedChannels = slackTeamCommander.syncPublicChannels(user.id.get, slackTeam.slackTeamId).flatMap {
+        val futureSyncedChannels = slackChannelCommander.syncPublicChannels(user.id.get, slackTeam.slackTeamId).flatMap {
           case (_, channels, futureLibByChannel) => futureLibByChannel.map(libByChannel => (channels, libByChannel))
         }
         val (channels, libByChannel) = Await.result(futureSyncedChannels, Duration.Inf)
