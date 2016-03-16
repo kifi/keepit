@@ -20,6 +20,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
+import com.keepit.slack.SlackPushingActor.PushItem.{ MessageToPush, KeepToPush }
 import com.keepit.slack.models.SlackErrorCode._
 import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
 import com.keepit.slack.models._
@@ -49,19 +50,20 @@ object SlackPushingActor {
     case class MessageToPush(k: Keep, msg: CrossServiceMessage) extends PushItem(msg.sentAt)
   }
   case class PushItems(
-      oldKeeps: Seq[(Keep, KeepToLibrary)],
-      newKeeps: Seq[(Keep, KeepToLibrary)],
-      oldMsgs: Map[Keep, Seq[CrossServiceMessage]],
-      newMsgs: Map[Keep, Seq[CrossServiceMessage]],
+      oldKeeps: Seq[KeepToPush],
+      newKeeps: Seq[KeepToPush],
+      oldMsgs: Seq[MessageToPush],
+      newMsgs: Seq[MessageToPush],
       lib: Library,
       slackTeamId: SlackTeamId,
+      slackChannelId: SlackChannelId,
       attribution: Map[Id[Keep], SourceAttribution],
       users: Map[Id[User], BasicUser]) {
-    def maxKeepSeq: Option[SequenceNumber[Keep]] = Seq(oldKeeps, newKeeps).flatMap(_.map(_._1.seq)).maxOpt
-    def maxMsgSeq: Option[SequenceNumber[Message]] = Seq(oldMsgs.values, newMsgs.values).flatMap(_.flatMap(_.map(_.seq))).maxOpt
+    def maxKeepSeq: Option[SequenceNumber[Keep]] = Seq(oldKeeps, newKeeps).flatMap(_.map(_.k.seq)).maxOpt
+    def maxMsgSeq: Option[SequenceNumber[Message]] = Seq(oldMsgs, newMsgs).flatMap(_.map(_.msg.seq)).maxOpt
     def sortedNewItems: Seq[PushItem] = {
-      val items: Seq[PushItem] = newKeeps.map { case (k, ktl) => PushItem.KeepToPush(k, ktl) } ++ newMsgs.flatMap { case (k, msgs) => msgs.map(msg => PushItem.MessageToPush(k, msg)) }
-      if (items.length > MAX_ITEMS_TO_PUSH) Seq(PushItem.Digest(newKeeps.map(_._2.addedAt).minOpt getOrElse newMsgs.values.flatten.map(_.sentAt).min))
+      val items: Seq[PushItem] = newKeeps ++ newMsgs
+      if (items.length > MAX_ITEMS_TO_PUSH) Seq(PushItem.Digest(newKeeps.map(_.ktl.addedAt).minOpt getOrElse newMsgs.map(_.msg.sentAt).min))
       else items.sortBy(_.time)
     }
   }
@@ -184,64 +186,44 @@ class SlackPushingActor @Inject() (
   }
 
   private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
-    implicit val channelId = integration.slackChannelId
     getPushItems(integration).flatMap { implicit pushItems =>
-      // First, do a best effort to update all the "old" shit, which can only happen with a slack bot user
-      // We do not keep track of whether this succeeds, we just assume that it does
-      db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBot.map(_.token)) }.foreach { botToken =>
-        log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found bot token $botToken")
-        for {
-          _ <- FutureHelpers.sequentialExec(pushItems.oldKeeps) {
-            case (k, ktl) =>
-              // lookup k in a cache to find a slack message timestamp
-              slackPushForKeepRepo.getTimestampFromCache(integration.id.get, k.id.get).map { oldKeepTimestamp =>
-                // regenerate the slack message
-                val updatedKeepMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
-                // call the SlackClient to try and update the message
-                log.info(s"[SLACK-PUSH-ACTOR] While pushing to ${integration.id.get}, found timestamp $oldKeepTimestamp for keep ${k.id.get}, trying to update")
-                slackClient.updateMessage(botToken, integration.slackChannelId, oldKeepTimestamp, updatedKeepMessage).andThen {
-                  case Success(msgResponse) => log.info(s"[SLACK-PUSH-ACTOR] Updated keep ${k.id.get}!")
-                  case Failure(ex) => log.error(s"[SLACK-PUSH-ACTOR] Failed to update keep ${k.id.get} because ${ex.getMessage}.")
-                }.imap(_ => ()).recover {
-                  case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
-                    slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
-                    slackPushForKeepRepo.dropTimestampFromCache(integration.id.get, k.id.get)
-                  case fail: SlackAPIErrorResponse =>
-                    slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} with timestamp $oldKeepTimestamp because ${fail.getMessage}")
-                    ()
-                }
-              }.getOrElse(Future.successful(()))
-          }
-          _ <- FutureHelpers.sequentialExec(pushItems.oldMsgs) {
-            case (k, msgs) =>
-              FutureHelpers.sequentialExec(msgs) { msg =>
-                slackPushForMessageRepo.getTimestampFromCache(integration.id.get, msg.id).fold(Future.successful(())) { oldCommentTimestamp =>
-                  // regenerate the slack message if there is some text to push
-                  val updatedCommentMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))(integration.slackChannelId)
-                  // call the SlackClient to try and update the message
-                  slackClient.updateMessage(botToken, integration.slackChannelId, oldCommentTimestamp, updatedCommentMessage).imap(_ => ()).recover {
-                    case SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(EDIT_WINDOW_CLOSED) =>
-                      slackLog.warn(s"Failed to update comment ${msg.id} because Slack says it's uneditable, removing it from the cache")
-                      slackPushForMessageRepo.dropTimestampFromCache(integration.id.get, msg.id)
-                    case fail: SlackAPIErrorResponse =>
-                      slackLog.warn(s"Failed to update comment ${msg.id} from integration ${integration.id.get} with timestamp $oldCommentTimestamp because ${fail.getMessage}")
-                      ()
-                  }
-                }
-              }
-          }
-        } yield ()
-      }
+      val botTokenOpt = db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBot.map(_.token)) }
+      for {
+        _ <- pushNewItems(integration, pushItems.sortedNewItems, settings)
+        _ <- botTokenOpt.map(token => updatePushedKeeps(integration, pushItems.oldKeeps, token)).getOrElse(Future.successful(()))
+        _ <- botTokenOpt.map(token => updatePushedMessages(integration, pushItems.oldMsgs, token)).getOrElse(Future.successful(()))
+      } yield ()
+    }
+  }
 
-      // Now push new things, updating the integration state as we go
-      FutureHelpers.sequentialExec(pushItems.sortedNewItems) { item =>
-        slackMessageForItem(item, settings).fold(Future.successful(Option.empty[SlackMessageResponse])) { itemMsg =>
-          val messageFut = slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg)
-            .recoverWith {
-              case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+  private def pushNewItems(integration: LibraryToSlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
+    FutureHelpers.sequentialExec(sortedItems) { item =>
+      slackMessageForItem(item, settings).fold(Future.successful(())) { itemMsg =>
+        slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg).recoverWith {
+          case SlackFail.NoValidPushMethod => Future.failed(BrokenSlackIntegration(integration, None, Some(SlackFail.NoValidPushMethod)))
+        }.map { pushedMessageOpt =>
+          db.readWrite { implicit s =>
+            item match {
+              case PushItem.Digest(_) =>
+                pushItems.newKeeps.map(_.ktl.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
+                pushItems.newMsgs.map(_.msg.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
+              case PushItem.KeepToPush(k, ktl) =>
+                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
+                pushedMessageOpt.foreach { response =>
+                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg, response))
+                }
+                integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
+              case PushItem.MessageToPush(k, kifiMsg) =>
+                pushedMessageOpt.foreach { response =>
+                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, itemMsg, response))
+                }
+                integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
             }
-          messageFut.onSuccess {
-            case _ =>
+          }
+        } tap { msgFut =>
+          msgFut.onComplete {
+            case Failure(_) =>
+            case Success(_) =>
               implicit val contextBuilder = heimdalContextBuilder()
               val category = item match {
                 case _: PushItem.Digest => NotificationCategory.NonUser.LIBRARY_DIGEST
@@ -256,33 +238,67 @@ class SlackPushingActor @Inject() (
               slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, category, contextBuilder.build)
               ()
           }
-          messageFut
-        }.map { pushedMessageOpt =>
-          db.readWrite { implicit s =>
-            item match {
-              case PushItem.Digest(_) =>
-                pushItems.newKeeps.map(_._2.id.get).maxOpt.foreach { ktlId => integrationRepo.updateLastProcessedKeep(integration.id.get, ktlId) }
-                pushItems.newMsgs.values.flatten.map(_.id).maxOpt.foreach { msgId => integrationRepo.updateLastProcessedMsg(integration.id.get, msgId) }
-              case PushItem.KeepToPush(k, ktl) =>
-                log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
-                pushedMessageOpt.foreach { pushedMessage =>
-                  slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, pushedMessage))
-                }
-                integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
-              case PushItem.MessageToPush(k, kifiMsg) =>
-                pushedMessageOpt.foreach { pushedMessage =>
-                  slackPushForMessageRepo.intern(SlackPushForMessage.fromMessage(integration, kifiMsg.id, pushedMessage))
-                }
-                integrationRepo.updateLastProcessedMsg(integration.id.get, kifiMsg.id)
+        }
+      }
+    }.andThen {
+      case Success(_) =>
+        db.readWrite { implicit s =>
+          integrationRepo.updateLastProcessedSeqs(integration.id.get, pushItems.maxKeepSeq, pushItems.maxMsgSeq)
+        }
+    }
+  }
+
+  private def updatePushedKeeps(integration: LibraryToSlackChannel, oldKeeps: Seq[PushItem.KeepToPush], botToken: SlackBotAccessToken)(implicit pushItems: PushItems): Future[Unit] = {
+    val slackPushesByKeep = db.readOnlyMaster { implicit s =>
+      slackPushForKeepRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldKeeps.map(_.k.id.get).toSet)
+    }
+    FutureHelpers.sequentialExec(oldKeeps.flatAugmentWith { case KeepToPush(k, _) => slackPushesByKeep.get(k.id.get) }) {
+      case (KeepToPush(k, ktl), oldPush) =>
+        val updatedMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+        if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
+        else {
+          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, updatedMessage).map { response =>
+            db.readWrite { implicit s =>
+              slackPushForKeepRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
             }
+            ()
+          }.recover {
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+              slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
+              db.readWrite { implicit s => slackPushForKeepRepo.save(oldPush.uneditable) }
+              ()
+            case fail: SlackAPIErrorResponse =>
+              slackLog.warn(s"Failed to update keep ${k.id.get} from integration ${integration.id.get} because ${fail.getMessage}")
+              ()
           }
         }
-      }.andThen {
-        case Success(_) =>
-          db.readWrite { implicit s =>
-            integrationRepo.updateLastProcessedSeqs(integration.id.get, pushItems.maxKeepSeq, pushItems.maxMsgSeq)
+    }
+  }
+
+  private def updatePushedMessages(integration: LibraryToSlackChannel, oldMsgs: Seq[PushItem.MessageToPush], botToken: SlackBotAccessToken)(implicit pushItems: PushItems): Future[Unit] = {
+    val slackPushesByMsg = db.readOnlyMaster { implicit s =>
+      slackPushForMessageRepo.getEditableByIntegrationAndKeepIds(integration.id.get, oldMsgs.map(_.msg.id).toSet)
+    }
+    FutureHelpers.sequentialExec(oldMsgs.flatAugmentWith { case MessageToPush(_, msg) => slackPushesByMsg.get(msg.id) }) {
+      case (MessageToPush(k, msg), oldPush) =>
+        val updatedMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
+        if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
+        else {
+          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, updatedMessage).map { response =>
+            db.readWrite { implicit s =>
+              slackPushForMessageRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
+            }
+            ()
+          }.recover {
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+              slackLog.warn(s"Failed to update message ${msg.id} because slack says it's uneditable, removing it from the cache")
+              db.readWrite { implicit s => slackPushForMessageRepo.save(oldPush.uneditable) }
+              ()
+            case fail: SlackAPIErrorResponse =>
+              slackLog.warn(s"Failed to update message ${msg.id} from integration ${integration.id.get} because ${fail.getMessage}")
+              ()
           }
-      }
+        }
     }
   }
 
@@ -292,13 +308,12 @@ class SlackPushingActor @Inject() (
       val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
       (lib, changedKeeps)
     }
-    if (changedKeeps.nonEmpty) log.info(s"[SLACK-PUSH-ACTOR] Integration ${lts.id.get} has ${changedKeeps.length} changed keeps with seq >= ${lts.lastProcessedKeepSeq}")
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
     val keepsById = db.readOnlyMaster { implicit s => keepRepo.getByIds(changedKeepIds) }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
+      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
       def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
@@ -310,46 +325,43 @@ class SlackPushingActor @Inject() (
       def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
         ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
       }
-      val (oldKeeps, newKeeps) = changedKeeps.flatMap { k =>
-        for { ktl <- ktlsByKeepId.get(k.id.get) } yield (k, ktl)
-      }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+      val (oldKeeps, newKeeps) = changedKeeps.flatAugmentWith { k => ktlsByKeepId.get(k.id.get) }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
       (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
-      def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(lastId => msg.id.id <= lastId.id) // Any idea why the implicit Ordering[Id[Message]] won't help me here?
-      val (oldMsgsUngrouped, newMsgsUngrouped) = changedMsgs.partition(hasAlreadyBeenPushed)
-      val oldMsgs = oldMsgsUngrouped.groupBy(_.keep).flatMap { case (kId, msgs) => keepsById.get(kId).map(_ -> msgs) }
-      val newMsgs = newMsgsUngrouped.groupBy(_.keep).flatMap { case (kId, msgs) => keepsById.get(kId).map(_ -> msgs) }
-      (oldMsgs, newMsgs)
+      def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
+      val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepsById.get(msg.keep)).map(_.swap)
+      msgsWithKeep.partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
     }
 
     for {
       (oldKeeps, newKeeps, attributionByKeepId) <- keepsToPushFut
       (oldMsgs, newMsgs) <- msgsToPushFut
       users <- db.readOnlyReplicaAsync { implicit s =>
-        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.flatMap(_.sentBy)) ++ newMsgs.flatMap(_._2.flatMap(_.sentBy))
+        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy) ++ newMsgs.flatMap(_._2.sentBy)
         basicUserRepo.loadAll(userIds.toSet)
       }
     } yield {
       PushItems(
-        oldKeeps = oldKeeps,
-        newKeeps = newKeeps,
-        oldMsgs = oldMsgs,
-        newMsgs = newMsgs,
+        oldKeeps = oldKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
+        newKeeps = newKeeps.map { case (k, ktl) => KeepToPush(k, ktl) },
+        oldMsgs = oldMsgs.map { case (k, msg) => MessageToPush(k, msg) },
+        newMsgs = newMsgs.map { case (k, msg) => MessageToPush(k, msg) },
         lib = lib,
         slackTeamId = lts.slackTeamId,
+        slackChannelId = lts.slackChannelId,
         attribution = attributionByKeepId,
         users = users
       )
     }
   }
 
-  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems, channelId: SlackChannelId): Option[SlackMessageRequest] = {
+  private def slackMessageForItem(item: PushItem, orgSettings: Option[OrganizationSettings])(implicit items: PushItems): Option[SlackMessageRequest] = {
     import DescriptionElements._
-    val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(channelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
+    val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(items.lib, items.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, NotificationCategory.NonUser.LIBRARY_DIGEST)))
     item match {
       case PushItem.Digest(since) => Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
-        items.lib.name, "has", (items.newKeeps.length, items.newMsgs.values.map(_.length).sum) match {
+        items.lib.name, "has", (items.newKeeps.length, items.newMsgs.length) match {
           case (numKeeps, numMsgs) if numMsgs < 2 => DescriptionElements(numKeeps, "new keeps since", since, ".")
           case (numKeeps, numMsgs) if numKeeps < 2 => DescriptionElements(numMsgs, "new comments since", since, ".")
           case (numKeeps, numMsgs) => DescriptionElements(numKeeps, "new keeps and", numMsgs, "new comments since", since, ".")
@@ -364,21 +376,17 @@ class SlackPushingActor @Inject() (
         None
     }
   }
-  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit slackChannelId: SlackChannelId): SlackMessageRequest = {
+  private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
     import DescriptionElements._
-
     val category = NotificationCategory.NonUser.NEW_KEEP
-
     val userStr = user.fold[String]("Someone")(_.firstName)
-    val keepElement = {
-      DescriptionElements(
-        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
-        "  ",
-        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some("viewArticle")))),
-        "|",
-        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some("reply"))))
-      )
-    }
+    val keepElement = DescriptionElements(
+      s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
+      "  ",
+      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
+      "|",
+      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
+    )
 
     (keep.note, attribution) match {
       case (None, None) =>
@@ -396,7 +404,7 @@ class SlackPushingActor @Inject() (
           })))
     }
   }
-  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit slackChannelId: SlackChannelId): SlackMessageRequest = {
+  private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
     airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
@@ -404,7 +412,7 @@ class SlackPushingActor @Inject() (
     val userStr = user.fold[String]("Someone")(_.firstName)
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
-    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(slackChannelId, category, Some(subaction))))
+    def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
       DescriptionElements(
