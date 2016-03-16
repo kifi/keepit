@@ -6,6 +6,7 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.Json
+import com.keepit.common.time._
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -90,7 +91,7 @@ class FakeSlackClientImpl extends SlackClient {
       SlackChannelId.Public("C" + RandomStringUtils.randomAlphanumeric(8)),
       SlackChannelName(if (x == 1) "#general" else RandomStringUtils.randomAlphabetic(15)),
       SlackUserId("U" + RandomStringUtils.randomAlphanumeric(8)),
-      SlackTimestamp(s"$x.00000"),
+      currentDateTime,
       isArchived = false,
       isGeneral = x == 1,
       members = Set.empty,
