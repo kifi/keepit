@@ -60,6 +60,12 @@ object SlackChannelIdAndPrettyName {
   def from(channelIdAndName: SlackChannelIdAndName): SlackChannelIdAndPrettyName = SlackChannelIdAndPrettyName.from(channelIdAndName.id, channelIdAndName.name)
 }
 
+sealed trait SlackChannelInfo {
+  def channelId: SlackChannelId
+  def channelName: SlackChannelName
+  def channelIdAndName = SlackChannelIdAndName(channelId, channelName)
+}
+
 // There is more stuff than just this returned
 case class SlackPublicChannelInfo(
     channelId: SlackChannelId.Public,
@@ -70,9 +76,7 @@ case class SlackPublicChannelInfo(
     isGeneral: Boolean,
     numMembers: Int,
     topic: Option[SlackChannelTopic],
-    purpose: Option[SlackChannelPurpose]) {
-  def channelIdAndName = SlackChannelIdAndName(channelId, channelName)
-}
+    purpose: Option[SlackChannelPurpose]) extends SlackChannelInfo
 object SlackPublicChannelInfo {
   implicit val reads: Reads[SlackPublicChannelInfo] = (
     (__ \ 'id).read[SlackChannelId.Public] and
@@ -85,4 +89,27 @@ object SlackPublicChannelInfo {
     (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
     (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))
   )(SlackPublicChannelInfo.apply _)
+}
+
+// There is more stuff than just this returned
+case class SlackPrivateChannelInfo(
+  channelId: SlackChannelId.Private,
+  channelName: SlackChannelName,
+  creator: SlackUserId,
+  createdAt: SlackTimestamp,
+  isArchived: Boolean,
+  members: Set[SlackUserId],
+  topic: Option[SlackChannelTopic],
+  purpose: Option[SlackChannelPurpose]) extends SlackChannelInfo
+object SlackPrivateChannelInfo {
+  implicit val reads: Reads[SlackPrivateChannelInfo] = (
+    (__ \ 'id).read[SlackChannelId.Private] and
+    (__ \ 'name).read[SlackChannelName] and
+    (__ \ 'creator).read[SlackUserId] and
+    (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
+    (__ \ 'is_archived).read[Boolean] and
+    (__ \ 'members).read[Set[SlackUserId]] and
+    (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
+    (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))
+  )(SlackPrivateChannelInfo.apply _)
 }

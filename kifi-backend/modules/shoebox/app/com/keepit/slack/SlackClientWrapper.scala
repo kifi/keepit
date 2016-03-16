@@ -18,6 +18,8 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
+  // These will potentially yield failed futures if the request cannot be completed
+
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
@@ -28,11 +30,12 @@ trait SlackClientWrapper {
   // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
-  // These will potentially yield failed futures if the request cannot be completed
+  // These APIs are token-specific
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
+  def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPrivateChannelInfo]]
 
-  // These are APIs token-agnostic - will first try preferred tokens first then whichever they can find
+  // These APIs are token-agnostic - will first try preferred tokens first then whichever they can find
   def getPublicChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]]
   def getGeneralChannelId(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Option[SlackChannelId]]
   def getChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
@@ -188,6 +191,18 @@ class SlackClientWrapperImpl @Inject() (
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = {
     slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
+  }
+
+  def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPrivateChannelInfo]] = {
+    slackClient.getPrivateChannels(token, excludeArchived) andThen (onRevokedToken(token)) andThen {
+      case Success(chs) => db.readWrite { implicit s =>
+        getSlackTeamId(token).foreach { teamId =>
+          chs.foreach { ch =>
+            slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
+          }
+        }
+      }
+    }
   }
 
   private def getSlackTeamId(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamId] = {
