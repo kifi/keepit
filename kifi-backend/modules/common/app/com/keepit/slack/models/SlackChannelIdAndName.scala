@@ -99,6 +99,7 @@ case class SlackPrivateChannelInfo(
   creator: SlackUserId,
   createdAt: SlackTimestamp,
   isArchived: Boolean,
+  isMultipartyDM: Boolean,
   members: Set[SlackUserId],
   topic: Option[SlackChannelTopic],
   purpose: Option[SlackChannelPurpose]) extends SlackChannelInfo
@@ -109,6 +110,7 @@ object SlackPrivateChannelInfo {
     (__ \ 'creator).read[SlackUserId] and
     (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
     (__ \ 'is_archived).read[Boolean] and
+    (__ \ 'is_mpim).read[Boolean] and
     (__ \ 'members).read[Set[SlackUserId]] and
     (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
     (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))

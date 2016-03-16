@@ -404,7 +404,7 @@ class SlackTeamCommanderImpl @Inject() (
                           val updatedTeam = team.withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
                           if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
                         }
-                        def shouldBeIgnored(channel: SlackPrivateChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId)
+                        def shouldBeIgnored(channel: SlackPrivateChannelInfo) = channel.isArchived || channel.isMultipartyDM || updatedTeam.channelsSynced.contains(channel.channelId)
                         val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
                         val futureSlackChannelLibraries = SafeFuture {
                           setupPrivateSlackChannels(updatedTeam, membership, channelsToIntegrate)
