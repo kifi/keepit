@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.controller._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ KifiUrlRedirectHelper, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
@@ -13,8 +13,10 @@ import com.keepit.common.http._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
+import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.model._
-import com.keepit.slack.SlackTeamCommander
+import com.keepit.shoebox.controllers.TrackingActions
+import com.keepit.slack.{ SlackAnalytics, SlackTeamCommander }
 import com.keepit.slack.models._
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
 import play.api.mvc.{ Cookie, Result }
@@ -37,13 +39,16 @@ class SlackAuthRouter @Inject() (
   permissionCommander: PermissionCommander,
   pathCommander: PathCommander,
   slackTeamCommander: SlackTeamCommander,
+  heimdal: HeimdalServiceClient,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   val airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
-  implicit val defaultContext: ExecutionContext,
+  implicit val slackAnalytics: SlackAnalytics,
+  implicit val ec: ExecutionContext,
   implicit val publicIdConfiguration: PublicIdConfiguration)
-    extends UserActions with ShoeboxServiceController {
+    extends ShoeboxServiceController with UserActions with TrackingActions {
 
-  def fromSlackToInstallPage(slackTeamId: SlackTeamId) = MaybeUserAction { implicit request =>
+  def fromSlackToInstallPage(slackTeamId: SlackTeamId) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "extension")) { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive).map { org =>
         val target = PathCommander.browserExtension.absolute
@@ -56,7 +61,7 @@ class SlackAuthRouter @Inject() (
     redir.getOrElse(notFound(request))
   }
 
-  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User], isWelcomeMessage: Boolean) = MaybeUserAction { implicit request =>
+  def fromSlackToUser(slackTeamId: SlackTeamId, extId: ExternalId[User], isWelcomeMessage: Boolean) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "user")) { implicit request =>
     import com.keepit.common.core._
     db.readOnlyMaster { implicit s =>
       val userPathOpt = userRepo.getOpt(extId).filter(_.isActive).map(user => pathCommander.pathForUser(user).absolute)
@@ -73,7 +78,7 @@ class SlackAuthRouter @Inject() (
     }.getOrElse(notFound(request))
   }
 
-  def fromSlackToOrg(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
+  def fromSlackToOrg(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "org")) { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgPage(org).absolute
@@ -85,7 +90,7 @@ class SlackAuthRouter @Inject() (
     }
     redir.getOrElse(notFound(request))
   }
-  def fromSlackToOrgIntegrations(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = MaybeUserAction { implicit request =>
+  def fromSlackToOrgIntegrations(slackTeamId: SlackTeamId, pubId: PublicId[Organization]) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "integrations")) { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Organization.decodePublicId(pubId).toOption.flatMap(orgId => Some(orgRepo.get(orgId)).filter(_.isActive)).map { org =>
         val target = pathCommander.orgIntegrationsPage(org).absolute + "#slack-settings-" // Carlos magic to smooth-scroll to the settings part
@@ -98,7 +103,7 @@ class SlackAuthRouter @Inject() (
     redir.getOrElse(notFound(request))
   }
 
-  def fromSlackToLibrary(slackTeamId: SlackTeamId, pubId: PublicId[Library]) = MaybeUserAction { implicit request =>
+  def fromSlackToLibrary(slackTeamId: SlackTeamId, pubId: PublicId[Library]) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "library")) { implicit request =>
     val redir = db.readOnlyMaster { implicit s =>
       Library.decodePublicId(pubId).toOption.flatMap(libId => Some(libraryRepo.get(libId)).filter(_.isActive)).map { lib =>
         val target = pathCommander.libraryPage(lib).absolute
@@ -111,7 +116,7 @@ class SlackAuthRouter @Inject() (
     redir.getOrElse(notFound(request))
   }
 
-  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = MaybeUserAction { implicit request =>
+  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "keep")) { implicit request =>
     // show 3rd party url with ext if possible, otherwise go to keep page (with proper upsells) or 3rd party url
     val redirOpt = db.readOnlyMaster { implicit s =>
       Keep.decodePublicId(pubId)
@@ -145,7 +150,7 @@ class SlackAuthRouter @Inject() (
     }
   }
 
-  def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = MaybeUserAction { implicit request =>
+  def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "toggleDigest")) { implicit request =>
     if (SlackTeamMembership.decodeTeamAndUser(hash).safely.contains((slackTeamId, slackUserId))) {
       slackTeamCommander.togglePersonalDigests(slackTeamId, slackUserId, turnOn = turnOn) // this can fail if there is no such membership! (should never happen)
     }
@@ -182,4 +187,3 @@ class SlackAuthRouter @Inject() (
     NotFound(views.html.error.notFound(request.path))
   }
 }
-

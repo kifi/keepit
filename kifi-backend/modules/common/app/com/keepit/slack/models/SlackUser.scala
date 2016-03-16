@@ -11,7 +11,9 @@ object SlackUserId {
     override def unbind(key: String, obj: SlackUserId): String = obj.value
   }
 }
-@json case class SlackUsername(value: String)
+@json case class SlackUsername(value: String) {
+  def asChannelName = SlackChannelName(this.value)
+}
 
 object SlackUsername {
   val slackbot = SlackUsername("slackbot")
