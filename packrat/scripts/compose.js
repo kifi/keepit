@@ -18,7 +18,7 @@ k.compose = k.compose || (function() {
     if ($form.is($forms) && !$form.data('submitted')) {
       api.port.emit('save_draft', {
         to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
-        html: editor.getRaw(),
+        html: k.render('html/keeper/kifi_mustache_tags', editor.getRaw()),
         track: trackData
       });
     }
