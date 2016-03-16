@@ -58,7 +58,6 @@ class EventTrackingController @Inject() (
   }
 
   private def clientTrackEvent[E <: HeimdalEvent](event: E)(implicit heimdalEventCompanion: HeimdalEventCompanion[E]): Unit = {
-    if (event.eventType == EventType("searched") && event.context.data.get("source").contains(ContextStringData("Slack"))) log.info(s"[searchUserStatus] event = ${event.context.data}")
     try {
       mixpanelClient.track(event)
     } catch {
