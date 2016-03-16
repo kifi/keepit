@@ -43,6 +43,9 @@ object SlackOnboarder {
 
     def syncingPublicChannels() = parent.teamAgent.syncingPublicChannels(this)()
     def syncedPublicChannels(channels: Seq[SlackPublicChannelInfo]) = parent.teamAgent.syncedPublicChannels(this)(channels)
+
+    def syncingPrivateChannels() = parent.teamAgent.syncingPrivateChannels(this)()
+    def syncedPrivateChannels(channels: Seq[SlackPrivateChannelInfo]) = parent.teamAgent.syncedPrivateChannels(this)(channels)
   }
 }
 
@@ -264,6 +267,90 @@ class SlackOnboarderImpl @Inject() (
         }
       }
     }
+
+    def syncingPrivateChannels(agent: TeamOnboardingAgent)(): Future[Try[Unit]] = FutureHelpers.robustly {
+      (for {
+        msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(DescriptionElements(
+          SlackEmoji.arrowsCounterclockwise,
+          "I started sync'ing your private :slack: channels and creating :books: Kifi libraries.",
+          agent.membership.privateChannelsLastSyncedAt match {
+            case Some(lastTime) =>
+              DescriptionElements("The last time you sync'd this was", lastTime, "so it should only take us a few seconds to pull in what's new.")
+            case None =>
+              DescriptionElements("Give me a few minutes and I'll let you know when it's all set up.")
+          }
+        )))).filter(_ => agent.isWorking)
+      } yield {
+        slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+      }) getOrElse {
+        slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+        Future.successful(Unit)
+      }
+    }
+
+    def syncedPrivateChannels(agent: TeamOnboardingAgent)(channels: Seq[SlackPrivateChannelInfo]): Future[Try[Unit]] = FutureHelpers.robustly {
+      import DescriptionElements._
+      FutureHelpers.accumulateRobustly(channels) { ch =>
+        import SlackSearchRequest._
+        val query = Query(Query.in(ch.channelName), Query.hasLink)
+        slackClient.searchMessages(agent.membership.token.get, SlackSearchRequest(query)).map { response =>
+          response.messages.total
+        }
+      }.flatMap { msgsByChannel =>
+        val numMsgsWithLinks = msgsByChannel.values.toList match {
+          case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
+          case results =>
+            slackLog.error(
+              "Failed to predict the number of ingestable links for", agent.membership.slackTeamName.value,
+              results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
+            )
+            None
+        }
+        (for {
+          org <- agent.team.organizationId.map { orgId => db.readOnlyMaster { implicit s => orgRepo.get(orgId) } }
+          msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
+            if (channels.nonEmpty) {
+              DescriptionElements.unlines(Seq(
+                DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+                  "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
+                  numMsgsWithLinks.map(numMsgs => DescriptionElements(
+                    "I",
+                    numMsgs match {
+                      case n if n > 1 => s"found $n messages with links, and once they're indexed you can access all of them"
+                      case 1 => "only found one message with a link, though. Once it's indexed you can access it"
+                      case 0 => "couldn't find any messages with links, though. Sorry :(. If we HAD found any, you could find them"
+                    },
+                    "inside your", if (channels.length > 1) "newly created private libraries" else "new private library", "."
+                  )),
+                  "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+                ),
+                DescriptionElements(
+                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously. Take a look at your granular team settings",
+                  "here" --> LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId)),
+                  "and you can turn off any messages I send to your team (and toggle all of your library integrations)."
+                )
+              ))
+            } else {
+              DescriptionElements(
+                SlackEmoji.sweatSmile, "I just looked but I didn't find any",
+                agent.membership.privateChannelsLastSyncedAt match {
+                  case Some(lastTime) => DescriptionElements("new channels since you last sync'd", lastTime, ".")
+                  case None => DescriptionElements("private channels.")
+                },
+                "If you think this is an error, please email my human friends at support@kifi.com."
+              )
+            }
+          ))).filter(_ => agent.isWorking)
+        } yield {
+          agent.dieIf(channels.isEmpty)
+          slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map(_ => ())
+        }) getOrElse {
+          slackLog.info(s"Decided not to send a FTUI to team ${agent.team.slackTeamName.value}")
+          Future.successful(Unit)
+        }
+      }
+    }
+
     private def logFTUI(agent: TeamOnboardingAgent, msg: SlackMessageRequest): PartialFunction[Try[_], Unit] = {
       case Success(_) => slackLog.info("Pushed a team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "saying", msg.text)
       case Failure(fail) => slackLog.warn("Failed to push team FTUI to", agent.membership.slackUsername.value, "in", agent.team.slackTeamName.value, "because:", fail.getMessage)

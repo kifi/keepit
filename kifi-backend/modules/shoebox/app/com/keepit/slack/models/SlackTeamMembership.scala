@@ -147,7 +147,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def updateLastPersonalDigest(id: Id[SlackTeamMembership])(implicit session: RWSession): Unit
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
-
+  def markAsSyncingChannels(slackTeamId: SlackTeamId, slackUserId: SlackUserId, syncTimeout: Duration)(implicit session: RWSession): Boolean
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
 }
 

@@ -37,6 +37,7 @@ trait SlackTeamCommander {
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam]
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization]
   def syncPublicChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])]
+  def syncPrivateChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])]
   def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]]
   def togglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit]
 }
@@ -173,45 +174,60 @@ class SlackTeamCommanderImpl @Inject() (
     }
   }
 
-  private def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackPublicChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-    require(membership.slackTeamId == team.slackTeamId, s"SlackTeam ${team.id.get}/${team.slackTeamId.value} doesn't match SlackTeamMembership ${membership.id.get}/${membership.slackTeamId.value}")
-    require(membership.userId.isDefined, s"SlackTeamMembership ${membership.id.get} doesn't belong to any user.")
-
-    val userId = membership.userId.get
-    val libraryName = channel.channelName.value
-    val librarySpace = LibrarySpace(userId, team.organizationId)
-
+  private def createLibraryForPublicChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPublicChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     // If this channel is the slack team's general channel, try to sync it with the org's general library
     // if not, just create a library as normal
-    def createLibrary() = {
-      val maybeOrgGeneralLibrary = if (channel.isGeneral) {
-        val generalLib = db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
-        generalLib.map { lib => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(name = Some(channel.channelName.value))).modifiedLibrary }
-      } else None
+    val librarySpace = LibrarySpace.fromOrganizationId(organizationId)
 
-      maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
-        val initialValues = LibraryInitialValues(
-          name = libraryName,
-          visibility = librarySpace match {
-            case UserSpace(_) => LibraryVisibility.SECRET
-            case OrganizationSpace(_) => LibraryVisibility.ORGANIZATION
-          },
-          kind = Some(LibraryKind.SLACK_CHANNEL),
-          description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
-          space = Some(librarySpace)
-        )
-        libraryCommander.createLibrary(initialValues, userId)
-      }
+    val maybeOrgGeneralLibrary = if (channel.isGeneral) {
+      val generalLib = db.readOnlyMaster { implicit s => libraryRepo.getBySpaceAndKind(librarySpace, LibraryKind.SYSTEM_ORG_GENERAL).headOption }
+      generalLib.map { lib => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(name = Some(channel.channelName.value))).modifiedLibrary }
+    } else None
+
+    maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
+      val initialValues = LibraryInitialValues(
+        name = channel.channelName.value,
+        visibility = LibraryVisibility.ORGANIZATION,
+        kind = Some(LibraryKind.SLACK_CHANNEL),
+        description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
+        space = Some(librarySpace)
+      )
+      libraryCommander.createLibrary(initialValues, userId)
+    }
+  }
+
+  private def createLibraryForPrivateChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPrivateChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+    val initialValues = LibraryInitialValues(
+      name = channel.channelName.value,
+      visibility = LibraryVisibility.ORGANIZATION,
+      kind = Some(LibraryKind.SLACK_CHANNEL),
+      description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
+      space = Some(organizationId)
+    )
+    libraryCommander.createLibrary(initialValues, userId)
+  }
+
+  private def setupSlackChannel(team: SlackTeam, membership: SlackTeamMembership, channel: SlackChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+    require(membership.slackTeamId == team.slackTeamId, s"SlackTeam ${team.id.get}/${team.slackTeamId.value} doesn't match SlackTeamMembership ${membership.id.get}/${membership.slackTeamId.value}")
+    require(membership.userId.isDefined, s"SlackTeamMembership ${membership.id.get} doesn't belong to any user.")
+    require(team.organizationId.isDefined, s"SlackTeam ${team.id.get} doesn't belong to any org.")
+
+    val userId = membership.userId.get
+    val orgId = team.organizationId.get
+
+    val libraryMaybe = channel match {
+      case publicChannel: SlackPublicChannelInfo => createLibraryForPublicChannel(orgId, userId, publicChannel)
+      case privateChannel: SlackPrivateChannelInfo => createLibraryForPrivateChannel(orgId, userId, privateChannel)
     }
 
-    createLibrary() tap {
+    libraryMaybe tap {
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
           channelRepo.getOrCreate(team.slackTeamId, channel.channelId, channel.channelName)
           libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
-            space = librarySpace,
+            space = library.space,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
@@ -221,7 +237,7 @@ class SlackTeamCommanderImpl @Inject() (
           ))
           channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
-            space = librarySpace,
+            space = library.space,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
@@ -245,8 +261,9 @@ class SlackTeamCommanderImpl @Inject() (
       val newLibraries = libCreationsByChannel.collect { case (channel, Right(lib)) => channel -> lib }
       val failedChannels = libCreationsByChannel.collect { case (channel, Left(fail)) => channel -> fail }
 
-      val updatedTeam = team.withPublicChannelsSyncedAt(clock.now).withSyncedChannels(newLibraries.keySet.map(_.id))
-      db.readWrite { implicit s => slackTeamRepo.save(updatedTeam) }
+      db.readWrite { implicit s =>
+        slackTeamRepo.save(slackTeamRepo.get(team.id.get).withPublicChannelsSyncedAt(clock.now).withSyncedChannels(newLibraries.keySet.map(_.id)))
+      }
 
       if (failedChannels.nonEmpty) slackLog.warn(
         "Failed to create some libraries while integrating Slack team", team.slackTeamId.value, ".",
@@ -319,24 +336,76 @@ class SlackTeamCommanderImpl @Inject() (
       case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
+
+  private def setupPrivateSlackChannels(team: SlackTeam, membership: SlackTeamMembership, channels: Seq[SlackPrivateChannelInfo])(implicit context: HeimdalContext): SlackChannelLibraries = {
+
+    val markedAsSyncing = db.readWrite { implicit session => slackTeamMembershipRepo.markAsSyncingChannels(membership.slackTeamId, membership.slackUserId, SlackTeamCommander.channelSyncTimeout) }
+
+    if (markedAsSyncing) {
+      val libCreationsByChannel = channels.map { channel =>
+        channel.channelIdAndName -> setupSlackChannel(team, membership, channel)
+      }.toMap
+
+      val newLibraries = libCreationsByChannel.collect { case (channel, Right(lib)) => channel -> lib }
+      val failedChannels = libCreationsByChannel.collect { case (channel, Left(fail)) => channel -> fail }
+
+      db.readWrite { implicit s =>
+        slackTeamRepo.save(slackTeamRepo.get(team.id.get).withSyncedChannels(newLibraries.keySet.map(_.id)))
+        slackTeamMembershipRepo.save(slackTeamMembershipRepo.get(membership.id.get).withPrivateChannelsSyncedAt(clock.now()))
+      }
+
+      if (failedChannels.nonEmpty) slackLog.warn(
+        "Failed to create some libraries while integrating private channels from", membership.slackUserId.value, "in Slack team", team.slackTeamId.value, ".",
+        "The errors are:", failedChannels.values.map(_.getMessage).mkString("[", ",", "]")
+      )
+
+      if (newLibraries.nonEmpty) {
+        SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
+          "Created", newLibraries.size, "private libraries from", team.slackTeamName.value, "private channels",
+          team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+        ))))
+      }
+
+      libCreationsByChannel
+    } else Map.empty
+  }
+
+  def syncPrivateChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackChannelIdAndName], Future[SlackChannelLibraries])] = {
+    val teamOpt = db.readOnlyMaster { implicit session => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId) }
+    teamOpt match {
+      case Some(team) =>
+        team.organizationId match {
+          case Some(orgId) =>
+            val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
+              val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, team.slackTeamId)
+              val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).map(_.slackChannelId).toSet
+              val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
+              (membershipOpt, integratedChannelIds, hasOrgPermissions)
+            }
+            if (hasOrgPermissions) {
+              val tokenOpt = membershipOpt.flatMap(_.getTokenIncludingScopes(Set(SlackAuthScope.GroupsRead)))
+              (membershipOpt, tokenOpt) match {
+                case (Some(membership), Some(token)) =>
+                  val shouldSync = {
+                    val now = clock.now()
+                    val alreadySyncing = membership.privateChannelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
+                    val syncedRecently = membership.privateChannelsLastSyncedAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncBuffer))
                     !alreadySyncing && !syncedRecently
                   }
                   if (shouldSync) {
-                    val preferredTokens = Seq(team.getKifiBotTokenIncludingScopes(SlackAuthScope.syncPublicChannels), membership.getTokenIncludingScopes(SlackAuthScope.syncPublicChannels)).flatten
                     val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
-                    onboardingAgent.syncingPublicChannels().flatMap { _ =>
-                      slackClient.getChannels(slackTeamId, excludeArchived = true, preferredTokens = preferredTokens).map { channels =>
+                    onboardingAgent.syncingPrivateChannels().flatMap { _ =>
+                      slackClient.getPrivateChannels(token).map { channels =>
                         val updatedTeam = {
-                          val teamWithGeneral = channels.collectFirst { case channel if channel.isGeneral => team.withGeneralChannelId(channel.channelId) }
-                          val updatedTeam = (teamWithGeneral getOrElse team).withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
+                          val updatedTeam = team.withSyncedChannels(integratedChannelIds) // lazy single integration channel backfilling
                           if (team == updatedTeam) team else db.readWrite { implicit session => slackTeamRepo.save(updatedTeam) }
                         }
-                        def shouldBeIgnored(channel: SlackPublicChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId)
+                        def shouldBeIgnored(channel: SlackPrivateChannelInfo) = channel.isArchived || updatedTeam.channelsSynced.contains(channel.channelId)
                         val channelsToIntegrate = channels.filter(!shouldBeIgnored(_)).sortBy(_.createdAt)
                         val futureSlackChannelLibraries = SafeFuture {
-                          setupPublicSlackChannels(updatedTeam, membership, channelsToIntegrate)
+                          setupPrivateSlackChannels(updatedTeam, membership, channelsToIntegrate)
                         } flatMap { slackChannelLibraries =>
-                          onboardingAgent.syncedPublicChannels(membership, channelsToIntegrate).map { _ =>
+                          onboardingAgent.syncedPrivateChannels(channelsToIntegrate).map { _ =>
                             slackChannelLibraries
                           }
                         }
@@ -346,7 +415,7 @@ class SlackTeamCommanderImpl @Inject() (
                   } else {
                     Future.successful((orgId, Set.empty[SlackChannelIdAndName], Future.successful(Map.empty[SlackChannelIdAndName, Either[LibraryFail, Library]])))
                   }
-                case None => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
+                case _ => Future.failed(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, membershipOpt))
               }
             } else Future.failed(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
