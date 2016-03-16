@@ -203,7 +203,7 @@ class SlackTeamCommanderImpl @Inject() (
   private def createLibraryForPrivateChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPrivateChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val initialValues = LibraryInitialValues(
       name = channel.channelName.value,
-      visibility = LibraryVisibility.ORGANIZATION,
+      visibility = LibraryVisibility.SECRET,
       kind = Some(LibraryKind.SLACK_CHANNEL),
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
       space = Some(organizationId)
