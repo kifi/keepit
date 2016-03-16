@@ -6,6 +6,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.keepit.social.twitter.{ TwitterUserId, TwitterHandle, TwitterStatusId, RawTweet }
+import org.apache.commons.lang3.StringEscapeUtils
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -82,7 +83,7 @@ object PrettyTweet {
     (__ \ 'text).format[String]
   )(PrettyTweet.apply _, unlift((PrettyTweet.unapply)))
 
-  def fromRawTweet(tweet: RawTweet): PrettyTweet = PrettyTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text)
+  def fromRawTweet(tweet: RawTweet): PrettyTweet = PrettyTweet(tweet.id, tweet.user, tweet.getUrl, StringEscapeUtils.unescapeHtml4(tweet.text))
 }
 
 case class TwitterAttribution(tweet: PrettyTweet) extends SourceAttribution
