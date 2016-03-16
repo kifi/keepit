@@ -19,13 +19,11 @@ trait TrackingActions {
       Future {
         request.getQueryString("t").foreach { signedTrackingParams =>
           val params = KifiUrlRedirectHelper.extractTrackingParams(signedTrackingParams, Some("ascii"))
-          log.info(s"[clickTracking] params=${params.params.mkString(",")}")
           for {
             slackChannelId <- params.getParam("slackChannelId").flatMap(_.value.map(SlackChannelId(_)))
             category <- params.getParam("category").flatMap(_.value.map(NotificationCategory(_)))
             subaction = params.getParam("subaction").flatMap(_.value).getOrElse(subactionFallback)
           } {
-            log.info(s"[clickTracking] tracking slack notification click... $category, $slackTeamId, $slackChannelId")
             slackAnalytics.trackNotificationClicked(slackTeamId, slackChannelId, category, subaction)
           }
         }
