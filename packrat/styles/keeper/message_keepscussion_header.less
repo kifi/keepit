@@ -1,4 +1,8 @@
+@buttonBgColor: #67829c;
+@dotBgColor: #b8c5d1;
+
 .kifi-message-keepscussion-header {
+  position: relative;
   padding: 0 10px;
   border-bottom: 1px lightgray solid;
 }
@@ -100,5 +104,81 @@
   use,
   use path {
     fill: #F00;
+  }
+}
+
+.kifi-message-keepscussion-dialog {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  z-index: 10;
+  width: 100%;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  color: white;
+  background: @dotBgColor;
+
+  :not(.kifi-dialog-opened)>& {
+    display: none;
+  }
+
+  &>.kifi-ti-list {
+    padding: 3px !important;
+    padding-top: 6px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    &::before {
+      content: none;
+    }
+  }
+
+  .kifi-ti-token {
+    font-size: 13px;
+    font-weight: 200;
+    letter-spacing: .5px;
+    line-height: 16px;
+  }
+
+  input {
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: .5px;
+    line-height: 18px !important;
+    border: 0 !important;
+    padding: 3px 0 !important;
+  }
+
+  &>.kifi-ti-dropdown {
+    // border: 1px solid @buttonBgColor;
+    // border-bottom-width: 2px;
+  }
+}
+
+.kifi-message-keepscussion-dialog-title {
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 6px;
+}
+
+.kifi-message-keepscussion-dialog-button {
+  float: right;
+  font-size: 13px;
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  padding: 7px 16px;
+  border-radius: 2px !important;
+  margin-top: 8px;
+  color: white;
+  background: @buttonBgColor;
+
+  &:hover, &:focus {
+    color: white;
+    background: shade(@buttonBgColor, 10%);
+  }
+
+  &:active {
+    color: white;
+    background: shade(@buttonBgColor, 20%);
   }
 }

@@ -222,6 +222,14 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 			return this.plugins.map(function (plugin) {
 				return plugin.render(compName) || '';
 			});
+		},
+
+		refresh: function () {
+			this.plugins.forEach(function (plugin) {
+				if (plugin.refresh) {
+					plugin.refresh();
+				}
+			});
 		}
 	};
 })(jQuery, this);

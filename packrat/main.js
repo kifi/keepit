@@ -724,6 +724,36 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
+  update_discussion_keep_library: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    var discussionKeep = data.discussionKeep;
+    var newLibrary = data.newLibrary;
+    var oldLibrary = discussionKeep.libraries.filter(function (l) { return l.id !== newLibrary.id; })[0];
+    var params = {
+      libraries: {
+        add: [ newLibrary.id ],
+        remove: oldLibrary ? [ oldLibrary.id ] : []
+      }
+    };
+
+    ajax('POST', '/ext/keeps/' + discussionKeep.id + '/recipients', params, function (result) {
+      var keep = keepData[discussionKeep.id];
+      loadLibraries(function (libraries) {
+        var canonicalLibrary = libraries.find(idIs(newLibrary.id));
+        if (keep) {
+          keep.libraries = [ canonicalLibrary ];
+        }
+        var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
+        if (pageKeep) {
+          pageKeep.libraryId = newLibrary.id;
+        }
+
+        respond({ success: true, response: keep });
+      })
+    }, function (failData) {
+      respond({ success: false })
+    });
+  },
   keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     loadLibraries(function (libraries) {
@@ -748,10 +778,12 @@ api.port.on({
 
       // preload keep details
       keeps.forEach(function (keep) {
-        ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
-          extend(keep, details);
-          // TODO: trigger get_keep response if any are waiting
-        });
+        if (keep.libraryId) {
+          ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
+            extend(keep, details);
+            // TODO: trigger get_keep response if any are waiting
+          });
+        }
       });
     }, respond);
   },
