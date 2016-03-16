@@ -313,7 +313,7 @@ class SlackPushingActor @Inject() (
     val keepsById = db.readOnlyMaster { implicit s => keepRepo.getByIds(changedKeepIds) }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds, excludeState = None).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
+      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
       def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
@@ -378,33 +378,30 @@ class SlackPushingActor @Inject() (
   }
   private def keepAsSlackMessage(keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
     import DescriptionElements._
-    if (!keep.isActive) SlackMessageRequest.fromKifi("[keep was deleted]")
-    else {
-      val category = NotificationCategory.NonUser.NEW_KEEP
-      val userStr = user.fold[String]("Someone")(_.firstName)
-      val keepElement = DescriptionElements(
-        s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
-        "  ",
-        "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
-        "|",
-        "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
-      )
+    val category = NotificationCategory.NonUser.NEW_KEEP
+    val userStr = user.fold[String]("Someone")(_.firstName)
+    val keepElement = DescriptionElements(
+      s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
+      "  ",
+      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
+      "|",
+      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
+    )
 
-      (keep.note, attribution) match {
-        case (None, None) =>
-          SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement)))
-        case (Some(note), _) =>
-          SlackMessageRequest.fromKifi(
-            text = DescriptionElements.formatForSlack(keepElement),
-            attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
-          )
-        case (None, Some(attr)) =>
-          SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
-            attachments = Seq(SlackAttachment.simple(attr match {
-              case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
-              case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username}:*", msg.text)
-            })))
-      }
+    (keep.note, attribution) match {
+      case (None, None) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement)))
+      case (Some(note), _) =>
+        SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(keepElement),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+        )
+      case (None, Some(attr)) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
+          attachments = Seq(SlackAttachment.simple(attr match {
+            case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
+            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username}:*", msg.text)
+          })))
     }
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
@@ -427,43 +424,28 @@ class SlackPushingActor @Inject() (
       )
     }
 
-    if (!keep.isActive) SlackMessageRequest.fromKifi("[keep was deleted]")
-    else {
-      val userStr = user.fold[String]("Someone")(_.firstName)
-      val keepLink = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId))
-      val keepElement = {
-        DescriptionElements(
-          s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
-          "  ",
-          "View Article" --> keepLink,
-          "|",
-          "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId))
-        )
-      }
-
-      val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
-      SlackMessageRequest.fromKifi(
-        text = DescriptionElements.formatForSlack(keepElement),
-        attachments =
-          if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
-          else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
-            case Left(str) => DescriptionElements(str)
-            case Right(Success((pointer, ref))) => pointer --> keepLink
-            case Right(Failure(fail)) => "look here" --> keepLink
-          })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
-            case Right(Success((pointer, ref))) =>
-              imageUrlRegex.findFirstIn(ref) match {
-                case Some(url) =>
-                  SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink)).withImageUrl(url)
-                case None =>
-                  SlackAttachment.simple(DescriptionElements(
-                    SlackEmoji.magnifyingGlass, pointer --> keepLink, ": ",
-                    DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
-                  )).withFullMarkdown
-              }
-          }
-      )
-    }
+    val textAndLookHeres = CrossServiceMessage.splitOutLookHeres(msg.text)
+    SlackMessageRequest.fromKifi(
+      text = DescriptionElements.formatForSlack(keepElement),
+      attachments =
+        if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
+        else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
+          case Left(str) => DescriptionElements(str)
+          case Right(Success((pointer, ref))) => pointer --> keepLink("lookHere")
+          case Right(Failure(fail)) => "look here" --> keepLink("lookHere")
+        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+          case Right(Success((pointer, ref))) =>
+            imageUrlRegex.findFirstIn(ref) match {
+              case Some(url) =>
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHereImage"))).withImageUrl(url)
+              case None =>
+                SlackAttachment.simple(DescriptionElements(
+                  SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHere"), ": ",
+                  DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
+                )).withFullMarkdown
+            }
+        }
+    )
   }
 }
 
