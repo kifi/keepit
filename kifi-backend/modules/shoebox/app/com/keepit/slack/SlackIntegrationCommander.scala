@@ -98,7 +98,7 @@ class SlackIntegrationCommanderImpl @Inject() (
 
     teamWithPushIntegrationMaybe map {
       case (team, pushIntegration) =>
-        SafeFuture.swallow {
+        SafeFuture.wrap {
           val inhouseMsg = db.readOnlyReplica { implicit s =>
             import DescriptionElements._
             val lib = libRepo.get(libId)

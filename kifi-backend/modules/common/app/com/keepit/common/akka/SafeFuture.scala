@@ -41,6 +41,6 @@ object SafeFuture {
   def apply[T](func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func })
   def apply[T](name: String)(func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func }, Some(name))
 
-  def swallow(f: => Future[Unit])(implicit executor: ExecutionContext) = new SafeFuture(FutureHelpers.safely(f))
+  def wrap[T](f: => Future[T])(implicit executor: ExecutionContext) = new SafeFuture(FutureHelpers.safely(f))
 }
 
