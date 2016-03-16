@@ -1,7 +1,113 @@
+section-border = defaultBorder
+section-border-radius = 10px
+
 .kf-keep-page-loading-spinner-container
   text-align: center
 
+.kf-keep-page-rhr:empty
+  display: none
+
+.kf-keep-page-rhr
+  margin-top: 0px
+  margin-left: 20px
+  font-size: 14px
+  width: 250px
+  font-smoothing: antialiased
+  text-overflow: ellipsis
+
+  > * + *
+    margin-top: 20px
+
+.kf-keep-page-rhr-people-container
+  .kf-keep-page-rhr-header
+    margin-bottom: 6px
+
+.kf-keep-page-rhr-header
+  font-size: 15px
+  margin-bottom: 10px
+
+.kf-keep-page-rhr-library-wrapper
+  display: inline-block
+  width: 100%
+  color: #000
+
+.kf-keep-page-rhr-people-container
+.kf-keep-page-rhr-sources-container
+.kf-keep-page-rhr-container
+  border-radius: section-border-radius
+  border: section-border
+  background-color: #fff
+  padding: 10px 16px
+  font-size: 13px
+  color: #333
+
 .kf-keep-page-container
-  padding-top: 50px
-  max-width: 525px
+  padding: 25px 0
+  display: flex
+  flex-direction: row
+  justify-content: center
   margin: auto
+
+  .kf-keep-container
+    max-width: 525px
+    margin: 0
+
+.kf-keep-page-sources-slack-image.kf-keep-page-sources-slack-image
+.kf-keep-page-sources-twitter-image.kf-keep-page-sources-twitter-image
+  width: 40px
+  height: 35px
+  margin-top: 10px
+  flex-shrink: 0
+  align-self: flex-start
+  background-repeat: no-repeat
+
+.kf-keep-page-sources-title
+  font-weight: semi-bold
+  font-size: 16px
+  color: #333
+
+.kf-keep-page-sources-message
+  font-size: 14px
+  color: #555
+  margin: 5px 0
+
+.kf-keep-page-who-pic-box
+  display: inline-block
+  vertical-align: middle
+  height: 23px
+  border-radius: 50%
+  margin: 4px 4px 0 0
+  position: relative // for user hovercard
+
+  @media (max-width: 479px)
+    margin-left: 1px
+    height: 18px
+
+  &>.kf-utt
+    margin-left: 14px
+
+.kf-keep-page-who-pic
+  position: relative
+  display: inline-block
+  vertical-align: top
+  border-radius: 50%
+  background-size: 100%
+  width: 23px
+  height: 23px
+
+  @media (max-width: 479px)
+    width: 18px
+    height: 18px
+
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: 50%
+    box-shadow: inset 0 0 1px rgba(0,0,0,.15)
+
+.kf-keep-page-source-row
+  overflow: hidden

@@ -3,7 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepCardActivityAttribution', [
-  function () {
+  '$state',
+  function ($state) {
     return {
       scope: {
         keep: '=keep'
@@ -12,6 +13,7 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'keep/keepCardActivityAttribution.tpl.html',
       link: function (scope) {
+        scope.showKeepPageLink = scope.keep.path && !$state.is('keepPage');
         var keep = scope.keep;
         var messages = keep && keep.discussion && keep.discussion.messages;
         var author = keep && keep.author;
