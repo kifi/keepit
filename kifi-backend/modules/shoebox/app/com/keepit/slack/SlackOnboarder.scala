@@ -77,7 +77,7 @@ class SlackOnboarderImpl @Inject() (
   private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackOnboarder._
 
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.swallow {
+  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.wrap {
     db.readOnlyMaster { implicit s =>
       generateOnboardingMessageForIntegration(integ)
     }.flatMap { welcomeMsg =>

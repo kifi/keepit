@@ -219,7 +219,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       messageRepo.save(messageRepo.get(messageId).withText(newText))
     }
 
-    SafeFuture.swallow(tryToFixThreadNotif(editedMsg.keepId))
+    SafeFuture.wrap(tryToFixThreadNotif(editedMsg.keepId))
     externalizeMessage(editedMsg)
   }
 
@@ -230,7 +230,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       msg.keepId
     }
 
-    SafeFuture.swallow(tryToFixThreadNotif(keepForDeletedMsg))
+    SafeFuture.wrap(tryToFixThreadNotif(keepForDeletedMsg))
   }
 
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean = db.readOnlyMaster { implicit s =>
