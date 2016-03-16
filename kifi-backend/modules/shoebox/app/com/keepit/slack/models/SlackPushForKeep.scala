@@ -22,46 +22,44 @@ case class SlackPushForKeep(
   integrationId: Id[LibraryToSlackChannel],
   keepId: Id[Keep],
   timestamp: SlackTimestamp,
-  text: String)
+  text: String,
+  lastKnownEditability: SlackMessageEditability,
+  messageRequest: Option[SlackMessageRequest])
     extends Model[SlackPushForKeep] with ModelWithState[SlackPushForKeep] {
   def withId(id: Id[SlackPushForKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackPushForKeepStates.ACTIVE
+  def isEditable: Boolean = lastKnownEditability == SlackMessageEditability.EDITABLE
+
+  def uneditable = this.copy(lastKnownEditability = SlackMessageEditability.UNEDITABLE)
+  def withMessageRequest(mr: SlackMessageRequest) = this.copy(messageRequest = Some(mr))
+  def withTimestamp(newTimestamp: SlackTimestamp) = this.copy(timestamp = newTimestamp)
 }
 object SlackPushForKeepStates extends States[SlackPushForKeep]
 object SlackPushForKeep {
-  def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], pushedMessage: SlackMessageResponse): SlackPushForKeep = {
+  def fromMessage(integration: LibraryToSlackChannel, keepId: Id[Keep], request: SlackMessageRequest, response: SlackMessageResponse): SlackPushForKeep = {
     SlackPushForKeep(
       slackTeamId = integration.slackTeamId,
       slackChannelId = integration.slackChannelId,
       integrationId = integration.id.get,
       keepId = keepId,
-      timestamp = pushedMessage.timestamp,
-      text = pushedMessage.text
+      timestamp = response.timestamp,
+      text = response.text,
+      lastKnownEditability = SlackMessageEditability.EDITABLE,
+      messageRequest = Some(request)
     )
   }
 }
 
-case class SlackPushForKeepTimestampKey(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]) extends Key[SlackTimestamp] {
-  override val version = 1
-  val namespace = "slack_push_for_keep"
-  def toKey(): String = s"${integrationId.id}_${keepId.id}"
-}
-
-class SlackPushForKeepTimestampCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SlackPushForKeepTimestampKey, SlackTimestamp](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 @ImplementedBy(classOf[SlackPushForKeepRepoImpl])
 trait SlackPushForKeepRepo extends Repo[SlackPushForKeep] {
   def intern(model: SlackPushForKeep)(implicit session: RWSession): SlackPushForKeep // interns by (integrationId, keepId)
-  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Option[SlackTimestamp]
-  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Unit
+  def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SlackPushForKeep]
 }
 
 @Singleton
 class SlackPushForKeepRepoImpl @Inject() (
   val db: DataBaseComponent,
-  timestampCache: SlackPushForKeepTimestampCache,
   val clock: Clock)
     extends DbRepo[SlackPushForKeep] with SlackPushForKeepRepo {
 
@@ -70,6 +68,8 @@ class SlackPushForKeepRepoImpl @Inject() (
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val slackTimestampColumnType = SlackDbColumnTypes.timestamp(db)
+  implicit val editabilityMapper = MappedColumnType.base[SlackMessageEditability, String](_.value, str => SlackMessageEditability.fromStr(str).get)
+  implicit val messageRequestMapper = jsonMapper[SlackMessageRequest]
 
   type RepoImpl = SlackPushForKeepTable
   class SlackPushForKeepTable(tag: Tag) extends RepoTable[SlackPushForKeep](db, tag, "slack_push_for_keep") {
@@ -79,30 +79,24 @@ class SlackPushForKeepRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def timestamp = column[SlackTimestamp]("slack_timestamp", O.NotNull)
     def text = column[String]("text", O.NotNull)
+    def lastKnownEditability = column[SlackMessageEditability]("last_known_editability", O.NotNull)
+    def messageRequest = column[Option[SlackMessageRequest]]("message_request", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackChannelId, integrationId, keepId, timestamp, text) <> ((SlackPushForKeep.apply _).tupled, SlackPushForKeep.unapply)
+    def * = (id.?, createdAt, updatedAt, state, slackTeamId, slackChannelId, integrationId, keepId, timestamp, text, lastKnownEditability, messageRequest) <> ((SlackPushForKeep.apply _).tupled, SlackPushForKeep.unapply)
   }
 
+  private def activeRows = rows.filter(_.state === SlackPushForKeepStates.ACTIVE)
   def table(tag: Tag) = new SlackPushForKeepTable(tag)
   initTable()
 
-  override def deleteCache(model: SlackPushForKeep)(implicit session: RSession): Unit = {
-    timestampCache.remove(SlackPushForKeepTimestampKey(model.integrationId, model.keepId))
-  }
-
-  override def invalidateCache(model: SlackPushForKeep)(implicit session: RSession) = {
-    timestampCache.set(SlackPushForKeepTimestampKey(model.integrationId, model.keepId), model.timestamp)
-  }
+  override def deleteCache(model: SlackPushForKeep)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: SlackPushForKeep)(implicit session: RSession) = {}
 
   def intern(model: SlackPushForKeep)(implicit session: RWSession): SlackPushForKeep = {
     val existingModel = rows.filter(r => r.integrationId === model.integrationId && r.keepId === model.keepId).firstOption
     save(model.copy(id = existingModel.map(_.id.get)))
   }
-
-  def getTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Option[SlackTimestamp] = {
-    timestampCache.direct.get(SlackPushForKeepTimestampKey(integrationId, keepId))
-  }
-  def dropTimestampFromCache(integrationId: Id[LibraryToSlackChannel], keepId: Id[Keep]): Unit = {
-    timestampCache.direct.remove(SlackPushForKeepTimestampKey(integrationId, keepId))
+  def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SlackPushForKeep] = {
+    activeRows.filter(r => r.integrationId === integrationId && r.keepId.inSet(keepIds)).list.map(kp => kp.keepId -> kp).toMap
   }
 }
