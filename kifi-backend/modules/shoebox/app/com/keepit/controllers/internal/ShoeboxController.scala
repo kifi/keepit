@@ -25,8 +25,8 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackTeamMembershipRepo, SlackTeamRepo }
-import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackInfoCommander, SlackIntegrationCommander }
+import com.keepit.slack.models._
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackIntegrationCommander }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -87,7 +87,6 @@ class ShoeboxController @Inject() (
   discussionCommander: DiscussionCommander,
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
-  slackInfoCommander: SlackInfoCommander,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackTeamRepo: SlackTeamRepo,
   slackIntegrationCommander: SlackIntegrationCommander,
@@ -586,7 +585,9 @@ class ShoeboxController @Inject() (
   def getIntegrationsBySlackChannel() = Action(parse.tolerantJson) { request =>
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
-    val integrations = slackInfoCommander.getIntegrationsBySlackChannel(teamId, channelId)
+    val integrations = db.readOnlyMaster { implicit session =>
+      slackIntegrationCommander.getBySlackChannels(teamId, Set(channelId)).getOrElse(channelId, SlackChannelIntegrations.none(teamId, channelId))
+    }
     SafeFuture { slackIntegrationCommander.ingestFromChannelPlease(teamId, channelId) }
     Ok(Json.toJson(integrations))
   }

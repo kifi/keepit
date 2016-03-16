@@ -70,9 +70,6 @@ trait SlackInfoCommander {
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
 
-  // Called by ShoeboxServiceController
-  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations
-
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int] = None)(implicit session: RSession): OrganizationSlackInfo
   def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo]
@@ -172,22 +169,6 @@ class SlackInfoCommanderImpl @Inject() (
 
       libId -> integrations
     }.toMap
-  }
-
-  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): SlackChannelIntegrations = {
-    db.readOnlyMaster { implicit session =>
-      val channelToLibIntegrations = channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId)
-      val libToChannelIntegrations = libToChannelRepo.getBySlackTeamAndChannel(teamId, channelId)
-      val integrationSpaces = (channelToLibIntegrations.map(stl => stl.libraryId -> stl.space) ++ libToChannelIntegrations.map(lts => lts.libraryId -> lts.space)).groupBy(_._1).mapValues(_.map(_._2).toSet)
-      SlackChannelIntegrations(
-        teamId = teamId,
-        channelId = channelId,
-        allLibraries = channelToLibIntegrations.map(_.libraryId).toSet ++ libToChannelIntegrations.map(_.libraryId),
-        toLibraries = channelToLibIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
-        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
-        spaces = integrationSpaces
-      )
-    }
   }
 
   def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo] = {

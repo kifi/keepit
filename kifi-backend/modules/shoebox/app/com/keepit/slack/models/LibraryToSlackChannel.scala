@@ -87,7 +87,7 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def updateLastProcessedSeqs(id: Id[LibraryToSlackChannel], keepSeqOpt: Option[SequenceNumber[Keep]], msgSeqOpt: Option[SequenceNumber[Message]])(implicit session: RWSession): Unit
   def updateAfterPush(id: Id[LibraryToSlackChannel], nextPushAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
 
-  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[LibraryToSlackChannel]
+  def getBySlackTeamAndChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Set[LibraryToSlackChannel]]
 }
 
 @Singleton
@@ -297,7 +297,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastProcessingAt, r.lastProcessedAt, r.nextPushAt, r.status)).update((now, None, Some(now), nextPushAt, status))
   }
 
-  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[LibraryToSlackChannel] = {
-    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId === channelId).list
+  def getBySlackTeamAndChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Set[LibraryToSlackChannel]] = {
+    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId.inSet(channelIds)).list.toSet.groupBy(_.slackChannelId)
   }
 }
