@@ -14,6 +14,7 @@ case class KeeperInfo(
   normalized: String,
   kept: Option[String],
   keepId: Option[ExternalId[Keep]],
+  keepPublicId: Option[PublicId[Keep]],
   tags: Seq[SendableTag],
   position: Option[JsObject],
   neverOnSite: Boolean,
@@ -26,6 +27,7 @@ object KeeperInfo {
     (__ \ 'normalized).write[String] and
     (__ \ 'kept).writeNullable[String] and
     (__ \ 'keepId).writeNullable[ExternalId[Keep]] and
+    (__ \ 'pubId).writeNullable[PublicId[Keep]] and
     (__ \ 'tags).writeNullable[Seq[SendableTag]].contramap[Seq[SendableTag]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
