@@ -36,6 +36,7 @@ class ExtLibraryController @Inject() (
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
   basicUserRepo: BasicUserRepo,
+  libRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   libPathCommander: PathCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -212,9 +213,9 @@ class ExtLibraryController @Inject() (
   def addKeep(libraryPubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
     decodeAsync(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+        (libRepo.get(libraryId), libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId))
       } match {
-        case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
+        case (lib, Some(mem)) if mem.canWrite =>
           val body = request.body
           val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
@@ -246,8 +247,8 @@ class ExtLibraryController @Inject() (
                 keep.externalId,
                 mine = keep.userId.safely.contains(request.userId),
                 removable = mem.canWrite,
-                secret = keep.visibility == LibraryVisibility.SECRET,
-                visibility = keep.visibility,
+                secret = lib.visibility == LibraryVisibility.SECRET,
+                visibility = lib.visibility,
                 libraryId = Some(libraryPubId))
               val moarKeepData = MoarKeepData(
                 title = keep.title,

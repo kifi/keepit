@@ -35,6 +35,7 @@ case class KeepToLibrary(
 
   def isActive = state == KeepToLibraryStates.ACTIVE
   def isInactive = state == KeepToLibraryStates.INACTIVE
+  def isPrivate: Boolean = visibility == LibraryVisibility.SECRET
 
   def sanitizeForDelete = this.withState(KeepToLibraryStates.INACTIVE)
 }

@@ -37,6 +37,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
   slackIdentityCommander: SlackIdentityCommander,
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
+  slackTeamRepo: SlackTeamRepo,
   pathCommander: PathCommander,
   implicit val executionContext: ExecutionContext,
   stateCache: SlackAuthStateCache,
@@ -157,6 +158,12 @@ class SlackAuthenticationCommanderImpl @Inject() (
         slackTeamCommander.turnCommentMirroring(userId, slackTeamId, turnOn).map { orgId =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url)
         }
+      }
+
+      case BackfillScopes(_) => Future {
+        slackTeamCommander.getSlackTeamOpt(slackTeamId).flatMap {
+          _.organizationId.map(redirectToOrganizationIntegrations)
+        }.getOrElse(SlackResponse.ActionPerformed(Some("https://www.kifi.com/")))
       }
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")

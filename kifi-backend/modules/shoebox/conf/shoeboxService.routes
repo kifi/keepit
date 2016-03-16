@@ -16,7 +16,7 @@ GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/slack               @com.keepit.controllers.website.SlackOAuthController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
 
 # These really need to be non-site endpoints
-GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None)
+GET     /site/slack/add                      @com.keepit.controllers.website.SlackOAuthController.addSlackTeam(slackTeamId: Option[SlackTeamId] ?= None, extraScopes: Option[String] ?= None)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -52,9 +52,9 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /slack-connect              @com.keepit.controllers.core.AuthController.connectWithSlack()
 GET     /slack-connect/go           @com.keepit.controllers.core.AuthController.connectWithSlackGo()
-GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None)
+GET     /integrations/slack/start   @com.keepit.controllers.core.AuthController.startWithSlack(slackTeamId: Option[SlackTeamId] ?= None, extraScopes: Option[String] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None, slackTeamId: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None, publicOrgId: Option[String] ?= None, orgAuthToken: Option[String] ?= None, publicKeepId: Option[String] ?= None, keepAuthToken: Option[String] ?= None, slackTeamId: Option[String] ?= None, slackExtraScopes: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -652,6 +652,7 @@ GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.c
 GET     /internal/shoebox/database/getIndexableSocialUserInfos     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates          @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
+GET     /internal/shoebox/database/getCrossServiceKeepsAndTagsChanged      @com.keepit.controllers.internal.ShoeboxDataPipeController.getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesChanged                     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int)
@@ -708,7 +709,7 @@ GET      /internal/shoebox/image/getUserImageUrl                   @com.keepit.c
 POST     /internal/shoebox/database/canViewLibrary                 @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 POST     /internal/shoebox/database/getPersonalKeeps               @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicKeepsByIds             @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
-POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxController.getCrossServiceKeepsByIds()
+POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxDataPipeController.getCrossServiceKeepsByIds()
 POST     /internal/shoebox/database/getDiscussionKeepsByIds        @com.keepit.controllers.internal.ShoeboxController.getDiscussionKeepsByIds()
 POST     /internal/shoebox/database/getBasicLibraryDetails         @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getLibraryCardInfos            @com.keepit.controllers.internal.ShoeboxController.getLibraryCardInfos()
@@ -718,6 +719,7 @@ GET      /internal/shoebox/database/getLibrariesWithWriteAccess    @com.keepit.c
 GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
+POST     /internal/shoebox/database/getRelevantKeepsByUserAndUri       @com.keepit.controllers.internal.ShoeboxController.getRelevantKeepsByUserAndUri()
 POST     /internal/shoebox/database/getSlackTeamIds                @com.keepit.controllers.internal.ShoeboxController.getSlackTeamIds()
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: SlackTeamId)
 

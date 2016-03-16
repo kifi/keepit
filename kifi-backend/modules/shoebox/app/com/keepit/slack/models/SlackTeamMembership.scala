@@ -12,6 +12,8 @@ import com.keepit.common.oauth.SlackIdentity
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
+import com.keepit.slack.SlackActionFail
+import com.keepit.slack.SlackActionFail._
 import com.keepit.model.User
 import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey, UserIdentity }
 import org.joda.time.{ DateTime, Duration }
@@ -149,6 +151,10 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
   def markAsSyncingChannels(slackTeamId: SlackTeamId, slackUserId: SlackUserId, syncTimeout: Duration)(implicit session: RWSession): Boolean
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
+
+  //admin
+  def getAllByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Set[SlackTeamMembership]
+  def getByUserIdsAndSlackTeams(keys: Map[Id[User], SlackTeamId])(implicit session: RSession): Seq[SlackTeamMembership]
 }
 
 @Singleton
@@ -292,7 +298,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       case Some(membership) if membership.isActive =>
         membership.userId.foreach { ownerId =>
           request.userId.foreach { requesterId =>
-            if (requesterId != ownerId) throw new IllegalStateException(s"SlackMembership requested by user $requesterId is already owned by user $ownerId: $membership")
+            if (requesterId != ownerId) throw SlackActionFail.MembershipExists(requesterId, ownerId, request.slackTeamId, request.slackTeamName, request.slackUserId, membership)
           }
         }
         val updated = membership.copy(
@@ -414,6 +420,15 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit = {
     save(model.sanitizeForDelete)
+  }
+
+  def getAllByIds(ids: Set[Id[SlackTeamMembership]])(implicit session: RSession): Set[SlackTeamMembership] = activeRows.filter(r => r.id.inSet(ids)).list.toSet
+
+  def getByUserIdsAndSlackTeams(teamByUserId: Map[Id[User], SlackTeamId])(implicit session: RSession): Seq[SlackTeamMembership] = {
+    val userIds = teamByUserId.keySet
+    activeRows.filter(r => r.userId.inSet(userIds))
+      .list
+      .filter { stm => stm.userId.isDefined && stm.slackTeamId == teamByUserId(stm.userId.get) }
   }
 }
 

@@ -6,6 +6,7 @@ import com.keepit.model._
 import com.keepit.search.index.{ Searcher, FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
+import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
@@ -63,8 +64,8 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
-  val id = keep.id.get
+case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag]) extends Indexable[Keep, Keep] {
+  val id = keep.id
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive
 
@@ -104,34 +105,37 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
     doc.add(buildKeywordField(uriField, keep.uriId.id.toString))
-    keep.userId.foreach { userId =>
+    keep.owner.foreach { userId => // TODO(ryan): Léo, can this be done for every user?
       doc.add(buildKeywordField(userField, userId.id.toString))
     }
 
-    if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
+    val keepVisibilities = keep.libraries.map(_.visibility)
+    if (keepVisibilities.contains(LibraryVisibility.DISCOVERABLE) || keepVisibilities.contains(LibraryVisibility.PUBLISHED)) { // TODO(ryan): Léo is this semantically correct?
       doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString))
-      keep.userId.foreach { userId =>
+      keep.owner.foreach { userId =>
         doc.add(buildKeywordField(userDiscoverableField, userId.id.toString))
       }
     }
 
-    keep.organizationId.foreach { orgId =>
-      doc.add(buildKeywordField(orgField, orgId.id.toString))
-      if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
-        doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
+    val primaryLibrary = keep.libraries.minByOpt(_.id)
+    primaryLibrary.foreach { lib =>
+      lib.organizationId.foreach { orgId =>
+        doc.add(buildKeywordField(orgField, orgId.id.toString))
+        if (lib.visibility == LibraryVisibility.PUBLISHED || lib.visibility == LibraryVisibility.ORGANIZATION) {
+          doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
+        }
       }
     }
 
-    keep.libraryId.foreach { libId =>
-      doc.add(buildDataPayloadField(new Term(libraryField, libId.id.toString), titleLang.lang.getBytes(UTF8)))
+    primaryLibrary.foreach { lib =>
+      doc.add(buildDataPayloadField(new Term(libraryField, lib.id.id.toString), titleLang.lang.getBytes(UTF8)))
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
-    doc.add(buildIdValueField(userIdField, keep.userId.getOrElse(Id[User](-1))))
-    doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
-    doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
-
-    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
+    doc.add(buildIdValueField(userIdField, keep.owner.getOrElse(Id[User](-1))))
+    doc.add(buildIdValueField(libraryIdField, primaryLibrary.map(_.id).getOrElse(Id[Library](-1))))
+    doc.add(buildIdValueField(orgIdField, primaryLibrary.flatMap(_.organizationId).getOrElse(Id[Organization](-1))))
+    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(primaryLibrary.map(_.visibility).getOrElse(LibraryVisibility.SECRET))))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))

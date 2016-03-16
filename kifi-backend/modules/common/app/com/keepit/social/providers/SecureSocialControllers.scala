@@ -84,7 +84,7 @@ object ProviderController extends Controller with Logging {
             case badResult if badResult.header.status == 400 =>
               log.error(s"[handleAuth] ${badResult.header.status} from $provider")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
-                "slackTeamId", "creditCode").map(DiscardingCookie(_))
+                "slackTeamId", "creditCode", "slackExtraScopes").filter(request.cookies.get(_).isDefined).map(DiscardingCookie(_))
               val failUrl = request.cookies.get("onFailUrl").map(_.value).getOrElse(toUrl(badResult.session))
               Redirect(failUrl, queryString = Map("error" -> Seq("access_denied"))).discardingCookies(discardingCookies: _*)
             case res => res
@@ -121,7 +121,8 @@ object ProviderController extends Controller with Logging {
           request.cookies.get("publicLibraryId"),
           request.cookies.get("libAuthToken"),
           request.cookies.get("publicKeepId"),
-          request.cookies.get("keepAuthToken")
+          request.cookies.get("keepAuthToken"),
+          request.cookies.get("slackExtraScopes")
         ).flatten ++ slackTeamIdCookies
         Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -

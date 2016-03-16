@@ -43,7 +43,7 @@ object NormalizationCandidateSanitizer {
       host = uri.host,
       port = uri.port,
       path = uri.path,
-      query = uri.query.map(q => Query(q.params.map(p => p.copy(value = p.value.map(_.replace("%25", "%")))))),
+      query = uri.query.map(q => Query(q.params.map(p => p.copy(value = p.value.map(_.replace("%25", "%")))): _*)),
       fragment = uri.fragment
     ).toString
   }

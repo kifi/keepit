@@ -30,7 +30,7 @@ object LinkedInNormalizer extends StaticNormalizer {
     uri match {
       case URI(scheme, userInfo, host, port, path, query, _) => {
         uri.raw match {
-          case Some(linkedInPrivateProfile(country, id)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query(Seq(Param("id", Some(id))))), None)
+          case Some(linkedInPrivateProfile(country, id)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query(Param("id", Some(id)))), None)
           case Some(linkedInCanonicalPublicProfile(country, slash)) => URI(scheme, userInfo, normalize(host), port, path.map(p => if (slash != null) p.dropRight(1) else p), None, None)
           case Some(touchPublicProfile(linkedin, profile)) => URI(scheme, userInfo, normalize(Some(Host(linkedin))), port, Some(profile), None, None)
           case Some(touchRedirect(linkedin, redirect, _)) => URI(scheme, userInfo, normalize(Some(Host(linkedin))), port, Some(redirect), None, None)

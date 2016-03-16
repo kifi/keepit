@@ -10,7 +10,7 @@ k.tile = k.tile || (function () {
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  (function loadContentSecurityPolicyBlockedImages() { // iife
+  function loadContentSecurityPolicyBlockedImages() {
     loadCspCheck(onCspCheckLoaded);
 
     function loadCspCheck(cb) {
@@ -99,7 +99,7 @@ k.tile = k.tile || (function () {
       var match = cssUrlRe.exec(path);
       return match && match[1];
     }
-  }());
+  }
 
   var whenMeKnown = [], tile, tileParent, tileObserver, tileCard;
   while ((tile = document.getElementById('kifi-tile'))) {
@@ -116,6 +116,7 @@ k.tile = k.tile || (function () {
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
     if ((tileCard.contains(e.target)) && e.isTrusted !== false) {
+      loadContentSecurityPolicyBlockedImages();
       loadAndDo('keeper', 'show');
     }
   });

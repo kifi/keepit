@@ -7,6 +7,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.net.{ Query, Param }
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -29,8 +30,6 @@ class PathCommander @Inject() (
 
   def profilePage(user: User): Path = profilePageByHandle(user.primaryUsername.get.normalized)
   def profilePage(user: BasicUser): Path = profilePageByHandle(user.username)
-
-  def userPageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/u/${basicUser.externalId.id}")
 
   /**
    * ORGANIZATION
@@ -59,15 +58,12 @@ class PathCommander @Inject() (
 
   def orgIntegrationsPage(org: Organization): Path = orgIntegrationsPageByHandle(org.primaryHandle.get.normalized)
 
-  private def orgPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
-    Path(s"s/${slackTeamId.value}/o/${orgId.id}")
-  }
+  private def orgPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/o/${orgId.id}")
+
   def orgPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
   def orgPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgPageViaSlackByPublicId(org.orgId, slackTeamId)
 
-  private def orgIntegrationsPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = {
-    Path(s"s/${slackTeamId.value}/oi/${orgId.id}")
-  }
+  private def orgIntegrationsPageViaSlackByPublicId(orgId: PublicId[Organization], slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/oi/${orgId.id}")
   def orgIntegrationsPageViaSlack(org: BasicOrganization, slackTeamId: SlackTeamId): Path = orgIntegrationsPageViaSlackByPublicId(org.orgId, slackTeamId)
   def orgIntegrationsPageViaSlack(org: Organization, slackTeamId: SlackTeamId): Path = orgIntegrationsPageViaSlackByPublicId(Organization.publicId(org.id.get), slackTeamId)
 
@@ -84,9 +80,7 @@ class PathCommander @Inject() (
     libPageByHandleAndSlug(handle, lib.slug)
   }
   def libraryPageById(libId: Id[Library])(implicit session: RSession): Path = libraryPage(libRepo.get(libId))
-  def libraryPageViaSlack(lib: Library, slackTeamId: SlackTeamId): Path = {
-    Path(s"s/${slackTeamId.value}/l/${Library.publicId(lib.id.get).id}")
-  }
+  def libraryPageViaSlack(lib: Library, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/l/${Library.publicId(lib.id.get).id}")
 
   /**
    * KEEP
@@ -96,16 +90,17 @@ class PathCommander @Inject() (
   }
   def keepPageOnKifiViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/kifi"
   def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/web"
+  def userPageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/u/${basicUser.externalId.id}")
 
   /**
    * MISCELLANEOUS
    */
   def browserExtensionViaSlack(slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/i")
   def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
-  def slackPersonalDigestToggle(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean) =
-    Path(s"s/pd/${slackTeamId.value}/${slackUserId.value}/${SlackTeamMembership.encodeTeamAndUser(slackTeamId, slackUserId)}?turnOn=$turnOn")
+  def slackPersonalDigestToggle(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean) = Path(s"s/pd/${slackTeamId.value}/${slackUserId.value}/${SlackTeamMembership.encodeTeamAndUser(slackTeamId, slackUserId)}").withQuery(Query("turnOn" -> turnOn.toString))
   def welcomePageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/welcome/${basicUser.externalId.id}")
   def ownKeepsFeedPage: Path = Path(s"/?filter=own")
+  def startWithSlackPath(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]): Path = Path(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId, extraScopes).url)
 
   /**
    * I'd prefer if you just didn't use these routes

@@ -4,15 +4,19 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
+import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.net.Param
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.RandomChoice._
+import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.Author
@@ -52,6 +56,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
   airbrake: AirbrakeNotifier,
   orgInfoCommander: OrganizationInfoCommander,
   orgExperimentRepo: OrganizationExperimentRepo,
+  slackAnalytics: SlackAnalytics,
+  val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[Id[SlackTeamMembership]] {
@@ -108,6 +114,10 @@ class SlackPersonalDigestNotificationActor @Inject() (
               }
               slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
+            val contextBuilder = heimdalContextBuilder()
+            contextBuilder += ("numChannelMembers", 1)
+            contextBuilder += ("slackTeamName", membership.slackTeamName.value)
+            slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
             slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
@@ -169,16 +179,17 @@ class SlackPersonalDigestNotificationActor @Inject() (
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
+    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
-    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentIngestedMsg._1, slackTeamId))
-    val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
+    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentIngestedMsg._1, slackTeamId).withQuery(trackingParams("latestMessage")))
+    val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(Seq(
       DescriptionElements(
         SlackEmoji.wave, s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I've saved of couple of links you shared.",
         "I also scanned the text on those pages so you can search for them more easily."
       ),
       DescriptionElements(
-        "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId)), "to get:"
+        "Join", "your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org"))), "to get:"
       )
     ))
     val attachments = List(
@@ -208,8 +219,9 @@ class SlackPersonalDigestNotificationActor @Inject() (
   }
   private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
+    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPage)
-    val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false))
+    val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(List(
       DescriptionElements("You've sent", digest.numIngestedMessages, "links", inTheLast(digest.digestPeriod), ".",
         "I", "archived them" --> linkToFeed, "for you, and indexed the pages so you can search for them more easily."),

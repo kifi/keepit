@@ -5,14 +5,15 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db._
-import com.keepit.common.json.{ EnumFormat, TraversableFormat, TupleFormat }
+import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.{ BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicAuthor }
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -41,18 +42,12 @@ case class Keep(
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
   connections: KeepConnections,
-  libraryId: Option[Id[Library]], // deprecated, prefer connections.libraries
-  visibility: LibraryVisibility, // deprecated, prefer KeepToLibrary.visibility
-  organizationId: Option[Id[Organization]] = None)
+  libraryId: Option[Id[Library]])
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
-
-  // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
-  //@deprecated("Use `visibility` instead", "2014-08-25")
-  def isPrivate = Keep.visibilityToIsPrivate(visibility)
 
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -66,14 +61,16 @@ case class Keep(
 
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
-    visibility = lib.visibility,
-    organizationId = lib.organizationId,
     connections = connections.withLibraries(Set(lib.id.get))
   )
+  def withNoLibrary = this.copy(libraryId = None)
 
-  def withConnections(connections: KeepConnections): Keep = this.copy(connections = connections)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
-  def withParticipants(users: Set[Id[User]]): Keep = this.copy(connections = connections.withUsers(users))
+  def withConnections(newConnections: KeepConnections): Keep = {
+    if (newConnections.libraries.isEmpty) this.copy(connections = newConnections).withNoLibrary
+    else this.copy(connections = newConnections)
+  }
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withConnections(connections.withLibraries(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.withConnections(connections.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
   def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
@@ -98,7 +95,6 @@ case class Keep(
 }
 
 object Keep extends PublicIdGenerator[Keep] {
-
   protected[this] val publicIdPrefix = "k"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))
 
@@ -108,6 +104,7 @@ object Keep extends PublicIdGenerator[Keep] {
       case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
+
   implicit val format: Format[Keep] = (
     (__ \ 'id).formatNullable[Id[Keep]] and
     (__ \ 'createdAt).format[DateTime] and
@@ -126,9 +123,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
     (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'libraryId).formatNullable[Id[Library]] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'organizationId).formatNullable[Id[Organization]]
+    (__ \ 'libraryId).formatNullable[Id[Library]]
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -151,7 +146,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 15
+  override val version = 17
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -169,7 +164,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 6
+  override val version = 8
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -227,11 +222,26 @@ object KeepSource {
   )
 }
 
-case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
+case class KeepAndTags(keep: Keep, deprecated: (LibraryVisibility, Option[Id[Organization]]), source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  case class Helper(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
   implicit val sourceFormat = SourceAttribution.internalFormat
-  implicit val format = Json.format[KeepAndTags]
+  val helperFormat = Json.format[Helper]
+  implicit val format: Format[KeepAndTags] = Format(
+    Reads { j => helperFormat.reads(j).map(h => KeepAndTags(h.keep, (LibraryVisibility.SECRET, Option.empty), h.source, h.tags)) },
+    Writes { kts =>
+      val obj = helperFormat.writes(Helper(kts.keep, kts.source, kts.tags)).as[JsObject]
+      obj deepMerge Json.obj("keep" -> Json.obj("visibility" -> kts.deprecated._1, "organizationId" -> kts.deprecated._2))
+    }
+  )
+}
+
+case class CrossServiceKeepAndTags(keep: CrossServiceKeep, source: Option[SourceAttribution], tags: Set[Hashtag])
+
+object CrossServiceKeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
+  implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
 case class BasicKeep(
@@ -258,6 +268,9 @@ object BasicKeep {
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
+@json
+case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
+
 // All the important parts of a Keep to send across services
 // NOT to be sent to clients
 // PSA: Think of a Keep as the source node of a graph
@@ -266,27 +279,58 @@ object BasicKeep {
 //     2. Indirectly, via a library (keep -> library -> library-membership -> user)
 //     3. Indirectly, via an organization (keep -> library -> organization -> organization-membership -> user)
 case class CrossServiceKeep(
-  id: Id[Keep],
-  owner: Option[Id[User]], // the person who "owns" the keep, if any
-  users: Set[Id[User]], // all the users directly connected to the keep
-  libraries: Set[Id[Library]], // all the libraries directly connected to the keep
-  url: String,
-  uriId: Id[NormalizedURI],
-  keptAt: DateTime,
-  title: Option[String],
-  note: Option[String])
+    id: Id[Keep],
+    externalId: ExternalId[Keep],
+    state: State[Keep],
+    seq: SequenceNumber[Keep],
+    owner: Option[Id[User]], // the person who "owns" the keep, if any
+    users: Set[Id[User]], // all the users directly connected to the keep
+    libraries: Set[CrossServiceKeep.LibraryInfo], // all the libraries directly connected to the keep
+    url: String,
+    uriId: Id[NormalizedURI],
+    keptAt: DateTime,
+    title: Option[String],
+    note: Option[String]) {
+  def isActive: Boolean = state == KeepStates.ACTIVE
+}
 object CrossServiceKeep {
+  case class LibraryInfo(id: Id[Library], visibility: LibraryVisibility, organizationId: Option[Id[Organization]])
+  object LibraryInfo {
+    def fromLibrary(lib: Library) = LibraryInfo(lib.id.get, lib.visibility, lib.organizationId)
+    def fromKTL(ktl: KeepToLibrary) = LibraryInfo(ktl.libraryId, ktl.visibility, ktl.organizationId)
+  }
+  private implicit val libraryFormat = Json.format[LibraryInfo]
   implicit val format: Format[CrossServiceKeep] = (
     (__ \ 'id).format[Id[Keep]] and
+    (__ \ 'externalId).format[ExternalId[Keep]] and
+    (__ \ 'state).format[State[Keep]] and
+    (__ \ 'seq).format[SequenceNumber[Keep]] and
     (__ \ 'owner).formatNullable[Id[User]] and
     (__ \ 'users).format[Set[Id[User]]] and
-    (__ \ 'libraries).format[Set[Id[Library]]] and
+    (__ \ 'libraries).format[Set[CrossServiceKeep.LibraryInfo]] and
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'keptAt).format[DateTime] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
+
+  def fromKeepAndRecipients(keep: Keep, users: Set[Id[User]], libraries: Set[LibraryInfo]): CrossServiceKeep = {
+    CrossServiceKeep(
+      id = keep.id.get,
+      externalId = keep.externalId,
+      state = keep.state,
+      seq = keep.seq,
+      owner = keep.userId,
+      users = users,
+      libraries = libraries,
+      url = keep.url,
+      uriId = keep.uriId,
+      keptAt = keep.keptAt,
+      title = keep.title,
+      note = keep.note
+    )
+  }
 }
 
 case class PersonalKeep(

@@ -97,6 +97,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
@@ -132,6 +133,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
@@ -628,6 +630,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[CrossServiceKeepAndTags]] = {
+    call(Shoebox.internal.getCrossServiceKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
+      r.json.as[Seq[CrossServiceKeepAndTags]]
+    }
+  }
+
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
     call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
@@ -767,8 +775,13 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]] = {
-    val payload = Json.obj("domainNames" -> domainNames)
-    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo } }
+    if (domainNames.isEmpty) Future.successful(Map.empty)
+    else {
+      val payload = Json.obj("domainNames" -> domainNames)
+      call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map {
+        _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo }
+      }
+    }
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
@@ -854,6 +867,13 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
+  }
+
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = {
+    val payload = Json.obj("userId" -> userId, "uriId" -> uriId, "before" -> before, "limit" -> limit)
+    call(Shoebox.internal.getRelevantKeepsByUserAndUri(), payload).map { j =>
+      j.json.asOpt[Seq[BasicKeepWithId]].getOrElse(Seq.empty)
+    }
   }
 
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = {

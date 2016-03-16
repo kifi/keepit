@@ -25,6 +25,8 @@ class ShoeboxDataPipeController @Inject() (
     normUriRepo: NormalizedURIRepo,
     collectionRepo: CollectionRepo,
     keepRepo: KeepRepo,
+    ktuRepo: KeepToUserRepo,
+    ktlRepo: KeepToLibraryRepo,
     sourceRepo: KeepSourceAttributionRepo,
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
@@ -187,15 +189,59 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
+  def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
+    val ids = request.body.as[Set[Id[Keep]]]
+    val (keeps, ktus, ktls) = db.readOnlyMaster { implicit s =>
+      val keepsById = keepRepo.getByIds(ids)
+      val ktusByKeep = ktuRepo.getAllByKeepIds(keepsById.keySet)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(keepsById.keySet)
+      (keepsById, ktusByKeep, ktlsByKeep)
+    }
+    val keepDataById = keeps.map {
+      case (keepId, keep) => keepId -> CrossServiceKeep.fromKeepAndRecipients(
+        keep = keep,
+        users = ktus.getOrElse(keepId, Seq.empty).map(_.userId).toSet,
+        libraries = ktls.getOrElse(keepId, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
+      )
+    }
+    Ok(Json.toJson(keepDataById))
+  }
+  def getCrossServiceKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
+        val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
+        val keepIds = changedKeeps.flatMap(_.id).toSet
+        val attributionById = sourceRepo.getByKeepIds(keepIds)
+        val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
+        val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
+        changedKeeps.map { keep =>
+          val csKeep = CrossServiceKeep.fromKeepAndRecipients(
+            keep = keep,
+            users = ktusByKeep.getOrElse(keep.id.get, Seq.empty).map(_.userId).toSet,
+            libraries = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
+          )
+          val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
+          val source = attributionById.get(keep.id.get)
+          CrossServiceKeepAndTags(csKeep, source, tags)
+        }
+      }
+      Ok(Json.toJson(keepAndTagsChanged))
+    }
+  }
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-        val attributionById = sourceRepo.getByKeepIds(changedKeeps.flatMap(_.id).toSet)
+        val keepIds = changedKeeps.flatMap(_.id).toSet
+        val attributionById = sourceRepo.getByKeepIds(keepIds)
+        val libByKeep = {
+          ktlRepo.getAllByKeepIds(keepIds).flatMapValues(_.headOption.map(ktl => libraryRepo.get(ktl.libraryId)))
+        }
         changedKeeps.map { keep =>
           val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)
           val source = attributionById.get(keep.id.get)
-          KeepAndTags(keep, source, tags)
+          val lib = libByKeep.get(keep.id.get)
+          KeepAndTags(keep, (lib.map(_.visibility).getOrElse(LibraryVisibility.SECRET), lib.flatMap(_.organizationId)), source, tags)
         }
       }
       Ok(Json.toJson(keepAndTagsChanged))

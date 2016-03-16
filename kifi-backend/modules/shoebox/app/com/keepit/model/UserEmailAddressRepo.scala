@@ -2,9 +2,9 @@ package com.keepit.model
 
 import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.ActorInstance
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
-import com.keepit.payments.RewardKind
 import com.keepit.social.{ IdentityUserIdKey, IdentityUserIdCache }
 import org.joda.time.DateTime
 
@@ -86,11 +86,8 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   def getUsersByAddresses(addresses: Set[EmailAddress], excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Map[EmailAddress, Id[User]] = {
-    val hashesByEmail = addresses.map(address => address -> EmailAddressHash.hashEmailAddress(address)).toMap
-    val candidates = rows.filter(row => row.address.inSet(addresses) && row.state =!= excludeState.orNull).list.groupBy(_.address)
-    candidates.collect {
-      case (email, Seq(userEmail)) if hashesByEmail(email) == userEmail.hash => email -> userEmail.userId
-    }
+    val hashes = addresses.map(EmailAddressHash.hashEmailAddress)
+    rows.filter(row => row.hash.inSet(hashes) && row.address.inSet(addresses) && row.state =!= excludeState.orNull).list.map(x => x.address -> x.userId).toMap
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] = {
