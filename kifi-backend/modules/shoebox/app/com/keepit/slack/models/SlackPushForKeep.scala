@@ -86,6 +86,7 @@ class SlackPushForKeepRepoImpl @Inject() (
   }
 
   private def activeRows = rows.filter(_.state === SlackPushForKeepStates.ACTIVE)
+  private def editableRows = activeRows.filter(_.lastKnownEditability === (SlackMessageEditability.EDITABLE: SlackMessageEditability))
   def table(tag: Tag) = new SlackPushForKeepTable(tag)
   initTable()
 
@@ -97,6 +98,6 @@ class SlackPushForKeepRepoImpl @Inject() (
     save(model.copy(id = existingModel.map(_.id.get)))
   }
   def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SlackPushForKeep] = {
-    activeRows.filter(r => r.integrationId === integrationId && r.keepId.inSet(keepIds)).list.map(kp => kp.keepId -> kp).toMap
+    editableRows.filter(r => r.integrationId === integrationId && r.keepId.inSet(keepIds)).list.map(mp => mp.keepId -> mp).toMap
   }
 }

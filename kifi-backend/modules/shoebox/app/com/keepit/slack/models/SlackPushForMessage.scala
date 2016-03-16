@@ -87,6 +87,7 @@ class SlackPushForMessageRepoImpl @Inject() (
   }
 
   private def activeRows = rows.filter(_.state === SlackPushForMessageStates.ACTIVE)
+  private def editableRows = activeRows.filter(_.lastKnownEditability === (SlackMessageEditability.EDITABLE: SlackMessageEditability))
   def table(tag: Tag) = new SlackPushForMessageTable(tag)
   initTable()
 
@@ -98,6 +99,6 @@ class SlackPushForMessageRepoImpl @Inject() (
     save(model.copy(id = existingModel.map(_.id.get)))
   }
   def getEditableByIntegrationAndKeepIds(integrationId: Id[LibraryToSlackChannel], msgIds: Set[Id[Message]])(implicit session: RSession): Map[Id[Message], SlackPushForMessage] = {
-    activeRows.filter(r => r.integrationId === integrationId && r.messageId.inSet(msgIds)).list.map(mp => mp.messageId -> mp).toMap
+    editableRows.filter(r => r.integrationId === integrationId && r.messageId.inSet(msgIds)).list.map(mp => mp.messageId -> mp).toMap
   }
 }

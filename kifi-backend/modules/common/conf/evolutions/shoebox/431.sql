@@ -13,6 +13,8 @@ CREATE TABLE slack_push_for_keep (
   keep_id BIGINT(20) NOT NULL,
   slack_timestamp VARCHAR(32) NOT NULL,
   text TEXT NOT NULL,
+  last_known_editability VARCHAR(32) NOT NULL DEFAULT 'editable',
+  message_request TEXT DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_push_for_keep_u_integration_id_keep_id (integration_id, keep_id),
@@ -31,6 +33,8 @@ CREATE TABLE slack_push_for_message (
   message_id BIGINT(20) NOT NULL,
   slack_timestamp VARCHAR(32) NOT NULL,
   text TEXT NOT NULL,
+  last_known_editability VARCHAR(32) NOT NULL DEFAULT 'editable',
+  message_request TEXT DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_push_for_message_u_integration_id_message_id (integration_id, message_id),
