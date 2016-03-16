@@ -177,44 +177,22 @@ class URITest extends Specification {
 
   "Path" should {
     "work basically" in {
-      val baseUrlString = "https://www.kifi.com/"
-      val basePath = Path("")
-      baseUrlString === basePath.absolute
-      basePath.relative === ""
-      basePath.queryString === Query.empty.toUrlString
+      // path segments, with and without leading '/'
+      (Path("") + "kifi").absolute === "https://www.kifi.com/kifi"
+      (Path("") + "/kifi").absolute === "https://www.kifi.com/kifi"
+      (Path("kifi") + "general").absolute === "https://www.kifi.com/kifi/general"
+      (Path("kifi") + "/general").absolute === "https://www.kifi.com/kifi/general"
 
-      val simpleUrlString = baseUrlString + "kifi"
-      val simplePath = Path("kifi")
-      simpleUrlString === simplePath.absolute
-      simplePath.queryString === Query.empty.toUrlString
+      // query parameters should be prefixed with a '?' or '&', and automatically do The Right Thing (TM)
+      (Path("kifi/general") + "?a=b").absolute === "https://www.kifi.com/kifi/general/?a=b"
+      (Path("kifi/general") + "&a=b").absolute === "https://www.kifi.com/kifi/general/?a=b"
+      (Path("kifi/general?a=b") + "&c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
+      (Path("kifi/general?a=b") + "?c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
 
-      // combine relative paths
-      val complexUrlString = simpleUrlString + "/general"
-      val complexPath = simplePath + "/general"
-      complexUrlString === complexPath.absolute
-      complexPath.queryString === Query.empty.toUrlString
-
-      // add query strings
-      val simpleQueryString = "?a=b"
-      val queriedUrlString = simpleUrlString + simpleQueryString
-      val queriedPath = simplePath.withQuery(Query.parse(simpleQueryString))
-      URI.parse(queriedUrlString) === URI.parse(queriedPath.absolute)
-      queriedPath.queryString === simpleQueryString
-
-      // normalize added query strings
-      val complexQueryString = "&b=c&c=d&d=e"
-      val complexQueriedUrlString = queriedUrlString + complexQueryString
-      val complexQueriedPath = queriedPath.withQuery(Query.parse(complexQueryString))
-      complexQueriedUrlString === (queriedPath + complexQueryString).absolute
-      complexQueriedUrlString === complexQueriedPath.absolute
-      complexQueriedPath.queryString === simpleQueryString + complexQueryString
-
-      val complexQueryString2 = "?e=f&f=g"
-      val complexQueriedUrlString2 = complexQueriedUrlString + "&" + complexQueryString2.stripPrefix("?")
-      val complexQueriedPath2 = complexQueriedPath.withQuery(Query.parse(complexQueryString2))
-      complexQueriedUrlString2 === (complexQueriedPath + complexQueryString2).absolute
-      complexQueriedUrlString2 === complexQueriedPath2.absolute
-      complexQueriedPath2.queryString === simpleQueryString + complexQueryString + "&" + complexQueryString2.stripPrefix("?")
+      // multiple query params can be added at once if you manually inject the '&' between them
+      (Path("kifi/general") + "?a=b&c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
+      (Path("kifi/general?a=b") + "&c=d&e=f").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d&e=f"
+      (Path("kifi/general?a=b") + "?c=d&e=f").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d&e=f"
     }
   }
 }

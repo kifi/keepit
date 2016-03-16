@@ -25,7 +25,7 @@ sealed class Path(private val value: String, private val query: Query) {
       if (segment.startsWith("&")) Path.splitQuery(segment.replaceFirst("&", "?"))
       else Path.splitQuery(segment)
     }
-    new Path(value + segmentValue, query ++ segmentQuery)
+    new Path(value + "/" + segmentValue.stripPrefix("/"), query ++ segmentQuery)
   }
 
   def withQuery(query: Query, overwrite: Boolean = false): Path = new Path(value, if (overwrite) query else this.query ++ query)
