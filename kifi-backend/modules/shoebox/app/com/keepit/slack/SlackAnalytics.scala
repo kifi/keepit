@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{ Param, Query }
 import com.keepit.heimdal.{ HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model.NotificationCategory
-import com.keepit.slack.models.{ SlackChannelName, SlackTeamRepo, SlackChannelId, SlackTeamId }
+import com.keepit.slack.models._
 import com.keepit.social.NonUserKinds
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -40,8 +40,13 @@ class SlackAnalytics @Inject() (
     }
     val membersFut = {
       if (existingContext.get[Double]("numChannelMembers").isEmpty || existingContext.get[String]("slackChannelName").isEmpty) {
-        slackClient.getChannelInfo(slackTeamId, slackChannelId).map { info =>
-          contextBuilder += ("numChannelMembers", info.numMembers)
+        val channelInfoFuture = slackChannelId match {
+          case publicChannelId: SlackChannelId.Public => slackClient.getPublicChannelInfo(slackTeamId, publicChannelId)
+          case privateChannelId: SlackChannelId.Private => slackClient.getPrivateChannelInfo(slackTeamId, privateChannelId)
+          case _ => Future.failed(new UnsupportedOperationException(s"Cannot get information for Slack channel $slackChannelId"))
+        }
+        channelInfoFuture map { info =>
+          contextBuilder += ("numChannelMembers", info.members.size)
           contextBuilder += ("slackChannelName", info.channelName.value)
           ()
         }

@@ -38,7 +38,8 @@ trait SlackClientWrapper {
   // These APIs are token-agnostic - will first try preferred tokens first then whichever they can find
   def getPublicChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]]
   def getGeneralChannelId(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Option[SlackChannelId]]
-  def getChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
+  def getPublicChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Public, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
+  def getPrivateChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Private, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPrivateChannelInfo]
   def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackTeamInfo]
   def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserInfo]
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
@@ -278,9 +279,15 @@ class SlackClientWrapperImpl @Inject() (
     getPublicChannels(slackTeamId, preferredTokens = preferredTokens).imap(_.collectFirst { case channel if channel.isGeneral => channel.channelId })
   }
 
-  def getChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo] = {
+  def getPublicChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Public, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.ChannelsRead)) { token =>
       slackClient.getPublicChannelInfo(token, channelId)
+    }
+  }
+
+  def getPrivateChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Private, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPrivateChannelInfo] = {
+    withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.GroupsRead)) { token =>
+      slackClient.getPrivateChannelInfo(token, channelId)
     }
   }
 

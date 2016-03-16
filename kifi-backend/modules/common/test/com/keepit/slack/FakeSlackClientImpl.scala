@@ -93,7 +93,7 @@ class FakeSlackClientImpl extends SlackClient {
       SlackTimestamp(s"$x.00000"),
       isArchived = false,
       isGeneral = x == 1,
-      numMembers = 10,
+      members = Set.empty,
       topic = None,
       purpose = None
     )

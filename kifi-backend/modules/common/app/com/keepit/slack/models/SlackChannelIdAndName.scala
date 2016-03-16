@@ -64,6 +64,7 @@ sealed trait SlackChannelInfo {
   def channelId: SlackChannelId
   def channelName: SlackChannelName
   def channelIdAndName = SlackChannelIdAndName(channelId, channelName)
+  def members: Set[SlackUserId]
 }
 
 // There is more stuff than just this returned
@@ -74,7 +75,7 @@ case class SlackPublicChannelInfo(
     createdAt: SlackTimestamp,
     isArchived: Boolean,
     isGeneral: Boolean,
-    numMembers: Int,
+    members: Set[SlackUserId],
     topic: Option[SlackChannelTopic],
     purpose: Option[SlackChannelPurpose]) extends SlackChannelInfo
 object SlackPublicChannelInfo {
@@ -85,7 +86,7 @@ object SlackPublicChannelInfo {
     (__ \ 'created).read[Long].map(t => SlackTimestamp(t.toString)) and
     (__ \ 'is_archived).read[Boolean] and
     (__ \ 'is_general).read[Boolean] and
-    (__ \ 'num_members).read[Int] and
+    (__ \ 'members).read[Set[SlackUserId]] and
     (__ \ 'topic \ 'value).readNullable[SlackChannelTopic].map(_.filter(_.value.nonEmpty)) and
     (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))
   )(SlackPublicChannelInfo.apply _)
