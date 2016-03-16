@@ -932,7 +932,7 @@ api.port.on({
     }
   },
   track_ftue: function (type) {
-    var category = {e: 'extMsgFTUE', l: 'libFTUE', m: 'moveKeepFtue'}[type];
+    var category = {l: 'libFTUE', m: 'moveKeepFtue', s: 'safariInstallUpdate'}[type];
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,
