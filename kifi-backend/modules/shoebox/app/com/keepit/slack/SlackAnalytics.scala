@@ -14,7 +14,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 object SlackAnalytics {
   def generateTrackingParams(slackChannelId: SlackChannelId, category: NotificationCategory, subaction: Option[String] = None): Query = {
     val queryParams = Query("slackChannelId" -> Some(slackChannelId.value), "category" -> Some(category.category), "subaction" -> subaction)
-    Query(Param("t", Some(KifiUrlRedirectHelper.signTrackingParams(queryParams))))
+    Query(Param("t", Some(KifiUrlRedirectHelper.signTrackingParams(queryParams, Some("ascii")))))
   }
 }
 

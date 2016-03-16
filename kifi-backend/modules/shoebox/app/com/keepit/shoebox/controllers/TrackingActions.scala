@@ -18,7 +18,7 @@ trait TrackingActions {
     override def invokeBlock[A](request: MaybeUserRequest[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       Future {
         request.getQueryString("t").foreach { signedTrackingParams =>
-          val params = KifiUrlRedirectHelper.extractTrackingParams(signedTrackingParams)
+          val params = KifiUrlRedirectHelper.extractTrackingParams(signedTrackingParams, Some("ascii"))
           for {
             slackChannelId <- params.getParam("slackChannelId").flatMap(_.value.map(SlackChannelId(_)))
             category <- params.getParam("category").flatMap(_.value.map(NotificationCategory(_)))
