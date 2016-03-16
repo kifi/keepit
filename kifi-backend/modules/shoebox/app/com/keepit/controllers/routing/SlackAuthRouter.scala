@@ -116,6 +116,16 @@ class SlackAuthRouter @Inject() (
     redir.getOrElse(notFound(request))
   }
 
+  def fromSlackToOwnFeed(slackTeamId: SlackTeamId) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "ownFeed")) { implicit request =>
+    db.readOnlyMaster { implicit s =>
+      val target = pathCommander.ownKeepsFeedPage.absolute
+      (for {
+        org <- slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId).map(orgRepo.get).filter(_.isActive)
+        _ <- Some(true) if weWantThisUserToAuthWithSlack(request.userIdOpt, org, slackTeamId)
+      } yield redirectThroughSlackAuth(org, slackTeamId, target)) getOrElse Redirect(target)
+    }
+  }
+
   def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "keep")) { implicit request =>
     // show 3rd party url with ext if possible, otherwise go to keep page (with proper upsells) or 3rd party url
     val redirOpt = db.readOnlyMaster { implicit s =>
@@ -162,7 +172,7 @@ class SlackAuthRouter @Inject() (
       case None => true // always hand non-users over to the frontend to ask them to log in or sign up
       case Some(userId) => // if they're logged in AND they can't access the page in question AND signing up with slack would help
         slackTeamRepo.getBySlackTeamId(slackTeamId).exists { slackTeam =>
-          val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.contains(org.id.get)
+          val orgIsConnectedToThisSlackTeam = slackTeam.organizationId.safely.contains(org.id.get)
           val userIsNotInThisOrg = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, userId).isEmpty
           val userHasNotGivenUsTheirSlackInfo = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId).isEmpty
           orgIsConnectedToThisSlackTeam && (userIsNotInThisOrg && userHasNotGivenUsTheirSlackInfo)

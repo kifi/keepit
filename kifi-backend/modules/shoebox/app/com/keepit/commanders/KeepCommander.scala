@@ -1,8 +1,5 @@
 package com.keepit.commanders
 
-import java.util.concurrent.{ Callable, TimeUnit }
-
-import com.google.common.cache.{ Cache, CacheBuilder }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
@@ -13,25 +10,22 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
-import com.keepit.common.strings._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
-import com.keepit.rover.model.RoverArticleSummary
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
 import com.keepit.slack.LibraryToSlackChannelPusher
-import com.keepit.social.twitter.TwitterHandle
-import com.keepit.social.{ BasicAuthor, Author }
+import com.keepit.social.BasicAuthor
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import org.joda.time.DateTime
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -40,7 +34,7 @@ import play.api.libs.json._
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Try, Failure, Success }
+import scala.util.{ Failure, Success, Try }
 
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])

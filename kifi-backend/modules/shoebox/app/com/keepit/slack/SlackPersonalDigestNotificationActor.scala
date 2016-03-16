@@ -37,6 +37,8 @@ object SlackPersonalDigestConfig {
 
   val minDigestConcurrency = 1
   val maxDigestConcurrency = 10
+
+  val superAwesomeWelcomeMessageGIF = "https://d1dwdv9wd966qu.cloudfront.net/img/slack_initial_personal_digest.gif"
 }
 
 class SlackPersonalDigestNotificationActor @Inject() (
@@ -220,7 +222,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
   private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPage)
+    val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPageViaSlack(digest.slackMembership.slackTeamId).withQuery(trackingParams("ownFeed")))
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(List(
       DescriptionElements("You've sent", digest.numIngestedMessages, "links", inTheLast(digest.digestPeriod), ".",
