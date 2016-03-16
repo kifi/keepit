@@ -6,6 +6,7 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.Json
+import com.keepit.common.time._
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -84,22 +85,23 @@ class FakeSlackClientImpl extends SlackClient {
   }
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit] = Future.successful(())
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = Future.successful(None)
   def getTeamInfo(token: SlackAccessToken): Future[SlackTeamInfo] = ???
   def getPublicChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPublicChannelInfo]] = Future.successful(Seq.range(1, 10).map { x =>
     SlackPublicChannelInfo(
       SlackChannelId.Public("C" + RandomStringUtils.randomAlphanumeric(8)),
       SlackChannelName(if (x == 1) "#general" else RandomStringUtils.randomAlphabetic(15)),
       SlackUserId("U" + RandomStringUtils.randomAlphanumeric(8)),
-      SlackTimestamp(s"$x.00000"),
+      currentDateTime,
       isArchived = false,
       isGeneral = x == 1,
-      numMembers = 10,
+      members = Set.empty,
       topic = None,
       purpose = None
     )
   })
   def getPublicChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPublicChannelInfo] = ???
+  def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean): Future[Seq[SlackPrivateChannelInfo]] = ???
+  def getPrivateChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPrivateChannelInfo] = ???
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = ???
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = ???

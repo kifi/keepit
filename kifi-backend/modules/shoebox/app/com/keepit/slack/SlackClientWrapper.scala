@@ -18,6 +18,8 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
+  // These will potentially yield failed futures if the request cannot be completed
+
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackHoweverPossible(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]]
   def sendToSlackViaBot(slackTeamId: SlackTeamId, slackChannel: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
@@ -28,15 +30,16 @@ trait SlackClientWrapper {
   // PSA: validateToken recovers from SlackAPIFailures, it should always yield a successful future
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
-  // These will potentially yield failed futures if the request cannot be completed
+  // These APIs are token-specific
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
+  def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPrivateChannelInfo]]
 
-  // These are APIs token-agnostic - will first try preferred tokens first then whichever they can find
-  def getChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]]
+  // These APIs are token-agnostic - will first try preferred tokens first then whichever they can find
+  def getPublicChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]]
   def getGeneralChannelId(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Option[SlackChannelId]]
-  def getChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
+  def getPublicChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Public, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo]
+  def getPrivateChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Private, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPrivateChannelInfo]
   def getTeamInfo(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackTeamInfo]
   def getUserInfo(slackTeamId: SlackTeamId, userId: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserInfo]
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
@@ -191,8 +194,16 @@ class SlackClientWrapperImpl @Inject() (
     slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
   }
 
-  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
-    slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
+  def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPrivateChannelInfo]] = {
+    slackClient.getPrivateChannels(token, excludeArchived) andThen (onRevokedToken(token)) andThen {
+      case Success(chs) => db.readWrite { implicit s =>
+        getSlackTeamId(token).foreach { teamId =>
+          chs.foreach { ch =>
+            slackChannelRepo.getOrCreate(teamId, ch.channelId, ch.channelName)
+          }
+        }
+      }
+    }
   }
 
   private def getSlackTeamId(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamId] = {
@@ -250,7 +261,7 @@ class SlackClientWrapperImpl @Inject() (
     }
   }.flatMap(_.map(Future.successful(_)).getOrElse(Future.failed(SlackFail.NoValidToken)))
 
-  def getChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]] = {
+  def getPublicChannels(slackTeamId: SlackTeamId, excludeArchived: Boolean = false, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackPublicChannelInfo]] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.ChannelsRead)) { token =>
       slackClient.getPublicChannels(token, excludeArchived) andThen {
         case Success(chs) => db.readWrite { implicit s =>
@@ -265,12 +276,18 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   def getGeneralChannelId(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Option[SlackChannelId]] = {
-    getChannels(slackTeamId, preferredTokens = preferredTokens).imap(_.collectFirst { case channel if channel.isGeneral => channel.channelId })
+    getPublicChannels(slackTeamId, preferredTokens = preferredTokens).imap(_.collectFirst { case channel if channel.isGeneral => channel.channelId })
   }
 
-  def getChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo] = {
+  def getPublicChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Public, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPublicChannelInfo] = {
     withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.ChannelsRead)) { token =>
       slackClient.getPublicChannelInfo(token, channelId)
+    }
+  }
+
+  def getPrivateChannelInfo(slackTeamId: SlackTeamId, channelId: SlackChannelId.Private, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackPrivateChannelInfo] = {
+    withFirstValidToken(slackTeamId, preferredTokens, Set(SlackAuthScope.GroupsRead)) { token =>
+      slackClient.getPrivateChannelInfo(token, channelId)
     }
   }
 

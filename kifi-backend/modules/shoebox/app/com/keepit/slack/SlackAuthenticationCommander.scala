@@ -149,6 +149,11 @@ class SlackAuthenticationCommanderImpl @Inject() (
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
       }
 
+      case SyncPrivateChannels() => slackTeamCommander.syncPrivateChannels(userId, slackTeamId).map {
+        case (orgId, _, _) =>
+          SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
+      }
+
       case TurnCommentMirroring(turnOn) => Future.fromTry {
         slackTeamCommander.turnCommentMirroring(userId, slackTeamId, turnOn).map { orgId =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url)

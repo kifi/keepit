@@ -7,8 +7,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ Param, Query }
 import com.keepit.heimdal.{ HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model.NotificationCategory
-import com.keepit.slack.models.{ SlackChannelName, SlackTeamRepo, SlackChannelId, SlackTeamId }
+import com.keepit.slack.models._
 import com.keepit.social.NonUserKinds
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -39,7 +40,11 @@ class SlackAnalytics @Inject() (
     }
     val channelFut = {
       if (existingContext.get[Double]("numChannelMembers").isEmpty || existingContext.get[String]("slackChannelName").isEmpty) {
-        slackClient.getChannelInfo(slackTeamId, slackChannelId).map(Some(_))
+        slackChannelId match {
+          case publicChannelId: SlackChannelId.Public => slackClient.getPublicChannelInfo(slackTeamId, publicChannelId).imap(Some(_))
+          case privateChannelId: SlackChannelId.Private => slackClient.getPrivateChannelInfo(slackTeamId, privateChannelId).imap(Some(_))
+          case _ => Future.successful(None)
+        }
       } else Future.successful(None)
     }
 
@@ -52,7 +57,7 @@ class SlackAnalytics @Inject() (
       }
 
       channelOpt.foreach { info =>
-        contextBuilder += ("numChannelMembers", info.numMembers)
+        contextBuilder += ("numChannelMembers", info.members.size)
         contextBuilder += ("slackChannelName", info.channelName.value)
       }
 

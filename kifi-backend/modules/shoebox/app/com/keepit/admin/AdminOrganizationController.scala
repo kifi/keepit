@@ -474,7 +474,7 @@ class AdminOrganizationController @Inject() (
   private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Unit] = {
     import DescriptionElements._
     FutureHelpers.chunkySequentialExec(members, chunkSize = 100) { mem =>
-      val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushAnywhereWithKifiBot)))
+      val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
       val text = DescriptionElements.formatForSlack(DescriptionElements(
         "Kifi team here - we made some major upgrades by creating a bot. To take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), "here.",
         "\n\n", "Learn about the new features including a bot & personal stats on your usage ", "here" --> LinkElement("https://www.kifi.com/") // todo(Cam): use the blog post link when it's ready

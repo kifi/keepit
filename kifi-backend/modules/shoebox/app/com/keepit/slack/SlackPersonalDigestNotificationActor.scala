@@ -81,7 +81,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         now = now,
         vipTeams = vipTeams
       )
-      ripeIds.filter(id => slackMembershipRepo.markAsProcessing(id, overrideProcessesOlderThan = now minus maxProcessingDuration))
+      ripeIds.filter(id => slackMembershipRepo.markAsProcessingPersonalDigest(id, overrideProcessesOlderThan = now minus maxProcessingDuration))
     }
   }
 

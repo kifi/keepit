@@ -16,6 +16,7 @@ CREATE TABLE slack_team_membership (
   token VARCHAR(512) NOT NULL,
   scopes text NOT NULL,
   slack_user text DEFAULT NULL,
+  private_channels_last_synced_at DATETIME DEFAULT NULL,
   last_personal_digest_at DATETIME DEFAULT NULL,
   last_processing_at DATETIME DEFAULT NULL,
   last_processed_at DATETIME DEFAULT NULL,

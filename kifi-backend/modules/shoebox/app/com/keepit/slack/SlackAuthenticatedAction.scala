@@ -72,6 +72,12 @@ case class SyncPublicChannels() extends SlackAuthenticatedAction {
   def helper = SyncPublicChannels
 }
 
+object SyncPrivateChannels extends SlackAuthenticatedActionHelper[SyncPrivateChannels]("sync_private_channels")
+case class SyncPrivateChannels() extends SlackAuthenticatedAction {
+  type A = SyncPrivateChannels
+  def helper = SyncPrivateChannels
+}
+
 object TurnCommentMirroring extends SlackAuthenticatedActionHelper[TurnCommentMirroring]("turn_comment_mirroring")
 @json case class TurnCommentMirroring(turnOn: Boolean) extends SlackAuthenticatedAction {
   type A = TurnCommentMirroring
@@ -101,6 +107,7 @@ object SlackAuthenticatedActionHelper {
     ConnectSlackTeam,
     CreateSlackTeam,
     SyncPublicChannels,
+    SyncPrivateChannels,
     TurnCommentMirroring,
     BackfillScopes
   )
@@ -123,6 +130,7 @@ object SlackAuthenticatedActionHelper {
     case ConnectSlackTeam => implicitly[Format[ConnectSlackTeam]]
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
     case SyncPublicChannels => formatPure(SyncPublicChannels())
+    case SyncPrivateChannels => formatPure(SyncPrivateChannels())
     case TurnCommentMirroring => implicitly[Format[TurnCommentMirroring]]
     case BackfillScopes => implicitly[Format[BackfillScopes]]
   }
@@ -136,8 +144,9 @@ object SlackAuthenticatedActionHelper {
     case AddSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case ConnectSlackTeam(_, andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
-    case SyncPublicChannels() => SlackAuthScope.syncPublicChannelsWithKifiBot
-    case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushAnywhereWithKifiBot else Set.empty
+    case SyncPublicChannels() => SlackAuthScope.syncPublicChannels
+    case SyncPrivateChannels() => SlackAuthScope.syncPrivateChannels
+    case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushToPublicChannels else Set.empty
     case BackfillScopes(scopes) => scopes
   }
 

@@ -120,6 +120,16 @@ class SlackController @Inject() (
     handleAsAPIRequest(res)(request.request)
   }
 
+  def syncPrivateChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val slackTeamIdOpt = db.readOnlyMaster { implicit session =>
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+    }
+    val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPrivateChannels()))
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
+    handleAsAPIRequest(res)(request.request)
+  }
+
   def getOrganizationsToConnectToSlackTeam() = UserAction { implicit request =>
     val orgs = db.readOnlyMaster { implicit session =>
       slackTeamCommander.getOrganizationsToConnectToSlackTeam(request.userId).toSeq.sortBy(_.name)
