@@ -85,6 +85,7 @@ object VisitorEventTypes {
 object SlackEventTypes extends Enumerator[EventType] {
   val SEARCHED = EventType("searched")
   val CLICKED_SEARCH_RESULT = EventType("clicked_search_result")
+  val WAS_NOTIFIED = EventType("was_notified")
 
   def contains(eventType: EventType) = _all.contains(eventType)
 }
