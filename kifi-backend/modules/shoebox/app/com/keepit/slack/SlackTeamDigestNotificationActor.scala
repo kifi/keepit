@@ -249,7 +249,7 @@ class SlackTeamDigestNotificationActor @Inject() (
           topLibraries.map(lib => DescriptionElements(lib.name --> LinkElement(pathCommander.libraryPageViaSlack(lib, digest.slackTeam.slackTeamId).withQuery(trackingParams))))
         }
       )))).withFullMarkdown
-    ) ++ prng.choice(kifiSlackTipAttachments(digest.slackTeam.slackTeamId))
+    ) ++ prng.choiceOption(kifiSlackTipAttachments(digest.slackTeam.slackTeamId))
 
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
   }
