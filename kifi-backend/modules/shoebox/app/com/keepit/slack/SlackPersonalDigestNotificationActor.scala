@@ -5,6 +5,7 @@ import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
 import com.keepit.common.crypto.KifiUrlRedirectHelper
+import com.keepit.common.strings._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -144,6 +145,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
       })
       digest = SlackPersonalDigest(
         slackMembership = membership,
+        slackTeam = slackTeam,
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
@@ -183,8 +185,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val mostRecentIngestedMsg = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
-    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentIngestedMsg._1, slackTeamId).withQuery(trackingParams("latestMessage")))
+    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
+    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(Seq(
       DescriptionElements(
@@ -198,19 +200,14 @@ class SlackPersonalDigestNotificationActor @Inject() (
     val attachments = List(
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.books, "Access to your archived links", "-",
-        "For example, check out the archive of your latest message",
-        mostRecentIngestedMsg._2.channel.name.map(chName => DescriptionElements("in", s"#${chName.value}")),
-        "here" --> linkToMostRecentKeep
+        "For example, here's the archive of your recent message",
+        mostRecentIngestedMsg.channel.name.map(chName => DescriptionElements("in", s"#${chName.value}:")),
+        mostRecentKeep.title.getOrElse(mostRecentKeep.url).abbreviate(60) --> linkToMostRecentKeep
       )))),
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.magnifyingGlass, "Google search integration", "-",
         "See the pages your coworkers are shared on top of Google search results"
-      )))),
-      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.pencil, "On the page", "-",
-        "Ever wonder if your coworkers are already talking about an article you're looking at?",
-        "If they are, I'll give you a link to the conversation."
-      )))),
+      )))).withImageUrl(superAwesomeWelcomeMessageGIF),
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.robotFace,
         "Also, my binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to any messages you send my way  :zipper_mouth_face:.",
@@ -227,8 +224,8 @@ class SlackPersonalDigestNotificationActor @Inject() (
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(List(
       prng.choice(puns),
-      DescriptionElements("You've sent", digest.numIngestedMessages, "links", inTheLast(digest.digestPeriod), ".",
-        "I", "archived them" --> linkToFeed, "for you, and indexed the pages so you can search for them more easily."),
+      DescriptionElements("You've sent", s"${digest.numIngestedMessages} links" --> linkToFeed, inTheLast(digest.digestPeriod), ".",
+        "I archived them for you, and indexed the pages so you can search for them more easily."),
       DescriptionElements("If you don't want to get any more of these notifications,", "click here" --> linkToUnsubscribe)
     ))
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text))
