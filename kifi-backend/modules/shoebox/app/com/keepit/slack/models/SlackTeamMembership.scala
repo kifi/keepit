@@ -81,7 +81,6 @@ case class SlackTeamMembership(
   token: Option[SlackUserAccessToken],
   scopes: Set[SlackAuthScope],
   slackUser: Option[SlackUserInfo],
-  privateChannelsLastSyncingAt: Option[DateTime] = None,
   privateChannelsLastSyncedAt: Option[DateTime] = None,
   // Personal digest scheduling nonsense
   lastPersonalDigestAt: Option[DateTime] = None,
@@ -107,8 +106,8 @@ case class SlackTeamMembership(
   }
 
   def withPrivateChannelsSyncedAt(time: DateTime) = privateChannelsLastSyncedAt match {
-    case Some(lastSync) if lastSync isAfter time => this.copy(privateChannelsLastSyncingAt = None)
-    case _ => this.copy(privateChannelsLastSyncingAt = None, privateChannelsLastSyncedAt = Some(time))
+    case Some(lastSync) if lastSync isAfter time => this
+    case _ => this.copy(privateChannelsLastSyncedAt = Some(time))
   }
 
   // These modify the personal digest setting, so they should be initiated by user actions
@@ -149,7 +148,6 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def updateLastPersonalDigest(id: Id[SlackTeamMembership])(implicit session: RWSession): Unit
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
-  def markAsSyncingChannels(slackTeamId: SlackTeamId, slackUserId: SlackUserId, syncTimeout: Duration)(implicit session: RWSession): Boolean
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
 
   //admin
@@ -192,7 +190,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
     token: Option[SlackUserAccessToken],
     scopes: JsValue,
     slackUser: Option[JsValue],
-    privateChannelsLastSyncingAt: Option[DateTime],
     privateChannelsLastSyncedAt: Option[DateTime],
     lastPersonalDigestAt: Option[DateTime],
     lastProcessingAt: Option[DateTime],
@@ -214,7 +211,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
       token,
       scopes.as[Set[SlackAuthScope]],
       slackUser.map(_.as[SlackUserInfo]),
-      privateChannelsLastSyncingAt,
       privateChannelsLastSyncedAt,
       lastPersonalDigestAt = lastPersonalDigestAt,
       lastProcessingAt = lastProcessingAt,
@@ -239,7 +235,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.token,
     Json.toJson(membership.scopes),
     membership.slackUser.map(Json.toJson(_)),
-    membership.privateChannelsLastSyncingAt,
     membership.privateChannelsLastSyncedAt,
     membership.lastPersonalDigestAt,
     membership.lastProcessingAt,
@@ -260,7 +255,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def token = column[Option[SlackUserAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
     def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
-    def privateChannelsLastSyncingAt = column[Option[DateTime]]("private_channels_last_syncing_at", O.Nullable)
     def privateChannelsLastSyncedAt = column[Option[DateTime]]("private_channels_last_synced_at", O.Nullable)
     def lastPersonalDigestAt = column[Option[DateTime]]("last_personal_digest_at", O.Nullable)
     def lastProcessingAt = column[Option[DateTime]]("last_processing_at", O.Nullable)
@@ -268,7 +262,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def personalDigestSetting = column[SlackPersonalDigestSetting]("personal_digest_setting", O.NotNull)
     def nextPersonalDigestAt = column[Option[DateTime]]("next_personal_digest_at", O.Nullable)
     def lastIngestedMessageTimestamp = column[Option[SlackTimestamp]]("last_ingested_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser, privateChannelsLastSyncingAt, privateChannelsLastSyncedAt, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser, privateChannelsLastSyncedAt, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
 
     def availableForProcessing(overrideDate: DateTime) = lastProcessingAt.isEmpty || lastProcessingAt < overrideDate
   }
@@ -410,12 +404,6 @@ class SlackTeamMembershipRepoImpl @Inject() (
       .filter(stm => stm.id === id)
       .map(stm => (stm.updatedAt, stm.lastProcessingAt, stm.lastProcessedAt, stm.nextPersonalDigestAt))
       .update((now, None, Some(now), Some(now plus delayUntilNextPush)))
-  }
-
-  def markAsSyncingChannels(slackTeamId: SlackTeamId, slackUserId: SlackUserId, syncTimeout: Duration)(implicit session: RWSession): Boolean = {
-    val now = clock.now()
-    val syncTimeoutAt = now minus syncTimeout
-    rows.filter(r => r.slackTeamId === slackTeamId && r.slackUserId === slackUserId && (r.privateChannelsLastSyncingAt.isEmpty || r.privateChannelsLastSyncingAt <= syncTimeoutAt)).map(r => (r.updatedAt, r.privateChannelsLastSyncingAt)).update((now, Some(now))) > 0
   }
 
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit = {

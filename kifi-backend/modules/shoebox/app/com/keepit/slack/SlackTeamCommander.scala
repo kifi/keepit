@@ -302,7 +302,7 @@ class SlackTeamCommanderImpl @Inject() (
                 case Some(membership) =>
                   val shouldSync = {
                     val now = clock.now()
-                    val alreadySyncing = team.publicChannelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
+                    val alreadySyncing = team.channelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
                     val syncedRecently = team.publicChannelsLastSyncedAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncBuffer))
                     !alreadySyncing && !syncedRecently
                   }
@@ -343,7 +343,7 @@ class SlackTeamCommanderImpl @Inject() (
 
   private def setupPrivateSlackChannels(team: SlackTeam, membership: SlackTeamMembership, channels: Seq[SlackPrivateChannelInfo])(implicit context: HeimdalContext): SlackChannelLibraries = {
 
-    val markedAsSyncing = db.readWrite { implicit session => slackTeamMembershipRepo.markAsSyncingChannels(membership.slackTeamId, membership.slackUserId, SlackTeamCommander.channelSyncTimeout) }
+    val markedAsSyncing = db.readWrite { implicit session => slackTeamRepo.markAsSyncingChannels(team.slackTeamId, SlackTeamCommander.channelSyncTimeout) }
 
     if (markedAsSyncing) {
       val libCreationsByChannel = channels.map { channel =>
@@ -392,7 +392,7 @@ class SlackTeamCommanderImpl @Inject() (
                 case (Some(membership), Some(token)) =>
                   val shouldSync = {
                     val now = clock.now()
-                    val alreadySyncing = membership.privateChannelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
+                    val alreadySyncing = team.channelsLastSyncingAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncTimeout))
                     val syncedRecently = membership.privateChannelsLastSyncedAt.exists(_ isAfter (now minus SlackTeamCommander.channelSyncBuffer))
                     !alreadySyncing && !syncedRecently
                   }
