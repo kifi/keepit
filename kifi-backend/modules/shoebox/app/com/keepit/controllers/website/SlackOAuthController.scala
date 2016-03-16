@@ -55,9 +55,10 @@ class SlackOAuthController @Inject() (
     }
   }
 
-  def addSlackTeam(slackTeamId: Option[SlackTeamId]) = UserAction.async { implicit request =>
+  def addSlackTeam(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = UserAction.async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam(andThen = None))
+    val backfillScopes = extraScopes.map(SlackAuthScope.setFromString).map(BackfillScopes(_))
+    val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, slackTeamId, AddSlackTeam(andThen = backfillScopes))
     handleAsBrowserRequest(res)
   }
 

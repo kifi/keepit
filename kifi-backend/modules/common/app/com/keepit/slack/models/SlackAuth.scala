@@ -68,11 +68,17 @@ object SlackAuthScope {
   val userSignup: Set[SlackAuthScope] = Set(Identify, UsersRead, TeamRead)
   val userLogin: Set[SlackAuthScope] = Set(Identify)
 
-  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
+  val slackFormat: Format[Set[SlackAuthScope]] = Format(
+    Reads { j => j.validate[String].map(s => s.split(',').toSet.map(SlackAuthScope.apply)) },
+    Writes { o => JsString(o.map(_.value).mkString(",")) }
+  )
   val dbFormat: Format[SlackAuthScope] = Format(
     Reads { j => j.validate[String].map(SlackAuthScope.apply) },
     Writes { sas => JsString(sas.value) }
   )
+
+  def setFromString(str: String): Set[SlackAuthScope] = str.split(',').filter(_.nonEmpty).map(SlackAuthScope(_)).toSet
+  def stringifySet(scopes: Set[SlackAuthScope]) = scopes.map(_.value).mkString(",")
 }
 
 @json case class SlackAuthorizationCode(code: String)
@@ -108,7 +114,7 @@ case class SlackAuthorizationResponse(
 object SlackAuthorizationResponse {
   implicit val reads: Reads[SlackAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackUserAccessToken] and
-    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
+    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackFormat) and
     (__ \ 'team_name).read[SlackTeamName] and
     (__ \ 'team_id).read[SlackTeamId] and
     (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook] and
@@ -211,6 +217,7 @@ object SlackUserPresenceState {
   case object Active extends SlackUserPresenceState("active")
   case object Away extends SlackUserPresenceState("away")
   case object Unknown extends SlackUserPresenceState("unknown")
+  case object ERROR extends SlackUserPresenceState("error")
 }
 
 case class SlackUserPresence(

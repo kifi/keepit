@@ -169,7 +169,7 @@ class UserController @Inject() (
   }
 
   def currentUser = UserAction { implicit request =>
-    getUserInfo(request.userId)
+    Ok(getUserInfo(request.userId))
   }
 
   def changePassword = UserAction(parse.tolerantJson) { implicit request =>
@@ -284,7 +284,7 @@ class UserController @Inject() (
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
-        getUserInfo(request.userId)
+        Ok(getUserInfo(request.userId))
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
         BadRequest(Json.obj("error" -> "bad email addresses"))
@@ -293,7 +293,7 @@ class UserController @Inject() (
     }
   }
 
-  private def getUserInfo[T](userId: Id[User]) = {
+  private[controllers] def getUserInfo(userId: Id[User]) = {
     val user = db.readOnlyMaster { implicit session =>
       userRepo.get(userId)
     }
@@ -321,7 +321,7 @@ class UserController @Inject() (
           "slack" -> pimpedUser.slack
         )
     }
-    Ok(json)
+    json
   }
 
   private val SitePrefNames = {

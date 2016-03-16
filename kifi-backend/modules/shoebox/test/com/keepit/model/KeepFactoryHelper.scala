@@ -7,6 +7,8 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.KeepFactory.PartialKeep
 import org.apache.commons.lang3.RandomStringUtils.random
 
+import scala.util.Try
+
 object KeepFactoryHelper {
 
   implicit class KeepPersister(partialKeep: PartialKeep) {
@@ -37,12 +39,14 @@ object KeepFactoryHelper {
         candidate
       }
 
-      val keep = partialKeep.get |> fixUriReferences |> fixLibraryReferences
+      val keep = partialKeep.keep |> fixUriReferences |> fixLibraryReferences
 
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(keep.libraryId.toSet).withParticipants(keep.userId.toSet))
+      val libIds = keep.libraryId.toSet ++ partialKeep.explicitLibs.map(_.id.get) ++ partialKeep.implicitLibs.map(_._1)
+      val userIds = keep.userId.toSet
+      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(libIds).withParticipants(userIds))
       val libraries = finalKeep.libraryId.toSet[Id[Library]].map(libId => injector.getInstance(classOf[LibraryRepo]).get(libId))
 
-      libraries.foreach { library =>
+      partialKeep.explicitLibs.foreach { library =>
         val ktl = KeepToLibrary(
           keepId = finalKeep.id.get,
           libraryId = library.id.get,
@@ -54,6 +58,20 @@ object KeepFactoryHelper {
           lastActivityAt = finalKeep.lastActivityAt
         )
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
+      }
+      partialKeep.implicitLibs.foreach {
+        case (libId, vis, orgId) =>
+          val ktl = KeepToLibrary(
+            keepId = finalKeep.id.get,
+            libraryId = libId,
+            addedAt = finalKeep.keptAt,
+            addedBy = finalKeep.userId,
+            uriId = finalKeep.uriId,
+            visibility = vis,
+            organizationId = orgId,
+            lastActivityAt = finalKeep.lastActivityAt
+          )
+          injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
       }
       finalKeep.connections.users.foreach { userId =>
         val ktu = KeepToUser(

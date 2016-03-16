@@ -4,7 +4,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ KeepAndTags, NormalizedURI, Keep }
+import com.keepit.model.{ CrossServiceKeepAndTags, NormalizedURI, Keep }
 import scala.concurrent.Future
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.sharding.{ ShardedIndexer, Shard }
@@ -48,9 +48,9 @@ class ShardedKeepIndexer(
   }
 
   private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Seq[KeepIndexable], SequenceNumber[Keep], Boolean)]] = {
-    shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
+    shoebox.getCrossServiceKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
       if (changedKeepsAndTags.nonEmpty) {
-        val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags) }
+        val indexables = changedKeepsAndTags.map { case CrossServiceKeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags) }
         val exhausted = changedKeepsAndTags.isEmpty
         val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
         Some((indexables, maxSeq, exhausted))

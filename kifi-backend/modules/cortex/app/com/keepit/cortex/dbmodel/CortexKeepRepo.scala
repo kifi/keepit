@@ -35,11 +35,9 @@ class CortexKeepRepoImpl @Inject() (
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def isPrivate = column[Boolean]("is_private", O.NotNull)
     def source = column[KeepSource]("source", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.Nullable)
-    def visibility = column[LibraryVisibility]("visibility", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, keptAt, keepId, userId, uriId, isPrivate, state, source, seq, libraryId.?, visibility.?) <> ((CortexKeep.apply _).tupled, CortexKeep.unapply _)
+    def * = (id.?, createdAt, updatedAt, keptAt, keepId, userId, uriId, state, source, seq, libraryId.?) <> ((CortexKeep.apply _).tupled, CortexKeep.unapply _)
   }
 
   def table(tag: Tag) = new CortexKeepTable(tag)

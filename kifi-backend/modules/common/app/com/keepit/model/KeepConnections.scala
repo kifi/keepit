@@ -1,7 +1,9 @@
 package com.keepit.model
 
-import com.keepit.common.db.Id
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.DeltaSet
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -21,6 +23,8 @@ case class KeepConnections(
 
   def plusUser(user: Id[User]) = this.withUsers(users + user)
   def plusLibrary(lib: Id[Library]) = this.withLibraries(libraries + lib)
+
+  def diffed(diff: KeepConnectionsDiff) = this.copy(users = users ++ diff.users.added -- diff.users.removed, libraries = libraries ++ diff.libraries.added -- diff.libraries.removed)
 }
 object KeepConnections {
   val EMPTY: KeepConnections = KeepConnections(libraries = Set.empty, users = Set.empty)
@@ -58,4 +62,18 @@ case class KeepMembers(libraries: Seq[KeepMember.Library], users: Seq[KeepMember
 object KeepMembers {
   implicit val writes = Json.writes[KeepMembers]
   val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
+}
+
+case class KeepConnectionsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]])
+object KeepConnectionsDiff {
+  def addUser(user: Id[User]) = KeepConnectionsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty)
+  def addUsers(users: Set[Id[User]]) = KeepConnectionsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty)
+  def addLibrary(library: Id[Library]) = KeepConnectionsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library))
+}
+case class ExternalKeepConnectionsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]])
+object ExternalKeepConnectionsDiff {
+  implicit val reads: Reads[ExternalKeepConnectionsDiff] = (
+    (__ \ 'users).readNullable[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
+    (__ \ 'libraries).readNullable[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty)
+  )(ExternalKeepConnectionsDiff.apply _)
 }

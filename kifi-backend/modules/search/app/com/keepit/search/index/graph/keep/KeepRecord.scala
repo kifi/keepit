@@ -1,7 +1,7 @@
 package com.keepit.search.index.graph.keep
 
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ Library, Hashtag, Keep }
+import com.keepit.model.{ CrossServiceKeep, Library, Hashtag, Keep }
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import com.keepit.search.index.Searcher
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
@@ -13,7 +13,7 @@ import com.keepit.common.time._
 case class KeepRecord(title: Option[String], url: String, keptAt: DateTime, libraryId: Option[Id[Library]], externalId: ExternalId[Keep], note: Option[String], tags: Set[Hashtag])
 
 object KeepRecord {
-  def fromKeepAndTags(keep: Keep, tags: Set[Hashtag]): KeepRecord = KeepRecord(keep.title, keep.url, keep.keptAt, keep.libraryId, keep.externalId, keep.note.filter(_.nonEmpty), tags)
+  def fromKeepAndTags(keep: CrossServiceKeep, tags: Set[Hashtag]): KeepRecord = KeepRecord(keep.title, keep.url, keep.keptAt, keep.libraries.headOption.map(_.id), keep.externalId, keep.note.filter(_.nonEmpty), tags)
 
   implicit def toByteArray(record: KeepRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()

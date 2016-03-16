@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI))], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI))], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], counts: Seq[(String, Int)], total: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -51,9 +51,6 @@
   <h2>Showing @bookmarksAndUsers.size (page @{page + 1})</h2>
   <h4>Keeps in the last 24 hours</h4>
   <ul>
-    @if(keeperKeepCount.nonEmpty) {
-      <li>Keeper keeps: @keeperKeepCount.get (@privateKeeperKeepCount private)</li>
-    }
     <li>Counts per source:
       <ul>
         @for((source, count) <- counts) {

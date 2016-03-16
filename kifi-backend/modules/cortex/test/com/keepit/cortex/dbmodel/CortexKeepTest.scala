@@ -31,7 +31,6 @@ class CortexKeepTest extends Specification with CortexTestInjector {
               keepId = Id[Keep](i),
               uriId = Id[NormalizedURI](i),
               userId = Some(Id[User](i)),
-              isPrivate = false,
               state = State[CortexKeep]("active"),
               source = KeepSource.keeper,
               seq = SequenceNumber[CortexKeep](i)
@@ -61,7 +60,6 @@ class CortexKeepTest extends Specification with CortexTestInjector {
               keepId = Id[Keep](i),
               uriId = Id[NormalizedURI](i),
               userId = Some(Id[User](1)),
-              isPrivate = false,
               state = State[CortexKeep]("active"),
               source = KeepSource.keeper,
               seq = SequenceNumber[CortexKeep](i)

@@ -994,8 +994,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (user1, library1, keep1, keep2)
         }
 
-        val keepPermissions = KeepPermission.all
-
         inject[FakeSearchServiceClient].setKeepers((keep1.userId.toSeq, 1), (keep2.userId.toSeq, 1))
 
         val pubId1 = Library.publicId(lib1.id.get)
@@ -1006,6 +1004,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
+        def keepPermissions(keepId: Id[Keep]) = db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keepId, Some(user1.id.get)) }
         val author = BasicAuthor.fromUser(BasicUser.fromUser(user1))
         val expected1 = Json.parse(
           s"""
@@ -1021,7 +1020,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
                 "createdAt": "${keep2.keptAt}",
-                "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "visibility":"${keep2.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
+                "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "visibility":"${lib1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -1037,7 +1036,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions)}
+                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))}
               },
               {
                 "author":${Json.toJson(author)},
@@ -1049,7 +1048,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "user":{"id":"${user1.externalId}","firstName":"Aaron","lastName":"Hsu","pictureName":"0.jpg","username":"test"},
                 "createdAt": "${keep1.keptAt}",
-                "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "visibility":"${keep1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
+                "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "visibility":"${lib1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -1065,7 +1064,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions)}
+                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))}
               }
             ],
             "numKeeps": 2

@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.{ Json, JsArray, JsString, JsNumber, JsBoolean, JsValue }
-import com.keepit.model.{ KeepPermission, Keep, Username, User }
+import com.keepit.model._
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

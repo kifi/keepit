@@ -72,19 +72,19 @@ trait KeepCommander {
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep
 
   // Updating / managing
+  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
@@ -120,6 +120,7 @@ class KeepCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
+    basicKeepCache: BasicKeepByIdCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionCommander: CollectionCommander,
     keepRepo: KeepRepo,
@@ -159,8 +160,9 @@ class KeepCommanderImpl @Inject() (
 
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
     val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
-      val keeps = keepRepo.getByIds(ids)
-      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keeps.values.flatMap(_.id).toSet)
+      val keepsById = keepRepo.getByIds(ids)
+      val ktlsByKeep = ktlRepo.getAllByKeepIds(ids)
+      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keepsById.values.flatMap(_.id).toSet)
       def getAuthor(keep: Keep): Option[BasicAuthor] = {
         attributions.get(keep.id.get).map {
           case (_, Some(user)) => BasicAuthor.fromUser(user)
@@ -173,49 +175,27 @@ class KeepCommanderImpl @Inject() (
         }
       }
       val keepInfos = for {
-        (kId, keep) <- keeps
+        (kId, keep) <- keepsById
         author <- getAuthor(keep)
       } yield {
-        (kId, keep, author)
+        (kId, keep, author, ktlsByKeep.getOrElse(kId, Seq.empty))
       }
       (attributions, keepInfos)
     }
 
     keepInfos.map {
-      case (kId, keep, author) =>
+      case (kId, keep, author, ktls) =>
         kId -> BasicKeep(
           id = keep.externalId,
           title = keep.title,
           url = keep.url,
-          visibility = keep.visibility,
-          libraryId = keep.libraryId.map(Library.publicId),
+          visibility = ktls.headOption.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+          libraryId = ktls.headOption.map(ktl => Library.publicId(ktl.libraryId)),
           author = author,
           attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
           uriId = NormalizedURI.publicId(keep.uriId)
         )
     }.toMap
-  }
-
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
-    val (keeps, users, libs) = db.readOnlyMaster { implicit s =>
-      val keepsById = keepRepo.getByIds(ids)
-      val usersById = ktuRepo.getAllByKeepIds(keepsById.keySet).map { case (keepId, ktus) => keepId -> ktus.map(_.userId).toSet }
-      val libsById = ktlRepo.getAllByKeepIds(keepsById.keySet).map { case (keepId, ktls) => keepId -> ktls.map(_.libraryId).toSet }
-      (keepsById, usersById, libsById)
-    }
-    keeps.map {
-      case (keepId, keep) => keepId -> CrossServiceKeep(
-        id = keepId,
-        owner = keep.userId,
-        users = users.getOrElse(keepId, Set.empty),
-        libraries = libs.getOrElse(keepId, Set.empty),
-        url = keep.url,
-        uriId = keep.uriId,
-        keptAt = keep.keptAt,
-        title = keep.title,
-        note = keep.note
-      )
-    }
   }
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -287,6 +267,27 @@ class KeepCommanderImpl @Inject() (
       keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, maxMessagesShown = maxMessagesShown, sanitizeUrls = false)
         .imap { case Seq(keepInfo) => keepInfo }
     }
+  }
+
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId] = {
+    val keepIds = db.readOnlyReplica { implicit session =>
+      val libs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
+      val libKeeps = ktlRepo.getByLibraryIdsAndUriIds(libs, Set(nUriId)).map(l => (l.addedAt, l.keepId))
+      val userKeeps = ktuRepo.getByUserIdAndUriIds(userId, Set(nUriId)).map(u => (u.addedAt, u.keepId))
+      // Not efficient to load this all in memory, but saves a lot of complexity
+      val allKids = (libKeeps ++ userKeeps).sortBy(_._1)(implicitly[Ordering[DateTime]].reverse)
+      val filtered = beforeDate match {
+        case Some(date) => allKids.filter(_._1.isBefore(date))
+        case None => allKids
+      }
+      filtered.take(limit).map(_._2)
+    }
+
+    val basicKeeps = basicKeepCache.bulkGetOrElse(keepIds.toSet.map(BasicKeepIdKey)) { missingKeys =>
+      getBasicKeeps(missingKeys.map(_.id)).map { case (k, v) => BasicKeepIdKey(k) -> v }
+    }.map(s => s._1.id -> s._2)
+
+    keepIds.flatMap { kId => basicKeeps.get(kId).map(BasicKeepWithId(kId, _)) }
   }
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
@@ -708,12 +709,18 @@ class KeepCommanderImpl @Inject() (
 
     newKeep
   }
-  def addUsersToKeep(keepId: Id[Keep], addedBy: Option[Id[User]], newUsers: Set[Id[User]])(implicit session: RWSession): Keep = {
+  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
-    val newKeep = keepRepo.save(oldKeep.withParticipants(oldKeep.connections.users ++ newUsers))
-
-    newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy) }
-    newKeep
+    val libOpt = diff.libraries.added.headOption.map(libId => libraryRepo.get(libId))
+    val updatedKeep = libOpt.fold(oldKeep)(oldKeep.withLibrary).withConnections(oldKeep.connections.diffed(diff))
+    keepRepo.save(updatedKeep) tap { newKeep =>
+      diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
+      diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
+      libraryRepo.getActiveByIds(diff.libraries.added).values.foreach { newLib =>
+        ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
+      }
+      diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
+    }
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
@@ -838,8 +845,6 @@ class KeepCommanderImpl @Inject() (
       url = k.url,
       uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
-      visibility = toLibrary.visibility,
-      organizationId = toLibrary.organizationId,
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),

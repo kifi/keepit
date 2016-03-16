@@ -1,5 +1,5 @@
 ---
 dependencies:
-  - { role: williamyeh.oracle-java }
+  - { role: williamyeh.oracle-java, when: 'not java7_installed_with_apt' }
   - { role: ricbra.logentries }
   - { role: jtyr.ulimit }

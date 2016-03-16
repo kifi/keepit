@@ -236,22 +236,6 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
       "match librariesWithMostKeepsSince" in {
-        // def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
-        withDb(modules: _*) { implicit injector =>
-          db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val libs = randomLibs(10, user)
-
-            val libIds = libs.map(_.id.get).toSet
-            val expected = inject[KeepRepo].librariesWithMostKeepsSince(5, since = currentDateTime.minusDays(100)).toMap
-            val actual = inject[KeepToLibraryRepo].publishedLibrariesWithMostKeepsSince(Limit(5), since = currentDateTime.minusDays(100))
-
-            expected === actual
-          }
-          1 === 1
-        }
-      }
-      "match librariesWithMostKeepsSince" in {
         // def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
         withDb(modules: _*) { implicit injector =>
           db.readWrite { implicit session =>

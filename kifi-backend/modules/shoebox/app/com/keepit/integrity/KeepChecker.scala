@@ -63,7 +63,6 @@ class KeepChecker @Inject() (
           ensureUriIntegrity(keep.id.get)
           ensureLibrariesIntegrity(keep.id.get)
           ensureParticipantsIntegrity(keep.id.get)
-          ensureOrganizationIdIntegrity(keep.id.get)
           ensureNoteAndTagsAreInSync(keep.id.get)
         }
         recentKeeps.map(_.id.get.id).maxOpt.foreach { maxId =>
@@ -126,14 +125,6 @@ class KeepChecker @Inject() (
     if (keep.connections.users != users) {
       log.error(s"[KTU-MATCH] Keep $keepId's participants don't match: ${keep.connections.users} != $users")
       keepCommander.refreshParticipants(keepId)
-    }
-  }
-
-  private def ensureOrganizationIdIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
-    val keep = keepRepo.getNoCache(keepId)
-    ktlRepo.getAllByKeepId(keepId).map(_.libraryId).foreach { libId =>
-      val library = libraryRepo.get(libId)
-      if (keep.organizationId != library.organizationId) keepCommander.syncWithLibrary(keep, library)
     }
   }
 

@@ -78,6 +78,14 @@ object TurnCommentMirroring extends SlackAuthenticatedActionHelper[TurnCommentMi
   def helper = TurnCommentMirroring
 }
 
+object BackfillScopes extends SlackAuthenticatedActionHelper[BackfillScopes]("backfill_scopes") {
+  implicit val scopesFormat = SlackAuthScope.slackFormat
+}
+@json case class BackfillScopes(scopes: Set[SlackAuthScope]) extends SlackAuthenticatedAction {
+  type A = BackfillScopes
+  def helper = BackfillScopes
+}
+
 sealed abstract class SlackAuthenticatedActionHelper[A <: SlackAuthenticatedAction](val action: String) {
   implicit def helper: SlackAuthenticatedActionHelper[A] = this
 }
@@ -93,7 +101,8 @@ object SlackAuthenticatedActionHelper {
     ConnectSlackTeam,
     CreateSlackTeam,
     SyncPublicChannels,
-    TurnCommentMirroring
+    TurnCommentMirroring,
+    BackfillScopes
   )
 
   implicit val format: Format[SlackAuthenticatedActionHelper[_ <: SlackAuthenticatedAction]] = Format(
@@ -115,6 +124,7 @@ object SlackAuthenticatedActionHelper {
     case CreateSlackTeam => implicitly[Format[CreateSlackTeam]]
     case SyncPublicChannels => formatPure(SyncPublicChannels())
     case TurnCommentMirroring => implicitly[Format[TurnCommentMirroring]]
+    case BackfillScopes => implicitly[Format[BackfillScopes]]
   }
 
   private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
@@ -128,6 +138,7 @@ object SlackAuthenticatedActionHelper {
     case CreateSlackTeam(andThen) => SlackAuthScope.teamSetup ++ andThen.map(getRequiredScopes).getOrElse(Set.empty)
     case SyncPublicChannels() => SlackAuthScope.syncPublicChannelsWithKifiBot
     case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushAnywhereWithKifiBot else Set.empty
+    case BackfillScopes(scopes) => scopes
   }
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {

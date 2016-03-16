@@ -170,14 +170,32 @@
           var id = userIdDiv.getAttribute("user_id");
           if (id) {
             console.log(id);
-            $.get("/admin/user/"+id+"/slack/online", function(online){
-              if(online) {
-                var i = document.createElement('img');
-                i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-logo-color.png";
-                i.height=16;
-                i.width=16;
-                userIdDiv.parentNode.appendChild(i);
-              }
+            $.get("/admin/user/"+id+"/slack/presence", function(presences){
+              [].forEach.call(presences, function(presence) {
+                if(presence) {
+                  var i = document.createElement('img');
+                  if(presence.state === "active") {
+                    i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-online.png";
+                  }
+                  if(presence.state === "away") {
+                    i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-away.png";
+                  }
+                  if(presence.state === "unknown") {
+                    i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-unknown.png";
+                  }
+                  if(presence.state === "error") {
+                    i.src="//d120ofs0tant1t.cloudfront.net/img/os_logos/slack-error.png";
+                  }
+                  var tooltip = "team: " + presence.team + ", user: " + presence.user + ", state: " + presence.state
+                  if(presence.since) {
+                    tooltip = tooltip + ", since: " + presence.since
+                  }
+                  i.height=16;
+                  i.width=16;
+                  i.title = tooltip;
+                  userIdDiv.parentNode.appendChild(i);
+                }
+              })
             });
           }
         });

@@ -15,7 +15,9 @@
     # the kifi-node-setup playbook writes this file on the ec2 instance
     - include_vars: /opt/kifi-vars.yml
 
-    - set_fact: ansible_fqdn="{{ kifi_hostname }}"
+    - set_fact:
+        ansible_fqdn: "{{ kifi_hostname }}"
+        java7_installed_with_apt: False
 
     - name: add localhost to service group {{ ec2_tag_Service }}
       add_host:

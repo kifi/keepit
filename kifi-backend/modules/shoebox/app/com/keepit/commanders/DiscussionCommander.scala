@@ -5,9 +5,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
+import com.keepit.discussion.{ DiscussionFail, Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -19,13 +18,17 @@ trait DiscussionCommander {
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromId: Option[Id[Message]]): Future[Seq[Message]]
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message]
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit]
+
+  // deprecate this in favor of modifyConnectionsForKeep
   def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepConnectionsDiff): Future[Unit]
 }
 
 @Singleton
 class DiscussionCommanderImpl @Inject() (
   db: Database,
   keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
   keepCommander: KeepCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
@@ -47,7 +50,7 @@ class DiscussionCommanderImpl @Inject() (
       Future.failed(fail)
     }.getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.addUsersToKeep(keepId, Some(userId), Set(userId))
+        keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUser(userId), userAttribution = Some(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
@@ -101,9 +104,35 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        keepCommander.addUsersToKeep(keepId, addedBy = Some(userId), newUsers)
+        keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUsers(newUsers), userAttribution = Some(userId))
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers)
+      elizaEdit.onSuccess {
+        case elizaUsers =>
+          airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
+      }
+      elizaEdit.map { res => Unit }
+    }
+  }
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepConnectionsDiff): Future[Unit] = {
+    val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
+      val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
+      val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
+      (keepPermissions, uriCollisionsByLib)
+    }
+    val errs: Stream[DiscussionFail] = Stream(
+      (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+      (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+      (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+      uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
+    ).collect { case (true, fail) => fail }
+
+    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+      val keep = db.readWrite { implicit s =>
+        keepCommander.unsafeModifyKeepConnections(keepId, diff, userAttribution = Some(userId))
+      }
+      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added) // TODO(ryan): needs to be modified once we can remove participants
       elizaEdit.onSuccess {
         case elizaUsers =>
           airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")

@@ -39,10 +39,6 @@
 		        <td>@{i+1}</td>
 		        <td><span class="badge">@keep.id.get.id</span></td>
 		        <td>
-		          <input type="hidden" name="private_@{keep.id.get.id}" value="0" />
-  					  <center><input type="checkbox" id="private_@keep.id.get.id" name="private_@{keep.id.get.id}" value="1" @if(keep.isPrivate) {checked="checked"}></input></center>
-		        </td>
-		        <td>
               <input type="hidden" name="active_@{keep.id.get.id}" value="0" />
 							<center><input type="checkbox" id="active_@keep.id.get.id" name="active_@{keep.id.get.id}" value="1" @if(keep.state.value == "active") {checked="checked"}></input></center>
 		        </td>

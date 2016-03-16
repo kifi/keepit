@@ -9,6 +9,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -23,9 +24,10 @@ import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, UserExperiment, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ SlackClientWrapper, SlackClient }
-import com.keepit.slack.models.{ SlackUserPresenceState, SlackChannelToLibraryRepo, SlackTeamMembershipStates, SlackTeamMembershipRepo }
+import com.keepit.slack.models._
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworks, SocialUserRawInfoStore }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
+import org.joda.time.Minutes
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent, Result }
@@ -67,6 +69,7 @@ import com.keepit.controllers.admin.UserViewTypes._
 class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
+    clock: Clock,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     slackClient: SlackClientWrapper,
     userRepo: UserRepo,
@@ -287,7 +290,13 @@ class AdminUserController @Inject() (
 
     val (user, bookmarks) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = keepRepo.getByUser(userId, Set(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val keepIds = {
+        val allKeepIds = ktuRepo.getAllByUserId(userId).map(_.keepId).toSet
+        if (showPrivates) allKeepIds else {
+          ktlRepo.getAllByKeepIds(allKeepIds).filterValues(_.exists(!_.isPrivate)).keySet
+        }
+      }
+      val bookmarks = keepRepo.getByIds(keepIds).values
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }
@@ -1010,5 +1019,35 @@ class AdminUserController @Inject() (
           false
       }
     } map { active => Ok(JsBoolean(active)) }
+  }
+
+  //will kill slackUserOnline for this one after it works fine
+  def slackUserPresence(id: Id[User]) = AdminUserPage.async { implicit request =>
+    val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
+    val presencesF = memberships.map { membership =>
+      slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).recover {
+        case error: Throwable =>
+          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
+          SlackUserPresence(SlackUserPresenceState.ERROR, None, JsNull)
+      } map { p =>
+        membership -> p
+      }
+    }
+    Future.sequence(presencesF).map { presences =>
+      val presencesJson = presences.map {
+        case (membership, presence) =>
+          JsObject.apply(Seq(
+            "user" -> JsString(membership.slackUsername.value),
+            "slackUserId" -> JsString(membership.slackUserId.value),
+            "team" -> JsString(membership.slackTeamName.value),
+            "state" -> JsString(presence.state.name),
+            "origJson" -> presence.originalJson,
+            "since" -> (presence.lastActivity.map { date =>
+              val minutes = Minutes.minutesBetween(date, clock.now())
+              JsString(s"${minutes.getMinutes}M")
+            }).getOrElse(JsNull)))
+      }
+      Ok(JsArray.apply(presencesJson))
+    }
   }
 }
