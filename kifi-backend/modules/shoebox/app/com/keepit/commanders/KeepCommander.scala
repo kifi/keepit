@@ -20,6 +20,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.common.strings._
+import com.keepit.common.util.Debouncing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
@@ -40,6 +41,7 @@ import play.api.libs.json._
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.duration._
 import scala.util.{ Try, Failure, Success }
 
 case class RawBookmarksWithCollection(
@@ -794,13 +796,17 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
+
+  private val deleteBuffer = new Debouncing.Buffer[Id[Keep]]
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
     session.onTransactionSuccess {
-      eliza.deleteThreadsForKeeps(Set(keep.id.get))
+      deleteBuffer.debounce("delete", 5 seconds)(keep.id.get) { keepIds =>
+        eliza.deleteThreadsForKeeps(keepIds.toSet)
+      }
     }
   }
 
