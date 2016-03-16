@@ -31,7 +31,7 @@ object KifiUrlRedirectHelper {
   }
   def extractTrackingParams(signedTrackingParams: String, encoding: Option[String]): Query = {
     val maybeDecoded = encoding.map(URLDecoder.decode(signedTrackingParams, _)).getOrElse(signedTrackingParams)
-    Query.parse(maybeDecoded)
+    Query.parse(cipher.decrypt(maybeDecoded))
   }
 
 }
