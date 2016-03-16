@@ -33,33 +33,35 @@ class SlackAnalytics @Inject() (
     val teamFut = {
       if (existingContext.get[String]("slackTeamName").isEmpty) {
         db.readOnlyReplicaAsync { implicit s =>
-          slackTeamRepo.getBySlackTeamId(slackTeamId).foreach { team =>
-            contextBuilder += ("slackTeamName", team.slackTeamName.value)
-          }
+          slackTeamRepo.getBySlackTeamId(slackTeamId)
         }
-      } else Future.successful(())
+      } else Future.successful(None)
     }
-    val membersFut = {
+    val channelFut = {
       if (existingContext.get[Double]("numChannelMembers").isEmpty || existingContext.get[String]("slackChannelName").isEmpty) {
-        slackClient.getChannelInfo(slackTeamId, slackChannelId).map { info =>
-          contextBuilder += ("numChannelMembers", info.numMembers)
-          contextBuilder += ("slackChannelName", info.channelName.value)
-          ()
-        }
-      } else Future.successful(())
+        slackClient.getChannelInfo(slackTeamId, slackChannelId).map(Some(_))
+      } else Future.successful(None)
     }
-
-    contextBuilder += ("category", category.category)
-    contextBuilder += ("channel", "slack")
-    contextBuilder += ("slackTeamId", slackTeamId.value)
-    contextBuilder += ("slackChannelId", slackChannelId.value)
-    val nonUserIdentifier = s"${slackTeamId.value}:${slackChannelId.value}"
 
     for {
-      _ <- teamFut
-      _ <- membersFut
+      teamOpt <- teamFut.recover { case _ => None }
+      channelOpt <- channelFut.recover { case _ => None }
     } yield {
+      teamOpt.foreach { team =>
+        contextBuilder += ("slackTeamName", team.slackTeamName.value)
+      }
+
+      channelOpt.foreach { info =>
+        contextBuilder += ("numChannelMembers", info.numMembers)
+        contextBuilder += ("slackChannelName", info.channelName.value)
+      }
+
+      contextBuilder += ("category", category.category)
+      contextBuilder += ("channel", "slack")
+      contextBuilder += ("slackTeamId", slackTeamId.value)
+      contextBuilder += ("slackChannelId", slackChannelId.value)
       log.info(s"[clickTracking] processed slack $category, $slackTeamId, $slackChannelId, sending to heimdal")
+      val nonUserIdentifier = s"${slackTeamId.value}:${slackChannelId.value}"
       heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
     }
   }
