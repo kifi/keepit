@@ -720,7 +720,7 @@ class KeepRepoImpl @Inject() (
     val q = sql"""
             SELECT #$bookmarkColumnOrder
             FROM bookmark bm INNER JOIN keep_to_library ktl ON (bm.id = ktl.keep_id)
-            WHERE bm.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libraryId AND (bm.seq > $seq OR bm.seq < 0)
+            WHERE (bm.state = 'inactive' OR ktl.state = 'active') AND ktl.library_id = $libraryId AND (bm.seq > $seq OR bm.seq < 0)
             ORDER BY bm.seq ASC
             """
     q.as[Keep].list

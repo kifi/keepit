@@ -308,13 +308,12 @@ class SlackPushingActor @Inject() (
       val changedKeeps = keepRepo.getChangedKeepsFromLibrary(lts.libraryId, lts.lastProcessedKeepSeq getOrElse SequenceNumber.ZERO)
       (lib, changedKeeps)
     }
-    if (changedKeeps.nonEmpty) log.info(s"[SLACK-PUSH-ACTOR] Integration ${lts.id.get} has ${changedKeeps.length} changed keeps with seq >= ${lts.lastProcessedKeepSeq}")
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
     val keepsById = db.readOnlyMaster { implicit s => keepRepo.getByIds(changedKeepIds) }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMap { case (kId, ktls) => ktls.find(_.libraryId == lts.libraryId).map(kId -> _) }
+      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds, excludeState = None).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
       def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
@@ -326,9 +325,7 @@ class SlackPushingActor @Inject() (
       def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
         ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
       }
-      val (oldKeeps, newKeeps) = changedKeeps.flatMap { k =>
-        for { ktl <- ktlsByKeepId.get(k.id.get) } yield (k, ktl)
-      }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+      val (oldKeeps, newKeeps) = changedKeeps.flatAugmentWith { k => ktlsByKeepId.get(k.id.get) }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
       (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
