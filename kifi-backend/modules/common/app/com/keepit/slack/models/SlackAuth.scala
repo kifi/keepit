@@ -64,6 +64,9 @@ object SlackAuthScope {
   val ingestFromPublicChannels: Set[SlackAuthScope] = ingest + ChannelsRead
   val syncPublicChannels = teamSetup ++ pushToPublicChannels ++ ingestFromPublicChannels
 
+  val pushToPrivateChannels: Set[SlackAuthScope] = Set(GroupsRead, GroupsWrite, Bot, Commands)
+  val ingestFromPrivateChannels: Set[SlackAuthScope] = ingest + GroupsRead
+  val syncPrivateChannels = teamSetup ++ pushToPrivateChannels ++ ingestFromPrivateChannels
 
   val userSignup: Set[SlackAuthScope] = Set(Identify, UsersRead, TeamRead)
   val userLogin: Set[SlackAuthScope] = Set(Identify)
