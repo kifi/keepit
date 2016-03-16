@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ Param, Query }
 import com.keepit.heimdal.{ HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model.NotificationCategory
@@ -25,7 +26,7 @@ class SlackAnalytics @Inject() (
     slackClient: SlackClientWrapper,
     heimdal: HeimdalServiceClient,
     val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    implicit val ec: ExecutionContext) {
+    implicit val ec: ExecutionContext) extends Logging {
   private def trackSlackNotificationEvent(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, category: NotificationCategory, existingContext: HeimdalContext = HeimdalContext.empty): Future[Unit] = {
     val contextBuilder = heimdalContextBuilder().addExistingContext(existingContext)
 
@@ -57,7 +58,10 @@ class SlackAnalytics @Inject() (
     for {
       _ <- teamFut
       _ <- membersFut
-    } yield heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
+    } yield {
+      log.info(s"[clickTracking] processed slack $category, $slackTeamId, $slackChannelId, sending to heimdal")
+      heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
+    }
   }
 
   def trackNotificationSent(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName, category: NotificationCategory, existingContext: HeimdalContext = HeimdalContext.empty): Future[Unit] = Future {
