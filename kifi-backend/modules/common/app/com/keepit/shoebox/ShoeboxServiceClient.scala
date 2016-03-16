@@ -775,8 +775,13 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def internDomainsByDomainNames(domainNames: Set[NormalizedHostname]): Future[Map[NormalizedHostname, DomainInfo]] = {
-    val payload = Json.obj("domainNames" -> domainNames)
-    call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map { _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo } }
+    if (domainNames.isEmpty) Future.successful(Map.empty)
+    else {
+      val payload = Json.obj("domainNames" -> domainNames)
+      call(Shoebox.internal.internDomainsByDomainNames(), payload, routingStrategy = offlinePriority).map {
+        _.json.as[Map[String, DomainInfo]].map { case (hostname: String, domainInfo: DomainInfo) => NormalizedHostname(hostname) -> domainInfo }
+      }
+    }
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
