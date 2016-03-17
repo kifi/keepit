@@ -73,6 +73,7 @@ class KeepInternerImpl @Inject() (
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
   libToSlackProcessor: LibraryToSlackChannelPusher,
+  userInteractionCommander: UserInteractionCommander,
   normalizationService: NormalizationService,
   searchClient: SearchServiceClient,
   implicit private val clock: Clock,
@@ -205,7 +206,7 @@ class KeepInternerImpl @Inject() (
     if (keeps.nonEmpty) {
       // Analytics
       libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeps, lib, ctx) }
-      keeps.groupBy(_.userId).collect { case (Some(userId), keeps) => heimdalClient.processKeepAttribution(userId, keeps) }
+      keeps.groupBy(_.userId).collect { case (Some(userId), ks) => heimdalClient.processKeepAttribution(userId, ks) }
       searchClient.updateKeepIndex()
 
       // Make external notifications & fetch
@@ -214,6 +215,9 @@ class KeepInternerImpl @Inject() (
           libraryOpt.foreach { lib =>
             libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
             libToSlackProcessor.schedule(Set(lib.id.get))
+            keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
+              userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
+            }
           }
         }
         FutureHelpers.sequentialExec(keeps) { keep =>
