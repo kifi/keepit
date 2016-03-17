@@ -18,7 +18,7 @@ k.compose = k.compose || (function() {
     if ($form.is($forms) && !$form.data('submitted')) {
       api.port.emit('save_draft', {
         to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
-        html: k.render('html/keeper/kifi_mustache_tags', editor.getRaw()),
+        html: editor.getRaw(),
         track: trackData
       });
     }
@@ -123,13 +123,10 @@ k.compose = k.compose || (function() {
         return convertHtmlDraftToMarkdown($d.html());
       },
       getRaw: function () {
-        return k.formatting.jsonDom($d.html());
+        return $d.html();
       },
       setRaw: function (html) {
-        if (typeof html === 'string') {
-          html = k.formatting.jsonDom(html);
-        }
-        $d.empty().append($(k.render('html/keeper/kifi_mustache_tags', html)));
+        $d.empty().append(k.formatting.parseStringToElement(html));
         notifyEmpty(!html);
       },
       clear: function () {

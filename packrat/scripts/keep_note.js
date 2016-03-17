@@ -401,7 +401,7 @@ k.keepNote = k.keepNote || (function () {
           }
           data.$suggestions
             .empty()
-            .append($(results.map(formatTagSuggestion).join('')))
+            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')).childNodes)
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
@@ -600,7 +600,7 @@ k.keepNote = k.keepNote || (function () {
     init: function ($note, $bounds, libraryId, keepId, noteText) {
       $note
       .empty()
-      .append($(k.render('html/keeper/kifi_mustache_tags', k.formatting.jsonDom(noteTextToHtml(noteText)))));
+      .append(k.formatting.parseStringToElement(noteTextToHtml(noteText)));
 
       var data = $note.data({
         libraryId: libraryId,
