@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.strings.StringWithReplacements
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.keepit.social.twitter.{ TwitterUserId, TwitterHandle, TwitterStatusId, RawTweet }
@@ -82,7 +83,7 @@ object PrettyTweet {
     (__ \ 'text).format[String]
   )(PrettyTweet.apply _, unlift((PrettyTweet.unapply)))
 
-  def fromRawTweet(tweet: RawTweet): PrettyTweet = PrettyTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text)
+  def fromRawTweet(tweet: RawTweet): PrettyTweet = PrettyTweet(tweet.id, tweet.user, tweet.getUrl, tweet.text.replaceAllLiterally("&lt;" -> "<", "&gt;" -> ">", "&amp;" -> "&"))
 }
 
 case class TwitterAttribution(tweet: PrettyTweet) extends SourceAttribution
