@@ -793,9 +793,6 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
-    session.onTransactionSuccess {
-      eliza.deleteThreadsForKeeps(Set(keep.id.get))
-    }
   }
 
   // TODO(ryan): eventually this should basically JUST call ktlCommander.removeKeep and ktlCommander.internKeep
@@ -882,11 +879,6 @@ class KeepCommanderImpl @Inject() (
         val beforeId = beforeExtId.flatMap(extId => db.readOnlyReplica(implicit s => keepRepo.get(extId).id))
         eliza.getElizaKeepStream(userId, limit, beforeId, filter).map { lastActivityByKeepId =>
           val keepsByIds = db.readOnlyReplica(implicit s => keepRepo.getByIds(lastActivityByKeepId.keySet))
-          Future {
-            // make sure eliza is up-to-date on keeps that have been deleted
-            val zombieThreadKeepIds = lastActivityByKeepId.keySet -- keepsByIds.keySet
-            eliza.deleteThreadsForKeeps(zombieThreadKeepIds)
-          }
           keepsByIds.map { case (keepId, keep) => (keep, lastActivityByKeepId(keepId)) }.toList.sortBy(-_._2.getMillis)
         }
       case shoeboxFilterOpt: Option[ShoeboxFeedFilter @unchecked] =>
