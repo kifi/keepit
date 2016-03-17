@@ -51,17 +51,17 @@ class UserInteractionCommander @Inject() (
   }
 
   def getRecentInteractions(uid: Id[User]): Seq[InteractionInfo] = {
-    db.readOnlyMaster { implicit s =>
-      val arr = userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
-      val scores = for ((obj, i) <- arr.zipWithIndex) yield {
-        parseJson(obj).map(r => (r._1, calcInteractionScore(i, r._2)))
-      }
-
-      scores.flatten.groupBy(e => e._1).map { b =>
-        val sum = b._2.foldLeft(0.0)((r, c) => r + c._2)
-        InteractionInfo(b._1, sum)
-      }.toSeq.sorted.reverse
+    val interactions = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
     }
+    val scores = for ((obj, i) <- interactions.zipWithIndex) yield {
+      parseJson(obj).map(r => (r._1, calcInteractionScore(i, r._2)))
+    }
+
+    scores.flatten.groupBy(e => e._1).map { b =>
+      val sum = b._2.foldLeft(0.0)((r, c) => r + c._2)
+      InteractionInfo(b._1, sum)
+    }.toSeq.sorted.reverse
   }
 
   def grouped(interactions: Seq[InteractionInfo]) = {
