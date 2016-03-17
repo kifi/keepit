@@ -17,7 +17,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
-import com.keepit.slack.models.{ SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
+import com.keepit.slack.models.{ SlackEmoji, SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
 import com.keepit.slack.{ SlackClientWrapper, SlackClient }
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
@@ -455,13 +455,17 @@ class AdminOrganizationController @Inject() (
   }
 
   def sendBackfillScopesDMToOwnersWithoutKifiBot = AdminUserAction.async(parse.tolerantJson) { implicit request =>
-    val members = (request.body \ "members").as[Set[Id[SlackTeamMembership]]] // if defined, only send to these org owners
-    val (slackUsersToSendTo, slackUsersWeWouldveSentTo) = db.readOnlyMaster { implicit s =>
-      (slackMembershipRepo.getAllByIds(members), getOwnersToSendTo())
-      //if (members.isDefined) slackMembershipRepo.getAllByIds(members.get)
-      //else getOwnersToSendTo()
+    val members = (request.body \ "members").asOpt[Set[Id[SlackTeamMembership]]] // if defined, only send to these org owners
+    val slackUsersToSendTo = db.readOnlyMaster { implicit s =>
+      members.map(slackMembershipRepo.getAllByIds).getOrElse(getOwnersToSendTo())
     }
-    sendBackfillScopesDM(slackUsersToSendTo).map(_ => Ok(Json.toJson(slackUsersWeWouldveSentTo.map(_.id.get))))
+    sendBackfillScopesDM(slackUsersToSendTo).map {
+      case results =>
+        Ok(Json.obj(
+          "success" -> results.collect { case (id, true) => id },
+          "fail" -> results.collect { case (id, false) => id }
+        ))
+    }
   }
 
   private def getOwnersToSendTo()(implicit session: RSession): Set[SlackTeamMembership] = {
@@ -471,16 +475,19 @@ class AdminOrganizationController @Inject() (
     slackMembershipRepo.getByUserIdsAndSlackTeams(teamIdByOwnerId).toSet
   }
 
-  private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Unit] = {
+  private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Map[Id[SlackTeamMembership], Boolean]] = {
     import DescriptionElements._
-    FutureHelpers.chunkySequentialExec(members, chunkSize = 100) { mem =>
-      val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
-      val text = DescriptionElements.formatForSlack(DescriptionElements(
-        "Kifi team here - we made some major upgrades by creating a bot. To take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), "here.",
-        "\n\n", "Learn about the new features including a bot & personal stats on your usage ", "here" --> LinkElement("https://www.kifi.com/") // todo(Cam): use the blog post link when it's ready
-      ))
-      val msg = SlackMessageRequest.fromKifi(text)
-      slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg).map(s => mem.id.get -> true).recover { case _ => mem.id.get -> false }
+    FutureHelpers.foldLeft(members)(Map.empty[Id[SlackTeamMembership], Boolean]) {
+      case (acc, mem) =>
+        val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
+        val text = DescriptionElements.formatForSlack(DescriptionElements(
+          s"Kifi team here ${SlackEmoji.wave.value} - we made some major upgrades by creating a bot. To take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), ".",
+          "\n\n", "Learn more" --> LinkElement("http://blog.kifi.com/personal-stats-via-kifi-bot/"), " about the new features including a bot user & personal stats on your usage."
+        ))
+        val msg = SlackMessageRequest.fromKifi(text)
+        slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg)
+          .map(_ => acc + (mem.id.get -> true))
+          .recover { case _ => acc + (mem.id.get -> false) }
     }
   }
 }
