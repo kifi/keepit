@@ -119,13 +119,6 @@ class ElizaDiscussionController @Inject() (
       Ok(Json.toJson(output))
     }
   }
-  def deleteThreadsForKeeps() = Action(parse.tolerantJson) { request =>
-    import DeleteThreadsForKeeps._
-    val input = request.body.as[Request]
-    discussionCommander.deleteThreadsForKeeps(input.keepIds)
-    NoContent
-  }
-
   def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = Action { request =>
     val hasToken = Try(ThreadAccessToken(accessToken)).map { token =>
       discussionCommander.keepHasAccessToken(keepId, token)

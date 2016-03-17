@@ -137,7 +137,6 @@ trait ElizaServiceClient extends ServiceClient {
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]]): Future[Set[Id[User]]]
-  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
 }
@@ -402,14 +401,6 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].users
     }
   }
-  def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Future[Unit] = {
-    import DeleteThreadsForKeeps._
-    val request = Request(keepIds)
-    call(Eliza.internal.deleteThreadsForKeeps(), body = Json.toJson(request)).map { response =>
-      Unit
-    }
-  }
-
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
     call(Eliza.internal.keepHasAccessToken(keepId, accessToken)).map { response =>
       log.info(s"[keepAccessToken] keepId=$keepId, accessToken=$accessToken, hasToken=${(response.json \ "hasToken").as[Boolean]}")
@@ -506,9 +497,5 @@ object ElizaServiceClient {
     case class Response(users: Set[Id[User]])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
-  object DeleteThreadsForKeeps {
-    case class Request(keepIds: Set[Id[Keep]])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }
