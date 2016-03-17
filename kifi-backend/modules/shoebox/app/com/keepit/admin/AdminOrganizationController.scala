@@ -477,6 +477,7 @@ class AdminOrganizationController @Inject() (
 
   private def sendBackfillScopesDM(members: Set[SlackTeamMembership]): Future[Map[Id[SlackTeamMembership], Boolean]] = {
     import DescriptionElements._
+<<<<<<< Updated upstream
     FutureHelpers.foldLeft(members)(Map.empty[Id[SlackTeamMembership], Boolean]) {
       case (acc, mem) =>
         val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
@@ -488,6 +489,16 @@ class AdminOrganizationController @Inject() (
         slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg)
           .map(_ => acc + (mem.id.get -> true))
           .recover { case _ => acc + (mem.id.get -> false) }
+=======
+    FutureHelpers.chunkySequentialExec(members, chunkSize = 100) { mem =>
+      val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
+      val text = DescriptionElements.formatForSlack(DescriptionElements(
+        "Kifi team here - we made some major upgrades by creating a bot. To take advantage of them, maybe you'll want to", "update your slack integration settings" --> LinkElement(authLink), "here.",
+        "\n\n", "Learn about the new features including a bot & personal stats on your usage ", "here" --> LinkElement("https://www.kifi.com/")
+      ))
+      val msg = SlackMessageRequest.fromKifi(text)
+      slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg).map(s => mem.id.get -> true).recover { case _ => mem.id.get -> false }
+>>>>>>> Stashed changes
     }
   }
 }
