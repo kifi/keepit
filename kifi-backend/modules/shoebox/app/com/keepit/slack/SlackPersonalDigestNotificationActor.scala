@@ -4,17 +4,19 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
+import com.keepit.common.crypto.KifiUrlRedirectHelper
+import com.keepit.common.strings._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.net.Param
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.strings._
-import com.keepit.common.time._
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -183,7 +185,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp, k.id.get) }
+    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = DescriptionElements.unlines(Seq(
@@ -215,7 +217,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = prng.choice(puns)
 
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp, k.id.get) }
+    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp.value, k.id.get.id) }
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, digest.slackTeam.slackTeamId).withQuery(trackingParams("latestMessage")))
     val attachments = Seq(
       SlackAttachment.simple(DescriptionElements(
