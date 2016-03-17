@@ -29,7 +29,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object SlackPersonalDigestConfig {
-  val minDelayInsideTeam = Duration.standardMinutes(10)
+  val minDelayInsideTeam = Duration.standardMinutes(1)
 
   val delayAfterSuccessfulDigest = Duration.standardDays(7)
   val delayAfterFailedDigest = Duration.standardDays(1)
@@ -40,7 +40,7 @@ object SlackPersonalDigestConfig {
   val minDigestConcurrency = 1
   val maxDigestConcurrency = 10
 
-  val superAwesomeWelcomeMessageGIF = "https://d1dwdv9wd966qu.cloudfront.net/img/slack_initial_personal_digest.gif"
+  val superAwesomeWelcomeMessageGIF = "https://d1dwdv9wd966qu.cloudfront.net/img/slack_initial_personal_digest_6.gif"
 }
 
 class SlackPersonalDigestNotificationActor @Inject() (
@@ -108,7 +108,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         }
         Future.successful(())
       case Some(digest) =>
-        val message = if (membership.lastPersonalDigestAt.isEmpty) messageForFirstTimeDigest(digest) else messageForRegularDigest(digest)
+        val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) messageForFirstTimeDigest(digest) else messageForRegularDigest(digest)
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
@@ -146,6 +146,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
       digest = SlackPersonalDigest(
         slackMembership = membership,
         slackTeam = slackTeam,
+        allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
@@ -182,20 +183,23 @@ class SlackPersonalDigestNotificationActor @Inject() (
 
   // "Pure" functions
   private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
+    require(digest.slackMembership.userId.isEmpty, "First time digest is only for non-kifi users")
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
+    val numMembersOnKifi = digest.allMembers.count(stm => stm.userId.isDefined)
     val text = DescriptionElements.unlines(Seq(
       DescriptionElements(
         SlackEmoji.wave, s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved the link you just shared",
-        mostRecentIngestedMsg.channel.name.map(chName => DescriptionElements("in", s"#${chName.value}")), "."
+        mostRecentIngestedMsg.channel.name.map(chName => s"in #${chName.value}" --> LinkElement(mostRecentIngestedMsg.permalink)),
+        "(", "archived", "here" --> linkToMostRecentKeep, ")", "."
       ),
       DescriptionElements(
         "Here's a bit of what I do; you can",
-        "join your team on Kifi" --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org"))),
+        (if (numMembersOnKifi <= 1) "join your team on Kifi" else s"join $numMembersOnKifi of your team members on Kifi") --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org"))),
         "to get access to these features:"
       )))
     val attachments = List(
