@@ -126,6 +126,9 @@ k.compose = k.compose || (function() {
         return $d.html();
       },
       setRaw: function (html) {
+        if (typeof html === 'object') {
+          html = k.render('html/keeper/kifi_mustache_tags', html);
+        }
         $d.empty().append(k.formatting.parseStringToElement(html));
         notifyEmpty(!html);
       },
