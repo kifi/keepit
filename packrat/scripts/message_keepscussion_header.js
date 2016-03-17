@@ -114,9 +114,10 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
      */
     getView: function () {
       var keep = this.parent.keep;
-
+      var keptBy = keep && keep.keptBy;
       return {
         keep: keep,
+        canEdit: (keptBy && keptBy.id === k.me.id),
         librariesPlural: keep && keep.libraries && keep.libraries.length !== 1
       };
     },

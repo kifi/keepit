@@ -7,9 +7,11 @@
     <div class="kifi-message-keepscussion-header-lib">
       {{#keep.libraries.0}}{{>keep_box_lib}}{{/keep.libraries.0}}
     </div>
+    {{#canEdit}}
     <a href="javascript:" class="kifi-message-keepscussion-header-lib-edit">
       <svg class="kifi-message-keepscussion-header-lib-edit-icon"><use xlink:href="#kifi-pencil"/></svg>
     </a>
+    {{/canEdit}}
   </div>
   {{/keep.libraries.length}}
   {{^keep.libraries.length}}
