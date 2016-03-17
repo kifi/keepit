@@ -40,7 +40,7 @@ class SlackIdentityCommanderTest extends TestKitSupport with SpecificationLike w
             inject[SlackTeamMembershipRepo].all must haveSize(1)
             inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.slackTeamId, slackUser.userId).get.userId must beSome(user1.id.get)
           }
-          slackCommander.registerAuthorization(Some(user2.id.get), auth, ident) should throwAn[SlackActionFail.MembershipExists]
+          slackCommander.registerAuthorization(Some(user2.id.get), auth, ident) should throwAn[SlackActionFail.MembershipAlreadyConnected]
         }
       }
     }
