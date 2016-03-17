@@ -455,10 +455,12 @@ class AdminOrganizationController @Inject() (
   }
 
   def sendBackfillScopesDMToOwnersWithoutKifiBot = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val getOwners = (request.body \ "getOwners").as[Boolean]
     val members = (request.body \ "members").asOpt[Set[Id[SlackTeamMembership]]] // if defined, only send to these org owners
     val slackUsersToSendTo = db.readOnlyMaster { implicit s =>
-      members.map(slackMembershipRepo.getAllByIds).getOrElse(getOwnersToSendTo())
-    }
+      if (getOwners && members.isEmpty) getOwnersToSendTo()
+      else slackMembershipRepo.getAllByIds(members.get)
+    }git
     sendBackfillScopesDM(slackUsersToSendTo).map {
       case results =>
         Ok(Json.obj(
