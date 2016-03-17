@@ -1,15 +1,30 @@
-<div class="kf-keep-card-activity-attribution" ng-show="lastComment">
-  <div class="kf-keep-card-activity-attribution-message">
-    <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
-    <span><a class="kf-link"
-       ng-href="{{::lastComment.sentBy|profileUrl}}"
-       ng-bind="::lastComment.sentBy|name"/>
-    </a></span>
-    commented on this
-    <span ng-if="::lastComment.sentAt">·
-      <span><time ng-attr-datetime="{{::lastComment.sentAt}}" am-time-ago="::lastComment.sentAt"
-          title="{{::lastComment.sentAt|localTime}}"></time></span>
-    </span>
+<div class="kf-keep-card-activity-attribution">
+  <div class="kf-keep-card-activity-attribution-wrapper" ng-if="lastComment">
+    <a class="kf-keep-card-attribution-keeper-pic"
+      ng-href="{{::lastComment.sentBy|profileUrl}}"
+      ng-style="{ 'background-image' : 'url(' + (lastComment.sentBy|pic:100) + ')' }"></a>
+    <div class="kf-keep-card-activity-attribution-message">
+      <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
+      <span><a class="kf-link"
+        ng-href="{{::lastComment.sentBy|profileUrl}}"
+        ng-bind="::lastComment.sentBy|name"/>
+      </a></span>
+      commented on this
+      <span ng-if="::lastComment.sentAt">·
+        <a class="kf-keep-card-attribution-page-link kf-link" ng-if="showKeepPageLink" ng-href="{{::keep.path}}">
+          <time ng-attr-datetime="{{::lastComment.sentAt}}" am-time-ago="::lastComment.sentAt"
+            title="{{::lastComment.sentAt|localTime}}"></time>
+        </a>
+        <span ng-if="!showKeepPageLink"><time ng-attr-datetime="{{::lastComment.sentAt}}" am-time-ago="::lastComment.sentAt"
+            title="{{::lastComment.sentAt|localTime}}"></time></span>
+      </span>
+    </div>
   </div>
-  <div class="kf-keep-card-activity-attribution-divider"></div>
+  <div kf-keep-card-attribution
+       keep="keep"
+       show-library-attribution="false"
+       is-first-item="::isFirstItem"
+       title-only="false"
+       short-message="true"
+       ng-if="!lastComment"></div>
 </div>

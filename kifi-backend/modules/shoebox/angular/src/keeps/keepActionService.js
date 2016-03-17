@@ -108,8 +108,9 @@ angular.module('kifi')
       });
     }
 
-    function getFullKeepInfo(id, authToken) {
-      return net.getKeep(id, authToken).then(function (result) {
+    function getFullKeepInfo(id, authToken, maxMessagesShown) {
+      var params = maxMessagesShown && {maxMessagesShown: maxMessagesShown};
+      return net.getKeep(id, authToken, params).then(function (result) {
         return result.data;
       });
     }

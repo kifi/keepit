@@ -7,6 +7,53 @@ defaultBorderColorOverEee = rgba(0,0,100,.08)  // makes #dadae2 (defaultBorderCo
 maxWidthForNarrowKeep = 559px // see derivation in keeps.styl
 minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
+.kf-keep-card-participant-pic
+  width: 20px
+  height: 20px
+  border-radius: 50%
+  display: inline-block
+  background: #3e495533
+  flex-shrink: 0
+  background-size: cover
+  position: relative
+
+.kf-keep-card-participants-more
+  color: #333
+  font-size: 13px
+  cursor: pointer
+  position: relative
+
+.kf-keep-card-actions
+  align-items: center
+
+.kf-keep-card-participants-more:hover
+  .kf-keep-card-participants-more-tooltip
+    display: block
+    position: absolute
+
+.kf-keep-card-participants-more-tooltip
+  display: none
+  left: calc(50% - 70px)
+  top: 25px
+  width: 140px
+  text-align: left
+  padding: 10px
+  color: black
+
+.kf-keep-card-initial-message-container
+  display: flex
+  flex-direction: row
+  flex-grow: 1
+  align-items: flex-start
+
+  > a
+    margin-top: 0
+    margin-right: 10px
+
+  > div
+    width: 100%
+    align-self: center
+
 .kf-keep-container
   display: inline-block
   width: 100%
@@ -32,6 +79,28 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
       &:not(.kf-side-by-side) // increasing top border-radius to ensure box-shadow does not bleed through corners of image/video
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
+
+.kf-keep-card-library-chip
+  border-radius: 3px
+  font-size: 12px
+  max-width: 120px
+  background: gray
+  display: inline-flex
+  padding: 2px 6px
+  color: white
+
+  svg
+    width: 15px
+    height: 15px
+    margin: auto 4px auto 0px
+    flex-shrink: 0
+    fill: white
+
+  span
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
 
 .kf-keep-header
   border-bottom: 1px solid defaultBorderColor
@@ -244,11 +313,12 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     opacity: 1.0
 
 .kf-keep-card-footer
-  display: table
+  display: flex
   width: 100%
   line-height: 16px
   font-size: 14px
   min-height: 30px
+  margin-left: 15px
   margin-bottom: 5px
 
   @media (max-width: maxWidthForNarrowKeep)
@@ -257,10 +327,10 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     min-height: 30px
 
 .kf-keep-actions
-  display: table-cell
+  display: inline-block
   vertical-align: middle
   text-align: left
-  padding: 0px 15px
+  padding: 0px 12px
 
 .kf-keep-keep-btn
 .kf-keep-share-btn
@@ -332,11 +402,20 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       width: 15px
       height: 15px
 
+.kf-keeps-search
+  .kf-keep-who
+    display: table-cell
+
+  .compact
+    .kf-keep-who
+      display: inline-block
+
 .kf-keep-who
-  display: table-cell
+  display: none
   vertical-align: middle
   text-align: right
   padding-right: 20px
+  margin-left: auto
 
   &::after
     content: 'kept this'
@@ -411,6 +490,9 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
 .kf-keep-length
   white-space: nowrap  // hides entire element (including bullet) if it does not fit
+  color: #999
+  font-size: 12px
+  flex-shrink: 0
 
   @media (max-width: 479px)
     font-size: 11px
@@ -452,7 +534,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 .compact
   .kf-keep-card
     .kf-keep-who
-      display: inline-block
       align-self: center
       flex-grow: 1
       padding-right: 10px
@@ -486,7 +567,7 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     font-size: 12px
     font-weight: normal
     font-smoothing: antialiased
-    margin-top: 6px
+    margin-right: auto
 
   .kf-keep-card-menu-button
     svg
@@ -506,6 +587,14 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       margin-top: 6px
 
   .kf-keep-card-attribution-container
+    justify-content: flex-end
+    margin-top: 10px
+    margin-right: 2px
+    margin-left: 2px
+    color: #777
+
+  .kf-keep-card-activity-attribution-container
+  .kf-keep-card-attribution-container
     display: flex
     flex-direction: row
     align-items: center
@@ -515,14 +604,14 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       height: 100%
 
     > * + *
-      margin-left: 10px
+      margin-left: 6px
 
   .kf-keep-keeper-pic
     margin-right: 10px
 
   .kf-keep-card-image-container
-    width: 64px
-    height: 64px
+    width: 50px
+    height: 50px
     border-right-style: solid
     border-width: 1px
     border-right-color: eeeOverlay
@@ -558,11 +647,17 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     margin-left: 0px
     overflow: hidden
     text-overflow: ellipsis
+    display: flex
+    align-items: center
+    width: 100%
 
   .kf-keep-card-title-link[href]
     font: 18px/17px Lato,sans-serif
+    height: 18px
     color: #111
     white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
 
   .kf-keep-card-source
     font-size: 13px
@@ -575,12 +670,12 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
   .kf-keep-card-note-container
     .kf-knf-editor
-      font-size: 13px
+      font-size: 14px
 
   .kf-keep-card-add-note
   .kf-keep-card-note
-    font: 13px Lato,sans-serif
-    color: #777
+    font: 14px Lato,sans-serif
+    color: #333
     vertical-align: top
     line-height: 15px
     margin-bottom: 2px
@@ -600,7 +695,7 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     color: #ccc //linkColor
     background-color: transparent
     font-smoothing: antialiased
-    margin-top: -2px
+    margin-top: 0
 
     &:hover
       color: #aaa
@@ -624,6 +719,8 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       height: 14px
 
   .kf-keep-card-menu-container
+    margin-left: auto
+    padding-left: 10px
     .kf-dropdown-menu
       top: 40px
       right: 0px

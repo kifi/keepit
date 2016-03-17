@@ -3,6 +3,53 @@
     <div kf-loading-spinner class="kf-keep-page-loading-spinner" hide="loaded"></div>
   </div>
   <div class="kf-keep-page-container" ng-if="keep">
-    <div class="kf-keep-page" kf-keep-card="keep" boxed="true" force-gallery-view="true" click-callback="keepClick(keep, event)" delete-callback="unkeepFromLibrary"></div>
+    <div class="kf-keep-page"
+         kf-keep-card="keep"
+         boxed="true"
+         force-gallery-view="true"
+         click-callback="keepClick(keep, event)"
+         delete-callback="unkeepFromLibrary"
+         max-initial-comments="maxInitialComments"></div>
+    <div class="kf-keep-page-rhr" ng-if="enableRHR">
+      <div class="kf-keep-page-rhr-container" ng-if="keep.keepers.length">
+        <div class="kf-keep-page-rhr-header">Other people kept this</div>
+        <span class="kf-keep-page-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:40" kf-user-tooltip="::keeper"
+              library="::keeper.library" desc="Your Kifi connection">
+          <a class="kf-keep-page-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
+             ng-href="{{::keeper.library.path || '/' + keeper.username}}"
+             kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"
+             ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
+        </span>
+      </div>
+      <div class="kf-keep-page-rhr-container" ng-if="keep.libraries.length">
+        <div class="kf-keep-page-rhr-header">This page is in other libraries</div>
+        <a class="library-select-option kf-keep-page-rhr-library-wrapper"
+           ng-repeat="libraryAndKeeper in keep.libraries" ng-init="library=libraryAndKeeper[0]"
+           ng-class="{'selected': library.selected}"
+           ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)"
+           ng-href="{{library.path}}"
+           ng-include="'keep/keepToLibraryWidgetLibraryItem.tpl.html'">
+        </a>
+      </div>
+      <div class="kf-keep-page-rhr-container" ng-if="keep.sources.length">
+        <div class="kf-keep-page-rhr-header">This page is in these channels</div>
+        <div ng-repeat="source in keep.sources">
+          <a class="kf-flex-row kf-keep-page-source-row" ng-if="source.slack" ng-href="{{source.slack.message.permalink}}">
+            <div class="kf-keep-page-sources-slack-image svg-slack"></div>
+            <div>
+              <div class="kf-keep-page-sources-title" ng-bind="source.slack.message.channel.name"></div>
+              <div class="kf-keep-page-sources-message">@<span ng-bind="source.slack.message.username"></span>: <span ng-bind="source.slack.message.text|slackText"></span></div>
+            </div>
+          </a>
+          <a class="kf-flex-row kf-keep-page-source-row" ng-if="source.twitter" ng-href="{{source.twitter.tweet.permalink}}">
+            <div class="kf-keep-twitter-logo kf-keep-page-sources-twitter-image svg-twitter-blue"></div>
+            <div>
+              <div class="kf-keep-page-sources-title" ng-bind="source.twitter.tweet.user.name"></div>
+              <div class="kf-keep-page-sources-message">@<span ng-bind="source.twitter.tweet.user.screen_name"></span>: <span ng-bind="source.twitter.tweet.text"></span></div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

@@ -86,7 +86,8 @@ angular.module('kifi')
         deleteCallback: '&',
         removeImageCallback: '&',
         forceGalleryView: '=',
-        isFirstItem: '='
+        isFirstItem: '=',
+        maxInitialComments: '='
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
@@ -129,7 +130,7 @@ angular.module('kifi')
           if (!editor.length) {
             var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
-            $injector.get('keepNoteForm').init(noteEl, scope.displayNote, keepLibraryId, keep.pubId, function update(noteText) {
+            $injector.get('keepNoteForm').init(noteEl, scope.keep.displayNote, keepLibraryId, keep.pubId, function update(noteText) {
               keep.note = noteText;
             });
           } else {
@@ -284,7 +285,6 @@ angular.module('kifi')
           scope.$watch('keep.title', updateTitle);
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
-          scope.showActivityAttribution = $state.is('home.feed');
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
@@ -302,18 +302,18 @@ angular.module('kifi')
 
             if (noteMayHaveFallback && !noteHasSubstance(keep.note)) {
               if (keep.sourceAttribution.twitter) {
-                scope.displayNote = keep.sourceAttribution.twitter.tweet.text;
-                scope.noteAttribution = 'Twitter';
+                scope.keep.displayNote = keep.sourceAttribution.twitter.tweet.text;
+                scope.keep.noteAttribution = 'Twitter';
               } else if (keep.sourceAttribution.slack) {
                 var html = $filter('slackText')(keep.sourceAttribution.slack.message.text);
                 if (html) {
-                  scope.displayNote = html;
-                  scope.noteAttribution = 'Slack';
+                  scope.keep.displayNote = html;
+                  scope.keep.noteAttribution = 'Slack';
                 }
               }
             } else {
-              scope.displayNote = keep.note;
-              scope.noteAttribution = '';
+              scope.keep.displayNote = keep.note;
+              scope.keep.noteAttribution = '';
             }
           };
           scope.$watch('keep.note', updateNote);
@@ -373,10 +373,6 @@ angular.module('kifi')
               scope.menuItems.push({
                 title: 'Edit Title',
                 action: scope.editKeepTitle.bind(scope)
-              });
-              scope.menuItems.push({
-                title: scope.displayNote ? 'Edit Note' : 'Add Note',
-                action: scope.editKeepNote.bind(scope)
               });
               var removeImageCallback = scope.removeImageCallback();
               if (keep.summary && keep.summary.imageUrl && removeImageCallback) {
