@@ -42,7 +42,9 @@ case class SlackTeam(
     case Some(lastSync) if lastSync isAfter time => this
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
   }
-  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsLastSyncingAt = None, channelsSynced = channelsSynced ++ newChannels)
+
+  def doneSyncing = this.copy(channelsLastSyncingAt = None)
+  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
 
   def withNoKifiBot = this.copy(kifiBot = None)
   def withKifiBotIfDefined(kifiBotOpt: Option[KifiSlackBot]) = kifiBotOpt match {

@@ -41,6 +41,7 @@ class SlackIdentityCommanderImpl @Inject() (
   orgMembershipCommander: OrganizationMembershipCommander,
   slackClient: SlackClientWrapper,
   keepSourceCommander: KeepSourceCommander,
+  slackChannelCommander: SlackChannelCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackIdentityCommander with Logging {
@@ -88,6 +89,7 @@ class SlackIdentityCommanderImpl @Inject() (
     autojoinOrganization(membership)
     userIdOpt.foreach { userId =>
       session.onTransactionSuccess {
+        slackChannelCommander.syncChannelMemberships(identity.teamId)
         keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.teamId, identity.userId), userId)
       }
     }
