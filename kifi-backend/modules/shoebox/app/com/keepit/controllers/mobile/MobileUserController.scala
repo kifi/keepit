@@ -310,7 +310,7 @@ class MobileUserController @Inject() (
               case None => InternalServerError(Json.obj("error" -> "unable_to_resize"))
             }
           case Failure(ex) =>
-            airbrakeNotifier.notify("Couldn't upload temporary picture (xhr direct)", ex)
+            airbrakeNotifier.notify(s"Couldn't upload temporary picture from mobile (xhr direct) coming from user ${request.userId} with agent ${request.userAgentOpt.getOrElse("unknown").toString}", ex)
             BadRequest(JsNumber(0))
         }
       case Left(err) =>
