@@ -51,7 +51,7 @@ trait URIParserGrammar extends RegexParsers {
 
   def pathComponent: Parser[String] = """[^/?#]*""".r ^^ (normalizePathComponent(_))
 
-  def query: Parser[Query] = repsep(param, "&") ^^ { params => Query(normalizeParams(params)) }
+  def query: Parser[Query] = repsep(param, "&") ^^ { params => Query(normalizeParams(params): _*) }
 
   def param: Parser[Param] = """[^#&=]*""".r ~ ("=" ~> """[^#&]*""".r).? ^^ {
     case name ~ value => Param(normalizeParamName(name), value.map(normalizeParamValue))

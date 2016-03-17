@@ -156,7 +156,9 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
             integrationId = libToSlackChannel.id.get,
             keepId = keep.id.get,
             timestamp = SlackTimestamp("42424242.00000"),
-            text = "I am a keep-flavored meat popsicle"
+            text = "I am a keep-flavored meat popsicle",
+            lastKnownEditability = SlackMessageEditability.EDITABLE,
+            messageRequest = Some(SlackMessageRequest.fromKifi("wahoo"))
           ))
           slackPushForKeepRepo.get(saved.id.get) === saved
           saved
@@ -171,7 +173,9 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
             integrationId = libToSlackChannel.id.get,
             messageId = Id[Message](4257),
             timestamp = SlackTimestamp("42424242.00000"),
-            text = "I am a message-flavored meat popsicle"
+            text = "I am a message-flavored meat popsicle",
+            lastKnownEditability = SlackMessageEditability.EDITABLE,
+            messageRequest = Some(SlackMessageRequest.fromKifi("wahoo"))
           ))
           slackPushForMessageRepo.get(saved.id.get) === saved
           saved

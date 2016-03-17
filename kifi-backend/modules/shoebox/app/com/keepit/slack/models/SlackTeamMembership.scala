@@ -81,6 +81,7 @@ case class SlackTeamMembership(
   token: Option[SlackUserAccessToken],
   scopes: Set[SlackAuthScope],
   slackUser: Option[SlackUserInfo],
+  privateChannelsLastSyncedAt: Option[DateTime] = None,
   // Personal digest scheduling nonsense
   lastPersonalDigestAt: Option[DateTime] = None,
   lastProcessingAt: Option[DateTime] = None,
@@ -102,6 +103,11 @@ case class SlackTeamMembership(
       slackUsername = if (lastIngestedMessageTimestamp.exists(_ >= msg.timestamp)) slackUsername else msg.username,
       lastIngestedMessageTimestamp = Some(lastIngestedMessageTimestamp.filter(_ >= msg.timestamp).getOrElse(msg.timestamp))
     )
+  }
+
+  def withPrivateChannelsSyncedAt(time: DateTime) = privateChannelsLastSyncedAt match {
+    case Some(lastSync) if lastSync isAfter time => this
+    case _ => this.copy(privateChannelsLastSyncedAt = Some(time))
   }
 
   // These modify the personal digest setting, so they should be initiated by user actions
@@ -139,10 +145,9 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getByUserIdAndSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit session: RSession): Option[SlackTeamMembership]
 
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
-  def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
+  def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def updateLastPersonalDigest(id: Id[SlackTeamMembership])(implicit session: RWSession): Unit
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
-
   def deactivate(model: SlackTeamMembership)(implicit session: RWSession): Unit
 
   //admin
@@ -185,6 +190,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     token: Option[SlackUserAccessToken],
     scopes: JsValue,
     slackUser: Option[JsValue],
+    privateChannelsLastSyncedAt: Option[DateTime],
     lastPersonalDigestAt: Option[DateTime],
     lastProcessingAt: Option[DateTime],
     lastProcessedAt: Option[DateTime],
@@ -205,6 +211,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       token,
       scopes.as[Set[SlackAuthScope]],
       slackUser.map(_.as[SlackUserInfo]),
+      privateChannelsLastSyncedAt,
       lastPersonalDigestAt = lastPersonalDigestAt,
       lastProcessingAt = lastProcessingAt,
       lastProcessedAt = lastProcessedAt,
@@ -228,6 +235,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.token,
     Json.toJson(membership.scopes),
     membership.slackUser.map(Json.toJson(_)),
+    membership.privateChannelsLastSyncedAt,
     membership.lastPersonalDigestAt,
     membership.lastProcessingAt,
     membership.lastProcessedAt,
@@ -247,13 +255,14 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def token = column[Option[SlackUserAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
     def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
+    def privateChannelsLastSyncedAt = column[Option[DateTime]]("private_channels_last_synced_at", O.Nullable)
     def lastPersonalDigestAt = column[Option[DateTime]]("last_personal_digest_at", O.Nullable)
     def lastProcessingAt = column[Option[DateTime]]("last_processing_at", O.Nullable)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def personalDigestSetting = column[SlackPersonalDigestSetting]("personal_digest_setting", O.NotNull)
     def nextPersonalDigestAt = column[Option[DateTime]]("next_personal_digest_at", O.Nullable)
     def lastIngestedMessageTimestamp = column[Option[SlackTimestamp]]("last_ingested_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser, privateChannelsLastSyncedAt, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
 
     def availableForProcessing(overrideDate: DateTime) = lastProcessingAt.isEmpty || lastProcessingAt < overrideDate
   }
@@ -377,7 +386,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     LIMIT $limit
     """.as[Id[SlackTeamMembership]].list
   }
-  def markAsProcessing(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = {
+  def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = {
     val now = clock.now
     activeRows
       .filter(stm => stm.id === id && stm.availableForProcessing(overrideProcessesOlderThan))
@@ -388,6 +397,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     val now = clock.now
     rows.filter(_.id === id).map(stm => (stm.updatedAt, stm.lastPersonalDigestAt)).update(now, Some(now))
   }
+
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit = {
     val now = clock.now
     rows

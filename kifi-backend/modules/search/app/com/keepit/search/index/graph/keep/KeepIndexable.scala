@@ -117,7 +117,8 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
       }
     }
 
-    keep.libraries.headOption.foreach { lib =>
+    val primaryLibrary = keep.libraries.minByOpt(_.id)
+    primaryLibrary.foreach { lib =>
       lib.organizationId.foreach { orgId =>
         doc.add(buildKeywordField(orgField, orgId.id.toString))
         if (lib.visibility == LibraryVisibility.PUBLISHED || lib.visibility == LibraryVisibility.ORGANIZATION) {
@@ -126,15 +127,15 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
       }
     }
 
-    keep.libraries.headOption.foreach { lib =>
+    primaryLibrary.foreach { lib =>
       doc.add(buildDataPayloadField(new Term(libraryField, lib.id.id.toString), titleLang.lang.getBytes(UTF8)))
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.owner.getOrElse(Id[User](-1))))
-    doc.add(buildIdValueField(libraryIdField, keep.libraries.headOption.map(_.id).getOrElse(Id[Library](-1))))
-    doc.add(buildIdValueField(orgIdField, keep.libraries.headOption.flatMap(_.organizationId).getOrElse(Id[Organization](-1))))
-    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.libraries.map(_.visibility).maxOpt.getOrElse(LibraryVisibility.SECRET))))
+    doc.add(buildIdValueField(libraryIdField, primaryLibrary.map(_.id).getOrElse(Id[Library](-1))))
+    doc.add(buildIdValueField(orgIdField, primaryLibrary.flatMap(_.organizationId).getOrElse(Id[Organization](-1))))
+    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(primaryLibrary.map(_.visibility).getOrElse(LibraryVisibility.SECRET))))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))

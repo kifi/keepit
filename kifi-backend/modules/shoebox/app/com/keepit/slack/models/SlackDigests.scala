@@ -23,6 +23,7 @@ case class SlackTeamDigest(
 
 case class SlackPersonalDigest(
     slackMembership: SlackTeamMembership,
+    slackTeam: SlackTeam,
     digestPeriod: Duration,
     org: BasicOrganization,
     ingestedMessagesByChannel: Map[SlackChannelIdAndPrettyName, Seq[(Keep, PrettySlackMessage)]]) {

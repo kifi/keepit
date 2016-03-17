@@ -260,6 +260,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
 			return {
 				onKeep: onKeep,
+				keptBy: keptBy ? this.getFullName(keptBy) : null,
 				participantName: attr ? this.getFullName(attr) : null,
 				isOverflowed: this.isOverflowed(),
 				participantCount: participantsCount,

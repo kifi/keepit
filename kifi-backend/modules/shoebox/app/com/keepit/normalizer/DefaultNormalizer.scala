@@ -21,7 +21,7 @@ object DefaultNormalizer extends StaticNormalizer with Logging {
         try {
           val newQuery = query.flatMap { query =>
             val newParams = query.params.filter { param => !stopParams.contains(param.name) }
-            if (newParams.isEmpty) None else Some(Query(newParams))
+            if (newParams.isEmpty) None else Some(Query(newParams: _*))
           }
           if (fragment.isDefined && fragment.get != "/" && (fragment.get.contains("/") || fragment.get.contains("%2F"))) {
             URI(scheme, userInfo, host, port, path, newQuery, fragment)

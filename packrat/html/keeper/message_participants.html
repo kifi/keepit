@@ -4,7 +4,7 @@
   </div>
   <div class="kifi-message-participants-2">
     <div class="kifi-message-participants-title">A {{#onKeep}}keep by{{/onKeep}}{{^onKeep}}discussion with{{/onKeep}}</div>
-    <div class="kifi-message-participant-name">{{participantName}}</div>
+    <div class="kifi-message-participant-name">{{#onKeep}}{{keptBy}}{{/onKeep}}{{^onKeep}}{{participantName}}{{/onKeep}}</div>
   </div>
   <div class="kifi-message-participants-n">
     <div class="kifi-message-participants-title">A discussion with <span class="kifi-participant-count">{{participantCount}}</span> people</div>

@@ -2,10 +2,12 @@ package com.keepit.controllers.mobile
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.json.TestHelper
@@ -44,8 +46,9 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeCortexServiceClientModule(),
     FakeSocialGraphModule()
   )
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
 
-  "mobileController" should {
+  "MobilePageController" should {
     "return connected users from the database" in {
       withDb(mobileControllerTestModules: _*) { implicit injector =>
         val path = com.keepit.controllers.mobile.routes.MobilePageController.getPageDetails().toString
@@ -96,6 +99,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           "normalized" -> "http://www.google.com",
           "kept" -> "public",
           "keepId" -> keep1.externalId,
+          "pubId" -> Keep.publicId(keep1.id.get),
           "tags" -> Seq(
             Json.obj("id" -> "eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672", "name" -> "Cooking"),
             Json.obj("id" -> "ffffffff-51ad-4c7d-a88e-d4e6e3c9a673", "name" -> "Baking")),

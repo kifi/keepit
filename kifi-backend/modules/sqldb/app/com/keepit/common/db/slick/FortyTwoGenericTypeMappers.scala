@@ -35,6 +35,7 @@ import org.joda.time.{ DateTime, LocalTime }
 import securesocial.core.SocialUser
 
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -173,6 +174,11 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   }, { src =>
     Json.parse(src).as[JsObject]
   })
+
+  def jsonMapper[T](implicit format: Format[T], ctag: ClassTag[T]) = MappedColumnType.base[T, String](
+    { t => Json.stringify(format.writes(t)) },
+    { str => format.reads(Json.parse(str)).get }
+  )
 
   implicit val jsValueMapper = MappedColumnType.base[JsValue, String]({ json =>
     Json.stringify(json)

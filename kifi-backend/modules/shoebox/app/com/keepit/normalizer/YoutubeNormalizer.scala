@@ -13,7 +13,7 @@ object YoutubeNormalizer extends StaticNormalizer {
   def apply(uri: URI) = {
     uri match {
       case URI(scheme, _, host, port, path, Some(query), _) =>
-        val newQuery = Query(query.params.filter { _.name == "v" })
+        val newQuery = Query(query.params.filter { _.name == "v" }: _*)
         URI(scheme, None, host, port, path, Some(newQuery), None)
       case _ => throw new Exception("illegal invocation")
     }

@@ -56,7 +56,7 @@ k.safariUpdateTooltip = k.safariUpdateTooltip || (function () {
     api.port.on(handlers);
     api.onEnd.push(hide);
     k.hideKeeperCallout = hide;
-    // api.port.emit('track_ftue', 's');
+    api.port.emit('track_ftue', 's');
   }
 
   function onClickX(e) {

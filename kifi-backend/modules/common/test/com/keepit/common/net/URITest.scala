@@ -1,5 +1,6 @@
 package com.keepit.common.net
 
+import com.keepit.common.path.Path
 import org.specs2.mutable.Specification
 import java.net.{ URI => JavaURI }
 
@@ -171,6 +172,27 @@ class URITest extends Specification {
       }
 
       "All Good" === "All Good"
+    }
+  }
+
+  "Path" should {
+    "work basically" in {
+      // path segments, with and without leading '/'
+      (Path("") + "kifi").absolute === "https://www.kifi.com/kifi"
+      (Path("") + "/kifi").absolute === "https://www.kifi.com/kifi"
+      (Path("kifi") + "general").absolute === "https://www.kifi.com/kifi/general"
+      (Path("kifi") + "/general").absolute === "https://www.kifi.com/kifi/general"
+
+      // query parameters should be prefixed with a '?' or '&', and automatically do The Right Thing (TM)
+      (Path("kifi/general") + "?a=b").absolute === "https://www.kifi.com/kifi/general/?a=b"
+      (Path("kifi/general") + "&a=b").absolute === "https://www.kifi.com/kifi/general/?a=b"
+      (Path("kifi/general?a=b") + "&c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
+      (Path("kifi/general?a=b") + "?c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
+
+      // multiple query params can be added at once if you manually inject the '&' between them
+      (Path("kifi/general") + "?a=b&c=d").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d"
+      (Path("kifi/general?a=b") + "&c=d&e=f").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d&e=f"
+      (Path("kifi/general?a=b") + "?c=d&e=f").absolute === "https://www.kifi.com/kifi/general/?a=b&c=d&e=f"
     }
   }
 }

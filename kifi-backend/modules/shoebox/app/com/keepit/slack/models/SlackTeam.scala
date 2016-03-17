@@ -8,11 +8,11 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.model.{ SlackTeamIdOrgIdKey, SlackTeamIdOrgIdCache, Organization }
-import org.joda.time.DateTime
+import org.joda.time.{ DateTime, Duration }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{ Duration => ConcurrentDuration }
 
 case class SlackTeam(
   id: Option[Id[SlackTeam]] = None,
@@ -24,8 +24,8 @@ case class SlackTeam(
   organizationId: Option[Id[Organization]],
   generalChannelId: Option[SlackChannelId],
   lastDigestNotificationAt: Option[DateTime] = None,
-  publicChannelsLastSyncingAt: Option[DateTime] = None,
   publicChannelsLastSyncedAt: Option[DateTime] = None,
+  channelsLastSyncingAt: Option[DateTime] = None,
   channelsSynced: Set[SlackChannelId] = Set.empty,
   kifiBot: Option[KifiSlackBot],
   noPersonalDigestsUntil: Option[DateTime] = None)
@@ -39,10 +39,10 @@ case class SlackTeam(
   def withNoPersonalDigestsEver = this.copy(noPersonalDigestsUntil = None)
   def withNoPersonalDigestsUntil(time: DateTime) = this.copy(noPersonalDigestsUntil = Some(time))
   def withPublicChannelsSyncedAt(time: DateTime) = publicChannelsLastSyncedAt match {
-    case Some(lastSync) if lastSync isAfter time => this.copy(publicChannelsLastSyncingAt = None)
-    case _ => this.copy(publicChannelsLastSyncingAt = None, publicChannelsLastSyncedAt = Some(time))
+    case Some(lastSync) if lastSync isAfter time => this
+    case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
   }
-  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
+  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsLastSyncingAt = None, channelsSynced = channelsSynced ++ newChannels)
 
   def withNoKifiBot = this.copy(kifiBot = None)
   def withKifiBotIfDefined(kifiBotOpt: Option[KifiSlackBot]) = kifiBotOpt match {
@@ -52,7 +52,7 @@ case class SlackTeam(
 
   def withOrganizationId(newOrgId: Option[Id[Organization]]): SlackTeam = organizationId match {
     case Some(orgId) if newOrgId.contains(orgId) => this
-    case _ => this.copy(organizationId = newOrgId, lastDigestNotificationAt = None, publicChannelsLastSyncingAt = None, publicChannelsLastSyncedAt = None, channelsSynced = Set.empty)
+    case _ => this.copy(organizationId = newOrgId, lastDigestNotificationAt = None, channelsLastSyncingAt = None, publicChannelsLastSyncedAt = None, channelsSynced = Set.empty)
   }
 
   def toInternalSlackTeamInfo = InternalSlackTeamInfo(this.organizationId, this.slackTeamName)
@@ -101,7 +101,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[SlackBotUserAuthorization])(implicit session: RWSession): SlackTeam
 
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackTeam]]
-  def markAsSyncing(slackTeamId: SlackTeamId, maxSyncingFor: Duration)(implicit session: RWSession): Boolean
+  def markAsSyncingChannels(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean
 
   //admin
   def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam]
@@ -134,8 +134,8 @@ class SlackTeamRepoImpl @Inject() (
     organizationId: Option[Id[Organization]],
     generalChannelId: Option[SlackChannelId],
     lastDigestNotificationAt: Option[DateTime],
-    publicChannelsLastSyncingAt: Option[DateTime],
     publicChannelsLastSyncedAt: Option[DateTime],
+    channelsLastSyncingAt: Option[DateTime],
     channelsSynced: Set[SlackChannelId],
     kifiBotUserId: Option[SlackUserId],
     kifiBotToken: Option[SlackBotAccessToken],
@@ -150,8 +150,8 @@ class SlackTeamRepoImpl @Inject() (
       organizationId,
       generalChannelId,
       lastDigestNotificationAt,
-      publicChannelsLastSyncingAt,
       publicChannelsLastSyncedAt,
+      channelsLastSyncingAt,
       channelsSynced,
       for { botId <- kifiBotUserId; botToken <- kifiBotToken } yield KifiSlackBot(botId, botToken),
       noPersonalDigestsUntil
@@ -168,8 +168,8 @@ class SlackTeamRepoImpl @Inject() (
     slackTeam.organizationId,
     slackTeam.generalChannelId,
     slackTeam.lastDigestNotificationAt,
-    slackTeam.publicChannelsLastSyncingAt,
     slackTeam.publicChannelsLastSyncedAt,
+    slackTeam.channelsLastSyncingAt,
     slackTeam.channelsSynced,
     slackTeam.kifiBot.map(_.userId),
     slackTeam.kifiBot.map(_.token),
@@ -184,15 +184,15 @@ class SlackTeamRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def generalChannelId = column[Option[SlackChannelId]]("general_channel_id", O.Nullable)
     def lastDigestNotificationAt = column[Option[DateTime]]("last_digest_notification_at", O.Nullable)
-    def publicChannelsLastSyncingAt = column[Option[DateTime]]("public_channels_last_syncing_at", O.Nullable)
     def publicChannelsLastSyncedAt = column[Option[DateTime]]("public_channels_last_synced_at", O.Nullable)
+    def channelsLastSyncingAt = column[Option[DateTime]]("channels_last_syncing_at", O.Nullable)
     def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
     def kifiBotUserId = column[Option[SlackUserId]]("kifi_bot_user_id", O.Nullable)
     def kifiBotToken = column[Option[SlackBotAccessToken]]("kifi_bot_token", O.Nullable)
     def noPersonalDigestsUntil = column[Option[DateTime]]("no_personal_digests_until", O.Nullable)
     def * = (
       id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId,
-      generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncingAt, publicChannelsLastSyncedAt, channelsSynced,
+      generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsLastSyncingAt, channelsSynced,
       kifiBotUserId, kifiBotToken, noPersonalDigestsUntil
     ) <> ((teamFromDbRow _).tupled, teamToDbRow _)
   }
@@ -273,10 +273,10 @@ class SlackTeamRepoImpl @Inject() (
     activeRows.filter(row => row.lastDigestNotificationAt.isEmpty || row.lastDigestNotificationAt < lastPushOlderThan).map(_.id).list
   }
 
-  def markAsSyncing(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean = {
+  def markAsSyncingChannels(slackTeamId: SlackTeamId, syncTimeout: Duration)(implicit session: RWSession): Boolean = {
     val now = clock.now()
-    val syncTimeoutAt = now.minusSeconds(syncTimeout.toSeconds.toInt)
-    rows.filter(r => r.slackTeamId === slackTeamId && (r.publicChannelsLastSyncingAt.isEmpty || r.publicChannelsLastSyncingAt <= syncTimeoutAt)).map(r => (r.updatedAt, r.publicChannelsLastSyncingAt)).update((now, Some(now))) > 0
+    val syncTimeoutAt = now minus syncTimeout
+    rows.filter(r => r.slackTeamId === slackTeamId && (r.channelsLastSyncingAt.isEmpty || r.channelsLastSyncingAt <= syncTimeoutAt)).map(r => (r.updatedAt, r.channelsLastSyncingAt)).update((now, Some(now))) > 0
   }
 
   def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam] = activeRows.filter(r => r.kifiBotToken.isEmpty && r.organizationId.isDefined).list
@@ -288,6 +288,6 @@ case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
   val namespace = "slack_team_by_slack_team_id"
   def toKey(): String = id.value
 }
-class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration)*)
   extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
 

@@ -100,7 +100,6 @@ class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClien
     else new SafeFuture({
       val eventData = eventBuilder.build()
       val eventJson = Json.stringify(eventData)
-      if (event.eventType == UserEventTypes.SEARCHED && (eventData \ "source").asOpt[String].contains("Slack")) log.info(s"[searchedUserStatus] tracking searched event with data ${eventJson}")
       val request = ws.url(eventApiEndpoint).withQueryString("event" -> eventJson, "api_key" -> apiKey)
 
       request.get() map {

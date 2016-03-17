@@ -53,17 +53,20 @@ object SlackAuthScope {
 
   val inheritableBotScopes: Set[SlackAuthScope] = Set(Bot, UsersRead, TeamRead, ChannelsRead) // scopes covering APIs that can use a user token or the Kifi bot token transparently
 
-  val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot) + ChannelsRead // adding ChannelsReads *temporarily* as an attempt to backfill some of the missing channel ids
+  val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot)
   val newPush: Set[SlackAuthScope] = Set(Commands, IncomingWebhook)
   val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
   val integrationSetup = newPush
 
-  val pushAnywhere: Set[SlackAuthScope] = Set(ChannelsRead, ChatWriteBot, Commands)
-  val pushAnywhereWithKifiBot: Set[SlackAuthScope] = Set(ChannelsRead, ChannelsWrite, Bot, Commands)
-  val ingestAnywhere: Set[SlackAuthScope] = ingest + ChannelsRead
   val teamSetup = Set(TeamRead)
-  val syncPublicChannels = teamSetup ++ pushAnywhere ++ ingestAnywhere
-  val syncPublicChannelsWithKifiBot = teamSetup ++ pushAnywhereWithKifiBot ++ ingestAnywhere
+
+  val pushToPublicChannels: Set[SlackAuthScope] = Set(ChannelsRead, ChannelsWrite, Bot, Commands)
+  val ingestFromPublicChannels: Set[SlackAuthScope] = ingest + ChannelsRead
+  val syncPublicChannels = teamSetup ++ pushToPublicChannels ++ ingestFromPublicChannels
+
+  val pushToPrivateChannels: Set[SlackAuthScope] = Set(GroupsRead, GroupsWrite, Bot, Commands)
+  val ingestFromPrivateChannels: Set[SlackAuthScope] = ingest + GroupsRead
+  val syncPrivateChannels = teamSetup ++ pushToPrivateChannels ++ ingestFromPrivateChannels
 
   val userSignup: Set[SlackAuthScope] = Set(Identify, UsersRead, TeamRead)
   val userLogin: Set[SlackAuthScope] = Set(Identify)

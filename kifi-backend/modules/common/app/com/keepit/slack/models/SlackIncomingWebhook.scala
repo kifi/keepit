@@ -61,17 +61,16 @@ object SlackMessageRequest {
     parseMode = "none"
   )
 
-  implicit val writes: Writes[SlackMessageRequest] = Writes { o =>
-    Json.obj(
-      "text" -> o.text,
-      "username" -> o.username,
-      "icon_url" -> o.iconUrl,
-      "attachments" -> o.attachments,
-      "unfurl_links" -> o.unfurlLinks,
-      "unfurl_media" -> o.unfurlMedia,
-      "parse" -> o.parseMode
-    )
-  }
+  implicit val format: Format[SlackMessageRequest] = (
+    (__ \ 'text).format[String] and
+    (__ \ 'username).format[String] and
+    (__ \ 'icon_url).format[String] and
+    (__ \ 'attachments).format[Seq[SlackAttachment]] and
+    (__ \ 'as_user).format[Boolean] and
+    (__ \ 'unfurl_links).format[Boolean] and
+    (__ \ 'unfurl_media).format[Boolean] and
+    (__ \ 'parse).format[String]
+  )(SlackMessageRequest.apply, unlift(SlackMessageRequest.unapply))
 }
 
 case class SlackMessageResponse(

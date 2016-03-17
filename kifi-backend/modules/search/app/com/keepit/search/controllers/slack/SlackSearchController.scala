@@ -3,13 +3,13 @@ package com.keepit.search.controllers.slack
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.{ KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.controller.{ MaybeUserRequest, SearchServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.{ RedirectTrackingParameters, KifiUrlRedirectHelper, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{ Query, HttpClient }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time.Clock
 import com.keepit.common.util.LinkElement
@@ -55,7 +55,6 @@ class SlackSearchController @Inject() (
     searchAnalytics: SearchAnalytics,
     heimdal: HeimdalServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    kifiUrlRedirectHelper: KifiUrlRedirectHelper,
     clock: Clock,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -132,13 +131,14 @@ class SlackSearchController @Inject() (
   }
 
   private def convertUrlToKifiRedirect(url: String, command: SlackCommandRequest, action: String): String = {
-    val trackingParams = RedirectTrackingParameters(
-      eventType = SlackEventTypes.CLICKED_SEARCH_RESULT,
-      action = action,
-      slackUserId = command.userId,
-      slackTeamId = command.teamId
+    val trackingParams = Query(
+      "eventType" -> SlackEventTypes.CLICKED_SEARCH_RESULT.name,
+      "action" -> action,
+      "slackUserId" -> command.userId.value,
+      "slackTeamId" -> command.teamId.value,
+      "source" -> "slack"
     )
-    kifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
+    KifiUrlRedirectHelper.generateKifiUrlRedirect(url, trackingParams)
   }
 
   private def doSearch(request: MaybeUserRequest[_], integrations: SlackChannelIntegrations, command: SlackCommandRequest): Future[SlackCommandResponse] = {
