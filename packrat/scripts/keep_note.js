@@ -401,7 +401,7 @@ k.keepNote = k.keepNote || (function () {
           }
           data.$suggestions
             .empty()
-            .append($(k.render('html/keeper/kifi_mustache_tags', k.formatting.jsonDom(results.map(formatTagSuggestion).join('')))))
+            .append($(results.map(formatTagSuggestion).join('')))
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
