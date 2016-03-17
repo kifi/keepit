@@ -1,6 +1,7 @@
 <div class="kf-keep-card-attribution">
   <a class="kf-keep-card-attribution-keeper-pic" ng-href="{{::keep.author.url|pathFromUrl}}"
-     ng-style="{ 'background-image' : 'url(' + (keep.author.picture) + ')' }"></a>
+     ng-style="{ 'background-image' : 'url(' + (keep.author.picture) + ')' }"
+     ng-if="!titleOnly"></a>
   <div class="kf-keep-card-attribution-message">
     <!--Add an empty span here to make safari render the whitespace in the following spans correctly-->
     <span></span>
@@ -10,7 +11,7 @@
     </span>
     <span ng-if="::!keep.sourceAttribution.slack && !showAsDiscussion">kept this</span>
     <span ng-if="::showAsDiscussion">started a discussion</span>
-    <span ng-if="::showAsDiscussion && keep.participants.length > 1">with
+    <span ng-if="::showAsDiscussion && !shortMessage && keep.participants.length > 1">with
       <span class="kf-keep-card-attribution-discussion-members-list-item"
             ng-repeat="participant in keep.participants | filter:({id: '!'+keep.author.id}) | limitTo: (keep.participants.length > 4 ? 2 : 3)">
         <a class="kf-link" ng-href="{{::participant|profileUrl}}" ng-bind="participant.firstName"></a>
@@ -19,7 +20,7 @@
             ng-if="::keep.participants.length > 4"
             ng-bind="(keep.participants.length - 3)+' others'"></span>
     </span>
-    <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
+    <span ng-if="::showLibraryAttribution && keep.library">
     into
     </span>
     <span ng-if="::showLibraryAttribution && keep.library.visibility === 'secret'"
@@ -59,14 +60,14 @@
        ng-if="::showLibraryAttribution && keep.library.org.name"
        click-action="clickedOrganization"></a>
 
-    <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack">
+    <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack && !shortMessage">
       <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
         <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>#<span ng-bind="keep.sourceAttribution.slack.message.channel.name"></span>
       </a>
     </span>
 
     <a class="kf-keep-tweet-link"
-       ng-if="::keep.sourceAttribution.twitter.screenName"
+       ng-if="::keep.sourceAttribution.twitter.screenName && !shortMessage"
        href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
        target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span><span ng-bind="'@' + keep.sourceAttribution.twitter.screenName"></span>
     </a>

@@ -92,6 +92,19 @@ angular.module('kifi')
   }
 ])
 
+.filter('libPrivacyIcon', function () {
+  return function (library) {
+    if (library.visibility === 'secret') {
+      return 'lock';
+    } else if (library.visibility === 'organization') {
+      return 'org';
+    } else if (library.kind !== 'system_main' && library.visibility === 'published') {
+      return 'globe';
+    }
+    return '';
+  };
+})
+
 .filter('bgImageAndPos', [
   'env',
   function (env) {

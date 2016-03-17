@@ -31,8 +31,11 @@ angular.module('kifi')
 
       return {
         restrict: 'A',
-        $scope: {
-          keep: '='
+        scope: {
+          keep: '=',
+          maxInitialComments: '=',
+          canEditKeep: '=',
+          editKeepNote: '='
         },
         templateUrl: 'common/directives/comments/comments.tpl.html',
         link: function ($scope, element) {
@@ -50,7 +53,7 @@ angular.module('kifi')
 
           $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
 
-          $scope.visibleCount = Math.min(3, $scope.comments.length);
+          $scope.visibleCount = Math.min($scope.maxInitialComments || 3, $scope.comments.length);
           $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.keep.discussion.numMessages;
 
           // listeners

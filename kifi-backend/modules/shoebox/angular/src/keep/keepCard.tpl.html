@@ -6,14 +6,8 @@
         'mine': (keep.author.id === me.id)}">
 
     <div class="kf-keep-card kf-flex-column">
-      <div class="kf-keep-card-activity-attribution-container" ng-if="::showActivityAttribution">
+      <div class="kf-keep-card-activity-attribution-container">
         <div kf-keep-card-activity-attribution keep="keep"></div>
-      </div>
-      <div class="kf-keep-card-attribution-container">
-        <div kf-keep-card-attribution
-             keep="keep"
-             show-library-attribution="::currentPageOrigin !== 'libraryPage'"
-             is-first-item="::isFirstItem"></div>
         <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
           <button class="kf-button kf-button-image kf-keep-card-menu-button">
@@ -31,16 +25,6 @@
                 ng-if="!globalGalleryView"
                 ng-click="toggleExpandCard()">
           <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
-        </button>
-      </div>
-      <div class="kf-keep-card-note-container">
-        <div class="kf-keep-card-note" ng-show="::displayNote && !noteAttribution" ng-bind-html="::displayNote|noteHtml"></div>
-        <div class="kf-keep-card-note" ng-if="::displayNote && noteAttribution === 'Slack'"><span ng-bind-html="::displayNote"></span> <span class="kf-keep-card-note-via">(via Slack)</span></div>
-        <div class="kf-keep-card-note" ng-if="::displayNote && noteAttribution === 'Twitter'"><span ng-bind="::displayNote"></span> <span class="kf-keep-card-note-via">(via Twitter)</span></div>
-
-        <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
-                ng-if="canEditKeep && galleryView && !displayNote && keep.author.id === me.id">Add a note
-          (type # to add a tag)
         </button>
       </div>
       <div class="kf-keep-body" ng-if="galleryView"
@@ -62,17 +46,20 @@
                ng-click="clickCallback({keep: keep, event: $event}); maybeOpenExt($event);" rel="nofollow"
                click-action="clickedArticleTitle" kf-ellipsis full-text="displayTitle"
                ng-bind="displayTitle" max-num-lines="2"></a>
+               <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId">{{::keep.summary.wordCount|timeToRead}} read</span>
           </div>
           <div class="kf-keep-card-description" kf-ellipsis ng-bind="keep.summary.description"
                full-text="keep.summary.description"
                max-num-lines="image.maxDescLines || defaultDescLines"
                ng-if="keep.summary.description"></div>
-          <span class="kf-keep-card-source">{{::keepSource}}</span>
         </div>
 
         <div class="clearfix"></div>
 
         <div class="kf-keep-card-footer kf-keep-card-actions">
+          <span class="kf-keep-card-source">
+            <span ng-bind="::keepSource"></span>
+          </span>
           <div class="kf-keep-actions" ng-if="$root.userLoggedIn">
             <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
                     kf-keep-to-library-widget widget-action-text="Keep"
@@ -83,25 +70,19 @@
               <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
               <span>{{howKept ? 'Kept' : 'Keep'}}</span>
             </button>
-            <button class="kf-keep-share-btn"
-                    ng-click="clickCallback({keep: keep, event: $event}); shareAction()"
-                    click-action="clickedShareArticle">
-              <span class="svg-share-arrow-green"></span>
-              <span>Share</span>
-            </button>
           </div>
           <div class="kf-keep-who"
-               ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
-          <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
-                library="::keeper.library" desc="Your Kifi connection">
-            <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
-               ng-href="{{::keeper.library.path || '/' + keeper.username}}"
-               kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"
-               ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
-          </span>
-          <span class="kf-keep-who-num" ng-if="keep.keepersTotal - 1 > (keep.keepers.length || 0)">
-            {{keep.keepersTotal - (keep.keepers.length || 0) | num}}
-          </span>
+               ng-if="(keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id))">
+            <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
+                  library="::keeper.library" desc="Your Kifi connection">
+              <a class="kf-keep-who-pic" ng-style="{'background-image': 'url(' + (keeper | pic:100) + ')'}"
+                 ng-href="{{::keeper.library.path || '/' + keeper.username}}"
+                 kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"
+                 ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
+            </span>
+            <span class="kf-keep-who-num" ng-if="keep.keepersTotal - 1 > (keep.keepers.length || 0)">
+              {{keep.keepersTotal - (keep.keepers.length || 0) | num}}
+            </span>
           </div>
         </div>
       </div>
@@ -127,9 +108,9 @@
                  click-action="clickedArticleTitle" full-text="displayTitle"
                  ng-bind="displayTitle"></a>
             </div>
-            <span class="kf-keep-card-source">{{::keepSource}}</span>
           </div>
           <div class="kf-keep-card-flex-row kf-keep-card-actions">
+            <span class="kf-keep-card-source" ng-bind="::keepSource"></span>
             <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
                     kf-keep-to-library-widget widget-action-text="Keep"
                     library-click-action="onWidgetLibraryClicked(clickedLibrary)"
@@ -139,17 +120,11 @@
               <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
               <span>{{howKept ? 'Kept' : 'Keep'}}</span>
             </button>
-            <button class="kf-keep-share-btn"
-                    ng-click="clickCallback({keep: keep, event: $event}); shareAction()"
-                    click-action="clickedShareArticle">
-              <span class="svg-share-arrow-green"></span>
-              <span>Share</span>
-            </button>
             <div class="kf-keep-who"
                  ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.author.id)">
               <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                     library="::keeper.library" desc="Your Kifi connection">
-                <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
+                <a class="kf-keep-who-pic" ng-style="{'background-image': 'url(' + (participant | pic:100) + ')'}"
                    ng-href="{{::keeper.library.path || '/' + keeper.username}}"
                    kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"
                    ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
@@ -161,11 +136,45 @@
           </div>
         </div>
       </div>
-      <div ng-if="galleryView" kf-keep-comments keep="keep"></div>
-      <span ng-if="!galleryView && keep.discussion.numMessages"
-            class="kf-keep-card-view-comments kf-link"
-            ng-bind-template="View Comments ({{keep.discussion.numMessages}})"
-            ng-click="toggleExpandCard()"></span>
+      <div class="kf-keep-card-attribution-container">
+        <span ng-if="keep.discussion.numMessages || keep.displayNote"
+              class="kf-keep-card-view-comments"
+              ng-class="{'kf-link': !galleryView}"
+              ng-pluralize
+              ng-init="commentCount = keep.discussion.numMessages + (keep.displayNote ? 1 : 0)"
+              count="commentCount"
+              when="{'one': '1 comment', 'other': '{{commentCount|number}} comments'}"
+              ng-click="!galleryView && toggleExpandCard()"></span>
+        <a class="kf-feed-tooltip-target kf-keep-card-library-chip"
+           ng-style="{'background': library.color}"
+           kf-user-tooltip="library.owner"
+           library="library"
+           ng-href="{{::library.path}}"
+           ng-repeat="addedLibrary in keep.members.libraries"
+           ng-init="library = addedLibrary.library">
+          <svg kf-symbol-sprite
+               ng-if="library && library|libPrivacyIcon"
+               icon="{{::library|libPrivacyIcon}}"></svg>
+          <span ng-bind="library.name"></span>
+        </a>
+        <a class="kf-feed-tooltip-target kf-keep-card-participant-pic"
+           ng-href="{{::participant|profileUrl}}"
+           ng-style="{'background-image': 'url(' + (participant | pic:100) + ')'}"
+           kf-user-tooltip="::participant"
+           ng-repeat="addedUser in keep.members.users | limitTo: (keep.participants.length > 5 ? 4 : 5)"
+           ng-init="participant = addedUser.user"></a>
+         <span class="kf-keep-card-participants-more"
+               ng-if="keep.members.users.length > 5">
+          <span ng-bind-template="+{{(keep.members.users.length - 4)|number}}"></span>
+          <div class="kf-dropdown-menu kf-keep-card-participants-more-tooltip">
+            <div ng-repeat="addedUser in keep.members.users.slice(4)"
+                 ng-init="participant = addedUser.user"
+                 ng-bind="participant|name"></div>
+          </div>
+         </span>
+      </div>
+
+      <div ng-if="galleryView" kf-keep-comments keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>
     </div>
 
     <div class="kf-keep-checkbox-wrap">

@@ -1,4 +1,40 @@
 <div class="kf-keep-comments-container">
+  <div class="kf-keep-card-initial-message-container"
+    ng-if="!showViewPreviousComments">
+    <a class="kf-keep-card-attribution-keeper-pic" ng-href="{{::keep.author.url|pathFromUrl}}"
+      ng-style="{ 'background-image' : 'url(' + (keep.author.picture) + ')' }"
+      ng-if="!titleOnly"></a>
+    <div>
+      <div class="kf-keep-comment-container">
+        <div kf-keep-card-attribution
+            keep="keep"
+            show-library-attribution="::currentPageOrigin !== 'libraryPage'"
+            title-only="true"
+            is-first-item="::isFirstItem"></div>
+
+        <span class="kf-keep-comment-actions" kf-click-menu ng-if="canEditKeep">
+          <menu class="kf-dropdown-menu kf-keep-comment-actions-menu">
+            <button class="kf-dropdown-menu-item kf-keep-comment-actions-item"
+                    ng-click="editKeepNote($event, keep)">
+                    Edit note
+            </button>
+          </menu>
+          <button class="kf-keep-comment-actions-button kf-button kf-button-image">
+            <svg kf-symbol-sprite class="kf-keep-comment-actions-icon" icon="dropdown-arrow"></svg>
+          </button>
+        </span>
+      </div>
+      <div class="kf-keep-card-note-container">
+        <div class="kf-keep-card-note" ng-if="::keep.displayNote && !keep.noteAttribution" ng-bind-html="::keep.displayNote|noteHtml"></div>
+        <div class="kf-keep-card-note" ng-if="::keep.displayNote && keep.noteAttribution === 'Slack'"><span ng-bind-html="::keep.displayNote"></span> <span class="kf-keep-card-note-via">(via Slack)</span></div>
+        <div class="kf-keep-card-note" ng-if="::keep.displayNote && keep.noteAttribution === 'Twitter'"><span ng-bind="::keep.displayNote"></span> <span class="kf-keep-card-note-via">(via Twitter)</span></div>
+        <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
+                ng-if="canEditKeep && !keep.displayNote && keep.author.id === me.id">Add a note
+          (type # to add a tag)
+        </button>
+      </div>
+    </div>
+  </div>
   <div class="kf-keep-comments" ng-if="visibleCount > 0 || canAddComments" ng-attr-kf-inview="{{ keep.discussion && keep.discussion.messages.length > 0 ? 'onInview' : undefined }}">
     <span class="kf-keep-comments-view-previous" ng-if="showViewPreviousComments" ng-click="onViewPreviousComments()">View Previous Comments</span>
     <div
