@@ -1,28 +1,17 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
+import com.keepit.commanders.PathCommander
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
-import com.keepit.common.crypto.KifiUrlRedirectHelper
-import com.keepit.common.strings._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.net.Param
-import com.keepit.common.performance.StatsdTiming
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time.{ Clock, _ }
-import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ DescriptionElements, LinkElement, Ord }
+import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
-import com.keepit.social.Author
 import com.kifi.juggle._
-import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -45,20 +34,13 @@ object SlackPersonalDigestConfig {
 
 class SlackPersonalDigestNotificationActor @Inject() (
   db: Database,
-  channelToLibRepo: SlackChannelToLibraryRepo,
   slackTeamRepo: SlackTeamRepo,
   slackMembershipRepo: SlackTeamMembershipRepo,
-  orgConfigRepo: OrganizationConfigurationRepo,
-  libRepo: LibraryRepo,
-  attributionRepo: KeepSourceAttributionRepo,
-  ktlRepo: KeepToLibraryRepo,
-  keepRepo: KeepRepo,
-  basicUserRepo: BasicUserRepo,
+  digestGenerator: SlackPersonalDigestNotificationGenerator,
   pathCommander: PathCommander,
   slackClient: SlackClientWrapper,
   clock: Clock,
   airbrake: AirbrakeNotifier,
-  orgInfoCommander: OrganizationInfoCommander,
   orgExperimentRepo: OrganizationExperimentRepo,
   slackAnalytics: SlackAnalytics,
   val heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -97,7 +79,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
     val now = clock.now
     val (membership, digestOpt) = db.readOnlyMaster { implicit s =>
       val membership = slackMembershipRepo.get(membershipId)
-      val digestOpt = createPersonalDigest(membership)
+      val digestOpt = digestGenerator.createPersonalDigest(membership)
       (membership, digestOpt)
     }
     digestOpt match {
@@ -108,7 +90,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
         }
         Future.successful(())
       case Some(digest) =>
-        val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) messageForFirstTimeDigest(digest) else messageForRegularDigest(digest)
+        val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) digestGenerator.messageForFirstTimeDigest(digest) else digestGenerator.messageForRegularDigest(digest)
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>
             db.readWrite { implicit s =>
@@ -131,126 +113,4 @@ class SlackPersonalDigestNotificationActor @Inject() (
         }
     }
   }
-
-  @StatsdTiming("SlackPersonalDigestNotificationActor.createPersonalDigest")
-  private def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): Option[SlackPersonalDigest] = {
-    for {
-      slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId)
-      orgId <- slackTeam.organizationId
-      org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
-      _ <- Some(true) if (membership.personalDigestSetting match {
-        case SlackPersonalDigestSetting.On => true
-        case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
-        case _ => false
-      })
-      digest = SlackPersonalDigest(
-        slackMembership = membership,
-        slackTeam = slackTeam,
-        allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
-        digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
-        org = org,
-        ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
-      )
-      relevantDigest <- Some(digest).filter(_.numIngestedMessages >= minIngestedMessagesForPersonalDigest)
-    } yield relevantDigest
-  }
-
-  private def getIngestedMessagesForSlackUser(membership: SlackTeamMembership)(implicit session: RSession): Map[SlackChannelIdAndPrettyName, Seq[(Keep, PrettySlackMessage)]] = {
-    // I'm so sorry that this function exists
-    // This grabs the (keep, message) pairs that are a result of ingestion that:
-    //     1. Are from this slack user
-    //     2. Are marked as having been sent (in Slack) AFTER at least one of the ingestions in that channel was created
-    //     3. Were ingested (and thus turned into a keep) since the last time we sent a personal digest to this user (if ever)
-    val keepsForThisMembership = attributionRepo.getKeepIdsByAuthor(Author.SlackUser(membership.slackTeamId, membership.slackUserId))
-    val attributions = attributionRepo.getByKeepIds(keepsForThisMembership).collect {
-      case (keepId, slack: SlackAttribution) => keepId -> slack
-    }
-    val keepsById = keepRepo.getByIds(keepsForThisMembership)
-    val attributionsByChannel = attributions.groupBy(_._2.message.channel)
-    val oldestIntegrationByChannel = channelToLibRepo.getBySlackTeam(membership.slackTeamId).groupBy(_.slackChannelId).mapValuesStrict { integrations =>
-      integrations.map(_.createdAt).min
-    }
-    attributionsByChannel.flatMap {
-      case (channel, attrsAndKeeps) => oldestIntegrationByChannel.get(channel.id).map { baseTimestamp =>
-        channel -> attrsAndKeeps.flatMap {
-          case (kId, attr) => keepsById.get(kId).map(_ -> attr.message).filter {
-            case (k, msg) => msg.timestamp.toDateTime.isAfter(baseTimestamp) && !membership.lastPersonalDigestAt.exists(lastTime => lastTime isAfter k.createdAt)
-          }
-        }.toSeq
-      }
-    }
-  }
-
-  // "Pure" functions
-  private def messageForFirstTimeDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
-    require(digest.slackMembership.userId.isEmpty, "First time digest is only for non-kifi users")
-    import DescriptionElements._
-    val slackTeamId = digest.slackMembership.slackTeamId
-    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
-    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
-    val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
-    val numMembersOnKifi = digest.allMembers.count(stm => stm.userId.isDefined)
-    val text = DescriptionElements.unlines(Seq(
-      DescriptionElements(
-        SlackEmoji.wave, s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved the link you just shared",
-        mostRecentIngestedMsg.channel.name.map(chName => s"in #${chName.value}" --> LinkElement(mostRecentIngestedMsg.permalink)),
-        "(", "archived", "here" --> linkToMostRecentKeep, ")", "."
-      ),
-      DescriptionElements(
-        "Here's a bit of what I do; you can",
-        (if (numMembersOnKifi <= 1) "join your team on Kifi" else s"join $numMembersOnKifi of your team members on Kifi") --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org"))),
-        "to get access to these features:"
-      )))
-    val attachments = List(
-      SlackAttachment(color = None, text = Some("")).withImageUrl(superAwesomeWelcomeMessageGIF),
-      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.robotFace,
-        "Also, my binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to any messages you send my way  :zipper_mouth_face:.",
-        "You can still", "opt to stop receiving notifications" --> linkToSquelch,
-        "or if you've got questions email my human friends at support@kifi.com."
-      ))))
-    )
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
-  }
-  private def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
-    import DescriptionElements._
-    def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val linkToFeed = LinkElement(pathCommander.ownKeepsFeedPageViaSlack(digest.slackMembership.slackTeamId).withQuery(trackingParams("ownFeed")))
-    val linkToOrg = LinkElement(pathCommander.orgPageViaSlack(digest.org, digest.slackTeam.slackTeamId).withQuery(trackingParams("orgPage")))
-    val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
-    val text = prng.choice(puns)
-
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp.value, k.id.get.id) }
-    val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, digest.slackTeam.slackTeamId).withQuery(trackingParams("latestMessage")))
-    val attachments = Seq(
-      SlackAttachment.simple(DescriptionElements(
-        "You've sent", s"${digest.numIngestedMessages} links" --> linkToFeed, inTheLast(digest.digestPeriod), ".",
-        "Here's your latest:"
-      )),
-      SlackAttachment.simple(DescriptionElements(mostRecentKeep.title.getOrElse(mostRecentKeep.url).abbreviate(60) --> linkToMostRecentKeep)),
-      SlackAttachment.simple(DescriptionElements(
-        "Access all links from", "your team on Kifi" --> linkToOrg, ".",
-        "Also, you can", "opt to stop receiving notifications" --> linkToUnsubscribe, "."
-      )))
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments = attachments)
-  }
-
-  private val prng = new MersenneTwister(System.currentTimeMillis())
-  private val puns = IndexedSeq[DescriptionElements](
-    DescriptionElements("Look at this boatload :rowboat: of links!"),
-    DescriptionElements("Surprise! I brought you a gift :gift:! It's all the links you messaged to your team this week. I'm bad at keeping secrets"),
-    DescriptionElements("You're turning into a link finding factory :factory:!"),
-    DescriptionElements("Man, you really hit the links :golf: hard this week! See what I mean?!"),
-    DescriptionElements("You're making it rain :umbrella:! Check out all these links!"),
-    DescriptionElements("Since you stashed so many links, I think you should watch cat :cat: videos the rest of the day. Go ahead, you earned it."),
-    DescriptionElements("You must love The Legend of Zelda :princess: because this link obsession is obvi."),
-    DescriptionElements("You might wanna cool it on the caffeine :coffee:! I mean, this is a lot of hyperlinks."),
-    DescriptionElements("You're turning link capturing into a science :microscope:!"),
-    DescriptionElements("You racked up a baker's dozen :doughnut: links this week. Reward yourself with donut!"),
-    DescriptionElements("Wow! You've added more links than you can shake a stick at :ice_hockey_stick_and_puck:"),
-    DescriptionElements("No need to :fishing_pole_and_fish: for your links.  We've got your summary right here."),
-    DescriptionElements("Don't worry!  We didn't :maple_leaf: your links behind.  Here they are!"),
-    DescriptionElements("You've gotta be :cat2: kitten me, right meow.  Did you really save all those links?!")
-  )
 }
