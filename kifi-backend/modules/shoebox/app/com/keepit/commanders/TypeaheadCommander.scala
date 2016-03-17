@@ -361,26 +361,25 @@ class TypeaheadCommander @Inject() (
 
   def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
     val allRecentInteractions = interactionCommander.getRecentInteractions(userId)
-    val relevantInteractions = limit.map(allRecentInteractions.take(_)) getOrElse allRecentInteractions
-    val (userIds, emailAddresses) = relevantInteractions.foldLeft((Seq.empty[Id[User]], Seq.empty[EmailAddress])) {
-      case ((userIds, emailAddresses), InteractionInfo(UserInteractionRecipient(userId), _)) => (userIds :+ userId, emailAddresses)
-      case ((userIds, emailAddresses), InteractionInfo(EmailInteractionRecipient(emailAddress), _)) => (userIds, emailAddresses :+ emailAddress)
-    }
+    val relevantInteractions = limit.map(allRecentInteractions.take) getOrElse allRecentInteractions
+    val grouped = interactionCommander.grouped(relevantInteractions)
+    val userIds = grouped.users
+    val emailAddresses = grouped.emails
 
     val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
     val users = userIds.map(id => id -> usersById(id))
-    val contacts = emailAddresses.map(BasicContact(_)) // TODO(Aaron): include contact name if address is in user's address book
+    val contacts = emailAddresses.map(BasicContact(_))
     (users, contacts)
   }
 
   def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
-        case ((users, contacts), nextContact: RichContact) => (users, contacts :+ nextContact)
-        case ((users, contacts), nextUser: User) => (users :+ nextUser, contacts)
-        case ((users, contacts), nextHit) =>
+        case ((us, cs), nextContact: RichContact) => (us, cs :+ nextContact)
+        case ((us, cs), nextUser: User) => (us :+ nextUser, cs)
+        case ((us, cs), nextHit) =>
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
-          (users, contacts)
+          (us, cs)
       }
       (
         users.collect { case user if includeSelf || !user.id.contains(userId) => user.id.get -> BasicUser.fromUser(user) },
@@ -397,16 +396,12 @@ class TypeaheadCommander @Inject() (
         // Start futures
         val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
 
-        val startTime = System.currentTimeMillis()
-
         val (userOrder, contactOrder) = suggestFriendsAndContacts(userId, None) |> {
           case (users, contacts) =>
             val userOrder = users.zipWithIndex.map(u => u._1._1 -> u._2).toMap
             val contactOrder = contacts.zipWithIndex.toMap
             (userOrder.withDefaultValue(limit.getOrElse(500)), contactOrder.withDefaultValue(limit.getOrElse(500)))
         }
-
-        log.info(s"[searchForContacts] Ordering results for $userId took ${System.currentTimeMillis() - startTime}ms")
 
         val rankedFriends = friends.imap {
           case (users, contacts) =>

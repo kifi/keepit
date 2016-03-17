@@ -52,7 +52,7 @@ class ExtUserController @Inject() (
           "pictureName" -> ("../../../../" + org.avatarPath.path: String), // one weird trick
           "kind" -> "org",
           "avatarPath" -> (org.avatarPath.path: String),
-          "handle" -> org.handle
+          "handle" -> org.handle.value
         )
       }.toList
     }
