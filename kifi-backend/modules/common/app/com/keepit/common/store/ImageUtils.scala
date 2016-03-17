@@ -121,7 +121,10 @@ class ImageUtils @Inject() () {
     // This forces an image to use RGB and to use white as the transparency color if the source image supports it
     // However, this can still fail on different color modes, especially from images explicitly saved as CMYK from
     // Adobe software. The true solution is to use a full featured image processor, like imagemagick.
-    val imageRGB = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
+    // from time to time one of the lines here is throwing NPE, breaking the code down a bit to narrow on the problem.
+    val width = image.getWidth
+    val heigth = image.getHeight
+    val imageRGB = new BufferedImage(width, heigth, BufferedImage.TYPE_INT_RGB)
     val g = imageRGB.createGraphics()
     g.setColor(Color.WHITE)
     g.fillRect(0, 0, image.getWidth, image.getHeight)
