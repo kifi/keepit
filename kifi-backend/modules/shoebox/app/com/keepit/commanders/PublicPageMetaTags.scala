@@ -10,7 +10,7 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
 import scala.concurrent.duration.Duration
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 20
+  override val version = 21
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
@@ -19,7 +19,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserMetadataKey(id: Id[User], tab: UserProfileTab) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_metadata_by_id"
   def toKey(): String = s"${id.id.toString}:${tab.paths.mkString("")}"
 }
@@ -28,7 +28,7 @@ class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostP
   extends JsonCacheImpl[UserMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class OrgMetadataKey(id: Id[Organization]) extends Key[String] {
-  override val version = 2
+  override val version = 3
   val namespace = "org_metadata_by_id"
   def toKey(): String = s"${id.id.toString}"
 }
@@ -37,7 +37,7 @@ class OrgMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[OrgMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepMetadataKey(id: Id[Keep]) extends Key[String] {
-  override val version = 4
+  override val version = 5
   val namespace = "keep_metadata_by_id"
   def toKey(): String = s"${id.id.toString}"
 }
@@ -77,7 +77,7 @@ trait PublicPageMetaTags {
   def formatOpenGraphForKeep: String
 }
 
-case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
+case class PublicPageMetaPrivateTags(urlPathOnly: String, mobileDeeplink: String) extends PublicPageMetaTags {
 
   def formatOpenGraphForLibrary: String = formatOpenGraph
 
@@ -90,7 +90,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
   private def formatOpenGraph: String =
     s"""
       |<meta name="robots" content="noindex">
-      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=$mobileDeeplink">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
     """.stripMargin
@@ -99,7 +99,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
 case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String,
     feedName: Option[String], unsafeDescription: String, images: Seq[String], facebookId: Option[String],
     createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, profileUrl: String,
-    noIndex: Boolean, related: Seq[String]) extends PublicPageMetaTags {
+    noIndex: Boolean, related: Seq[String], mobileDeeplink: String) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -178,16 +178,16 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
     s"""
       |<title>$title</title>
-      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly">
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=$mobileDeeplink">
       |<meta name="apple-mobile-web-app-capable" content="no">
       |<meta name="google-play-app" content="app-id=com.kifi">
       |<meta property="og:description" content="$description">
       |<meta property="og:title" content="$title">
       |<meta property="og:type" content="$ogType">
-      |<meta property="al:iphone:url" content="kifi:/$urlPathOnly">
+      |<meta property="al:iphone:url" content="$mobileDeeplink">
       |<meta property="al:iphone:app_store_id" content="740232575">
       |<meta property="al:iphone:app_name" content="Kifi iPhone App">
-      |<meta property="al:android:url" content="kifi:/$urlPathOnly">
+      |<meta property="al:android:url" content="$mobileDeeplink">
       |<meta property="al:android:package" content="com.kifi">
       |<meta property="al:android:app_name" content="Kifi Android App">
       |<meta property="al:android:class" content="com.kifi.SplashActivity">
@@ -205,10 +205,10 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta name="twitter:url" content="$url">
       |<meta name="twitter:app:name:iphone" content="Kifi iPhone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
-      |<meta name="twitter:app:url:iphone" content="kifi://www.kifi.com$urlPathOnly">
+      |<meta name="twitter:app:url:iphone" content="$mobileDeeplink">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
-      |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">
+      |<meta name="twitter:app:url:googleplay" content="$mobileDeeplink">
       |$twitterImageTags
       |<meta name="twitter:dnt" content="on">
       |<meta itemprop="name" content="$title">

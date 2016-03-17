@@ -36,7 +36,7 @@ class PublicPageMetaTagsTest extends Specification {
     "add rss and atom feeds when includeFeedUrl is true" in {
       val tags = PublicPageMetaFullTags(unsafeTitle = "Unsafe Title", url = "https://www.kifi.com/colin", urlPathOnly = "/colin", unsafeDescription = "Unsafe Description",
         images = Seq(), facebookId = None, feedName = Some("library name"), createdAt = DateTime.now(), updatedAt = DateTime.now(),
-        unsafeFirstName = "Colin", unsafeLastName = "Lane", profileUrl = "profile", noIndex = false, related = Seq())
+        unsafeFirstName = "Colin", unsafeLastName = "Lane", profileUrl = "profile", noIndex = false, related = Seq(), mobileDeeplink = "")
       val metaTags = tags.formatOpenGraphForLibrary.lines.toList
       metaTags.exists { line =>
         line.contains("""type="application/rss+xml"""") && line.contains("""href="https://www.kifi.com/colin/rss"""")
