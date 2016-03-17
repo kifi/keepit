@@ -401,7 +401,7 @@ k.keepNote = k.keepNote || (function () {
           }
           data.$suggestions
             .empty()
-            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')).childNodes)
+            .append(k.formatting.parseStringToElement(results.map(formatTagSuggestion).join('')))
             .position(data.$suggestions.data('position'));
           selectSuggestion(data, data.$suggestions[0].firstChild);
         } else if (data.$suggestions) {
