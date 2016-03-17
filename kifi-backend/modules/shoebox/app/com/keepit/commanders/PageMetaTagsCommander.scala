@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig }
 import com.keepit.common.util.DescriptionElements
+import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
@@ -48,6 +49,7 @@ class PageMetaTagsCommander @Inject() (
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    normalizedUriRepo: NormalizedURIRepo,
     applicationConfig: FortyTwoConfig,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryRepo: LibraryRepo,
@@ -122,10 +124,11 @@ class PageMetaTagsCommander @Inject() (
   }
 
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
-    val (owner, urlPathOnly) = db.readOnlyMaster { implicit s =>
+    val (owner, urlPathOnly, mobileDeeplink) = db.readOnlyMaster { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
       val urlPathOnly = pathCommander.getPathForLibrary(library)
-      (owner, urlPathOnly)
+      val mobileDeeplink = DeepLinkRouter.generateMobileDeeplink(DeepLinkRouter.libraryLink(Library.publicId(library.id.get), None))
+      (owner, urlPathOnly, mobileDeeplink)
     }
     val altDescF: Future[Option[String]] = if (library.description.exists(_.size > 10)) {
       Future.successful(None)
@@ -133,7 +136,7 @@ class PageMetaTagsCommander @Inject() (
       selectKeepsDescription(library.id.get)
     }
     if (library.visibility != PUBLISHED) {
-      Future.successful(PublicPageMetaPrivateTags(urlPathOnly))
+      Future.successful(PublicPageMetaPrivateTags(urlPathOnly, mobileDeeplink))
     } else {
       val relatedLibrariesLinksF: Future[Seq[String]] = relatedLibrariesLinks(library)
       val metaInfoF = db.readOnlyMasterAsync { implicit s =>
@@ -172,7 +175,9 @@ class PageMetaTagsCommander @Inject() (
           unsafeLastName = owner.lastName,
           getUserProfileUrl(owner.username),
           noIndex = lowQualityLibrary,
-          related = relatedLibrariesLinks)
+          related = relatedLibrariesLinks,
+          mobileDeeplink = mobileDeeplink
+        )
       }
     }
   }
@@ -224,7 +229,9 @@ class PageMetaTagsCommander @Inject() (
         unsafeLastName = user.lastName,
         profileUrl = url,
         noIndex = countLibraries == 0, //no public libraries - no index
-        related = Seq.empty)
+        related = Seq.empty,
+        mobileDeeplink = DeepLinkRouter.generateMobileDeeplink(DeepLinkRouter.userLink(user.externalId))
+      )
     }
   }
 
@@ -252,13 +259,16 @@ class PageMetaTagsCommander @Inject() (
         unsafeLastName = "",
         profileUrl = url.getOrElse(""),
         noIndex = countLibraries == 0, //no public libraries - no index
-        related = Seq.empty)
+        related = Seq.empty,
+        mobileDeeplink = DeepLinkRouter.generateMobileDeeplink(DeepLinkRouter.organizationLink(Organization.publicId(org.id.get), authToken = None))
+      )
     }
   }
 
   def keepMetaTags(keep: Keep): Future[PublicPageMetaTags] = {
     val urlPath = keepPathOnly(keep)
     val url = getKeepProfileUrl(keep)
+    val uriFut = db.readOnlyMasterAsync(implicit s => normalizedUriRepo.get(keep.uriId))
     val authorFut = db.readOnlyMasterAsync { implicit s =>
       val source = keepSourceCommander.getSourceAttributionForKeeps(Set(keep.id.get)).get(keep.id.get)
       source.map { case (attr, userOpt) => BasicAuthor(attr, userOpt) }
@@ -269,6 +279,7 @@ class PageMetaTagsCommander @Inject() (
     }
     val summaryFut = rover.getArticleSummaryByUris(Set(keep.uriId))
     for {
+      uri <- uriFut
       authorOpt <- authorFut
       libraries <- librariesFut
       imageOpt <- imageFut
@@ -294,7 +305,8 @@ class PageMetaTagsCommander @Inject() (
         unsafeLastName = splitName.flatMap(_.lastOption).getOrElse(""),
         profileUrl = url,
         noIndex = libraries.values.count(_.visibility == PUBLISHED) == 0,
-        related = Seq.empty
+        related = Seq.empty,
+        mobileDeeplink = DeepLinkRouter.generateMobileDeeplink(DeepLinkRouter.keepLink(Keep.publicId(keep.id.get), uri.externalId, authToken = None))
       )
     }
   }

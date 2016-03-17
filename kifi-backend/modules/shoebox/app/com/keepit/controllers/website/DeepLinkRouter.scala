@@ -10,6 +10,7 @@ import com.keepit.common.path.Path
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject }
 import com.keepit.common.http._
+import play.utils.UriEncoding
 
 case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
@@ -103,10 +104,15 @@ class DeepLinkRouterImpl @Inject() (
 }
 
 object DeepLinkRouter {
-  private def authTokenField(authTokenOpt: Option[String]) = authTokenOpt.map(t => Json.obj(DeepLinkField.AuthToken -> t)).getOrElse(Json.obj(Seq.empty: _*))
+  def generateMobileDeeplink(data: JsObject): String = s"kifi://open?data=${UriEncoding.encodePathSegment(Json.stringify(data), "ascii")}"
+
   def libraryLink(libId: PublicId[Library], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id) ++ authTokenField(authToken)
   def organizationLink(orgId: PublicId[Organization], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.OrganizationView, DeepLinkField.OrganizationId -> orgId.id) ++ authTokenField(authToken)
-  def keepLink(keepId: PublicId[Keep], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.DiscussionView, DeepLinkField.KeepId -> keepId.id) ++ authTokenField(authToken)
+  def keepLink(keepId: PublicId[Keep], uriId: ExternalId[NormalizedURI], authToken: Option[String]): JsObject = Json.obj("t" -> DeepLinkType.DiscussionView, DeepLinkField.KeepId -> keepId.id, DeepLinkField.UriId -> uriId.id) ++ authTokenField(authToken)
+  def userLink(userId: ExternalId[User]): JsObject = Json.obj("t" -> DeepLinkType.UserView, DeepLinkField.UserId -> userId.id)
+
+  private def authTokenField(authTokenOpt: Option[String]) = authTokenOpt.map(t => Json.obj(DeepLinkField.AuthToken -> t)).getOrElse(Json.obj(Seq.empty: _*))
+
 }
 
 object DeepLinkType {
