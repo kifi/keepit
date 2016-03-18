@@ -15,7 +15,7 @@ object SlackOAuthController {
 
 @Singleton
 class SlackOAuthController @Inject() (
-  slackClient: SlackClient,
+  slackClient: SlackClientWrapper,
   slackIdentityCommander: SlackIdentityCommander,
   slackAuthCommander: SlackAuthenticationCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,

@@ -204,10 +204,11 @@ class AuthController @Inject() (
             }
         } catch {
           case ex: AccessDeniedException => {
+            log.error("[handleAuth] Unable to log user in. Access was denied.", ex)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
           case other: Throwable => {
-            log.error("Unable to log user in. An exception was thrown", other)
+            log.error("[handleAuth] Unable to log user in. An exception was thrown", other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
