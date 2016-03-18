@@ -56,10 +56,10 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
             val memberships = teams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
 
             val expected = {
-              val legalTeams = teams.filter(t => t.noPersonalDigestsUntil.exists(time => time isBefore now)).map(_.slackTeamId).toSet
-              val legalMemberships = memberships.filter(m => legalTeams.contains(m.slackTeamId) && m.nextPersonalDigestAt.exists(time => time isBefore now))
-              val bestByTeam = legalMemberships.groupBy(_.slackTeamId).mapValues(_.sortBy(m => (m.nextPersonalDigestAt.get, m.id.get)).head)
-              bestByTeam.values.toList.sortBy(m => (m.nextPersonalDigestAt.get, m.id.get)).map(_.id.get).take(10)
+              val legalTeams = teams.filter(t => t.noPersonalDigestsUntil isBefore now).map(_.slackTeamId).toSet
+              val legalMemberships = memberships.filter(m => legalTeams.contains(m.slackTeamId) && (m.nextPersonalDigestAt isBefore now))
+              val bestByTeam = legalMemberships.groupBy(_.slackTeamId).mapValues(_.sortBy(m => (m.nextPersonalDigestAt, m.id.get)).head)
+              bestByTeam.values.toList.sortBy(m => (m.nextPersonalDigestAt, m.id.get)).map(_.id.get).take(10)
             }
             val actual = {
               inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now, vipTeams = teams.map(_.slackTeamId).toSet).toList
