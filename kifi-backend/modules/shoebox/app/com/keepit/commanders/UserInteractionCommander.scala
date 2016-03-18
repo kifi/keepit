@@ -8,6 +8,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject }
 
+import scala.collection.mutable
+
 class UserInteractionCommander @Inject() (
     db: Database,
     userValueRepo: UserValueRepo) extends Logging {
@@ -23,8 +25,21 @@ class UserInteractionCommander @Inject() (
       case (LibraryInteraction(id), interaction) => Json.obj("library" -> id, "action" -> interaction.value)
     }
 
+    val limited = {
+      val existing = mutable.Map.empty[JsObject, Int].withDefaultValue(0)
+      interactions.filter { int =>
+        val cnt = existing(int)
+        if (cnt < UserInteraction.maximumInteractionsPerRecipient) {
+          existing.put(int, cnt + 1)
+          true
+        } else {
+          false
+        }
+      }
+    }
+
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
-    val newInteractions = newJson.reverse ++ interactions.take(UserInteraction.maximumInteractions - 1)
+    val newInteractions = newJson.reverse ++ limited.take(UserInteraction.maximumInteractions - 1)
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
     }
@@ -95,6 +110,7 @@ object UserInteraction {
   case object KEPT_TO_LIBRARY extends UserInteraction("keep_to_library", 2.0)
 
   val maximumInteractions = 250
+  val maximumInteractionsPerRecipient = 25
 
   def getAction(action: String) = {
     action match {
