@@ -20,6 +20,8 @@ import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, He
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.controllers.core.PostRegIntent._
+import com.keepit.shoebox.controllers.TrackingActions
+import com.keepit.slack.SlackAnalytics
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
@@ -27,14 +29,13 @@ import com.kifi.macros.json
 import play.api.Play
 import play.api.Play._
 import play.api.i18n.Messages
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{ JsNumber, JsValue, Json }
 import play.api.mvc._
 import securesocial.core._
 import securesocial.core.providers.utils.RoutesHelper
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 object AuthController {
@@ -136,8 +137,10 @@ class AuthController @Inject() (
     userIdentityHelper: UserIdentityHelper,
     pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
+    implicit val slackAnalytics: SlackAnalytics,
     implicit val secureSocialClientIds: SecureSocialClientIds,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController with TrackingActions with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
@@ -589,7 +592,7 @@ class AuthController @Inject() (
     Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None).url, SEE_OTHER)
   }
 
-  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = MaybeUserAction { implicit request =>
+  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = (MaybeUserAction andThen SlackClickTracking(slackTeamId, "startWithSlack")) { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))

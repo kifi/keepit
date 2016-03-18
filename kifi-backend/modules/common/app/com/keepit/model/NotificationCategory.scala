@@ -99,6 +99,7 @@ object NotificationCategory {
     val NEW_KEEP = NotificationCategory("new_keep")
     val NEW_COMMENT = NotificationCategory("new_comment")
     val SETTINGS_TOGGLE = NotificationCategory("settings_toggle")
+    val BOT_SETTINGS_UPGRADE = NotificationCategory("bot_settings_upgrade_dm")
 
     val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION, BILLING)
 
