@@ -37,27 +37,33 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     extends Logging {
   import SlackPersonalDigestConfig._
 
+  private final case class OptionOrString[T](x: Either[String, T])
+
   @StatsdTiming("SlackPersonalDigestNotificationActor.createPersonalDigest")
-  def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): Option[SlackPersonalDigest] = {
+  def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): Either[String, SlackPersonalDigest] = {
     for {
-      slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId)
-      orgId <- slackTeam.organizationId
-      org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
-      _ <- Some(true) if (membership.personalDigestSetting match {
+      slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).map(Right(_)).getOrElse(Left("no slack team")).right
+      orgId <- slackTeam.organizationId.map(Right(_)).getOrElse(Left("no org id on slack team")).right
+      org <- orgInfoCommander.getBasicOrganizationHelper(orgId).map(Right(_)).getOrElse(Left(s"no basic org for $orgId")).right
+      z <- Either.cond(membership.personalDigestSetting match {
         case SlackPersonalDigestSetting.On => true
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
-      })
-      digest = SlackPersonalDigest(
+      }, true, "digests not enabled").right
+      digest <- Right(SlackPersonalDigest(
         slackMembership = membership,
         slackTeam = slackTeam,
         allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
-      )
-      relevantDigest <- Some(digest).filter(_.numIngestedMessages >= minIngestedMessagesForPersonalDigest)
-    } yield relevantDigest
+      )).right
+      _ <- Either.cond(digest.numIngestedMessages < minIngestedMessagesForPersonalDigest, (), "not enough ingested messages").right
+      _ <- Either.cond(
+        membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
+        (), "this is the first digest and the most recent message is old"
+      ).right
+    } yield digest
   }
 
   private def getIngestedMessagesForSlackUser(membership: SlackTeamMembership)(implicit session: RSession): Map[SlackChannelIdAndPrettyName, Seq[(Keep, PrettySlackMessage)]] = {
@@ -92,7 +98,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     import DescriptionElements._
     val slackTeamId = digest.slackMembership.slackTeamId
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (kId, msg) => msg.timestamp }
+    val (mostRecentKeep, mostRecentIngestedMsg) = digest.mostRecentMessage
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val numMembersOnKifi = digest.allMembers.count(stm => stm.userId.isDefined)
@@ -126,7 +132,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     val linkToUnsubscribe = LinkElement(pathCommander.slackPersonalDigestToggle(digest.slackMembership.slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val text = prng.choice(puns)
 
-    val (mostRecentKeep, mostRecentIngestedMsg) = digest.ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp.value, k.id.get.id) }
+    val mostRecentKeep = digest.mostRecentMessage._1
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, digest.slackTeam.slackTeamId).withQuery(trackingParams("latestMessage")))
     val attachments = Seq(
       SlackAttachment.simple(DescriptionElements(
