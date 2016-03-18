@@ -46,11 +46,11 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
       slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).withLeft("no slack team")
       orgId <- slackTeam.organizationId.withLeft("no org id on slack team")
       org <- orgInfoCommander.getBasicOrganizationHelper(orgId).withLeft(s"no basic org for $orgId")
-      _ <- RightBias.cond(membership.personalDigestSetting match {
+      _ <- RightBias.unit.filter(membership.personalDigestSetting match {
         case SlackPersonalDigestSetting.On => true
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
-      }, (), "digests not enabled")
+      }, "digests not enabled")
       digest = SlackPersonalDigest(
         slackMembership = membership,
         slackTeam = slackTeam,
@@ -59,10 +59,10 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
       )
-      _ <- RightBias.cond(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, (), "not enough ingested messages")
-      _ <- RightBias.cond(
+      _ <- RightBias.unit.filter(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, "not enough ingested messages")
+      _ <- RightBias.unit.filter(
         membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
-        (), "this is the first digest and the most recent message is old"
+        "this is the first digest and the most recent message is old"
       )
     } yield digest
   }
