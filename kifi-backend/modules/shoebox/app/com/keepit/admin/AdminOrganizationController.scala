@@ -19,7 +19,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.{ SlackEmoji, SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
-import com.keepit.slack.{SlackAnalytics, SlackClientWrapper, SlackClient}
+import com.keepit.slack.{ SlackAnalytics, SlackClientWrapper, SlackClient }
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
@@ -461,7 +461,7 @@ class AdminOrganizationController @Inject() (
     val slackUsersToSendTo = db.readOnlyMaster { implicit s =>
       if (getOwners && members.isEmpty) getOwnersToSendTo()
       else slackMembershipRepo.getAllByIds(members.get)
-    }git
+    }
     sendBackfillScopesDM(slackUsersToSendTo).map {
       case results =>
         Ok(Json.obj(
@@ -485,7 +485,7 @@ class AdminOrganizationController @Inject() (
         def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(mem.slackUserId.asChannel, NotificationCategory.NonUser.BOT_SETTINGS_UPGRADE, Some(subaction))
         val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels))).withQuery(trackingParams("updateSettings"))
         val text = DescriptionElements.formatForSlack(DescriptionElements(
-          s"Kifi team here ${SlackEmoji.wave.value} - we made some major upgrades by creating a bot. To take advantage of them, maybe you'll want to", "update your slack integration settings" --> LinkElement(authLink), ".",
+          s"Kifi team here ${SlackEmoji.wave.value} we made some major upgrades by creating a bot. If you want to take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), ".",
           "\n\n", "Learn more" --> LinkElement("http://blog.kifi.com/personal-stats-via-kifi-bot/"), " about the new features including a bot user & personal stats on your usage."
         ))
         val msg = SlackMessageRequest.fromKifi(text)
