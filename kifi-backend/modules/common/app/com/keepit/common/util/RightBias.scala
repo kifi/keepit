@@ -5,8 +5,6 @@ final class RightBias[L, R](ethr: Either[L, R]) {
   def map[R1](f: R => R1): RightBias[L, R1] = new RightBias(ethr.right.map(f))
   def flatMap[R1](f: R => RightBias[L, R1]): RightBias[L, R1] = ethr.fold[RightBias[L, R1]](l => RightBias.left(l), r => f(r))
   def fold[T](lf: L => T, rf: R => T): T = ethr.fold(lf, rf)
-
-  def filter[L1](test: => Boolean, l: => L1): RightBias[L1, R] = ethr.fold[RightBias[L1, R]](_ => RightBias.left(l), r => if (test) RightBias.right(r) else RightBias.left(l))
 }
 
 object RightBias {
