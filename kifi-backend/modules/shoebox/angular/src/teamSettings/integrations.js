@@ -3,10 +3,12 @@
 angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
-  '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
+  '$scope', '$window', '$analytics', 'orgProfileService', 'profileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
   'slackService', 'profile', 'modalService',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService,
-    profile, modalService) {
+  function ($scope, $window, $analytics, orgProfileService, profileService, messageTicker, libraryService, ORG_PERMISSION,
+   slackService, profile, modalService) {
+
+    var me = profileService.me;
 
     $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
@@ -18,6 +20,10 @@ angular.module('kifi')
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
+    $scope.slackMembership = me.slack && profileService.me.slack.memberships.filter(function (mem) {
+      return profile.organization.id === mem.orgId;
+    })[0];
+    $scope.isAdmin = me.experiments.indexOf('admin') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -159,9 +165,17 @@ angular.module('kifi')
       messageTicker({ text: 'Odd, that didn’t work. Try again?', type: 'red' });
     }
 
-    $scope.onClickedSyncAllSlackChannels = function() {
-      $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
-      slackService.publicSync(profile.organization.id).then(function (resp) {
+    $scope.onClickedSyncAllSlackChannels = function (publicOrPrivate) {
+      $analytics.eventTrack('user_clicked_page',
+        {
+          type: 'orgProfileIntegrations',
+          action: publicOrPrivate === 'public' ? 'syncAllChannels' : 'syncAllPrivateChannels'
+        }
+      );
+
+      var syncP = publicOrPrivate === 'public' ? slackService.publicSync(profile.organization.id) : slackService.privateSync(profile.organization.id);
+
+      syncP.then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
         } else if (resp.redirect) {

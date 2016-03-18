@@ -114,6 +114,7 @@ angular.module('kifi')
       getKifiOrgsForSlackIntegration: get(shoebox, '/slack/add/organizations'),
       getAddSlackIntegrationLink: post(shoebox, '/libraries/:libraryId/slack/add'),
       publicSyncSlack: post(shoebox, '/organizations/:teamId/slack/sync/public'),
+      privateSyncSlack: post(shoebox, '/organizations/:teamId/slack/sync/private'),
       connectSlack: post(shoebox, '/organizations/:teamId/slack/connect?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
 
