@@ -13,15 +13,14 @@ case class LinkedInIdentity(socialUser: SocialUser) extends RichIdentity
 case class TwitterIdentity(socialUser: SocialUser, pictureUrl: Option[String], profileUrl: Option[String]) extends RichIdentity
 case class EmailPasswordIdentity(firstName: String, lastName: String, email: EmailAddress, password: Option[PasswordInfo]) extends RichIdentity
 
-case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, token: Option[SlackUserAccessToken], scopes: Set[SlackAuthScope], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
+case class SlackIdentity(teamId: SlackTeamId, teamName: SlackTeamName, tokenWithScopes: Option[SlackTokenWithScopes], userId: SlackUserId, username: SlackUsername, user: Option[SlackUserInfo]) extends RichIdentity
 object SlackIdentity {
   def apply(auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse, user: Option[SlackUserInfo]): SlackIdentity = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName && !user.exists(_.id != identity.userId))
     SlackIdentity(
       auth.teamId,
       auth.teamName,
-      Some(auth.accessToken),
-      auth.scopes,
+      Some(SlackTokenWithScopes(auth.accessToken, auth.scopes)),
       identity.userId,
       identity.userName,
       user
@@ -42,7 +41,7 @@ object RichIdentity {
       email = slackIdentity.user.map(_.profile.emailAddress.get.address),
       avatarUrl = slackIdentity.user.flatMap(_.profile.avatarUrl),
       authMethod = AuthenticationMethod.OAuth2,
-      oAuth2Info = slackIdentity.token.map(t => (OAuth2Info(t.token, None, None, None)))
+      oAuth2Info = slackIdentity.tokenWithScopes.map(ts => (OAuth2Info(ts.token.token, None, None, None)))
     )
     case EmailPasswordIdentity(firstName, lastName, email, password) =>
       SocialUser(

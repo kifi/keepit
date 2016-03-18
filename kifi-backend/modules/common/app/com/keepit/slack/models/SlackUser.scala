@@ -27,3 +27,4 @@ sealed trait SlackAccessToken {
 @json case class SlackUserAccessToken(token: String) extends SlackAccessToken
 @json case class SlackBotAccessToken(token: String) extends SlackAccessToken
 
+case class SlackTokenWithScopes(token: SlackUserAccessToken, scopes: Set[SlackAuthScope])

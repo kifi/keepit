@@ -106,8 +106,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           SlackUsername("@fake"),
           slackTeam.slackTeamId,
           slackTeam.slackTeamName,
-          Some(SlackUserAccessToken("fake_token")),
-          Set(SlackAuthScope.SearchRead),
+          Some(SlackTokenWithScopes(SlackUserAccessToken("fake_token"), Set(SlackAuthScope.SearchRead))),
           slackUser = None
         )
         db.readWrite { implicit session =>

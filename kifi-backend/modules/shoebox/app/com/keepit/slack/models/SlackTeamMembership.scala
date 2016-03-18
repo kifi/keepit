@@ -13,7 +13,6 @@ import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.SlackActionFail
-import com.keepit.slack.SlackActionFail._
 import com.keepit.model.User
 import com.keepit.social.{ IdentityUserIdCache, IdentityUserIdKey, UserIdentity }
 import org.joda.time.{ DateTime, Duration }
@@ -25,17 +24,11 @@ case class SlackTeamMembershipInternRequest(
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
-  token: Option[SlackUserAccessToken],
-  scopes: Set[SlackAuthScope],
+  tokenWithScopes: Option[SlackTokenWithScopes],
   slackUser: Option[SlackUserInfo])
 
 case class InvalidSlackAccountOwnerException(requestingUserId: Id[User], membership: SlackTeamMembership)
   extends Exception(s"Slack account ${membership.slackUsername.value} in team ${membership.slackTeamName.value} already belongs to Kifi user ${membership.userId}")
-
-case class SlackTokenWithScopes(token: SlackUserAccessToken, scopes: Set[SlackAuthScope])
-object SlackTokenWithScopes {
-  def unapply(stm: SlackTeamMembership): Option[(SlackUserAccessToken, Set[SlackAuthScope])] = stm.token.map(_ -> stm.scopes)
-}
 
 object SlackTeamMembership {
   private val ivSpec = new IvParameterSpec(Array(47, 64, 35, 93, -9, -110, 78, 70, -113, 109, 41, -76, -89, -95, 59, -51))
@@ -56,8 +49,7 @@ object SlackTeamMembership {
       SlackIdentity(
         membership.slackTeamId,
         membership.slackTeamName,
-        membership.token,
-        membership.scopes,
+        membership.tokenWithScopes,
         membership.slackUserId,
         membership.slackUsername,
         membership.slackUser
@@ -78,8 +70,7 @@ case class SlackTeamMembership(
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
-  token: Option[SlackUserAccessToken],
-  scopes: Set[SlackAuthScope],
+  tokenWithScopes: Option[SlackTokenWithScopes],
   slackUser: Option[SlackUserInfo],
   privateChannelsLastSyncedAt: Option[DateTime] = None,
   // Personal digest scheduling nonsense
@@ -93,8 +84,11 @@ case class SlackTeamMembership(
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
-  def tokenWithScopes: Option[SlackTokenWithScopes] = token.map(SlackTokenWithScopes(_, scopes))
-  def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackUserAccessToken] = if (requiredScopes subsetOf scopes) token else None
+  def scopes: Set[SlackAuthScope] = tokenWithScopes.map(_.scopes) getOrElse Set.empty
+  def token: Option[SlackUserAccessToken] = tokenWithScopes.map(_.token)
+  def getTokenIncludingScopes(requiredScopes: Set[SlackAuthScope]): Option[SlackUserAccessToken] = tokenWithScopes.collect {
+    case SlackTokenWithScopes(token, scopes) if (requiredScopes subsetOf scopes) => token
+  }
   def unnotifiedSince: DateTime = lastPersonalDigestAt getOrElse createdAt
 
   def withIngestedMessage(msg: SlackMessage) = {
@@ -116,8 +110,8 @@ case class SlackTeamMembership(
   // This just schedules the digest, it doesn't guarantee that it will happen
   def scheduledForDigestAtLatest(time: DateTime) = this.copy(nextPersonalDigestAt = Some(nextPersonalDigestAt.filter(_ isBefore time).getOrElse(time)))
 
-  def revoked = this.copy(token = None, scopes = Set.empty)
-  def sanitizeForDelete = this.copy(userId = None, token = None, scopes = Set.empty, state = SlackTeamMembershipStates.INACTIVE)
+  def revoked = this.copy(tokenWithScopes = None)
+  def sanitizeForDelete = this.copy(userId = None, tokenWithScopes = None, state = SlackTeamMembershipStates.INACTIVE)
 }
 
 sealed abstract class SlackPersonalDigestSetting(val value: String)
@@ -187,7 +181,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
-    token: Option[SlackUserAccessToken],
+    tokenOpt: Option[SlackUserAccessToken],
     scopes: JsValue,
     slackUser: Option[JsValue],
     privateChannelsLastSyncedAt: Option[DateTime],
@@ -208,8 +202,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       slackUsername,
       slackTeamId,
       slackTeamName,
-      token,
-      scopes.as[Set[SlackAuthScope]],
+      tokenOpt.map(token => SlackTokenWithScopes(token, scopes.as[Set[SlackAuthScope]])),
       slackUser.map(_.as[SlackUserInfo]),
       privateChannelsLastSyncedAt,
       lastPersonalDigestAt = lastPersonalDigestAt,
@@ -232,8 +225,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.slackUsername,
     membership.slackTeamId,
     membership.slackTeamName,
-    membership.token,
-    Json.toJson(membership.scopes),
+    membership.tokenWithScopes.map(_.token),
+    Json.toJson(membership.tokenWithScopes.map(_.scopes).getOrElse(Set.empty)),
     membership.slackUser.map(Json.toJson(_)),
     membership.privateChannelsLastSyncedAt,
     membership.lastPersonalDigestAt,
@@ -299,8 +292,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
           userId = request.userId orElse membership.userId,
-          token = request.token orElse membership.token,
-          scopes = request.scopes,
+          tokenWithScopes = request.tokenWithScopes orElse membership.tokenWithScopes,
           slackUser = request.slackUser orElse membership.slackUser
         )
         if (updated == membership) (membership, false) else (save(updated), (updated.userId != membership.userId))
@@ -312,8 +304,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = request.slackUsername,
           slackTeamId = request.slackTeamId,
           slackTeamName = request.slackTeamName,
-          token = request.token,
-          scopes = request.scopes,
+          tokenWithScopes = request.tokenWithScopes,
           slackUser = request.slackUser,
           nextPersonalDigestAt = None
         )
@@ -334,8 +325,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = message.username,
           slackTeamId = slackTeam.slackTeamId,
           slackTeamName = slackTeam.slackTeamName,
-          token = None,
-          scopes = Set.empty,
+          tokenWithScopes = None,
           slackUser = None,
           lastIngestedMessageTimestamp = Some(message.timestamp),
           nextPersonalDigestAt = None
