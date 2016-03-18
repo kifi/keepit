@@ -60,11 +60,17 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
         sortedScores.map(_.recipient).toList === List(UserInteractionRecipient(user2.id.get), UserInteractionRecipient(user3.id.get), EmailInteractionRecipient(user4))
 
         // test interaction array keeps X most recent interactions
-        for (i <- 1 to UserInteraction.maximumInteractions) {
-          userInteractionCommander.addInteractions(user1.id.get, Seq((UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER)))
+        for (i <- 1 to UserInteraction.maximumInteractions + 1) {
+          userInteractionCommander.addInteractions(user1.id.get, Seq(
+            (UserInteractionRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
+            (UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+          ))
         }
+        userInteractionCommander.addInteractions(user1.id.get, Seq((EmailInteractionRecipient(user4), UserInteraction.MESSAGE_USER)))
+
         db.readOnlyMaster { implicit session =>
-          userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === UserInteraction.maximumInteractions
+          val expectedSize = UserInteraction.maximumInteractionsPerRecipient * 2 + 2 // maxing out user2 and user3, two for user4
+          userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === expectedSize
         }
       }
     }
