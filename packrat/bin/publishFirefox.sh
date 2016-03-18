@@ -161,4 +161,5 @@ else
 
   printf $'\nSuccessfully published Firefox extension.'
   printf $'\nCheck it out at https://addons.mozilla.org/en-US/developers/addons'
+  printf $'\n(to publish the listed extension, you need to manually upload the xpi and source)'
 fi
