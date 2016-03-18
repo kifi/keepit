@@ -22,6 +22,8 @@ final class AnyExtensionOps[A](val x: A) extends AnyVal {
     f(x)
     x
   }
+
+  def min(y: A)(implicit ord: Ordering[A]): A = Seq(x, y).min
 }
 
 final class FuncExtensionOpts[A](f: => A) {
