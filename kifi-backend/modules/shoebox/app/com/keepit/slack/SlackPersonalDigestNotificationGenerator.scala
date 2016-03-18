@@ -51,14 +51,14 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
       }, (), "digests not enabled")
-      digest <- RightBias.right(SlackPersonalDigest(
+      digest = SlackPersonalDigest(
         slackMembership = membership,
         slackTeam = slackTeam,
         allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
-      ))
+      )
       _ <- RightBias.cond(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, (), "not enough ingested messages")
       _ <- RightBias.cond(
         membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
