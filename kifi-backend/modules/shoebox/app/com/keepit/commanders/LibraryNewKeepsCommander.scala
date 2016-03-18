@@ -61,7 +61,7 @@ class LibraryNewKeepsCommander @Inject() (
           case (attr: SlackAttribution, _) =>
             val name = attr.message.username.value
             attr.message.channel.name match {
-              case Some(prettyChannelName) => s"$name added to #$prettyChannelName" + titleString
+              case Some(prettyChannelName) => s"$name added to #${prettyChannelName.value}" + titleString
               case None => s"$name shared" + titleString
             }
         } getOrElse {
