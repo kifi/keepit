@@ -66,7 +66,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackTimestamp)(implicit session: RWSession): Unit
   def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
   def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[SlackChannelToLibrary]
-  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary]
+  def getBySlackTeamAndChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Set[SlackChannelToLibrary]]
   def ingestFromChannelWithin(teamId: SlackTeamId, channelId: SlackChannelId, ingestWithin: Period)(implicit session: RWSession): Int
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit
 }
@@ -260,8 +260,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[SlackChannelToLibrary] = {
     activeRows.filter(r => r.slackTeamId === teamId).list
   }
-  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary] = {
-    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId === channelId).list
+
+  def getBySlackTeamAndChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, Set[SlackChannelToLibrary]] = {
+    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId.inSet(channelIds)).list.toSet.groupBy(_.slackChannelId)
   }
 
   def ingestFromChannelWithin(teamId: SlackTeamId, channelId: SlackChannelId, ingestWithin: Period)(implicit session: RWSession): Int = {

@@ -30,6 +30,7 @@ trait SlackIntegrationCommander {
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
+  def getBySlackChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, SlackChannelIntegrations]
 }
 
 @Singleton
@@ -224,5 +225,23 @@ class SlackIntegrationCommanderImpl @Inject() (
 
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>
     channelToLibRepo.ingestFromChannelWithin(teamId, channelId, SlackIngestionConfig.maxIngestionDelayAfterCommand)
+  }
+
+  def getBySlackChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, SlackChannelIntegrations] = {
+    val channelToLibIntegrationsByChannelId = channelToLibRepo.getBySlackTeamAndChannels(teamId, channelIds)
+    val libToChannelIntegrationsByChannelId = libToChannelRepo.getBySlackTeamAndChannels(teamId, channelIds)
+    channelIds.map { channelId =>
+      val channelToLibIntegrations = channelToLibIntegrationsByChannelId.getOrElse(channelId, Set.empty)
+      val libToChannelIntegrations = libToChannelIntegrationsByChannelId.getOrElse(channelId, Set.empty)
+      val integrationSpaces = (channelToLibIntegrations.map(stl => stl.libraryId -> stl.space) ++ libToChannelIntegrations.map(lts => lts.libraryId -> lts.space)).groupBy(_._1).mapValues(_.map(_._2))
+      channelId -> SlackChannelIntegrations(
+        teamId = teamId,
+        channelId = channelId,
+        allLibraries = channelToLibIntegrations.map(_.libraryId).toSet ++ libToChannelIntegrations.map(_.libraryId),
+        toLibraries = channelToLibIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
+        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
+        spaces = integrationSpaces
+      )
+    }.toMap
   }
 }
