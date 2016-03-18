@@ -59,7 +59,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
       ))
-      _ <- RightBias.cond(digest.numIngestedMessages < minIngestedMessagesForPersonalDigest, (), "not enough ingested messages")
+      _ <- RightBias.cond(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, (), "not enough ingested messages")
       _ <- RightBias.cond(
         membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
         (), "this is the first digest and the most recent message is old"
