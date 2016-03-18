@@ -501,7 +501,7 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId]) = AdminUserAction(parse.tolerantJson) { implicit request =>
+  def backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId]) = AdminUserAction { implicit request =>
     val slackTeamIds = db.readOnlyMaster { implicit session =>
       val allTeamIds = slackTeamRepo.all.sortBy(_.id.get).map(_.slackTeamId)
       fromSlackTeamId match {
