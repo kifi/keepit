@@ -97,7 +97,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getSlackTeamIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], SlackTeamId]
   def getBySlackTeamIdNoCache(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
-  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId])(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[SlackBotUserAuthorization])(implicit session: RWSession): SlackTeam
 
@@ -110,7 +110,6 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 
 @Singleton
 class SlackTeamRepoImpl @Inject() (
-    slackTeamIdCache: SlackTeamIdCache,
     slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
@@ -208,12 +207,10 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.remove(SlackTeamIdKey(model.slackTeamId))
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.remove(SlackTeamIdOrgIdKey(orgId)))
   }
   override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.set(SlackTeamIdKey(model.slackTeamId), model)
-    model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.set(SlackTeamIdOrgIdKey(orgId), model.slackTeamId))
+    deleteCache(model)
   }
 
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam] = {
@@ -240,13 +237,11 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
-    getBySlackTeamIds(Set(slackTeamId), excludeState).get(slackTeamId)
+    rows.filter(r => r.slackTeamId === slackTeamId && r.state =!= excludeState.orNull).firstOption
   }
 
-  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam] = {
-    slackTeamIdCache.bulkGetOrElse(slackTeamIds.map(SlackTeamIdKey(_))) { missingKeys =>
-      rows.filter(row => row.slackTeamId.inSet(missingKeys.map(_.id)) && row.state =!= excludeState.orNull).list.map { team => SlackTeamIdKey(team.slackTeamId) -> team }.toMap
-    }.map { case (SlackTeamIdKey(slackTeamId), team) => slackTeamId -> team }
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId])(implicit session: RSession): Map[SlackTeamId, SlackTeam] = {
+    activeRows.filter(row => row.slackTeamId.inSet(slackTeamIds)).list.map(st => st.slackTeamId -> st).toMap
   }
 
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam] = {
@@ -283,12 +278,4 @@ class SlackTeamRepoImpl @Inject() (
   def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam] = activeRows.filter(r => r.kifiBotToken.isEmpty && r.organizationId.isDefined).list
 
 }
-
-case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 14
-  val namespace = "slack_team_by_slack_team_id"
-  def toKey(): String = id.value
-}
-class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration)*)
-  extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
 

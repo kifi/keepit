@@ -469,10 +469,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new SlackTeamIdOrgIdCache(stats, accessLog, (outerRepo, 7 days))
 
   @Provides @Singleton
-  def slackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SlackTeamIdCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Provides @Singleton
   def slackStateCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SlackAuthStateCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 1 day))
 
