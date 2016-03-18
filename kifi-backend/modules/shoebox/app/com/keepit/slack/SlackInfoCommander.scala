@@ -58,7 +58,13 @@ object OrganizationSlackInfo {
 case class UserSlackInfo(memberships: Seq[UserSlackTeamInfo])
 
 @json
-case class UserSlackTeamInfo(teamId: SlackTeamId, orgId: Option[PublicId[Organization]], teamName: SlackTeamName, slackUserId: SlackUserId, username: SlackUsername)
+case class UserSlackTeamInfo(
+  teamId: SlackTeamId,
+  orgId: Option[PublicId[Organization]],
+  teamName: SlackTeamName,
+  slackUserId: SlackUserId,
+  username: SlackUsername,
+  privateChannelsLastSyncedAt: Option[DateTime])
 
 object UserSlackInfo {
   def empty = UserSlackInfo(memberships = Seq.empty)
@@ -220,7 +226,7 @@ class SlackInfoCommanderImpl @Inject() (
       val memberships = slackTeamMembershipRepo.getByUserId(userId)
       val userSlackTeamInfos = memberships.map { stm =>
         val orgIdOpt = slackTeamRepo.getBySlackTeamId(stm.slackTeamId).flatMap(_.organizationId)
-        UserSlackTeamInfo(stm.slackTeamId, orgIdOpt.map(Organization.publicId), stm.slackTeamName, stm.slackUserId, stm.slackUsername)
+        UserSlackTeamInfo(stm.slackTeamId, orgIdOpt.map(Organization.publicId), stm.slackTeamName, stm.slackUserId, stm.slackUsername, stm.privateChannelsLastSyncedAt)
       }
       UserSlackInfo(userSlackTeamInfos)
     }
