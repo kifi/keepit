@@ -191,15 +191,15 @@ class SlackIngestingActor @Inject() (
   private def ingestMessages(integration: SlackChannelToLibrary, settings: Option[OrganizationSettings], messages: Seq[SlackMessage]): (Option[SlackTimestamp], Set[SlackMessage]) = {
     val slackIdentities = messages.map(_.userId).map(slackUserId => (integration.slackTeamId, slackUserId)).toSet
     val blacklist = settings.flatMap(_.settingFor(ClassFeature.SlackIngestionDomainBlacklist).collect { case blk: ClassFeature.Blacklist => blk })
-    val (library, slackTeam, userBySlackIdentity) = db.readOnlyMaster { implicit s =>
+    val (library, slackTeam, slackMemberships) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(integration.libraryId)
       val slackTeam = slackTeamRepo.getBySlackTeamId(integration.slackTeamId).getOrElse(throw new Exception(s"There is supposed to be a db-level integrity constraint for ${integration.slackTeamId}"))
-      val usersBySlackIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities).flatMap { case (slackIdentity, stm) => stm.userId.map(slackIdentity -> _) }
-      (lib, slackTeam, usersBySlackIdentity)
+      val slackMemberships = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
+      (lib, slackTeam, slackMemberships)
     }
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
-    val rawBookmarksByUser = messages.groupBy(msg => userBySlackIdentity.get((integration.slackTeamId, msg.userId))).map {
-      case (kifiUserOpt, msgs) => kifiUserOpt -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist)).distinctBy(_.url)
+    val rawBookmarksByUser = messages.groupBy(msg => slackMemberships.get((integration.slackTeamId, msg.userId))).collect {
+      case (membershipOpt, msgs) if !membershipOpt.exists(_.isBot) => membershipOpt.flatMap(_.userId) -> msgs.flatMap(toRawBookmarks(_, slackTeam, blacklist)).distinctBy(_.url)
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
