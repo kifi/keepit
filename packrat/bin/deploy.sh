@@ -89,6 +89,13 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
 
     fi
 
+    echo $'\n(to publish Safari, navigate to https://developer.apple.com/safari/extensions/submission/)'
+    echo $'(auth with your Apple ID, then use this Bookmarklet to set all the values)'
+    echo $'(and highlight the fields that need manual intervention and files from ./adapters/safari/gallery/)'
+    echo
+    echo "javascript:'$( git rev-parse HEAD )';$( cat ./adapters/safari/gallery/bookmarklet.js | node node_modules/uglify-js/bin/uglifyjs)"
+    echo
+
   else
 
     echo 'Skipping webstore publishes.'
