@@ -394,7 +394,9 @@ gulp.task('lib-min-styles', function () {
 
 gulp.task('lib-scripts', function () {
   return gulp.src(devFiles(libJsFiles))
+    .pipe(sourcemaps.init())
     .pipe(concat('lib.js'))
+    .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest(outDir));
 });
 
