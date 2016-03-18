@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifierStatic, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeNotifierStatic, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent

@@ -17,7 +17,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.Author
 import org.apache.commons.math3.random.MersenneTwister
-import org.joda.time.Duration
+import org.joda.time.{ Minutes, Duration }
 
 import scala.concurrent.ExecutionContext
 
@@ -42,6 +42,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
 
   @StatsdTiming("SlackPersonalDigestNotificationActor.createPersonalDigest")
   def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): RightBias[String, SlackPersonalDigest] = {
+    val now = clock.now
     for {
       slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).withLeft("no slack team")
       orgId <- slackTeam.organizationId.withLeft("no org id on slack team")
@@ -55,14 +56,14 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
         slackMembership = membership,
         slackTeam = slackTeam,
         allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
-        digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
+        digestPeriod = new Duration(membership.unnotifiedSince, now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
       )
-      _ <- RightBias.unit.filter(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, "not enough ingested messages")
+      _ <- RightBias.unit.filter(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, s"only ${digest.numIngestedMessages} ingested messages since ${membership.unnotifiedSince}")
       _ <- RightBias.unit.filter(
-        membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
-        "this is the first digest and the most recent message is old"
+        membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(now minus maxDelayFromMessageToInitialDigest),
+        s"this is the first digest and the most recent message is ${Minutes.minutesBetween(digest.mostRecentMessage._2.timestamp.toDateTime, now).getMinutes} minutes old"
       )
     } yield digest
   }
