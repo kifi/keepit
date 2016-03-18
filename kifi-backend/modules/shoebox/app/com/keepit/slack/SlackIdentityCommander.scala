@@ -146,7 +146,7 @@ class SlackIdentityCommanderImpl @Inject() (
 
     savedIdentityAndExistingUserScopesOpt match {
       case Some((slackTeamId, slackUserId, SlackTokenWithScopes(userToken, existingUserScopes))) => slackClient.validateToken(userToken).imap {
-        case true => (Some((slackTeamId, slackUserId)), existingUserScopes)
+        case true => (Some((slackTeamId, slackUserId)), existingUserScopes -- SlackAuthScope.ignoredUserScopes)
         case false => (None, Set.empty[SlackAuthScope])
       }
       case None => Future.successful((None, Set.empty[SlackAuthScope]))
