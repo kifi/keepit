@@ -52,6 +52,7 @@ object SlackAuthScope {
   val UsersWrite = SlackAuthScope("users:write")
 
   val inheritableBotScopes: Set[SlackAuthScope] = Set(Bot, UsersRead, TeamRead, ChannelsRead) // scopes covering APIs that can use a user token or the Kifi bot token transparently
+  val ignoredUserScopes: Set[SlackAuthScope] = Set(Bot) // we rely exclusively on the Kifi bot token validity to track bot permissions, not on user scopes
 
   val brokenPush: Set[SlackAuthScope] = Set(Commands, ChatWriteBot)
   val newPush: Set[SlackAuthScope] = Set(Commands, IncomingWebhook)
