@@ -343,16 +343,18 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
-    slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
-      userId = None,
-      slackUserId = user.id,
-      slackUsername = user.name,
-      slackTeamId = slackTeam.slackTeamId,
-      slackTeamName = slackTeam.slackTeamName,
-      tokenWithScopes = None,
-      slackUser = Some(user)
-    ))._1
+  private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): Unit = {
+    if (!user.bot) {
+      slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
+        userId = None,
+        slackUserId = user.id,
+        slackUsername = user.name,
+        slackTeamId = slackTeam.slackTeamId,
+        slackTeamName = slackTeam.slackTeamName,
+        tokenWithScopes = None,
+        slackUser = Some(user)
+      ))
+    }
   }
 
   def checkUserPresence(slackTeamId: SlackTeamId, user: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserPresence] = {
