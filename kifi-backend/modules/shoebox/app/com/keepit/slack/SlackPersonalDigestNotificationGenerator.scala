@@ -10,7 +10,8 @@ import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ DescriptionElements, LinkElement }
+import com.keepit.common.util.{ RightBias, DescriptionElements, LinkElement }
+import com.keepit.common.util.RightBias._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -40,29 +41,29 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
   private final case class OptionOrString[T](x: Either[String, T])
 
   @StatsdTiming("SlackPersonalDigestNotificationActor.createPersonalDigest")
-  def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): Either[String, SlackPersonalDigest] = {
+  def createPersonalDigest(membership: SlackTeamMembership)(implicit session: RSession): RightBias[String, SlackPersonalDigest] = {
     for {
-      slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).map(Right(_)).getOrElse(Left("no slack team")).right
-      orgId <- slackTeam.organizationId.map(Right(_)).getOrElse(Left("no org id on slack team")).right
-      org <- orgInfoCommander.getBasicOrganizationHelper(orgId).map(Right(_)).getOrElse(Left(s"no basic org for $orgId")).right
-      z <- Either.cond(membership.personalDigestSetting match {
+      slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).withLeft("no slack team")
+      orgId <- slackTeam.organizationId.withLeft("no org id on slack team")
+      org <- orgInfoCommander.getBasicOrganizationHelper(orgId).withLeft(s"no basic org for $orgId")
+      _ <- RightBias.unit.filter(membership.personalDigestSetting match {
         case SlackPersonalDigestSetting.On => true
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
-      }, true, "digests not enabled").right
-      digest <- Right(SlackPersonalDigest(
+      }, "digests not enabled")
+      digest <- RightBias.right(SlackPersonalDigest(
         slackMembership = membership,
         slackTeam = slackTeam,
         allMembers = slackMembershipRepo.getBySlackTeam(membership.slackTeamId),
         digestPeriod = new Duration(membership.unnotifiedSince, clock.now),
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
-      )).right
-      _ <- Either.cond(digest.numIngestedMessages < minIngestedMessagesForPersonalDigest, (), "not enough ingested messages").right
-      _ <- Either.cond(
+      ))
+      _ <- RightBias.unit.filter(digest.numIngestedMessages < minIngestedMessagesForPersonalDigest, "not enough ingested messages")
+      _ <- RightBias.unit.filter(
         membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(clock.now minus maxDelayFromMessageToInitialDigest),
-        (), "this is the first digest and the most recent message is old"
-      ).right
+        "this is the first digest and the most recent message is old"
+      )
     } yield digest
   }
 
