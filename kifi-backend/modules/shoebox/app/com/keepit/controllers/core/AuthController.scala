@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{AirbrakeNotifierStatic, AirbrakeNotifier}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
@@ -25,6 +25,7 @@ import com.keepit.slack.SlackAnalytics
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
+import com.keepit.social.providers.ProviderController._
 import com.kifi.macros.json
 import play.api.Play
 import play.api.Play._
@@ -208,7 +209,9 @@ class AuthController @Inject() (
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
           case other: Throwable => {
-            log.error("[handleAuth] Unable to log user in. An exception was thrown", other)
+            val message = "[handleAuth] Unable to log user in. An exception was thrown"
+            log.error(message, other)
+            airbrake.notify(message, other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
