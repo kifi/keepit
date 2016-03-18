@@ -1,9 +1,8 @@
 package com.keepit.social.providers
 
-import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession
 import com.keepit.common.logging.Logging
-import com.keepit.social.{ IdentityHelpers, UserIdentity$ }
+import com.keepit.social.IdentityHelpers
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._
@@ -13,6 +12,7 @@ import providers.utils.RoutesHelper
 import securesocial.core.LoginEvent
 import securesocial.core.AccessDeniedException
 import securesocial.controllers.TemplatesPlugin
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 
 /**
  * A controller to provide the authentication entry point
@@ -96,7 +96,9 @@ object ProviderController extends Controller with Logging {
           }
 
           case other: Throwable => {
-            log.error("[handleAuth] Unable to log user in. An exception was thrown", other)
+            val message = "[handleAuth] Unable to log user in. An exception was thrown"
+            log.error(message, other)
+            AirbrakeNotifierStatic.notify(message, other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
