@@ -19,7 +19,7 @@ import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.{ SlackEmoji, SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
-import com.keepit.slack.{ SlackAnalytics, SlackClientWrapper, SlackClient }
+import com.keepit.slack.{ SlackChannelCommander, SlackAnalytics, SlackClientWrapper, SlackClient }
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
@@ -62,6 +62,7 @@ class AdminOrganizationController @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     pathCommander: PathCommander,
     slackAnalytics: SlackAnalytics,
+    slackChannelCommander: SlackChannelCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
@@ -498,5 +499,24 @@ class AdminOrganizationController @Inject() (
           }
           .recover { case _ => acc + (mem.id.get -> false) }
     }
+  }
+
+  def backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId]) = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val slackTeamIds = db.readOnlyMaster { implicit session =>
+      val allTeamIds = slackTeamRepo.all.sortBy(_.id.get).map(_.slackTeamId)
+      fromSlackTeamId match {
+        case Some(teamId) => allTeamIds.dropWhile(_ != teamId)
+        case None => allTeamIds
+      }
+    }
+    FutureHelpers.sequentialExec(slackTeamIds) { slackTeamId =>
+      log.info(s"[backfillSlackStuff] Processing Slack team ${slackTeamId.value}")
+      for {
+        _ <- slackClient.getTeamInfo(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching team for Slack team ${slackTeamId.value}", error) }
+        _ <- slackClient.getUsers(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching users for Slack team ${slackTeamId.value}") }
+        _ <- slackChannelCommander.syncChannelMemberships(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed syncing channel members for Slack team ${slackTeamId.value}", error) }
+      } yield log.info(s"[backfillSlackStuff] Done processing Slack team ${slackTeamId.value}")
+    }
+    Ok("I'm on it.")
   }
 }
