@@ -28,7 +28,7 @@ case class SlackTeam(
   channelsLastSyncingAt: Option[DateTime] = None,
   channelsSynced: Set[SlackChannelId] = Set.empty,
   kifiBot: Option[KifiSlackBot],
-  noPersonalDigestsUntil: Option[DateTime] = None)
+  noPersonalDigestsUntil: DateTime = currentDateTime)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -36,8 +36,7 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = Some(time))
-  def withNoPersonalDigestsEver = this.copy(noPersonalDigestsUntil = None)
-  def withNoPersonalDigestsUntil(time: DateTime) = this.copy(noPersonalDigestsUntil = Some(time))
+  def withNoPersonalDigestsUntil(time: DateTime) = this.copy(noPersonalDigestsUntil = time)
   def withPublicChannelsSyncedAt(time: DateTime) = publicChannelsLastSyncedAt match {
     case Some(lastSync) if lastSync isAfter time => this
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
@@ -86,7 +85,7 @@ object SlackTeam {
     (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime] and
     (__ \ 'channelsSynced).format[Set[SlackChannelId]] and
     (__ \ 'kifiBot).formatNullable[KifiSlackBot] and
-    (__ \ 'noPersonalDigestsUntil).formatNullable[DateTime]
+    (__ \ 'noPersonalDigestsUntil).format[DateTime]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -141,7 +140,7 @@ class SlackTeamRepoImpl @Inject() (
     channelsSynced: Set[SlackChannelId],
     kifiBotUserId: Option[SlackUserId],
     kifiBotToken: Option[SlackBotAccessToken],
-    noPersonalDigestsUntil: Option[DateTime]) = {
+    noPersonalDigestsUntil: DateTime) = {
     SlackTeam(
       id,
       createdAt,
@@ -191,7 +190,7 @@ class SlackTeamRepoImpl @Inject() (
     def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
     def kifiBotUserId = column[Option[SlackUserId]]("kifi_bot_user_id", O.Nullable)
     def kifiBotToken = column[Option[SlackBotAccessToken]]("kifi_bot_token", O.Nullable)
-    def noPersonalDigestsUntil = column[Option[DateTime]]("no_personal_digests_until", O.Nullable)
+    def noPersonalDigestsUntil = column[DateTime]("no_personal_digests_until", O.NotNull)
     def * = (
       id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId,
       generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsLastSyncingAt, channelsSynced,

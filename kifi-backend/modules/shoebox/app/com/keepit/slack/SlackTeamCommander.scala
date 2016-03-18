@@ -188,11 +188,12 @@ class SlackTeamCommanderImpl @Inject() (
     val now = clock.now
     val membershipOpt = db.readWrite { implicit s =>
       slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map { membership =>
-        if (turnOn && membership.nextPersonalDigestAt.isEmpty) {
-          slackTeamMembershipRepo.save(membership.withNextPersonalDigestAt(now))
-        } else if (!turnOn && membership.nextPersonalDigestAt.isDefined) {
-          slackTeamMembershipRepo.save(membership.withNoNextPersonalDigest)
-        } else membership
+        val updated = if (turnOn) {
+          membership.withNextPersonalDigestAt(now)
+        } else {
+          membership.withNoNextPersonalDigest
+        }
+        if (updated != membership) slackTeamMembershipRepo.save(updated) else membership
       }
     }
     import DescriptionElements._
