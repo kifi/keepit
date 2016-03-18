@@ -61,6 +61,7 @@ class AdminOrganizationController @Inject() (
     orgStatsCommander: OrgStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
     pathCommander: PathCommander,
+    slackAnalytics: SlackAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
@@ -482,7 +483,8 @@ class AdminOrganizationController @Inject() (
     import DescriptionElements._
     FutureHelpers.foldLeft(members)(Map.empty[Id[SlackTeamMembership], Boolean]) {
       case (acc, mem) =>
-        def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(mem.slackUserId.asChannel, NotificationCategory.NonUser.BOT_SETTINGS_UPGRADE, Some(subaction))
+        val category = NotificationCategory.NonUser.BOT_SETTINGS_UPGRADE
+        def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(mem.slackUserId.asChannel, category, Some(subaction))
         val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels))).withQuery(trackingParams("updateSettings"))
         val text = DescriptionElements.formatForSlack(DescriptionElements(
           s"Kifi team here ${SlackEmoji.wave.value} we made some major upgrades by creating a bot. If you want to take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), ".",
@@ -491,6 +493,7 @@ class AdminOrganizationController @Inject() (
         val msg = SlackMessageRequest.fromKifi(text)
         slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg)
           .map { _ =>
+            slackAnalytics.trackNotificationSent(mem.slackTeamId, mem.slackUserId.asChannel, mem.slackUsername.asChannelName, category)
             acc + (mem.id.get -> true)
           }
           .recover { case _ => acc + (mem.id.get -> false) }
