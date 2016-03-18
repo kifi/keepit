@@ -20,6 +20,7 @@ import scala.util.{ Failure, Success }
 object SlackPersonalDigestConfig {
   val minDelayInsideTeam = Duration.standardMinutes(1)
 
+  val maxDelayFromMessageToInitialDigest = Duration.standardMinutes(10)
   val delayAfterSuccessfulDigest = Duration.standardDays(7)
   val delayAfterFailedDigest = Duration.standardDays(1)
   val delayAfterNoDigest = Duration.standardHours(6)
@@ -83,13 +84,13 @@ class SlackPersonalDigestNotificationActor @Inject() (
       (membership, digestOpt)
     }
     digestOpt match {
-      case None =>
-        slackLog.info(s"Considered sending a personal digest to ${membership.slackUsername} in ${membership.slackTeamName} but opted not to")
+      case Left(reasonForNoDigest) =>
+        slackLog.info(s"Considered sending a personal digest to ${membership.slackUsername} in ${membership.slackTeamName} but opted not to because", reasonForNoDigest)
         db.readWrite { implicit s =>
           slackMembershipRepo.finishProcessing(membershipId, delayAfterNoDigest)
         }
         Future.successful(())
-      case Some(digest) =>
+      case Right(digest) =>
         val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) digestGenerator.messageForFirstTimeDigest(digest) else digestGenerator.messageForRegularDigest(digest)
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>

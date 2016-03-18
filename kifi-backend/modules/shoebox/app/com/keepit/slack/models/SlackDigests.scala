@@ -30,4 +30,5 @@ case class SlackPersonalDigest(
     ingestedMessagesByChannel: Map[SlackChannelIdAndPrettyName, Seq[(Keep, PrettySlackMessage)]]) {
   lazy val numIngestedMessagesByChannel = ingestedMessagesByChannel.mapValues(_.length)
   lazy val numIngestedMessages = numIngestedMessagesByChannel.values.sum
+  lazy val mostRecentMessage = ingestedMessagesByChannel.values.flatten.maxBy { case (k, msg) => (msg.timestamp.value, k.id.get.id) }
 }

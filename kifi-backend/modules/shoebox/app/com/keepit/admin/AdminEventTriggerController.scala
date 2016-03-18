@@ -106,15 +106,13 @@ class AdminEventTriggerController @Inject() (
       } yield (team, membership)
     }.map {
       case Some((team, membership)) =>
-        val digest = db.readOnlyMaster { implicit s => slackPersonalDigestGenerator.createPersonalDigest(membership) }
-        val msg = digest.map { d =>
-          if (trigger.forceFirst) slackPersonalDigestGenerator.messageForFirstTimeDigest(d)
-          else slackPersonalDigestGenerator.messageForRegularDigest(d)
-        }
-        msg.foreach { msg =>
+        val digestOpt = db.readOnlyMaster { implicit s => slackPersonalDigestGenerator.createPersonalDigest(membership) }
+        digestOpt.fold(reasonForNoDigest => Json.obj("ok" -> false, "reason" -> reasonForNoDigest), { digest =>
+          val msg = if (trigger.forceFirst) slackPersonalDigestGenerator.messageForFirstTimeDigest(digest)
+          else slackPersonalDigestGenerator.messageForRegularDigest(digest)
           slackClient.sendToSlackHoweverPossible(trigger.team, trigger.user.asChannel, msg)
-        }
-        Json.obj("ok" -> true, "digest_sent" -> digest.isDefined)
+          Json.obj("ok" -> true)
+        })
       case None =>
         Json.obj("ok" -> false, "err" -> "could not find team")
     }
