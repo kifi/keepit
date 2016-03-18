@@ -27,6 +27,9 @@ angular.module('kifi')
       publicSync: function (teamId) {
         return net.publicSyncSlack(teamId).then(dataLens);
       },
+      privateSync: function (teamId) {
+        return net.privateSyncSlack(teamId).then(dataLens);
+      },
       // Returns a link that we should send the client to if they want to connect Slack to a team
       connectTeam: function (teamId, optSlackTeamId, optSlackState) {
         return net.connectSlack(teamId, optSlackTeamId, optSlackState).then(dataLens);
