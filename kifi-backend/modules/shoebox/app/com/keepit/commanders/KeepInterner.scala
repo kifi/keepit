@@ -215,8 +215,10 @@ class KeepInternerImpl @Inject() (
           libraryOpt.foreach { lib =>
             libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
             libToSlackProcessor.schedule(Set(lib.id.get))
-            keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
-              userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
+            if (KeepSource.manual.contains(keeps.head.source)) {
+              keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>
+                userInteractionCommander.addInteractions(userId, Seq(LibraryInteraction(lib.id.get) -> UserInteraction.KEPT_TO_LIBRARY))
+              }
             }
           }
         }
