@@ -29,8 +29,8 @@ k.tile = k.tile || (function () {
       loadAndDo('keeper', 'show');
     }
   });
-
   tileCard = tile.firstChild;
+  loadSymbolSprites();
 
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener(('mozHidden' in document ? 'moz' : 'webkit') + 'fullscreenchange', onFullScreenChange);
@@ -211,6 +211,22 @@ k.tile = k.tile || (function () {
       var match = cssUrlRe.exec(path);
       return match && match[1];
     }
+  }
+
+  function loadSymbolSprites() {
+    if (document.getElementById('kifi-ext-symbol-sprites')) {
+      // Don't load the sprites more than once.
+      return;
+    }
+
+    api.port.emit('load_image', api.url('images/symbol-sprite.svg'), function (data) {
+      var uri = data.uri;
+      var base64 = uri.slice(uri.indexOf(',') + 1);
+      var rawSvg = window.atob(base64);
+      var $svg = new DOMParser().parseFromString(rawSvg, 'application/xml').documentElement;
+      $svg.id = 'kifi-ext-symbol-sprites'
+      document.body.appendChild($svg);
+    });
   }
 
   var tLastK = 0;
