@@ -20,6 +20,7 @@ import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, He
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.controllers.core.PostRegIntent._
+import com.keepit.shoebox.controllers.TrackingActions
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
@@ -137,7 +138,7 @@ class AuthController @Inject() (
     pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
     implicit val secureSocialClientIds: SecureSocialClientIds,
-    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with TrackingActions with Logging {
 
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
@@ -589,7 +590,7 @@ class AuthController @Inject() (
     Redirect(com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamId = None).url, SEE_OTHER)
   }
 
-  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = MaybeUserAction { implicit request =>
+  def startWithSlack(slackTeamId: Option[SlackTeamId], extraScopes: Option[String]) = MaybeUserAction andThen SlackClickTracking() { implicit request =>
     request match {
       case userRequest: UserRequest[_] =>
         val slackTeamIdFromCookie = request.cookies.get(Slack.slackTeamIdKey).map(_.value).map(SlackTeamId(_))

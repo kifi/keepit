@@ -12,13 +12,14 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.path.Path
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
 import com.keepit.slack.models.{ SlackEmoji, SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
-import com.keepit.slack.{ SlackClientWrapper, SlackClient }
+import com.keepit.slack.{SlackAnalytics, SlackClientWrapper, SlackClient}
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
@@ -481,14 +482,17 @@ class AdminOrganizationController @Inject() (
     import DescriptionElements._
     FutureHelpers.foldLeft(members)(Map.empty[Id[SlackTeamMembership], Boolean]) {
       case (acc, mem) =>
-        val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels)))
+        def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(mem.slackUserId.asChannel, NotificationCategory.NonUser.BOT_SETTINGS_UPGRADE, Some(subaction))
+        val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels))).withQuery(trackingParams("updateSettings"))
         val text = DescriptionElements.formatForSlack(DescriptionElements(
           s"Kifi team here ${SlackEmoji.wave.value} - we made some major upgrades by creating a bot. To take advantage of them, maybe you'll want to", "update your slack integration settings" --> LinkElement(authLink), ".",
           "\n\n", "Learn more" --> LinkElement("http://blog.kifi.com/personal-stats-via-kifi-bot/"), " about the new features including a bot user & personal stats on your usage."
         ))
         val msg = SlackMessageRequest.fromKifi(text)
         slackClient.sendToSlackHoweverPossible(mem.slackTeamId, mem.slackUserId.asChannel, msg)
-          .map(_ => acc + (mem.id.get -> true))
+          .map { _ =>
+            acc + (mem.id.get -> true)
+          }
           .recover { case _ => acc + (mem.id.get -> false) }
     }
   }
