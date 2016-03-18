@@ -31,6 +31,8 @@ trait SlackClientWrapper {
   def validateToken(token: SlackAccessToken): Future[Boolean]
 
   // These APIs are token-specific
+  def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
+  def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp): Future[Unit]
   def getPrivateChannels(token: SlackAccessToken, excludeArchived: Boolean = false): Future[Seq[SlackPrivateChannelInfo]]
@@ -184,6 +186,14 @@ class SlackClientWrapperImpl @Inject() (
 
   def validateToken(token: SlackAccessToken): Future[Boolean] = {
     slackClient.testToken(token).andThen(onRevokedToken(token)).map(_ => true).recover { case f => false }
+  }
+
+  def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
+    slackClient.identifyUser(token)
+  }
+
+  def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = {
+    slackClient.processAuthorizationResponse(code, redirectUri)
   }
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {

@@ -96,7 +96,7 @@ object ProviderController extends Controller with Logging {
           }
 
           case other: Throwable => {
-            log.error("Unable to log user in. An exception was thrown", other)
+            log.error("[handleAuth] Unable to log user in. An exception was thrown", other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
           }
         }
@@ -106,7 +106,7 @@ object ProviderController extends Controller with Logging {
   }
 
   def completeAuthentication(userIdentity: Identity, session: Session)(implicit request: RequestHeader): Result = {
-    log.info(s"[securesocial] user logged in : [${userIdentity.email}] class=${userIdentity.getClass}")
+    log.info(s"[completeAuthentication] user logged in : [${userIdentity.email}] class=${userIdentity.getClass}")
     val sess = Events.fire(new LoginEvent(userIdentity)).getOrElse(session)
     Authenticator.create(userIdentity) match {
       case Right(authenticator) => {
@@ -130,7 +130,7 @@ object ProviderController extends Controller with Logging {
           OAuth1Provider.CacheKey).withCookies(Seq(authenticator.toCookie) ++ kifiCookies: _*)
       }
       case Left(error) => {
-        log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
+        log.error(s"[ProviderController.completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
         throw new RuntimeException("Error creating authenticator", error)
       }
     }
