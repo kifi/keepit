@@ -114,16 +114,22 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           slackTeamMembershipRepo.getBySlackTeamAndUser(slackAccount.slackTeamId, slackAccount.slackUserId) must beSome(saved)
         }
 
+        // SlackChannelRepo
+        val slackChannelRepo = inject[SlackChannelRepo]
+        val slackChannel = db.readWrite { implicit session =>
+          val saved = slackChannelRepo.getOrCreate(slackTeam.slackTeamId, SlackChannelId("CFAKE"), SlackChannelName("#fake"))
+          slackChannelRepo.get(saved.id.get) === saved
+          saved
+        }
+
         // SlackIncomingWebhookInfoRepo
         val slackWebhookRepo = inject[SlackIncomingWebhookInfoRepo]
-        val channelName = SlackChannelName("#fake")
-        val channelId = SlackChannelId("CFAKE")
-        val hook = SlackIncomingWebhook(channelId, channelName, "fake_url", "fake_config_url")
+        val hook = SlackIncomingWebhook(slackChannel.slackChannelId, slackChannel.slackChannelName, "fake_url", "fake_config_url")
         db.readWrite { implicit session =>
           val saved = slackWebhookRepo.save(SlackIncomingWebhookInfo(
             slackUserId = slackAccount.slackUserId,
             slackTeamId = slackAccount.slackTeamId,
-            slackChannelId = channelId,
+            slackChannelId = hook.channelId,
             webhook = hook,
             lastPostedAt = None
           ))
@@ -131,7 +137,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId.get, LibrarySpace.fromUserId(slackAccount.userId.get), slackAccount.slackUserId, slackAccount.slackTeamId, channelId, channelName, lib.id.get, status = SlackIntegrationStatus.On)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId.get, LibrarySpace.fromUserId(slackAccount.userId.get), slackAccount.slackUserId, slackAccount.slackTeamId, slackChannel.slackChannelId, slackChannel.slackChannelName, lib.id.get, status = SlackIntegrationStatus.On)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
         val libToSlackChannel = db.readWrite { implicit session =>
           val saved = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)

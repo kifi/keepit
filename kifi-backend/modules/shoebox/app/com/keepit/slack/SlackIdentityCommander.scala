@@ -36,6 +36,7 @@ class SlackIdentityCommanderImpl @Inject() (
   db: Database,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  slackChannelRepo: SlackChannelRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
@@ -52,6 +53,7 @@ class SlackIdentityCommanderImpl @Inject() (
       slackTeamRepo.internSlackTeam(auth.teamId, auth.teamName, auth.botAuth)
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
       auth.incomingWebhook.map { webhook =>
+        slackChannelRepo.getOrCreate(identity.teamId, webhook.channelId, webhook.channelName)
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
