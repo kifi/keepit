@@ -30,6 +30,7 @@ object SlackTeamMembershipFactory {
       slackUsername = SlackUsername(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
+      isBot = false,
       tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken(ran(30)), SlackAuthScope.newPush ++ SlackAuthScope.ingest)),
       slackUser = None
     ))

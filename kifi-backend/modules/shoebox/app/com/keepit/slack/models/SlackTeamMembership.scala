@@ -70,6 +70,7 @@ case class SlackTeamMembership(
   slackUsername: SlackUsername,
   slackTeamId: SlackTeamId,
   slackTeamName: SlackTeamName,
+  isBot: Boolean,
   tokenWithScopes: Option[SlackTokenWithScopes],
   slackUser: Option[SlackUserInfo],
   privateChannelsLastSyncedAt: Option[DateTime] = None,
@@ -128,7 +129,7 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 
 @ImplementedBy(classOf[SlackTeamMembershipRepoImpl])
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFunction[SlackTeamMembership] {
-  def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
+  def getBySlackTeam(slackTeamId: SlackTeamId, excludeBots: Boolean = true)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
@@ -181,6 +182,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackUsername: SlackUsername,
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
+    isBot: Boolean,
     tokenOpt: Option[SlackUserAccessToken],
     scopes: JsValue,
     slackUser: Option[JsValue],
@@ -202,6 +204,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
       slackUsername,
       slackTeamId,
       slackTeamName,
+      isBot,
       tokenOpt.map(token => SlackTokenWithScopes(token, scopes.as[Set[SlackAuthScope]])),
       slackUser.map(_.as[SlackUserInfo]),
       privateChannelsLastSyncedAt,
@@ -225,6 +228,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     membership.slackUsername,
     membership.slackTeamId,
     membership.slackTeamName,
+    membership.isBot,
     membership.tokenWithScopes.map(_.token),
     Json.toJson(membership.tokenWithScopes.map(_.scopes).getOrElse(Set.empty)),
     membership.slackUser.map(Json.toJson(_)),
@@ -245,6 +249,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def slackUsername = column[SlackUsername]("slack_username", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackTeamName = column[SlackTeamName]("slack_team_name", O.NotNull)
+    def isBot = column[Boolean]("is_bot", O.NotNull)
     def token = column[Option[SlackUserAccessToken]]("token", O.Nullable)
     def scopes = column[JsValue]("scopes", O.NotNull)
     def slackUser = column[Option[JsValue]]("slack_user", O.Nullable)
@@ -255,7 +260,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
     def personalDigestSetting = column[SlackPersonalDigestSetting]("personal_digest_setting", O.NotNull)
     def nextPersonalDigestAt = column[Option[DateTime]]("next_personal_digest_at", O.Nullable)
     def lastIngestedMessageTimestamp = column[Option[SlackTimestamp]]("last_ingested_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scopes, slackUser, privateChannelsLastSyncedAt, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, isBot, token, scopes, slackUser, privateChannelsLastSyncedAt, lastPersonalDigestAt, lastProcessingAt, lastProcessedAt, personalDigestSetting, nextPersonalDigestAt, lastIngestedMessageTimestamp) <> ((membershipFromDbRow _).tupled, membershipToDbRow _)
 
     def availableForProcessing(overrideDate: DateTime) = lastProcessingAt.isEmpty || lastProcessingAt < overrideDate
   }
@@ -274,8 +279,8 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = deleteCache(membership)
 
-  def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership] = {
-    activeRows.filter(row => row.slackTeamId === slackTeamId).list.toSet
+  def getBySlackTeam(slackTeamId: SlackTeamId, excludeBots: Boolean = true)(implicit session: RSession): Set[SlackTeamMembership] = {
+    activeRows.filter(row => row.slackTeamId === slackTeamId && !(row.isBot && excludeBots)).list.toSet
   }
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackUserId === slackUserId && row.state =!= excludeState.orNull).firstOption
@@ -291,6 +296,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
         val updated = membership.copy(
           slackUsername = request.slackUsername,
           slackTeamName = request.slackTeamName,
+          isBot = request.slackUser.exists(_.bot) || membership.isBot,
           userId = request.userId orElse membership.userId,
           tokenWithScopes = request.tokenWithScopes orElse membership.tokenWithScopes,
           slackUser = request.slackUser orElse membership.slackUser
@@ -304,6 +310,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = request.slackUsername,
           slackTeamId = request.slackTeamId,
           slackTeamName = request.slackTeamName,
+          isBot = request.slackUser.exists(_.bot),
           tokenWithScopes = request.tokenWithScopes,
           slackUser = request.slackUser,
           nextPersonalDigestAt = None
@@ -325,6 +332,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           slackUsername = message.username,
           slackTeamId = slackTeam.slackTeamId,
           slackTeamName = slackTeam.slackTeamName,
+          isBot = false,
           tokenWithScopes = None,
           slackUser = None,
           lastIngestedMessageTimestamp = Some(message.timestamp),
