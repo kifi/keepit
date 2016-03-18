@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
+import com.keepit.common.util.RightBias.{ RightSide, LeftSide }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -84,13 +85,13 @@ class SlackPersonalDigestNotificationActor @Inject() (
       (membership, digestOpt)
     }
     digestOpt match {
-      case Left(reasonForNoDigest) =>
+      case LeftSide(reasonForNoDigest) =>
         slackLog.info(s"Considered sending a personal digest to ${membership.slackUsername} in ${membership.slackTeamName} but opted not to because", reasonForNoDigest)
         db.readWrite { implicit s =>
           slackMembershipRepo.finishProcessing(membershipId, delayAfterNoDigest)
         }
         Future.successful(())
-      case Right(digest) =>
+      case RightSide(digest) =>
         val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) digestGenerator.messageForFirstTimeDigest(digest) else digestGenerator.messageForRegularDigest(digest)
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>
