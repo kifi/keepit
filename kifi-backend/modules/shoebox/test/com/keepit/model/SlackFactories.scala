@@ -30,8 +30,7 @@ object SlackTeamMembershipFactory {
       slackUsername = SlackUsername(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
-      token = Some(SlackUserAccessToken(ran(30))),
-      scopes = SlackAuthScope.newPush ++ SlackAuthScope.ingest,
+      tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken(ran(30)), SlackAuthScope.newPush ++ SlackAuthScope.ingest)),
       slackUser = None
     ))
   }
@@ -40,7 +39,7 @@ object SlackTeamMembershipFactory {
     def withUser(user: User) = this.copy(stm = stm.copy(userId = Some(user.id.get)))
     def withTeam(team: SlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.slackTeamId, slackTeamName = team.slackTeamName))
     def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
-    def withScopes(scopes: Set[SlackAuthScope]) = this.copy(stm = stm.copy(scopes = scopes))
+    def withScopes(scopes: Set[SlackAuthScope]) = this.copy(stm = stm.copy(tokenWithScopes = stm.tokenWithScopes.map(_.copy(scopes = scopes))))
 
     def withNextPersonalDigestAt(time: DateTime) = this.copy(stm = stm.withNextPersonalDigestAt(time))
   }

@@ -82,8 +82,7 @@ class SlackIdentityCommanderImpl @Inject() (
       slackUsername = identity.username,
       slackTeamId = identity.teamId,
       slackTeamName = identity.teamName,
-      token = identity.token,
-      scopes = identity.scopes,
+      tokenWithScopes = identity.tokenWithScopes,
       slackUser = identity.user
     ))
     autojoinOrganization(membership)
