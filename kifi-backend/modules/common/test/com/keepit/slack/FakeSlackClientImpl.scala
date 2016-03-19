@@ -47,15 +47,16 @@ class FakeSlackClientImpl extends SlackClient {
   def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, msg: SlackMessageRequest): Future[SlackMessageResponse] = ???
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit] = ???
 
-  def sayInChannel(userId: SlackUserId, username: SlackUsername, teamId: SlackTeamId, token: Option[SlackAccessToken], ch: SlackChannelIdAndName)(str: String): Unit = {
-    val key = (teamId, ch.name)
+  def sayInChannel(userId: SlackUserId, username: SlackUsername, teamId: SlackTeamId, token: Option[SlackAccessToken], ch: (SlackChannelId, SlackChannelName))(str: String): Unit = {
+    val channelIdAndName = SlackChannelIdAndName(ch._1, ch._2)
+    val key = (teamId, channelIdAndName.name)
     val msgId = inc.incrementAndGet()
     val msgJson = Json.obj(
       "type" -> "message",
       "user" -> userId.value,
       "username" -> username.value,
       "ts" -> s"$msgId.00000",
-      "channel" -> ch,
+      "channel" -> channelIdAndName,
       "text" -> str,
       "attachments" -> Json.arr(),
       "permalink" -> s"https://slack.com/$msgId"

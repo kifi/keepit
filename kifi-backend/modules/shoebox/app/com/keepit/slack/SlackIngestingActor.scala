@@ -77,7 +77,7 @@ class SlackIngestingActor @Inject() (
   }
 
   protected def processTasks(integrationIds: Seq[Id[SlackChannelToLibrary]]): Map[Id[SlackChannelToLibrary], Future[Unit]] = {
-    val (integrationsByIds, isAllowed, getTokens, getSettings) = db.readOnlyMaster { implicit session =>
+    val (integrationsByIds, isAllowed, getIntegrationInfo, getSettings) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
       val isAllowed = integrationsByIds.map {
@@ -87,15 +87,18 @@ class SlackIngestingActor @Inject() (
           }
       }
 
-      val getTokens = {
+      val getIntegrationInfo = {
         val slackTeamsById = slackTeamRepo.getBySlackTeamIds(integrationsByIds.values.map(_.slackTeamId).toSet)
         val slackIdentities = integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackUserId)).toSet
         val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
+        val slackChannelBySlackTeamAndChannelId = slackChannelRepo.getByChannelIds(integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackChannelId)).toSet)
+
         integrationsByIds.map {
           case (integrationId, integration) =>
+            val slackTeam = slackTeamsById(integration.slackTeamId)
+            val slackChannel = slackChannelBySlackTeamAndChannelId((integration.slackTeamId, integration.slackChannelId))
             val userTokenWithScopes = slackMembershipsByIdentity.get((integration.slackTeamId, integration.slackUserId)).flatMap(_.tokenWithScopes)
-            val botToken = slackTeamsById.get(integration.slackTeamId).flatMap(_.kifiBot.map(_.token))
-            integrationId -> (userTokenWithScopes, botToken)
+            integrationId -> (slackTeam, slackChannel, userTokenWithScopes)
         }
       }
 
@@ -105,20 +108,21 @@ class SlackIngestingActor @Inject() (
         orgIdsByIntegrationIds.mapValues(settingsByOrgIds.apply).get _
       }
 
-      (integrationsByIds, isAllowed, getTokens, getSettings)
+      (integrationsByIds, isAllowed, getIntegrationInfo, getSettings)
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> ingestMaybe(integration, isAllowed, getTokens, getSettings).imap(_ => ())
+        integrationId -> ingestMaybe(integration, isAllowed, getIntegrationInfo, getSettings).imap(_ => ())
     }
   }
 
-  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getTokens: Id[SlackChannelToLibrary] => (Option[SlackTokenWithScopes], Option[SlackBotAccessToken]), getSettings: Id[SlackChannelToLibrary] => Option[OrganizationSettings]): Future[Option[SlackTimestamp]] = {
+  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getIntegrationInfo: Id[SlackChannelToLibrary] => (SlackTeam, SlackChannel, Option[SlackTokenWithScopes]), getSettings: Id[SlackChannelToLibrary] => Option[OrganizationSettings]): Future[Option[SlackTimestamp]] = {
+    val (team, channel, tokenOpt) = getIntegrationInfo(integration.id.get)
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
-        getTokens(integration.id.get) match {
-          case (Some(tokenWithScopes), botToken) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(tokenWithScopes, botToken, getSettings(integration.id.get), integration)
-          case (invalidTokenOpt, _) => Future.failed(BrokenSlackIntegration(integration, invalidTokenOpt.map(_.token), None))
+        tokenOpt match {
+          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(team, channel, tokenWithScopes, getSettings(integration.id.get), integration)
+          case invalidTokenOpt => Future.failed(BrokenSlackIntegration(integration, invalidTokenOpt.map(_.token), None))
         }
       } else {
         Future.failed(ForbiddenSlackIntegration(integration))
@@ -131,7 +135,7 @@ class SlackIngestingActor @Inject() (
         val (nextIngestionAt, updatedStatus) = result match {
           case Success(lastMsgTimestamp) =>
             if (integration.lastIngestedAt.isEmpty) { // this is the first time we've tried ingesting for this integration
-              slackOnboarder.talkAboutIntegration(integration)
+              slackOnboarder.talkAboutIntegration(integration, channel)
             }
             val delay = lastMsgTimestamp match {
               case Some(newTimestamp) if !integration.lastMessageTimestamp.contains(newTimestamp) => nextIngestionDelayAfterNewMessages
@@ -139,21 +143,14 @@ class SlackIngestingActor @Inject() (
             }
             (Some(now plus delay), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            slackLog.warn("Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelName.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
+            slackLog.warn("Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelId.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelName.value, "in team", broken.integration.slackTeamId.value, "is broken")
+            slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelId.value, "in team", broken.integration.slackTeamId.value, "is broken")
             SafeFuture {
-              val team = db.readOnlyReplica { implicit s =>
-                slackTeamRepo.getBySlackTeamId(broken.integration.slackTeamId)
-              }
-              val org = db.readOnlyMaster { implicit s =>
-                team.flatMap(_.organizationId).flatMap(organizationInfoCommander.getBasicOrganizationHelper)
-              }
-              val name = team.map(_.slackTeamName.value).getOrElse("???")
               val cause = broken.cause.map(_.toString).getOrElse("???")
               inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                "Can't Ingest - Broken Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelName.value, "cause", cause)))
+                "Can't Ingest - Broken Slack integration of team", integration.slackTeamId.value, "channel", broken.integration.slackChannelId.value, "cause", cause)))
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
@@ -166,15 +163,15 @@ class SlackIngestingActor @Inject() (
     }
   }
 
-  private def doIngest(tokenWithScopes: SlackTokenWithScopes, botToken: Option[SlackBotAccessToken], settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
+  private def doIngest(team: SlackTeam, channel: SlackChannel, tokenWithScopes: SlackTokenWithScopes, settings: Option[OrganizationSettings], integration: SlackChannelToLibrary): Future[Option[SlackTimestamp]] = {
     val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
-        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, lastMessageTimestamp).flatMap { messages =>
+        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, lastMessageTimestamp).flatMap { messages =>
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
-              slackClient.addReaction(botToken getOrElse tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
+              slackClient.addReaction(team.kifiBot.map(_.token) getOrElse tokenWithScopes.token, SlackReaction.robotFace, message.channel.id, message.timestamp) recover {
                 case SlackErrorCode(ALREADY_REACTED) => ()
               }
             }

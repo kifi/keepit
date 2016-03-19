@@ -89,6 +89,7 @@ class SlackInfoCommanderImpl @Inject() (
   db: Database,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  slackChannelRepo: SlackChannelRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
@@ -142,11 +143,15 @@ class SlackInfoCommanderImpl @Inject() (
       }.toMap
     }
 
-    // todo(Léo): migrate to use SlackChannelId
-    case class SlackIntegrationInfoKey(space: LibrarySpace, slackTeamId: SlackTeamId, slackChannelName: SlackChannelName)
+    val channelNameByTeamAndChannelId = {
+      val channelIds = slackToLibs.map(stl => (stl.slackTeamId, stl.slackChannelId)).toSet ++ libToSlacks.map(lts => (lts.slackTeamId, lts.slackChannelId))
+      slackChannelRepo.getByChannelIds(channelIds).mapValues(_.slackChannelName)
+    }
+
+    case class SlackIntegrationInfoKey(space: LibrarySpace, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)
     object SlackIntegrationInfoKey {
-      def fromSTL(stl: SlackChannelToLibrary) = SlackIntegrationInfoKey(stl.space, stl.slackTeamId, stl.slackChannelName)
-      def fromLTS(lts: LibraryToSlackChannel) = SlackIntegrationInfoKey(lts.space, lts.slackTeamId, lts.slackChannelName)
+      def fromSTL(stl: SlackChannelToLibrary) = SlackIntegrationInfoKey(stl.space, stl.slackTeamId, stl.slackChannelId)
+      def fromLTS(lts: LibraryToSlackChannel) = SlackIntegrationInfoKey(lts.space, lts.slackTeamId, lts.slackChannelId)
     }
     libraryIds.map { libId =>
       val permissions = permissionsByLib.getOrElse(libId, Set.empty)
@@ -166,7 +171,7 @@ class SlackInfoCommanderImpl @Inject() (
       val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
         LibrarySlackIntegrationInfo(
           teamName = teamNameByTeamId(key.slackTeamId),
-          channelName = key.slackChannelName,
+          channelName = channelNameByTeamAndChannelId((key.slackTeamId, key.slackChannelId)),
           space = externalSpaceBySpace(key.space),
           toSlack = toSlackGroupedInfos.get(key),
           fromSlack = fromSlackGroupedInfos.get(key)

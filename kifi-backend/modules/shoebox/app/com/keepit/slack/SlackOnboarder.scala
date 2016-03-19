@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SlackOnboarderImpl])
 trait SlackOnboarder {
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit]
+  def talkAboutIntegration(integ: SlackIntegration, channel: SlackChannel): Future[Unit]
   def getTeamAgent(team: SlackTeam, membership: SlackTeamMembership, forceOverride: Boolean = false): TeamOnboardingAgent
 }
 
@@ -77,25 +77,25 @@ class SlackOnboarderImpl @Inject() (
   private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
   import SlackOnboarder._
 
-  def talkAboutIntegration(integ: SlackIntegration): Future[Unit] = SafeFuture.wrap {
+  def talkAboutIntegration(integ: SlackIntegration, channel: SlackChannel): Future[Unit] = SafeFuture.wrap {
     db.readOnlyMaster { implicit s =>
-      generateOnboardingMessageForIntegration(integ)
+      generateOnboardingMessageForIntegration(integ, channel)
     }.flatMap { welcomeMsg =>
       log.info(s"[SLACK-ONBOARD] Generated this message: " + welcomeMsg)
-      debouncer.debounce(s"${integ.slackTeamId.value}_${integ.slackChannelName.value}", 10 minutes) {
-        slackLog.info(s"Sent a welcome message to channel ${integ.slackChannelName} saying", welcomeMsg.text)
+      debouncer.debounce(s"${integ.slackTeamId.value}_${channel.slackChannelName.value}", 10 minutes) {
+        slackLog.info(s"Sent a welcome message to channel ${channel.slackChannelName} saying", welcomeMsg.text)
         slackClient.sendToSlackHoweverPossible(integ.slackTeamId, integ.slackChannelId, welcomeMsg).map { _ =>
-          slackAnalytics.trackNotificationSent(integ.slackTeamId, integ.slackChannelId, integ.slackChannelName, NotificationCategory.NonUser.INTEGRATION_WELCOME)
+          slackAnalytics.trackNotificationSent(integ.slackTeamId, integ.slackChannelId, channel.slackChannelName, NotificationCategory.NonUser.INTEGRATION_WELCOME)
           ()
         }
       }
     }.getOrElse {
-      log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${integ.slackChannelName} in ${integ.slackTeamId}")
+      log.info(s"[SLACK-ONBOARD] Decided not to send an onboarding message to ${channel.slackChannelName} in ${integ.slackTeamId}")
       Future.successful(())
     }
   }
 
-  private def generateOnboardingMessageForIntegration(integ: SlackIntegration)(implicit session: RSession): Option[SlackMessageRequest] = {
+  private def generateOnboardingMessageForIntegration(integ: SlackIntegration, channel: SlackChannel)(implicit session: RSession): Option[SlackMessageRequest] = {
     val lib = libRepo.get(integ.libraryId)
     val slackTeamOpt = slackTeamRepo.getBySlackTeamId(integ.slackTeamId)
     val allowedToSendToSlackTeam = slackTeamOpt.exists { team =>
@@ -110,23 +110,23 @@ class SlackOnboarderImpl @Inject() (
           // We can be more explicit about what is happening
           integ match {
             case ltsc: LibraryToSlackChannel if lib.kind == LibraryKind.USER_CREATED =>
-              explicitPushMessage(ltsc, owner, lib, slackTeam)
+              explicitPushMessage(ltsc, owner, lib, slackTeam, channel)
             case sctl: SlackChannelToLibrary if lib.kind == LibraryKind.USER_CREATED =>
-              explicitIngestionMessage(sctl, owner, lib, slackTeam)
+              explicitIngestionMessage(sctl, owner, lib, slackTeam, channel)
             case _ => None
           }
         case _ =>
           // be very conservative, this integration is not on one of this team's org libraries
           integ match {
             case ltsc: LibraryToSlackChannel =>
-              conservativePushMessage(ltsc, owner, lib)
+              conservativePushMessage(ltsc, owner, lib, channel)
             case _ => None
           }
       }
     }
   }
 
-  private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library)(implicit session: RSession): Option[SlackMessageRequest] = {
+  private def conservativePushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, channel: SlackChannel)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val trackingParams = SlackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
@@ -136,7 +136,7 @@ class SlackOnboarderImpl @Inject() (
     val msg = SlackMessageRequest.fromKifi(text = txt).quiet
     Some(msg)
   }
-  private def explicitPushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
+  private def explicitPushMessage(ltsc: LibraryToSlackChannel, owner: BasicUser, lib: Library, slackTeam: SlackTeam, slackChannel: SlackChannel)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
     val trackingParams = SlackAnalytics.generateTrackingParams(ltsc.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
     val welcomeLink = LinkElement(pathCommander.welcomePageViaSlack(owner, ltsc.slackTeamId).withQuery(trackingParams))
@@ -144,7 +144,7 @@ class SlackOnboarderImpl @Inject() (
 
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
       owner.firstName --> welcomeLink, "connected",
-      ltsc.slackChannelName.value, "with", lib.name --> libraryLink, ".",
+      slackChannel.slackChannelName.value, "with", lib.name --> libraryLink, ".",
       "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -164,7 +164,7 @@ class SlackOnboarderImpl @Inject() (
     Some(msg)
   }
 
-  private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam)(implicit session: RSession): Option[SlackMessageRequest] = {
+  private def explicitIngestionMessage(sctl: SlackChannelToLibrary, owner: BasicUser, lib: Library, slackTeam: SlackTeam, slackChannel: SlackChannel)(implicit session: RSession): Option[SlackMessageRequest] = {
     import DescriptionElements._
 
     implicit val trackingParams = SlackAnalytics.generateTrackingParams(sctl.slackChannelId, NotificationCategory.NonUser.INTEGRATION_WELCOME)
@@ -172,12 +172,12 @@ class SlackOnboarderImpl @Inject() (
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).withQuery(trackingParams))
 
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner.firstName --> welcomeLink, "connected", sctl.slackChannelName.value, "with", lib.name --> libraryLink,
+      owner.firstName --> welcomeLink, "connected", slackChannel.slackChannelName.value, "with", lib.name --> libraryLink,
       "on Kifi to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.star, s"*Saving links from ${sctl.slackChannelName.value}*"),
+        DescriptionElements(SlackEmoji.star, s"*Saving links from ${slackChannel.slackChannelName.value}*"),
         DescriptionElements("Any time someone includes a link in their message, we'll automatically save it and index the site so you can search for it easily.")
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(

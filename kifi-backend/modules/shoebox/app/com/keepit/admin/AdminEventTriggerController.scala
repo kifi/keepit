@@ -122,11 +122,15 @@ class AdminEventTriggerController @Inject() (
     db.readOnlyReplicaAsync { implicit s =>
       val pushes = libraryToSlackChannelRepo.getActiveByIds(trigger.pushes)
       val ingestions = slackChannelToLibraryRepo.getActiveByIds(trigger.ingestions)
-      (pushes, ingestions)
+      val channelsById = {
+        val channelIds = pushes.map(stl => (stl.slackTeamId, stl.slackChannelId)).toSet ++ ingestions.map(lts => (lts.slackTeamId, lts.slackChannelId))
+        slackChannelRepo.getByChannelIds(channelIds)
+      }
+      (pushes, ingestions, channelsById)
     }.flatMap {
-      case (pushes, ingestions) => for {
-        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc))
-        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl))
+      case (pushes, ingestions, channelsById) => for {
+        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc, channelsById(ltsc.slackTeamId, ltsc.slackChannelId)))
+        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl, channelsById(sctl.slackTeamId, sctl.slackChannelId)))
       } yield ()
     }.map { _: Unit =>
       Json.obj("ok" -> true)

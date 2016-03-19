@@ -131,7 +131,7 @@ class SlackClientWrapperImpl @Inject() (
         case None => Future.failed(SlackFail.NoValidWebhooks)
         case Some(webhookInfo) =>
           val now = clock.now
-          val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
+          val pushFut = slackClient.pushToWebhook(webhookInfo.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
               slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, webhookInfo.slackChannelId).foreach { channel =>
                 slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
