@@ -60,7 +60,7 @@ object SlackAttachment {
 
   def simple(text: DescriptionElements): SlackAttachment = {
     val str = DescriptionElements.formatForSlack(text)
-    SlackAttachment(text = Some(str), fallback = Some(str))
+    SlackAttachment(text = Some(str), fallback = Some(str)).withFullMarkdown
   }
 
   def applyFromSlack(
