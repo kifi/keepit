@@ -43,6 +43,9 @@ angular.module('kifi')
       },
       modifyLibraryIngestIntegration: function (libraryId, syncId, turnOn) {
         return net.modifyLibraryIngestSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
+      },
+      togglePersonalDigest: function(slackTeamId, slackUserId, turnOn) {
+        return net.togglePersonalDigest(slackTeamId, slackUserId, turnOn).then(dataLens);
       }
     };
     return api;
