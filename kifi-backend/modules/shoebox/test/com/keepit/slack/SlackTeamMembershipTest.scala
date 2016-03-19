@@ -48,10 +48,6 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
           db.readWrite { implicit s =>
             val now = fakeClock.now
 
-            // These do not have the experiment, so we should never get results from these teams
-            val garbageTeams = (1 to 10).map(_ => SlackTeamFactory.team().withNoPersonalDigestsUntil(now plusHours rand(-100, 100)).saved)
-            val garbageMemberships = garbageTeams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
-
             val teams = (1 to 10).map(_ => SlackTeamFactory.team().withNoPersonalDigestsUntil(now plusHours rand(-100, 100)).saved)
             val memberships = teams.flatMap(team => (1 to 10).map(_ => SlackTeamMembershipFactory.membership().withTeam(team).withNextPersonalDigestAt(now plusHours rand(-100, 100)).saved))
 
@@ -62,7 +58,7 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
               bestByTeam.values.toList.sortBy(m => (m.nextPersonalDigestAt, m.id.get)).map(_.id.get).take(10)
             }
             val actual = {
-              inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now, vipTeams = teams.map(_.slackTeamId).toSet).toList
+              inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now).toList
             }
             actual === expected
           }
