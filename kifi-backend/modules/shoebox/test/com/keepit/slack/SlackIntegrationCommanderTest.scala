@@ -12,6 +12,7 @@ import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.SlackTeamFactoryHelper._
+import com.keepit.model.SlackChannelFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -67,10 +68,11 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
 
             (user, lib, lts, stl)
           }
@@ -106,10 +108,11 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val lib = LibraryFactory.library().withOwner(user).saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).on.saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
 
             (user, lib, org, lts, stl)
           }
@@ -145,10 +148,11 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val user = UserFactory.user().saved
             val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).on.saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
 
             (user, lib, lts, stl)
           }
@@ -173,9 +177,10 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
             val lib = LibraryFactory.library().withOwner(owner).saved
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").on.saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).on.saved
 
             (owner, member, org, lib, lts)
           }

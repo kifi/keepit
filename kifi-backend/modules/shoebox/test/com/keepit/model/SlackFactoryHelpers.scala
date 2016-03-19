@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, FakeClock }
 import com.keepit.model.LibraryToSlackChannelFactory.PartialLibraryToSlackChannel
+import com.keepit.model.SlackChannelFactory.PartialSlackChannel
 import com.keepit.model.SlackChannelToLibraryFactory.PartialSlackChannelToLibrary
 import com.keepit.model.SlackIncomingWebhookFactory.PartialSlackIncomingWebhook
 import com.keepit.model.SlackTeamFactory.PartialSlackTeam
@@ -22,6 +23,14 @@ object SlackTeamFactoryHelper {
   implicit class SlackTeamPersister(partial: PartialSlackTeam) {
     def saved(implicit injector: Injector, session: RWSession): SlackTeam = {
       injector.getInstance(classOf[SlackTeamRepo]).save(partial.team)
+    }
+  }
+}
+
+object SlackChannelFactoryHelper {
+  implicit class SlackChannelPersister(partial: PartialSlackChannel) {
+    def saved(implicit injector: Injector, session: RWSession): SlackChannel = {
+      injector.getInstance(classOf[SlackChannelRepo]).save(partial.channel)
     }
   }
 }

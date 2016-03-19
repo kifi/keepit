@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 
 case class SlackChannel(
-  id: Option[Id[SlackChannel]],
+  id: Option[Id[SlackChannel]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[SlackChannel] = SlackChannelStates.ACTIVE,
@@ -33,6 +33,7 @@ object SlackChannelStates extends States[SlackChannel]
 @ImplementedBy(classOf[SlackChannelRepoImpl])
 trait SlackChannelRepo extends Repo[SlackChannel] {
   def getByIds(ids: Set[Id[SlackChannel]])(implicit session: RSession): Map[Id[SlackChannel], SlackChannel]
+  def getByChannelIds(slackTeamAndChannelIds: Set[(SlackTeamId, SlackChannelId)])(implicit session: RSession): Map[(SlackTeamId, SlackChannelId), SlackChannel]
   def getByChannelId(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)(implicit session: RSession): Option[SlackChannel]
   def getOrCreate(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, slackChannelName: SlackChannelName)(implicit session: RWSession): SlackChannel
   def getRipeForPushingDigestNotification(lastPushOlderThan: DateTime)(implicit session: RSession): Seq[Id[SlackChannel]]
@@ -103,6 +104,15 @@ class SlackChannelRepoImpl @Inject() (
 
   def getByIds(ids: Set[Id[SlackChannel]])(implicit session: RSession): Map[Id[SlackChannel], SlackChannel] = {
     activeRows.filter(_.id.inSet(ids)).list.map { model => model.id.get -> model }.toMap
+  }
+
+  def getByChannelIds(slackTeamAndChannelIds: Set[(SlackTeamId, SlackChannelId)])(implicit session: RSession): Map[(SlackTeamId, SlackChannelId), SlackChannel] = {
+    // This query looks up channels from the db by slack channel id only (so we could get some extra values back).
+    // We then pare down to the correct values in-memory
+    val slackChannelIds = slackTeamAndChannelIds.map(_._2)
+    activeRows.filter(row => row.slackChannelId.inSet(slackChannelIds)).list.groupBy(channel => (channel.slackTeamId, channel.slackChannelId)).collect {
+      case (k, Seq(v)) if slackTeamAndChannelIds.contains(k) => k -> v
+    }
   }
 
   def getByChannelId(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)(implicit session: RSession): Option[SlackChannel] = {

@@ -13,7 +13,8 @@ CREATE TABLE slack_channel (
   last_notification_at DATETIME DEFAULT NULL,
 
   PRIMARY KEY(id),
-  UNIQUE KEY slack_channel_u_team_id_channel_id (slack_team_id, slack_channel_id)
+  UNIQUE KEY slack_channel_u_team_id_channel_id (slack_team_id, slack_channel_id),
+  KEY slack_channel_i_channel_id (slack_channel_id)
 );
 
 ALTER TABLE slack_channel_to_library ADD CONSTRAINT slack_channel_to_library_f_slack_channel FOREIGN KEY (slack_team_id, slack_channel_id) REFERENCES slack_channel(slack_team_id, slack_channel_id);
