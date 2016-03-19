@@ -151,7 +151,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFu
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
   def getByUserIdAndSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit session: RSession): Option[SlackTeamMembership]
 
-  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]]
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime)(implicit session: RSession): Seq[Id[SlackTeamMembership]]
   def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean
   def updateLastPersonalDigest(id: Id[SlackTeamMembership])(implicit session: RWSession): Unit
   def finishProcessing(id: Id[SlackTeamMembership], delayUntilNextPush: Duration)(implicit session: RWSession): Unit
@@ -374,14 +374,12 @@ class SlackTeamMembershipRepoImpl @Inject() (
   }
 
   @StatsdTiming("SlackTeamMembershipRepo.getRipeForPersonalDigest")
-  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime, vipTeams: Set[SlackTeamId])(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
+  def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime)(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val vipTeamsStr = vipTeams.map(id => s"'${id.value}'").mkString("(", ",", ")") // I hate myself and everyone else
     sql"""
     SELECT stm.id
     FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
-    WHERE st.slack_team_id IN #$vipTeamsStr AND
-          st.no_personal_digests_until < $now AND
+    WHERE st.no_personal_digests_until < $now AND
           stm.id = ( SELECT sub.id FROM slack_team_membership sub
                      WHERE sub.slack_team_id = stm.slack_team_id AND
                            sub.state = 'active' AND

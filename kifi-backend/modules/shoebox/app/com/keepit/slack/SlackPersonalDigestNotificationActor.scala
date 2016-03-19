@@ -59,15 +59,10 @@ class SlackPersonalDigestNotificationActor @Inject() (
   protected def pullTasks(limit: Int): Future[Seq[Id[SlackTeamMembership]]] = {
     val now = clock.now
     db.readWriteAsync { implicit session =>
-      val vipTeams = {
-        val orgs = orgExperimentRepo.getOrganizationsByExperiment(OrganizationExperimentType.SLACK_PERSONAL_DIGESTS).toSet
-        slackTeamRepo.getByOrganizationIds(orgs).values.flatten.map(_.slackTeamId).toSet
-      }
       val ripeIds = slackMembershipRepo.getRipeForPersonalDigest(
         limit = limit,
         overrideProcessesOlderThan = now minus maxProcessingDuration,
-        now = now,
-        vipTeams = vipTeams
+        now = now
       )
       ripeIds.filter(id => slackMembershipRepo.markAsProcessingPersonalDigest(id, overrideProcessesOlderThan = now minus maxProcessingDuration))
     }
