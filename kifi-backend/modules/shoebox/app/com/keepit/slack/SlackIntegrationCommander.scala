@@ -58,17 +58,15 @@ class SlackIntegrationCommanderImpl @Inject() (
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhookId: Id[SlackIncomingWebhookInfo]): Try[SlackTeam] = {
     val teamWithPushIntegrationMaybe = db.readWrite { implicit s =>
-      val webhookInfo = slackIncomingWebhookInfoRepo.get(webhookId)
-      val slackTeamId = webhookInfo.slackTeamId
-      val slackUserId = webhookInfo.slackUserId
+      val webhook = slackIncomingWebhookInfoRepo.get(webhookId)
+      val channel = channelRepo.getByChannelId(webhook.slackTeamId, webhook.slackChannelId).get
+      val slackTeamId = webhook.slackTeamId
+      val slackUserId = webhook.slackUserId
 
       slackTeamRepo.getBySlackTeamId(slackTeamId) match {
         case Some(team) =>
           team.organizationId match {
             case Some(orgId) =>
-              val webhook = webhookInfo.webhook
-              val channel = channelRepo.getOrCreate(slackTeamId, webhook.channelId, webhook.channelName)
-
               val space = LibrarySpace.fromOrganizationId(orgId)
               val ltsc = libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
                 requesterId = userId,
@@ -76,7 +74,7 @@ class SlackIntegrationCommanderImpl @Inject() (
                 libraryId = libId,
                 slackUserId = slackUserId,
                 slackTeamId = slackTeamId,
-                slackChannelId = webhook.channelId,
+                slackChannelId = webhook.slackChannelId,
                 status = SlackIntegrationStatus.On
               ))
               val sctl = channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
@@ -85,7 +83,7 @@ class SlackIntegrationCommanderImpl @Inject() (
                 libraryId = libId,
                 slackUserId = slackUserId,
                 slackTeamId = slackTeamId,
-                slackChannelId = webhook.channelId,
+                slackChannelId = webhook.slackChannelId,
                 status = SlackIntegrationStatus.Off
               ))
               Success((team, channel, ltsc))

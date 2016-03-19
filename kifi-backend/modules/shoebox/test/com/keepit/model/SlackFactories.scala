@@ -89,23 +89,18 @@ object SlackIncomingWebhookFactory {
     val teamStr = ran(10)
     val botStr = ran(10)
     val slackChannelId = SlackChannelId("C" + ra(8))
-    val slackChannelName = SlackChannelName(ra(10))
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
       slackChannelId = slackChannelId,
-      webhook = SlackIncomingWebhook(
-        channelName = slackChannelName,
-        channelId = slackChannelId,
-        url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
-        configUrl = s"https://${ra(5)}.slack.com/services/$botStr"
-      ),
+      url = s"https://hooks.slack.com/services/$teamStr/$botStr/${ran(10)}",
+      configUrl = s"https://${ra(5)}.slack.com/services/$botStr",
       lastPostedAt = None
     ))
   }
   case class PartialSlackIncomingWebhook(siw: SlackIncomingWebhookInfo) {
     def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
-    def withChannel(channel: SlackChannel) = this.copy(siw = siw.copy(slackChannelId = channel.slackChannelId, webhook = siw.webhook.copy(channelId = channel.slackChannelId, channelName = channel.slackChannelName)))
+    def withChannel(channel: SlackChannel) = this.copy(siw = siw.copy(slackChannelId = channel.slackChannelId))
   }
   def webhooks(count: Int) = List.fill(count)(webhook())
 }

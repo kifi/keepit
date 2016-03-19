@@ -58,7 +58,8 @@ class SlackIdentityCommanderImpl @Inject() (
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
           slackChannelId = webhook.channelId,
-          webhook = webhook,
+          url = webhook.url,
+          configUrl = webhook.configUrl,
           lastPostedAt = None
         )).id.get
       }

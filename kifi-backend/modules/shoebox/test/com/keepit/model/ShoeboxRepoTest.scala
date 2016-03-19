@@ -130,7 +130,8 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
             slackUserId = slackAccount.slackUserId,
             slackTeamId = slackAccount.slackTeamId,
             slackChannelId = hook.channelId,
-            webhook = hook,
+            url = hook.url,
+            configUrl = hook.configUrl,
             lastPostedAt = None
           ))
           slackWebhookRepo.get(saved.id.get) === saved

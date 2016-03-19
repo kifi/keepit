@@ -46,7 +46,6 @@ CREATE TABLE slack_incoming_webhook_info (
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) NOT NULL,
-  slack_channel_name text NOT NULL,
   url varchar(2048) NOT NULL,
   config_url varchar(2048) NOT NULL,
   last_posted_at DATETIME DEFAULT NULL,

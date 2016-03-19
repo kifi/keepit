@@ -35,17 +35,14 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val lib = LibraryFactory.library().withOwner(user).saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team().withOrg(org).saved
+            val channel1 = SlackChannelFactory.channel().withTeam(slackTeam).withName("#1").saved
+            val channel2 = SlackChannelFactory.channel().withTeam(slackTeam).withName("#2").saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val Seq(siw1, siw2) = SlackIncomingWebhookFactory.webhooks(2).map(_.withMembership(stm).saved)
+            val siw1 = SlackIncomingWebhookFactory.webhook().withChannel(channel1).withMembership(stm).saved
+            val siw2 = SlackIncomingWebhookFactory.webhook().withChannel(channel2).withMembership(stm).saved
             (user, lib, slackTeam, stm, siw1, siw2)
           }
-          val ident = SlackIdentifyResponse(
-            url = "https://www.whatever.com",
-            teamName = stm.slackTeamName,
-            userName = stm.slackUsername,
-            teamId = stm.slackTeamId,
-            userId = stm.slackUserId
-          )
+
           slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw1.id.get)
           slackIntegrationCommander.setupIntegrations(user.id.get, lib.id.get, siw2.id.get)
 
