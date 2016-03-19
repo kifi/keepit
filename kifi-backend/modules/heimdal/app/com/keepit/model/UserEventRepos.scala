@@ -12,7 +12,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.core._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.slack.models.{ InternalSlackTeamInfo, SlackTeamInfo, SlackTeamId }
+import com.keepit.slack.models.{ InternalSlackTeamInfoCache, InternalSlackTeamInfoKey, InternalSlackTeamInfo, SlackTeamInfo, SlackTeamId }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.heimdal.{ HeimdalContext, UserEvent }
@@ -128,14 +128,16 @@ class UserDiscussionViewedAugmentor(eventContextHelper: EventContextHelper)(impl
   }
 }
 
-class SlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: ShoeboxServiceClient) extends EventAugmentor[HeimdalEvent] {
+class SlackInfoAugmentor(eventContextHelper: EventContextHelper, shoebox: ShoeboxServiceClient, internalSlackTeamInfoCache: InternalSlackTeamInfoCache) extends EventAugmentor[HeimdalEvent] {
   def isDefinedAt(event: HeimdalEvent) = SlackEventTypes.contains(event.eventType)
 
   def apply(event: HeimdalEvent): Future[Seq[(String, ContextData)]] = {
     val emptyResponse = Future.successful(Seq.empty[(String, ContextData)])
 
     event.context.get[String]("slackTeamId").map { id =>
-      shoebox.getSlackTeamInfo(SlackTeamId(id)).flatMap { teamInfoOpt =>
+      internalSlackTeamInfoCache.getOrElseFutureOpt(InternalSlackTeamInfoKey(SlackTeamId(id))) {
+        shoebox.getSlackTeamInfo(SlackTeamId(id))
+      }.flatMap { teamInfoOpt =>
         teamInfoOpt.map {
           case InternalSlackTeamInfo(orgIdOpt, teamName) =>
             val userIdOpt = Some(event).collect { case ue: UserEvent => ue.userId }

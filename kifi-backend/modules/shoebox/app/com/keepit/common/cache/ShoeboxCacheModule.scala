@@ -479,4 +479,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def inferredKeeperPositionCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new InferredKeeperPositionCache(stats, accessLog, (innerRepo, 1 day), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def internalSlackTeamInfo(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new InternalSlackTeamInfoCache(stats, accessLog, (outerRepo, 7 days))
 }

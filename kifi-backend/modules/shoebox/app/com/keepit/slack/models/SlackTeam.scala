@@ -113,6 +113,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 class SlackTeamRepoImpl @Inject() (
     slackTeamIdCache: SlackTeamIdCache,
     slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
+    internalSlackTeamInfoCache: InternalSlackTeamInfoCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
 
@@ -210,10 +211,12 @@ class SlackTeamRepoImpl @Inject() (
 
   override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
     slackTeamIdCache.remove(SlackTeamIdKey(model.slackTeamId))
+    internalSlackTeamInfoCache.remove(InternalSlackTeamInfoKey(model.slackTeamId))
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.remove(SlackTeamIdOrgIdKey(orgId)))
   }
   override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
     slackTeamIdCache.set(SlackTeamIdKey(model.slackTeamId), model)
+    internalSlackTeamInfoCache.set(InternalSlackTeamInfoKey(model.slackTeamId), model.toInternalSlackTeamInfo)
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.set(SlackTeamIdOrgIdKey(orgId), model.slackTeamId))
   }
 
@@ -292,4 +295,3 @@ case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
 }
 class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration)*)
   extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
-
