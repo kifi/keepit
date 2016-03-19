@@ -81,6 +81,8 @@ object UserExperimentType {
   val CUSTOM_LIBRARY_ORDERING = UserExperimentType("custom_library_ordering")
   val DISCUSSION_FEED_FILTERS = UserExperimentType("discussion_feed_filters")
   val KEEP_PAGE_RHR = UserExperimentType("keep_page_rhr")
+  val TOGGLE_DIGESTS = UserExperimentType("toggle_digests_ui")
+  val PRIVATE_SYNC = UserExperimentType("private_sync")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
@@ -89,7 +91,7 @@ object UserExperimentType {
     ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: CREATE_TEAM :: SLACK :: CUSTOM_LIBRARY_ORDERING ::
-    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: Nil
+    DISCUSSION_FEED_FILTERS :: KEEP_PAGE_RHR :: TOGGLE_DIGESTS :: PRIVATE_SYNC :: Nil
 
   // only the ExperimentTypes in this list will be tracked as user properties in analytics
   val _TRACK_FOR_ANALYTICS = Set(EXPLICIT_SOCIAL_POSTING, RELATED_PAGE_INFO, ACTIVITY_EMAIL)

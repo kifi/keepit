@@ -10,20 +10,26 @@ angular.module('kifi')
 
     var me = profileService.me;
 
-    $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
+    $scope.slackMembership = me.slack && profileService.me.slack.memberships.filter(function (mem) {
+      return profile.organization.id === mem.orgId;
+    })[0];
+
+    $scope.canEditIntegrations = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
     var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
     var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     var mirroringSetting = settings.slack_comment_mirroring && settings.slack_comment_mirroring.setting;
+    var personalDigestSetting = ($scope.slackMembership && $scope.slackMembership.personalDigestSetting !== 'defer') ?
+      $scope.slackMembership.personalDigestSetting : settings.slack_personal_digest_default;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
-    $scope.slackMembership = me.slack && profileService.me.slack.memberships.filter(function (mem) {
-      return profile.organization.id === mem.orgId;
-    })[0];
-    $scope.isAdmin = me.experiments.indexOf('admin') !== -1;
+    $scope.slackPersonalDigestModel = {enabled: personalDigestSetting === 'on' };
+
+    $scope.canPrivateSync = me.experiments.indexOf('private_sync') !== -1;
+    $scope.canToggleDigest = me.experiments.indexOf('toggle_digests_ui') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -79,6 +85,12 @@ angular.module('kifi')
     $scope.onSlackToKifiChanged = function(integration) {
       integration.integration.fromSlack.status = integration.slackToKifi ? 'on' : 'off';
       slackService.modifyLibraryIngestIntegration(integration.library.id, integration.integration.fromSlack.id, integration.slackToKifi)
+      .then(onSave, onError);
+    };
+
+    $scope.onPersonalDigestChanged = function() {
+      personalDigestSetting = $scope.slackPersonalDigestModel.enabled ? 'on' : 'off';
+      slackService.togglePersonalDigest($scope.slackMembership.teamId, $scope.slackMembership.slackUserId, $scope.slackPersonalDigestModel.enabled)
       .then(onSave, onError);
     };
 

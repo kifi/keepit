@@ -117,6 +117,7 @@ angular.module('kifi')
       privateSyncSlack: post(shoebox, '/organizations/:teamId/slack/sync/private'),
       connectSlack: post(shoebox, '/organizations/:teamId/slack/connect?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
       createTeamFromSlack: post(shoebox, '/organizations/create/slack?slackTeamId=:optSlackTeamId&slackState=:optSlackState'),
+      togglePersonalDigest: post(shoebox, '/organizations/slack/togglePersonalDigest?slackTeamId=:slackTeamId&slackUserId=:slackUserId&turnOn=:turnOn'),
 
       addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
