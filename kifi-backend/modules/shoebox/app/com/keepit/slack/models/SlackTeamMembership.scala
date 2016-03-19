@@ -387,6 +387,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
                            sub.state = 'active' AND
                            sub.personal_digest_setting != 'off' AND
                            sub.next_personal_digest_at < $now AND
+                           sub.last_ingested_message_timestamp IS NOT NULL AND
                            (sub.last_processing_at IS NULL OR sub.last_processing_at < $overrideProcessesOlderThan)
                      ORDER BY sub.next_personal_digest_at ASC, sub.id ASC
                      LIMIT 1

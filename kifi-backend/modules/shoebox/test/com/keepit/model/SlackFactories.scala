@@ -32,7 +32,8 @@ object SlackTeamMembershipFactory {
       slackTeamName = SlackTeamName(ran(10)),
       kind = SlackAccountKind.User,
       tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken(ran(30)), SlackAuthScope.newPush ++ SlackAuthScope.ingest)),
-      slackUser = None
+      slackUser = None,
+      lastIngestedMessageTimestamp = Some(SlackTimestamp("42424242.0007"))
     ))
   }
 
