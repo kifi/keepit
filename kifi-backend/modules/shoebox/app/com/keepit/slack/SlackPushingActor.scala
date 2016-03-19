@@ -409,7 +409,7 @@ class SlackPushingActor @Inject() (
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(attr match {
             case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
-            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username}:*", msg.text)
+            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username.value}:*", msg.text)
           })))
     }
   }
