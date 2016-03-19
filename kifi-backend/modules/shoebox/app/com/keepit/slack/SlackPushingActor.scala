@@ -327,17 +327,15 @@ class SlackPushingActor @Inject() (
       val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
-      def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
-        case sa: SlackAttribution => lts.slackChannelId == sa.message.channel.id
-        case _ => false
-      }
+      // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
+      def comesFromDestinationChannel(keep: Keep): Boolean = keep.source == KeepSource.slack
 
       val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
       def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
         ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
       }
       val (oldKeeps, newKeeps) = changedKeeps.flatAugmentWith { k => ktlsByKeepId.get(k.id.get) }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
-      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) }, attributionByKeepId)
+      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
