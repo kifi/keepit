@@ -60,7 +60,7 @@ class SlackTeamMembershipTest extends TestKitSupport with SpecificationLike with
             val actual = {
               inject[SlackTeamMembershipRepo].getRipeForPersonalDigest(limit = 10, overrideProcessesOlderThan = now, now = now).toList
             }
-            actual === expected
+            actual.toSet === expected.toSet
           }
           1 === 1
         }
