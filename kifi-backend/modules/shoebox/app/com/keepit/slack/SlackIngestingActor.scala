@@ -168,6 +168,7 @@ class SlackIngestingActor @Inject() (
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, lastMessageTimestamp).flatMap { messages =>
+          airbrake.verify(messages.forall(_.channel.id == integration.slackChannelId), s"Ingested a message from the wrong channel (id ${integration.id.get})")
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
