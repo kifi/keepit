@@ -377,21 +377,17 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getRipeForPersonalDigest(limit: Int, overrideProcessesOlderThan: DateTime, now: DateTime)(implicit session: RSession): Seq[Id[SlackTeamMembership]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
-    SELECT stm.id
-    FROM slack_team_membership stm INNER JOIN slack_team st ON (stm.slack_team_id = st.slack_team_id)
-    WHERE st.no_personal_digests_until < $now AND
-          stm.id = ( SELECT sub.id FROM slack_team_membership sub
-                     WHERE sub.slack_team_id = stm.slack_team_id AND
-                           sub.state = 'active' AND
-                           sub.personal_digest_setting != 'off' AND
-                           sub.next_personal_digest_at < $now AND
-                           sub.last_ingested_message_timestamp IS NOT NULL AND
-                           (sub.last_processing_at IS NULL OR sub.last_processing_at < $overrideProcessesOlderThan)
-                     ORDER BY sub.next_personal_digest_at ASC, sub.id ASC
-                     LIMIT 1
-                   )
-    ORDER BY stm.next_personal_digest_at ASC, stm.id ASC
-    LIMIT $limit
+    SELECT MIN(stm.id)
+    FROM slack_team st INNER JOIN slack_team_membership stm ON st.slack_team_id = stm.slack_team_id
+    WHERE st.state = 'active' AND st.no_personal_digests_until < NOW()
+      AND stm.id = (SELECT sub.id FROM slack_team_membership sub
+                    WHERE sub.slack_team_id = st.slack_team_id
+                      AND sub.state = 'active'
+                      AND sub.next_personal_digest_at < NOW()
+                      AND (sub.last_processing_at IS NULL OR sub.last_processing_at < '2016-01-01')
+                    ORDER BY sub.next_personal_digest_at ASC, sub.id ASC
+                    LIMIT 1)
+    GROUP BY st.slack_team_id;
     """.as[Id[SlackTeamMembership]].list
   }
   def markAsProcessingPersonalDigest(id: Id[SlackTeamMembership], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Boolean = {
