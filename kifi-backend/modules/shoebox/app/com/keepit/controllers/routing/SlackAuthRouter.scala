@@ -162,7 +162,7 @@ class SlackAuthRouter @Inject() (
 
   def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "toggleDigest")) { implicit request =>
     if (SlackTeamMembership.decodeTeamAndUser(hash).safely.contains((slackTeamId, slackUserId))) {
-      slackTeamCommander.togglePersonalDigests(slackTeamId, slackUserId, turnOn = turnOn) // this can fail if there is no such membership! (should never happen)
+      slackTeamCommander.unsafeTogglePersonalDigests(slackTeamId, slackUserId, turnOn = turnOn) // this can fail if there is no such membership! (should never happen)
     }
     Redirect(PathCommander.home.absolute)
   }
