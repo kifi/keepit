@@ -16,7 +16,7 @@ object SlackSearchRequest {
 
     implicit def toOption(q: Query): Option[Query] = Some(q)
     implicit def fromString(query: String): Query = Query(query)
-    def in(channelName: SlackChannelName) = Query(s"in:${channelName.value}")
+    def in(channelName: SlackChannelName) = Query(s"in:#${channelName.value.stripPrefix("#").stripPrefix("@")}")
     def from(username: SlackUsername) = Query(s"from:${username.value}")
     def before(date: LocalDate) = Query(s"before:$date")
     def after(date: LocalDate) = Query(s"after:$date")

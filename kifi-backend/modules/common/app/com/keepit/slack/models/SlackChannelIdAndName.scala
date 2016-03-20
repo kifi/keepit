@@ -46,7 +46,13 @@ object SlackChannelId {
   }
 }
 
-@json case class SlackChannelName(value: String)
+case class SlackChannelName(value: String)
+object SlackChannelName {
+  private val reads = Reads[SlackChannelName](_.validate[String].map(value => SlackChannelName(value.stripPrefix("#").stripPrefix("@"))))
+  private val writes = Writes[SlackChannelName](name => JsString(name.value))
+  implicit val format = Format(reads, writes)
+}
+
 @json case class SlackChannelTopic(value: String)
 @json case class SlackChannelPurpose(value: String)
 
@@ -54,6 +60,7 @@ object SlackChannelId {
 @json case class SlackChannelIdAndPrettyName(id: SlackChannelId, name: Option[SlackChannelName])
 object SlackChannelIdAndPrettyName {
   def from(channelId: SlackChannelId, name: SlackChannelName): SlackChannelIdAndPrettyName = channelId match {
+    case SlackChannelId.Public(_) if !name.value.startsWith("#") => SlackChannelIdAndPrettyName(channelId, Some(name.copy(value = "#" + name.value)))
     case SlackChannelId.Public(_) | SlackChannelId.Private(_) => SlackChannelIdAndPrettyName(channelId, Some(name))
     case _ => SlackChannelIdAndPrettyName(channelId, None)
   }
@@ -83,7 +90,7 @@ case class SlackPublicChannelInfo(
 object SlackPublicChannelInfo {
   implicit val reads: Reads[SlackPublicChannelInfo] = (
     (__ \ 'id).read[SlackChannelId.Public] and
-    (__ \ 'name).read[String].map(name => SlackChannelName("#" + name)) and
+    (__ \ 'name).read[SlackChannelName] and
     (__ \ 'creator).read[SlackUserId] and
     (__ \ 'created).read[DateTime] and
     (__ \ 'is_archived).read[Boolean] and
