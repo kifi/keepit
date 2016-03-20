@@ -144,7 +144,7 @@ class SlackOnboarderImpl @Inject() (
 
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
       owner.firstName --> welcomeLink, "connected",
-      slackChannel.slackChannelName.value, "with", lib.name --> libraryLink, ".",
+      (slackChannel.prettyName getOrElse slackChannel.slackChannelName).value, "with", lib.name --> libraryLink, ".",
       "Keeps added to", lib.name, "will be posted here", SlackEmoji.fireworks
     ))
     val attachments = List(
@@ -172,12 +172,12 @@ class SlackOnboarderImpl @Inject() (
     val libraryLink = LinkElement(pathCommander.libraryPageViaSlack(lib, slackTeam.slackTeamId).withQuery(trackingParams))
 
     val txt = DescriptionElements.formatForSlack(DescriptionElements(
-      owner.firstName --> welcomeLink, "connected", slackChannel.slackChannelName.value, "with", lib.name --> libraryLink,
+      owner.firstName --> welcomeLink, "connected", (slackChannel.prettyName getOrElse slackChannel.slackChannelName).value, "with", lib.name --> libraryLink,
       "on Kifi to auto-magically manage links", SlackEmoji.fireworks
     ))
     val attachments = List(
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(
-        DescriptionElements(SlackEmoji.star, s"*Saving links from ${slackChannel.slackChannelName.value}*"),
+        DescriptionElements(SlackEmoji.star, s"*Saving links from ${(slackChannel.prettyName getOrElse slackChannel.slackChannelName).value}*"),
         DescriptionElements("Any time someone includes a link in their message, we'll automatically save it and index the site so you can search for it easily.")
       ))))).withFullMarkdown,
       SlackAttachment(text = Some(DescriptionElements.formatForSlack(DescriptionElements.unlines(List(

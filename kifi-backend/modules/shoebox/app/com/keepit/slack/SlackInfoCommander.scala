@@ -146,7 +146,7 @@ class SlackInfoCommanderImpl @Inject() (
 
     val channelNameByTeamAndChannelId = {
       val channelIds = slackToLibs.map(stl => (stl.slackTeamId, stl.slackChannelId)).toSet ++ libToSlacks.map(lts => (lts.slackTeamId, lts.slackChannelId))
-      slackChannelRepo.getByChannelIds(channelIds).mapValues(_.slackChannelName)
+      slackChannelRepo.getByChannelIds(channelIds).mapValues(channel => channel.prettyName getOrElse channel.slackChannelName)
     }
 
     case class SlackIntegrationInfoKey(space: LibrarySpace, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId)

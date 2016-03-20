@@ -25,6 +25,7 @@ case class SlackChannel(
   def unnotifiedSince: DateTime = lastNotificationAt getOrElse createdAt
 
   def idAndName: (SlackChannelId, SlackChannelName) = (slackChannelId, slackChannelName)
+  def prettyName: Option[SlackChannelName] = SlackChannelIdAndPrettyName.from(slackChannelId, slackChannelName).name
   def isActive: Boolean = state == SlackChannelStates.ACTIVE
 }
 
