@@ -203,6 +203,7 @@ class SlackTeamCommanderImpl @Inject() (
         if (updated != membership) slackTeamMembershipRepo.save(updated) else membership
       }
     }
+    slackLog.info(s"User ${slackUserId.value} in team ${slackTeamId.value} toggled personal digests ${if (turnOn) "on" else "off"}")
     import DescriptionElements._
     membershipOpt.fold(Future.failed[Unit](SlackFail.NoSuchMembership(slackTeamId, slackUserId))) { membership =>
       val channelId = membership.slackUserId.asChannel
