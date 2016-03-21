@@ -13,7 +13,7 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.visible = false;
-        scope.twitterHandle = scope.library.attr && scope.library.attr.twitter.screenName;
+        scope.twitterHandle = scope.library.attr && scope.library.attr.twitter.tweet.user.screen_name;
 
         scope.join = function ($event) {
           $rootScope.$emit('trackLibraryEvent', 'click', {

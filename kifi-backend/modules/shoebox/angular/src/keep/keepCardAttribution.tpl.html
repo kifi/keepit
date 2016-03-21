@@ -67,9 +67,9 @@
     </span>
 
     <a class="kf-keep-tweet-link"
-       ng-if="::keep.sourceAttribution.twitter.screenName && !shortMessage"
-       href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
-       target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span><span ng-bind="'@' + keep.sourceAttribution.twitter.screenName"></span>
+       ng-if="::keep.sourceAttribution.twitter.tweet.user.screen_name && !shortMessage"
+       ng-href="{{::keep.sourceAttribution.twitter.tweet.permalink}}"
+       target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span><span ng-bind="'@' + keep.sourceAttribution.twitter.tweet.user.screen_name"></span>
     </a>
     <span ng-if="isAdmin && keep.summary.hasContent">·</span>
     <span ng-if="isAdmin && keep.summary.hasContent"><a
