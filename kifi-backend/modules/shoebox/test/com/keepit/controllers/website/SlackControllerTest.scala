@@ -6,32 +6,22 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackTeamFactoryHelper._
-import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.SlackChannelFactoryHelper._
 import com.keepit.model.LibraryInviteFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
-import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.time._
-import com.keepit.common.util.DollarAmount
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.payments._
 import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibraryRepo, SlackChannelToLibrary }
 import com.keepit.test.ShoeboxTestInjector
-import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.Specification
 import play.api.libs.json._
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 class SlackControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -54,8 +44,9 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
             val lib = LibraryFactory.library().withOwner(UserFactory.user().saved).saved
 
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
 
             (user, lib, stl)
           }
@@ -103,8 +94,9 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
             val lib = LibraryFactory.library().withOwner(owner).withOrganization(org).saved
 
             val slackTeam = SlackTeamFactory.team().saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
 
             (user, lib, org, stl)
           }

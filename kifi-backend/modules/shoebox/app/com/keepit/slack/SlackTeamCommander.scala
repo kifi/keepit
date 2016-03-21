@@ -28,7 +28,8 @@ trait SlackTeamCommander {
   def connectSlackTeamToOrganization(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Id[Organization])(implicit context: HeimdalContext): Try[SlackTeam]
   def getOrganizationsToConnectToSlackTeam(userId: Id[User])(implicit session: RSession): Set[BasicOrganization]
   def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]]
-  def togglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit]
+  def togglePersonalDigests(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit]
+  def unsafeTogglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit]
 }
 
 @Singleton
@@ -184,15 +185,22 @@ class SlackTeamCommanderImpl @Inject() (
       case None => Failure(SlackActionFail.TeamNotFound(slackTeamId))
     }
   }
-  def togglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit] = {
+  def togglePersonalDigests(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit] = {
+    val membership = db.readOnlyReplica(implicit s => slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId))
+    if (!membership.exists(_.userId.contains(userId))) Future.successful(SlackFail.NoSuchMembership)
+    else unsafeTogglePersonalDigests(slackTeamId, slackUserId, turnOn)
+  }
+
+  def unsafeTogglePersonalDigests(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Future[Unit] = {
     val now = clock.now
     val membershipOpt = db.readWrite { implicit s =>
       slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map { membership =>
-        if (turnOn && membership.nextPersonalDigestAt.isEmpty) {
-          slackTeamMembershipRepo.save(membership.withNextPersonalDigestAt(now))
-        } else if (!turnOn && membership.nextPersonalDigestAt.isDefined) {
-          slackTeamMembershipRepo.save(membership.withNoNextPersonalDigest)
-        } else membership
+        val updated = if (turnOn) {
+          membership.withNextPersonalDigestAt(now)
+        } else {
+          membership.withNoNextPersonalDigest
+        }
+        if (updated != membership) slackTeamMembershipRepo.save(updated) else membership
       }
     }
     import DescriptionElements._

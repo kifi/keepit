@@ -20,7 +20,8 @@ case class SlackIncomingWebhookInfo(
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: SlackChannelId,
-    webhook: SlackIncomingWebhook,
+    url: String,
+    configUrl: String,
     lastPostedAt: Option[DateTime],
     lastFailedAt: Option[DateTime] = None,
     lastFailure: Option[SlackAPIErrorResponse] = None) extends ModelWithState[SlackIncomingWebhookInfo] {
@@ -61,7 +62,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: SlackChannelId,
-    slackChannelName: SlackChannelName,
     url: String,
     configUrl: String,
     lastPostedAt: Option[DateTime],
@@ -75,7 +75,8 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       slackUserId,
       slackTeamId,
       slackChannelId,
-      SlackIncomingWebhook(channelName = slackChannelName, channelId = slackChannelId, url = url, configUrl = configUrl),
+      url,
+      configUrl,
       lastPostedAt,
       lastFailedAt,
       lastFailure.map(_.as[SlackAPIErrorResponse])
@@ -90,9 +91,8 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     info.slackUserId,
     info.slackTeamId,
     info.slackChannelId,
-    info.webhook.channelName,
-    info.webhook.url,
-    info.webhook.configUrl,
+    info.url,
+    info.configUrl,
     info.lastPostedAt,
     info.lastFailedAt,
     info.lastFailure.map(Json.toJson(_)).filterNot(_ == JsNull)
@@ -104,13 +104,12 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
-    def slackChannelName = column[SlackChannelName]("slack_channel_name", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def configUrl = column[String]("config_url", O.NotNull)
     def lastPostedAt = column[Option[DateTime]]("last_posted_at", O.Nullable)
     def lastFailedAt = column[Option[DateTime]]("last_failed_at", O.Nullable)
     def lastFailure = column[Option[JsValue]]("last_failure", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, slackUserId, slackTeamId, slackChannelId, slackChannelName, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, slackUserId, slackTeamId, slackChannelId, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackIncomingWebhookInfoStates.ACTIVE)
@@ -119,16 +118,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   initTable()
   override def deleteCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
   override def invalidateCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
-
-  def add(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
-    save(SlackIncomingWebhookInfo(
-      slackUserId = slackUserId,
-      slackTeamId = slackTeamId,
-      slackChannelId = slackChannelId,
-      webhook = hook,
-      lastPostedAt = lastPostedAt
-    ))
-  }
 
   def getByChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackIncomingWebhookInfo] = {
     workingRows.filter(row => row.slackTeamId === teamId && row.slackChannelId === channelId).list

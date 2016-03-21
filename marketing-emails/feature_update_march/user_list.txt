@@ -1,0 +1,36 @@
+CREATE TEMPORARY TABLE march_emails
+SELECT * FROM (
+SELECT a.id, DATE(a.created_at) created, a.first_name, a.last_name, b.address,
+IF (b.verified_at IS NULL AND b.primary IS NULL, 'FALSE', 'TRUE') verified_primary_email, 
+IF (EXISTS(select * from social_user_info where network_type = 'twitter' AND user_id = b.user_id), 'TRUE', 'FALSE') twitter, 
+IF (EXISTS(select * from organization_membership where role = 'admin' and state = 'active' AND user_id = b.user_id), "TRUE", "FALSE") team_admin,
+IF (EXISTS(SELECT * FROM slack_team_membership o WHERE o.user_id = b.user_id), "TRUE", "FALSE") installed_slack,
+IF (EXISTS(SELECT * FROM organization_membership o WHERE o.user_id = b.user_id), "TRUE", "FALSE") in_team,
+IF ((SELECT COUNT(*) FROM bookmark WHERE user_id = b.user_id AND source NOT IN ("default") AND kept_at > '2016-01-01') > 1, "TRUE", "FALSE") keeper_new,
+IF ((SELECT COUNT(*) FROM bookmark WHERE user_id = b.user_id AND source NOT IN ("default") AND kept_at > '2015-06-01') > 5, "TRUE", "FALSE") keeper_old
+FROM `user` a INNER JOIN email_address b ON (a.id = b.user_id)
+WHERE
+    a.state='active' AND
+    b.state='active' AND
+    b.address NOT LIKE "%+test%" AND
+    b.address NOT LIKE "%NoMailUser%" AND
+    b.address NOT LIKE "%tfbnw.net" AND
+    b.address NOT LIKE "%mailinator%" AND
+    b.address NOT LIKE "%spam%" AND
+    b.address NOT LIKE "%test%" AND
+    b.address NOT LIKE "%asdf%" AND
+    a.id NOT IN (SELECT user_id FROM user_experiment WHERE experiment_type IN ("autogen", "fake")) AND
+    NOT EXISTS (SELECT * FROM email_opt_out WHERE address=b.address) AND
+    NOT EXISTS (SELECT * FROM user_notify_preference WHERE user_id = a.id)
+GROUP BY a.id    
+ORDER BY a.created_at
+) AA;
+
+-- G1
+SELECT count(*) FROM march_emails WHERE team_admin="TRUE";
+-- G2
+SELECT count(*) FROM march_emails WHERE team_admin="FALSE" AND (IN_TEAM="TRUE" OR installed_slack="TRUE");
+-- G3
+SELECT count(*) FROM march_emails WHERE (twitter = "TRUE" OR created >= '2016-01-01' OR keeper_new="TRUE" OR keeper_old="TRUE") AND (IN_TEAM="FALSE" OR team_admin="TRUE") ;
+
+

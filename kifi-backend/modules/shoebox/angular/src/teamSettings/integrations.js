@@ -3,21 +3,33 @@
 angular.module('kifi')
 
 .controller('IntegrationsCtrl', [
-  '$scope', '$window', '$analytics', 'orgProfileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
+  '$scope', '$window', '$analytics', 'orgProfileService', 'profileService', 'messageTicker', 'libraryService', 'ORG_PERMISSION',
   'slackService', 'profile', 'modalService',
-  function ($scope, $window, $analytics, orgProfileService, messageTicker, libraryService, ORG_PERMISSION, slackService,
-    profile, modalService) {
+  function ($scope, $window, $analytics, orgProfileService, profileService, messageTicker, libraryService, ORG_PERMISSION,
+   slackService, profile, modalService) {
 
-    $scope.canEditIntegrations =  ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
+    var me = profileService.me;
+
+    $scope.slackMembership = me.slack && profileService.me.slack.memberships.filter(function (mem) {
+      return profile.organization.id === mem.orgId;
+    })[0];
+
+    $scope.canEditIntegrations = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) !== -1);
     $scope.integrations = [];
 
     var settings = profile.organization && profile.organization.config && profile.organization.config.settings || {};
     var reactionSetting = settings.slack_ingestion_reaction && settings.slack_ingestion_reaction.setting;
     var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     var mirroringSetting = settings.slack_comment_mirroring && settings.slack_comment_mirroring.setting;
+    var personalDigestSetting = ($scope.slackMembership && $scope.slackMembership.personalDigestSetting !== 'defer') ?
+      $scope.slackMembership.personalDigestSetting : settings.slack_personal_digest_default;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
+    $scope.slackPersonalDigestModel = {enabled: personalDigestSetting === 'on' };
+
+    $scope.canPrivateSync = me.experiments.indexOf('private_sync') !== -1;
+    $scope.canToggleDigest = me.experiments.indexOf('toggle_digests_ui') !== -1;
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
@@ -73,6 +85,12 @@ angular.module('kifi')
     $scope.onSlackToKifiChanged = function(integration) {
       integration.integration.fromSlack.status = integration.slackToKifi ? 'on' : 'off';
       slackService.modifyLibraryIngestIntegration(integration.library.id, integration.integration.fromSlack.id, integration.slackToKifi)
+      .then(onSave, onError);
+    };
+
+    $scope.onPersonalDigestChanged = function() {
+      personalDigestSetting = $scope.slackPersonalDigestModel.enabled ? 'on' : 'off';
+      slackService.togglePersonalDigest($scope.slackMembership.teamId, $scope.slackMembership.slackUserId, $scope.slackPersonalDigestModel.enabled)
       .then(onSave, onError);
     };
 
@@ -159,9 +177,17 @@ angular.module('kifi')
       messageTicker({ text: 'Odd, that didn’t work. Try again?', type: 'red' });
     }
 
-    $scope.onClickedSyncAllSlackChannels = function() {
-      $analytics.eventTrack('user_clicked_page', { type: 'orgProfileIntegrations', action: 'syncAllChannels' });
-      slackService.publicSync(profile.organization.id).then(function (resp) {
+    $scope.onClickedSyncAllSlackChannels = function (publicOrPrivate) {
+      $analytics.eventTrack('user_clicked_page',
+        {
+          type: 'orgProfileIntegrations',
+          action: publicOrPrivate === 'public' ? 'syncAllChannels' : 'syncAllPrivateChannels'
+        }
+      );
+
+      var syncP = publicOrPrivate === 'public' ? slackService.publicSync(profile.organization.id) : slackService.privateSync(profile.organization.id);
+
+      syncP.then(function (resp) {
         if (resp.success) {
           messageTicker({ text: 'Syncing!', type: 'green' });
         } else if (resp.redirect) {

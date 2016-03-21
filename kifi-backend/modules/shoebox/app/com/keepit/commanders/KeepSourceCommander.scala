@@ -107,7 +107,7 @@ class KeepSourceAugmentor @Inject() (
           case SlackChannelId.User(username) =>
             slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, SlackUserId(username)).map(s => "<@" + s.slackUsername.value.stripPrefix("@") + ">")
           case channel: SlackChannelId =>
-            slackChannelRepo.getByChannelId(teamId, channel).map(s => "<#" + s.slackChannelName.value.stripPrefix("#") + ">")
+            slackChannelRepo.getByChannelId(teamId, channel).map(s => "<" + s.prettyName.getOrElse(s.slackChannelName).value + ">")
         }.flatten.getOrElse {
           log.warn(s"[genBasicSlackMessage] Unknown Slack id $whole")
           ""

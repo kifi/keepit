@@ -97,9 +97,6 @@ class SlackChannelCommanderImpl @Inject() (
                           onboardingAgent.syncedPublicChannels(successes).map { _ =>
                             slackChannelLibraries
                           }
-                          onboardingAgent.syncedPublicChannels(toBeSetup).map { _ =>
-                            slackChannelLibraries
-                          }
                         }
                         (orgId, toBeSetup.toSet, futureSlackChannelLibraries)
                       }
@@ -274,7 +271,6 @@ class SlackChannelCommanderImpl @Inject() (
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
             slackChannelId = channel.channelId,
-            slackChannelName = channel.channelName,
             status = SlackIntegrationStatus.On
           ))
           channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
@@ -284,7 +280,6 @@ class SlackChannelCommanderImpl @Inject() (
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
             slackChannelId = channel.channelId,
-            slackChannelName = channel.channelName,
             status = SlackIntegrationStatus.On
           ))
         }
@@ -303,7 +298,7 @@ class SlackChannelCommanderImpl @Inject() (
 
     maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
       val initialValues = LibraryInitialValues(
-        name = channel.channelName.value,
+        name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
         visibility = LibraryVisibility.ORGANIZATION,
         kind = Some(LibraryKind.SLACK_CHANNEL),
         description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
@@ -315,7 +310,7 @@ class SlackChannelCommanderImpl @Inject() (
 
   private def createLibraryForPrivateChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPrivateChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val initialValues = LibraryInitialValues(
-      name = channel.channelName.value,
+      name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
       visibility = LibraryVisibility.SECRET,
       kind = Some(LibraryKind.SLACK_CHANNEL),
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),

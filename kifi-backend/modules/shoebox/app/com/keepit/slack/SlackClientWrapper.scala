@@ -131,7 +131,7 @@ class SlackClientWrapperImpl @Inject() (
         case None => Future.failed(SlackFail.NoValidWebhooks)
         case Some(webhookInfo) =>
           val now = clock.now
-          val pushFut = slackClient.pushToWebhook(webhookInfo.webhook.url, msg).andThen {
+          val pushFut = slackClient.pushToWebhook(webhookInfo.url, msg).andThen {
             case Success(_: Unit) => db.readWrite { implicit s =>
               slackChannelRepo.getByChannelId(webhookInfo.slackTeamId, webhookInfo.slackChannelId).foreach { channel =>
                 slackChannelRepo.save(channel.withLastNotificationAtLeast(now))
@@ -343,18 +343,16 @@ class SlackClientWrapperImpl @Inject() (
     }
   }
 
-  private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): Unit = {
-    if (!user.bot) {
-      slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
-        userId = None,
-        slackUserId = user.id,
-        slackUsername = user.name,
-        slackTeamId = slackTeam.slackTeamId,
-        slackTeamName = slackTeam.slackTeamName,
-        tokenWithScopes = None,
-        slackUser = Some(user)
-      ))
-    }
+  private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
+    slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
+      userId = None,
+      slackUserId = user.id,
+      slackUsername = user.name,
+      slackTeamId = slackTeam.slackTeamId,
+      slackTeamName = slackTeam.slackTeamName,
+      tokenWithScopes = None,
+      slackUser = Some(user)
+    ))._1
   }
 
   def checkUserPresence(slackTeamId: SlackTeamId, user: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserPresence] = {
