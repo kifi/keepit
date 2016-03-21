@@ -47,7 +47,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),
-        cc = Seq(SystemEmailAddress.ENG),
+        cc = Seq(SystemEmailAddress.ENG42),
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = "hi",
         category = NotificationCategory.System.ADMIN,

@@ -31,7 +31,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
       val user = UserFactory.user().withName("John", "Doe").withUsername("test").saved
       val emailAddr = userEmailAddressCommander.intern(address = EmailAddress("johndoe@gmail.com"), userId = user.id.get).get._1
       val email = emailRepo.save(ElectronicMail(
-        from = SystemEmailAddress.ENG,
+        from = SystemEmailAddress.ENG42,
         to = List(EmailAddress("johndoe@gmail.com")),
         subject = "Welcome",
         htmlBody = "Hi",

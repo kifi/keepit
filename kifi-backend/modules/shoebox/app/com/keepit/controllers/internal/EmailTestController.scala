@@ -32,7 +32,7 @@ class EmailTestController @Inject() (
       db.readWrite { implicit session =>
         postOffice.sendMail(ElectronicMail(
           senderUserId = None,
-          from = SystemEmailAddress.ENG,
+          from = SystemEmailAddress.ENG42,
           fromName = Some("Email Test"),
           to = Seq(EmailAddress(email)),
           subject = "Email Template Test: " + name,

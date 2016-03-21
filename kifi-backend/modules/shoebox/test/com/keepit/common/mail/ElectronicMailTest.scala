@@ -13,7 +13,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
   "ElectronicMail" should {
     "long title" in {
       ElectronicMail(from = SystemEmailAddress.TEAM,
-        to = List(SystemEmailAddress.ENG),
+        to = List(SystemEmailAddress.ENG42),
         subject = new StringBuilder("foo") * 500,
         htmlBody = "body",
         category = NotificationCategory.System.HEALTHCHECK) must throwA[IllegalArgumentException]
@@ -21,7 +21,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
     "user filters" in {
       withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
-          val mails = ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.ENG), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
+          val mails = ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.ENG42), subject = "foo 1", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
             ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.TEAM), cc = Seq(SystemEmailAddress.EISHAY, SystemEmailAddress.JARED), subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = NotificationCategory.System.HEALTHCHECK) ::
             ElectronicMail(from = SystemEmailAddress.TEAM, to = Seq(SystemEmailAddress.EISHAY), subject = "foo 3", htmlBody = "body", category = NotificationCategory.System.HEALTHCHECK) ::
             Nil
@@ -39,7 +39,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
     "EmailToSend is JSONable" in {
       val em = EmailToSend(
-        from = SystemEmailAddress.ENG,
+        from = SystemEmailAddress.ENG42,
         to = Right(SystemEmailAddress.JOSH),
         subject = "Test",
         campaign = Some("testing"),

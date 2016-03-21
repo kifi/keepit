@@ -32,7 +32,7 @@ class AdminAuthController @Inject() (
       throw new Exception(s"user ${request.user.firstName} ${request.user.lastName} is trying to impersonate user $id ${user.firstName} ${user.lastName} while the cookie is still in use to impersonate user $existingImp")
     }
     log.info(s"impersonating user $user")
-    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42, to = List(SystemEmailAddress.ENG42),
       subject = s"${request.user.firstName} impersonating user $user",
       htmlBody = s"we know that ${request.user.firstName} ${request.user.lastName} is a good person, won't abuse it",
       category = NotificationCategory.System.ADMIN))

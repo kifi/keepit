@@ -63,7 +63,7 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
         val emailToSend = EmailToSend(
           title = "Testing!!!",
           to = Left(toUserId),
-          cc = Seq(SystemEmailAddress.ENG),
+          cc = Seq(SystemEmailAddress.ENG42),
           from = SystemEmailAddress.NOTIFICATIONS,
           subject = "hi",
           category = NotificationCategory.System.ADMIN,

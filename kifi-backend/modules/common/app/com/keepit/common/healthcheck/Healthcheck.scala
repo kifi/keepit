@@ -67,7 +67,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
     val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
-    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42, to = List(SystemEmailAddress.ENG42),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
@@ -76,7 +76,7 @@ class SendOutOfDateMail(sender: MailSender, services: FortyTwoServices) extends 
   def sendMail() {
     val subject = s"${services.currentService} out of date for 10 days"
     val body = ""
-    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42, to = List(SystemEmailAddress.ENG42),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
