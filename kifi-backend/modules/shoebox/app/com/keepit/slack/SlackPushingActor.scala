@@ -422,6 +422,7 @@ class SlackPushingActor @Inject() (
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
+    def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
       DescriptionElements(
@@ -440,16 +441,16 @@ class SlackPushingActor @Inject() (
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
         else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
-          case Right(Success((pointer, ref))) => pointer --> keepLink("lookHere")
-          case Right(Failure(fail)) => "look here" --> keepLink("lookHere")
+          case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
+          case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
         })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHereImage"))).withImageUrl(url)
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
               case None =>
                 SlackAttachment.simple(DescriptionElements(
-                  SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHere"), ": ",
+                  SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
                   DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
                 )).withFullMarkdown
             }

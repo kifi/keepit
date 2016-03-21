@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{ Query, Param }
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.discussion.Message
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackTeamMembership, SlackUserId, SlackTeamId }
@@ -91,6 +92,10 @@ class PathCommander @Inject() (
   def keepPageOnKifiViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/kifi"
   def keepPageOnUrlViaSlack(keep: Keep, slackTeamId: SlackTeamId): Path = keepPageViaSlack(keep, slackTeamId) + "/web"
   def userPageViaSlack(basicUser: BasicUser, slackTeamId: SlackTeamId): Path = Path(s"s/${slackTeamId.value}/u/${basicUser.externalId.id}")
+
+  def keepPageOnMessageViaSlack(keep: Keep, slackTeamId: SlackTeamId, messageId: Id[Message]) = {
+    Path(s"s/${slackTeamId.value}/k/${Keep.publicId(keep.id.get).id}/${UrlHash.hashUrl(keep.url).urlEncoded}/m/${Message.publicId(messageId).id}")
+  }
 
   /**
    * MISCELLANEOUS
