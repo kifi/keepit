@@ -189,28 +189,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def bookmarksKeywordsPageView(page: Int = 0) = AdminUserPage.async { implicit request =>
-    val PAGE_SIZE = 25
-
-    val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
-      case ex: Throwable => -1
-    }
-
-    bmsFut.flatMap { bms =>
-      val uris = bms.map { _.uriId }
-      val keywordsFut = Future.sequence(uris.map { uri => keywordSummaryCommander.getKeywordsSummary(uri) })
-
-      for {
-        keywords <- keywordsFut
-        totalCount <- bookmarkTotalCountFuture
-      } yield {
-        val pageCount = (totalCount * 1f / PAGE_SIZE).ceil.toInt
-        Ok(html.admin.bookmarkKeywords(bms, keywords, page, pageCount))
-      }
-    }
-  }
-
   def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, Hashtag(tagName))
