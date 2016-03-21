@@ -2,7 +2,7 @@ package com.keepit.common.healthcheck
 
 import com.google.inject.Singleton
 import com.keepit.common.mail.{ FakeAmazonMailModule, PostOffice, ElectronicMail }
-import com.keepit.common.mail.SystemEmailAddress.ENG
+import com.keepit.common.mail.SystemEmailAddress.ENG42
 import scala.collection.mutable.MutableList
 import com.keepit.model.NotificationCategory
 

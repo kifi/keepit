@@ -227,7 +227,7 @@ class AuthCommander @Inject() (
           UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}""
         """
         amazonSimpleMailProvider.sendMail(ElectronicMail(
-          from = SystemEmailAddress.ENG,
+          from = SystemEmailAddress.ENG42,
           to = Seq(SystemEmailAddress.SALES),
           subject = s"New user from company: $trimmed",
           htmlBody = informationalMessage,

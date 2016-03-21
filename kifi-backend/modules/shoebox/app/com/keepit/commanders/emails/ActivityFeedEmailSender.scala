@@ -144,8 +144,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
         val subject = s"Activity email sent to $sentCount/${emailOpts.size} candidates"
         val body = subject + ". Took " + sw.logTime() / 1e9 + "s"
         val mail = ElectronicMail(
-          to = Seq(SystemEmailAddress.ENG),
-          from = SystemEmailAddress.ENG,
+          to = Seq(SystemEmailAddress.ENG42),
+          from = SystemEmailAddress.ENG42,
           subject = subject,
           category = NotificationCategory.System.ADMIN,
           htmlBody = LargeString(body))

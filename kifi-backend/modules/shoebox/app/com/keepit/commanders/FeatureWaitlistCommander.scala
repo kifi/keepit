@@ -35,7 +35,7 @@ class FeatureWaitlistCommander @Inject() (
     }
     if (feature == "teams") {
       amazonSimpleMailProvider.sendMail(ElectronicMail(
-        from = SystemEmailAddress.ENG,
+        from = SystemEmailAddress.ENG42,
         to = Seq(SystemEmailAddress.SALES),
         subject = s"New entry on 'Teams' waitlist: $email",
         htmlBody = "",
