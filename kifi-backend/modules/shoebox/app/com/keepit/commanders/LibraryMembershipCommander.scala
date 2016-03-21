@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
@@ -62,6 +63,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     permissionCommander: PermissionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     typeaheadCommander: TypeaheadCommander,
+    userInteractionCommander: UserInteractionCommander,
     kifiUserTypeahead: KifiUserTypeahead,
     libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
@@ -337,8 +339,13 @@ class LibraryMembershipCommanderImpl @Inject() (
 
   def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
     val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, includeSelf = false, limit)
-      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
+      case Some(validQuery) => typeaheadCommander.searchForContacts(userId, validQuery, limit, includeSelf = false)
+      case None =>
+        val (userIds, emails) = userInteractionCommander.suggestFriendsAndContacts(userId, limit)
+        val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
+        val users = userIds.map(id => id -> usersById(id))
+        val contacts = emails.map { email => BasicContact(email = email) }
+        Future.successful((users, contacts))
     }
 
     val activeInvites = db.readOnlyMaster { implicit session =>

@@ -30,7 +30,7 @@ class MobileContactsController @Inject() (
   }
 
   def searchForAllContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-    val typeaheadF = typeaheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
+    val typeaheadF = typeaheadCommander.searchForContactResults(request.userId, query.getOrElse(""), limit, includeSelf = false)
 
     val orgsToInclude = {
       val basicOrgs = db.readOnlyReplica { implicit s =>

@@ -17,8 +17,7 @@ import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
-import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
+import com.keepit.typeahead.{ LibraryTypeahead, TypeaheadHit, KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
@@ -39,6 +38,7 @@ class TypeaheadCommander @Inject() (
     abookServiceClient: ABookServiceClient,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
+    libraryTypeahead: LibraryTypeahead,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
@@ -49,9 +49,9 @@ class TypeaheadCommander @Inject() (
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
-    val futureContacts = search match {
-      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
-      case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
+    val futureContacts = search.map(_.trim) match {
+      case Some(query) if query.nonEmpty => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
+      case _ => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
     futureContacts map { items => dedupBy(items)(_.email.address.toLowerCase) }
   }
@@ -59,108 +59,6 @@ class TypeaheadCommander @Inject() (
   def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {
     // TODO(jared,ray): filter in the abook service instead for efficiency and correctness
     queryContacts(userId, Some(query), 2 * limit).map { contacts => contacts.filter(_.userId.isEmpty).take(limit) }
-  }
-
-  private def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(RichContact, Boolean)]] = {
-    queryContacts(userId, search, limit) map { contacts =>
-      val allEmailInvites = db.readOnlyMaster { implicit ro =>
-        invitationRepo.getEmailInvitesBySenderId(userId)
-      }
-      val invitesMap = allEmailInvites.map { inv => inv.recipientEmailAddress.get -> inv }.toMap // overhead
-      contacts map { c =>
-        val invited = invitesMap.get(c.email) map { _.state != InvitationStates.INACTIVE } getOrElse false
-        (c, invited)
-      }
-    }
-  }
-
-  private def queryContactsInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[ConnectionWithInviteStatus]] = {
-    queryContactsWithInviteStatus(userId, search, limit) map { contacts =>
-      contacts.map {
-        case (c, invited) =>
-          ConnectionWithInviteStatus(c.name.getOrElse(""), -1, SocialNetworks.EMAIL.name, None, emailId(c.email), if (invited) "invited" else "")
-      }
-    }
-  }
-
-  private def querySocial(userId: Id[User], search: Option[String], network: Option[String], limit: Int): Future[Seq[(SocialUserBasicInfo, String)]] = {
-    val filteredF = search match {
-      case Some(query) if query.trim.length > 0 => {
-        implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-        socialUserTypeahead.topN(userId, query, None) map { hits => // todo(ray): use limit
-          val infos = hits map { _.info }
-          val res = network match {
-            case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
-            case None => infos.filter(info => info.networkType.name != SocialNetworks.FORTYTWO) // backward compatibility
-          }
-          log.info(s"[querySocialConnections($userId,$search,$network,$limit)] res=${res.mkString(",")}")
-          res
-        }
-      }
-      case None => {
-        db.readOnlyMasterAsync { implicit s =>
-          socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
-        } map { infos =>
-          infos.values.flatten.toVector
-        }
-
-      }
-    }
-    filteredF map { filtered =>
-      log.info(s"[queryConnections($userId,$search,$network,$limit)] filteredConns(len=${filtered.length});${filtered.take(20).mkString(",")}")
-
-      val paged = filtered.take(limit)
-
-      db.readOnlyMaster { implicit ro =>
-        val allInvites = invitationRepo.getSocialInvitesBySenderId(userId)
-        val invitesMap = allInvites.map { inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
-        val resWithStatus = paged map { sci =>
-          val status = sci.userId match {
-            case Some(userId) => "joined"
-            case None => invitesMap.get(sci.id) collect {
-              case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED =>
-                // This is a hint that that cache may be stale as userId should be set
-                socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-                  socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-                }
-                "joined"
-              case inv if inv.state != InvitationStates.INACTIVE => "invited"
-            } getOrElse ""
-          }
-          (sci, status)
-        }
-        resWithStatus
-      }
-    }
-  }
-
-  private def querySocialInviteStatus(userId: Id[User], search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean): Future[Seq[ConnectionWithInviteStatus]] = {
-    querySocial(userId, search, network, limit) map { infos =>
-      infos.map {
-        case (c, s) =>
-          ConnectionWithInviteStatus(c.fullName, -1, c.networkType.name, if (pictureUrl) c.getPictureUrl(75, 75) else None, socialId(c), s)
-      }
-    }
-  }
-
-  def queryAll(userId: Id[User], search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean): Future[Seq[ConnectionWithInviteStatus]] = {
-    val abookF = {
-      if (network.isEmpty || network.exists(_ == "email")) queryContactsInviteStatus(userId, search, limit) // deviate from UserCommander.getAllConnections
-      else Future.successful(Seq.empty[ConnectionWithInviteStatus])
-    }
-
-    val socialF = {
-      if (network.isEmpty || network.exists(_ != "email")) {
-        querySocialInviteStatus(userId, search, network, limit, pictureUrl)
-      } else Future.successful(Seq.empty[ConnectionWithInviteStatus])
-    }
-
-    for {
-      socialRes <- socialF
-      abookRes <- abookF
-    } yield {
-      (socialRes ++ abookRes)
-    }
   }
 
   private val snMap: Map[SocialNetworkType, Int] =
@@ -257,9 +155,9 @@ class TypeaheadCommander @Inject() (
       case Some(limit) =>
         val social: Future[Seq[NetworkTypeAndHit]] = socialF.map { hits =>
           val hitsMap = hits.groupBy(_.info.networkType)
-          val fb = hitsMap.get(SocialNetworks.FACEBOOK) getOrElse Seq.empty
-          val lnkd = hitsMap.get(SocialNetworks.LINKEDIN) getOrElse Seq.empty
-          val twtr = hitsMap.get(SocialNetworks.TWITTER) getOrElse Seq.empty
+          val fb = hitsMap.getOrElse(SocialNetworks.FACEBOOK, Seq.empty)
+          val lnkd = hitsMap.getOrElse(SocialNetworks.LINKEDIN, Seq.empty)
+          val twtr = hitsMap.getOrElse(SocialNetworks.TWITTER, Seq.empty)
           (fb ++ lnkd ++ twtr).map(hit => (hit.info.networkType, hit))
         }
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
@@ -359,20 +257,7 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
-    val allRecentInteractions = interactionCommander.getRecentInteractions(userId)
-    val relevantInteractions = limit.map(allRecentInteractions.take) getOrElse allRecentInteractions
-    val grouped = interactionCommander.grouped(relevantInteractions)
-    val userIds = grouped.users
-    val emailAddresses = grouped.emails
-
-    val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
-    val users = userIds.map(id => id -> usersById(id))
-    val contacts = emailAddresses.map(BasicContact(_))
-    (users, contacts)
-  }
-
-  def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
+  private def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
         case ((us, cs), nextContact: RichContact) => (us, cs :+ nextContact)
@@ -381,6 +266,7 @@ class TypeaheadCommander @Inject() (
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
           (us, cs)
       }
+
       (
         users.collect { case user if includeSelf || !user.id.contains(userId) => user.id.get -> BasicUser.fromUser(user) },
         contacts.collect { case richContact if includeSelf || !richContact.userId.contains(userId) => BasicContact.fromRichContact(richContact) }
@@ -388,18 +274,26 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
-    val friendsAndContactsF = query.trim match {
-      case q if q.isEmpty =>
-        Future.successful(suggestFriendsAndContacts(userId, limit))
-      case q =>
-        // Start futures
-        val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
+  private def suggestionsToResults(suggestions: (Seq[Id[User]], Seq[EmailAddress])): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
+    val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(suggestions._1.toSet) }
+    val users = suggestions._1.map(id => id -> usersById(id))
+    val contacts = suggestions._2.map(BasicContact(_))
 
-        val (userOrder, contactOrder) = suggestFriendsAndContacts(userId, None) |> {
+    (users, contacts)
+  }
+
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
+    query.trim match {
+      case q if q.isEmpty =>
+        Future.successful(suggestionsToResults(interactionCommander.suggestFriendsAndContacts(userId, limit)))
+      case q =>
+        val friends = searchFriendsAndContacts(userId, q, includeSelf = includeSelf, limit)
+
+        val (userOrder, contactOrder) = suggestionsToResults(interactionCommander.suggestFriendsAndContacts(userId, None)) |> {
           case (users, contacts) =>
             val userOrder = users.zipWithIndex.map(u => u._1._1 -> u._2).toMap
             val contactOrder = contacts.zipWithIndex.toMap
+
             (userOrder.withDefaultValue(limit.getOrElse(500)), contactOrder.withDefaultValue(limit.getOrElse(500)))
         }
 
@@ -411,13 +305,46 @@ class TypeaheadCommander @Inject() (
         }
         rankedFriends
     }
+  }
 
+  def searchForContactResults(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[Seq[ContactSearchResult]] = {
+    val friendsAndContactsF = searchForContacts(userId, query, limit, includeSelf = includeSelf)
     for {
       (users, contacts) <- friendsAndContactsF
     } yield {
       val userResults = users.map { case (_, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
       val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
       userResults ++ emailResults
+    }
+  }
+
+  def searchForKeepRecipients(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
+    // Users, emails, and libraries
+    query.trim match {
+      case q if q.isEmpty =>
+        val interactions = interactionCommander.getRecentInteractions(userId)
+
+        val userIds = interactions.collect { case InteractionInfo(UserInteractionRecipient(u), _) => u }
+        val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
+
+        val suggestions: Seq[ContactSearchResult] = interactions.flatMap {
+          case InteractionInfo(UserInteractionRecipient(u), _) => usersById.get(u).map { bu =>
+            UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName))
+          }
+          case InteractionInfo(EmailInteractionRecipient(e), _) => Some(EmailContactResult(name = None, email = e))
+          case InteractionInfo(LibraryInteraction(l), _) => None
+        }
+
+        Future.successful(suggestions)
+      case q =>
+        val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
+        val libraries = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[LibraryData])
+
+        libraries.map { l =>
+          l.head.info
+        }
+
+        ???
     }
   }
 

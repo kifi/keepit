@@ -26,7 +26,7 @@ class ExtUserController @Inject() (
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
 
-    val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
+    val typeaheadF = typeAheadCommander.searchForContactResults(request.userId, query.getOrElse(""), limit, includeSelf = true)
 
     val orgsToInclude = {
       val basicOrgs = db.readOnlyReplica { implicit s =>
@@ -72,7 +72,7 @@ class ExtUserController @Inject() (
   }
 
   def suggestRecipient(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-
+    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit)
     Future.successful(Ok)
   }
 
