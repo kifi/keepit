@@ -28,9 +28,6 @@ angular.module('kifi')
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
     $scope.slackPersonalDigestModel = {enabled: personalDigestSetting === 'on' };
 
-    $scope.canPrivateSync = me.experiments.indexOf('private_sync') !== -1;
-    $scope.canToggleDigest = me.experiments.indexOf('toggle_digests_ui') !== -1;
-
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {
       $scope.integrationsLoaded = true;
