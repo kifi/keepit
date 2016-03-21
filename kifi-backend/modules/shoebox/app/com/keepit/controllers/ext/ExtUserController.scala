@@ -11,6 +11,8 @@ import play.api.libs.json.{ JsNull, Json }
 
 import com.google.inject.Inject
 
+import scala.concurrent.Future
+
 class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
@@ -67,6 +69,11 @@ class ExtUserController @Inject() (
       }
       Ok(Json.toJson(res1))
     }
+  }
+
+  def suggestRecipient(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
+
+    Future.successful(Ok)
   }
 
   def getGuideInfo = UserAction { request =>
