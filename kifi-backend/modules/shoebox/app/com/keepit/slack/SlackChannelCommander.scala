@@ -301,7 +301,7 @@ class SlackChannelCommanderImpl @Inject() (
 
     maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
       val initialValues = LibraryInitialValues(
-        name = channel.channelName.value,
+        name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
         visibility = LibraryVisibility.ORGANIZATION,
         kind = Some(LibraryKind.SLACK_CHANNEL),
         description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
@@ -313,7 +313,7 @@ class SlackChannelCommanderImpl @Inject() (
 
   private def createLibraryForPrivateChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPrivateChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val initialValues = LibraryInitialValues(
-      name = channel.channelName.value,
+      name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
       visibility = LibraryVisibility.SECRET,
       kind = Some(LibraryKind.SLACK_CHANNEL),
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
