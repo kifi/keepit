@@ -111,6 +111,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 @Singleton
 class SlackTeamRepoImpl @Inject() (
     slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
+    internalSlackTeamInfoCache: InternalSlackTeamInfoCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
 
@@ -207,10 +208,12 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
+    internalSlackTeamInfoCache.remove(InternalSlackTeamInfoKey(model.slackTeamId))
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.remove(SlackTeamIdOrgIdKey(orgId)))
   }
   override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
-    deleteCache(model)
+    internalSlackTeamInfoCache.set(InternalSlackTeamInfoKey(model.slackTeamId), model.toInternalSlackTeamInfo)
+    model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.set(SlackTeamIdOrgIdKey(orgId), model.slackTeamId))
   }
 
   def getByIds(ids: Set[Id[SlackTeam]])(implicit session: RSession): Map[Id[SlackTeam], SlackTeam] = {
@@ -278,4 +281,3 @@ class SlackTeamRepoImpl @Inject() (
   def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam] = activeRows.filter(r => r.kifiBotToken.isEmpty && r.organizationId.isDefined).list
 
 }
-

@@ -1,9 +1,14 @@
 package com.keepit.slack.models
 
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.model.Organization
 import com.kifi.macros.json
+import play.api.libs.json.Json
 import play.api.mvc.{ QueryStringBindable, PathBindable }
+
+import scala.concurrent.duration.Duration
 
 @json case class SlackTeamId(value: String)
 object SlackTeamId {
@@ -29,3 +34,10 @@ object SlackTeamId {
 @json case class SlackTeamEmailDomain(value: String)
 @json case class InternalSlackTeamInfo(orgId: Option[Id[Organization]], teamName: SlackTeamName) // augment as needed
 
+case class InternalSlackTeamInfoKey(id: SlackTeamId) extends Key[InternalSlackTeamInfo] {
+  override val version = 1
+  val namespace = "internal_slack_team_info_by_slack_team_id"
+  def toKey(): String = id.value
+}
+class InternalSlackTeamInfoCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[InternalSlackTeamInfoKey, InternalSlackTeamInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Json.format[InternalSlackTeamInfo])
