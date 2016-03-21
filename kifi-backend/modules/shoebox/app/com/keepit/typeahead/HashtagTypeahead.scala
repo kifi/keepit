@@ -49,7 +49,7 @@ class HashtagTypeahead @Inject() (
   protected def create(userId: Id[User]): Future[UserHashtagTypeahead] = Future.successful {
     val allTagsWithKeepCount = db.readOnlyMaster { implicit session =>
       collectionRepo.getAllTagsByUserSortedByNumKeeps(userId)
-    }.toSeq
+    }
     val filter = buildFilter(userId, allTagsWithKeepCount.zipWithIndex.map { case (tagAndKeepCount, idx) => (Id[Hashtag](idx), tagAndKeepCount) })
     UserHashtagTypeahead(userId, allTagsWithKeepCount, filter, clock.now())
   }
