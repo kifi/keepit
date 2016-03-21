@@ -488,7 +488,7 @@ class AdminOrganizationController @Inject() (
         def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(mem.slackUserId.asChannel, category, Some(subaction))
         val authLink = pathCommander.startWithSlackPath(Some(mem.slackTeamId), Some(SlackAuthScope.stringifySet(SlackAuthScope.pushToPublicChannels))).withQuery(trackingParams("updateSettings"))
         val text = DescriptionElements.formatForSlack(DescriptionElements(
-          s"Kifi team here ${SlackEmoji.wave.value} we made some major upgrades by creating a bot. If you want to take advantage of them, you'll need to", "update your slack integration settings" --> LinkElement(authLink), ".",
+          s"Kifi team here ${SlackEmoji.wave.value}. We made some upgrades. Click", "here" --> LinkElement(authLink), "to update.",
           "\n\n", "Learn more" --> LinkElement("http://blog.kifi.com/personal-stats-via-kifi-bot/"), " about the new features including a bot user & personal stats on your usage."
         ))
         val msg = SlackMessageRequest.fromKifi(text)
