@@ -138,6 +138,7 @@ GET    /admin/user/:id/slack/presence        @com.keepit.controllers.admin.Admin
 
 
 GET     /admin/organizations/backfillSlackStuff              @com.keepit.controllers.admin.AdminOrganizationController.backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId] ?= None)
+GET     /admin/organizations/findIllegalSlackKeeps              @com.keepit.controllers.admin.AdminOrganizationController.findIllegalSlackKeeps()
 GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
 GET     /admin/organization/id/:id                           @com.keepit.controllers.admin.AdminOrganizationController.organizationViewBy(id: Id[Organization], numMemberRecos: Int ?= 60)
 POST    /admin/organization/:id/setName                      @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])

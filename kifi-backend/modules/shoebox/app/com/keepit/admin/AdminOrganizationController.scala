@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
 import com.keepit.classify.NormalizedHostname
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -12,14 +13,14 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.path.Path
+import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.OrganizationSpace
 import com.keepit.model._
 import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo }
-import com.keepit.slack.models.{ SlackEmoji, SlackTeamId, SlackMessageRequest, SlackTeamMembership, SlackTeamMembershipRepo, SlackAuthScope, SlackTeamRepo }
-import com.keepit.slack.{ SlackChannelCommander, SlackAnalytics, SlackClientWrapper, SlackClient }
+import com.keepit.slack.models._
+import com.keepit.slack.{ SlackChannelCommander, SlackAnalytics, SlackClientWrapper }
 import play.api.libs.iteratee.Concurrent
 import play.api.{ Mode, Play }
 import play.api.libs.json.Json
@@ -40,7 +41,10 @@ class AdminOrganizationController @Inject() (
     implicit val executionContext: ExecutionContext,
     db: Database,
     userRepo: UserRepo,
-    keepRepo: KeepToLibraryRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
+    keepRepo: KeepRepo,
+    keepSourceRepo: KeepSourceAttributionRepo,
+    postOffice: LocalPostOffice,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     paidAccountRepo: PaidAccountRepo,
@@ -50,6 +54,7 @@ class AdminOrganizationController @Inject() (
     slackTeamRepo: SlackTeamRepo,
     slackMembershipRepo: SlackTeamMembershipRepo,
     slackClient: SlackClientWrapper,
+    slackToLibraryRepo: SlackChannelToLibraryRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgCommander: OrganizationCommander,
@@ -105,7 +110,7 @@ class AdminOrganizationController @Inject() (
 
   def liveOrganizationsView() = AdminUserPage.async { implicit request =>
     val orgs = db.readOnlyReplica { implicit s =>
-      val orgIds = keepRepo.orgsWithKeepsLastThreeDays().map(_._1)
+      val orgIds = keepToLibraryRepo.orgsWithKeepsLastThreeDays().map(_._1)
       val allOrgs = orgRepo.getByIds(orgIds.toSet)
       orgIds.map(id => allOrgs(id)).toSeq.filter(_.state == OrganizationStates.ACTIVE)
     }
@@ -517,6 +522,54 @@ class AdminOrganizationController @Inject() (
         _ <- slackChannelCommander.syncChannelMemberships(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed syncing channel members for Slack team ${slackTeamId.value}", error) }
       } yield log.info(s"[backfillSlackStuff] Done processing Slack team ${slackTeamId.value}")
     }
+    Ok("I'm on it.")
+  }
+
+  def findIllegalSlackKeeps() = AdminUserAction { implicit request =>
+    SafeFuture {
+      val slackChannelsByLibraryId = db.readOnlyMaster { implicit session =>
+        slackToLibraryRepo.all().groupBy(_.libraryId).mapValues(_.map(stl => (stl.slackTeamId, stl.slackChannelId)))
+      }
+
+      val libraryIds = slackChannelsByLibraryId.keys.toSeq.sortBy(_.id)
+      log.info(s"[findIllegalSlackKeeps] Reviewing ${libraryIds.size} libraries...")
+
+      val illegalKeepsByLibraryIds = libraryIds.zipWithIndex.map {
+        case (libraryId, idx) =>
+          if (idx % 100 == 0) log.info(s"[findIllegalSlackKeeps] Reviewed $idx libraries so far...")
+          val expectedSlackChannelIds = slackChannelsByLibraryId(libraryId)
+          libraryId -> db.readOnlyMaster { implicit session =>
+            val allKeepIds = keepToLibraryRepo.getAllByLibraryId(libraryId).map(_.keepId).toSet
+            keepSourceRepo.getByKeepIds(allKeepIds).collect {
+              case (keepId, SlackAttribution(message, teamId)) if !expectedSlackChannelIds.contains((teamId, message.channel.id)) => (keepId, teamId, message.channel.id)
+            }
+          }
+      }.filter(_._2.nonEmpty)
+
+      log.info(s"[findIllegalSlackKeeps] Found ${illegalKeepsByLibraryIds.size} libraries with suspicious keeps...")
+
+      val allKeepIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._1)).toSet
+      val allTeamIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._2)).toSet
+      val allChannelIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._3)).toSet
+
+      val subject = s"Found ${allKeepIds.size} suspicious keeps in ${illegalKeepsByLibraryIds.size} libraries from ${allChannelIds.size} Slack channels in ${allTeamIds.size} Slack teams."
+
+      val teamSummary = s"All teams: ${allTeamIds.map(_.value).mkString(",")}"
+      val channelSummary = s"All channels: ${allChannelIds.map(_.value).mkString(",")}"
+      val keepSummary = s"All keeps: ${allKeepIds.map(_.id).mkString(",")}"
+
+      val body = Seq(teamSummary, channelSummary, keepSummary).mkString("\n\n")
+
+      val email = ElectronicMail(
+        from = EmailAddress("eng@kifi.com"),
+        to = Seq(EmailAddress("leo@kifi.com")),
+        subject = subject,
+        category = ElectronicMailCategory("admin"),
+        htmlBody = body
+      )
+      db.readWrite { implicit session => postOffice.sendMail(email) }
+    }
+
     Ok("I'm on it.")
   }
 }
