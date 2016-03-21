@@ -14,12 +14,13 @@ trait TrackingActions {
 
   implicit val ec: ExecutionContext
 
-  def SlackClickTracking(slackTeamId: SlackTeamId, subactionFallback: String)(implicit slackAnalytics: SlackAnalytics) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, MaybeUserRequest] {
+  def SlackClickTracking(slackTeamIdOpt: Option[SlackTeamId], subactionFallback: String)(implicit slackAnalytics: SlackAnalytics) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, MaybeUserRequest] {
     override def invokeBlock[A](request: MaybeUserRequest[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       Future {
         request.getQueryString("t").foreach { signedTrackingParams =>
           val params = KifiUrlRedirectHelper.extractTrackingParams(signedTrackingParams, Some("ascii"))
           for {
+            slackTeamId <- slackTeamIdOpt
             slackChannelId <- params.getParam("slackChannelId").flatMap(_.value.map(SlackChannelId(_)))
             category <- params.getParam("category").flatMap(_.value.map(NotificationCategory(_)))
             subaction = params.getParam("subaction").flatMap(_.value).getOrElse(subactionFallback)

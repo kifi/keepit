@@ -10,97 +10,6 @@ k.tile = k.tile || (function () {
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  function loadContentSecurityPolicyBlockedImages() {
-    loadCspCheck(onCspCheckLoaded);
-
-    function loadCspCheck(cb) {
-      var CSP_CHECK_URL = '//djty7jcqog9qu.cloudfront.net/assets/1x1.png';
-      var cspCheckImage = new Image();
-      cspCheckImage.addEventListener('load', cb.bind(null, false));
-      cspCheckImage.addEventListener('error', cb.bind(null, true));
-      cspCheckImage.src = CSP_CHECK_URL;
-    }
-
-    function onCspCheckLoaded(isCspBlocking) {
-      log('[keeper_scout.onCspCheckLoaded]', (isCspBlocking ? 'Yes, a CSP is detected (or the check image is missing).' : 'No, a CSP is not detected.'));
-      if (isCspBlocking) {
-        var observer = new MutationObserver(withMutations);
-        var whatToObserve = { childList: true, subtree: true };
-        observer.observe(document, whatToObserve);
-        document.addEventListener('error', kifiImgError, true); // capture descending errors
-      }
-    }
-
-    function withMutations(records) {
-      records.forEach(function (record) {
-        var target = record.target;
-        if (kifiContains(target)) {
-          var children = target.querySelectorAll('*');
-          Array.prototype.forEach.call(children, fixBackgroundImage);
-        }
-      });
-    }
-
-    function kifiImgError(e) {
-      var img = e.target;
-      var tagName = img.tagName.toLowerCase();
-      var wasReattempted = img.dataset.kifiReattempted;
-      var reattempt = (!wasReattempted && tagName === 'img' && isHttpUrl(img.src) && kifiContains(img));
-
-      if (reattempt) {
-        img.dataset.kifiReattempted = true;
-
-        api.port.emit('load_image', img.src, function (data) {
-          var err = data.error;
-          if (!err) {
-            img.src = data.uri;
-          } else {
-            log('[keeper_scout.kifiImgError] Could not fix image: %s', err);
-          }
-        });
-      }
-    }
-
-    function fixBackgroundImage(node) {
-      var backgroundImageProperty = node.style.backgroundImage || getComputedStyle(node).backgroundImage;
-      var backgroundImageUrl = extractCssUrl(backgroundImageProperty);
-
-      if (backgroundImageUrl && isHttpUrl(backgroundImageUrl)) {
-        api.port.emit('load_image', backgroundImageUrl, function (data) {
-          var err = data.error;
-          if (!err) {
-            node.setAttribute('style', 'background-image: url(' + data.uri + ');');
-          } else {
-            log('[keeper_scout.fixBackgroundImage] Could not fix image: %s', err);
-          }
-        });
-      }
-    }
-
-    function kifiContains(child) {
-      var kifiElements = document.querySelectorAll('kifi');
-      for (var i = 0; i < kifiElements.length; i++) {
-        if (kifiElements[i].contains(child)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    var httpUrlRe = /(https?:)?\/\//;
-    function isHttpUrl(path) {
-      var match = httpUrlRe.exec(path);
-      var index = match && match.index;
-      return index === 0;
-    }
-
-    var cssUrlRe = /url\(['"]?(.*?)['"]?\)/;
-    function extractCssUrl(path) {
-      var match = cssUrlRe.exec(path);
-      return match && match[1];
-    }
-  }
-
   var whenMeKnown = [], tile, tileParent, tileObserver, tileCard;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
@@ -208,6 +117,102 @@ k.tile = k.tile || (function () {
     }
   });
 
+  function loadContentSecurityPolicyBlockedImages() {
+    if (typeof k.csp !== 'undefined') {
+      return;
+    }
+
+    loadCspCheck(onCspCheckLoaded);
+
+    function loadCspCheck(cb) {
+      var CSP_CHECK_URL = '//djty7jcqog9qu.cloudfront.net/assets/1x1.png';
+      var cspCheckImage = new Image();
+      cspCheckImage.addEventListener('load', cb.bind(null, false));
+      cspCheckImage.addEventListener('error', cb.bind(null, true));
+      cspCheckImage.src = CSP_CHECK_URL;
+    }
+
+    function onCspCheckLoaded(isCspBlocking) {
+      k.csp = isCspBlocking;
+      log('[keeper_scout.onCspCheckLoaded]', (isCspBlocking ? 'Yes, a CSP is detected (or the check image is missing).' : 'No, a CSP is not detected.'));
+      if (isCspBlocking) {
+        var observer = new MutationObserver(withMutations);
+        var whatToObserve = { childList: true, subtree: true };
+        observer.observe(document, whatToObserve);
+        document.addEventListener('error', kifiImgError, true); // capture descending errors
+      }
+    }
+
+    function withMutations(records) {
+      records.forEach(function (record) {
+        var target = record.target;
+        if (kifiContains(target)) {
+          var children = target.querySelectorAll('*');
+          Array.prototype.forEach.call(children, fixBackgroundImage);
+        }
+      });
+    }
+
+    function kifiImgError(e) {
+      var img = e.target;
+      var tagName = img.tagName.toLowerCase();
+      var wasReattempted = img.dataset.kifiReattempted;
+      var reattempt = (!wasReattempted && tagName === 'img' && isHttpUrl(img.src) && kifiContains(img));
+
+      if (reattempt) {
+        img.dataset.kifiReattempted = true;
+
+        api.port.emit('load_image', img.src, function (data) {
+          var err = data.error;
+          if (!err) {
+            img.src = data.uri;
+          } else {
+            log('[keeper_scout.kifiImgError] Could not fix image: %s', err);
+          }
+        });
+      }
+    }
+
+    function fixBackgroundImage(node) {
+      var backgroundImageProperty = node.style.backgroundImage || getComputedStyle(node).backgroundImage;
+      var backgroundImageUrl = extractCssUrl(backgroundImageProperty);
+
+      if (backgroundImageUrl && isHttpUrl(backgroundImageUrl)) {
+        api.port.emit('load_image', backgroundImageUrl, function (data) {
+          var err = data.error;
+          if (!err) {
+            node.setAttribute('style', node.getAttribute('style') + ';background-image:url(' + data.uri + ');');
+          } else {
+            log('[keeper_scout.fixBackgroundImage] Could not fix image: %s', err);
+          }
+        });
+      }
+    }
+
+    function kifiContains(child) {
+      var kifiElements = document.querySelectorAll('kifi');
+      for (var i = 0; i < kifiElements.length; i++) {
+        if (kifiElements[i].contains(child)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    var httpUrlRe = /(https?:)?\/\//;
+    function isHttpUrl(path) {
+      var match = httpUrlRe.exec(path);
+      var index = match && match.index;
+      return index === 0;
+    }
+
+    var cssUrlRe = /url\(['"]?(.*?)['"]?\)/;
+    function extractCssUrl(path) {
+      var match = cssUrlRe.exec(path);
+      return match && match[1];
+    }
+  }
+
   var tLastK = 0;
   function onKeyDown(e) {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
@@ -275,6 +280,7 @@ k.tile = k.tile || (function () {
   }
 
   function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
+    loadContentSecurityPolicyBlockedImages();
     if (!('me' in k)) {  // not yet initialized
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);

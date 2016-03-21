@@ -12,7 +12,7 @@ import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.tracking.LibraryViewTrackingCommander
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.slack.models.SlackUserId
+import com.keepit.slack.models.{InternalSlackTeamInfoCache, SlackUserId}
 import com.keepit.social.NonUserKinds
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
@@ -39,6 +39,7 @@ class EventTrackingController @Inject() (
     amplitudeClient: AmplitudeClient,
     airbrake: AirbrakeNotifier,
     eventContextHelper: EventContextHelper,
+    slackTeamInfoCache: InternalSlackTeamInfoCache,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val defaultContext: ExecutionContext) extends HeimdalServiceController with Logging {
 
@@ -81,7 +82,7 @@ class EventTrackingController @Inject() (
       new UserOrgValuesAugmentor(eventContextHelper),
       new UserKeepViewedAugmentor(eventContextHelper),
       new UserDiscussionViewedAugmentor(eventContextHelper),
-      new SlackInfoAugmentor(eventContextHelper, shoeboxClient)
+      new SlackInfoAugmentor(eventContextHelper, shoeboxClient, slackTeamInfoCache)
     )
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
@@ -101,7 +102,7 @@ class EventTrackingController @Inject() (
   }
 
   private def handleNonUserEvent(rawNonUserEvent: NonUserEvent) = {
-    val augmentors = Seq(NonUserIdentifierAugmentor, new SlackInfoAugmentor(eventContextHelper, shoeboxClient))
+    val augmentors = Seq(NonUserIdentifierAugmentor, new SlackInfoAugmentor(eventContextHelper, shoeboxClient, slackTeamInfoCache))
 
     val nonUserEventF = EventAugmentor.safelyAugmentContext(rawNonUserEvent, augmentors: _*).map { ctx =>
       rawNonUserEvent.copy(context = ctx)

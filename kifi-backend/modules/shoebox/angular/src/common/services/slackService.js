@@ -27,6 +27,9 @@ angular.module('kifi')
       publicSync: function (teamId) {
         return net.publicSyncSlack(teamId).then(dataLens);
       },
+      privateSync: function (teamId) {
+        return net.privateSyncSlack(teamId).then(dataLens);
+      },
       // Returns a link that we should send the client to if they want to connect Slack to a team
       connectTeam: function (teamId, optSlackTeamId, optSlackState) {
         return net.connectSlack(teamId, optSlackTeamId, optSlackState).then(dataLens);
@@ -40,6 +43,9 @@ angular.module('kifi')
       },
       modifyLibraryIngestIntegration: function (libraryId, syncId, turnOn) {
         return net.modifyLibraryIngestSlackIntegration(libraryId, syncId, turnOn).then(dataLens);
+      },
+      togglePersonalDigest: function(slackTeamId, slackUserId, turnOn) {
+        return net.togglePersonalDigest(slackTeamId, slackUserId, turnOn).then(dataLens);
       }
     };
     return api;

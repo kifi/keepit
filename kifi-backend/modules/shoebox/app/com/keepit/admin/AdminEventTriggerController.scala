@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time.{Clock, _}
-import com.keepit.slack.{SlackPersonalDigestNotificationActor, SlackClientWrapper, SlackOnboarder}
+import com.keepit.slack.{SlackPersonalDigestNotificationGenerator, SlackPersonalDigestNotificationActor, SlackClientWrapper, SlackOnboarder}
 import com.keepit.slack.models._
 import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.Period
@@ -63,7 +63,7 @@ class AdminEventTriggerController @Inject() (
   libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
   slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   slackClient: SlackClientWrapper,
-  slackPersonalDigestActor: ActorInstance[SlackPersonalDigestNotificationActor],
+  slackPersonalDigestGenerator: SlackPersonalDigestNotificationGenerator,
   implicit val executionContext: ExecutionContext)
     extends AdminUserActions {
   import AdminEventTriggerController._
@@ -71,8 +71,8 @@ class AdminEventTriggerController @Inject() (
   def parseAndTriggerEvent() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
     import AdminEventTriggerController.EventTrigger._
     val result = request.body.as[EventTrigger] match {
-      case x: SlackTeamDigest => forceSlackTeamDigest(x)
-      case x: SlackPersonalDigest => forceSlackPersonalDigest(x)
+      case x: SlackTeamDigest => demoSlackTeamDigest(x)
+      case x: SlackPersonalDigest => demoSlackPersonalDigest(x)
       case x: SlackIntegrationsFTUIs => forceSlackIntegrationsFTUIs(x)
     }
     result.map(Ok(_))
@@ -80,7 +80,7 @@ class AdminEventTriggerController @Inject() (
 
 
 
-  private def forceSlackTeamDigest(trigger: EventTrigger.SlackTeamDigest): Future[JsValue] = {
+  private def demoSlackTeamDigest(trigger: EventTrigger.SlackTeamDigest): Future[JsValue] = {
     db.readWriteAsync { implicit s =>
       slackTeamRepo.getBySlackTeamId(trigger.team).map { team =>
         slackTeamRepo.save(team.withLastDigestNotificationAt(clock.now minus Period.years(5)))
@@ -94,22 +94,25 @@ class AdminEventTriggerController @Inject() (
     }
   }
 
-  private def forceSlackPersonalDigest(trigger: EventTrigger.SlackPersonalDigest): Future[JsValue] = {
+  private def demoSlackPersonalDigest(trigger: EventTrigger.SlackPersonalDigest): Future[JsValue] = {
     val now = clock.now
     db.readWriteAsync { implicit s =>
       for {
-        team <- slackTeamRepo.getBySlackTeamId(trigger.team).map { team =>
-          slackTeamRepo.save(team.withNoPersonalDigestsUntil(now))
-        }
+        team <- slackTeamRepo.getBySlackTeamId(trigger.team)
         membership <- slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user).map { membership =>
-          slackMembershipRepo.save(membership.withNextPersonalDigestAt(now minusYears 1).copy(lastPersonalDigestAt = if (trigger.forceFirst) None else membership.lastPersonalDigestAt))
+          if (trigger.forceFirst) slackMembershipRepo.save(membership.copy(lastPersonalDigestAt = None))
+          else membership
         }
       } yield (team, membership)
     }.map {
       case Some((team, membership)) =>
-        slackClient.sendToSlackHoweverPossible(trigger.team, trigger.user.asChannel, SlackMessageRequest.fromKifi("Forcing personal digest soon!"))
-        slackPersonalDigestActor.ref ! IfYouCouldJustGoAhead
-        Json.obj("ok" -> true)
+        val digestOpt = db.readOnlyMaster { implicit s => slackPersonalDigestGenerator.createPersonalDigest(membership) }
+        digestOpt.fold(reasonForNoDigest => Json.obj("ok" -> false, "reason" -> reasonForNoDigest), { digest =>
+          val msg = if (trigger.forceFirst) slackPersonalDigestGenerator.messageForFirstTimeDigest(digest)
+          else slackPersonalDigestGenerator.messageForRegularDigest(digest)
+          slackClient.sendToSlackHoweverPossible(trigger.team, trigger.user.asChannel, msg)
+          Json.obj("ok" -> true)
+        })
       case None =>
         Json.obj("ok" -> false, "err" -> "could not find team")
     }
@@ -119,11 +122,15 @@ class AdminEventTriggerController @Inject() (
     db.readOnlyReplicaAsync { implicit s =>
       val pushes = libraryToSlackChannelRepo.getActiveByIds(trigger.pushes)
       val ingestions = slackChannelToLibraryRepo.getActiveByIds(trigger.ingestions)
-      (pushes, ingestions)
+      val channelsById = {
+        val channelIds = pushes.map(stl => (stl.slackTeamId, stl.slackChannelId)).toSet ++ ingestions.map(lts => (lts.slackTeamId, lts.slackChannelId))
+        slackChannelRepo.getByChannelIds(channelIds)
+      }
+      (pushes, ingestions, channelsById)
     }.flatMap {
-      case (pushes, ingestions) => for {
-        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc))
-        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl))
+      case (pushes, ingestions, channelsById) => for {
+        _ <- FutureHelpers.sequentialExec(pushes)(ltsc => slackOnboarder.talkAboutIntegration(ltsc, channelsById(ltsc.slackTeamId, ltsc.slackChannelId)))
+        _ <- FutureHelpers.sequentialExec(ingestions)(sctl => slackOnboarder.talkAboutIntegration(sctl, channelsById(sctl.slackTeamId, sctl.slackChannelId)))
       } yield ()
     }.map { _: Unit =>
       Json.obj("ok" -> true)

@@ -76,7 +76,7 @@ class SlackPushingActor @Inject() (
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
-  slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
+  slackChannelRepo: SlackChannelRepo,
   integrationRepo: LibraryToSlackChannelRepo,
   permissionCommander: PermissionCommander,
   clock: Clock,
@@ -114,7 +114,7 @@ class SlackPushingActor @Inject() (
 
   protected def processTasks(integrationIds: Seq[Id[LibraryToSlackChannel]]): Map[Id[LibraryToSlackChannel], Future[Unit]] = {
     log.info(s"[SLACK-PUSH-ACTOR] Processing $integrationIds")
-    val (integrationsByIds, isAllowed, getSettings) = db.readOnlyMaster { implicit session =>
+    val (integrationsByIds, isAllowed, getChannel, getSettings) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
       val isAllowed = integrationsByIds.map {
@@ -124,17 +124,26 @@ class SlackPushingActor @Inject() (
           }
       }
 
+      val getChannel = {
+        val slackChannelBySlackTeamAndChannelId = slackChannelRepo.getByChannelIds(integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackChannelId)).toSet)
+        integrationsByIds.map {
+          case (integrationId, integration) =>
+            val slackChannel = slackChannelBySlackTeamAndChannelId((integration.slackTeamId, integration.slackChannelId))
+            integrationId -> slackChannel
+        }
+      }
+
       val getSettings = {
         val orgIdsByIntegrationIds = integrationsByIds.mapValues(_.space).collect { case (integrationId, OrganizationSpace(orgId)) => integrationId -> orgId }
         val settingsByOrgIds = orgConfigRepo.getByOrgIds(orgIdsByIntegrationIds.values.toSet).mapValues(_.settings)
         orgIdsByIntegrationIds.mapValues(settingsByOrgIds.apply).get _
       }
 
-      (integrationsByIds, isAllowed, getSettings)
+      (integrationsByIds, isAllowed, getChannel, getSettings)
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getSettings)).map {
+        integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getChannel, getSettings)).map {
           case Success(_) =>
             ()
           case Failure(fail) =>
@@ -144,9 +153,11 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Unit] = {
+  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getChannel: Id[LibraryToSlackChannel] => SlackChannel, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Unit] = {
+    val channel = getChannel(integration.id.get)
+
     val futurePushMaybe = {
-      if (isAllowed(integration.id.get)) doPush(integration, getSettings(integration.id.get))
+      if (isAllowed(integration.id.get)) doPush(integration, channel, getSettings(integration.id.get))
       else Future.failed(ForbiddenSlackIntegration(integration))
     }
 
@@ -157,10 +168,10 @@ class SlackPushingActor @Inject() (
           case Success(_) =>
             (Some(now plus delayFromSuccessfulPush), None)
           case Failure(forbidden: ForbiddenSlackIntegration) =>
-            slackLog.warn("Push Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelName.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
+            slackLog.warn("Push Integration between", forbidden.integration.libraryId, "and", forbidden.integration.slackChannelId.value, "in team", forbidden.integration.slackTeamId.value, "is forbidden")
             (None, Some(SlackIntegrationStatus.Off))
           case Failure(broken: BrokenSlackIntegration) =>
-            slackLog.warn("Push Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelName.value, "in team", broken.integration.slackTeamId.value, "is broken")
+            slackLog.warn("Push Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelId.value, "in team", broken.integration.slackTeamId.value, "is broken")
             SafeFuture {
               val team = db.readOnlyReplica { implicit s =>
                 slackTeamRepo.getBySlackTeamId(broken.integration.slackTeamId)
@@ -171,7 +182,7 @@ class SlackPushingActor @Inject() (
               val name = team.map(_.slackTeamName.value).getOrElse("???")
               val cause = broken.cause.map(_.toString).getOrElse("???")
               inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                "Can't Push - Broken Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelName.value, "cause", cause)))
+                "Can't Push - Broken Slack integration of team", name, "and Kifi org", org, "channel", broken.integration.slackChannelId.value, "cause", cause)))
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
@@ -185,18 +196,18 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def doPush(integration: LibraryToSlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
+  private def doPush(integration: LibraryToSlackChannel, channel: SlackChannel, settings: Option[OrganizationSettings]): Future[Unit] = {
     getPushItems(integration).flatMap { implicit pushItems =>
       val botTokenOpt = db.readOnlyMaster { implicit s => slackTeamRepo.getBySlackTeamId(integration.slackTeamId).flatMap(_.kifiBot.map(_.token)) }
       for {
-        _ <- pushNewItems(integration, pushItems.sortedNewItems, settings)
+        _ <- pushNewItems(integration, channel, pushItems.sortedNewItems, settings)
         _ <- botTokenOpt.map(token => updatePushedKeeps(integration, pushItems.oldKeeps, token)).getOrElse(Future.successful(()))
         _ <- botTokenOpt.map(token => updatePushedMessages(integration, pushItems.oldMsgs, token)).getOrElse(Future.successful(()))
       } yield ()
     }
   }
 
-  private def pushNewItems(integration: LibraryToSlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
+  private def pushNewItems(integration: LibraryToSlackChannel, channel: SlackChannel, sortedItems: Seq[PushItem], settings: Option[OrganizationSettings])(implicit pushItems: PushItems): Future[Unit] = {
     FutureHelpers.sequentialExec(sortedItems) { item =>
       slackMessageForItem(item, settings).fold(Future.successful(())) { itemMsg =>
         slackClient.sendToSlackHoweverPossible(integration.slackTeamId, integration.slackChannelId, itemMsg).recoverWith {
@@ -235,7 +246,7 @@ class SlackPushingActor @Inject() (
                   contextBuilder += ("threadId", k.id.get.id)
                   NotificationCategory.NonUser.NEW_COMMENT
               }
-              slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, integration.slackChannelName, category, contextBuilder.build)
+              slackAnalytics.trackNotificationSent(integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, category, contextBuilder.build)
               ()
           }
         }
@@ -316,17 +327,15 @@ class SlackPushingActor @Inject() (
       val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
 
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
-      def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
-        case sa: SlackAttribution => lts.slackChannelId == sa.message.channel.id
-        case _ => false
-      }
+      // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
+      def comesFromDestinationChannel(keep: Keep): Boolean = keep.source == KeepSource.slack
 
       val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
       def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
         ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
       }
       val (oldKeeps, newKeeps) = changedKeeps.flatAugmentWith { k => ktlsByKeepId.get(k.id.get) }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
-      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k.id.get) }, attributionByKeepId)
+      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
@@ -400,7 +409,7 @@ class SlackPushingActor @Inject() (
         SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(attr match {
             case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
-            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username}:*", msg.text)
+            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username.value}:*", msg.text)
           })))
     }
   }
@@ -413,6 +422,7 @@ class SlackPushingActor @Inject() (
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
+    def msgLink(subaction: String) = LinkElement(pathCommander.keepPageOnMessageViaSlack(keep, slackTeamId, msg.id).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
 
     val keepElement = {
       DescriptionElements(
@@ -431,16 +441,16 @@ class SlackPushingActor @Inject() (
         if (msg.isDeleted) Seq(SlackAttachment.simple("[comment has been deleted]"))
         else SlackAttachment.simple(DescriptionElements(s"*$userStr:*", textAndLookHeres.map {
           case Left(str) => DescriptionElements(str)
-          case Right(Success((pointer, ref))) => pointer --> keepLink("lookHere")
-          case Right(Failure(fail)) => "look here" --> keepLink("lookHere")
+          case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
+          case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
         })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>
-                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHereImage"))).withImageUrl(url)
+                SlackAttachment.simple(DescriptionElements(SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHereImage"))).withImageUrl(url)
               case None =>
                 SlackAttachment.simple(DescriptionElements(
-                  SlackEmoji.magnifyingGlass, pointer --> keepLink("lookHere"), ": ",
+                  SlackEmoji.magnifyingGlass, pointer --> msgLink("lookHere"), ": ",
                   DescriptionElements.unlines(ref.lines.toSeq.map(ln => DescriptionElements(s"_${ln}_")))
                 )).withFullMarkdown
             }

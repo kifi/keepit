@@ -37,6 +37,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
   slackIdentityCommander: SlackIdentityCommander,
   slackIntegrationCommander: SlackIntegrationCommander,
   slackTeamCommander: SlackTeamCommander,
+  slackChannelCommander: SlackChannelCommander,
   slackTeamRepo: SlackTeamRepo,
   pathCommander: PathCommander,
   implicit val executionContext: ExecutionContext,
@@ -144,12 +145,12 @@ class SlackAuthenticationCommanderImpl @Inject() (
         }
       }
 
-      case SyncPublicChannels() => slackTeamCommander.syncPublicChannels(userId, slackTeamId).map {
+      case SyncPublicChannels() => slackChannelCommander.syncPublicChannels(userId, slackTeamId).map {
         case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
       }
 
-      case SyncPrivateChannels() => slackTeamCommander.syncPrivateChannels(userId, slackTeamId).map {
+      case SyncPrivateChannels() => slackChannelCommander.syncPrivateChannels(userId, slackTeamId).map {
         case (orgId, _, _) =>
           SlackResponse.ActionPerformed(redirectToOrganizationIntegrations(orgId).url.map(_ + s"/slack-confirm?slackTeamId=${slackTeamId.value}"))
       }

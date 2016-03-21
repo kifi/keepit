@@ -80,7 +80,7 @@ if [[ $ERR -ne 0 ]]; then
 
 fi
 
-echo "Uploaded extension to the web store. Publishing..."
+echo $'\n\n**** Successfully uploaded extension to the web store. Publishing...\n\n'
 
 # Publish it
 curl \

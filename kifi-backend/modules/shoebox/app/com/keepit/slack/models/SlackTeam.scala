@@ -28,7 +28,7 @@ case class SlackTeam(
   channelsLastSyncingAt: Option[DateTime] = None,
   channelsSynced: Set[SlackChannelId] = Set.empty,
   kifiBot: Option[KifiSlackBot],
-  noPersonalDigestsUntil: Option[DateTime] = None)
+  noPersonalDigestsUntil: DateTime = currentDateTime)
     extends ModelWithState[SlackTeam] {
   def withId(id: Id[SlackTeam]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -36,13 +36,14 @@ case class SlackTeam(
   def withName(name: SlackTeamName) = this.copy(slackTeamName = name)
   def withGeneralChannelId(channelId: SlackChannelId) = this.copy(generalChannelId = Some(channelId))
   def withLastDigestNotificationAt(time: DateTime) = this.copy(lastDigestNotificationAt = Some(time))
-  def withNoPersonalDigestsEver = this.copy(noPersonalDigestsUntil = None)
-  def withNoPersonalDigestsUntil(time: DateTime) = this.copy(noPersonalDigestsUntil = Some(time))
+  def withNoPersonalDigestsUntil(time: DateTime) = this.copy(noPersonalDigestsUntil = time)
   def withPublicChannelsSyncedAt(time: DateTime) = publicChannelsLastSyncedAt match {
     case Some(lastSync) if lastSync isAfter time => this
     case _ => this.copy(publicChannelsLastSyncedAt = Some(time))
   }
-  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsLastSyncingAt = None, channelsSynced = channelsSynced ++ newChannels)
+
+  def doneSyncing = this.copy(channelsLastSyncingAt = None)
+  def withSyncedChannels(newChannels: Set[SlackChannelId]) = this.copy(channelsSynced = channelsSynced ++ newChannels)
 
   def withNoKifiBot = this.copy(kifiBot = None)
   def withKifiBotIfDefined(kifiBotOpt: Option[KifiSlackBot]) = kifiBotOpt match {
@@ -84,7 +85,7 @@ object SlackTeam {
     (__ \ 'publicChannelsLastSyncedAt).formatNullable[DateTime] and
     (__ \ 'channelsSynced).format[Set[SlackChannelId]] and
     (__ \ 'kifiBot).formatNullable[KifiSlackBot] and
-    (__ \ 'noPersonalDigestsUntil).formatNullable[DateTime]
+    (__ \ 'noPersonalDigestsUntil).format[DateTime]
   )(SlackTeam.apply, unlift(SlackTeam.unapply))
 }
 
@@ -96,7 +97,7 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
   def getSlackTeamIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], SlackTeamId]
   def getBySlackTeamIdNoCache(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam]
-  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam]
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId])(implicit session: RSession): Map[SlackTeamId, SlackTeam]
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam]
   def internSlackTeam(teamId: SlackTeamId, teamName: SlackTeamName, botAuth: Option[SlackBotUserAuthorization])(implicit session: RWSession): SlackTeam
 
@@ -109,8 +110,8 @@ trait SlackTeamRepo extends Repo[SlackTeam] {
 
 @Singleton
 class SlackTeamRepoImpl @Inject() (
-    slackTeamIdCache: SlackTeamIdCache,
     slackTeamIdByOrganizationIdCache: SlackTeamIdOrgIdCache,
+    internalSlackTeamInfoCache: InternalSlackTeamInfoCache,
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[SlackTeam] with SlackTeamRepo {
 
@@ -139,7 +140,7 @@ class SlackTeamRepoImpl @Inject() (
     channelsSynced: Set[SlackChannelId],
     kifiBotUserId: Option[SlackUserId],
     kifiBotToken: Option[SlackBotAccessToken],
-    noPersonalDigestsUntil: Option[DateTime]) = {
+    noPersonalDigestsUntil: DateTime) = {
     SlackTeam(
       id,
       createdAt,
@@ -189,7 +190,7 @@ class SlackTeamRepoImpl @Inject() (
     def channelsSynced = column[Set[SlackChannelId]]("channels_synced", O.NotNull)
     def kifiBotUserId = column[Option[SlackUserId]]("kifi_bot_user_id", O.Nullable)
     def kifiBotToken = column[Option[SlackBotAccessToken]]("kifi_bot_token", O.Nullable)
-    def noPersonalDigestsUntil = column[Option[DateTime]]("no_personal_digests_until", O.Nullable)
+    def noPersonalDigestsUntil = column[DateTime]("no_personal_digests_until", O.NotNull)
     def * = (
       id.?, createdAt, updatedAt, state, slackTeamId, slackTeamName, organizationId,
       generalChannelId, lastDigestNotificationAt, publicChannelsLastSyncedAt, channelsLastSyncingAt, channelsSynced,
@@ -207,11 +208,11 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   override def deleteCache(model: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.remove(SlackTeamIdKey(model.slackTeamId))
+    internalSlackTeamInfoCache.remove(InternalSlackTeamInfoKey(model.slackTeamId))
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.remove(SlackTeamIdOrgIdKey(orgId)))
   }
   override def invalidateCache(model: SlackTeam)(implicit session: RSession): Unit = {
-    slackTeamIdCache.set(SlackTeamIdKey(model.slackTeamId), model)
+    internalSlackTeamInfoCache.set(InternalSlackTeamInfoKey(model.slackTeamId), model.toInternalSlackTeamInfo)
     model.organizationId.foreach(orgId => slackTeamIdByOrganizationIdCache.set(SlackTeamIdOrgIdKey(orgId), model.slackTeamId))
   }
 
@@ -239,13 +240,11 @@ class SlackTeamRepoImpl @Inject() (
   }
 
   def getBySlackTeamId(slackTeamId: SlackTeamId, excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Option[SlackTeam] = {
-    getBySlackTeamIds(Set(slackTeamId), excludeState).get(slackTeamId)
+    rows.filter(r => r.slackTeamId === slackTeamId && r.state =!= excludeState.orNull).firstOption
   }
 
-  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId], excludeState: Option[State[SlackTeam]] = Some(SlackTeamStates.INACTIVE))(implicit session: RSession): Map[SlackTeamId, SlackTeam] = {
-    slackTeamIdCache.bulkGetOrElse(slackTeamIds.map(SlackTeamIdKey(_))) { missingKeys =>
-      rows.filter(row => row.slackTeamId.inSet(missingKeys.map(_.id)) && row.state =!= excludeState.orNull).list.map { team => SlackTeamIdKey(team.slackTeamId) -> team }.toMap
-    }.map { case (SlackTeamIdKey(slackTeamId), team) => slackTeamId -> team }
+  def getBySlackTeamIds(slackTeamIds: Set[SlackTeamId])(implicit session: RSession): Map[SlackTeamId, SlackTeam] = {
+    activeRows.filter(row => row.slackTeamId.inSet(slackTeamIds)).list.map(st => st.slackTeamId -> st).toMap
   }
 
   def getByKifiBotToken(token: SlackBotAccessToken)(implicit session: RSession): Option[SlackTeam] = {
@@ -282,12 +281,3 @@ class SlackTeamRepoImpl @Inject() (
   def getAllActiveWithOrgAndWithoutKifiBotToken()(implicit session: RSession): Seq[SlackTeam] = activeRows.filter(r => r.kifiBotToken.isEmpty && r.organizationId.isDefined).list
 
 }
-
-case class SlackTeamIdKey(id: SlackTeamId) extends Key[SlackTeam] {
-  override val version = 13
-  val namespace = "slack_team_by_slack_team_id"
-  def toKey(): String = id.value
-}
-class SlackTeamIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration), innerToOuterPluginSettings: (FortyTwoCachePlugin, ConcurrentDuration)*)
-  extends JsonCacheImpl[SlackTeamIdKey, SlackTeam](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SlackTeam.cacheFormat)
-

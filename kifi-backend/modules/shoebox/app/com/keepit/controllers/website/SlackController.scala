@@ -192,6 +192,15 @@ class SlackController @Inject() (
     }
   }
 
+  def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean) = UserAction.async { implicit request =>
+    slackTeamCommander.togglePersonalDigests(request.userId, slackTeamId, slackUserId, turnOn).recover {
+      case fail: SlackFail => fail.asResponse
+      case ex =>
+        airbrake.notify(s"unhandled $ex when toggling personal digest for ${request.userId} ")
+        InternalServerError
+    }.map(_ => Ok(Json.obj("success" -> true)))
+  }
+
   // Always speaks JSON, should be on /site/ routes, cannot handle Redirects to HTML pages
   private def handleAsAPIRequest[T](response: Future[SlackResponse])(implicit request: UserRequest[T]) = {
     response.map {

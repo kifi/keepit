@@ -21,7 +21,7 @@ trait SlackOAuthProvider extends OAuthProvider[SlackAuthorizationResponse, Slack
 
 @Singleton
 class SlackOAuthProviderImpl @Inject() (
-    slackClient: SlackClient,
+    slackClient: SlackClientWrapper,
     slackAuthCommander: SlackAuthenticationCommander,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends SlackOAuthProvider with Logging {
@@ -33,7 +33,7 @@ class SlackOAuthProviderImpl @Inject() (
   def getRichIdentity(auth: SlackAuthorizationResponse): Future[SlackIdentity] = {
     for {
       userIdentity <- slackClient.identifyUser(auth.accessToken)
-      userInfo <- slackClient.getUserInfo(auth.accessToken, userIdentity.userId)
+      userInfo <- slackClient.getUserInfo(userIdentity.teamId, userIdentity.userId, if (auth.scopes.contains(SlackAuthScope.UsersRead)) Seq(auth.accessToken) else Seq.empty)
     } yield SlackIdentity(auth, userIdentity, Some(userInfo))
   }
 

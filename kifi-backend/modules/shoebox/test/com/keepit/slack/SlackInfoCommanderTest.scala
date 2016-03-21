@@ -12,6 +12,7 @@ import com.keepit.model.LibraryToSlackChannelFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.SlackTeamFactoryHelper._
+import com.keepit.model.SlackChannelFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -36,12 +37,15 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
             val Seq(lib1, lib2) = LibraryFactory.libraries(2).map(_.withOwner(user)).saved
             val slackTeam = SlackTeamFactory.team().saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val engChannel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
+            val aChannel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#a").saved
+            val bChannel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#b").saved
 
-            LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib1).withChannel("#eng").saved
-            SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib1).withChannel("#eng").saved
+            LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib1).withChannel(engChannel).saved
+            SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib1).withChannel(engChannel).saved
 
-            LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib2).withChannel("#a").saved
-            SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib2).withChannel("#b").saved
+            LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib2).withChannel(aChannel).saved
+            SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib2).withChannel(bChannel).saved
 
             (user, lib1, lib2)
           }
@@ -61,12 +65,14 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
             val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam1 = SlackTeamFactory.team().withName("kifi").saved
             val slackTeam2 = SlackTeamFactory.team().withName("kifi").saved
+            val team1EngChannel = SlackChannelFactory.channel().withTeam(slackTeam1).withName("#eng").saved
+            val team2EngChannel = SlackChannelFactory.channel().withTeam(slackTeam2).withName("#eng").saved
 
             val stm1 = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam1).saved
             val stm2 = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam2).saved
 
-            LibraryToSlackChannelFactory.lts().withMembership(stm1).withLibrary(lib).withChannel("#eng").saved
-            SlackChannelToLibraryFactory.stl().withMembership(stm2).withLibrary(lib).withChannel("#eng").saved
+            LibraryToSlackChannelFactory.lts().withMembership(stm1).withLibrary(lib).withChannel(team1EngChannel).saved
+            SlackChannelToLibraryFactory.stl().withMembership(stm2).withLibrary(lib).withChannel(team2EngChannel).saved
 
             (user, lib)
           }
@@ -87,11 +93,12 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
             val slackTeam = SlackTeamFactory.team().withName("slack").saved
             val stmOwner = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
             val stmMember = SlackTeamMembershipFactory.membership().withUser(member).withTeam(slackTeam).saved
+            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val personalSpace = LibrarySpace.fromUserId(member.id.get)
             LibraryFactory.libraries(5).map(_.withOwner(member).withVisibility(LibraryVisibility.SECRET)).saved.foreach { lib =>
-              LibraryToSlackChannelFactory.lts().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel("#eng").saved
-              SlackChannelToLibraryFactory.stl().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel("#eng").saved
+              LibraryToSlackChannelFactory.lts().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel(channel).saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel(channel).saved
             }
 
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
@@ -106,8 +113,8 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
               LibraryFactory.library().withOwner(member).withOrganization(org).saved
             )
             for (lib <- personalLibs ++ orgLibs) yield {
-              LibraryToSlackChannelFactory.lts().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel("#eng").saved
-              SlackChannelToLibraryFactory.stl().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel("#eng").saved
+              LibraryToSlackChannelFactory.lts().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel(channel).saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel(channel).saved
             }
             (owner, member, org, orgLibs ++ personalLibs)
           }

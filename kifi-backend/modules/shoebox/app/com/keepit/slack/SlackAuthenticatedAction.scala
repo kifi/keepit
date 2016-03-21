@@ -152,9 +152,7 @@ object SlackAuthenticatedActionHelper {
 
   def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {
     val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action)
-    val missingScopes = requiredScopes -- existingScopes
-    val requiresNewIncomingWebhook = requiredScopes.contains(SlackAuthScope.IncomingWebhook)
-    if (requiresNewIncomingWebhook) missingScopes + SlackAuthScope.IncomingWebhook else missingScopes
+    requiredScopes -- existingScopes
   }
 }
 

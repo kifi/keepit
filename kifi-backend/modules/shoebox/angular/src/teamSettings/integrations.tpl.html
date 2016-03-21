@@ -28,10 +28,16 @@
           To integrate one library or channel at a time, visit <a ui-sref="orgProfile.libraries">any library</a> and click the
         <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button.</div>
 
-        <div class="kf-ts-integrations-sync"><button
-          class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
-          tabindex="0"
-          ng-click="onClickedSyncAllSlackChannels()">Sync all Slack Channels</button>
+        <div class="kf-ts-integrations-sync">
+          <div class="kf-ts-integrations-sync-public">
+            <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+              tabindex="0"
+              ng-click="onClickedSyncAllSlackChannels('public')">Sync all Slack Public Channels</button>
+          </div>
+          <div class="kf-ts-integrations-sync-private" ng-if="canPrivateSync">
+            <button class="kf-button kf-button-large kf-action-button kf-button-cta-red" tabindex="0"
+              ng-click="onClickedSyncAllSlackChannels('private')">Sync all Slack Private channels<svg class="kf-ts-integrations-sync-private-svg symbol-sprite" kf-symbol-sprite icon="lock"></svg></button>
+          </div>
         </div>
       </div>
 
@@ -43,16 +49,25 @@
           <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button on your libraries.
         </span>
         <div class="kf-ts-integrations-sync">
-          <button
-            class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
-            tabindex="0"
-            ng-click="onClickedSyncAllSlackChannels()">Sync new Slack channels</button>
-          <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackTeam.publicChannelsLastSyncedAt" ng-if="slackTeam.publicChannelsLastSyncedAt"></time><span ng-if="!slackTeam.publicChannelsLastSyncedAt">never</span></div>
+          <div class="kf-ts-integrations-sync-public">
+            <button
+              class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+              tabindex="0"
+              ng-click="onClickedSyncAllSlackChannels('public')">Sync new Slack Public channels<svg class="kf-ts-integrations-sync-public-svg symbol-sprite" kf-symbol-sprite icon="org"></svg></button>
+            <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackTeam.publicChannelsLastSyncedAt" ng-if="slackTeam.publicChannelsLastSyncedAt"></time><span ng-if="!slackTeam.publicChannelsLastSyncedAt">never</span></div>
+          </div>
+          <div class="kf-ts-integrations-sync-private" ng-if="canPrivateSync">
+            <button
+              class="kf-button kf-button-large kf-action-button kf-button-cta-red"
+              tabindex="0"
+              ng-click="onClickedSyncAllSlackChannels('private')">Sync new Slack Private channels<svg class="kf-ts-integrations-sync-private-svg symbol-sprite" kf-symbol-sprite icon="lock"></svg></button>
+            <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackMembership.privateChannelsLastSyncedAt" ng-if="slackMembership.privateChannelsLastSyncedAt"></time><span ng-if="!slackMembership.privateChannelsLastSyncedAt">never</span></div>
+          </div>
         </div>
       </div>
 
       <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackTeam">
-        <div class="kf-container-header"><h2 id="slack-settings">Slack settings</h2></div>
+        <div class="kf-container-header"><h2 id="slack-settings">Teamwide Slack settings</h2></div>
         <div class="kf-ts-integrations-checkrow">
           <input class="kf-ts-integrations-checkbox" ng-model="slackIntegrationReactionModel.enabled" ng-change="onSlackIntegrationReactionChanged()"  type="checkbox" />
           <span>Show the <img src="/img/robot-face.png"/> emoji on links after they have been successfully saved in Kifi.</span>
@@ -64,6 +79,14 @@
         <div class="kf-ts-integrations-checkrow">
           <input class="kf-ts-integrations-checkbox" ng-model="slackCommentMirroringModel.enabled" ng-change="onSlackIntegrationMirroringChanged()"  type="checkbox" />
           <span>Send comments on Keeps to Slack channels.</span>
+        </div>
+      </div>
+
+      <div class="kf-container kf-container-toppad" ng-if="integrationsLoaded && slackMembership">
+        <div class="kf-container-header"><h2>Personal Slack settings<span ng-bind="' for @' + slackMembership.username"></span></h2></div>
+        <div class="kf-ts-integrations-checkrow">
+          <input class="kf-ts-integrations-checkbox" type="checkbox" ng-model="slackPersonalDigestModel.enabled" ng-change="onPersonalDigestChanged()">
+          <span class="kf-ts-integrations-personal-txt">Receive weekly personal stats via Kifi BOT</span>
         </div>
       </div>
 

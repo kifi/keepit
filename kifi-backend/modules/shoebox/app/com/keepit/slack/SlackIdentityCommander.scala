@@ -36,11 +36,13 @@ class SlackIdentityCommanderImpl @Inject() (
   db: Database,
   slackTeamRepo: SlackTeamRepo,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
+  slackChannelRepo: SlackChannelRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgMembershipCommander: OrganizationMembershipCommander,
   slackClient: SlackClientWrapper,
   keepSourceCommander: KeepSourceCommander,
+  slackChannelCommander: SlackChannelCommander,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackIdentityCommander with Logging {
@@ -51,11 +53,13 @@ class SlackIdentityCommanderImpl @Inject() (
       slackTeamRepo.internSlackTeam(auth.teamId, auth.teamName, auth.botAuth)
       internSlackIdentity(userIdOpt, SlackIdentity(auth, identity, None))
       auth.incomingWebhook.map { webhook =>
+        slackChannelRepo.getOrCreate(identity.teamId, webhook.channelId, webhook.channelName)
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
           slackChannelId = webhook.channelId,
-          webhook = webhook,
+          url = webhook.url,
+          configUrl = webhook.configUrl,
           lastPostedAt = None
         )).id.get
       }
@@ -81,13 +85,13 @@ class SlackIdentityCommanderImpl @Inject() (
       slackUsername = identity.username,
       slackTeamId = identity.teamId,
       slackTeamName = identity.teamName,
-      token = identity.token,
-      scopes = identity.scopes,
+      tokenWithScopes = identity.tokenWithScopes,
       slackUser = identity.user
     ))
     autojoinOrganization(membership)
     userIdOpt.foreach { userId =>
       session.onTransactionSuccess {
+        slackChannelCommander.syncChannelMemberships(identity.teamId)
         keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.teamId, identity.userId), userId)
       }
     }
@@ -145,7 +149,7 @@ class SlackIdentityCommanderImpl @Inject() (
 
     savedIdentityAndExistingUserScopesOpt match {
       case Some((slackTeamId, slackUserId, SlackTokenWithScopes(userToken, existingUserScopes))) => slackClient.validateToken(userToken).imap {
-        case true => (Some((slackTeamId, slackUserId)), existingUserScopes)
+        case true => (Some((slackTeamId, slackUserId)), existingUserScopes -- SlackAuthScope.ignoredUserScopes)
         case false => (None, Set.empty[SlackAuthScope])
       }
       case None => Future.successful((None, Set.empty[SlackAuthScope]))
