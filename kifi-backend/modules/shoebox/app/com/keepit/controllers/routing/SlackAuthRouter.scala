@@ -13,6 +13,7 @@ import com.keepit.common.http._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
+import com.keepit.discussion.Message
 import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.TrackingActions
@@ -158,6 +159,10 @@ class SlackAuthRouter @Inject() (
         }
       }
     }
+  }
+
+  def fromSlackToMessage(slackTeamId: SlackTeamId, keepId: PublicId[Keep], urlHash: UrlHash, msgId: PublicId[Message]) = {
+    fromSlackToKeep(slackTeamId, keepId, urlHash, onKifi = false)
   }
 
   def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "toggleDigest")) { implicit request =>
