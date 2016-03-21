@@ -97,9 +97,6 @@ class SlackChannelCommanderImpl @Inject() (
                           onboardingAgent.syncedPublicChannels(successes).map { _ =>
                             slackChannelLibraries
                           }
-                          onboardingAgent.syncedPublicChannels(toBeSetup).map { _ =>
-                            slackChannelLibraries
-                          }
                         }
                         (orgId, toBeSetup.toSet, futureSlackChannelLibraries)
                       }
