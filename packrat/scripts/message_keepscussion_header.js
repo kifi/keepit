@@ -210,20 +210,27 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
     },
 
     sendModifyKeep: function (libraries) {
-      var self = this;
       var keep = this.parent.keep;
       return api.port.emit('update_discussion_keep_library', {
         discussionKeep: keep,
         newLibrary: libraries[0]
-      }, function (d) {
+      }, function success(d) {
         var keep = d.response;
         if (d.success) {
-          self.parent.keep = keep;
+          this.parent.keep = keep;
+          this.parent.refresh();
+        } else {
+          // TODO(carlos): Add a progress bar to seem snappier
+          var $toShake = this.get$();
+          $toShake
+          .on('animationend', function onEnd() {
+            $toShake.off('animationend', onEnd);
+            $toShake.removeClass('kifi-shake');
+            this.parent.refresh();
+          })
+          .addClass('kifi-shake');
         }
-        self.parent.refresh();
-      }, function () {
-        self.parent.refresh();
-      });
+      }.bind(this));
     },
 
     showAddDialog: function () {
