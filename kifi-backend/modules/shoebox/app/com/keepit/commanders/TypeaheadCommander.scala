@@ -5,7 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
@@ -41,6 +42,11 @@ class TypeaheadCommander @Inject() (
     libraryTypeahead: LibraryTypeahead,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
+    libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
+    organizationAvatarCommander: OrganizationAvatarCommander,
+    libraryMembershipCommander: LibraryMembershipCommander,
+    pathCommander: PathCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
@@ -306,46 +312,118 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContactResults(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[Seq[ContactSearchResult]] = {
+  def searchForContactResults(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[Seq[TypeaheadSearchResult]] = {
     val friendsAndContactsF = searchForContacts(userId, query, limit, includeSelf = includeSelf)
     for {
       (users, contacts) <- friendsAndContactsF
     } yield {
-      val userResults = users.map { case (_, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
+      val userResults = users.map { case (_, bu) => UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName) }
       val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
       userResults ++ emailResults
     }
   }
 
-  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int]): Future[Seq[ContactSearchResult]] = {
+  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
     val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(20))
     query.trim match {
       case q if q.isEmpty =>
-        val interactions = interactionCommander.getRecentInteractions(userId)
-
-        val userIds = interactions.collect { case InteractionInfo(UserInteractionRecipient(u), _) => u }
-        val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
-
-        val suggestions: Seq[ContactSearchResult] = interactions.flatMap {
-          case InteractionInfo(UserInteractionRecipient(u), _) => usersById.get(u).map { bu =>
-            UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName))
-          }
-          case InteractionInfo(EmailInteractionRecipient(e), _) => Some(EmailContactResult(name = None, email = e))
-          case InteractionInfo(LibraryInteraction(l), _) => None
-        }
-        Future.successful(suggestions)
+        Future.successful(suggestResults(userId))
       case q =>
-        val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
-        val kifiUserF = kifiUserTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-        val abookF = abookServiceClient.prefixQuery(userId, q, limit.map(_ * 2))
-        val libraries = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[Library])
+        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
+        val librariesF = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[Library])
 
-        libraries.map { l =>
-          l.head.info
+        val (userScore, emailScore, libScore) = {
+          val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
+          val userScore = interactions.collect {
+            case (InteractionInfo(UserInteractionRecipient(u), score), idx) => u -> idx
+          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+          val emailScore = interactions.collect {
+            case (InteractionInfo(EmailInteractionRecipient(e), score), idx) => e -> idx
+          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+          val libScore = interactions.collect {
+            case (InteractionInfo(LibraryInteraction(l), score), idx) => l -> idx
+          }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
+          (userScore, emailScore, libScore)
         }
 
-        ???
+        for {
+          (users, contacts) <- friendsF
+          libraryHits <- librariesF
+        } yield {
+          val libraries = libraryHits.map(_.info)
+          // (interactionIdx, typeaheadIdx, value). Lower scores are better for both.
+          val userRes = users.zipWithIndex.map {
+            case ((id, bu), idx) =>
+              (userScore(id), idx, UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName))
+          }
+          val emailRes = contacts.zipWithIndex.map {
+            case (contact, idx) =>
+              (emailScore(contact.email), idx, EmailContactResult(email = contact.email, name = contact.name))
+          }
+          val libRes = libToResult(userId, libraries.map(_.id.get)).zipWithIndex.map {
+            case ((id, lib), idx) =>
+              (libScore(id), idx, lib)
+          }
+          (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).map { case (_, _, res) => res }
+        }
+    }
+  }
+
+  private def suggestResults(userId: Id[User]): Seq[TypeaheadSearchResult] = {
+    val interactions = interactionCommander.getRecentInteractions(userId)
+
+    val usersById = {
+      val userIds = interactions.collect { case InteractionInfo(UserInteractionRecipient(u), _) => u }
+      db.readOnlyMaster { implicit session =>
+        basicUserRepo.loadAll(userIds.toSet).map {
+          case (id, bu) =>
+            id -> UserContactResult(name = bu.fullName, id = bu.externalId, pictureName = Some(bu.pictureName), username = bu.username, firstName = bu.firstName, lastName = bu.lastName)
+        }
+      }
+    }
+    val libsById = {
+      val libIds = interactions.collect { case InteractionInfo(LibraryInteraction(u), _) => u }
+      libToResult(userId, libIds).toMap
+    }
+
+    interactions.flatMap {
+      case InteractionInfo(UserInteractionRecipient(u), _) => usersById.get(u)
+      case InteractionInfo(EmailInteractionRecipient(e), _) => Some(EmailContactResult(name = None, email = e))
+      case InteractionInfo(LibraryInteraction(l), _) => libsById.get(l)
+    }
+  }
+
+  private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Seq[(Id[Library], LibraryResult)] = {
+    val idSet = libIds.toSet
+    db.readOnlyReplica { implicit session =>
+      val libs = libraryRepo.getActiveByIds(idSet).values.toVector
+      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
+      val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
+      val allUserIds = collaborators.values.flatten.toSet
+      val orgIds = libs.flatMap(_.organizationId)
+
+      val basicUserById = basicUserRepo.loadAll(allUserIds)
+      val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
+
+      libs.map {
+        case lib =>
+          val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
+          val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
+          val membershipInfo = memberships.get(lib.id.get).map { mem => libraryMembershipCommander.createMembershipInfo(mem) }
+
+          lib.id.get -> LibraryResult(
+            id = Library.publicId(lib.id.get),
+            name = lib.name,
+            color = lib.color,
+            visibility = lib.visibility,
+            path = pathCommander.getPathForLibrary(lib),
+            hasCollaborators = collabs.nonEmpty,
+            collaborators = collabs,
+            orgAvatar = orgAvatarPath,
+            membership = membershipInfo
+          )
+      }
     }
   }
 
@@ -357,10 +435,12 @@ class TypeaheadCommander @Inject() (
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
-sealed trait ContactSearchResult
-@json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String]) extends ContactSearchResult
-@json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
-@json case class AliasContactResult(name: String, id: String, kind: String) extends ContactSearchResult
+sealed trait TypeaheadSearchResult
+@json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String], username: Username, firstName: String, lastName: String) extends TypeaheadSearchResult
+@json case class EmailContactResult(name: Option[String], email: EmailAddress) extends TypeaheadSearchResult
+@json case class LibraryResult(id: PublicId[Library], name: String, color: Option[LibraryColor], visibility: LibraryVisibility,
+  path: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
+  membership: Option[LibraryMembershipInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
 
 sealed abstract class ContactType(val value: String)
 object ContactType {

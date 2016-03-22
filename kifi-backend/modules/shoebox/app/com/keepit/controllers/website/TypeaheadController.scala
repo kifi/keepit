@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.model.UserExperimentType
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.commanders.{ AliasContactResult, EmailContactResult, UserContactResult, TypeaheadCommander }
+import com.keepit.commanders.{ EmailContactResult, UserContactResult, TypeaheadCommander }
 
 case class TypeaheadSearchRequest(query: String, limit: Int, pictureUrl: Boolean, inviteStatus: Boolean)
 

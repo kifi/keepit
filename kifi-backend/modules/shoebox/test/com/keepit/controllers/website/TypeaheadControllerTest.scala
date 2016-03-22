@@ -298,22 +298,20 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeUserActionsHelper].setUser(u1)
 
-        @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
+        @inline def search(query: String, limit: Int = 10): Seq[TypeaheadSearchResult] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
           val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
           val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
-            // Order matters here, since AliasContactResult is a superset of UserContactResult for backwards compatibility reasons
-            val parsed: ContactSearchResult = j.asOpt[AliasContactResult] orElse j.asOpt[UserContactResult] getOrElse j.as[EmailContactResult]
+            val parsed: TypeaheadSearchResult = j.asOpt[UserContactResult] getOrElse j.as[EmailContactResult]
             parsed
           }
           js
         }
 
-        def parseRes(contacts: Seq[ContactSearchResult]) = {
+        def parseRes(contacts: Seq[TypeaheadSearchResult]) = {
           contacts.collect {
             case u: UserContactResult => u.name
             case e: EmailContactResult => e.name.get
-            case a: AliasContactResult => a.name
           }
         }
 
@@ -380,7 +378,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeUserActionsHelper].setUser(u1)
 
-        @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
+        @inline def search(query: String, limit: Int = 10): Seq[TypeaheadSearchResult] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
           val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
           val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
@@ -392,11 +390,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           js
         }
 
-        def parseRes(contacts: Seq[ContactSearchResult]) = {
+        def parseRes(contacts: Seq[TypeaheadSearchResult]) = {
           contacts.collect {
             case u: UserContactResult => u.name
             case e: EmailContactResult => e.email.address
-            case a: AliasContactResult => a.name
           }
         }
 

@@ -130,6 +130,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
+GET     /ext/keeps/suggest          @com.keepit.controllers.ext.ExtUserController.suggestRecipient(query:Option[String], limit:Option[Int])
 
 POST    /ext/keeps/:id/recipients   @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
 
