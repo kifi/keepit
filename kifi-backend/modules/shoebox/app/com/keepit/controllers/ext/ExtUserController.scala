@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
@@ -19,7 +20,7 @@ class ExtUserController @Inject() (
   libPathCommander: PathCommander,
   permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   db: Database,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -34,7 +35,7 @@ class ExtUserController @Inject() (
           .filter { orgId =>
             permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
-        orgInfoCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+        basicOrganizationGen.getBasicOrganizations(orgsUserIsIn.toSet).values
       }
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs

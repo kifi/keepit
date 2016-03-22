@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext
 
 class OrganizationAvatarController @Inject() (
   orgAvatarCommander: OrganizationAvatarCommander,
+  orgAvatarUploadCommander: OrganizationAvatarUploadCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper,
   val db: Database,
@@ -27,7 +28,7 @@ class OrganizationAvatarController @Inject() (
   def uploadAvatar(pubId: PublicId[Organization], x: Int, y: Int, s: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.temporaryFile) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
-    val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
+    val uploadImageF = orgAvatarUploadCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
     uploadImageF.map { hash =>
       val avatar = db.readOnlyMaster { implicit s => orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize) }
       Ok(Json.obj("uploaded" -> avatar.imagePath))

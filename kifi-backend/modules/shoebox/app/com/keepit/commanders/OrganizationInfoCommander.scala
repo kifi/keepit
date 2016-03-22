@@ -1,14 +1,16 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance.StatsdTiming
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.slack.SlackInfoCommander
@@ -31,8 +33,6 @@ trait OrganizationInfoCommander {
   def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
-  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
-  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization]
   def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
 
 }
@@ -58,6 +58,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     planManagementCommander: Provider[PlanManagementCommander],
+    basicOrganizationGen: BasicOrganizationGen,
     basicOrganizationIdCache: BasicOrganizationIdCache,
     implicit val executionContext: ExecutionContext) extends OrganizationInfoCommander with Logging {
 
@@ -85,43 +86,9 @@ class OrganizationInfoCommanderImpl @Inject() (
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
     // This function assumes that the org is active
-    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganizationHelper(orgId).get)
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(basicOrganizationGen.getBasicOrganizationHelper(orgId).get)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
     BasicOrganizationView(basicOrganization, membershipInfo)
-  }
-
-  def getBasicOrganizations(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], BasicOrganization] = {
-    val cacheFormattedMap = basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
-      missing.map(_.id).map {
-        orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
-      }.collect {
-        case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
-      }.map {
-        case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
-      }.toMap
-    }
-    cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
-  }
-
-  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
-    val org = orgRepo.get(orgId)
-    if (org.isInactive) None
-    else {
-      val orgHandle = org.handle
-      val orgName = org.name
-      val description = org.description
-
-      val ownerId = userRepo.get(org.ownerId).externalId
-      val avatarPath = organizationAvatarCommander.get.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
-
-      Some(BasicOrganization(
-        orgId = Organization.publicId(orgId),
-        ownerId = ownerId,
-        handle = orgHandle,
-        name = orgName,
-        description = description,
-        avatarPath = avatarPath))
-    }
   }
 
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = {

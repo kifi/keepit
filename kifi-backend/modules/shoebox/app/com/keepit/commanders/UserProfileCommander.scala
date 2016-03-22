@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryQuery.Arrangement
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RSession
@@ -44,7 +45,7 @@ class UserProfileCommander @Inject() (
     libraryCardCommander: LibraryCardCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
     libQueryCommander: LibraryQueryCommander,
-    organizationInfoCommander: OrganizationInfoCommander,
+    basicOrganizationGen: BasicOrganizationGen,
     orgMembershipRepo: OrganizationMembershipRepo,
     graphServiceClient: GraphServiceClient,
     implicit val defaultContext: ExecutionContext,
@@ -293,7 +294,7 @@ class UserProfileCommander @Inject() (
       val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
       val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
 
-      val basicOrgsWithTopLibs = organizationInfoCommander.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
+      val basicOrgsWithTopLibs = basicOrganizationGen.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
         .map {
           case (id, org) =>
             val basicLibs = orgLibs.getOrElse(id, Seq.empty)

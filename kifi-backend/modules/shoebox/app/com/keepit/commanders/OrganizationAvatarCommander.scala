@@ -23,19 +23,13 @@ import scala.util.{ Failure, Success }
 trait OrganizationAvatarCommander {
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize)(implicit session: RSession): Map[Id[Organization], OrganizationAvatar]
-  def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]]
-  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
 }
 
 @Singleton
 class OrganizationAvatarCommanderImpl @Inject() (
     db: Database,
     orgAvatarRepo: OrganizationAvatarRepo,
-    imageStore: RoverImageStore,
-    implicit val photoshop: Photoshop,
-    val webService: WebService,
-    creditRewardCommander: Provider[CreditRewardCommander],
-    private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
+    private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with Logging {
 
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = getBestImagesByOrgIds(Set(orgId), imageSize).head._2
 
@@ -69,6 +63,23 @@ class OrganizationAvatarCommanderImpl @Inject() (
         source = ImageSource.Unknown,
         sourceFileHash = imageHash, sourceImageURL = None))
   }
+}
+
+@ImplementedBy(classOf[OrganizationAvatarUploadCommanderImpl])
+trait OrganizationAvatarUploadCommander {
+  def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]]
+  def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
+}
+
+@Singleton
+class OrganizationAvatarUploadCommanderImpl @Inject() (
+    db: Database,
+    orgAvatarRepo: OrganizationAvatarRepo,
+    imageStore: RoverImageStore,
+    implicit val photoshop: Photoshop,
+    val webService: WebService,
+    creditRewardCommander: Provider[CreditRewardCommander],
+    private implicit val executionContext: ExecutionContext) extends OrganizationAvatarUploadCommander with ProcessedImageHelper with Logging {
 
   def persistRemoteOrganizationAvatars(orgId: Id[Organization], imageUrl: String): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashRemoteImage(imageUrl).flatMap {

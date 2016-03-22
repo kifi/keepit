@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -27,7 +28,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   libraryRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   pathCommander: PathCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends CreditRewardInfoCommander with Logging {
@@ -65,7 +66,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = orgInfoCommander.getBasicOrganizationHelper(id)
+  private def getOrg(id: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = basicOrganizationGen.getBasicOrganizationHelper(id)
   def getDescription(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
     require(creditReward.applied.isDefined)
     val reason = creditReward.reward match {

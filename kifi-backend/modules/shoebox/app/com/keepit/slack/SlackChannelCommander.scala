@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander, LibraryCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
@@ -37,7 +38,7 @@ trait SlackChannelCommander {
 @Singleton
 class SlackChannelCommanderImpl @Inject() (
     db: Database,
-    organizationInfoCommander: OrganizationInfoCommander,
+    basicOrganizationGen: BasicOrganizationGen,
     permissionCommander: PermissionCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -195,7 +196,7 @@ class SlackChannelCommanderImpl @Inject() (
       if (newLibraries.nonEmpty) {
         SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
           "Created", newLibraries.size, "libraries from", team.slackTeamName.value, "public channels",
-          team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+          team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => basicOrganizationGen.getBasicOrganizationHelper(orgId) }))
         ))))
       }
 
@@ -229,7 +230,7 @@ class SlackChannelCommanderImpl @Inject() (
       if (newLibraries.nonEmpty) {
         SafeFuture(inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
           "Created", newLibraries.size, "private libraries from", team.slackTeamName.value, "private channels",
-          team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => organizationInfoCommander.getBasicOrganizationHelper(orgId) }))
+          team.organizationId.map(orgId => DescriptionElements("for", db.readOnlyMaster { implicit s => basicOrganizationGen.getBasicOrganizationHelper(orgId) }))
         ))))
       }
 

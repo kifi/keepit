@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -48,7 +49,7 @@ class KeepDecoratorImpl @Inject() (
   keepImageCommander: KeepImageCommander,
   libraryCardCommander: LibraryCardCommander,
   userCommander: UserCommander,
-  organizationInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   searchClient: SearchServiceClient,
   keepSourceCommander: KeepSourceCommander,
   permissionCommander: PermissionCommander,
@@ -99,7 +100,7 @@ class KeepDecoratorImpl @Inject() (
         val basicOrgByLibId = {
           val orgIdByLibId = idToLibrary.collect { case (libId, lib) if lib.organizationId.isDefined => libId -> lib.organizationId.get }
           val orgIds = orgIdByLibId.values.toSet
-          val basicOrgById = db.readOnlyMaster(implicit s => organizationInfoCommander.getBasicOrganizations(orgIds))
+          val basicOrgById = db.readOnlyMaster(implicit s => basicOrganizationGen.getBasicOrganizations(orgIds))
           orgIdByLibId.mapValues(basicOrgById(_))
         }
 

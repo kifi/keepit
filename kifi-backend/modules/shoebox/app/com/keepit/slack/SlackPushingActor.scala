@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
@@ -71,7 +72,7 @@ object SlackPushingActor {
 
 class SlackPushingActor @Inject() (
   db: Database,
-  organizationInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   slackTeamRepo: SlackTeamRepo,
   libRepo: LibraryRepo,
   slackClient: SlackClientWrapper,
@@ -177,7 +178,7 @@ class SlackPushingActor @Inject() (
                 slackTeamRepo.getBySlackTeamId(broken.integration.slackTeamId)
               }
               val org = db.readOnlyMaster { implicit s =>
-                team.flatMap(_.organizationId).flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+                team.flatMap(_.organizationId).flatMap(basicOrganizationGen.getBasicOrganizationHelper)
               }
               val name = team.map(_.slackTeamName.value).getOrElse("???")
               val cause = broken.cause.map(_.toString).getOrElse("???")

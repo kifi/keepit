@@ -80,4 +80,12 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
       prodStoreModule.kifiUserTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryKifiUserTypeaheadStoreImpl())
   }
+
+  @Singleton
+  @Provides
+  def libraryTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LibraryTypeaheadStore = {
+    whenConfigured("amazon.s3.typeahead.library.bucket")(
+      prodStoreModule.libraryTypeaheadStore(amazonS3Client, accessLog)
+    ) getOrElse (new InMemoryLibraryTypeaheadStoreImpl())
+  }
 }

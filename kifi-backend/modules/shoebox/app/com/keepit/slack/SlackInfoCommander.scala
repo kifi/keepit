@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -97,7 +98,7 @@ class SlackInfoCommanderImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   libRepo: LibraryRepo,
-  orgInfoCommander: Provider[OrganizationInfoCommander],
+  basicOrganizationGen: BasicOrganizationGen,
   permissionCommander: PermissionCommander,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
@@ -203,7 +204,7 @@ class SlackInfoCommanderImpl @Inject() (
         val owners = libs.map(_.ownerId).toSet
         val basicUserById = basicUserRepo.loadAll(owners)
         val orgIds = libs.flatMap(_.organizationId).toSet
-        val basicOrgs = orgIds.flatMap { orgId => orgInfoCommander.get.getBasicOrganizationHelper(orgId).map(orgId -> _) }.toMap
+        val basicOrgs = orgIds.flatMap { orgId => basicOrganizationGen.getBasicOrganizationHelper(orgId).map(orgId -> _) }.toMap
         libs.map { lib =>
           lib.id.get -> BasicLibrary(lib, basicUserById(lib.ownerId), lib.organizationId.flatMap(basicOrgs.get).map(_.handle))
         }.toMap

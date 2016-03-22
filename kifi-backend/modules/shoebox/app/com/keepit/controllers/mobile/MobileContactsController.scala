@@ -3,6 +3,7 @@ package com.keepit.controllers.mobile
 import com.google.inject.Inject
 
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
@@ -14,7 +15,7 @@ import com.keepit.abook.model.RichContact
 
 class MobileContactsController @Inject() (
   val userActionsHelper: UserActionsHelper,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   orgMemberRepo: OrganizationMembershipRepo,
   db: Database,
   typeaheadCommander: TypeaheadCommander,
@@ -38,7 +39,7 @@ class MobileContactsController @Inject() (
           .filter { orgId =>
             permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
-        orgInfoCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+        basicOrganizationGen.getBasicOrganizations(orgsUserIsIn.toSet).values
       }
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs

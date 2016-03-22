@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
@@ -46,7 +47,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   slackClient: SlackClientWrapper,
   clock: Clock,
   airbrake: AirbrakeNotifier,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   slackAnalytics: SlackAnalytics,
   val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val ec: ExecutionContext,
@@ -116,7 +117,7 @@ class SlackTeamDigestNotificationActor @Inject() (
       ownerId <- slackMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.userId.isDefined).minBy(_.createdAt).userId // TODO(ryan): this might be stupid...
       owner <- basicUserRepo.loadActive(ownerId)
       orgId <- slackTeam.organizationId
-      org <- orgInfoCommander.getBasicOrganizationHelper(orgId)
+      org <- basicOrganizationGen.getBasicOrganizationHelper(orgId)
     } yield {
       val txt = DescriptionElements.formatForSlack(DescriptionElements(
         owner.firstName --> LinkElement(pathCommander.welcomePageViaSlack(owner, slackTeam.slackTeamId).withQuery(trackingParams)),
@@ -148,7 +149,7 @@ class SlackTeamDigestNotificationActor @Inject() (
   }
   private def createTeamDigest(slackTeam: SlackTeam)(implicit session: RSession): Option[SlackTeamDigest] = {
     for {
-      org <- slackTeam.organizationId.flatMap(orgInfoCommander.getBasicOrganizationHelper)
+      org <- slackTeam.organizationId.flatMap(basicOrganizationGen.getBasicOrganizationHelper)
       librariesByChannel = {
         val teamIntegrations = channelToLibRepo.getBySlackTeam(slackTeam.slackTeamId).filter(_.isWorking)
         val librariesById = libRepo.getActiveByIds(teamIntegrations.map(_.libraryId).toSet)

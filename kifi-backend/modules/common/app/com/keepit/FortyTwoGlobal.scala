@@ -239,7 +239,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   def announceStopping(app: Application): Unit = if (!announcedStopping) synchronized {
     if (!announcedStopping) { //double check on entering sync block
-      injector.instance[ShutdownCommander].shutdown()
+      Try(injector.instance[ShutdownCommander].shutdown())
       if (mode == Mode.Prod) {
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]
