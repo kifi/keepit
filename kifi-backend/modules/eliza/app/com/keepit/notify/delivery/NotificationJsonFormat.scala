@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
+import com.keepit.common.util.Ord
 import com.keepit.eliza.commanders.NotificationJsonMaker
 import com.keepit.eliza.model._
 import com.keepit.model.{ Keep, NormalizedURI, NotificationCategory }
@@ -34,9 +35,9 @@ class NotificationJsonFormat @Inject() (
     case PublicImage(url) => url
   }
 
-  def getNotificationThreadStr(notification: Notification, item: NotificationItem): String = {
-    item.event match {
-      case newKeep: LibraryNewKeep => Keep.publicId(newKeep.keepId).id
+  def getNotificationThreadStr(notification: Notification, items: Set[NotificationItem]): String = {
+    items.toSeq.sortBy(_.eventTime)(Ord.descending).map(_.event) match {
+      case Seq(newKeep: LibraryNewKeep) => Keep.publicId(newKeep.keepId).id
       case _ => notification.externalId.id
     }
   }
@@ -46,7 +47,7 @@ class NotificationJsonFormat @Inject() (
       val relevantItem = notifWithInfo.relevantItem
       notifWithInfo.info match {
         case info: StandardNotificationInfo =>
-          val thread = getNotificationThreadStr(notif, relevantItem)
+          val thread = getNotificationThreadStr(notif, items)
           Future.successful(NotificationWithJson(notif, items, Json.obj(
             "id" -> relevantItem.externalId,
             "time" -> relevantItem.eventTime,
