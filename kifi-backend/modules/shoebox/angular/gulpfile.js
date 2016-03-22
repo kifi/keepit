@@ -284,7 +284,7 @@ gulp.task('sprite', ['symbol-sprites', 'sprite-imports', 'sprite-classes', 'svg-
 
 gulp.task('symbol-sprites', function () {
   return gulp.src('node_modules/symbol-sprites/dist/symbol-sprite.svg')
-    .pipe(rename('symbol-sprite.svg'))
+    .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest('./dist'));
 });
 
