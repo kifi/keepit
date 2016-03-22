@@ -1036,7 +1036,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))}
+                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))},
+                "activity": { "events": [] }
               },
               {
                 "author":${Json.toJson(author)},
@@ -1064,7 +1065,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))}
+                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
+                "activity": { "events": [] }
               }
             ],
             "numKeeps": 2
