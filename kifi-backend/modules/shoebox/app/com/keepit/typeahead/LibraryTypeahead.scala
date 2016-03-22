@@ -1,7 +1,7 @@
 package com.keepit.typeahead
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -29,7 +29,7 @@ class LibraryTypeahead @Inject() (
     override val airbrake: AirbrakeNotifier,
     store: LibraryTypeaheadStore,
     cache: LibraryTypeaheadCache,
-    libraryInfoCommander: LibraryInfoCommander,
+    libraryInfoCommander: Provider[LibraryInfoCommander],
     libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, Library, UserLibraryTypeahead] with Logging {
@@ -67,7 +67,7 @@ class LibraryTypeahead @Inject() (
 
   private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], Library)]] = SafeFuture {
     db.readOnlyReplica { implicit session =>
-      libraryInfoCommander.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map { case (l, _, _) => l.id.get -> l }
+      libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map { case (l, _, _) => l.id.get -> l }
     }
   }
 

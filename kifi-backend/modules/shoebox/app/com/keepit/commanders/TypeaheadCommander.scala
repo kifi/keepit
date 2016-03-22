@@ -45,7 +45,7 @@ class TypeaheadCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
-    libraryMembershipCommander: LibraryMembershipCommander,
+    permissionCommander: PermissionCommander,
     pathCommander: PathCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
@@ -410,7 +410,9 @@ class TypeaheadCommander @Inject() (
         case lib =>
           val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
           val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-          val membershipInfo = memberships.get(lib.id.get).map { mem => libraryMembershipCommander.createMembershipInfo(mem) }
+          val membershipInfo = memberships.get(lib.id.get).map { mem =>
+            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
+          }
 
           lib.id.get -> LibraryResult(
             id = Library.publicId(lib.id.get),
