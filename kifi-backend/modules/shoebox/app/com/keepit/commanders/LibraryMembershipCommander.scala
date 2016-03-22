@@ -17,7 +17,7 @@ import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator }
 import com.keepit.search.SearchServiceClient
-import com.keepit.typeahead.KifiUserTypeahead
+import com.keepit.typeahead.{ LibraryTypeahead, KifiUserTypeahead }
 import org.joda.time.DateTime
 import play.api.Mode.Mode
 import play.api.http.Status._
@@ -65,6 +65,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     typeaheadCommander: TypeaheadCommander,
     userInteractionCommander: UserInteractionCommander,
     kifiUserTypeahead: KifiUserTypeahead,
+    libraryTypeahead: LibraryTypeahead,
     libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
     searchClient: SearchServiceClient,
@@ -195,7 +196,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryAnalytics.followLibrary(userId, library, eventContext)
     searchClient.updateLibraryIndex()
     if (LibraryAccess.collaborativePermissions.contains(membership.access)) {
-      refreshLibraryCollaboratorsTypeahead(libraryId)
+      refreshTypeaheads(userId, libraryId)
     }
   }
 
@@ -216,7 +217,7 @@ class LibraryMembershipCommanderImpl @Inject() (
           libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
           if (LibraryAccess.collaborativePermissions.contains(mem.access)) {
-            refreshLibraryCollaboratorsTypeahead(libraryId)
+            refreshTypeaheads(userId, libraryId)
           }
         }
         Right((): Unit)
@@ -270,7 +271,7 @@ class LibraryMembershipCommanderImpl @Inject() (
             } tap {
               // Unless we're just kicking out a follower, the set of collaborators has changed.
               case Right(updatedMembership) if !(updatedMembership.isFollower && updatedMembership.state == LibraryMembershipStates.INACTIVE) => {
-                SafeFuture { refreshLibraryCollaboratorsTypeahead(library.id.get) }
+                refreshTypeaheads(targetUserId, library.id.get)
               }
               case _ => //
             }
@@ -282,11 +283,13 @@ class LibraryMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def refreshLibraryCollaboratorsTypeahead(libraryId: Id[Library]): Future[Unit] = {
-    val collaboratorIds = db.readOnlyMaster { implicit session =>
-      libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
+  private def refreshTypeaheads(userId: Id[User], libraryId: Id[Library]): Future[Unit] = {
+    libraryTypeahead.refresh(userId).map { _ =>
+      val collaboratorIds = db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
+      }
+      kifiUserTypeahead.refreshByIds(collaboratorIds.toSeq)
     }
-    kifiUserTypeahead.refreshByIds(collaboratorIds.toSeq)
   }
 
   private def notifyOwnerOfNewFollowerOrCollaborator(newFollowerId: Id[User], lib: Library, access: LibraryAccess): Unit = SafeFuture {

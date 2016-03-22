@@ -4,7 +4,7 @@ import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.UserRepo
 import com.keepit.social.{ SocialUserRawInfoStore, InMemorySocialUserRawInfoStoreImpl }
-import com.keepit.typeahead.{ InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore }
+import com.keepit.typeahead._
 
 case class FakeShoeboxStoreModule() extends FakeStoreModule {
 
@@ -27,5 +27,10 @@ case class FakeShoeboxStoreModule() extends FakeStoreModule {
   @Provides @Singleton
   def kifiUserTypeaheadStore(): KifiUserTypeaheadStore = {
     new InMemoryKifiUserTypeaheadStoreImpl()
+  }
+
+  @Provides @Singleton
+  def libraryTypeaheadStore(): LibraryTypeaheadStore = {
+    new InMemoryLibraryTypeaheadStoreImpl()
   }
 }

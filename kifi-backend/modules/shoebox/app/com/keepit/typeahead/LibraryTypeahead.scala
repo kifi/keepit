@@ -4,14 +4,13 @@ import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.{ BinaryCacheImpl, CacheStatistics, FortyTwoCachePlugin, Key }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.cache.{ BinaryCacheImpl, CacheStatistics, FortyTwoCachePlugin, Key }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.time._
 import com.keepit.model._
@@ -28,14 +27,8 @@ object LibraryTypeahead {
 class LibraryTypeahead @Inject() (
     db: Database,
     override val airbrake: AirbrakeNotifier,
-    userRepo: UserRepo,
     store: LibraryTypeaheadStore,
     cache: LibraryTypeaheadCache,
-    basicUserRepo: BasicUserRepo,
-    organizationAvatarCommander: OrganizationAvatarCommander,
-    libraryMembershipCommander: LibraryMembershipCommander,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    libPathCommander: PathCommander,
     libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext,
