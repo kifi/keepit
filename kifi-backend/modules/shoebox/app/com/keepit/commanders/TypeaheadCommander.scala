@@ -365,7 +365,7 @@ class TypeaheadCommander @Inject() (
           }
           val emailRes = contacts.zipWithIndex.map {
             case (contact, idx) =>
-              (emailScore(contact.email), idx, EmailContactResult(email = contact.email, name = contact.name))
+              (emailScore(contact.email), idx + limit.get, EmailContactResult(email = contact.email, name = contact.name))
           }
           val libRes = libToResult(userId, libraries.map(_.id.get)).zipWithIndex.map {
             case ((id, lib), idx) =>
