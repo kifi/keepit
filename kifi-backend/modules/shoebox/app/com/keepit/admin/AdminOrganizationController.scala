@@ -519,7 +519,7 @@ class AdminOrganizationController @Inject() (
       for {
         _ <- slackClient.getTeamInfo(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching team for Slack team ${slackTeamId.value}", error) }
         _ <- slackClient.getUsers(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching users for Slack team ${slackTeamId.value}") }
-        _ <- slackChannelCommander.syncChannelMemberships(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed syncing channel members for Slack team ${slackTeamId.value}", error) }
+        _ <- slackChannelCommander.syncChannelMemberships(slackTeamId, None).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed syncing channel members for Slack team ${slackTeamId.value}", error) }
       } yield log.info(s"[backfillSlackStuff] Done processing Slack team ${slackTeamId.value}")
     }
     Ok("I'm on it.")
