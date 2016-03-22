@@ -129,7 +129,7 @@ class KeepToLibraryRepoImpl @Inject() (
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
   def countNonImportedKeepsInOrg(orgId: Id[Organization])(implicit session: RSession): Int = {
-    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).length.run
+    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).map { case (kId, ktls) => kId }.length.run
   }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
     val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
@@ -158,7 +158,7 @@ class KeepToLibraryRepoImpl @Inject() (
     activeRows.filter(_.libraryId.inSet(libraryIds)).list.groupBy(_.libraryId)
   }
   def getCountByOrganizationSince(orgId: Id[Organization], since: DateTime)(implicit session: RSession): Int = {
-    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).length.run
+    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).map { case (kId, ktls) => kId }.length.run
   }
 
   def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], since: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]] = {
