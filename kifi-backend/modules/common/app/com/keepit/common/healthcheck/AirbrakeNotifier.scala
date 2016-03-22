@@ -95,14 +95,14 @@ class AirbrakeSender @Inject() (
              * Error messages, files, components, actions, environment names, request URLs, and error class names are truncated after 255 characters.
              * Any incoming element with text content over 2 kilobytes (not chars) will be truncated.
              */
-            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
-              to = Seq(SystemEmailAddress.ENG),
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
+              to = Seq(SystemEmailAddress.ENG42),
               category = NotificationCategory.System.HEALTHCHECK,
               subject = s"[${service.currentService}] [WARNING] Error was too big",
               htmlBody = ex.getMessage + "\n\n" + body.toString.take(10 * 1024)))
           } else {
-            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG,
-              to = Seq(SystemEmailAddress.ENG),
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
+              to = Seq(SystemEmailAddress.ENG42),
               category = NotificationCategory.System.HEALTHCHECK,
               subject = s"[${service.currentService}] [WARNING] Could not send airbrake error (Airbrake down?)",
               htmlBody = ex.getMessage))

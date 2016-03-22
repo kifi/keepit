@@ -39,7 +39,7 @@
         <span class="kifi-res-source">
           {{#twitter.tweet}}
             <span class="kifi-res-source-twitter-icon"></span>
-            <a class="kifi-res-source-tweet-user" href="https://www.twitter.com/{{user.screen_name}}/status/{{id_str}}">@{{user.screen_name}}</a>
+            <a class="kifi-res-source-tweet-user" href="{{permalink}}">@{{user.screen_name}}</a>
           {{/twitter.tweet}}
           {{#slack.message}}
             <span class="kifi-res-source-slack-icon"></span>

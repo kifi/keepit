@@ -433,7 +433,7 @@ class LibraryController @Inject() (
                 "error" -> error.message
               )
           }
-          val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+          val mapLibrary = goodKeeps.groupBy(_.lowestLibraryId).map {
             case (libId, keeps) =>
               val pubId = Library.publicId(libId.get)
               val numKeepsMoved = keeps.length
@@ -493,7 +493,7 @@ class LibraryController @Inject() (
               "error" -> error.message
             )
         }
-        val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+        val mapLibrary = goodKeeps.groupBy(_.lowestLibraryId).map {
           case (libId, keeps) =>
             val pubId = Library.publicId(libId.get)
             val numKeepsMoved = keeps.length
@@ -514,7 +514,7 @@ class LibraryController @Inject() (
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
       val existingKeeps = db.readOnlyMaster { implicit s =>
-        keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
+        keepRepo.pageByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
       val (keeps, failures) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))

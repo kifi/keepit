@@ -84,7 +84,7 @@ class AdminLibraryController @Inject() (
       val keeps: Int = 0
       while (hasMore) {
         val from = page * pageSize
-        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
+        val chunk: Seq[Keep] = keepRepo.pageByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
           val tags = keepToCollectionRepo.getByKeep(keep.id.get)
           tags foreach { keepToTag =>
             val origTag = collectionRepo.get(keepToTag.collectionId)
@@ -107,7 +107,7 @@ class AdminLibraryController @Inject() (
 
   private def buildLibStatistic(library: Library, owner: User)(implicit session: RSession): LibraryStatistic = {
     require(library.ownerId == owner.id.get, "Library and Owner do not match.")
-    val keepsCount = keepRepo.getCountByLibrary(library.id.get)
+    val keepsCount = ktlRepo.getCountByLibraryId(library.id.get)
     val membershipsCount = libraryMembershipRepo.countWithLibraryId(library.id.get)
     val invitesCount = libraryInviteRepo.getWithLibraryId(library.id.get).length
     LibraryStatistic(library, owner, keepsCount, membershipsCount, invitesCount)
@@ -163,7 +163,7 @@ class AdminLibraryController @Inject() (
     val (library, owner, keepCount, contributors, followers, suggestedSearches) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keepCount = keepRepo.getCountByLibrary(libraryId)
+      val keepCount = ktlRepo.getCountByLibraryId(libraryId)
       val members = libraryMembershipRepo.getWithLibraryId(libraryId)
 
       val contributors = members.filter(x => x.access == LibraryAccess.READ_WRITE).map { m => userRepo.get(m.userId) }
@@ -189,8 +189,8 @@ class AdminLibraryController @Inject() (
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keepCount = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !lib.isSecret)
+      val keepCount = ktlRepo.getCountByLibraryId(libraryId)
+      val keeps = keepRepo.pageByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !lib.isSecret)
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)

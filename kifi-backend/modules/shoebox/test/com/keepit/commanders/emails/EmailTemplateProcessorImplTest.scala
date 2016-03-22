@@ -96,7 +96,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           val emailToSend = EmailToSend(
             title = "Test Email!!!",
             to = Right(SystemEmailAddress.JOSH),
-            cc = Seq(SystemEmailAddress.ENG),
+            cc = Seq(SystemEmailAddress.ENG42),
             from = SystemEmailAddress.NOTIFICATIONS,
             fromName = Some(Right(firstName(id2) + "!!!")),
             subject = "hi " + firstName(id1) + " and " + firstName(id2),

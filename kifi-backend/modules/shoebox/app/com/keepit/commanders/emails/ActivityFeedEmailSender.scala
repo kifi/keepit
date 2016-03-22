@@ -144,8 +144,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
         val subject = s"Activity email sent to $sentCount/${emailOpts.size} candidates"
         val body = subject + ". Took " + sw.logTime() / 1e9 + "s"
         val mail = ElectronicMail(
-          to = Seq(SystemEmailAddress.ENG),
-          from = SystemEmailAddress.ENG,
+          to = Seq(SystemEmailAddress.ENG42),
+          from = SystemEmailAddress.ENG42,
           subject = subject,
           category = NotificationCategory.System.ADMIN,
           htmlBody = LargeString(body))
@@ -381,7 +381,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     def getNewKeepsFromFollowedLibraries(): Future[Seq[(LibraryInfoView, Seq[KeepInfoView])]] = {
       val libraryKeeps = db.readOnlyReplica { implicit session =>
         followedLibraries map { library =>
-          val keeps = keepRepo.getByLibrary(library.id.get, 0, maxNewKeepsPerLibrary) filter { keep =>
+          val keeps = keepRepo.pageByLibrary(library.id.get, 0, maxNewKeepsPerLibrary) filter { keep =>
             keep.createdAt > minRecordAge
           }
           library -> keeps

@@ -488,7 +488,7 @@ class UserCommanderImpl @Inject() (
     val safeComment = comment.replaceAll("[<>]+", "")
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
-        from = SystemEmailAddress.ENG,
+        from = SystemEmailAddress.ENG42,
         to = Seq(SystemEmailAddress.SUPPORT),
         subject = s"Close Account for $userId",
         htmlBody = s"User $userId requested to close account.<br/>---<br/>$safeComment",

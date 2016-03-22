@@ -3,12 +3,9 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
@@ -17,7 +14,6 @@ import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.social.{ IdentityHelpers, UserIdentityHelper, Author }
-import com.keepit.social.twitter.RawTweet
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
@@ -63,7 +59,7 @@ class AdminBookmarksController @Inject() (
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
       val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
-      val libraryOpt = bookmark.libraryId.map { opt => libraryRepo.get(opt) }
+      val libraryOpt = bookmark.lowestLibraryId.map { opt => libraryRepo.get(opt) }
 
       keywordsFut.map { keywords =>
         Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
@@ -193,28 +189,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def bookmarksKeywordsPageView(page: Int = 0) = AdminUserPage.async { implicit request =>
-    val PAGE_SIZE = 25
-
-    val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
-      case ex: Throwable => -1
-    }
-
-    bmsFut.flatMap { bms =>
-      val uris = bms.map { _.uriId }
-      val keywordsFut = Future.sequence(uris.map { uri => keywordSummaryCommander.getKeywordsSummary(uri) })
-
-      for {
-        keywords <- keywordsFut
-        totalCount <- bookmarkTotalCountFuture
-      } yield {
-        val pageCount = (totalCount * 1f / PAGE_SIZE).ceil.toInt
-        Ok(html.admin.bookmarkKeywords(bms, keywords, page, pageCount))
-      }
-    }
-  }
-
   def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, Hashtag(tagName))
@@ -269,15 +243,15 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).values.toList
+        keepRepo.getByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).toList
+        keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
       }
       val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+        ktlRepo.pageByLibraryId(Id[Library](l), Offset(0), Limit(1000)).map(_.keepId).toSet
       }
-      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+      keeps ++ userKeeps ++ libKeeps
     }
     val updated = keepCommander.removeTagFromKeeps(keepIds, Hashtag(tagToRemove))
 
@@ -291,15 +265,15 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).values.toList
+        keepRepo.getByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).toList
+        keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
       }
       val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+        ktlRepo.getAllByLibraryId(Id[Library](l)).map(_.keepId).toSet
       }
-      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+      keeps ++ userKeeps ++ libKeeps
     }
     val updated = keepCommander.replaceTagOnKeeps(keepIds, Hashtag(oldTag), Hashtag(newTag))
 

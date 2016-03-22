@@ -22,7 +22,6 @@ POST    /admin/bookmarks/replaceTags @com.keepit.controllers.admin.AdminBookmark
 POST    /admin/bookmarks/removeTag  @com.keepit.controllers.admin.AdminBookmarksController.removeTagFromKeeps()
 DELETE  /admin/bookmarks/emptyLibrary @com.keepit.controllers.admin.AdminBookmarksController.deleteAllKeepsFromLibrary()
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
-GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
 POST    /admin/bookmarks/reattributeKeeps             @com.keepit.controllers.admin.AdminBookmarksController.reattributeKeeps(author: String, userId: Option[Long] ?= None, overwriteExistingOwner: Boolean ?= false, doIt: Boolean ?= false)
@@ -138,6 +137,7 @@ GET    /admin/user/:id/slack/presence        @com.keepit.controllers.admin.Admin
 
 
 GET     /admin/organizations/backfillSlackStuff              @com.keepit.controllers.admin.AdminOrganizationController.backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId] ?= None)
+GET     /admin/organizations/findIllegalSlackKeeps              @com.keepit.controllers.admin.AdminOrganizationController.findIllegalSlackKeeps()
 GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
 GET     /admin/organization/id/:id                           @com.keepit.controllers.admin.AdminOrganizationController.organizationViewBy(id: Id[Organization], numMemberRecos: Int ?= 60)
 POST    /admin/organization/:id/setName                      @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])

@@ -52,7 +52,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       libraries.foreach { library =>
         if (!library.isActive) {
           db.readWrite { implicit session =>
-            val zombieKtls = ktlRepo.getAllByLibraryId(library.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+            val zombieKtls = ktlRepo.getAllByLibraryId(library.id.get)
             if (zombieKtls.nonEmpty) {
               //airbrake.notify(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
               log.error(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
@@ -151,10 +151,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
       val nextSeqNum = if (keeps.isEmpty) None else Some(keeps.map(_.seq).max)
-      val libraryIds = keeps.flatMap(_.libraryId).toSet
+      val libraryIds = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).values.flatMap(_.map(_.libraryId)).toSet
 
-      val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
-      val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(libraryIds)
+      val newLibraryKeepCount = ktlRepo.getCountsByLibraryIds(libraryIds)
+      val latestKeptAtMap = ktlRepo.latestKeptAtByLibraryIds(libraryIds)
       val librariesNeedingUpdate = libraryRepo.getActiveByIds(libraryIds)
       (nextSeqNum, librariesNeedingUpdate, newLibraryKeepCount, latestKeptAtMap)
     }

@@ -52,7 +52,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
       val emailToSend = EmailToSend(
         title = "Testing!!!",
         to = Left(id3),
-        cc = Seq(SystemEmailAddress.ENG),
+        cc = Seq(SystemEmailAddress.ENG42),
         from = SystemEmailAddress.NOTIFICATIONS,
         fromName = Some(Left(id1)),
         subject = "hi from " + fullName(id1),
@@ -82,7 +82,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         freshEmail === email
         email.subject === "hi from Tony Stark"
         email.to === Seq(EmailAddress("samuelljackson@shield.com"))
-        email.cc === Seq(SystemEmailAddress.ENG)
+        email.cc === Seq(SystemEmailAddress.ENG42)
         email.from === SystemEmailAddress.NOTIFICATIONS
         email.fromName === Some("Tony Stark (via Kifi)")
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)

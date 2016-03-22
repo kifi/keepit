@@ -165,7 +165,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
 
         val mail: ElectronicMail = outbox(0)
-        mail.from === SystemEmailAddress.ENG
+        mail.from === SystemEmailAddress.ENG42
         mail.to === Seq(SystemEmailAddress.SUPPORT)
         mail.subject.toString === s"Close Account for ${user1.id.get}"
         mail.htmlBody.toString === s"User ${user1.id.get} requested to close account.<br/>---<br/>al/agoing amish"

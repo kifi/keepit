@@ -60,6 +60,7 @@ class KeepInternerImpl @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   normalizedURIRepo: NormalizedURIRepo,
   keepRepo: KeepRepo,
+  ktlRepo: KeepToLibraryRepo,
   libraryRepo: LibraryRepo,
   keepCommander: KeepCommander,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -142,8 +143,7 @@ class KeepInternerImpl @Inject() (
     sourceAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
     airbrake.verify(userIdOpt.isDefined || sourceAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
-    // We intern by (library, uri)
-    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrary(uri.id.get, lib.id.get) }
+    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
 
     val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.title), uri.title).flatten.headOption
     val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.note)).flatten.headOption
@@ -155,7 +155,6 @@ class KeepInternerImpl @Inject() (
       uriId = uri.id.get,
       url = url,
       source = source,
-      libraryId = libraryOpt.map(_.id.get),
       keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
@@ -234,7 +233,7 @@ class KeepInternerImpl @Inject() (
       db.readWrite(attempts = 3) { implicit s =>
         libraryOpt.foreach { lib =>
           libraryRepo.updateLastKept(lib.id.get)
-          Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = keepRepo.getCountByLibrary(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
+          Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = ktlRepo.getCountByLibraryId(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
         }
       }
     }
