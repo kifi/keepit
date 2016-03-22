@@ -17,7 +17,7 @@ import com.keepit.shoebox.model.KeepImagesCache
 import com.keepit.slack.SlackAuthStateCache
 import com.keepit.slack.models._
 import com.keepit.social.{ BasicUserUserIdCache, IdentityUserIdCache }
-import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
+import com.keepit.typeahead.{ LibraryTypeaheadCache, KifiUserTypeaheadCache, SocialUserTypeaheadCache, UserHashtagTypeaheadCache }
 
 import scala.concurrent.duration._
 
@@ -281,6 +281,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def libraryTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides

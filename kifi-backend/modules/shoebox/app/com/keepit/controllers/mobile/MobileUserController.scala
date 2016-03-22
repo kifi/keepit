@@ -168,13 +168,6 @@ class MobileUserController @Inject() (
     }
   }
 
-  // legacy
-  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean = false) = UserAction.async { request =>
-    typeaheadCommander.queryAll(request.userId, search, network, limit, pictureUrl) map { r =>
-      Ok(Json.toJson(r))
-    }
-  }
-
   def friend(externalId: ExternalId[User]) = UserAction { request =>
     val (success, code) = userConnectionsCommander.friend(request.user, externalId)
     val res = Json.obj("code" -> code)

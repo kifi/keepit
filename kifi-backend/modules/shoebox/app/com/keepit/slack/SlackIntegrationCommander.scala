@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -49,7 +50,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
-  organizationInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
@@ -100,7 +101,7 @@ class SlackIntegrationCommanderImpl @Inject() (
             import DescriptionElements._
             val lib = libRepo.get(libId)
             val user = basicUserRepo.load(userId)
-            val orgOpt = lib.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+            val orgOpt = lib.organizationId.flatMap(basicOrganizationGen.getBasicOrganizationHelper)
             DescriptionElements(
               user, s"set up Slack integrations between channel ${channel.slackChannelName.value} and",
               lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute),

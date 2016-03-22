@@ -23,7 +23,7 @@ trait PersonalTypeahead[T, E, I] {
 }
 
 object PersonalTypeahead {
-  def apply[T, E, I](id: Id[T], prefixFilter: PrefixFilter[E], infoGetter: Seq[Id[E]] => Future[Seq[I]]) = new PersonalTypeahead[T, E, I] {
+  def apply[T, E, I](id: Id[T], prefixFilter: PrefixFilter[E], infoGetter: Seq[Id[E]] => Future[Seq[I]]): PersonalTypeahead[T, E, I] = new PersonalTypeahead[T, E, I] {
     val ownerId = id
     val filter = prefixFilter
     def getInfos(infoIds: Seq[Id[E]]): Future[Seq[I]] = infoGetter(infoIds)

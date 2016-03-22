@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.core.{ mapExtensionOps, optionExtensionOps }
 import com.keepit.common.db.slick.DBSession.RSession
@@ -31,7 +32,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
   keepRepo: KeepRepo,
   pathCommander: PathCommander,
   clock: Clock,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   val heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val ec: ExecutionContext,
   implicit val inhouseSlackClient: InhouseSlackClient)
@@ -46,7 +47,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     for {
       slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).withLeft("no slack team")
       orgId <- slackTeam.organizationId.withLeft("no org id on slack team")
-      org <- orgInfoCommander.getBasicOrganizationHelper(orgId).withLeft(s"no basic org for $orgId")
+      org <- basicOrganizationGen.getBasicOrganizationHelper(orgId).withLeft(s"no basic org for $orgId")
       _ <- RightBias.unit.filter(membership.personalDigestSetting match {
         case SlackPersonalDigestSetting.On => true
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)

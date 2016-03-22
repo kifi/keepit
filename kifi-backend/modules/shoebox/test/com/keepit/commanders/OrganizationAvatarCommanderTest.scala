@@ -46,7 +46,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
   "organization avatar commander" should {
     "upload new avatar, and all processed derivatives" in {
       withDb(modules: _*) { implicit injector =>
-        val commander = inject[OrganizationAvatarCommander]
+        val commander = inject[OrganizationAvatarUploadCommander]
         val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()
@@ -72,7 +72,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     }
     "deactivate old avatars when a new one is uploaded" in {
       withDb(modules: _*) { implicit injector =>
-        val commander = inject[OrganizationAvatarCommander]
+        val commander = inject[OrganizationAvatarUploadCommander]
         val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()
@@ -114,7 +114,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
     "be sure that every distinct upload gets its own file path" in {
       withDb(modules: _*) { implicit injector =>
-        val commander = inject[OrganizationAvatarCommander]
+        val commander = inject[OrganizationAvatarUploadCommander]
         val store = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
         val (_, _, org1, _) = setup()

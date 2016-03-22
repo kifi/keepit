@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
@@ -11,20 +12,22 @@ import play.api.libs.json.{ JsNull, Json }
 
 import com.google.inject.Inject
 
+import scala.concurrent.Future
+
 class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
   libPathCommander: PathCommander,
   permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
-  orgInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   db: Database,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
 
-    val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
+    val typeaheadF = typeAheadCommander.searchForContactResults(request.userId, query.getOrElse(""), limit, includeSelf = true)
 
     val orgsToInclude = {
       val basicOrgs = db.readOnlyReplica { implicit s =>
@@ -32,7 +35,7 @@ class ExtUserController @Inject() (
           .filter { orgId =>
             permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
-        orgInfoCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+        basicOrganizationGen.getBasicOrganizations(orgsUserIsIn.toSet).values
       }
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs
@@ -66,6 +69,17 @@ class ExtUserController @Inject() (
         case e: EmailContactResult => Json.toJson(e)
       }
       Ok(Json.toJson(res1))
+    }
+  }
+
+  def suggestRecipient(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
+    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit).map { suggestions =>
+      val body = suggestions.take(limit.getOrElse(20)).collect {
+        case u: UserContactResult => Json.toJson(u)
+        case e: EmailContactResult => Json.toJson(e)
+        case l: LibraryResult => Json.toJson(l)
+      }
+      Ok(Json.toJson(body))
     }
   }
 

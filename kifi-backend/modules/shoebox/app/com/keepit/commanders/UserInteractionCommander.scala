@@ -4,8 +4,9 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsObject }
 
 import scala.collection.mutable
@@ -79,7 +80,15 @@ class UserInteractionCommander @Inject() (
     }.toSeq.sorted.reverse
   }
 
-  def grouped(interactions: Seq[InteractionInfo]) = {
+  def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[Id[User]], Seq[EmailAddress]) = {
+    val allRecentInteractions = getRecentInteractions(userId)
+    val relevantInteractions = limit.map(allRecentInteractions.take) getOrElse allRecentInteractions
+    val split = grouped(relevantInteractions)
+
+    (split.users, split.emails)
+  }
+
+  def grouped(interactions: Seq[InteractionInfo]): GroupedInteractions = {
     val userIds = interactions.collect {
       case InteractionInfo(UserInteractionRecipient(id), _) => id
     }

@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.model.UserExperimentType
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.commanders.{ AliasContactResult, EmailContactResult, UserContactResult, TypeaheadCommander }
+import com.keepit.commanders.{ EmailContactResult, UserContactResult, TypeaheadCommander }
 
 case class TypeaheadSearchRequest(query: String, limit: Int, pictureUrl: Boolean, inviteStatus: Boolean)
 
@@ -24,7 +24,7 @@ class TypeaheadController @Inject() (
   }
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-    commander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
+    commander.searchForContactResults(request.userId, query.getOrElse(""), limit, includeSelf = true) map { res =>
       val res1 = res.collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)

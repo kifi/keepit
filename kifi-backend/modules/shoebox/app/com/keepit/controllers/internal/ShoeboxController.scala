@@ -3,6 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -82,6 +83,7 @@ class ShoeboxController @Inject() (
   organizationMembershipCommander: OrganizationMembershipCommander,
   s3ImageStore: S3ImageStore,
   organizationInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
   discussionCommander: DiscussionCommander,
@@ -547,7 +549,7 @@ class ShoeboxController @Inject() (
 
   def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Set[Id[Organization]]]
-    val basicOrgs = db.readOnlyMaster(implicit s => organizationInfoCommander.getBasicOrganizations(orgIds))
+    val basicOrgs = db.readOnlyMaster(implicit s => basicOrganizationGen.getBasicOrganizations(orgIds))
     Ok(Json.toJson(basicOrgs))
   }
 

@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -41,9 +42,9 @@ class SlackTeamCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   orgCommander: OrganizationCommander,
   pathCommander: PathCommander,
-  orgAvatarCommander: OrganizationAvatarCommander,
+  orgAvatarUploadCommander: OrganizationAvatarUploadCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
-  organizationInfoCommander: OrganizationInfoCommander,
+  basicOrganizationGen: BasicOrganizationGen,
   basicUserRepo: BasicUserRepo,
   clock: Clock,
   implicit val executionContext: ExecutionContext,
@@ -102,7 +103,7 @@ class SlackTeamCommanderImpl @Inject() (
                   val orgId = createdOrg.newOrg.id.get
                   val futureAvatar = teamInfo.icon.maxByOpt(_._1) match {
                     case None => Future.successful(())
-                    case Some((_, imageUrl)) => orgAvatarCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
+                    case Some((_, imageUrl)) => orgAvatarUploadCommander.persistRemoteOrganizationAvatars(orgId, imageUrl).imap(_ => ())
                   }
                   teamInfo.emailDomains.exists { domain =>
                     orgCommander.modifyOrganization(OrganizationModifyRequest(userId, orgId, OrganizationModifications(rawSite = Some(domain.value)))).isRight
@@ -148,7 +149,7 @@ class SlackTeamCommanderImpl @Inject() (
       case Success(team) => slackClient.getUsers(team.slackTeamId).imap(Some(_)).recover { case _ => None }.map { slackTeamMembersOpt =>
         val numMembersOpt = slackTeamMembersOpt.map(_.count(member => !member.deleted && !member.bot))
         val (user, org) = db.readOnlyMaster { implicit session =>
-          (basicUserRepo.load(userId), organizationInfoCommander.getBasicOrganizationHelper(newOrganizationId))
+          (basicUserRepo.load(userId), basicOrganizationGen.getBasicOrganizationHelper(newOrganizationId))
         }
         inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
           user, "connected Slack team", team.slackTeamName.value, numMembersOpt.map(numMembers => s"with $numMembers members"), "to Kifi org", org
@@ -165,7 +166,7 @@ class SlackTeamCommanderImpl @Inject() (
     val permissionsByOrgIds = permissionCommander.getOrganizationsPermissions(allOrgIds, Some(userId))
     val slackTeamsByOrgId = slackTeamRepo.getByOrganizationIds(allOrgIds)
     val validOrgIds = allOrgIds.filter(orgId => slackTeamsByOrgId(orgId).isEmpty && permissionsByOrgIds(orgId).contains(SlackIdentityCommander.slackSetupPermission))
-    organizationInfoCommander.getBasicOrganizations(validOrgIds).values.toSet
+    basicOrganizationGen.getBasicOrganizations(validOrgIds).values.toSet
   }
 
   def turnCommentMirroring(userId: Id[User], slackTeamId: SlackTeamId, turnOn: Boolean): Try[Id[Organization]] = db.readWrite { implicit session =>

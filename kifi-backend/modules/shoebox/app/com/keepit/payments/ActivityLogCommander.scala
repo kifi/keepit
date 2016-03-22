@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.commanders.{ PathCommander, OrganizationInfoCommander }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -32,7 +33,7 @@ class ActivityLogCommanderImpl @Inject() (
     creditRewardInfoCommander: CreditRewardInfoCommander,
     pathCommander: PathCommander,
     basicUserRepo: BasicUserRepo,
-    orgInfoCommander: OrganizationInfoCommander,
+    basicOrganizationGen: BasicOrganizationGen,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
@@ -45,7 +46,7 @@ class ActivityLogCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgInfoCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
+  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = basicOrganizationGen.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit s =>
     buildSimpleEventInfoHelper(event)
