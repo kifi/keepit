@@ -5,7 +5,7 @@ import com.keepit.commanders.{ PermissionCommander, OrganizationInfoCommander, L
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.Clock
@@ -65,7 +65,7 @@ class SlackChannelCommanderImpl @Inject() (
           case Some(orgId) =>
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, team.slackTeamId)
-              val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).map(_.slackChannelId).toSet
+              val integratedChannelIds = getIntegratedChannelIds(slackTeamId, orgId)
               val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
@@ -122,7 +122,7 @@ class SlackChannelCommanderImpl @Inject() (
           case Some(orgId) =>
             val (membershipOpt, integratedChannelIds, hasOrgPermissions) = db.readOnlyMaster { implicit session =>
               val membershipOpt = slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, team.slackTeamId)
-              val integratedChannelIds = channelToLibRepo.getIntegrationsByOrg(orgId).filter(_.slackTeamId == team.slackTeamId).map(_.slackChannelId).toSet
+              val integratedChannelIds = getIntegratedChannelIds(slackTeamId, orgId)
               val hasOrgPermissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(SlackIdentityCommander.slackSetupPermission)
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
@@ -168,6 +168,12 @@ class SlackChannelCommanderImpl @Inject() (
         }
       case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
+  }
+
+  private def getIntegratedChannelIds(slackTeamId: SlackTeamId, orgId: Id[Organization])(implicit session: RSession): Set[SlackChannelId] = {
+    val integrations = channelToLibRepo.getBySlackTeam(slackTeamId).toSet
+    val orgLibraryIds = libraryRepo.getActiveByIds(integrations.map(_.libraryId)).collect { case (libraryId, library) if library.organizationId.contains(orgId) => libraryId }.toSet
+    integrations.collect { case integration if orgLibraryIds.contains(integration.libraryId) => integration.slackChannelId }
   }
 
   private def setupPublicSlackChannels(team: SlackTeam, membership: SlackTeamMembership, allChannels: Seq[SlackPublicChannelInfo], toBeSetup: Seq[SlackPublicChannelInfo])(implicit context: HeimdalContext): SlackPublicChannelLibraries = {
