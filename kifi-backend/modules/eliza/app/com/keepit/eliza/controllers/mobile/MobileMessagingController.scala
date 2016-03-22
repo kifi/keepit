@@ -82,7 +82,7 @@ class MobileMessagingController @Inject() (
     for {
       notices <- noticesFuture
     } yield {
-      val numUnreadUnmuted = notificationCommander.getUnreadNotificationsCount(Recipient(request.userId))
+      val numUnreadUnmuted = notificationCommander.getUnreadNotificationsCount(Recipient.fromUser(request.userId))
       val notifications = notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)).map(sanitizeUrls(_))
       Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
@@ -390,7 +390,7 @@ class MobileMessagingController @Inject() (
   }
 
   def getUnreadCounts = UserAction { request =>
-    val numUnreadNotifs = notificationCommander.getUnreadNotificationsCount(Recipient(request.userId))
+    val numUnreadNotifs = notificationCommander.getUnreadNotificationsCount(Recipient.fromUser(request.userId))
     val numUnreadMessages = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
     Ok(Json.obj(
       "messages" -> numUnreadMessages,

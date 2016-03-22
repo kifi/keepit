@@ -30,8 +30,8 @@ sealed trait MessageSender {
 
   def asRecipient: Option[Recipient] =
     if (isSystem) None
-    else asUser.map(userId => Recipient(userId)) orElse asNonUser.collect {
-      case NonUserEmailParticipant(email) => Recipient(email)
+    else asUser.map(userId => Recipient.fromUser(userId)) orElse asNonUser.collect {
+      case NonUserEmailParticipant(email) => Recipient.fromEmail(email)
     }
 }
 

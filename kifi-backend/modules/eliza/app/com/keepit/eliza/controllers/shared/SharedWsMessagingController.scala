@@ -121,7 +121,7 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_notifications_count" -> { _ =>
       val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-      val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
+      val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient.fromUser(socket.userId))
       socket.channel.push(Json.arr("unread_notifications_count",
         numUnreadUnmutedMessages + numUnreadUnmutedNotifications,
         numUnreadUnmutedMessages,
@@ -283,12 +283,12 @@ class SharedWsMessagingController @Inject() (
       case JsString(notifId) +: _ =>
         legacyNotificationCheck.ifNotifItemExists(notifId) {
           case (notif, item) =>
-            val recipient = Recipient(socket.userId)
+            val recipient = Recipient.fromUser(socket.userId)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
           Message.decodePublicIdStr(notifId).map(ElizaMessage.fromCommonId).foreach { messageId =>
             val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-            val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
+            val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient.fromUser(socket.userId))
             val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
             websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
           }

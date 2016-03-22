@@ -4,7 +4,8 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
-import org.joda.time.DateTime
+import org.joda.time.{Duration, DateTime}
+import com.keepit.common.core.traversableOnceExtensionOps
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import com.keepit.common.time._
@@ -116,9 +117,10 @@ case class LibraryNewKeep(
 
 }
 
-object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
 
+object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipient, Id[Library])] {
   override val name: String = "library_new_keep"
+  private val groupingTimeThreshold = Duration.standardMinutes(5)
 
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
@@ -128,6 +130,13 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
       (__ \ "libraryId").format[Id[Library]]
     )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
 
+  override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
+
+  override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
+    !existingEvents.map(_.time).maxOpt.exists { latestOther =>
+      (newEvent.time minus groupingTimeThreshold) isAfter latestOther
+    }
+  }
 }
 
 case class LibraryCollabInviteAccepted(

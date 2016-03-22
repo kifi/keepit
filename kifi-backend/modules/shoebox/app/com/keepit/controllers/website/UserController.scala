@@ -134,7 +134,7 @@ class UserController @Inject() (
               BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
             } else {
               friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
-              elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient(friendRequest.recipientId))
+              elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient.fromUser(friendRequest.recipientId))
               Ok(Json.obj("success" -> true))
             }
           } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))

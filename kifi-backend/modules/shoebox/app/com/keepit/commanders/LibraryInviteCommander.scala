@@ -90,14 +90,14 @@ class LibraryInviteCommanderImpl @Inject() (
       }
       if (invite.access == LibraryAccess.READ_WRITE) {
         elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
-          Recipient(inviterId),
+          Recipient.fromUser(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
         ))
       } else {
         elizaClient.sendNotificationEvent(LibraryFollowInviteAccepted(
-          Recipient(inviterId),
+          Recipient.fromUser(inviterId),
           currentDateTime,
           invitee.id.get,
           lib.id.get
@@ -301,7 +301,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     val collabInvitesF = Future.sequence(collabInviteeSet.map { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
-        Recipient(invitee),
+        Recipient.fromUser(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -310,7 +310,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
     val followInvitesF = Future.sequence(followInviteeSet.map { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
-        Recipient(invitee),
+        Recipient.fromUser(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
@@ -359,7 +359,7 @@ class LibraryInviteCommanderImpl @Inject() (
     val collabInvitesF = if (collabInviteeSet.nonEmpty) {
       Future.sequence(collabInviteeSet.map { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
-          Recipient(lib.ownerId),
+          Recipient.fromUser(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,
@@ -371,7 +371,7 @@ class LibraryInviteCommanderImpl @Inject() (
     val followInvitesF = if (followInviteeSet.nonEmpty) {
       Future.sequence(followInviteeSet.map { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
-          Recipient(lib.ownerId),
+          Recipient.fromUser(lib.ownerId),
           currentDateTime,
           inviter.id.get,
           userId,

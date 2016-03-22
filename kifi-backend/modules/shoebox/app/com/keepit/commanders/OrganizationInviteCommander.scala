@@ -230,7 +230,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
     invitees.foreach { inviteeId =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
-        Recipient(inviteeId),
+        Recipient.fromUser(inviteeId),
         currentDateTime,
         inviter.id.get,
         org.id.get
@@ -328,7 +328,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       invite.userId.foreach { inviteeId =>
         elizaClient.sendNotificationEvent(
           OrgInviteAccepted(
-            recipient = Recipient(inviterId),
+            recipient = Recipient.fromUser(inviterId),
             time = currentDateTime,
             accepterId = inviteeId,
             invite.organizationId)

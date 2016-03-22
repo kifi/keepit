@@ -47,11 +47,14 @@ object GroupIdentifier extends GroupIdentifierLowPriorityImplicits {
       }
     }
 
-  implicit def longGroupIdentifier: GroupIdentifier[Long] = new GroupIdentifier[Long] {
+  implicit val recipientGroupIdentifier: GroupIdentifier[Recipient] = new GroupIdentifier[Recipient] {
+    def serialize(that: Recipient): String = Recipient.serialize(that)
+    def deserialize(str: String): Recipient = Recipient.deserialize(str).get
+  }
+  implicit val longGroupIdentifier: GroupIdentifier[Long] = new GroupIdentifier[Long] {
     def serialize(that: Long): String = that.toString
     def deserialize(str: String): Long = str.toLong
   }
 
   implicit def idGroupIdentifier[A]: GroupIdentifier[Id[A]] = GroupIdentifier[Long].inmap(Id(_), _.id)
-
 }

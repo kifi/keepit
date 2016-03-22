@@ -323,14 +323,14 @@ class LibraryMembershipCommanderImpl @Inject() (
       access match {
         case LibraryAccess.READ_WRITE =>
           elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
-            Recipient(lib.ownerId),
+            Recipient.fromUser(lib.ownerId),
             currentDateTime,
             newFollowerId,
             lib.id.get
           ))
         case LibraryAccess.READ_ONLY =>
           elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
-            Recipient(lib.ownerId),
+            Recipient.fromUser(lib.ownerId),
             currentDateTime,
             newFollowerId,
             lib.id.get
