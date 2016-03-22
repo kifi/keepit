@@ -26,7 +26,7 @@ import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.{ SlackClientWrapper, SlackActionFail }
-import com.keepit.slack.models.{ SlackEmoji, SlackMessage, SlackSearchRequest, SlackChannelRepo, SlackChannelId, SlackMessageRequest, SlackFail, SlackTeamRepo, SlackUsername }
+import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -69,6 +69,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     userExperimentRepo: UserExperimentRepo,
     userCommander: Provider[UserCommander],
     slackTeamRepo: SlackTeamRepo,
+    slackTeamMembershipRepo: SlackTeamMembershipRepo,
     slackChannelRepo: SlackChannelRepo,
     slackClient: SlackClientWrapper,
     pathCommander: PathCommander,
@@ -452,28 +453,31 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def sendOrganizationInviteViaSlack(username: SlackUsername, orgId: Id[Organization], userIdOpt: Option[Id[User]]): Future[Unit] = {
     import DescriptionElements._
-    db.readOnlyReplica { implicit s =>
+    val (org, slackTeamIdOpt, slackUserIdOpt) = db.readOnlyMaster { implicit session =>
       val org = organizationRepo.get(orgId)
-      slackTeamRepo.getByOrganizationId(orgId) match {
-        case None => Future.failed(SlackActionFail.OrgNotConnected(orgId))
-        case Some(slackTeam) =>
-          val userInfosFut = slackClient.getUsers(slackTeam.slackTeamId)
-          val invite: OrganizationInvite = OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = None, emailAddress = None)
-          val message: SlackMessageRequest = SlackMessageRequest.fromKifi {
-            DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.mailboxWithMail, s" Here's the invitation access link you just requested!",
-              "Click here to access this team on Kifi!" --> LinkElement(s"${pathCommander.pathForOrganization(org).absolute}?authToken=${invite.authToken}"),
-              "\n", "...now back to watching ”The Big Bot Theory”"))
-          }
-          userInfosFut.flatMap { userInfos =>
-            userInfos.find(_.name == username) match {
-              case None => Future.failed(SlackFail.SlackUserNotFound(username, slackTeam.slackTeamId))
-              case Some(slackUser) =>
-                persistInvitation(invite, force = true).getOrElse(throw new Exception(s"can't create org (${orgId.id}) invite for ${slackUser.id} on slack team ${slackTeam.id.get.id}"))
-                log.info(s"[OrgDMInvite] sending to slack team ${slackTeam.id}, user ${slackUser.id.value}")
-                slackClient.sendToSlackHoweverPossible(slackTeam.slackTeamId, SlackChannelId.User(slackUser.id.value), message).map(_ => ())
+      val slackTeamIdOpt = slackTeamRepo.getByOrganizationId(orgId).map(_.slackTeamId)
+      val slackUserIdOpt = slackTeamIdOpt.flatMap(slackTeamMembershipRepo.getBySlackTeamAndUsername(_, username).map(_.slackUserId))
+      (org, slackTeamIdOpt, slackUserIdOpt)
+    }
+    slackTeamIdOpt match {
+      case None => Future.failed(SlackActionFail.OrgNotConnected(orgId))
+      case Some(slackTeamId) =>
+        val futureSlackUserIdOpt = slackUserIdOpt.map(id => Future.successful(Some(id))) getOrElse slackClient.getUsers(slackTeamId).imap { users =>
+          users.collectFirst { case user if user.name equalsIgnoreCase username => user.id }
+        }
+        futureSlackUserIdOpt.flatMap {
+          case None => Future.failed(SlackFail.SlackUserNotFound(username, slackTeamId))
+          case Some(slackUserId) =>
+            val invite: OrganizationInvite = OrganizationInvite(organizationId = orgId, inviterId = org.ownerId, userId = None, emailAddress = None)
+            val message: SlackMessageRequest = SlackMessageRequest.fromKifi {
+              DescriptionElements.formatForSlack(DescriptionElements(SlackEmoji.mailboxWithMail, s" Here's the invitation access link you just requested!",
+                "Click here to access this team on Kifi!" --> LinkElement(s"${pathCommander.pathForOrganization(org).absolute}?authToken=${invite.authToken}"),
+                "\n", "...now back to watching ”The Big Bot Theory”"))
             }
-          }
-      }
+            persistInvitation(invite, force = true).getOrElse(throw new Exception(s"can't create org (${orgId.id}) invite for ${slackUserId.value} on slack team ${slackTeamId.value}"))
+            log.info(s"[OrgDMInvite] sending to slack team ${slackTeamId.value}, user ${slackUserId.value}")
+            slackClient.sendToSlackHoweverPossible(slackTeamId, slackUserId.asChannel, message).map(_ => ())
+        }
     }
   }
 }
