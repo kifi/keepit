@@ -12,6 +12,7 @@ import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
+import com.keepit.common.util.{ ActivityLog, ActivityEvent }
 import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
@@ -212,6 +213,8 @@ class KeepDecoratorImpl @Inject() (
               KeepMembers(libraries, users, emails)
             }
 
+            val activityLog = generateActivityLog(discussionsByKeep(keepId))
+
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
@@ -246,6 +249,7 @@ class KeepDecoratorImpl @Inject() (
                 sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
                 discussion = discussionsByKeep.get(keepId),
+                activity = activityLog,
                 participants = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
                 members = keepMembers,
                 permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
@@ -338,6 +342,8 @@ class KeepDecoratorImpl @Inject() (
       }
     }
   }
+
+  def generateActivityLog(discussion: Discussion): ActivityLog = ActivityLog(discussion.messages.map { msg => ActivityEvent.fromComment(msg) })
 }
 
 object KeepDecorator {

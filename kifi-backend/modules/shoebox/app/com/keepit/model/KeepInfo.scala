@@ -6,6 +6,7 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
+import com.keepit.common.util.{ ActivityLog, ActivityEvent }
 import com.keepit.discussion.{ DiscussionKeep, Discussion }
 import com.keepit.slack.models.{ SlackUserId, SlackUsername }
 import com.keepit.social.{ BasicAuthor, BasicUser }
@@ -49,6 +50,7 @@ case class KeepInfo(
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
     discussion: Option[Discussion],
+    activity: ActivityLog,
     participants: Seq[BasicUser],
     members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {
@@ -106,6 +108,7 @@ object KeepInfo {
         "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
         "note" -> o.note,
         "discussion" -> o.discussion,
+        "activity" -> o.activity,
         "participants" -> o.participants,
         "members" -> o.members,
         "permissions" -> o.permissions
@@ -116,6 +119,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relative, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.libraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, activity = ActivityLog(Seq.empty), participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }
