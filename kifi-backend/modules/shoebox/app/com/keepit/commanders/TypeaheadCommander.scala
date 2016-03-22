@@ -282,13 +282,13 @@ class TypeaheadCommander @Inject() (
     (users, contacts)
   }
 
+  // Users and emails
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int], includeSelf: Boolean): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     query.trim match {
       case q if q.isEmpty =>
         Future.successful(suggestionsToResults(interactionCommander.suggestFriendsAndContacts(userId, limit)))
       case q =>
         val friends = searchFriendsAndContacts(userId, q, includeSelf = includeSelf, limit)
-
         val (userOrder, contactOrder) = suggestionsToResults(interactionCommander.suggestFriendsAndContacts(userId, None)) |> {
           case (users, contacts) =>
             val userOrder = users.zipWithIndex.map(u => u._1._1 -> u._2).toMap
@@ -296,7 +296,6 @@ class TypeaheadCommander @Inject() (
 
             (userOrder.withDefaultValue(limit.getOrElse(500)), contactOrder.withDefaultValue(limit.getOrElse(500)))
         }
-
         val rankedFriends = friends.imap {
           case (users, contacts) =>
             val sortedUsers = users.sortBy(u => userOrder(u._1))
@@ -318,8 +317,9 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForKeepRecipients(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
+  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int]): Future[Seq[ContactSearchResult]] = {
     // Users, emails, and libraries
+    val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(20))
     query.trim match {
       case q if q.isEmpty =>
         val interactions = interactionCommander.getRecentInteractions(userId)
@@ -334,11 +334,12 @@ class TypeaheadCommander @Inject() (
           case InteractionInfo(EmailInteractionRecipient(e), _) => Some(EmailContactResult(name = None, email = e))
           case InteractionInfo(LibraryInteraction(l), _) => None
         }
-
         Future.successful(suggestions)
       case q =>
         val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
-        val libraries = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[LibraryData])
+        val kifiUserF = kifiUserTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
+        val abookF = abookServiceClient.prefixQuery(userId, q, limit.map(_ * 2))
+        val libraries = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[Library])
 
         libraries.map { l =>
           l.head.info

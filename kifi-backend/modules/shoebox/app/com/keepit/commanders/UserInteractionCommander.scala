@@ -80,16 +80,6 @@ class UserInteractionCommander @Inject() (
     }.toSeq.sorted.reverse
   }
 
-  //  def getRecentInteractionsScore(uid: Id[User]): InteractionRecipient => Option[Double] = {
-  //    val interactions = getRecentInteractions(uid)
-  //
-  //    { recipient: InteractionRecipient =>
-  //      interactions.find { s =>
-  //        s.recipient == recipient
-  //      }.map(_.score)
-  //    }
-  //  }
-
   def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[Id[User]], Seq[EmailAddress]) = {
     val allRecentInteractions = getRecentInteractions(userId)
     val relevantInteractions = limit.map(allRecentInteractions.take) getOrElse allRecentInteractions

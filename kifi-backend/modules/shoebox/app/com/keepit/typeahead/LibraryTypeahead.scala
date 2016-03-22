@@ -8,7 +8,6 @@ import com.keepit.common.cache.{ BinaryCacheImpl, CacheStatistics, FortyTwoCache
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -23,7 +22,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 object LibraryTypeahead {
-  type UserLibraryTypeahead = PersonalTypeahead[User, Library, LibraryData]
+  type UserLibraryTypeahead = PersonalTypeahead[User, Library, Library]
 }
 
 class LibraryTypeahead @Inject() (
@@ -40,7 +39,7 @@ class LibraryTypeahead @Inject() (
     libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext,
-    implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, LibraryData, UserLibraryTypeahead] with Logging {
+    implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, Library, UserLibraryTypeahead] with Logging {
 
   protected val refreshRequestConsolidationWindow = 10 minutes
 
@@ -60,61 +59,26 @@ class LibraryTypeahead @Inject() (
     Future.successful(filterOpt.map(filter => PersonalTypeahead(userId, filter, getInfos(userId))))
   }
 
-  private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryData]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty[LibraryData])
+  private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[Library]] = {
+    if (ids.isEmpty) Future.successful(Seq.empty[Library])
     else {
       SafeFuture {
         val idSet = ids.toSet
         db.readOnlyReplica { implicit session =>
           val libs = libraryRepo.getActiveByIds(idSet)
-          val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
-          val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
-          val libData = ids.flatMap { libId =>
-            libs.get(libId).map { lib =>
-              (lib, memberships.get(libId), collaborators.getOrElse(libId, Set.empty))
-            }
-          }
-          buildData(userId, libData).map(_._2)
+          libs.values.toSeq
         }
       }
     }
   }
 
-  private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], LibraryData)]] = SafeFuture {
+  private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], Library)]] = SafeFuture {
     db.readOnlyReplica { implicit session =>
-      buildData(id, libraryInfoCommander.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true))
+      libraryInfoCommander.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map { case (l, _, _) => l.id.get -> l }
     }
   }
 
-  private def buildData(userId: Id[User], items: Seq[(Library, Option[LibraryMembership], Set[Id[User]])])(implicit session: RSession): Seq[(Id[Library], LibraryData)] = {
-    val allUserIds = items.flatMap(_._3).toSet
-    val orgIds = items.map(_._1).flatMap(_.organizationId)
-
-    val basicUserById = basicUserRepo.loadAll(allUserIds)
-    val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
-
-    items.map {
-      case (lib, membership, collaboratorsIds) =>
-        val collabs = (collaboratorsIds - userId).map(basicUserById(_)).toSeq
-        val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-        val membershipInfo = membership.map { mem => libraryMembershipCommander.createMembershipInfo(mem) }
-
-        lib.id.get -> LibraryData(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          color = lib.color,
-          visibility = lib.visibility,
-          path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = collabs.nonEmpty,
-          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
-          collaborators = collabs,
-          orgAvatar = orgAvatarPath,
-          membership = membershipInfo
-        )
-    }
-  }
-
-  protected def extractName(info: LibraryData): String = info.name
+  protected def extractName(info: Library): String = info.name
 
   protected def invalidate(typeahead: UserLibraryTypeahead) = {
     val userId = typeahead.ownerId
