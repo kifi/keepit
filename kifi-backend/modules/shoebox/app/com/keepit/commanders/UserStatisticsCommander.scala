@@ -124,7 +124,10 @@ class UserStatisticsCommander @Inject() (
       val keepCount = keepRepo.getCountByUser(userId)
       val libs = LibCountStatistics(libraryRepo.getAllByOwner(userId))
       val slackMembers = slackTeamMembershipRepo.getByUserId(userId)
-      val slackToLibs = slackChannelToLibraryRepo.getAllBySlackUserIds(slackMembers.map(_.slackUserId).toSet)
+      val slackToLibs = slackMembers.groupBy(_.slackTeamId).flatMap {
+        case (slackTeamId, slackMemberships) =>
+          slackChannelToLibraryRepo.getAllBySlackUserIds(slackTeamId, slackMemberships.map(_.slackUserId).toSet)
+      }
       (keepCount, libs, slackMembers, slackToLibs)
     }
     val lastLocationF = userIpAddressEventLogger.getLastLocation(userId)
