@@ -1,8 +1,29 @@
 <div class="kifi-message-keepscussion-header">
+  {{#keep.libraries.length}}
   <p class="kifi-message-keepscussion-header-count">
     Kept in {{keep.libraries.length}} {{#librariesPlural}}libraries{{/librariesPlural}}{{^librariesPlural}}library{{/librariesPlural}}
   </p>
-  <div class="kifi-message-keepscussion-header-lib">
-    {{#keep.libraries.0}}{{>keep_box_lib}}{{/keep.libraries.0}}
+  <div class="kifi-message-keepscussion-header-lib-wrapper">
+    <div class="kifi-message-keepscussion-header-lib">
+      {{#keep.libraries.0}}{{>keep_box_lib}}{{/keep.libraries.0}}
+    </div>
+    {{#canEdit}}
+    <a href="javascript:" class="kifi-message-keepscussion-header-lib-edit">
+      <span class="kifi-message-keepscussion-header-lib-edit-icon"></span>
+    </a>
+    {{/canEdit}}
+  </div>
+  {{/keep.libraries.length}}
+  {{^keep.libraries.length}}
+    <a href="javascript:" class="kifi-message-keepscussion-header-lib-add">
+      <span class="kifi-message-keepscussion-header-lib-add-icon"></span>
+      <span class="kifi-message-keepscussion-header-lib-add-icon kifi-message-keepscussion-header-lib-add-icon-dummy"></span>
+      Add a library to this discussion
+    </a>
+  {{/keep.libraries.length}}
+  <div class="kifi-message-keepscussion-dialog">
+    <div class="kifi-message-keepscussion-dialog-title">Add a library to this discussion</div>
+    <input class="kifi-message-keepscussion-dialog-input" type="text" placeholder="Type a name..."/>
+    <a class="kifi-message-keepscussion-dialog-button" href="javascript:">Done</a>
   </div>
 </div>

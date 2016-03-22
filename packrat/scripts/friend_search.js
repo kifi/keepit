@@ -1,6 +1,8 @@
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/mustache.js
+// @require scripts/lib/q.min.js
 // @require scripts/render.js
+// @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/repair_inputs.js
 
 var initFriendSearch = (function () {
@@ -65,8 +67,8 @@ var initFriendSearch = (function () {
     return '.' + d + acc;
   }
 
-  return function ($in, source, participants, includeSelf, options) {
-    $in.tokenInput(search.bind(null, participants.map(getId), includeSelf), $.extend({
+  return function ($in, source, participants, includeSelf, options, searchFor) {
+    $in.tokenInput(search.bind(null, participants.map(getId), includeSelf, searchFor), $.extend({
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
@@ -80,13 +82,42 @@ var initFriendSearch = (function () {
     $in.prev().find('.kifi-ti-token-for-input').repairInputs();
   };
 
-  function search(participantIds, includeSelf, ids, query, withResults) {
+  function search(excludeIds, includeSelf, searchFor, ids, query, withResults) {
+    searchFor = searchFor || { participants: true, libraries: false };
+
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_contacts', {q: query, n: n, includeSelf: includeSelf(ids.length), exclude: participantIds.concat(ids)}, function (contacts) {
-      if (contacts.length < 3) {
-        contacts.push('tip');
-      }
-      withResults(contacts);
+    var deferreds = [ Q.defer(), Q.defer() ];
+    var promises = [ deferreds[0].promise, deferreds[1].promise ];
+
+    if (searchFor.participants) {
+      api.port.emit('search_contacts', {q: query, n: n, includeSelf: includeSelf(ids.length), exclude: excludeIds.concat(ids)}, function (contacts) {
+        deferreds[0].resolve(contacts);
+      });
+    } else {
+      deferreds[0].resolve([]);
+    }
+
+    if (searchFor.libraries) {
+      api.port.emit('filter_libraries', query, function (results) {
+
+        results = results.filter(function (l) { return !~excludeIds.indexOf(l.id); }).slice(0, n).map(function (l) {
+          l.kind = 'lib';
+          return l;
+        });
+        deferreds[1].resolve(results);
+      });
+    } else {
+      deferreds[1].resolve([]);
+    }
+
+    Q.all(promises).done(function (vals) {
+      var contacts = vals[0];
+      var libraries = vals[1];
+      var percentContacts = contacts.length / (libraries.length + contacts.length);
+      var contactsCount = Math.floor(n * percentContacts);
+      contacts = contacts.slice(0, contactsCount);
+      libraries = libraries.slice(0, n - contactsCount);
+      withResults(contacts.concat(libraries));
     });
   }
 
@@ -94,6 +125,8 @@ var initFriendSearch = (function () {
     var html = ['<li>'];
     if (item.email) {
       html.push('<span class="kifi-ti-email-token-icon"></span>', Mustache.escape(item.email));
+    } else if (item.kind === 'lib') {
+      html.push('<span class="kifi-ti-lib-token-icon" style="background-color:' + item.color + '"></span>', Mustache.escape(item.name));
     } else if (item.kind === 'org') {
       var pic = k.cdnBase + '/' + item.avatarPath;
       html.push('<span class="kifi-ti-org-token-icon" style="background-image:url(' + pic + ')"></span>', Mustache.escape(item.name));
@@ -108,9 +141,22 @@ var initFriendSearch = (function () {
   }
 
   function formatResult(res) {
-    if (res.kind === 'org') {
-      var pic = k.cdnBase + '/' + res.avatarPath;
-      var html = [
+    var html;
+    var pic;
+
+    if (res.kind === 'lib') {
+      if (typeof res.nameParts[0] === 'string') {
+        annotateNameParts(res);
+      }
+      res.keep = res.keep || {};
+      res.keep.isSearchResult = true;
+
+      html = $(k.render('html/keeper/keep_box_lib', res, {'name_parts': 'name_parts'}));
+      html.addClass('kifi-ti-dropdown-item-token')
+      return html.prop('outerHTML');
+    } else if (res.kind === 'org') {
+      pic = k.cdnBase + '/' + res.avatarPath;
+      html = [
         '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-org" style="background-image:url(', pic, ')">',
         '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, res.nameParts);
@@ -121,8 +167,8 @@ var initFriendSearch = (function () {
         '</div></li>');
       return html.join('');
     } else if (res.pictureName || res.kind === 'user') {
-      var pic = k.cdnBase + '/users/' + res.id + '/pics/100/' + res.pictureName;
-      var html = [
+      pic = k.cdnBase + '/users/' + res.id + '/pics/100/' + res.pictureName;
+      html = [
         '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-user" style="background-image:url(', pic, ')">',
         '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, res.nameParts);
@@ -133,7 +179,7 @@ var initFriendSearch = (function () {
         '</div></li>');
       return html.join('');
     } else if (res.q) {
-      var html = [
+      html = [
         '<li class="', res.isValidEmail ? 'kifi-ti-dropdown-item-token ' : '', 'kifi-ti-dropdown-email kifi-ti-dropdown-new-email">',
         '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, ['', res.q]);
@@ -144,7 +190,7 @@ var initFriendSearch = (function () {
         '</div></li>');
       return html.join('');
     } else if (res.email) {
-      var html = [
+      html = [
         '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">',
         '<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>',
         '<div class="kifi-ti-dropdown-line-1">'];
@@ -164,6 +210,16 @@ var initFriendSearch = (function () {
         '<div class="kifi-ti-dropdown-line-1">Import Gmail contacts</div>',
         '</li>'].join('');
     }
+  }
+
+  function annotateNameParts(lib) {
+    lib.nameParts = lib.nameParts.map(function (part, i) {
+      return {
+        highlight: i % 2,
+        part: part
+      };
+    });
+    return lib;
   }
 
   function showResults($dropdown, els, done) {
@@ -262,7 +318,7 @@ var initFriendSearch = (function () {
   function onSelect(source, res, el) {
     if (res.isValidEmail) {
       res.id = res.email = res.q;
-    } else if (!res.pictureName && !res.email) {
+    } else if (!res.pictureName && !res.email && res.kind !== 'lib') {
       if (res === 'tip') {
         api.port.emit('import_contacts', {type: source, subsource: 'composeTypeahead'});
       }

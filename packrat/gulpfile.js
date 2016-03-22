@@ -24,6 +24,7 @@ var map = require('./gulp/vinyl-map.js');
 var filenames = require('gulp-filenames');
 var sourcemaps = require('gulp-sourcemaps');
 var babel = require('gulp-babel');
+var cheerio = require('gulp-cheerio');
 var explicitGlobals = require('explicit-globals');
 var pathSort = require('path-sort');
 var _ = require('lodash');
@@ -38,6 +39,7 @@ var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.jso
 var safariAdapterFiles = ['adapters/safari/**', '!adapters/safari/*.plist.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/url_*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var symbolSpritesFiles = ['node_modules/symbol-sprites/dist/symbol-sprite.svg'];
 var firefoxScriptModuleFiles = ['**/scripts/**/*.js', '!scripts/lib/jquery.js', '!scripts/lib/mustache.js', '!scripts/lib/underscore.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
@@ -51,6 +53,7 @@ var localBackgroundScripts = ['livereload.js'];
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
+var styleLessIncludes = ['node_modules/symbol-sprites/dist/'];
 var distFiles = outDir + '/**';
 
 var validateScripts = ['scripts/**', './*.js'];
@@ -190,7 +193,22 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/safari/kifi.safariextension'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  var resources = gulp.src(resourceFiles, { base: './' })
+  var resources = es.merge(
+      gulp.src(resourceFiles, { base: './' }),
+      gulp.src(symbolSpritesFiles)
+        .pipe(cheerio({
+          run: function ($) {
+            $('symbol').each(function () {
+              var $this = $(this);
+              $this.attr('id', 'kifi-' + $this.attr('id'));
+            });
+          },
+          parserOptions: {xmlMode: true}
+        }))
+        .pipe(rename(function (path) {
+          path.dirname = 'images'
+        }))
+    )
     .pipe(cache('resources'));
 
   var firefoxResources = resources.pipe(clone())
@@ -333,7 +351,7 @@ gulp.task('styles', function () {
 
   var stylePipe = gulp.src(styleFiles, {base: './'})
     .pipe(cache('styles'))
-    .pipe(gulpif(/[.]less$/, less()))
+    .pipe(gulpif(/[.]less$/, less({ paths: styleLessIncludes })))
     .pipe(mainStylesOnly(insulate));
 
   stylePipe

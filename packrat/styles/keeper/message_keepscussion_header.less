@@ -1,8 +1,15 @@
+@import (reference) 'symbol-sprite.less';
+
+@buttonBgColor: #67829c;
+@dotBgColor: #b8c5d1;
+
 .kifi-message-keepscussion-header {
+  position: relative;
   padding: 0 10px;
   border-bottom: 1px lightgray solid;
 }
 
+.kifi-message-keepscussion-header-lib-add,
 .kifi-message-keepscussion-header-count {
   padding: 5px 0;
   font-size: 13px;
@@ -10,9 +17,163 @@
   font-smoothing: antialiased;
 }
 
-.kifi-message-keepscussion-header-lib {
+.kifi-message-keepscussion-header-lib-wrapper {
+  display: flex;
   margin: 0 -10px;
   border-top: 1px lightgray solid;
-  border-top: 1px lightgray solid;
+  border-bottom: 1px lightgray solid;
   background-color: #fff;
+}
+
+.kifi-message-keepscussion-header-lib {
+  flex: 1;
+}
+
+.kifi-message-keepscussion-header-lib-edit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+
+  &:hover {
+    opacity: .6;
+  }
+
+  &:active {
+    opacity: 1.0
+  }
+}
+
+.kifi-message-keepscussion-header-lib-edit-icon {
+  width: 24px;
+  height: 24px;
+
+  @url: %(@kifi-symbol-pencil, #999, #999);
+  background-image: url(@url);
+}
+
+.kifi-message-keepscussion-header-lib-add {
+  position: relative;
+  display: block;
+  padding: 10px 40px;
+
+  &:hover {
+    color: #444;
+  }
+
+  &:hover .kifi-message-keepscussion-header-lib-add-icon:not(.kifi-message-keepscussion-header-lib-add-icon-dummy) {
+    use,
+    use path {
+      fill: #bbb;
+    }
+  }
+
+  &:active {
+    color: #999;
+  }
+}
+
+.kifi-message-keepscussion-header-lib-add-icon {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  margin: auto 2px;
+
+  @url: %(@kifi-symbol-hearts-plus, #999, #999, #999);
+  background-image: url(@url);
+}
+
+.kifi-message-keepscussion-header-lib-add-icon-dummy {
+  visibility: hidden;
+  @url: %(@kifi-symbol-hearts-plus, #F00, #F00, #F00);
+  background-image: url(@url);
+}
+
+.kifi-message-keepscussion-header-lib-add-icon-clicked {
+  visibility: visible;
+
+  transform: translateY(-25px) scale(1.25);
+  opacity: 0;
+  transition: transform 1s, opacity .8s;
+  z-index: 1000;
+
+}
+
+.kifi-message-keepscussion-dialog {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  z-index: 10;
+  width: 100%;
+  padding: 9px 12px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  color: white;
+  background: @dotBgColor;
+
+  :not(.kifi-dialog-opened)>& {
+    display: none;
+  }
+
+  &>.kifi-ti-list {
+    padding: 3px !important;
+    padding-top: 6px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    &::before {
+      content: none;
+    }
+  }
+
+  .kifi-ti-token {
+    font-size: 13px;
+    font-weight: 200;
+    letter-spacing: .5px;
+    line-height: 16px;
+  }
+
+  input {
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: .5px;
+    line-height: 18px !important;
+    border: 0 !important;
+    padding: 3px 0 !important;
+  }
+
+  &>.kifi-ti-dropdown {
+    // border: 1px solid @buttonBgColor;
+    // border-bottom-width: 2px;
+  }
+}
+
+.kifi-message-keepscussion-dialog-title {
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  margin-bottom: 6px;
+}
+
+.kifi-message-keepscussion-dialog-button {
+  float: right;
+  font-size: 13px;
+  font-weight: 200;
+  -webkit-font-smoothing: antialiased;
+  padding: 7px 16px;
+  border-radius: 2px !important;
+  margin-top: 8px;
+  color: white;
+  background: @buttonBgColor;
+
+  &:hover, &:focus {
+    color: white;
+    background: shade(@buttonBgColor, 10%);
+  }
+
+  &:active {
+    color: white;
+    background: shade(@buttonBgColor, 20%);
+  }
 }

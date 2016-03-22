@@ -307,7 +307,7 @@ textarea.kifi-compose-draft::-moz-placeholder {
 .kifi-ti-dropdown-item {
   position: relative;
   margin: 0 !important;
-  padding: 10px 30px 10px 54px !important;
+  padding: 10px 30px 10px 54px;
   background: -9999px no-repeat;
   height: 34px;
   border-top: 1px solid #eaeaea;
@@ -337,6 +337,17 @@ textarea.kifi-compose-draft::-moz-placeholder {
     background: 0 0/cover no-repeat;
     background-image: inherit;
     box-shadow: 0 0 2px rgba(0,0,0,.2) inset;
+  }
+  &.kifi-ti-dropdown-lib::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    height: 34px;
+    width: 24px;
+    border-radius: 14%;
+    background-color: currentColor;
+    box-shadow: 0 0 0px rgba(0,0,0,.5), 2px 2px 0px rgba(0,0,0,.3), 4px 4px 0px rgba(0,0,0,.1);
   }
   &.kifi-ti-dropdown-email {
     &::before {
@@ -479,6 +490,14 @@ textarea.kifi-compose-draft::-moz-placeholder {
   height: 14px;
   width: 14px;
   background-size: cover;
+  border-radius: 20%;
+  margin-right: 4px;
+  margin-bottom: -3px;
+}
+.kifi-ti-lib-token-icon {
+  display: inline-block;
+  height: 14px;
+  width: 9px;
   border-radius: 20%;
   margin-right: 4px;
   margin-bottom: -3px;

@@ -29,7 +29,6 @@ k.tile = k.tile || (function () {
       loadAndDo('keeper', 'show');
     }
   });
-
   tileCard = tile.firstChild;
 
   document.addEventListener('keydown', onKeyDown, true);
