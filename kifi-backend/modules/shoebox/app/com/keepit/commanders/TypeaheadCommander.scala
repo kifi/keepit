@@ -266,7 +266,7 @@ class TypeaheadCommander @Inject() (
   private def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
-        case ((us, cs), nextContact: RichContact) => (us, cs :+ nextContact)
+        case ((us, cs), nextContact: RichContact) if !nextContact.userId.exists(uid => us.exists(u => u.id.get == uid)) => (us, cs :+ nextContact)
         case ((us, cs), nextUser: User) => (us :+ nextUser, cs)
         case ((us, cs), nextHit) =>
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
@@ -396,36 +396,36 @@ class TypeaheadCommander @Inject() (
 
   private def libToResult(userId: Id[User], libIds: Seq[Id[Library]]): Seq[(Id[Library], LibraryResult)] = {
     val idSet = libIds.toSet
-    db.readOnlyReplica { implicit session =>
+    val (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById) = db.readOnlyReplica { implicit session =>
       val libs = libraryRepo.getActiveByIds(idSet).values.toVector
-      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
       val collaborators = libraryMembershipRepo.getCollaboratorsByLibrary(idSet)
-      val allUserIds = collaborators.values.flatten.toSet
-      val orgIds = libs.flatMap(_.organizationId)
+      val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(idSet, userId)
+      val permissions = libs.map { lib =>
+        lib.id.get -> permissionCommander.get.getLibraryPermissions(lib.id.get, Some(userId))
+      }.toMap
+      val basicUserById = basicUserRepo.loadAll(collaborators.values.flatten.toSet)
+      val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(libs.flatMap(_.organizationId).toSet, ProcessedImageSize.Medium.idealSize)
 
-      val basicUserById = basicUserRepo.loadAll(allUserIds)
-      val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
-
-      libs.map {
-        case lib =>
-          val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
-          val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
-          val membershipInfo = memberships.get(lib.id.get).map { mem =>
-            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.get.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
-          }
-
-          lib.id.get -> LibraryResult(
-            id = Library.publicId(lib.id.get),
-            name = lib.name,
-            color = lib.color,
-            visibility = lib.visibility,
-            path = pathCommander.getPathForLibrary(lib),
-            hasCollaborators = collabs.nonEmpty,
-            collaborators = collabs,
-            orgAvatar = orgAvatarPath,
-            membership = membershipInfo
-          )
+      (libs, collaborators, memberships, permissions, basicUserById, orgAvatarsById)
+    }
+    libs.map { lib =>
+      val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
+      val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
+      val membershipInfo = memberships.get(lib.id.get).map { mem =>
+        LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissions.getOrElse(lib.id.get, Set.empty))
       }
+
+      lib.id.get -> LibraryResult(
+        id = Library.publicId(lib.id.get),
+        name = lib.name,
+        color = lib.color,
+        visibility = lib.visibility,
+        path = pathCommander.getPathForLibrary(lib),
+        hasCollaborators = collabs.nonEmpty,
+        collaborators = collabs,
+        orgAvatar = orgAvatarPath,
+        membership = membershipInfo
+      )
     }
   }
 
