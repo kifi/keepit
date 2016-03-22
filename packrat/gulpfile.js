@@ -53,6 +53,7 @@ var localBackgroundScripts = ['livereload.js'];
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
+var styleLessIncludes = ['node_modules/symbol-sprites/dist/'];
 var distFiles = outDir + '/**';
 
 var validateScripts = ['scripts/**', './*.js'];
@@ -350,7 +351,7 @@ gulp.task('styles', function () {
 
   var stylePipe = gulp.src(styleFiles, {base: './'})
     .pipe(cache('styles'))
-    .pipe(gulpif(/[.]less$/, less()))
+    .pipe(gulpif(/[.]less$/, less({ paths: styleLessIncludes })))
     .pipe(mainStylesOnly(insulate));
 
   stylePipe

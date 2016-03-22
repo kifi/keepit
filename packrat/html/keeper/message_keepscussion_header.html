@@ -9,15 +9,15 @@
     </div>
     {{#canEdit}}
     <a href="javascript:" class="kifi-message-keepscussion-header-lib-edit">
-      <svg class="kifi-message-keepscussion-header-lib-edit-icon"><use xlink:href="#kifi-pencil"/></svg>
+      <span class="kifi-message-keepscussion-header-lib-edit-icon"></span>
     </a>
     {{/canEdit}}
   </div>
   {{/keep.libraries.length}}
   {{^keep.libraries.length}}
     <a href="javascript:" class="kifi-message-keepscussion-header-lib-add">
-      <svg class="kifi-message-keepscussion-header-lib-add-icon"><use xlink:href="#kifi-hearts-plus"/></svg>
-      <svg class="kifi-message-keepscussion-header-lib-add-icon kifi-message-keepscussion-header-lib-add-icon-dummy"><use xlink:href="#kifi-hearts-plus"/></svg>
+      <span class="kifi-message-keepscussion-header-lib-add-icon"></span>
+      <span class="kifi-message-keepscussion-header-lib-add-icon kifi-message-keepscussion-header-lib-add-icon-dummy"></span>
       Add a library to this discussion
     </a>
   {{/keep.libraries.length}}

@@ -1,3 +1,5 @@
+@import (reference) 'symbol-sprite.less';
+
 @buttonBgColor: #67829c;
 @dotBgColor: #b8c5d1;
 
@@ -46,10 +48,8 @@
   width: 24px;
   height: 24px;
 
-  use,
-  use path {
-    fill: #999;
-  }
+  @url: %(@kifi-symbol-pencil, #999, #999);
+  background-image: url(@url);
 }
 
 .kifi-message-keepscussion-header-lib-add {
@@ -82,16 +82,14 @@
   left: 0;
   margin: auto 2px;
 
-
-  use,
-  use path {
-    transition: color 1s;
-    fill: #999;
-  }
+  @url: %(@kifi-symbol-hearts-plus, #999, #999, #999);
+  background-image: url(@url);
 }
 
 .kifi-message-keepscussion-header-lib-add-icon-dummy {
   visibility: hidden;
+  @url: %(@kifi-symbol-hearts-plus, #F00, #F00, #F00);
+  background-image: url(@url);
 }
 
 .kifi-message-keepscussion-header-lib-add-icon-clicked {
@@ -101,10 +99,7 @@
   opacity: 0;
   transition: transform 1s, opacity .8s;
   z-index: 1000;
-  use,
-  use path {
-    fill: #F00;
-  }
+
 }
 
 .kifi-message-keepscussion-dialog {
