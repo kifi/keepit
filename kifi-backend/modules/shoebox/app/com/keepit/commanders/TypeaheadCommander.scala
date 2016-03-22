@@ -266,17 +266,23 @@ class TypeaheadCommander @Inject() (
   private def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
-        case ((us, cs), nextContact: RichContact) if !nextContact.userId.exists(uid => us.exists(u => u.id.get == uid)) => (us, cs :+ nextContact)
+        case ((us, cs), nextContact: RichContact) => (us, cs :+ nextContact)
         case ((us, cs), nextUser: User) => (us :+ nextUser, cs)
         case ((us, cs), nextHit) =>
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
           (us, cs)
       }
 
-      (
-        users.collect { case user if includeSelf || !user.id.contains(userId) => user.id.get -> BasicUser.fromUser(user) },
-        contacts.collect { case richContact if includeSelf || !richContact.userId.contains(userId) => BasicContact.fromRichContact(richContact) }
-      )
+      val userResults = users.collect {
+        case user if includeSelf || !user.id.contains(userId) =>
+          user.id.get -> BasicUser.fromUser(user)
+      }
+      val emailResults = contacts.collect {
+        case richContact if (includeSelf || !richContact.userId.contains(userId)) && !richContact.userId.exists(uid => users.exists(u => u.id.get == uid)) =>
+          BasicContact.fromRichContact(richContact)
+      }
+
+      (userResults, emailResults)
     }
   }
 
