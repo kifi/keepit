@@ -227,7 +227,7 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
             $toShake.off('animationend', onEnd);
             $toShake.removeClass('kifi-shake');
             this.parent.refresh();
-          })
+          }.bind(this))
           .addClass('kifi-shake');
         }
       }.bind(this));
