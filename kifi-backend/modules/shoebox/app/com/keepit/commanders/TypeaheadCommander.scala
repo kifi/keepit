@@ -226,7 +226,7 @@ class TypeaheadCommander @Inject() (
         case _: RichContact | SocialUserBasicInfo | User | TypeaheadUserHit => None
 
         case _ =>
-          airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
+          log.warn(s"Unknown hit type: $hit")
           None
       }
     }
