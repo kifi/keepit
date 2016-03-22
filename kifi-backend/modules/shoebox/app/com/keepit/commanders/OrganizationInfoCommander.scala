@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession }
@@ -40,15 +40,15 @@ trait OrganizationInfoCommander {
 @Singleton
 class OrganizationInfoCommanderImpl @Inject() (
     db: Database,
-    permissionCommander: PermissionCommander,
+    permissionCommander: Provider[PermissionCommander],
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
-    orgInviteCommander: OrganizationInviteCommander,
-    organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    orgInviteCommander: Provider[OrganizationInviteCommander],
+    organizationDomainOwnershipCommander: Provider[OrganizationDomainOwnershipCommander],
     orgInviteRepo: OrganizationInviteRepo,
-    organizationAvatarCommander: OrganizationAvatarCommander,
-    slackInfoCommander: SlackInfoCommander,
+    organizationAvatarCommander: Provider[OrganizationAvatarCommander],
+    slackInfoCommander: Provider[SlackInfoCommander],
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
@@ -57,7 +57,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
-    planManagementCommander: PlanManagementCommander,
+    planManagementCommander: Provider[PlanManagementCommander],
     basicOrganizationIdCache: BasicOrganizationIdCache,
     implicit val executionContext: ExecutionContext) extends OrganizationInfoCommander with Logging {
 
@@ -112,7 +112,7 @@ class OrganizationInfoCommanderImpl @Inject() (
       val description = org.description
 
       val ownerId = userRepo.get(org.ownerId).externalId
-      val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
+      val avatarPath = organizationAvatarCommander.get.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
       Some(BasicOrganization(
         orgId = Organization.publicId(orgId),
@@ -143,13 +143,13 @@ class OrganizationInfoCommanderImpl @Inject() (
 
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
-    val plan = planManagementCommander.currentPlanHelper(orgId)
+    val plan = planManagementCommander.get.currentPlanHelper(orgId)
     ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   @StatsdTiming("OrganizationInfoCommander.getOrganizationInfo")
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
-    val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
+    val viewerPermissions = permissionCommander.get.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up organization info for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
@@ -170,10 +170,10 @@ class OrganizationInfoCommanderImpl @Inject() (
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = members.length
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
+    val avatarPath = organizationAvatarCommander.get.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-    val slackTeamOpt = Try(viewerIdOpt.flatMap(slackInfoCommander.getOrganizationSlackTeam(orgId, _))).recover {
+    val slackTeamOpt = Try(viewerIdOpt.flatMap(slackInfoCommander.get.getOrganizationSlackTeam(orgId, _))).recover {
       case fail =>
         airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
         None
@@ -203,9 +203,9 @@ class OrganizationInfoCommanderImpl @Inject() (
 
   private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationViewerInfo = {
     val membershipOpt = viewerIdOpt.flatMap(orgMembershipRepo.getByOrgIdAndUserId(orgId, _))
-    val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
-    val sharedEmails = viewerIdOpt.map(userId => organizationDomainOwnershipCommander.getSharedEmailsHelper(userId, orgId)).getOrElse(Set.empty)
-    val permissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
+    val inviteOpt = orgInviteCommander.get.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
+    val sharedEmails = viewerIdOpt.map(userId => organizationDomainOwnershipCommander.get.getSharedEmailsHelper(userId, orgId)).getOrElse(Set.empty)
+    val permissions = permissionCommander.get.getOrganizationPermissions(orgId, viewerIdOpt)
 
     OrganizationViewerInfo(
       invite = inviteOpt,

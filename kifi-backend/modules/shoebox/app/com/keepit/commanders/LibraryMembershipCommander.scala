@@ -65,7 +65,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     typeaheadCommander: TypeaheadCommander,
     userInteractionCommander: UserInteractionCommander,
     kifiUserTypeahead: KifiUserTypeahead,
-    libraryTypeahead: LibraryTypeahead,
+    libraryTypeahead: Provider[LibraryTypeahead],
     libraryAnalytics: LibraryAnalytics,
     elizaClient: ElizaServiceClient,
     searchClient: SearchServiceClient,
@@ -284,7 +284,7 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   private def refreshTypeaheads(userId: Id[User], libraryId: Id[Library]): Future[Unit] = {
-    libraryTypeahead.refresh(userId).map { _ =>
+    libraryTypeahead.get.refresh(userId).map { _ =>
       val collaboratorIds = db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getCollaboratorsByLibrary(Set(libraryId)).get(libraryId).toSet.flatten
       }

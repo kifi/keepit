@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import java.io.{ FileInputStream, InputStream }
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.OrganizationAvatarConfiguration._
 import com.keepit.common.core._
 import com.keepit.common.db.Id
@@ -34,7 +34,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     imageStore: RoverImageStore,
     implicit val photoshop: Photoshop,
     val webService: WebService,
-    creditRewardCommander: CreditRewardCommander,
+    creditRewardCommander: Provider[CreditRewardCommander],
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = getBestImagesByOrgIds(Set(orgId), imageSize).head._2
@@ -134,7 +134,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.imageInfo.width, height = img.imageInfo.height, format = img.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
-      creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationAvatarUploaded(orgId))
+      creditRewardCommander.get.registerRewardTrigger(RewardTrigger.OrganizationAvatarUploaded(orgId))
     }
   }
 }

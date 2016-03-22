@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
@@ -44,8 +44,8 @@ class TypeaheadCommander @Inject() (
     interactionCommander: UserInteractionCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    organizationAvatarCommander: OrganizationAvatarCommander,
-    permissionCommander: PermissionCommander,
+    organizationAvatarCommander: Provider[OrganizationAvatarCommander],
+    permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
@@ -404,14 +404,14 @@ class TypeaheadCommander @Inject() (
       val orgIds = libs.flatMap(_.organizationId)
 
       val basicUserById = basicUserRepo.loadAll(allUserIds)
-      val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
+      val orgAvatarsById = organizationAvatarCommander.get.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
 
       libs.map {
         case lib =>
           val collabs = (collaborators.getOrElse(lib.id.get, Set.empty) - userId).map(basicUserById(_)).toSeq
           val orgAvatarPath = lib.organizationId.flatMap { orgId => orgAvatarsById.get(orgId).map(_.imagePath) }
           val membershipInfo = memberships.get(lib.id.get).map { mem =>
-            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
+            LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.get.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
           }
 
           lib.id.get -> LibraryResult(
