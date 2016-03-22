@@ -1,18 +1,14 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageConfig, S3ImageStore }
-import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
-import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
+import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ ConnectionInviteAccepted, NewConnectionInvite }

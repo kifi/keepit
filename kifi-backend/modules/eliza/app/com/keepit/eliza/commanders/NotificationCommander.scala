@@ -1,19 +1,13 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.eliza.model._
-import com.keepit.model.{NormalizedURI, User}
 import com.keepit.notify.delivery.WsNotificationDelivery
-import com.keepit.notify.model.event.{LegacyNotification, NotificationEvent}
+import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, NKind, Recipient}
-import org.joda.time.DateTime
-import play.api.libs.json.JsValue
 
 import scala.concurrent.ExecutionContext
 
