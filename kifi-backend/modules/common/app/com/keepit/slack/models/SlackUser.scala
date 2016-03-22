@@ -25,6 +25,7 @@ object SlackUserId {
 }
 @json case class SlackUsername(value: String) {
   def asChannelName = SlackChannelName(this.value)
+  def equalsIgnoreCase(that: SlackUsername): Boolean = this.value equalsIgnoreCase that.value
 }
 
 object SlackUsername {

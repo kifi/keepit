@@ -143,6 +143,7 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] with SeqNumberFunction[SlackTeamMembership] {
   def getBySlackTeam(slackTeamId: SlackTeamId, excludeKind: Option[SlackAccountKind] = Some(SlackAccountKind.Bot))(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
+  def getBySlackTeamAndUsername(slackTeamId: SlackTeamId, slackUsername: SlackUsername, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
 
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean)
   def internWithMessage(slackTeam: SlackTeam, message: SlackMessage)(implicit session: RWSession): (SlackTeamMembership, Boolean)
@@ -298,6 +299,11 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackUserId === slackUserId && row.state =!= excludeState.orNull).firstOption
   }
+
+  def getBySlackTeamAndUsername(slackTeamId: SlackTeamId, slackUsername: SlackUsername, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
+    rows.filter(row => row.slackTeamId === slackTeamId && row.slackUsername === slackUsername && row.state =!= excludeState.orNull).firstOption
+  }
+
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): (SlackTeamMembership, Boolean) = {
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
