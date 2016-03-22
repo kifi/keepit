@@ -7,7 +7,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.SlackLog
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.time.Clock
 import com.keepit.common.util.DescriptionElements
 import com.keepit.heimdal.HeimdalContext
@@ -53,7 +53,7 @@ class SlackChannelCommanderImpl @Inject() (
     slackAnalytics: SlackAnalytics,
     clock: Clock,
     implicit val executionContext: ExecutionContext,
-    implicit val inhouseSlackClient: InhouseSlackClient) extends SlackChannelCommander {
+    implicit val inhouseSlackClient: InhouseSlackClient) extends SlackChannelCommander with Logging {
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
@@ -115,6 +115,7 @@ class SlackChannelCommanderImpl @Inject() (
   }
 
   def syncPrivateChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackPrivateChannelInfo], Future[SlackPrivateChannelLibraries])] = {
+    log.info(s"[syncPrivateChannels][$userId|$slackTeamId] Starting...")
     val teamOpt = db.readOnlyMaster { implicit session => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId) }
     teamOpt match {
       case Some(team) =>
@@ -127,6 +128,7 @@ class SlackChannelCommanderImpl @Inject() (
               (membershipOpt, integratedChannelIds, hasOrgPermissions)
             }
             if (hasOrgPermissions) {
+              log.info(s"[syncPrivateChannels][$userId|$slackTeamId] Found correct org permissions...")
               val tokenOpt = membershipOpt.flatMap(_.getTokenIncludingScopes(Set(SlackAuthScope.GroupsRead)))
               (membershipOpt, tokenOpt) match {
                 case (Some(membership), Some(token)) =>
@@ -134,7 +136,9 @@ class SlackChannelCommanderImpl @Inject() (
                     val now = clock.now()
                     val alreadySyncing = team.channelsLastSyncingAt.exists(_ isAfter (now minus SlackChannelCommander.channelSyncTimeout))
                     val syncedRecently = membership.privateChannelsLastSyncedAt.exists(_ isAfter (now minus SlackChannelCommander.channelSyncBuffer))
-                    !alreadySyncing && !syncedRecently
+                    val shouldSync = !alreadySyncing && !syncedRecently
+                    log.info(s"[syncPrivateChannels][$userId|$slackTeamId] Already syncing: $alreadySyncing. Synced recently: $syncedRecently. ShouldSync: $shouldSync")
+                    shouldSync
                   }
                   if (shouldSync) {
                     val onboardingAgent = slackOnboarder.getTeamAgent(team, membership)
