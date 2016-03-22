@@ -141,7 +141,7 @@ class OrgStatisticsCommander @Inject() (
       val libraries = libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId))
       val slackToLibs = slackChannelToLibraryRepo.getAllByLibs(libraries.map(_.id.get))
       val numKeeps = libraries.map(_.keepCount).sum
-      val numKeepsLastWeek = keepRepo.getCountByLibrariesSince(libraries.map(_.id.get).toSet, clock.now().minusWeeks(1))
+      val numKeepsLastWeek = keepToLibraryRepo.getCountByOrganizationSince(orgId, clock.now.minusWeeks(1))
       val userIds = members.map(_.userId) ++ candidates.map(_.userId)
       val experiments = orgExperimentsRepo.getOrganizationExperiments(orgId)
       val membersStatsFut = membersStatistics(userIds)

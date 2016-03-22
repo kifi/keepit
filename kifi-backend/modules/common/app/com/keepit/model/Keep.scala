@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
+import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
@@ -41,8 +42,7 @@ case class Keep(
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
-  connections: KeepConnections,
-  libraryId: Option[Id[Library]])
+  connections: KeepConnections)
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
@@ -59,16 +59,7 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
-  def withLibrary(lib: Library) = this.copy(
-    libraryId = Some(lib.id.get),
-    connections = connections.withLibraries(Set(lib.id.get))
-  )
-  def withNoLibrary = this.copy(libraryId = None)
-
-  def withConnections(newConnections: KeepConnections): Keep = {
-    if (newConnections.libraries.isEmpty) this.copy(connections = newConnections).withNoLibrary
-    else this.copy(connections = newConnections)
-  }
+  def withConnections(newConnections: KeepConnections): Keep = this.copy(connections = newConnections)
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.withConnections(connections.withLibraries(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.withConnections(connections.withUsers(users))
 
@@ -82,16 +73,12 @@ case class Keep(
 
   def isOlderThan(other: Keep): Boolean = keptAt < other.keptAt || (keptAt == other.keptAt && id.get.id < other.id.get.id)
 
-  def hasStrictlyLessValuableMetadataThan(other: Keep): Boolean = {
-    this.isOlderThan(other) && (true || // TODO(ryan): remove this "(true ||" once we no longer want to mindlessly murder keeps
-      Seq(
-        note.isEmpty || note == other.note
-      ).forall(b => b))
-  }
-
   def titlePathString = this.title.getOrElse(this.url).trim.replaceAll("^https?://", "").replaceAll("[^A-Za-z0-9]", " ").replaceAll("  *", "-").replaceAll("^-|-$", "").take(40)
 
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
+
+  // Only for use in old code which expects keeps to have a single library
+  def lowestLibraryId: Option[Id[Library]] = connections.libraries.minByOpt(_.id)
 }
 
 object Keep extends PublicIdGenerator[Keep] {
@@ -122,8 +109,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'keptAt).format[DateTime] and
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
-    (__ \ 'connections).format[KeepConnections] and
-    (__ \ 'libraryId).formatNullable[Id[Library]]
+    (__ \ 'connections).format[KeepConnections]
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -146,7 +132,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 17
+  override val version = 18
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -164,7 +150,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 8
+  override val version = 9
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }

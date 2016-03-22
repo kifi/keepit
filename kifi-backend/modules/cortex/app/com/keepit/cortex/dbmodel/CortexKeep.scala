@@ -49,6 +49,6 @@ object CortexKeep {
       state = keep.state,
       source = keep.source,
       seq = keep.seq,
-      libraryId = keep.libraryId
+      libraryId = keep.lowestLibraryId
     )
 }

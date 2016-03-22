@@ -161,7 +161,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "members": ${Json.toJson(toSimpleKeepMembers(bookmark2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-            "permissions": ${Json.toJson(permissions(bookmark2.id.get))}
+            "permissions": ${Json.toJson(permissions(bookmark2.id.get))},
+            "activity": { "events": [] }
             },
           {
             "author":${Json.toJson(author)},
@@ -192,7 +193,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "library": ${Json.toJson(libraryCard(lib1.id.get))},
             "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
             "members": ${Json.toJson(toSimpleKeepMembers(bookmark1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-            "permissions": ${Json.toJson(permissions(bookmark1.id.get))}
+            "permissions": ${Json.toJson(permissions(bookmark1.id.get))},
+            "activity": { "events": [] } 
             }
         ]}
       """)

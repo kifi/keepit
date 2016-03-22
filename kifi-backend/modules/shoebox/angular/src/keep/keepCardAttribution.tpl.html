@@ -62,7 +62,7 @@
 
     <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack && !shortMessage">
       <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
-        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>#<span ng-bind="keep.sourceAttribution.slack.message.channel.name"></span>
+        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span><span ng-bind="keep.sourceAttribution.slack.message.channel.name"></span>
       </a>
     </span>
 

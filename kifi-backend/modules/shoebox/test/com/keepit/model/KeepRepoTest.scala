@@ -25,48 +25,17 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             userId = Some(Id[User](3)),
             originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
-            libraryId = Some(Id[Library](4)),
             connections = KeepConnections(Set(Id(4)), Set(Id(3)))
           ))
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
           val cacheKeep = keepRepo.get(savedKeep.id.get)
 
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
-          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.userId, k.source, k.libraryId, k.connections)
+          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.userId, k.source, k.connections)
           f(dbKeep) === f(savedKeep)
           f(dbKeep) === f(cacheKeep)
         }
         1 === 1
-      }
-    }
-    "getCountByLibrariesSince" in {
-      withDb() { implicit injector =>
-        val date = inject[FakeClock].now
-        val (lib1, lib2, lib3, lib4, lib5, lib6) = db.readWrite { implicit s =>
-          val user1 = user().saved
-          val user2 = user().saved
-
-          val lib1 = LibraryFactory.library().withOwner(user1).discoverable().saved
-          val lib2 = LibraryFactory.library().withOwner(user1).secret().saved
-          val lib3 = LibraryFactory.library().withOwner(user1).published().saved
-
-          val lib4 = LibraryFactory.library().withOwner(user2).discoverable().saved
-          val lib5 = LibraryFactory.library().withOwner(user2).secret().saved
-          val lib6 = LibraryFactory.library().withOwner(user2).published().saved
-
-          keep().withUser(user1).withKeptAt(date.plusDays(7)).withLibrary(lib1).saved
-          keep().withUser(user1).withKeptAt(date).withLibrary(lib2).saved
-          keep().withUser(user1).withKeptAt(date.minusDays(7)).withLibrary(lib3).saved
-          keeps(20).map(_.withUser(user2).withLibrary(lib6).withKeptAt(date)).saved
-          keeps(20).map(_.withUser(user2).withLibrary(lib5).withKeptAt(date)).saved
-          (lib1.id.get, lib2.id.get, lib3.id.get, lib4.id.get, lib5.id.get, lib6.id.get)
-        }
-        db.readOnlyMaster { implicit s =>
-          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusMinutes(1)) === 1
-          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusMinutes(1)) === 2
-          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.plusYears(1)) === 0
-          inject[KeepRepo].getCountByLibrariesSince(Set(lib1, lib2, lib3), date.minusYears(1)) === 3
-        }
       }
     }
     "last active keep time" in {
@@ -90,53 +59,5 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-
-    "most recent from followed libraries" in { //tests only that the query interpolates correctly
-      withDb() { implicit injector =>
-        db.readWrite { implicit s =>
-          import com.keepit.common.core._
-          val keepRepo = inject[KeepRepo]
-          val user1 = user().saved
-          val library = LibraryFactory.library().withOwner(user1).saved
-          val keeps = KeepFactory.keeps(50).map(_.withUser(user1).withLibrary(library).saved)
-          inject[LibraryMembershipRepo]
-          keepRepo.getRecentKeeps(user1.id.get, 10, None, None, None)
-          keepRepo.getRecentKeeps(user1.id.get, 10, Some(keeps.head.externalId), None, None)
-          keepRepo.getRecentKeeps(user1.id.get, 10, None, Some(keeps.head.externalId), None)
-
-          val firstPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, None, None, None)
-          val secondPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(firstPage.last._1.externalId), None, None)
-          secondPage.forall { case (_, time) => time.getMillis < firstPage.last._2.getMillis } === true
-          val thirdPage = keepRepo.getRecentKeepsByActivity(user1.id.get, 10, Some(secondPage.last._1.externalId), None, None)
-          thirdPage.forall { case (_, time) => time.getMillis < secondPage.last._2.getMillis } === true
-          secondPage.forall { case (_, time) => time.getMillis > thirdPage.head._2.getMillis } === true
-          1 === 1
-        }
-      }
-    }
-
-    "filter recent keeps using FeedFilters" in {
-      withDb() { implicit injector =>
-        val (user1, org) = db.readWrite { implicit s =>
-          val user1 = UserFactory.user().saved
-          val user2 = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(user1).saved
-          val lib1 = LibraryFactory.library().withOwner(user1).saved
-          val lib2 = LibraryFactory.library().withOwner(user1).withOrganization(org).withCollaborators(Seq(user2)).saved
-          keeps(22).map(_.withLibrary(lib1).withUser(user1)).saved
-          keeps(18).map(_.withLibrary(lib2).withUser(user2)).saved
-          (user1, org)
-        }
-
-        val user1Id = user1.id.get
-
-        db.readOnlyMaster { implicit s =>
-          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, None).length must equalTo(40)
-          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OwnKeeps)).length must equalTo(22)
-          keepRepo.getRecentKeeps(user1Id, limit = 100, None, None, Some(OrganizationKeeps(org.id.get))).length must equalTo(18)
-        }
-      }
-    }
-
   }
 }

@@ -24,7 +24,11 @@ case class SequenceOfElements(elements: Seq[DescriptionElements]) extends Descri
 object SequenceOfElements {
   val empty = SequenceOfElements(Seq.empty)
 }
-case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
+trait DescriptionElement {
+  val text: String
+  val url: Option[String]
+}
+case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements with DescriptionElement {
   def flatten = Seq(simplify)
   def withText(newText: String) = this.copy(text = newText)
   def withUrl(newUrl: String) = this.copy(url = Some(newUrl))

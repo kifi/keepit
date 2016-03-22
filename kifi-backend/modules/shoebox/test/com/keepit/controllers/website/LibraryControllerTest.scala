@@ -1036,7 +1036,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))}
+                "permissions": ${Json.toJson(keepPermissions(keep2.id.get))},
+                "activity": { "events": [] }
               },
               {
                 "author":${Json.toJson(author)},
@@ -1064,7 +1065,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "library": ${Json.toJson(libraryCard(lib1.id.get))},
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
-                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))}
+                "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
+                "activity": { "events": [] }
               }
             ],
             "numKeeps": 2
@@ -1162,7 +1164,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result4) must beSome("application/json")
         val jsonRes4 = Json.parse(contentAsString(result4))
         val copiedKeeps = db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(lib1.id.get, 0, Int.MaxValue)
+          keepRepo.pageByLibrary(lib1.id.get, 0, Int.MaxValue)
         }
         val success4 = (jsonRes4 \\ "id").map(_.as[ExternalId[Keep]]).toSet === copiedKeeps.map(_.externalId).toSet
         (jsonRes4 \\ "keep").length === 0
@@ -1310,7 +1312,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
 
         val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
+          val keeps = keepRepo.pageByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }
@@ -1325,7 +1327,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
 
         val (k4, k5, k6) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib2.id.get, 0, 10).sortBy(_.createdAt)
+          val keeps = keepRepo.pageByLibrary(lib2.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }
@@ -1378,7 +1380,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
 
         val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
+          val keeps = keepRepo.pageByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }

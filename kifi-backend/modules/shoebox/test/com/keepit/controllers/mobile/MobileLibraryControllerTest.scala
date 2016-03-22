@@ -501,7 +501,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1) = setupOneUserOneLibrary()
         db.readOnlyMaster { implicit s =>
-          keepRepo.getCountByLibrary(lib1.id.get) === 0
+          ktlRepo.getCountByLibraryId(lib1.id.get) === 0
         }
 
         val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
@@ -514,7 +514,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         contentType(result1) must beSome("application/json")
 
         db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keeps = keepRepo.pageByLibrary(lib1.id.get, 0, 10)
           val keep = keeps(0)
           keep.title.get === "Bikini Bottom"
           keep.note.get === "I love [#scala]"
@@ -528,7 +528,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         contentType(result2) must beSome("application/json")
 
         db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keeps = keepRepo.pageByLibrary(lib1.id.get, 0, 10)
           val keep = keeps(0)
           keep.title.get === "Airbnb"
           keep.note.get === "Just kidding, I like nothing"
@@ -543,7 +543,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
         val keep1 = db.readWrite { implicit s =>
           val keep = setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food"))
-          keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("krustykrab")
+          keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("krustykrab")
           keep
         }
 
@@ -551,7 +551,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(result1) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq.empty
+          keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq.empty
         }
       }
     }

@@ -22,31 +22,30 @@ object KeepFactoryHelper {
         } else candidate
       }
 
-      def fixLibraryReferences(candidate: Keep): Keep = {
-        val libRepo = injector.getInstance(classOf[LibraryRepo])
-        candidate.libraryId match {
-          case Some(libraryId) =>
-            val library = libRepo.get(libraryId)
-            libRepo.save(library.copy(lastKept = Some(candidate.createdAt), keepCount = library.keepCount + 1))
-          case None =>
-          // This would be great. However, we have tests that test the number of libraries.
-          // When keep.libraryId is not optional, this can be uncommented safely.
-          //            val lib = libRepo.getAllByOwner(candidate.userId, Some(LibraryStates.INACTIVE)).headOption.getOrElse {
-          //              library().withUser(candidate.userId).withVisibility(candidate.visibility).saved
-          //            }
-          //            libRepo.save(lib.copy(lastKept = Some(candidate.createdAt)))
+      val libRepo = injector.getInstance(classOf[LibraryRepo])
+      val keep = partialKeep.keep |> fixUriReferences
+
+      val finalKeep = {
+        val libIds = partialKeep.explicitLibs.map(_.id.get) ++ partialKeep.implicitLibs.map(_._1)
+        val userIds = keep.userId.toSet
+        injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(libIds.toSet).withParticipants(userIds))
+      }
+      val libraries = {
+        partialKeep.explicitLibs ++ partialKeep.implicitLibs.map {
+          case imp @ (libId, vis, orgId) => Try(libRepo.get(libId)).toOption match {
+            case Some(lib) if lib.visibility == vis && lib.organizationId == orgId => lib
+            case None => libRepo.save(LibraryFactory.library().withVisibility(vis).withOrganizationIdOpt(orgId).get)
+            case _ => throw new RuntimeException(s"Keep has implicit library $imp but db does not match")
+          }
         }
-        candidate
       }
 
-      val keep = partialKeep.keep |> fixUriReferences |> fixLibraryReferences
+      def incrementKeepCount(libId: Id[Library]) = {
+        val lib = libRepo.get(libId)
+        libRepo.save(lib.copy(keepCount = lib.keepCount + 1))
+      }
 
-      val libIds = keep.libraryId.toSet ++ partialKeep.explicitLibs.map(_.id.get) ++ partialKeep.implicitLibs.map(_._1)
-      val userIds = keep.userId.toSet
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(libIds).withParticipants(userIds))
-      val libraries = finalKeep.libraryId.toSet[Id[Library]].map(libId => injector.getInstance(classOf[LibraryRepo]).get(libId))
-
-      partialKeep.explicitLibs.foreach { library =>
+      libraries.foreach { library =>
         val ktl = KeepToLibrary(
           keepId = finalKeep.id.get,
           libraryId = library.id.get,
@@ -58,20 +57,7 @@ object KeepFactoryHelper {
           lastActivityAt = finalKeep.lastActivityAt
         )
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
-      }
-      partialKeep.implicitLibs.foreach {
-        case (libId, vis, orgId) =>
-          val ktl = KeepToLibrary(
-            keepId = finalKeep.id.get,
-            libraryId = libId,
-            addedAt = finalKeep.keptAt,
-            addedBy = finalKeep.userId,
-            uriId = finalKeep.uriId,
-            visibility = vis,
-            organizationId = orgId,
-            lastActivityAt = finalKeep.lastActivityAt
-          )
-          injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
+        incrementKeepCount(library.id.get)
       }
       finalKeep.connections.users.foreach { userId =>
         val ktu = KeepToUser(

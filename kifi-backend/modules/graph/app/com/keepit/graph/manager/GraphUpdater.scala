@@ -108,7 +108,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
     val userVertexIds: Set[VertexDataId[UserReader]] = update.userId.toSet.map(VertexDataId.fromUserId)
-    val libVertexIds: Set[VertexDataId[LibraryReader]] = update.libId.toSet.map(VertexDataId.fromLibraryId)
+    val libVertexIds: Set[VertexDataId[LibraryReader]] = update.libIds.map(VertexDataId.fromLibraryId)
 
     writer.removeVertexIfExists(keepVertexId) // build the vertex and its neighbors from empty state. (e.g. LibraryId can change, this removes old links)
 
