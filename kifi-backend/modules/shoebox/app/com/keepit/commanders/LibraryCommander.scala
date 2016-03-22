@@ -400,7 +400,7 @@ class LibraryCommanderImpl @Inject() (
           libraryToSlackChannelRepo.deactivate(integration)
         }
 
-        keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
+        keepRepo.pageByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         // ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
@@ -450,7 +450,7 @@ class LibraryCommanderImpl @Inject() (
     }
 
     val deletedKeepsFut = db.readWriteAsync { implicit session =>
-      keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
+      keepRepo.pageByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
       searchClient.updateKeepIndex()
     }
 
@@ -592,16 +592,16 @@ class LibraryCommanderImpl @Inject() (
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
-        case Some(membership) if membership.canWrite => {
+        case Some(membership) if membership.canWrite =>
           val toLibrary = libraryRepo.get(toLibraryId)
-          val validSourceLibraryIds = keeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
+          val validSourceLibraryIds = keeps.flatMap(_.connections.libraries).toSet.filter { fromLibraryId =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).exists(_.canWrite)
           }
           val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
           val successes = collection.mutable.ListBuffer[Keep]()
 
           keeps.foreach {
-            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId)(s) match {
+            case keep if keep.connections.libraries.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId) match {
               case Right(movedKeep) => successes += movedKeep
               case Left(error) => failures += (keep -> error)
             }
@@ -620,7 +620,6 @@ class LibraryCommanderImpl @Inject() (
           }
 
           (successes.toSeq, failures.toSeq)
-        }
         case _ => (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       }
     }
@@ -632,19 +631,19 @@ class LibraryCommanderImpl @Inject() (
       libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
         case Some(membership) if membership.canWrite =>
           val toLibrary = libraryRepo.get(toLibraryId)
-          val validSourceLibraryIds = sortedKeeps.flatMap(_.libraryId).toSet.filter { fromLibraryId =>
-            libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).isDefined
+          val validSourceLibraryIds = {
+            val allKeepLibraries = sortedKeeps.flatMap(_.connections.libraries).toSet
+            libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeepLibraries, userId).keySet
           }
-          val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
-          val successes = collection.mutable.ListBuffer[Keep]()
 
-          sortedKeeps.foreach {
-            case keep if keep.libraryId.exists(validSourceLibraryIds.contains) => keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
-              case Right(movedKeep) => successes += movedKeep
-              case Left(error) => failures += (keep -> error)
-            }
-            case forbiddenKeep => failures += (forbiddenKeep -> LibraryError.SourcePermissionDenied)
-          }
+          val (failures, successes) = sortedKeeps.map {
+            case keep if keep.connections.libraries.exists(validSourceLibraryIds.contains) =>
+              keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
+                case Right(copied) => Right(copied)
+                case Left(error) => Left(keep -> error)
+              }
+            case forbiddenKeep => Left(forbiddenKeep -> LibraryError.SourcePermissionDenied)
+          }.partitionEithers
 
           if (successes.nonEmpty) {
             libraryRepo.updateLastKept(toLibraryId)
@@ -664,10 +663,12 @@ class LibraryCommanderImpl @Inject() (
 
   private def refreshKeepCounts(libraryIds: Set[Id[Library]])(implicit session: RWSession): Unit = {
     libraryIds.foreach(libraryId => countByLibraryCache.remove(CountByLibraryKey(libraryId)))
-    keepRepo.getCountsByLibrary(libraryIds).foreach {
+    ktlRepo.getCountsByLibraryIds(libraryIds).foreach {
       case (libraryId, keepCount) =>
         val library = libraryRepo.get(libraryId)
-        libraryRepo.save(library.copy(keepCount = keepCount))
+        if (library.keepCount != keepCount) {
+          libraryRepo.save(library.copy(keepCount = keepCount))
+        }
     }
   }
 
@@ -678,8 +679,9 @@ class LibraryCommanderImpl @Inject() (
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit = {
     // persist when we last sent an email for each library membership
     db.readWrite { implicit rw =>
-      keeps.groupBy(_.libraryId).collect { case (Some(libId), _) => libId } foreach { libId =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) map { libMembership =>
+      val libIds: Set[Id[Library]] = keeps.flatMap(_.connections.libraries).toSet
+      libIds.foreach { libId =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId).foreach { libMembership =>
           libraryMembershipRepo.updateLastEmailSent(libMembership.id.get)
         }
       }

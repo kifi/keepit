@@ -245,7 +245,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           val allKeeps = inject[KeepRepo].all
           allKeeps.count(_.isActive) === origUris.length // all the dup URIs should lead to deactivated keeps
           allKeeps.count(_.isInactive) === dupUris.length
-          allKeeps.groupBy(k => (k.libraryId, k.isActive, k.uriId)).values.foreach(_.length === 1)
+          allKeeps.groupBy(k => (k.connections.librariesHash, k.isActive, k.uriId)).values.foreach(_.length === 1)
         }
         1 === 1
       }

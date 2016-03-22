@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.KeepVisibilityCount
+import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey, KeepVisibilityCount }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import scala.collection.mutable
@@ -17,10 +17,12 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]]
 
-  def getCountByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
-  def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
-  def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
+  def getCountByLibraryId(libraryId: Id[Library])(implicit session: RSession): Int
+  def getCountsByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
+  def getCountByOrganizationSince(orgId: Id[Organization], since: DateTime)(implicit session: RSession): Int
+  def pageByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]]
 
   def getByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE), drop: Int, take: Int)(implicit session: RSession): Seq[KeepToLibrary]
 
@@ -37,6 +39,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def allActive(implicit session: RSession): Seq[KeepToLibrary]
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
   def orgsWithKeepsLastThreeDays()(implicit session: RSession): Seq[(Id[Organization], Int)]
+  def countNonImportedKeepsInOrg(orgId: Id[Organization])(implicit session: RSession): Int
 
   // For backwards compatibility with KeepRepo
   def getByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[KeepToLibrary]
@@ -56,11 +59,19 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
 @Singleton
 class KeepToLibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
+  libraryMetadataCache: LibraryMetadataCache,
+  countByLibraryCache: CountByLibraryCache,
   val clock: Clock)
     extends KeepToLibraryRepo with DbRepo[KeepToLibrary] with Logging {
 
-  override def deleteCache(ktl: KeepToLibrary)(implicit session: RSession) {}
-  override def invalidateCache(ktl: KeepToLibrary)(implicit session: RSession) {}
+  override def deleteCache(ktl: KeepToLibrary)(implicit session: RSession): Unit = {
+    countByLibraryCache.remove(CountByLibraryKey(ktl.libraryId))
+    libraryMetadataCache.remove(LibraryMetadataKey(ktl.libraryId))
+  }
+  override def invalidateCache(ktl: KeepToLibrary)(implicit session: RSession): Unit = {
+    // TODO(ryan): is it necessary to actually delete the cache here?
+    deleteCache(ktl)
+  }
 
   import db.Driver.simple._
 
@@ -117,6 +128,9 @@ class KeepToLibraryRepoImpl @Inject() (
     val res = q.as[(Long, Int)].list
     res.map { case (orgId, count) => Id[Organization](orgId) -> count }
   }
+  def countNonImportedKeepsInOrg(orgId: Id[Organization])(implicit session: RSession): Int = {
+    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).length.run
+  }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
     val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
     keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, Seq.empty) }.toMap
@@ -128,24 +142,23 @@ class KeepToLibraryRepoImpl @Inject() (
     getAllByKeepIds(Set(keepId), excludeStateOpt).apply(keepId)
   }
 
-  private def getByLibraryIdsHelper(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.libraryId.inSet(libraryIds) && row.state =!= excludeStateOpt.orNull) yield row
+  def getCountByLibraryId(libraryId: Id[Library])(implicit session: RSession): Int = {
+    activeRows.filter(_.libraryId === libraryId).length.run
   }
-  private def getByLibraryIdHelper(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    getByLibraryIdsHelper(Set(libraryId), excludeStateOpt)
+  def getCountsByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {
+    activeRows.filter(_.libraryId.inSet(libraryIds)).groupBy(_.libraryId).map { case (libId, ktls) => libId -> ktls.length }.list.toMap
   }
-  def getCountByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).run.length
+  def pageByLibraryId(libraryId: Id[Library], offset: Offset, limit: Limit)(implicit session: RSession): Seq[KeepToLibrary] = {
+    activeRows.filter(_.libraryId === libraryId).sortBy(r => (r.lastActivityAt, r.id)).drop(offset.value).take(limit.value).list
   }
-  def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int] = {
-    // TODO(ryan): This needs to use a cache, and fall back on a single monster query, not a bunch of tiny queries
-    libraryIds.map(libId => libId -> getCountByLibraryId(libId, excludeStateOpt)).toMap
+  def getAllByLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[KeepToLibrary] = {
+    activeRows.filter(_.libraryId === libraryId).list
   }
-  def getAllByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByLibraryIdHelper(libraryId, excludeStateOpt).list
+  def getAllByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
+    activeRows.filter(_.libraryId.inSet(libraryIds)).list.groupBy(_.libraryId)
   }
-  def getAllByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Seq[KeepToLibrary]] = {
-    getByLibraryIdsHelper(libraryIds, excludeStateOpt).list.groupBy(_.libraryId)
+  def getCountByOrganizationSince(orgId: Id[Organization], since: DateTime)(implicit session: RSession): Int = {
+    activeRows.filter(_.organizationId === orgId).groupBy(_.keepId).length.run
   }
 
   def getSortedByKeepCountSince(userId: Id[User], orgIdOpt: Option[Id[Organization]], since: DateTime, offset: Offset, limit: Limit)(implicit session: RSession): Seq[Id[Library]] = {
@@ -297,12 +310,13 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select bm.note
-                  from keep_to_library ktl, bookmark bm
-                  where bm.id = ktl.keep_id and library_id = $libId and note is not null
-                  order by ktl.added_at desc
-                  limit $limit"""
-    q.as[String].list
+    sql"""
+    SELECT k.note
+    FROM bookmark k INNER JOIN keep_to_library ktl ON ktl.keep_id = k.id
+    WHERE k.state = 'active' AND ktl.state = 'active' AND ktl.library_id = $libId AND note IS NOT NULL
+    ORDER BY ktl.added_at DESC
+    LIMIT $limit
+    """.as[String].list
   }
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount = {

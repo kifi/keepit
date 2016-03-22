@@ -365,7 +365,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "guided" -> false))
         status(result1) === OK
         contentType(result1) must beSome("application/json")
-        val keep1 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).head }
+        val keep1 = db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib1.id.get, 0, 10).head }
         contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true,"visibility":"published","libraryId":"${pubId1.id}","title":"kayne-fidence"}"""
 
         // keep to someone else's library
@@ -375,7 +375,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "guided" -> false))
         status(result2) === OK
         contentType(result2) must beSome("application/json")
-        val keep2 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib2.id.get, 0, 10).head }
+        val keep2 = db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib2.id.get, 0, 10).head }
         contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"visibility":"secret","libraryId":"${pubId2.id}","title":"T 2"}"""
 
         // keep to someone else's library again (should be idempotent)
@@ -495,10 +495,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val uri2 = uriRepo.save(NormalizedURI.withHash("www.throwlong.com", Some("Throw")))
           val uri3 = uriRepo.save(NormalizedURI.withHash("www.howtonotchoke.com", Some("DontChoke")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-
           val keep1 = KeepFactory.keep().withTitle("Run").withUser(user1).withUri(uri1).withLibrary(lib1).saved
           val keep2 = KeepFactory.keep().withTitle("Throw").withUser(user1).withUri(uri2).withLibrary(lib1).saved
           val keep3 = KeepFactory.keep().withTitle("DontChoke").withUser(user1).withUri(uri3).withLibrary(lib1).saved
@@ -511,19 +507,19 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         // test unkeep from own library
         status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
-        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
+        db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
 
         // test unkeep from own library again (should be idempotent)
-        status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
-        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
+        status(removeKeep(user1, pubId1, keep1.externalId)) === BAD_REQUEST // keep is no longer in that library, so we cannot unkeep it
+        db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
 
         // test incorrect unkeep from own library (keep exists but in wrong library)
         status(removeKeep(user1, pubId2, keep2.externalId)) === BAD_REQUEST
-        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
+        db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("DontChoke", "Throw") }
 
         // test unkeep from someone else's library (have RW access)
         status(removeKeep(user2, pubId1, keep3.externalId)) === NO_CONTENT
-        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("Throw") }
+        db.readOnlyMaster { implicit s => keepRepo.pageByLibrary(lib1.id.get, 0, 10).map(_.title.get) === Seq("Throw") }
       }
     }
 

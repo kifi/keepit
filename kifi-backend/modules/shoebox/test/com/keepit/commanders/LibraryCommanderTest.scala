@@ -657,8 +657,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val keeps = db.readOnlyMaster { implicit s => keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000) }
-        keeps.size === 3
+        val ktls = db.readOnlyMaster { implicit s => ktlRepo.getFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000) }
+        ktls.length === 3
 
         libraryCommander.deleteLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
@@ -676,8 +676,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           deleted.state === LibraryStates.INACTIVE
           deleted.slug !== libMurica.slug
 
-          keeps foreach { keep =>
-            val deletedKeep = keepRepo.get(keep.id.get)
+          ktls foreach { ktl =>
+            val deletedKeep = keepRepo.get(ktl.keepId)
             deletedKeep.title === None
           }
         }
@@ -1172,13 +1172,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         db.readOnlyMaster { implicit s =>
-          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libShield.id.get, 10000).size === 0
-          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000).size === 3
-          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(10), libMurica.id.get, 10000).size === 2
-          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(20), libMurica.id.get, 10000).size === 1
-          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(60), libMurica.id.get, 10000).size === 0
-          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 2).size === 2
-          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 1).size === 1
+          ktlRepo.getFromLibrarySince(t1.minusYears(10), libShield.id.get, 10000).length === 0
+          ktlRepo.getFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000).length === 3
+          ktlRepo.getFromLibrarySince(t1.plusMinutes(10), libMurica.id.get, 10000).length === 2
+          ktlRepo.getFromLibrarySince(t1.plusMinutes(20), libMurica.id.get, 10000).length === 1
+          ktlRepo.getFromLibrarySince(t1.plusMinutes(60), libMurica.id.get, 10000).length === 0
+          ktlRepo.getFromLibrarySince(t1.minusYears(10), libMurica.id.get, 2).length === 2
+          ktlRepo.getFromLibrarySince(t1.minusYears(10), libMurica.id.get, 1).length === 1
         }
       }
     }
@@ -1196,15 +1196,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000).length === 0
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000) === keeps.reverse
+            inject[KeepRepo].pageByLibrary(emptyLib.id.get, 0, 1000).length === 0
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000) === keeps.reverse
           }
           val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, emptyLib.id.get, keeps.toSet, withSource = None)
           (yay.length, nay.length) === (keeps.length, 0)
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-            val newKeeps = inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000)
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
+            val newKeeps = inject[KeepRepo].pageByLibrary(emptyLib.id.get, 0, 1000)
             newKeeps.length === keeps.length
             newKeeps.map(_.title.get) === keeps.reverse.map(_.title.get)
             newKeeps.map(_.uriId) === keeps.reverse.map(_.uriId)
@@ -1229,15 +1229,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
+            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
           }
           val (yay, nay) = inject[LibraryCommander].copyKeeps(user.id.get, targetLib.id.get, keeps.toSet, withSource = None)
           (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
-            val newKeeps = inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000)
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
+            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
             val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
             newKeeps.length === keeps.length
             newKeeps.map(_.title) === expectedKeeps.map(_.title)
@@ -1261,15 +1261,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000).length === 0
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000) === keeps.reverse
+            inject[KeepRepo].pageByLibrary(emptyLib.id.get, 0, 1000).length === 0
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000) === keeps.reverse
           }
           val (yay, nay) = inject[LibraryCommander].moveKeeps(user.id.get, emptyLib.id.get, keeps)
           (yay.length, nay.length) === (keeps.length, 0)
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === 0
-            val newKeeps = inject[KeepRepo].getByLibrary(emptyLib.id.get, 0, 1000)
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === 0
+            val newKeeps = inject[KeepRepo].pageByLibrary(emptyLib.id.get, 0, 1000)
             val expectedKeeps = keeps.reverse
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
@@ -1296,15 +1296,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           }
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
+            inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000).length === obstacleKeeps.length
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === keeps.length
           }
           val (yay, nay) = inject[LibraryCommander].moveKeeps(user.id.get, targetLib.id.get, keeps)
           (yay.length, nay.length) === (keeps.length - obstacleKeeps.length, obstacleKeeps.length)
 
           db.readOnlyMaster { implicit session =>
-            inject[KeepRepo].getByLibrary(sourceLib.id.get, 0, 1000).length === 0
-            val newKeeps = inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000)
+            inject[KeepRepo].pageByLibrary(sourceLib.id.get, 0, 1000).length === 0
+            val newKeeps = inject[KeepRepo].pageByLibrary(targetLib.id.get, 0, 1000)
             val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
@@ -1376,18 +1376,18 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // unkeep k1
         db.readWrite { implicit s =>
           keepRepo.deactivate(k1)
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
           keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
         }
         // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res2 must beRight
-        res2.right.get._1.length === 1 // 1 reactivated keep
+        res2.right.get._1.length === 1 // 1 new keep
         res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 4
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepRepo.count === 5
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }
@@ -1442,8 +1442,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res1.right.get._1.length === 1 // all successes
         res1.right.get._2.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
         }
 
         //move 1 keep to libUSA - libUSA has no keeps
@@ -1451,8 +1451,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res2.right.get._1.length === 1 // all successes
         res2.right.get._2.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
 
         // move duplicate keeps to its own library
@@ -1460,8 +1460,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res3.right.get._1.length === 0
         res3.right.get._2.length === 1 // already kept
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
 
         // move in bulk
@@ -1469,8 +1469,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res4.right.get._1.length === 3
         res4.right.get._2.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 3
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 0
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 3
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 0
         }
 
         // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
@@ -1480,8 +1480,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res5.right.get._1.length === 2
         res5.right.get._2.length === 2 // already kept
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }

@@ -257,7 +257,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
           uriId = uri.id.get,
           url = url.url,
           source = source,
-          libraryId = Some(library.id.get),
           originalKeeperId = Some(user.id.get),
           connections = KeepConnections(Set(library.id.get), Set(user.id.get))
         )
@@ -634,7 +633,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keep.userId.safely.contains(userId),
         removable = true,
         LibraryVisibility.PUBLISHED,
-        keep.libraryId.map(Library.publicId)
+        keep.lowestLibraryId.map(Library.publicId)
       )
     })
   }

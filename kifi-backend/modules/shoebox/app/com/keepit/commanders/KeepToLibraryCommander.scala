@@ -27,7 +27,7 @@ object KeepToLibraryFail {
 trait KeepToLibraryCommander {
   def internKeepInLibrary(keep: Keep, library: Library, addedBy: Option[Id[User]])(implicit session: RWSession): KeepToLibrary
   def removeKeepFromLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RWSession): Try[Unit]
-  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit
+  def removeKeepFromAllLibraries(keepId: Id[Keep])(implicit session: RWSession): Unit
   def deactivate(ktl: KeepToLibrary)(implicit session: RWSession): Unit
 
   // Fun helper methods
@@ -78,8 +78,8 @@ class KeepToLibraryCommanderImpl @Inject() (
         Success(())
     }
   }
-  def removeKeepFromAllLibraries(keep: Keep)(implicit session: RWSession): Unit = {
-    ktlRepo.getAllByKeepId(keep.id.get).foreach(deactivate)
+  def removeKeepFromAllLibraries(keepId: Id[Keep])(implicit session: RWSession): Unit = {
+    ktlRepo.getAllByKeepId(keepId).foreach(deactivate)
   }
 
   def isKeepInLibrary(keepId: Id[Keep], libraryId: Id[Library])(implicit session: RSession): Boolean = {

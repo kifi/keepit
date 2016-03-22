@@ -18,6 +18,7 @@ class FeedController @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
     feedCommander: FeedCommander,
     fortyTwoConfig: FortyTwoConfig,
     airbrake: AirbrakeNotifier,
@@ -39,18 +40,15 @@ class FeedController @Inject() (
   }
 
   def getTopLibraries() = Action.async { request =>
-    db.readOnlyReplicaAsync { implicit ro =>
-      libraryMembershipRepo.mostMembersSince(30, clock.now().minusHours(24))
-    } flatMap { tops =>
+    db.readOnlyReplicaAsync { implicit s =>
+      val tops = libraryMembershipRepo.mostMembersSince(30, clock.now().minusHours(24))
+      val keepCountsByLibrary = ktlRepo.getCountsByLibraryIds(tops.map(_._1).toSet)
       val libIds = tops.filter {
-        case (libId, memberCount) =>
-          db.readOnlyMaster { implicit ro => keepRepo.getCountByLibrary(libId) >= 3 } // if needed, can also filter by memberCount
+        case (libId, numMembers) => keepCountsByLibrary.get(libId).exists(_ >= 3)
       } map (_._1)
-      val libMap = db.readOnlyReplica { implicit ro =>
-        libraryRepo.getActiveByIds(libIds.toSet)
-      }
-
-      val libs = libIds.map(libMap(_))
+      val libMap = libraryRepo.getActiveByIds(libIds.toSet)
+      libIds.flatMap(libMap.get)
+    }.flatMap { libs =>
       val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${com.keepit.controllers.website.routes.FeedController.getTopLibraries().url.toString()}"
       feedCommander.rss("Top Libraries on Kifi", feedUrl, libs) map { rss =>
         Result(
