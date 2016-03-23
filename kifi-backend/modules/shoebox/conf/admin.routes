@@ -98,6 +98,7 @@ GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/suggestRecipients  @com.keepit.controllers.admin.AdminUserController.suggestRecipient(id: Id[User], query: Option[String], limit: Option[Int])
 GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
 GET     /admin/user/:id/ips         @com.keepit.controllers.admin.AdminUserController.userIpAddressesView(id: Id[User])
 GET     /admin/user/:id/json        @com.keepit.controllers.admin.AdminUserController.userJsonByEitherId(id: String)
