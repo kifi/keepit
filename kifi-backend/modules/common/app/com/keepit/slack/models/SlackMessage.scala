@@ -123,15 +123,20 @@ object SlackAttachment {
 }
 
 case class SlackMessage(
-  messageType: SlackMessageType,
-  userId: SlackUserId,
-  username: SlackUsername,
-  timestamp: SlackTimestamp,
-  channel: SlackChannelIdAndName,
-  text: String,
-  attachments: Seq[SlackAttachment],
-  permalink: String,
-  originalJson: JsValue)
+    messageType: SlackMessageType,
+    userId: SlackUserId,
+    username: SlackUsername,
+    timestamp: SlackTimestamp,
+    channel: SlackChannelIdAndName,
+    rawText: String,
+    attachments: Seq[SlackAttachment],
+    permalink: String,
+    originalJson: JsValue) {
+  def text: String = rawText.replaceAllLiterally("&amp;" -> "&")
+  // TODO(ryan): the below line is technically more correct, but our ingestion relies on "dumb" regular expressions that may break
+  // if we unescape the angle-brackets. If we decide that this is a relevant concern, fix the regexs and switch to that line
+  // def text: String = rawText.replaceAllLiterally("&lt;" -> "<", "&gt;" -> ">", "&amp;" -> "&")
+}
 
 object SlackMessage {
   private val reads: Reads[SlackMessage] = (

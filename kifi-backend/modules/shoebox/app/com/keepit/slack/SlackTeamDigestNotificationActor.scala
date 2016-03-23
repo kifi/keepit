@@ -1,12 +1,11 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
+import com.keepit.commanders.PathCommander
 import com.keepit.commanders.gen.BasicOrganizationGen
-import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander }
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
-import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -21,14 +20,14 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
 import org.apache.commons.math3.random.MersenneTwister
-import org.joda.time.{ Duration, Period }
+import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 object SlackTeamDigestConfig {
-  val initialDelayForWelcomeMessage = Period.hours(2)
-  val minPeriodBetweenTeamDigests = Period.days(3)
+  val initialDelayForWelcomeMessage = Duration.standardHours(2)
+  val minPeriodBetweenTeamDigests = Duration.standardDays(14)
   val minIngestedLinksForTeamDigest = 10
 }
 

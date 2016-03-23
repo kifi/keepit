@@ -246,7 +246,7 @@ class SlackIngestingActor @Inject() (
     if (ignoreMessage(message, slackTeam.kifiBot.map(_.userId).toSet)) Set.empty[RawBookmarkRepresentation]
     else {
       val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
-        m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
+        m.subgroups.map(g => Option(g.trim).filter(_.nonEmpty)) match {
           case List(Some(url), titleOpt) => Some(url -> titleOpt)
           case _ => None
         }
