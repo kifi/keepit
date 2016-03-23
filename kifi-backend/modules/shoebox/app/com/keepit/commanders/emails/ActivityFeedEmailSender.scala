@@ -406,7 +406,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
         } filter {
           case (lm, library) =>
             !lm.isOwner && library.visibility == LibraryVisibility.PUBLISHED &&
-              lm.state == LibraryMembershipStates.ACTIVE && lm.lastJoinedAt.exists(minRecordAge <)
+              lm.state == LibraryMembershipStates.ACTIVE && (lm.createdAt > minRecordAge)
         }
         val libraries = libMembershipAndLibraries.map(_._2).distinct
 

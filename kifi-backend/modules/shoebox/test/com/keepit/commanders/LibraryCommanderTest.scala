@@ -246,7 +246,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             allMemberships.length === 3
             allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
             allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
-            allMemberships.map(_.lastJoinedAt).flatten.size === 3
           }
 
           // test re-activating inactive library
@@ -1058,10 +1057,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
             libraryRepo.get(libShield.id.get).memberCount === 1 //owner
 
-            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userIron.id.get).get.lastJoinedAt must beSome
-            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userAgent.id.get).get.lastJoinedAt must beSome
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userIron.id.get) must beSome
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userAgent.id.get) must beSome
             libraryMembershipRepo.getWithLibraryIdAndUserId(libMurica.id.get, userHulk.id.get) must beNone
-            libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userHulk.id.get).get.lastJoinedAt must beSome
+            libraryMembershipRepo.getWithLibraryIdAndUserId(libScience.id.get, userHulk.id.get) must beSome
           }
 
           // Proving that accepting a lesser invite doesn't destroy current access
