@@ -4,9 +4,12 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.core._
 import com.keepit.discussion.Message
 import com.keepit.model.{ Organization, Library, User, BasicOrganization, LibraryColor, BasicLibrary }
-import com.keepit.social.{ BasicUser, BasicNonUser }
+import com.keepit.social.BasicAuthor.{ TwitterUser, SlackUser, KifiUser }
+import com.keepit.social.{ BasicAuthor, BasicUser, BasicNonUser }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -41,15 +44,15 @@ object ActivitySource extends Enumerator[ActivitySource] {
   implicit val writes: Writes[ActivitySource] = Writes { o => JsString(o.value) }
 }
 
-sealed abstract class ActivityElement extends DescriptionElement
+trait ActivityElement extends DescriptionElement
 object ActivityElement {
-
-  case class TextElement(override val text: String) extends ActivityElement {
-    val url = None
+  case class ImageElement(override val url: Option[String], image: String) extends ActivityElement {
+    val text = ""
+    def flatten = Seq(this)
   }
-  object TextElement {
-    val kind = "text"
-    implicit val writes = new Writes[TextElement] { def writes(t: TextElement) = Json.obj("text" -> t.text, "kind" -> kind) }
+  object ImageElement {
+    val kind = "image"
+    implicit val writes = new Writes[ImageElement] { def writes(i: ImageElement) = Json.obj("text" -> i.text, "image" -> i.image, "kind" -> kind) }
   }
 
   case class UserElement(
@@ -59,6 +62,7 @@ object ActivityElement {
       path: Path) extends ActivityElement {
     val text = name
     val url = Some(path.relative)
+    def flatten = Seq(this)
   }
   object UserElement {
     val kind = "user"
@@ -70,10 +74,26 @@ object ActivityElement {
   case class NonUserElement(id: String) extends ActivityElement {
     val text = id
     val url = None
+    def flatten = Seq(this)
   }
   object NonUserElement {
     val kind = "nonUser"
     implicit val writes = new Writes[NonUserElement] { def writes(n: NonUserElement) = Json.obj("text" -> n.text, "kind" -> kind) }
+  }
+
+  case class AuthorElement(
+      id: String,
+      name: String,
+      image: String,
+      override val url: Option[String]) extends ActivityElement {
+    val text = name
+    def flatten = Seq(this)
+  }
+  object AuthorElement {
+    val kind = "author"
+    implicit val writes = new Writes[AuthorElement] {
+      def writes(a: AuthorElement) = Json.obj("id" -> a.id, "text" -> a.text, "image" -> a.image, "url" -> a.url, "kind" -> kind).nonNullFields
+    }
   }
 
   case class LibraryElement(
@@ -83,6 +103,7 @@ object ActivityElement {
       path: Path) extends ActivityElement {
     val text = name
     val url = Some(path.relative)
+    def flatten = Seq(this)
   }
   object LibraryElement {
     val kind = "library"
@@ -98,6 +119,7 @@ object ActivityElement {
       path: Path) extends ActivityElement {
     val text = name
     val url = Some(path.relative)
+    def flatten = Seq(this)
   }
   object OrganizationElement {
     val kind = "organization"
@@ -106,15 +128,21 @@ object ActivityElement {
     }
   }
 
-  def fromUser(bu: BasicUser) = UserElement(bu.externalId, bu.fullName, bu.pictureName, Path(bu.username.value))
-  def fromNonUser(bnu: BasicNonUser) = NonUserElement(bnu.id)
-  def fromBasicLibrary(bl: BasicLibrary) = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
-  def fromBasicOrg(bo: BasicOrganization) = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
+  implicit def fromUser(bu: BasicUser): UserElement = UserElement(bu.externalId, bu.fullName, bu.pictureName, Path(bu.username.value))
+  implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
+
+  implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
+  implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {
+    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
+    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
+    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
+  }
+  implicit def fromBasicLibrary(bl: BasicLibrary): LibraryElement = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
 
   implicit val writes = Writes[ActivityElement] {
-    case txt: TextElement => TextElement.writes.writes(txt)
     case usr: UserElement => UserElement.writes.writes(usr)
     case nur: NonUserElement => NonUserElement.writes.writes(nur)
+    case aut: AuthorElement => AuthorElement.writes.writes(aut)
     case lib: LibraryElement => LibraryElement.writes.writes(lib)
     case org: OrganizationElement => OrganizationElement.writes.writes(org)
   }
@@ -123,18 +151,19 @@ object ActivityElement {
 case class ActivityEvent(
   kind: ActivityKind,
   image: String,
-  header: Seq[ActivityElement], // e.g. "Cam kept this in LibraryX"
-  body: Seq[ActivityElement], // message and keep.note content
+  header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
+  body: DescriptionElements, // message and keep.note content
   timestamp: DateTime,
   source: Option[ActivitySource])
 object ActivityEvent {
-  def fromComment(msg: Message): ActivityEvent = {
-    val msgAuthor: ActivityElement = msg.sentBy.fold(ActivityElement.fromNonUser, ActivityElement.fromUser)
+  def fromComment(msg: Message)(implicit iamgeConfig: S3ImageConfig): ActivityEvent = {
+    import com.keepit.common.util.ActivityElement._
+    val msgAuthor: ActivityElement = msg.sentBy.fold(fromNonUser, fromUser)
     ActivityEvent(
       ActivityKind.Comment,
-      image = msg.sentBy.right.toOption.map(_.pictureName).getOrElse("0.jpg"),
-      header = Seq(msgAuthor, ActivityElement.TextElement("commented on this page")),
-      body = Seq(ActivityElement.TextElement(msg.text)),
+      image = msg.sentBy.right.toOption.map(_.picturePath.getUrl).getOrElse("0.jpg"),
+      header = DescriptionElements(msgAuthor, "commented on this page"),
+      body = DescriptionElements(msg.text),
       timestamp = msg.sentAt,
       source = None // todo(cam): add eliza.message.source (column) to Message
     )
@@ -143,8 +172,8 @@ object ActivityEvent {
   implicit val writes: Writes[ActivityEvent] = (
     (__ \ 'kind).write[ActivityKind] and
     (__ \ 'image).write[String] and
-    (__ \ 'header).write[Seq[ActivityElement]] and
-    (__ \ 'body).write[Seq[ActivityElement]] and
+    (__ \ 'header).write[DescriptionElements] and
+    (__ \ 'body).write[DescriptionElements] and
     (__ \ 'timestamp).write[DateTime] and
     (__ \ 'source).writeNullable[ActivitySource]
   )(unlift(ActivityEvent.unapply))

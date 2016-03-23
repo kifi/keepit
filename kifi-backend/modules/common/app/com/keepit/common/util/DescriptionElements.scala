@@ -16,7 +16,7 @@ import play.api.libs.json._
 import play.twirl.api.Html
 
 sealed trait DescriptionElements {
-  def flatten: Seq[BasicElement]
+  def flatten: Seq[DescriptionElement]
 }
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
   def flatten = elements.flatMap(_.flatten).filter(_.text.nonEmpty)
@@ -24,11 +24,18 @@ case class SequenceOfElements(elements: Seq[DescriptionElements]) extends Descri
 object SequenceOfElements {
   val empty = SequenceOfElements(Seq.empty)
 }
-trait DescriptionElement {
+trait DescriptionElement extends DescriptionElements {
   val text: String
   val url: Option[String]
 }
-case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements with DescriptionElement {
+object DescriptionElement {
+  implicit val writes = Writes[DescriptionElement] {
+    case be: BasicElement => BasicElement.writes.writes(be)
+    case ae: ActivityElement => ActivityElement.writes.writes(ae)
+    case o => Json.obj("text" -> o.text, "url" -> o.url)
+  }
+}
+case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElement {
   def flatten = Seq(simplify)
   def withText(newText: String) = this.copy(text = newText)
   def withUrl(newUrl: String) = this.copy(url = Some(newUrl))
@@ -97,16 +104,18 @@ object DescriptionElements {
     else intersperse(xs, Seq.fill(xs.length - 1)(x))
   }
 
-  def mkElements(els: Seq[DescriptionElements], e: BasicElement): DescriptionElements = SequenceOfElements(intersperseWith(els, e))
+  def mkElements(els: Seq[DescriptionElements], e: DescriptionElement): DescriptionElements = SequenceOfElements(intersperseWith(els, e))
   def unlines(els: Seq[DescriptionElements]): DescriptionElements = mkElements(els, "\n")
-  def unwordsPretty(els: Seq[DescriptionElements]): DescriptionElements = els match {
-    case Seq() => Seq()
-    case Seq(x) => Seq(x)
-    case Seq(x, y) => Seq[DescriptionElements](x, "and", y)
-    case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements(", and"))
+  def unwordsPretty(els: Seq[DescriptionElements]): DescriptionElements = {
+    els match {
+      case Seq() => Seq()
+      case Seq(x) => Seq(x)
+      case Seq(x, y) => Seq[DescriptionElements](x, "and", y)
+      case many => intersperse[DescriptionElements](many, Seq.fill(many.length - 2)(DescriptionElements(",")) :+ DescriptionElements(", and"))
+    }
   }
 
-  private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
+  private def interpolatePunctuation(els: Seq[DescriptionElement]): Seq[DescriptionElement] = {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
@@ -130,24 +139,28 @@ object DescriptionElements {
   }
 
   def formatAsHtml(description: DescriptionElements): Html = {
-    val htmlStr = interpolatePunctuation(description.flatten).map { be =>
-      val h = be.hover.map(DescriptionElements.formatPlain).getOrElse("")
-      be.url
-        .map(u => s"""<a href="$u" title="$h">${be.text}</a>""")
-        .getOrElse(s"""<span title="$h">${be.text}</span>""")
+    val htmlStr = interpolatePunctuation(description.flatten).map { de =>
+      val h = de match {
+        case BasicElement(_, _, hover) => hover.map(DescriptionElements.formatPlain).getOrElse("")
+        case _ => ""
+      }
+      de.url
+        .map(u => s"""<a href="$u" title="$h">${de.text}</a>""")
+        .getOrElse(s"""<span title="$h">${de.text}</span>""")
     }.mkString
     Html(htmlStr)
   }
 
-  private def simplifyElements(els: Seq[BasicElement]): Seq[BasicElement] = els match {
+  private def simplifyElements(els: Seq[DescriptionElement]): Seq[DescriptionElement] = els match {
     case Seq() => Seq()
     case Seq(x) => Seq(x)
-    case x +: y +: rs => x combineWith y match {
-      case Some(z) => simplifyElements(z +: rs)
-      case None => x +: simplifyElements(y +: rs)
+    case x +: y +: rs => (x, y) match {
+      case (x: BasicElement, y: BasicElement) =>
+        (x combineWith y).map(z => simplifyElements(z +: rs)).getOrElse(x +: simplifyElements(y +: rs))
+      case (x, y) => x +: simplifyElements(y +: rs)
     }
   }
   implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc =>
-    JsArray(simplifyElements(interpolatePunctuation(dsc.flatten)).map(BasicElement.writes.writes))
+    JsArray(simplifyElements(interpolatePunctuation(dsc.flatten)).map(DescriptionElement.writes.writes))
   }
 }
