@@ -1,14 +1,13 @@
-package com.keepit.model
+package com.keepit.model.keep
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
-import com.keepit.common.util.{ ActivityLog, ActivityEvent }
-import com.keepit.discussion.{ DiscussionKeep, Discussion }
-import com.keepit.slack.models.{ SlackUserId, SlackUsername }
+import com.keepit.common.util.ActivityLog
+import com.keepit.discussion.{ Discussion, DiscussionKeep }
+import com.keepit.model._
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, OWrites, Writes }

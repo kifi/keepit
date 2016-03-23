@@ -10,6 +10,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.model.keep.KeepInfo
 
 import play.api.libs.json._
 
