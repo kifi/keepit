@@ -119,6 +119,7 @@ class AdminUserController @Inject() (
     activityEmailSender: ActivityFeedEmailSender,
     userIpAddressCommander: UserIpAddressCommander,
     userStatisticsCommander: UserStatisticsCommander,
+    typeAheadCommander: TypeaheadCommander,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
@@ -986,7 +987,7 @@ class AdminUserController @Inject() (
     NoContent
   }
 
-  def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
+  def reNormalizedUsername(readOnly: Boolean, max: Int) = AdminUserAction { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
 
@@ -1048,6 +1049,17 @@ class AdminUserController @Inject() (
             }).getOrElse(JsNull)))
       }
       Ok(JsArray.apply(presencesJson))
+    }
+  }
+
+  def suggestRecipient(userId: Id[User], query: Option[String], limit: Option[Int]) = AdminUserAction.async { request =>
+    typeAheadCommander.searchForKeepRecipients(userId, query.getOrElse(""), limit).map { suggestions =>
+      val body = suggestions.take(limit.getOrElse(20)).collect {
+        case u: UserContactResult => Json.toJson(u)
+        case e: EmailContactResult => Json.toJson(e)
+        case l: LibraryResult => Json.toJson(l)
+      }
+      Ok(Json.toJson(body))
     }
   }
 }
