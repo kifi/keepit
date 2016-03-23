@@ -47,7 +47,7 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
   @Singleton
   @Provides
   def libraryTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LibraryTypeaheadStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.kifi.bucket").get)
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.library.bucket").get)
     new S3LibraryTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
