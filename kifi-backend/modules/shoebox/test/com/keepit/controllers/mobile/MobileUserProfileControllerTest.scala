@@ -27,7 +27,7 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.OrganizationFactory._
 import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactory.{ keep, keeps }
 import com.keepit.model.KeepFactoryHelper._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification

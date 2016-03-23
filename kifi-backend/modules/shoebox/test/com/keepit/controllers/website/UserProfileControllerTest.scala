@@ -16,7 +16,7 @@ import com.keepit.graph.FakeGraphServiceClientImpl
 import com.keepit.graph.model.{ SociallyRelatedEntitiesForUser, RelatedEntities }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactory.{ keep, keeps }
 import com.keepit.model.LibraryInviteFactory._
 import com.keepit.model.LibraryInviteFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
