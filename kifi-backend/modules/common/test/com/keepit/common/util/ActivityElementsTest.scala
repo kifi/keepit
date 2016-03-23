@@ -1,11 +1,9 @@
 package com.keepit.common.util
 
-import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TestHelper
 import com.keepit.common.path.Path
-import com.keepit.discussion.Message
-import com.keepit.model.{ Library, User }
+import com.keepit.model.User
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
