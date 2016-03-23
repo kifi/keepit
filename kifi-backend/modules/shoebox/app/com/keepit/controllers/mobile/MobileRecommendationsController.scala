@@ -1,14 +1,16 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.time._
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryInfoCommander, KeepCommander, LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.commanders.{ KeepCommander, RecommendationsCommander }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.UserAgent
+import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.model._
+import com.keepit.model.keep.BasicLibraryWithKeptAt
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }
@@ -106,7 +108,7 @@ class MobileRecommendationsController @Inject() (
 
   private def feedFromStream(uriContext: Option[String], libContext: Option[String], userId: Id[User]) = {
     val beforeExtId = uriContext.flatMap(id => ExternalId.asOpt[Keep](id))
-    val sentLibs: Boolean = libContext.exists(_ == "sentLibs")
+    val sentLibs: Boolean = libContext.safely.contains("sentLibs")
     val defaultLimit = 10
 
     val libsF: Future[Seq[FullLibRecoInfo]] = recommendationsCommander.curatedPublicLibraryRecos(userId).map(_.map(_._2))

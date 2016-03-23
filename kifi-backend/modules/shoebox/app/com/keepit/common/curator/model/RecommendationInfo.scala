@@ -2,7 +2,8 @@ package com.keepit.curator.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ FullLibraryInfo, Library, NormalizedURI, URISummary, KeepInfo }
+import com.keepit.model.keep.KeepInfo
+import com.keepit.model.{ FullLibraryInfo, Library, NormalizedURI, URISummary }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime

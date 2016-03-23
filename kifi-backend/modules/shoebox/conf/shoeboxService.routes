@@ -739,6 +739,7 @@ GET     /img/*file                 com.keepit.controllers.website.AngularImgAsse
 
 ->  / commonService.Routes
 ->  / admin.Routes
+->  / shoeboxClient.Routes
 ->  / site.Routes
 
 GET     /:handle/:slug/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
