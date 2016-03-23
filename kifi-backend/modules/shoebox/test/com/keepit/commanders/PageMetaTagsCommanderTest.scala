@@ -9,7 +9,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactory.keep
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient, FakeRoverServiceClientModule }
