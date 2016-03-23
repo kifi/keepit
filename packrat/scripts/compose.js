@@ -32,7 +32,7 @@ k.compose = k.compose || (function() {
           $to.tokenInput('add', draft.to[i]);
         }
       }
-      editor.setRaw(draft.html);
+      editor.setRaw(draft.html + editor.getRaw());
     }
   }
 
@@ -299,11 +299,6 @@ k.compose = k.compose || (function() {
       if (editor.supportsLinks) {
         var enabled = !this.classList.toggle('kifi-disabled');
         api.port.emit('set_look_here_mode', {on: enabled, from: $to.length ? 'compose' : 'chat'});
-        if (enabled) {
-          k.snap.enable(editor.$el);
-        } else {
-          k.snap.disable();
-        }
       } else {
         $('<div class="kifi-compose-highlight-unavailable">“Look here” mode is<br/>not available on this page<br/>in this browser.</div>')
         .insertAfter(this)
@@ -346,11 +341,6 @@ k.compose = k.compose || (function() {
         sendChooser.reflectPrefs(prefs);
         var lookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !lookHereMode);
-        if (lookHereMode) {
-          k.snap.enable(editor.$el);
-        } else {
-          k.snap.disable();
-        }
       },
       prefill: function (to) {
         log('[compose.prefill]', to);
@@ -377,9 +367,6 @@ k.compose = k.compose || (function() {
           $to.tokenInput('destroy');
         }
         editor.$el.handleLookClicks(false);
-        if (!$forms.length) {
-          k.snap.disable();
-        }
       }
     };
   };

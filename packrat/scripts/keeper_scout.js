@@ -37,6 +37,7 @@ k.tile = k.tile || (function () {
   api.port.emit('me', onMeChange);
   api.port.on({
     me_change: onMeChange,
+    look_here_mode: configureLookHere,
     guide: loadAndDo.bind(null, 'guide', 'show'),
     show_pane: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'icon'),
@@ -65,6 +66,12 @@ k.tile = k.tile || (function () {
         tile.offsetHeight;
         tileCard.classList.remove('kifi-0s');
       });
+
+      if (!k.snap) {
+        api.port.emit('prefs', function (prefs) {
+          configureLookHere(prefs.lookHereMode);
+        });
+      }
     },
     show_keeper: function(show) {
       tile.style.display = show ? '' : 'none';
@@ -209,6 +216,34 @@ k.tile = k.tile || (function () {
     function extractCssUrl(path) {
       var match = cssUrlRe.exec(path);
       return match && match[1];
+    }
+  }
+
+  function configureLookHere(on) {
+    if (on) {
+      if (k.snap) {
+        k.snap.enable();
+        k.snap.onLookHere.add(onLookHere);
+      } else {
+        loadAndDo('snap', 'enable', function () {
+          k.snap.onLookHere.add(onLookHere);
+        });
+      }
+    } else {
+      if (k.snap) {
+        k.snap.disable();
+        k.snap.onLookHere.remove(onLookHere);
+      }
+    }
+  }
+
+  function onLookHere(img, bRect, href, title) {
+    if (!(k.toaster && k.toaster.showing())) {
+      loadAndDo('keeper', 'compose', {trigger: 'look_here'}, function () {
+        k.toaster.lookHere(img, bRect, href, title);
+      });
+    } else {
+      k.toaster.lookHere(img, bRect, href, title, true);
     }
   }
 

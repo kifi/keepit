@@ -922,6 +922,7 @@ api.port.on({
     ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);
     if (prefs) prefs.lookHereMode = o.on;
     tracker.track('user_clicked_pane', {type: o.from, action: o.on ? 'toggledLookHereOn' : 'toggledLookHereOff'});
+    emitAllTabs('look_here_mode', o.on);
   },
   set_enter_to_send: function(data) {
     ajax('POST', '/ext/pref/enterToSend?enterToSend=' + data);

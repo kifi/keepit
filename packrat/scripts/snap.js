@@ -1,22 +1,28 @@
+// @require scripts/lib/jquery.js
+// @require scripts/lib/jquery.layout.js
+// @require scripts/listen.js
 // @require scripts/ranges.js
+// @require scripts/formatting.js
+// @require scripts/render.js
 // @require scripts/scroll_to.js
 // @require scripts/snapshot.js
+// @require scripts/html/keeper/snap_tip.js
+// @require styles/keeper/snap_tip.css
 
 // for creating "look here" links (text selection or image)
 k.snap = k.snap || (function () {
   'use strict';
 
-  var LOOK_LINK_TEXT = 'look\xa0here';
   var MIN_IMG_DIM = 35;
   var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
 
-  var $draft, $aSnapImg, $aSnapSel, timeoutSel;
+  var $aSnapImg, $aSnapSel, timeoutSel, entered;
 
   api.onEnd.push(leaveMode);
 
-  function enterMode($d) {
-    if ($draft && $draft !== $d) {
+  function enterMode() {
+    if (entered) {
       leaveMode();
     }
     window.addEventListener('mousemove', onWinMouseMove, true);  // for images, fires once
@@ -25,7 +31,7 @@ k.snap = k.snap || (function () {
     window.addEventListener('mouseup', onWinMouseUp, true);
     window.addEventListener('keydown', onWinKeyDown, true);
     $('html').on('mouseleave', onDocMouseLeave);
-    $draft = $d;
+    entered = true;
   }
 
   function leaveMode() {
@@ -38,7 +44,7 @@ k.snap = k.snap || (function () {
     hideSnapLink($aSnapImg);
     hideSnapLink($aSnapSel);
     clearTimeout(timeoutSel);
-    $draft = $aSnapSel = $aSnapImg = timeoutSel = null;
+    $aSnapSel = $aSnapImg = timeoutSel = entered = null;
   }
 
   function onWinMouseMove(e) {
@@ -163,9 +169,9 @@ k.snap = k.snap || (function () {
 
     var parRect = parent.getBoundingClientRect();
     var styles = {
-      top: (imgRect.top - parRect.top) + imgRect.height - parseFloat(imgCs.borderBottomWidth) - parseFloat(imgCs.paddingBottom) - 30,
-      left: (imgRect.left - parRect.left) + imgRect.width - parseFloat(imgCs.borderRightWidth) - parseFloat(imgCs.paddingRight) - 30
-    };
+      top: (imgRect.top - parRect.top) - parseFloat(imgCs.borderTopWidth) - parseFloat(imgCs.paddingTop),
+      left: (imgRect.left - parRect.left) + imgRect.width
+    }
     if (fixed) {
       styles.position = fixed;
     }
@@ -180,14 +186,30 @@ k.snap = k.snap || (function () {
     }
     // TODO: pxTooFarDown (out of viewport)
 
-    $aSnapImg = $('<kifi class="kifi-root kifi-snap kifi-img-snap"/>')
+    $aSnapImg = $(k.render('html/keeper/snap_tip', { img: true }))
+    .on('click', '.kifi-snap-icon-quote', function () {
+      var img = $aSnapImg.data('img');
+      $aSnapImg.remove();
+      $aSnapImg = null;
+
+      var href = 'x-kifi-sel:' + k.snapshot.ofImage(img);
+      var rect = k.snapshot.getImgContentRect(img);
+      var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
+      k.snap.onLookHere.dispatch(img2, rect, href, '');
+    })
     .css(styles)
     .appendTo(parent)
     .data('img', img)
     .layout()
     .css({
       transform: 'none',
-      opacity: 1
+      opacity: 1,
+      top: function () {
+        return styles.top - $(this).height() + 10
+      },
+      left: function () {
+        return styles.left - ($(this).width() / 2);
+      }
     });
     return true;
   }
@@ -223,8 +245,8 @@ k.snap = k.snap || (function () {
     }
     var parRect = parent.getBoundingClientRect();
     var styles = {
-      top: (selRect.top - parRect.top) + 3,
-      left: (selRect.left - parRect.left) + selRect.width + 3
+      top: (selRect.top - parRect.top),
+      left: (selRect.left - parRect.left) + selRect.width
     };
     var parentPos;
     if (window.getComputedStyle(parent).position === 'static') {
@@ -232,14 +254,26 @@ k.snap = k.snap || (function () {
       parent.style.position = 'relative';
     }
 
-    $aSnapSel = $('<kifi class="kifi-root kifi-snap kifi-sel-snap"/>')
+    $aSnapSel = $(k.render('html/keeper/snap_tip', { sel: true }))
+    .on('click', '.kifi-snap-icon-quote', function () {
+      var r = $aSnapSel.data('range');
+      removeSnapLink.call($aSnapSel);
+      $aSnapSel = null;
+      createSelLookHereLink(r);
+    })
     .css(styles)
     .appendTo(parent)
     .data({range: r, parentPos: parentPos})
     .layout()
     .css({
       transform: 'none',
-      opacity: 1
+      opacity: 1,
+      top: function () {
+        return styles.top - $(this).height() - 10
+      },
+      left: function () {
+        return styles.left - ($(this).width() / 2);
+      }
     });
   }
 
@@ -272,25 +306,8 @@ k.snap = k.snap || (function () {
   function onWinMouseDown(e) {
     log('[onWinMouseDown]');
     mouseDown = true;
-    if ($aSnapImg && $aSnapImg[0] === e.target) {
+    if (($aSnapImg && $aSnapImg[0].contains(e.target)) || ($aSnapSel && $aSnapSel[0].contains(e.target))) {
       e.preventDefault();
-      var img = $aSnapImg.data('img');
-      $aSnapImg.remove();
-      $aSnapImg = null;
-      if (k.snap.enabled()) {
-        var href = 'x-kifi-sel:' + k.snapshot.ofImage(img);
-        var rect = k.snapshot.getImgContentRect(img);
-        var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
-        finalizeLookHereLink.call(img2, rect, href);
-      }
-    } else if ($aSnapSel && $aSnapSel[0] === e.target) {
-      e.preventDefault();
-      var r = $aSnapSel.data('range');
-      removeSnapLink.call($aSnapSel);
-      $aSnapSel = null;
-      if (k.snap.enabled()) {
-        createSelLookHereLink(r);
-      }
     } else {
       asyncUpdateSelSnapLink();
     }
@@ -380,127 +397,27 @@ k.snap = k.snap || (function () {
     info.bounds = toJson(ranges.getBoundingClientRect(r, info.rects));
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
-      $(img).on('load error', finalizeLookHereLink.bind(img, info.bounds, href, title));
+      $(img).on('load error', function () {
+        k.snap.onLookHere.dispatch(img, info.bounds, href, title);
+      });
       img.src = dataUrl;
     });
     var href = 'x-kifi-sel:' + k.snapshot.ofRange(r);
     var title = formatKifiSelRangeText(href);
   }
 
-  function finalizeLookHereLink(bRect, href, title) {
-    var ms = 500;
-    var $img = $(this).addClass('kifi-root').css({
-      position: 'fixed',
-      zIndex: 999999999993,
-      top: bRect.top,
-      left: bRect.left,
-      width: bRect.width,
-      height: bRect.height,
-      transformOrigin: '0 0',
-      transition: 'all ' + ms + 'ms ease-in-out,opacity ' + ms + 'ms ease-in'
-    }).appendTo($('body')[0] || 'html');
-    window.getSelection().removeAllRanges();
-
-    var $a = insertLookHereLink();
-    $a.prop('href', href);
-    if (title) {
-      $a.prop('title', title);
-    }
-    positionCursorAfterLookHereLink($a);
-
-    var aRect = $a[0].getClientRects()[0];
-    var scale = Math.min(1, aRect.width / bRect.width);
-    $img.on('transitionend', onEnd).layout().css({
-      transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
-      opacity: 0
-    });
-    var onEndTimeout = setTimeout(function () {
-      onEnd();
-    }, ms + 5); // in case transition fails
-    function onEnd() {
-      clearTimeout(onEndTimeout);
-      $img.remove();
-      $draft.focus().triggerHandler('input'); // save draft
-    }
-  }
-
-  function insertLookHereLink() {
-    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
-    var r = $draft.data('sel');
-    if (r) {
-      var sc = r.startContainer;
-      var ec = r.endContainer;
-      if (sc === ec && !$(sc).closest('a').length) {
-        var i = r.startOffset;
-        var j = r.endOffset;
-        if (sc.nodeType === 3) {  // text
-          var s = sc.nodeValue;
-          if (i < j) {
-            $a.text(s.substring(i, j)).data('custom', true);
-          }
-          $(sc).replaceWith($a);
-          if (i > 0) {
-            $a.before(s.substr(0, i))
-          }
-          if (j < s.length) {
-            $a.after(s.substr(j));
-          }
-        } else if (i === j || !r.cloneContents().querySelector('a')) {
-          var next = sc.childNodes[j];
-          if (i < j && r.toString().trim()) {
-            $a.empty().append(r.extractContents()).data('custom', true);
-          }
-          sc.insertBefore($a[0], next);
-        }
-      }
-    }
-    if (!$a[0].parentNode) {
-      $draft.append($a);
-    }
-
-    if (!$a.data('custom')) {
-      var sib = $a[0].previousSibling;
-      var val = sib && sib.nodeType === 3 ? sib.nodeValue : '';
-      if (sib && (sib.nodeType !== 3 || !/\s$/.test(val))) {
-        $a.before(' ').data('before', '');
-      } else if (val && val[val.length - 1] === '\xa0') {
-        sib.nodeValue = val.substr(0, val.length - 1) + ' ';
-        $a.data('before', '\xa0');
-      }
-
-      sib = $a[0].nextSibling;
-      var sp = !sib ? '\xa0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
-      if (sp) {
-        $a.after(sp).data('after', sp);
-      }
-    }
-
-    $draft.triggerHandler('input');
-    return $a;
-  }
-
-  function positionCursorAfterLookHereLink($a) {
-    var r = document.createRange();
-    if ($a.data('after')) {
-      r.setEnd($a[0].nextSibling, 1);
-      r.collapse();
-    } else {
-      r.setStartAfter($a[0]);
-      r.collapse(true);
-    }
-    $draft.data('sel', r).prop('scrollTop', 999);
-  }
-
   // snap API
   return {
     enabled: function () {
-      return !!$draft;
+      return entered;
     },
-    enable: function ($d) {
-      $d.get();
-      enterMode($d);
+    enable: function (onEnabled) {
+      onEnabled = onEnabled || api.noop;
+      enterMode();
       updateSnapSelLink();
+      onEnabled();
     },
+    onLookHere: new Listeners(),
     disable: leaveMode
   };
 }());

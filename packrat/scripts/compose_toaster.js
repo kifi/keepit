@@ -12,6 +12,7 @@
 
 k.toaster = k.toaster || (function () {
   'use strict';
+  var LOOK_LINK_TEXT = 'look\xa0here';
   var DEFAULT_MESSAGE_TEXT = 'Check this out.';
   var $toast, $sent;
 
@@ -53,7 +54,8 @@ k.toaster = k.toaster || (function () {
     onHide: new Listeners(),
     showing: function () {
       return !!$toast;
-    }
+    },
+    lookHere: finalizeLookHereLink
   };
 
   function show($parent, trigger, guided, recipient) {
@@ -315,6 +317,113 @@ k.toaster = k.toaster || (function () {
       }
     });
     return deferred.promise;
+  }
+
+  function finalizeLookHereLink(img, bRect, href, title, focusText) {
+    var $draft = $toast.find('.kifi-compose-draft');
+    var ms = 500;
+    var $img = $(img).addClass('kifi-root').css({
+      position: 'fixed',
+      zIndex: 999999999993,
+      top: bRect.top,
+      left: bRect.left,
+      width: bRect.width,
+      height: bRect.height,
+      transformOrigin: '0 0',
+      transition: 'all ' + ms + 'ms ease-in-out,opacity ' + ms + 'ms ease-in'
+    }).appendTo($('body')[0] || 'html');
+    window.getSelection().removeAllRanges();
+
+    var $a = insertLookHereLink($draft);
+    $a.prop('href', href);
+    if (title) {
+      $a.prop('title', title);
+    }
+    positionCursorAfterLookHereLink($draft, $a);
+
+    var aRect = $a[0].getClientRects()[0];
+    var scale = Math.min(1, aRect.width / bRect.width);
+    $img.on('transitionend', onEnd).layout().css({
+      transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
+      opacity: 0
+    });
+    var onEndTimeout = setTimeout(function () {
+      onEnd();
+    }, ms + 5); // in case transition fails
+    function onEnd() {
+      clearTimeout(onEndTimeout);
+      $img.remove();
+      if (focusText) {
+        $draft.focus().triggerHandler('input'); // save draft
+      }
+    }
+  }
+
+  function insertLookHereLink($draft) {
+    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
+    var r = $draft.data('sel');
+    if (r) {
+      var sc = r.startContainer;
+      var ec = r.endContainer;
+      if (sc === ec && !$(sc).closest('a').length) {
+        var i = r.startOffset;
+        var j = r.endOffset;
+        if (sc.nodeType === 3) {  // text
+          var s = sc.nodeValue;
+          if (i < j) {
+            $a.text(s.substring(i, j)).data('custom', true);
+          }
+          $(sc).replaceWith($a);
+          if (i > 0) {
+            $a.before(s.substr(0, i))
+          }
+          if (j < s.length) {
+            $a.after(s.substr(j));
+          }
+        } else if (i === j || !r.cloneContents().querySelector('a')) {
+          var next = sc.childNodes[j];
+          if (i < j && r.toString().trim()) {
+            $a.empty().append(r.extractContents()).data('custom', true);
+          }
+          sc.insertBefore($a[0], next);
+        }
+      }
+    }
+    if (!$a[0].parentNode) {
+      $draft.append($a);
+    }
+
+    if (!$a.data('custom')) {
+      var sib = $a[0].previousSibling;
+      var val = sib && sib.nodeType === 3 ? sib.nodeValue : '';
+      if (sib && (sib.nodeType !== 3 || !/\s$/.test(val))) {
+        $a.before(' ').data('before', '');
+      } else if (val && val[val.length - 1] === '\xa0') {
+        sib.nodeValue = val.substr(0, val.length - 1) + ' ';
+        $a.data('before', '\xa0');
+      }
+
+      sib = $a[0].nextSibling;
+      var sp = !sib ? '\xa0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
+      if (sp) {
+        $a.after(sp).data('after', sp);
+      }
+    }
+
+    $draft.triggerHandler('input');
+    return $a;
+  }
+
+  function positionCursorAfterLookHereLink($draft, $a) {
+    var r = document.createRange();
+    if ($a.data('after')) {
+      r.setEnd($a[0].nextSibling, 1);
+      r.collapse();
+    } else {
+      r.setStartAfter($a[0]);
+      r.collapse(true);
+    }
+    $draft.data('sel', r).prop('scrollTop', 999);
   }
 
   function getId(o) {
