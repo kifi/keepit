@@ -6,7 +6,6 @@ import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.Id.ord
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
