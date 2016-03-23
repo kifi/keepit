@@ -21,11 +21,10 @@ import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, Typeahe
 import com.keepit.typeahead._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -47,6 +46,7 @@ class TypeaheadCommander @Inject() (
     organizationAvatarCommander: Provider[OrganizationAvatarCommander],
     permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
+    implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
@@ -334,7 +334,11 @@ class TypeaheadCommander @Inject() (
     val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(20))
     query.trim match {
       case q if q.isEmpty =>
-        libraryTypeahead.prefetch(userId)
+        Future {
+          libraryTypeahead.prefetch(userId).map { _ =>
+            kifiUserTypeahead.prefetch(userId)
+          }
+        }
         Future.successful(suggestResults(userId))
       case q =>
         val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
