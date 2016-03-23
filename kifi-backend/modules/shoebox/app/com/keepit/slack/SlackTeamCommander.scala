@@ -168,12 +168,12 @@ class SlackTeamCommanderImpl @Inject() (
 
   private def addAllSlackTeamMembersToOrganization(slackTeam: SlackTeam)(implicit session: RWSession): Unit = {
     slackTeam.organizationId.foreach { organizationId =>
-      slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId).foreach { membership =>
-        membership.userId.foreach { userId =>
-          if (orgMembershipRepo.getByOrgIdAndUserId(organizationId, userId).isEmpty) {
-            orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(organizationId, userId, userId))
-          }
-        }
+      val slackMemberships = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
+      val userIds = slackMemberships.flatMap(_.userId)
+      val existingOrgMembers = orgMembershipRepo.getByOrgIdAndUserIds(organizationId, userIds).map(_.userId)
+      val toBeAdded = userIds -- existingOrgMembers
+      toBeAdded.foreach { userId =>
+        orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(organizationId, userId, userId))
       }
     }
   }
