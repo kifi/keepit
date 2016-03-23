@@ -88,7 +88,7 @@ class SlackIdentityCommanderImpl @Inject() (
       tokenWithScopes = identity.tokenWithScopes,
       slackUser = identity.user
     ))
-    autojoinOrganization(membership)
+    addToOrganization(membership)
     userIdOpt.foreach { userId =>
       if (isNewIdentityOwner) {
         session.onTransactionSuccess {
@@ -100,7 +100,7 @@ class SlackIdentityCommanderImpl @Inject() (
     isNewIdentityOwner
   }
 
-  private def autojoinOrganization(membership: SlackTeamMembership)(implicit session: RWSession): Unit = {
+  private def addToOrganization(membership: SlackTeamMembership)(implicit session: RWSession): Unit = {
     membership.userId.foreach { userId =>
       slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
         team.organizationId.foreach { orgId =>

@@ -6,7 +6,7 @@ import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.core.{ anyExtensionOps, _ }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
@@ -44,6 +44,7 @@ class SlackTeamCommanderImpl @Inject() (
   pathCommander: PathCommander,
   orgAvatarUploadCommander: OrganizationAvatarUploadCommander,
   orgMembershipRepo: OrganizationMembershipRepo,
+  orgMembershipCommander: OrganizationMembershipCommander,
   basicOrganizationGen: BasicOrganizationGen,
   basicUserRepo: BasicUserRepo,
   clock: Clock,
@@ -139,7 +140,11 @@ class SlackTeamCommanderImpl @Inject() (
               case Some(orgTeam) => Failure(SlackActionFail.OrgAlreadyConnected(newOrganizationId, orgTeam.slackTeamId, failedToConnectTeam = slackTeamId))
               case None => slackTeamMembershipRepo.getByUserIdAndSlackTeam(userId, slackTeamId) match {
                 case None => Failure(SlackActionFail.InvalidMembership(userId, team.slackTeamId, team.slackTeamName, None))
-                case Some(validMembership) => Success(slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId))))
+                case Some(validMembership) => Success {
+                  val connectedTeam = slackTeamRepo.save(team.withOrganizationId(Some(newOrganizationId)))
+                  addAllSlackTeamMembersToOrganization(connectedTeam)
+                  connectedTeam
+                }
               }
             }
           }
@@ -158,6 +163,18 @@ class SlackTeamCommanderImpl @Inject() (
 
       case Failure(fail) =>
         slackLog.warn(s"Failed to connect $slackTeamId to org $newOrganizationId for user $userId because:", fail.getMessage)
+    }
+  }
+
+  private def addAllSlackTeamMembersToOrganization(slackTeam: SlackTeam)(implicit session: RWSession): Unit = {
+    slackTeam.organizationId.foreach { organizationId =>
+      val slackMemberships = slackTeamMembershipRepo.getBySlackTeam(slackTeam.slackTeamId)
+      val userIds = slackMemberships.flatMap(_.userId)
+      val existingOrgMembers = orgMembershipRepo.getByOrgIdAndUserIds(organizationId, userIds).map(_.userId)
+      val toBeAdded = userIds -- existingOrgMembers
+      toBeAdded.foreach { userId =>
+        orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(organizationId, userId, userId))
+      }
     }
   }
 
