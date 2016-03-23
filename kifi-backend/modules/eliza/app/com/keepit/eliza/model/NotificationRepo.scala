@@ -13,7 +13,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[NotificationRepoImpl])
 trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[Notification] {
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification]
-  def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
+  def getMostRecentByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
   def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int
   def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
@@ -67,10 +67,12 @@ class NotificationRepoImpl @Inject() (
     query.firstOption
   }
 
-  def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
+  def getMostRecentByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
     val kindStr = kind.name
-    val q = for (row <- activeRows if row.recipient === recipient && row.groupIdentifier === identifier && row.kind === kindStr) yield row
-    q.firstOption
+    activeRows
+      .filter(row => row.recipient === recipient && row.kind === kindStr && row.groupIdentifier === identifier)
+      .sortBy(_.lastEvent desc)
+      .firstOption
   }
 
   def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int = {

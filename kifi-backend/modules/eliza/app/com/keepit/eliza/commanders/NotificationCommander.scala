@@ -64,7 +64,7 @@ class NotificationCommander @Inject() (
     val notifWithItems = db.readWrite { implicit session =>
       val groupIdentifier = getGroupIdentifier(event)
       val existingNotifToGroupWith = groupIdentifier.map { identifier =>
-        notificationRepo.getByGroupIdentifier(event.recipient, event.kind, identifier)
+        notificationRepo.getMostRecentByGroupIdentifier(event.recipient, event.kind, identifier)
       }.getOrElse {
         notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
       }.filter { existingNotif =>
@@ -101,7 +101,7 @@ class NotificationCommander @Inject() (
 
   def completeNotification(kind: NKind, groupIdentifier: String, recipient: Recipient): Boolean = {
     db.readWrite { implicit session =>
-      notificationRepo.getByGroupIdentifier(recipient, kind, groupIdentifier).fold(false) { notif =>
+      notificationRepo.getMostRecentByGroupIdentifier(recipient, kind, groupIdentifier).fold(false) { notif =>
         notificationRepo.save(notif.copy(lastChecked = Some(notif.lastEvent)))
         true
       }
