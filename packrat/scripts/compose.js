@@ -7,7 +7,6 @@
 // @require scripts/send_chooser.js
 // @require scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
-// @require scripts/snap.js
 
 k.compose = k.compose || (function() {
   'use strict';
@@ -332,6 +331,13 @@ k.compose = k.compose || (function() {
       }
     });
 
+    var handlers = {
+      'look_here_mode': function (on) {
+        $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !on);
+      }
+    };
+    api.port.on(handlers);
+
     // compose API
     return {
       form: function () {
@@ -367,6 +373,7 @@ k.compose = k.compose || (function() {
           $to.tokenInput('destroy');
         }
         editor.$el.handleLookClicks(false);
+        api.port.off(handlers);
       }
     };
   };
