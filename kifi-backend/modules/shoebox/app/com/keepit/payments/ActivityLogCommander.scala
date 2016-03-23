@@ -2,7 +2,7 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.BasicOrganizationGen
-import com.keepit.commanders.PathCommander
+import com.keepit.commanders.{ PathCommander, OrganizationInfoCommander }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
