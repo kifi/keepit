@@ -5,6 +5,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/render.js
 // @require scripts/keep_box.js
+// @require scripts/friend_search.js
 
 /**
  * --------------------------
@@ -60,6 +61,12 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
         var submitAddParticipants = this.addParticipantTokens.bind(this);
 
         this.parent.$el
+        .on('click', '.kifi-message-keepscussion-header .kifi-keep-box-lib', function () {
+          api.port.emit('track_pane_click', {
+            type: 'chooseLibraryForDiscussion',
+            action: 'clickedDiscussionLibrary'
+          });
+        })
         .on('click', '.kifi-message-keepscussion-dialog-button', submitAddParticipants)
         .on('keydown', '.kifi-message-keepscussion-dialog', function (e) {
           if (e.which === 13 && e.originalEvent.isTrusted !== false) {
@@ -136,9 +143,10 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
      */
     initAndAsyncFocusInput: function () {
       var $input = this.$input;
+      var existingIds = (this.parent.keep ? [ this.parent.keep.id ] : []);
       if (!$input) {
         $input = this.$input = this.get$('.kifi-message-keepscussion-dialog-input');
-        initFriendSearch($input, 'threadPane', [ this.parent.keep.id ], api.noop, {
+        initFriendSearch($input, 'threadPane', existingIds, api.noop, {
           placeholder: 'Type a name...',
           onAdd: function () {
             this.getAddDialog().addClass('kifi-non-empty');
