@@ -1,4 +1,4 @@
-package com.keepit.model.keep
+package com.keepit.model.keep2
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
