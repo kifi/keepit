@@ -12,8 +12,7 @@ angular.module('kifi')
       var escapedBackslashOrRightBracketRe = /\\([\]\\])/g;
       var emailAddrRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/; // jshint ignore:line
       var uriRe = /(?:\b|^)((?:(?:(https?|ftp):\/\/|www\d{0,3}[.])?(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/; // jshint ignore:line
-
-      var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)$/i;
+      var imageUrlRe = /^[^?#]*\.(?:gif|jpg|jpeg|png)(?:\?([^#]*))?(?:#(.*))?$/i;
       //var lineBreaksRe = /\n([ \t\r]*\n)?(?:[ \t\r]*\n)*/g;
 
       var stringIsEmpty = function(str) {
