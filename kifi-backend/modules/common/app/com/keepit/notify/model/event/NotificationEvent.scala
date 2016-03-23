@@ -133,9 +133,10 @@ object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipien
   override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
 
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
-    !existingEvents.map(_.time).maxOpt.exists { latestOther =>
-      (newEvent.time minus groupingTimeThreshold) isAfter latestOther
+    val newEventIsCloseToAllExistingEvents = existingEvents.map(_.time).forall { existingEventTime =>
+      new Duration(existingEventTime, newEvent.time) isShorterThan groupingTimeThreshold
     }
+    newEventIsCloseToAllExistingEvents
   }
 }
 
