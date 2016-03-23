@@ -22,6 +22,13 @@ class WsNotificationDelivery @Inject() (
     notificationJsonFormat: Provider[NotificationJsonFormat],
     implicit val executionContext: ExecutionContext) {
 
+  def delete(recipient: Recipient, notifId: String): Unit = {
+    recipient match {
+      case UserRecipient(user) => notificationRouter.sendToUser(user, Json.arr("remove_notification", notifId))
+      case _ =>
+    }
+  }
+
   def deliver(recipient: Recipient, notif: NotificationWithItems): Future[Unit] = {
     notificationInfoGenerator.generateInfo(recipient, Seq(notif)).flatMap { infos =>
       notificationJsonFormat.get.extendedJson(infos.head).map { notifJson =>
