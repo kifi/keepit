@@ -1,17 +1,17 @@
 package com.keepit.slack.models
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.util.DescriptionElements
 import com.keepit.model.KeepAttributionType._
-import com.keepit.model.{ LibrarySpace, Keep, Library }
-import com.keepit.rover.model.BasicImages
+import com.keepit.model.{ Library, LibrarySpace }
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.kifi.macros.json
 
 import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
