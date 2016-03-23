@@ -1,4 +1,4 @@
-package com.keepit.model.keep
+package com.keepit.model.keep2
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.model.{ NormalizedURI, KeepPermission, Keep }

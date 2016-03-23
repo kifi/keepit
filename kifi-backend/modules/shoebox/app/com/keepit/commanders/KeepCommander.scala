@@ -20,7 +20,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
-import com.keepit.model.keep.KeepInfo
+import com.keepit.model.keep2.KeepInfo
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
