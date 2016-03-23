@@ -3,6 +3,7 @@ package com.keepit.typeahead
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders._
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.cache._
@@ -69,7 +70,9 @@ class LibraryTypeahead @Inject() (
   private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryTypeaheadResult]] = {
     SafeFuture {
       val idSet = ids.toSet
+      log.info(s"[LibraryTypeahead#getInfos] $userId $ids")
       libResCache(directCacheAccess).bulkGetOrElse(idSet.map(i => LibraryResultTypeaheadKey(userId, i))) { missingKeys =>
+        log.info(s"[LibraryTypeahead#getInfos:missing] Don't have ${missingKeys.map(_.libraryId)}")
         db.readOnlyReplica { implicit session =>
           val missingIds = missingKeys.map(_.libraryId)
           val libs = libraryRepo.getActiveByIds(missingIds)
@@ -84,12 +87,16 @@ class LibraryTypeahead @Inject() (
 
   private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], LibraryTypeaheadResult)]] = SafeFuture {
     db.readOnlyReplica { implicit session =>
-      libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map {
-        case (l, mOpt, _) =>
-          val res = LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
-          libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l.id.get), res)
-          l.id.get -> res
-      }
+      val r = libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
+      log.info(s"[LibraryTypeahead#all] $id ${r.length}: ${r.map(_._1.id.get).mkString(",")}")
+      r
+    }.map {
+      case (l, mOpt, _) =>
+        val res = LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
+        libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l.id.get), res)
+        l.id.get -> res
+    } tap { r =>
+      log.info(s"[LibraryTypeahead#allDone] $id ${r.length}")
     }
   }
 
