@@ -404,7 +404,7 @@ class LibraryInfoCommanderImpl @Inject() (
         val members = db.readOnlyReplica { implicit s =>
           libraryMembershipRepo.getWithLibraryId(libraryId) filter { membership =>
             membership.state == LibraryMembershipStates.ACTIVE && !membership.isOwner
-          } sortBy (-_.lastJoinedAt.map(_.getMillis).getOrElse(0L))
+          } sortBy (-_.createdAt.getMillis)
         }
 
         (libraryId, members)

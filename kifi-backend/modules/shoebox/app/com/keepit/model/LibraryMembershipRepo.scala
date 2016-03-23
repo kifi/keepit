@@ -90,10 +90,9 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
     def listed = column[Boolean]("listed", O.NotNull)
-    def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
     def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
     def priority = column[Long]("priority", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates, priority) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, subscribedToUpdates, priority) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   implicit val getLibraryResult = libraryRepo.getLibraryResult
