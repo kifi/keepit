@@ -44,110 +44,6 @@ object ActivitySource extends Enumerator[ActivitySource] {
   implicit val writes: Writes[ActivitySource] = Writes { o => JsString(o.value) }
 }
 
-trait ActivityElement extends DescriptionElement
-object ActivityElement {
-  case class ImageElement(override val url: Option[String], image: String) extends ActivityElement {
-    val text = ""
-    def flatten = Seq(this)
-  }
-  object ImageElement {
-    val kind = "image"
-    implicit val writes = new Writes[ImageElement] { def writes(i: ImageElement) = Json.obj("text" -> i.text, "image" -> i.image, "kind" -> kind) }
-  }
-
-  case class UserElement(
-      id: ExternalId[User],
-      name: String,
-      image: String,
-      path: Path) extends ActivityElement {
-    val text = name
-    val url = Some(path.relative)
-    def flatten = Seq(this)
-  }
-  object UserElement {
-    val kind = "user"
-    implicit val writes = new Writes[UserElement] {
-      def writes(u: UserElement) = Json.obj("id" -> u.id, "text" -> u.text, "image" -> u.image, "url" -> u.url, "kind" -> kind)
-    }
-  }
-
-  case class NonUserElement(id: String) extends ActivityElement {
-    val text = id
-    val url = None
-    def flatten = Seq(this)
-  }
-  object NonUserElement {
-    val kind = "nonUser"
-    implicit val writes = new Writes[NonUserElement] { def writes(n: NonUserElement) = Json.obj("text" -> n.text, "kind" -> kind) }
-  }
-
-  case class AuthorElement(
-      id: String,
-      name: String,
-      image: String,
-      override val url: Option[String]) extends ActivityElement {
-    val text = name
-    def flatten = Seq(this)
-  }
-  object AuthorElement {
-    val kind = "author"
-    implicit val writes = new Writes[AuthorElement] {
-      def writes(a: AuthorElement) = Json.obj("id" -> a.id, "text" -> a.text, "image" -> a.image, "url" -> a.url, "kind" -> kind).nonNullFields
-    }
-  }
-
-  case class LibraryElement(
-      id: PublicId[Library],
-      name: String,
-      color: Option[LibraryColor],
-      path: Path) extends ActivityElement {
-    val text = name
-    val url = Some(path.relative)
-    def flatten = Seq(this)
-  }
-  object LibraryElement {
-    val kind = "library"
-    implicit val writes = new Writes[LibraryElement] {
-      def writes(l: LibraryElement) = Json.obj("id" -> l.id, "text" -> l.text, "image" -> l.color, "url" -> l.url, "kind" -> kind)
-    }
-  }
-
-  case class OrganizationElement(
-      id: PublicId[Organization],
-      name: String,
-      image: String,
-      path: Path) extends ActivityElement {
-    val text = name
-    val url = Some(path.relative)
-    def flatten = Seq(this)
-  }
-  object OrganizationElement {
-    val kind = "organization"
-    implicit val writes = new Writes[OrganizationElement] {
-      def writes(o: OrganizationElement) = Json.obj("id" -> o.id, "text" -> o.text, "image" -> o.image, "url" -> o.url, "kind" -> kind)
-    }
-  }
-
-  implicit def fromUser(bu: BasicUser): UserElement = UserElement(bu.externalId, bu.fullName, bu.pictureName, Path(bu.username.value))
-  implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
-
-  implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
-  implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {
-    case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-    case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
-  }
-  implicit def fromBasicLibrary(bl: BasicLibrary): LibraryElement = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
-
-  implicit val writes = Writes[ActivityElement] {
-    case usr: UserElement => UserElement.writes.writes(usr)
-    case nur: NonUserElement => NonUserElement.writes.writes(nur)
-    case aut: AuthorElement => AuthorElement.writes.writes(aut)
-    case lib: LibraryElement => LibraryElement.writes.writes(lib)
-    case org: OrganizationElement => OrganizationElement.writes.writes(org)
-  }
-}
-
 case class ActivityEvent(
   kind: ActivityKind,
   image: String,
@@ -157,8 +53,8 @@ case class ActivityEvent(
   source: Option[ActivitySource])
 object ActivityEvent {
   def fromComment(msg: Message)(implicit iamgeConfig: S3ImageConfig): ActivityEvent = {
-    import com.keepit.common.util.ActivityElement._
-    val msgAuthor: ActivityElement = msg.sentBy.fold(fromNonUser, fromUser)
+    import com.keepit.common.util.DescriptionElements._
+    val msgAuthor = msg.sentBy.fold(fromNonUser, fromBasicUser)
     ActivityEvent(
       ActivityKind.Comment,
       image = msg.sentBy.right.toOption.map(_.picturePath.getUrl).getOrElse("0.jpg"),

@@ -13,7 +13,7 @@ import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
-import com.keepit.common.util.{ ActivityLog, ActivityEvent }
+import com.keepit.common.util.{ ImageElement, DescriptionElement, ActivitySource, ActivityKind, LinkElement, DescriptionElements, ActivityLog, ActivityEvent }
 import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
@@ -23,7 +23,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.social.{ BasicAuthor, BasicUser }
+import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -214,13 +214,14 @@ class KeepDecoratorImpl @Inject() (
               KeepMembers(libraries, users, emails)
             }
 
-            val activityLog = discussionsByKeep.get(keepId).map(generateActivityLog).getOrElse(ActivityLog.empty)
-
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
+              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), discussionsByKeep.get(keepId),
+                ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
+                idToBasicUser, idToBasicLibrary, idToBasicOrg)
               KeepInfo(
                 id = Some(keep.externalId),
                 pubId = Some(Keep.publicId(keepId)),
@@ -344,7 +345,61 @@ class KeepDecoratorImpl @Inject() (
     }
   }
 
-  def generateActivityLog(discussion: Discussion): ActivityLog = ActivityLog(discussion.messages.map { msg => ActivityEvent.fromComment(msg) })
+  def generateActivityLog(
+    keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], discussion: Option[Discussion],
+    ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser], userById: Map[Id[User], BasicUser],
+    libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): ActivityLog = {
+    import com.keepit.common.util.DescriptionElements._
+
+    val initialKeepEvent = {
+      val sortedKtls = ktls.sortBy {
+        _.addedAt.getMillis * -1
+      }
+      val sortedKtus = ktus.sortBy {
+        _.addedAt.getMillis * -1
+      }
+
+      val authorElement = fromBasicAuthor(author)
+      val header = sortedKtls.headOption match {
+        case Some(ktl) =>
+          val library: DescriptionElement = libById.get(ktl.libraryId).map(fromBasicLibrary).getOrElse("a library")
+          val orgOpt = orgByLibraryId.get(ktl.libraryId).map(fromBasicOrg)
+          sourceAttr match {
+            case Some(SlackAttribution(message, _)) =>
+              DescriptionElements(authorElement, "added this into", library, orgOpt.map(org => DescriptionElements("in", org)),
+                ImageElement(Some(message.permalink), ImageUrls.SLACK_LOGO), message.channel.name.map(_.value --> LinkElement(message.permalink)))
+            case Some(TwitterAttribution(tweet)) =>
+              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)),
+                ImageElement(Some(tweet.permalink), ImageUrls.TWITTER_LOGO), tweet.user.screenName.value --> LinkElement(tweet.permalink))
+            case None =>
+              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)))
+          }
+        case None =>
+          sortedKtus.headOption match {
+            case None =>
+              airbrake.notify(s"[activityLog] no ktu or ktls on ${keep.id.get}, can't generate initial keep event")
+              DescriptionElements(authorElement, "kept this page")
+            case Some(firstKtu) =>
+              val firstMinute = firstKtu.addedAt.plusMinutes(1)
+              val firstSentTo = sortedKtus.takeWhile(_.addedAt.getMillis <= firstMinute.getMillis)
+                .collect { case ktu if !keep.userId.contains(ktu.userId) => userById.get(ktu.userId) }.flatten
+              DescriptionElements(authorElement, "sent", if (firstSentTo.nonEmpty) DescriptionElements("to", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "this page")
+          }
+      }
+      val body = DescriptionElements(keep.note)
+      ActivityEvent(
+        ActivityKind.Initial,
+        image = authorElement.image,
+        header = header,
+        body = body,
+        timestamp = keep.keptAt,
+        source = None
+      )
+    }
+
+    val commentEvents = discussion.map(_.messages.map(ActivityEvent.fromComment)).getOrElse(Seq.empty)
+    ActivityLog(events = (commentEvents :+ initialKeepEvent))
+  }
 }
 
 object KeepDecorator {
