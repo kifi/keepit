@@ -233,7 +233,7 @@ class NotificationDeliveryCommander @Inject() (
     shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
 
     val (unreadMessages, unreadNotifications) = db.readOnlyMaster { implicit session =>
-      (userThreadRepo.getUnreadThreadCounts(userId).unmuted, notificationRepo.getUnreadNotificationsCount(Recipient(userId)))
+      (userThreadRepo.getUnreadThreadCounts(userId).unmuted, notificationRepo.getUnreadNotificationsCount(Recipient.fromUser(userId)))
     }
 
     notifFut.foreach { notif =>
@@ -251,7 +251,7 @@ class NotificationDeliveryCommander @Inject() (
       val msgCount = messageRepo.getMessageCounts(message.keepId, lastSeenOpt)
       val muted = userThreadRepo.isMuted(userId, message.keepId)
       val unreadThreads = userThreadRepo.getUnreadThreadCounts(userId).unmuted
-      val unreadNotifications = notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+      val unreadNotifications = notificationRepo.getUnreadNotificationsCount(Recipient.fromUser(userId))
       (msgCount, muted, unreadThreads, unreadNotifications)
     }
     if (!message.from.asUser.contains(userId) && !muted) {
@@ -287,14 +287,14 @@ class NotificationDeliveryCommander @Inject() (
     log.info(s"Setting all Notifications as read for user $userId.")
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markAllRead(userId)
-      notificationRepo.setAllRead(Recipient(userId))
+      notificationRepo.setAllRead(Recipient.fromUser(userId))
     }
   }
 
   def setSystemNotificationsRead(userId: Id[User]): Unit = {
     log.info(s"Setting System Notifications as read for user $userId")
     db.readWrite(attempts = 2) { implicit session =>
-      notificationRepo.setAllRead(Recipient(userId))
+      notificationRepo.setAllRead(Recipient.fromUser(userId))
     }
   }
 
@@ -310,7 +310,7 @@ class NotificationDeliveryCommander @Inject() (
     val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
-      notificationRepo.setAllReadBefore(Recipient(user), message.createdAt)
+      notificationRepo.setAllReadBefore(Recipient.fromUser(user), message.createdAt)
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -409,7 +409,7 @@ class NotificationDeliveryCommander @Inject() (
 
   def getUnreadCounts(userId: Id[User]): (Int, Int, Int) = db.readOnlyMaster { implicit session =>
     val unreadThreadCount = userThreadRepo.getUnreadThreadCounts(userId)
-    val unreadNotificationCount = notificationRepo.getUnreadNotificationsCount(Recipient(userId))
+    val unreadNotificationCount = notificationRepo.getUnreadNotificationsCount(Recipient.fromUser(userId))
     (unreadThreadCount.total, unreadThreadCount.unmuted, unreadNotificationCount)
   }
 

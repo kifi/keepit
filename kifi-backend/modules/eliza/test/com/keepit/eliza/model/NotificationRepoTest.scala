@@ -22,7 +22,7 @@ class NotificationRepoTest extends Specification with ElizaTestInjector {
         val notificationRepo = inject[NotificationRepo]
         val notif = db.readWrite { implicit session =>
           notificationRepo.save(Notification(
-            recipient = Recipient(Id[User](3)),
+            recipient = Recipient.fromUser(Id(3)),
             kind = NewSocialConnection,
             groupIdentifier = None,
             lastEvent = currentDateTime
@@ -32,7 +32,7 @@ class NotificationRepoTest extends Specification with ElizaTestInjector {
 
         val notif2 = db.readWrite { implicit session =>
           notificationRepo.save(Notification(
-            recipient = Recipient(Id[User](4)),
+            recipient = Recipient.fromUser(Id(4)),
             kind = NewSocialConnection,
             groupIdentifier = None,
             lastEvent = currentDateTime

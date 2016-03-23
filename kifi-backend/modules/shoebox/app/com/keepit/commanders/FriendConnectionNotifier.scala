@@ -42,7 +42,7 @@ class FriendConnectionNotifier @Inject() (
     val emailF = connectionMadeEmailSender(friendUserId, myUserId, category, networkTypeOpt)
 
     val notificationF = elizaServiceClient.sendNotificationEvent(NewSocialConnection(
-      Recipient(friendUserId),
+      Recipient.fromUser(friendUserId),
       currentDateTime,
       myUserId,
       networkTypeOpt

@@ -1,18 +1,14 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageConfig, S3ImageStore }
-import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
-import com.keepit.graph.GraphServiceClient
 import com.keepit.common.time._
+import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ ConnectionInviteAccepted, NewConnectionInvite }
@@ -48,7 +44,7 @@ class UserConnectionsCommander @Inject() (
       userRepo.getOpt(id) map { sender =>
         friendRequestRepo.getBySenderAndRecipient(sender.id.get, userId) map { friendRequest =>
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
-          elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient(friendRequest.recipientId))
+          elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient.fromUser(friendRequest.recipientId))
           (true, "friend_request_ignored")
         } getOrElse (false, "friend_request_not_found")
       } getOrElse (false, "user_not_found")
@@ -172,11 +168,11 @@ class UserConnectionsCommander @Inject() (
         category = UserPushNotificationCategory.UserConnectionAccepted)
     }
     val notifF = elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
-      Recipient(friend),
+      Recipient.fromUser(friend.id.get),
       currentDateTime,
       myUserId
     ))
-    elizaServiceClient.completeNotification(NewConnectionInvite, friend.id.get -> myUserId, Recipient(friend))
+    elizaServiceClient.completeNotification(NewConnectionInvite, friend.id.get -> myUserId, Recipient.fromUser(friend.id.get))
 
     emailF flatMap (_ => notifF)
   }
@@ -187,7 +183,7 @@ class UserConnectionsCommander @Inject() (
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 
     val friendReqF = elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
-      Recipient(recipient),
+      Recipient.fromUser(recipient.id.get),
       currentDateTime,
       recipient.id.get,
       myUser.id.get

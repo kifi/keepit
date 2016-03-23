@@ -49,7 +49,7 @@ class NotificationMessagingCommander @Inject() (
     recipient match {
       case UserRecipient(user) =>
         val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user)
-        val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(user))
+        val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient.fromUser(user))
         val pushNotif = MessageCountPushNotification(unreadMessages + unreadNotifications)
         pushNotifier.notifyUser(user, pushNotif, false)
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -68,12 +68,12 @@ class NotificationMessagingCommander @Inject() (
     val updated = notificationCommander.setNotificationUnreadTo(notif.id.get, unread)
     if (updated) {
       val nUrl = ""
-      val thread = notificationJsonFormat.getNotificationThreadStr(notif, item)
+      val thread = notificationJsonFormat.getNotificationThreadStr(notif, Set(item))
       webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, thread, item.eventTime, item.externalId))
       if (unread) {
         messagingAnalytics.clearedNotification(userId, Left(notif.externalId), Left(item.externalId), context)
       }
-      sendUnreadNotificationsWith(notif, Recipient(userId))
+      sendUnreadNotificationsWith(notif, Recipient.fromUser(userId))
     }
   }
 
@@ -95,7 +95,7 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def getNotificationsWithNewEvents(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
-    val recipient = Recipient(userId)
+    val recipient = Recipient.fromUser(userId)
     val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEvents(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -116,7 +116,7 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def getNotificationsWithNewEventsBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
-    val recipient = Recipient(userId)
+    val recipient = Recipient.fromUser(userId)
     val newEventNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getNotificationsWithNewEventsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -128,7 +128,7 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def getLatestNotifications(userId: Id[User], howMany: Int, uriSummary: Boolean = false): Future[NotificationResults] = {
-    val recipient = Recipient(userId)
+    val recipient = Recipient.fromUser(userId)
     val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotifications(recipient, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
@@ -150,7 +150,7 @@ class NotificationMessagingCommander @Inject() (
   }
 
   def getLatestNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, uriSummary: Boolean = false): Future[Seq[NotificationWithJson]] = {
-    val recipient = Recipient(userId)
+    val recipient = Recipient.fromUser(userId)
     val latestNotifs = db.readOnlyReplica { implicit session =>
       notificationRepo.getLatestNotificationsBefore(recipient, time, howMany).map { notif =>
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)

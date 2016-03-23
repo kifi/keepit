@@ -173,6 +173,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             uts.foreach { ut => userThreadRepo.get(ut.id.get).state === UserThreadStates.INACTIVE }
             msgs.foreach { msg => messageRepo.get(msg.id.get).state === ElizaMessageStates.INACTIVE }
           }
+          inject[WatchableExecutionContext].drain()
           1 === 1
         }
       }
