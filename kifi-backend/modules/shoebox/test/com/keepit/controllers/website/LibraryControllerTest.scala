@@ -1066,7 +1066,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "participants": ${Json.toJson(Seq(BasicUser.fromUser(user1)))},
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
-                "activity": { "events": [] }
+                "activity" : {
+                  "events":[
+                    {
+                      "kind":"initial",
+                      "image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg",
+                      "header":[
+                        {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
+                        {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
+                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","image":null,"url":"/test/${lib1.slug.value}","kind":"library"}
+                      ],
+                      "body": [],
+                      "timestamp":${keep1.keptAt.getMillis}
+                    }
+                  ]
+                }
               }
             ],
             "numKeeps": 2

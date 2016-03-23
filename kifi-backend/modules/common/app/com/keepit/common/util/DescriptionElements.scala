@@ -173,7 +173,7 @@ object DescriptionElements {
 
   implicit def fromDateTime(time: DateTime): TextElement = new PrettyTime().format(time.toDate)
 
-  implicit def fromBasicUser(bu: BasicUser): UserElement = UserElement(bu.externalId, bu.fullName, bu.pictureName, Path(bu.username.value))
+  implicit def fromBasicUser(bu: BasicUser): UserElement = UserElement(bu.externalId, bu.firstName, bu.pictureName, Path(bu.username.value))
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
   implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {
@@ -215,16 +215,19 @@ object DescriptionElements {
   }
 
   private def interpolatePunctuation(els: Seq[DescriptionElement]): Seq[DescriptionElement] = {
-    val words = els.map(_.text)
-    val wordPairs = words.init zip words.tail
+    if (els.isEmpty) Seq.empty
+    else {
+      val words = els.map(_.text)
+      val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n", "[", "(", "`", " ", "“")
-    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`", " ", "”", ":")
-    val interpolatedPunctuation = wordPairs.map {
-      case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
-      case _ => " "
-    }.map(TextElement(_, None, None))
-    intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
+      val leftEnds = Set("'", "\n", "[", "(", "`", " ", "“")
+      val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`", " ", "”", ":")
+      val interpolatedPunctuation = wordPairs.map {
+        case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
+        case _ => " "
+      }.map(TextElement(_, None, None))
+      intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
+    }
   }
   def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
 
