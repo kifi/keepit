@@ -73,11 +73,8 @@ class KifiUserTypeahead @Inject() (
   }
 
   private def getInfos(ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
-    if (ids.isEmpty) Seq.empty
-    else {
-      db.readOnlyMaster { implicit ro =>
-        userRepo.getUsers(ids).valuesIterator.toVector
-      }
+    db.readOnlyMaster { implicit ro =>
+      userRepo.getUsers(ids).valuesIterator.toVector
     }
   }
 

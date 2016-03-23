@@ -5,7 +5,7 @@ import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.keepit.common.cache.{ BinaryCacheImpl, CacheStatistics, FortyTwoCachePlugin, Key }
+import com.keepit.common.cache._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -15,31 +15,45 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.typeahead.LibraryTypeahead.UserLibraryTypeahead
+import com.kifi.macros.json
 import org.joda.time.Minutes
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 object LibraryTypeahead {
-  type UserLibraryTypeahead = PersonalTypeahead[User, Library, Library]
+  type UserLibraryTypeahead = PersonalTypeahead[User, Library, LibraryTypeaheadResult]
+}
+
+@json case class LibraryTypeaheadResult(id: Id[Library], name: String, importance: Int) {
+  // importance is a measure to assist in ranking of libraries not recently used by the user. Sum of (lowest is best):
+  //  • -2 active membership
+  //  • -1 visited previously
+  //  • -1 has keeps
+  //  • -1 keeps in past 3 days
+  //  • -1 keeps in past 15 days
+  //  • -1 user created
 }
 
 class LibraryTypeahead @Inject() (
     db: Database,
     override val airbrake: AirbrakeNotifier,
     store: LibraryTypeaheadStore,
-    cache: LibraryTypeaheadCache,
+    cache: LibraryFilterTypeaheadCache,
+    libResCache: LibraryResultTypeaheadCache,
     libraryInfoCommander: Provider[LibraryInfoCommander],
+    libraryMembershipRepo: LibraryMembershipRepo,
     libraryRepo: LibraryRepo,
+    clock: Clock,
     implicit val ec: ExecutionContext,
-    implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, Library, UserLibraryTypeahead] with Logging {
+    implicit val config: PublicIdConfiguration) extends Typeahead[User, Library, LibraryTypeaheadResult, UserLibraryTypeahead] with Logging {
 
   protected val refreshRequestConsolidationWindow = 20 seconds
 
-  protected val fetchRequestConsolidationWindow = 15 seconds
+  protected val fetchRequestConsolidationWindow = 30 seconds
 
-  protected def get(userId: Id[User]) = {
-    val filterOpt = cache.getOrElseOpt(LibraryTypeaheadKey(userId)) {
+  protected def get(userId: Id[User]): Future[Option[UserLibraryTypeahead]] = {
+    val filterOpt = cache.getOrElseOpt(LibraryFilterTypeaheadKey(userId)) {
       store.getWithMetadata(userId).map {
         case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
@@ -52,31 +66,54 @@ class LibraryTypeahead @Inject() (
     Future.successful(filterOpt.map(filter => PersonalTypeahead(userId, filter, getInfos(userId))))
   }
 
-  private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[Library]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty[Library])
-    else {
-      SafeFuture {
-        val idSet = ids.toSet
+  private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryTypeaheadResult]] = {
+    SafeFuture {
+      val idSet = ids.toSet
+      libResCache(directCacheAccess).bulkGetOrElse(idSet.map(i => LibraryResultTypeaheadKey(userId, i))) { missingKeys =>
         db.readOnlyReplica { implicit session =>
-          val libs = libraryRepo.getActiveByIds(idSet)
-          libs.values.toSeq
+          val missingIds = missingKeys.map(_.libraryId)
+          val libs = libraryRepo.getActiveByIds(missingIds)
+          val mems = libraryMembershipRepo.getWithLibraryIdsAndUserId(missingIds, userId)
+          libs.values.map { lib =>
+            LibraryResultTypeaheadKey(userId, lib.id.get) -> LibraryTypeaheadResult(lib.id.get, lib.name, calcImportance(lib, mems.get(lib.id.get)))
+          }.toMap
         }
+      }.values.toSeq
+    }
+  }
+
+  private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], LibraryTypeaheadResult)]] = SafeFuture {
+    db.readOnlyReplica { implicit session =>
+      libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map {
+        case (l, mOpt, _) =>
+          val res = LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
+          libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l.id.get), res)
+          l.id.get -> res
       }
     }
   }
 
-  private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], Library)]] = SafeFuture {
-    db.readOnlyReplica { implicit session =>
-      libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true).map { case (l, _, _) => l.id.get -> l }
-    }
+  private def calcImportance(lib: Library, memOpt: Option[LibraryMembership]): Int = {
+    Seq(
+      memOpt.isDefined,
+      memOpt.isDefined,
+      memOpt.exists(_.lastViewed.isDefined),
+      lib.keepCount > 0,
+      lib.lastKept.exists(_.isAfter(clock.now.minusHours(72))),
+      lib.lastKept.exists(_.isAfter(clock.now.minusHours(360))),
+      lib.kind == LibraryKind.USER_CREATED
+    ).map {
+        case true => -1
+        case false => 0
+      }.sum
   }
 
-  protected def extractName(info: Library): String = info.name
+  protected def extractName(info: LibraryTypeaheadResult): String = info.name
 
   protected def invalidate(typeahead: UserLibraryTypeahead) = {
     val userId = typeahead.ownerId
     val filter = typeahead.filter
-    cache.set(LibraryTypeaheadKey(userId), filter)
+    cache.set(LibraryFilterTypeaheadKey(userId), filter)
     store += (userId -> filter)
   }
 
@@ -99,12 +136,21 @@ class S3LibraryTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: Amazo
 
 class InMemoryLibraryTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User, Library] with LibraryTypeaheadStore
 
-class LibraryTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[LibraryTypeaheadKey, PrefixFilter[Library]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class LibraryFilterTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[LibraryFilterTypeaheadKey, PrefixFilter[Library]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class LibraryTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[Library]] {
+case class LibraryFilterTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[Library]] {
   val namespace = "library_typeahead"
   override val version = 1
   def toKey(): String = userId.id.toString
+}
+
+class LibraryResultTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryResultTypeaheadKey, LibraryTypeaheadResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryResultTypeaheadKey(userId: Id[User], libraryId: Id[Library]) extends Key[LibraryTypeaheadResult] {
+  val namespace = "library_typeahead_result"
+  override val version = 1
+  def toKey(): String = s"${userId.id.toString}:${libraryId.id.toString}"
 }
 

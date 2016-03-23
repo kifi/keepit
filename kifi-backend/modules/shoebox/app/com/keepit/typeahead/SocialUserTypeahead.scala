@@ -55,11 +55,8 @@ class SocialUserTypeahead @Inject() (
   }
 
   private def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
-    else {
-      db.readOnlyMasterAsync { implicit session =>
-        socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
-      }
+    db.readOnlyMasterAsync { implicit session =>
+      socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
     }
   }
 
