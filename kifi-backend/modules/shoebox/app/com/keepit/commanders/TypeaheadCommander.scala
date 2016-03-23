@@ -18,14 +18,13 @@ import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
-import com.keepit.typeahead.{ LibraryTypeahead, TypeaheadHit, KifiUserTypeahead, SocialUserTypeahead }
+import com.keepit.typeahead._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -47,6 +46,7 @@ class TypeaheadCommander @Inject() (
     organizationAvatarCommander: Provider[OrganizationAvatarCommander],
     permissionCommander: Provider[PermissionCommander],
     pathCommander: PathCommander,
+    implicit val ec: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
@@ -310,8 +310,8 @@ class TypeaheadCommander @Inject() (
         }
         val rankedFriends = friends.imap {
           case (users, contacts) =>
-            val sortedUsers = users.sortBy(u => userOrder(u._1))
-            val sortedContacts = contacts.sortBy(c => contactOrder(c))
+            val sortedUsers = users.zipWithIndex.sortBy { case ((id, _), idx) => (userOrder(id), idx) }.map(_._1)
+            val sortedContacts = contacts.zipWithIndex.sortBy { case (c, idx) => (contactOrder(c), idx) }.map(_._1)
             (sortedUsers, sortedContacts)
         }
         rankedFriends
@@ -334,10 +334,15 @@ class TypeaheadCommander @Inject() (
     val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(20))
     query.trim match {
       case q if q.isEmpty =>
+        Future {
+          libraryTypeahead.prefetch(userId).map { _ =>
+            kifiUserTypeahead.prefetch(userId)
+          }
+        }
         Future.successful(suggestResults(userId))
       case q =>
         val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
-        val librariesF = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[Library])
+        val librariesF = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
 
         val (userScore, emailScore, libScore) = {
           val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
@@ -367,11 +372,23 @@ class TypeaheadCommander @Inject() (
             case (contact, idx) =>
               (emailScore(contact.email), idx + limit.get, EmailContactResult(email = contact.email, name = contact.name))
           }
-          val libRes = libToResult(userId, libraries.map(_.id.get)).zipWithIndex.map {
+          val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
+          val libRes = libToResult(userId, libraries.map(_.id)).zipWithIndex.map {
             case ((id, lib), idx) =>
-              (libScore(id), idx, lib)
+              (libScore(id), idx + libIdToImportance(id), lib)
           }
-          (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).map { case (_, _, res) => res }
+          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2))
+
+          // For diagnosis, not for public release!
+          val summary = combined.map {
+            case (s1, s2, u: UserContactResult) => s"u($s1,$s2)"
+            case (s1, s2, e: EmailContactResult) => s"e($s1,$s2)"
+            case (s1, s2, l: LibraryResult) => s"l($s1,$s2)"
+          }.mkString(" ")
+          log.info(s"[searchForKeepRecipients] $userId q=$query, l=${combined.length}, s=$summary")
+          // For diagnosis, not for public release!
+
+          combined.map { case (_, _, res) => res }
         }
     }
   }

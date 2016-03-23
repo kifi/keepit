@@ -90,10 +90,8 @@ class EContactTypeahead @Inject() (
   }
 
   protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty) else {
-      db.readOnlyMasterAsync { implicit ro =>
-        econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
-      }
+    db.readOnlyMasterAsync { implicit ro =>
+      econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
     }
   }
 }

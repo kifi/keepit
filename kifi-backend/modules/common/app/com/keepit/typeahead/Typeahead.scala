@@ -65,12 +65,21 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
           Future.successful(Seq.empty)
         } else {
           val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-          typeahead.getInfos(typeahead.filter.filterBy(queryTerms)).map { infos =>
-            topNWithInfos(infos, queryTerms, limit)
+          val hitIds = typeahead.filter.filterBy(queryTerms)
+          if (hitIds.nonEmpty) {
+            typeahead.getInfos(hitIds).map { infos =>
+              topNWithInfos(infos, queryTerms, limit)
+            }
+          } else {
+            Future.successful(Seq.empty)
           }
         }
       }
     }
+  }
+
+  def prefetch(ownerId: Id[T]): Future[Unit] = {
+    getOrElseCreate(ownerId).map(_ => ())(ExecutionContext.immediate)
   }
 
   private[this] lazy val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
@@ -93,7 +102,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
         val name = PrefixFilter.normalize(extractName(info))
         TypeaheadHit(PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
       }.collect {
-        case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem
+        case elem @ TypeaheadHit(score, name, _, info) if score < 1000000.0d => elem
       }.sorted
       val top = limit map (n => hits.take(n)) getOrElse hits
       top
