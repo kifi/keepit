@@ -1,13 +1,15 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model._
+import com.keepit.model.Keep
 import com.keepit.notify.delivery.WsNotificationDelivery
-import com.keepit.notify.model.event.NotificationEvent
-import com.keepit.notify.model.{GroupingNotificationKind, NKind, Recipient}
+import com.keepit.notify.model.event.{LibraryNewKeep, NotificationEvent}
+import com.keepit.notify.model.{NotificationKind, GroupingNotificationKind, NKind, Recipient}
 
 import scala.concurrent.ExecutionContext
 
@@ -17,6 +19,7 @@ class NotificationCommander @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     wsNotificationDelivery: WsNotificationDelivery,
+    private implicit val publicIdConfiguration: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def getItems(notification: Id[Notification]): Set[NotificationItem] = {
@@ -60,7 +63,7 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent, tryDeliver: Boolean = true): NotificationWithItems = {
+  def processNewEvent(event: NotificationEvent): NotificationWithItems = {
     val notifWithItems = db.readWrite { implicit session =>
       val groupIdentifier = getGroupIdentifier(event)
       val existingNotifToGroupWith = groupIdentifier.map { identifier =>
@@ -69,6 +72,15 @@ class NotificationCommander @Inject() (
         notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
       }.filter { existingNotif =>
         val notifItems = notificationItemRepo.getAllForNotification(existingNotif.id.get)
+
+        // God help me for this travesty
+        notifItems.map(_.event) match {
+          case Seq(oldEvent: LibraryNewKeep) => session.onTransactionSuccess {
+            wsNotificationDelivery.delete(oldEvent.recipient, Keep.publicId(oldEvent.keepId).id)
+          }
+          case _ =>
+        }
+
         shouldGroupWith(event, notifItems.toSet)
       }
 
@@ -92,9 +104,7 @@ class NotificationCommander @Inject() (
       )
     }
 
-    if (tryDeliver) {
-      wsNotificationDelivery.deliver(event.recipient, notifWithItems)
-    }
+    wsNotificationDelivery.deliver(event.recipient, notifWithItems)
 
     notifWithItems
   }
