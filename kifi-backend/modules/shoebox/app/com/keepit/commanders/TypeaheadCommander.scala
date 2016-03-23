@@ -385,7 +385,7 @@ class TypeaheadCommander @Inject() (
             case (s1, s2, e: EmailContactResult) => s"e($s1,$s2)"
             case (s1, s2, l: LibraryResult) => s"l($s1,$s2)"
           }.mkString(" ")
-          log.info(s"[searchForKeepRecipients] $userId q=$query, l=${combined.length}, s=$summary")
+          log.info(s"[searchForKeepRecipients] $userId q=$query, l=${combined.length}, s=$summary\nlibs=$libraries")
           // For diagnosis, not for public release!
 
           combined.map { case (_, _, res) => res }
