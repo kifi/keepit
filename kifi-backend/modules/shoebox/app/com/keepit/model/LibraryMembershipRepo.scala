@@ -71,7 +71,6 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryRepo: LibraryRepoImpl,
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
-  memberIdCache: LibraryMembershipIdCache,
   countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
@@ -103,12 +102,6 @@ class LibraryMembershipRepoImpl @Inject() (
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
     val toSave = libraryMembership.copy(seq = deferredSeqNum())
     super.save(toSave)
-  }
-
-  override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
-    memberIdCache.getOrElse(LibraryMembershipIdKey(id)) {
-      getCompiled(id).first
-    }
   }
 
   @StatsdTiming("LibraryMembershipRepo.pageWithLibraryIdAndAccess")
@@ -314,7 +307,6 @@ class LibraryMembershipRepoImpl @Inject() (
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     libMem.id.map { id =>
       countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
-      memberIdCache.remove(LibraryMembershipIdKey(id))
       countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
       if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
@@ -325,13 +317,6 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   override def invalidateCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
-    libMem.id.map { id =>
-      if (libMem.state == LibraryMembershipStates.INACTIVE) {
-        deleteCache(libMem)
-      } else {
-        memberIdCache.set(LibraryMembershipIdKey(id), libMem)
-      }
-    }
     countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
     libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
     if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
