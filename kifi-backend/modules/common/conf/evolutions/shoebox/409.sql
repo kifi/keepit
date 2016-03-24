@@ -12,7 +12,6 @@ CREATE TABLE slack_team_membership (
   slack_user_id VARCHAR(32) NOT NULL,
   slack_username VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
-  slack_team_name VARCHAR(512) NOT NULL,
   kind VARCHAR(32) NOT NULL,
   token VARCHAR(512) NOT NULL,
   scopes text NOT NULL,

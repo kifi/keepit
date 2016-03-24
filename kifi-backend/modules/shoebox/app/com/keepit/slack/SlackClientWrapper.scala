@@ -349,7 +349,6 @@ class SlackClientWrapperImpl @Inject() (
       slackUserId = user.id,
       slackUsername = user.name,
       slackTeamId = slackTeam.slackTeamId,
-      slackTeamName = slackTeam.slackTeamName,
       tokenWithScopes = None,
       slackUser = Some(user)
     ))._1

@@ -134,16 +134,15 @@ class SlackInfoCommanderImpl @Inject() (
         case k @ (slackUserId, slackTeamId) => slackTeamMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map { v => k -> v }
       }.toMap
     }
-    val teamNameByTeamId = teamMembershipMap.map {
-      // intentionally drops duplicates; hopefully they are all the same team name
-      case ((_, slackTeamId), stm) => slackTeamId -> stm.slackTeamName
-    }
+
     val externalSpaceBySpace: Map[LibrarySpace, ExternalLibrarySpace] = {
       (slackToLibs.map(_.space) ++ libToSlacks.map(_.space)).map {
         case space @ OrganizationSpace(orgId) => space -> ExternalOrganizationSpace(Organization.publicId(orgId))
         case space @ UserSpace(userId) => space -> ExternalUserSpace(basicUserRepo.load(userId).externalId)
       }.toMap
     }
+
+    val teamNameByTeamId = slackTeamRepo.getBySlackTeamIds(teamMembershipMap.keySet.map(_._2)).mapValues(_.slackTeamName)
 
     val channelNameByTeamAndChannelId = {
       val channelIds = slackToLibs.map(stl => (stl.slackTeamId, stl.slackChannelId)).toSet ++ libToSlacks.map(lts => (lts.slackTeamId, lts.slackChannelId))
@@ -231,9 +230,11 @@ class SlackInfoCommanderImpl @Inject() (
     if (!viewerId.contains(userId)) UserSlackInfo.empty
     else {
       val memberships = slackTeamMembershipRepo.getByUserId(userId)
+      val teamsById = slackTeamRepo.getBySlackTeamIds(memberships.map(_.slackTeamId).toSet)
       val userSlackTeamInfos = memberships.map { stm =>
         val orgIdOpt = slackTeamRepo.getBySlackTeamId(stm.slackTeamId).flatMap(_.organizationId)
-        UserSlackTeamInfo(stm.slackTeamId, orgIdOpt.map(Organization.publicId), stm.slackTeamName, stm.slackUserId, stm.slackUsername, stm.privateChannelsLastSyncedAt, stm.personalDigestSetting)
+        val slackTeamName = teamsById(stm.slackTeamId).slackTeamName
+        UserSlackTeamInfo(stm.slackTeamId, orgIdOpt.map(Organization.publicId), slackTeamName, stm.slackUserId, stm.slackUsername, stm.privateChannelsLastSyncedAt, stm.personalDigestSetting)
       }
       UserSlackInfo(userSlackTeamInfos)
     }

@@ -16,7 +16,7 @@ import com.keepit.common.time.{ Clock }
 import com.keepit.common.core._
 import com.keepit.model.view.UserSessionView
 import com.keepit.slack.SlackIdentityCommander
-import com.keepit.slack.models.{ SlackTeamMembership, SlackTeamMembershipRepo }
+import com.keepit.slack.models.{ SlackTeamRepo, SlackTeamMembership, SlackTeamMembershipRepo }
 import com.keepit.social.SocialNetworks._
 
 import play.api.{ Application }
@@ -37,6 +37,7 @@ class UserIdentityHelper @Inject() (
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     identityUserIdCache: IdentityUserIdCache,
+    slackTeamRepo: SlackTeamRepo,
     slackMembershipRepo: SlackTeamMembershipRepo) {
   import IdentityHelpers._
 
@@ -73,7 +74,21 @@ class UserIdentityHelper @Inject() (
       }
       case SLACK =>
         Try(parseSlackId(identityId)).toOption.flatMap {
-          case (slackTeamId, slackUserId) => slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId).map(SlackTeamMembership.toUserIdentity)
+          case (slackTeamId, slackUserId) =>
+            for {
+              team <- slackTeamRepo.getBySlackTeamId(slackTeamId)
+              membership <- slackMembershipRepo.getBySlackTeamAndUser(slackTeamId, slackUserId)
+            } yield UserIdentity(
+              SlackIdentity(
+                membership.slackTeamId,
+                team.slackTeamName,
+                membership.tokenWithScopes,
+                membership.slackUserId,
+                membership.slackUsername,
+                membership.slackUser
+              ),
+              membership.userId
+            )
         }
       case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
         val socialId = parseSocialId(identityId)
