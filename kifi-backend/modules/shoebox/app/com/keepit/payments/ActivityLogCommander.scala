@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ DescriptionElements => Elements, LinkElement }
 import com.keepit.common.util.DescriptionElements._
 import com.keepit.model._
@@ -34,6 +35,7 @@ class ActivityLogCommanderImpl @Inject() (
     pathCommander: PathCommander,
     basicUserRepo: BasicUserRepo,
     basicOrganizationGen: BasicOrganizationGen,
+    implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {

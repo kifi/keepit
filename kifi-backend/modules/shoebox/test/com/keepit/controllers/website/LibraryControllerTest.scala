@@ -1045,7 +1045,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "header":[
                         {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
                         {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","image":null,"url":"/test/${lib1.slug.value}","kind":"library"}
+                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","image":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
                       ],
                       "body": [],
                       "timestamp":${keep2.keptAt.getMillis}
@@ -1088,7 +1088,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "header":[
                         {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
                         {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","image":null,"url":"/test/${lib1.slug.value}","kind":"library"}
+                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","image":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
                       ],
                       "body": [],
                       "timestamp":${keep1.keptAt.getMillis}

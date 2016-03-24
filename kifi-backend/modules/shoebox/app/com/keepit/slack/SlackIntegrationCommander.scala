@@ -12,6 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
@@ -52,6 +53,7 @@ class SlackIntegrationCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   basicOrganizationGen: BasicOrganizationGen,
   airbrake: AirbrakeNotifier,
+  implicit val imageConfig: S3ImageConfig,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   inhouseSlackClient: InhouseSlackClient)
