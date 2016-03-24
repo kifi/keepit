@@ -421,7 +421,7 @@ class TypeaheadCommander @Inject() (
     val suggestions = if (interactionRecipients.length >= ceil) {
       interactionRecipients.slice(drop, ceil)
     } else {
-      val libs = getRelevantLibrariesToSuggest(userId, ceil)
+      val libs = getRelevantLibrariesToSuggest(userId, ceil).map(LibraryInteraction).filter(l => !interactionRecipients.contains(l))
       (interactionRecipients ++ libs).slice(drop, ceil)
     }
 
@@ -437,7 +437,7 @@ class TypeaheadCommander @Inject() (
   private def getRelevantLibrariesToSuggest(userId: Id[User], max: Int) = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     relevantSuggestedLibrariesCache(directCacheAccess).getOrElse(RelevantSuggestedLibrariesKey(userId)) {
-      libraryTypeahead.getAllRelevantLibraries(userId).map(_._2).sortBy(l => (l.importance, l.name.toLowerCase)).map(l => l.id).take(maxHistory)
+      libraryTypeahead.getAllRelevantLibraries(userId).map(_._2).filter(_.importance != 0).sortBy(l => (l.importance, l.name.toLowerCase)).map(l => l.id).take(maxHistory)
     }.take(max)
   }
 
