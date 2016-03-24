@@ -192,7 +192,7 @@ k.snap = k.snap || (function () {
     // TODO: pxTooFarDown (out of viewport)
 
     $aSnapImg = $(k.render('html/keeper/snap_tip', { img: true }))
-    .on('click', function () {
+    .on('mouseup', function () {
       var img = $aSnapImg.data('img');
       $aSnapImg.remove();
       $aSnapImg = null;
@@ -266,7 +266,7 @@ k.snap = k.snap || (function () {
     }
 
     $aSnapSel = $(k.render('html/keeper/snap_tip', { sel: true }))
-    .on('click', function () {
+    .on('mouseup', function () {
       var r = $aSnapSel.data('range');
       removeSnapLink.call($aSnapSel);
       $aSnapSel = null;
@@ -326,10 +326,8 @@ k.snap = k.snap || (function () {
     $aSnapImg = null;
   }
 
-  var mouseDown;
   function onWinMouseDown(e) {
     log('[onWinMouseDown]');
-    mouseDown = true;
     if (($aSnapImg && $aSnapImg[0].contains(e.target)) || ($aSnapSel && $aSnapSel[0].contains(e.target))) {
       e.preventDefault();
     } else {
@@ -339,7 +337,6 @@ k.snap = k.snap || (function () {
 
   function onWinMouseUp(e) {
     log('[onWinMouseUp]');
-    mouseDown = false;
     if (!$(e.target).is('.kifi-root,.kifi-root *')) {
       updateSnapSelLink();
     }
