@@ -380,7 +380,7 @@ k.snap = k.snap || (function () {
 
   // Only allow these inputs
   var inputsExceptAllowed = 'input' + (
-    ['checkbox', 'radio', 'button', 'submit', 'file'].map(function (d) {
+    ['checkbox', 'radio', 'button', 'submit', 'file', 'hidden'].map(function (d) {
       return ':not([type="' + d + '"])';
     }).join('')
   );
