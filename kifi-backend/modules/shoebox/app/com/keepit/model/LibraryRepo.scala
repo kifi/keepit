@@ -16,6 +16,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.typeahead.{ LibraryResultTypeaheadCache, LibraryResultTypeaheadKey }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
@@ -35,7 +36,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySpaceAndKinds(space: LibrarySpace, kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
 
-  // PSA: Please use this function going forward, it's nonsense to have a million single-purpose queries
+  // PSA: Please use this function going forward for uncached queries, it's nonsense to have a million single-purpose queries
   def getLibraryIdsForQuery(query: LibraryQuery, extraInfo: LibraryQuery.ExtraInfo)(implicit session: RSession): Seq[Id[Library]]
   //
   // Profile Library Repo functions
@@ -92,6 +93,8 @@ class LibraryRepoImpl @Inject() (
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
   val topLibsCache: TopFollowedLibrariesCache,
+  relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
+  libraryResultTypeaheadCache: LibraryResultTypeaheadCache,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -174,7 +177,9 @@ class LibraryRepoImpl @Inject() (
   }
 
   override def deleteCache(library: Library)(implicit session: RSession): Unit = {
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(library.ownerId))
     library.id.map { id =>
+      libraryResultTypeaheadCache.remove(LibraryResultTypeaheadKey(library.ownerId, id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
       idCache.remove(LibraryIdKey(id))
     }
@@ -184,7 +189,9 @@ class LibraryRepoImpl @Inject() (
   }
 
   override def invalidateCache(library: Library)(implicit session: RSession): Unit = {
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(library.ownerId))
     library.id.map { id =>
+      libraryResultTypeaheadCache.remove(LibraryResultTypeaheadKey(library.ownerId, id))
       libraryMetadataCache.remove(LibraryMetadataKey(id))
       if (library.state == LibraryStates.INACTIVE) {
         deleteCache(library)

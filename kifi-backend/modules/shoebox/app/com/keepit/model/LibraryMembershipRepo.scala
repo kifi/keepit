@@ -3,6 +3,7 @@ package com.keepit.model
 import java.sql.SQLException
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.{ RelevantSuggestedLibrariesKey, RelevantSuggestedLibrariesCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
@@ -12,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{ timing, StatsdTiming }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
+import com.keepit.typeahead.{ LibraryFilterTypeaheadKey, LibraryFilterTypeaheadCache }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 import scala.concurrent.duration._
@@ -70,8 +72,10 @@ class LibraryMembershipRepoImpl @Inject() (
   val clock: Clock,
   libraryRepo: LibraryRepoImpl,
   libraryMembershipCountCache: LibraryMembershipCountCache,
+  relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
   followersCountCache: FollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
+  libraryFilterTypeaheadCache: LibraryFilterTypeaheadCache,
   countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
@@ -313,15 +317,17 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(libMem.userId))
+    libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+    if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
+    countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
+    // ugly! but the library is in an in memory cache so the cost is low
+    val ownerId = libraryRepo.get(libMem.libraryId).ownerId
+    followersCountCache.remove(FollowersCountKey(ownerId))
+    countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
+
     libMem.id.map { id =>
-      countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       memberIdCache.remove(LibraryMembershipIdKey(id))
-      countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
-      libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
-      if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
-      // ugly! but the library is in an in memory cache so the cost is low
-      val ownerId = libraryRepo.get(libMem.libraryId).ownerId
-      followersCountCache.remove(FollowersCountKey(ownerId))
     }
   }
 
@@ -333,6 +339,8 @@ class LibraryMembershipRepoImpl @Inject() (
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
       }
     }
+    libraryFilterTypeaheadCache.remove(LibraryFilterTypeaheadKey(libMem.userId))
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(libMem.userId))
     countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
     libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
     if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
