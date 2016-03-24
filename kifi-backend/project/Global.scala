@@ -29,10 +29,10 @@ object Global {
   )
 
   val macroParadiseSettings = Seq(
-    scalaVersion := "2.11.7",
+    scalaVersion := "2.11.8",
     scalacOptions ++= _scalacOptions,
     resolvers += Resolver.sonatypeRepo("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
   )
 
   val _commonResolvers = Seq(
@@ -93,7 +93,7 @@ object Global {
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     offline := false, // set to true to do work offline
-    scalaVersion := "2.11.7",
+    scalaVersion := "2.11.8",
     version := Version.appVersion,
     libraryDependencies ++= commonDependencies,
     scalacOptions ++= _scalacOptions,
