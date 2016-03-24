@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
-import org.joda.time.{Duration, DateTime}
+import org.joda.time.{Seconds, Duration, DateTime}
 import com.keepit.common.core.traversableOnceExtensionOps
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -138,17 +138,17 @@ object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipien
 
   override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
 
-  private val addedAtThreshold = Duration.standardSeconds(30)
-  private val keptAtThreshold = Duration.standardMinutes(5)
-  private val recentThreshold = Duration.standardMinutes(30)
+  private val maxAddedAtDifference = Duration.standardSeconds(30)
+  private val recentThreshold = Duration.standardDays(1)
+  private val minKeptAtDifference = Duration.standardMinutes(5)
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
-    val latestAddedAt = existingEvents.map(_.time).max
-    val earliestKeptAt = existingEvents.map(_.keptAt).min
-
-    val keepIsVeryOld = new Duration(newEvent.time, newEvent.keptAt) isLongerThan recentThreshold
-    val keepWasAddedShortlyAfterExistingKeeps = new Duration(newEvent.time, latestAddedAt) isShorterThan addedAtThreshold
-    val keepsWereOriginallyFarApart = new Duration(newEvent.keptAt, earliestKeptAt) isLongerThan keptAtThreshold
-
+    def keepWasAddedShortlyAfterExistingKeeps = existingEvents.map(_.time).exists { otherAddedAt =>
+      Seconds.secondsBetween(otherAddedAt, newEvent.time).toStandardDuration isShorterThan maxAddedAtDifference
+    }
+    def keepIsVeryOld = Seconds.secondsBetween(newEvent.keptAt, newEvent.time).toStandardDuration isLongerThan recentThreshold
+    def keepsWereOriginallyFarApart = existingEvents.map(_.keptAt).forall { otherKeptAt =>
+      Seconds.secondsBetween(otherKeptAt, newEvent.keptAt).toStandardDuration isLongerThan minKeptAtDifference
+    }
     keepWasAddedShortlyAfterExistingKeeps && (keepIsVeryOld || keepsWereOriginallyFarApart)
   }
 }

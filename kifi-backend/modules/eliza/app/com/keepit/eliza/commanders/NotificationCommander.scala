@@ -3,8 +3,10 @@ package com.keepit.eliza.commanders
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.core.{anyExtensionOps, iterableExtensionOps}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.Ord
 import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.eliza.model._
 import com.keepit.model.Keep
@@ -69,9 +71,9 @@ class NotificationCommander @Inject() (
 
   def processNewEvents(events: Seq[NotificationEvent]): Seq[NotificationWithItems] = {
     events.groupBy(e => (e.recipient, e.kind, getGroupIdentifier(e))).flatMap {
-      case ((recip, kind, Some(groupIdentifier)), groupedEvents) => Seq(processGroupedEvents(recip, kind, groupIdentifier, groupedEvents.toSet))
+      case ((recip, kind, Some(groupIdentifier)), groupableEvents) => groupableEvents.sortBy(_.time).map(event => processGroupedEvents(recip, kind, groupIdentifier, Set(event)))
       case (_, ungroupedEvents) => ungroupedEvents.map(processUngroupedEvent)
-    }.toSeq.sortBy(_.notification.lastEvent)
+    }.toSeq.sortBy(_.notification.lastEvent)(Ord.descending).distinctBy(_.notification.id.get)
   }
   private def processUngroupedEvent(event: NotificationEvent): NotificationWithItems = {
     val notifWithItems = db.readWrite { implicit session =>
