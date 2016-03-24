@@ -1,13 +1,12 @@
 package com.keepit.eliza.ws
 
-import com.keepit.eliza.social.FakeSecureSocial
-import play.api.libs.iteratee.{ Concurrent, Enumeratee, Iteratee, Enumerator }
+import com.keepit.eliza.notify.WsTestBehavior
+import play.api.libs.iteratee.{ Concurrent, Iteratee }
 import play.api.mvc.WebSocket
 import play.api.test.FakeRequest
 
-import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Promise, Future }
+import scala.concurrent.{ Await, Promise }
 import scala.concurrent.ExecutionContext.global
 
 case class MockWebSocket[A](implicit ws: WebSocket[A, A]) {
@@ -22,7 +21,7 @@ case class MockWebSocket[A](implicit ws: WebSocket[A, A]) {
   private val (enumOut, channel) = Concurrent.broadcast[A]
 
   {
-    val wsResult = Await.result(ws.f(FakeRequest("GET", "/ws?sid=" + FakeSecureSocial.FAKE_SID)), 10 seconds)
+    val wsResult = Await.result(ws.f(FakeRequest("GET", "/ws?sid=" + WsTestBehavior.FAKE_SID)), 10 seconds)
     val wsFunction = wsResult.right.get
     wsFunction(enumOut, itOut)
   }
