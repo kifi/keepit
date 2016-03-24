@@ -249,41 +249,38 @@ class SlackOnboarderImpl @Inject() (
           sendTo = agent.membership.slackUserId.asChannel
           category = NotificationCategory.NonUser.INTEGRATOR_POSTSYNC
           integrationsLink = LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(sendTo, category)))
-          msg <- Some(SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(
-            if (channels.nonEmpty) {
-              DescriptionElements.unlines(Seq(
-                DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
-                  "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
-                  numMsgsWithLinks.map(numMsgs => DescriptionElements(
-                    "I",
-                    numMsgs match {
-                      case n if n > 1 => s"found $n messages with links, and once they're indexed you can access all of them"
-                      case 1 => "only found one message with a link, though. Once it's indexed you can access it"
-                      case 0 => "couldn't find any messages with links, though. Sorry :(. If we HAD found any, you could find them"
-                    },
-                    "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
-                  )),
-                  "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
-                ),
-                DescriptionElements(
-                  "As soon as your libraries and links are nice and tidy, I'll send a welcome message to your team in #general",
-                  "to let them know about what Kifi's Slack integration can do for them.",
-                  "As a :robot_face: robot, I pledge to take mission control settings pretty seriously. Take a look at your granular team settings",
-                  "here" --> integrationsLink,
-                  "and you can turn off any messages I send to your team (and toggle all of your library integrations)."
-                )
+          msg <- Some(SlackMessageRequest.fromKifi("Okay, I just got back from Slack and here's what's going on", attachments =
+            if (channels.nonEmpty) Seq(
+              SlackAttachment.simple(DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+                "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
+                numMsgsWithLinks.map(numMsgs => DescriptionElements(
+                  "I",
+                  numMsgs match {
+                    case n if n > 1 => s"found $n messages with links, and once they're indexed you can access all of them"
+                    case 1 => "only found one message with a link, though. Once it's indexed you can access it"
+                    case 0 => "couldn't find any messages with links, though. Sorry :(. If we HAD found any, you could find them"
+                  },
+                  "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
+                )),
+                "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+              )),
+              SlackAttachment.simple(DescriptionElements(
+                "As soon as your libraries and links are nice and tidy, I'll send a welcome message to your team in #general",
+                "to let them know about what Kifi's Slack integration can do for them.",
+                "As a :robot_face: robot, I pledge to take mission control settings pretty seriously. Take a look at your granular team settings",
+                "here" --> integrationsLink,
+                "and you can turn off any messages I send to your team (and toggle all of your library integrations)."
               ))
-            } else {
-              DescriptionElements(
-                SlackEmoji.sweatSmile, "I just looked but I didn't find any",
-                agent.team.publicChannelsLastSyncedAt match {
-                  case Some(lastTime) => DescriptionElements("new channels since someone from your team last sync'd", lastTime, ".")
-                  case None => DescriptionElements("public channels.")
-                },
-                "If you think this is an error, please email my human friends at support@kifi.com."
-              )
-            }
-          ))).filter(_ => agent.isWorking)
+            )
+            else Seq(SlackAttachment.simple(DescriptionElements(
+              SlackEmoji.sweatSmile, "I just looked but I didn't find any",
+              agent.team.publicChannelsLastSyncedAt match {
+                case Some(lastTime) => DescriptionElements("new channels since someone from your team last sync'd", lastTime, ".")
+                case None => DescriptionElements("public channels.")
+              },
+              "If you think this is an error, please email my human friends at support@kifi.com."
+            )))
+          )).filter(_ => agent.isWorking)
         } yield {
           agent.dieIf(channels.isEmpty)
           slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, sendTo, msg)
