@@ -135,7 +135,7 @@ case class LibraryElement(
   val url = Some(path.absolute)
 }
 object LibraryElement extends DescriptionElementHelper[LibraryElement]("library") {
-  implicit val writes: Writes[LibraryElement] = Writes { l => Json.obj("id" -> l.id, "text" -> l.text, "image" -> l.color, "url" -> l.url, "kind" -> kind) }
+  implicit val writes: Writes[LibraryElement] = Writes { l => Json.obj("id" -> l.id, "text" -> l.text, "color" -> l.color, "url" -> l.url, "kind" -> kind) }
 }
 
 case class OrganizationElement(
