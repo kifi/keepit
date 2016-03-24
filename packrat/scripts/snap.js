@@ -181,7 +181,8 @@ k.snap = k.snap || (function () {
       styles.position = fixed;
     }
 
-    var availWidth = window.innerWidth - 322;
+    var kifiInTheWay = ((k.pane && k.pane.showing()) || (k.toaster && k.toaster.showing()));
+    var availWidth = window.innerWidth - (kifiInTheWay ? 322 : 0);
     var pxTooFarRight = parRect.left + styles.left + IMG_SNAP_BTN_WIDTH + 5 - availWidth;
     if (pxTooFarRight > 0) {
       if (imgRect.left + IMG_SNAP_BTN_WIDTH + 10 > availWidth) {
@@ -192,19 +193,6 @@ k.snap = k.snap || (function () {
     // TODO: pxTooFarDown (out of viewport)
 
     $aSnapImg = $(k.render('html/keeper/snap_tip', { img: true }))
-    .on('mouseup', function () {
-      var img = $aSnapImg.data('img');
-      $aSnapImg.remove();
-      $aSnapImg = null;
-      if ($aSnapSel) {
-        $aSnapSel.remove();
-        $aSnapSel = null;
-      }
-      var href = 'x-kifi-sel:' + k.snapshot.ofImage(img);
-      var rect = k.snapshot.getImgContentRect(img);
-      var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
-      k.snap.onLookHere.dispatch(img2, rect, href, '', 'image');
-    })
     .css(styles)
     .appendTo(parent)
     .data('img', img)
@@ -215,6 +203,22 @@ k.snap = k.snap || (function () {
         return styles.left - $(this).width() - 5;
       }
     });
+    $aSnapImg.get(0).addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      var img = $aSnapImg.data('img');
+      removeSnapLink($aSnapImg);
+      $aSnapImg = null;
+      if ($aSnapSel) {
+        removeSnapLink($aSnapImg);
+        $aSnapSel = null;
+      }
+      var href = 'x-kifi-sel:' + k.snapshot.ofImage(img);
+      var rect = k.snapshot.getImgContentRect(img);
+      var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
+      k.snap.onLookHere.dispatch(img2, rect, href, '', 'image');
+    }, true)
 
     api.port.emit('track_pane_view', {
       type: 'quotesOnHighlight',
@@ -230,7 +234,7 @@ k.snap = k.snap || (function () {
       if (areSameRange($aSnapSel.data('range'), r)) {
         return;
       }
-      removeSnapLink.call($aSnapSel);
+      removeSnapLink($aSnapSel);
     }
 
     var endEl = elementSelfOrParent(r.endContainer);
@@ -266,12 +270,6 @@ k.snap = k.snap || (function () {
     }
 
     $aSnapSel = $(k.render('html/keeper/snap_tip', { sel: true }))
-    .on('mouseup', function () {
-      var r = $aSnapSel.data('range');
-      removeSnapLink.call($aSnapSel);
-      $aSnapSel = null;
-      createSelLookHereLink(r);
-    })
     .css(styles)
     .appendTo(parent)
     .data({range: r, parentPos: parentPos})
@@ -282,6 +280,15 @@ k.snap = k.snap || (function () {
         return styles.left - ($(this).width() / 2);
       }
     });
+    $aSnapSel.get(0).addEventListener('click', function (e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      var r = $aSnapSel.data('range');
+      removeSnapLink($aSnapSel);
+      $aSnapSel = null;
+      createSelLookHereLink(r);
+    }, true);
 
     api.port.emit('track_pane_view', {
       type: 'quotesOnHighlight',
@@ -306,13 +313,12 @@ k.snap = k.snap || (function () {
 
   function hideSnapLink($a) {
     if ($a) {
-      $a.on('transitionend', removeSnapLink)
-      .removeClass('kifi-snap-show');
+      $a.get(0).addEventListener('transitionend', removeSnapLink.bind(null, $a), true);
+      $a.removeClass('kifi-snap-show');
     }
   }
 
-  function removeSnapLink() {
-    var $a = $(this);
+  function removeSnapLink($a) {
     var parentPos = $a.data('parentPos');
     var $p = parentPos && $a.parent();
     $a.remove();
