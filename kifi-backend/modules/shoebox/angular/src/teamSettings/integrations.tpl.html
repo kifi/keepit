@@ -25,17 +25,17 @@
         <div class="kf-container-header"><h2 id="slack-sync">Sync channels to Kifi</h2></div>
         <span class="kf-ts-integrations-marketing-text">Automatically keep links messaged in your channels. Kifi will create a library for each public (not private or direct message) Slack Channel. <a href="http://support.kifi.com/hc/en-us/articles/206873486-Getting-started-with-the-Kifi-Slack-Integeration" target="_blank">Learn more.</a></span>
         <div class="kf-ts-integrations-marketing-text">
-          To integrate one library or channel at a time, visit <a ui-sref="orgProfile.libraries">any library</a> and click the
-        <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button.</div>
+          To integrate one library or channel at a time, visit <a ui-sref="orgProfile.libraries">any library</a> and click <br>the
+        <span class="kf-lib-slack-btn-sm kf-ts-integrations-slack-btn-img"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button.</div>
 
         <div class="kf-ts-integrations-sync">
           <div class="kf-ts-integrations-sync-public">
-            <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+            <button class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-ts-integrations-sync-public-btn"
               tabindex="0"
-              ng-click="onClickedSyncAllSlackChannels('public')">Sync all Slack Public Channels</button>
+              ng-click="onClickedSyncAllSlackChannels('public')">Sync all Slack Public Channels<svg class="kf-ts-integrations-sync-public-svg symbol-sprite" kf-symbol-sprite icon="org"></svg></button>
           </div>
           <div class="kf-ts-integrations-sync-private">
-            <button class="kf-button kf-button-large kf-action-button kf-button-cta-red" tabindex="0"
+            <button class="kf-button kf-button-large kf-action-button kf-button-cta-red kf-ts-integrations-sync-private-btn" tabindex="0"
               ng-click="onClickedSyncAllSlackChannels('private')">Sync all Slack Private channels<svg class="kf-ts-integrations-sync-private-svg symbol-sprite" kf-symbol-sprite icon="lock"></svg></button>
           </div>
         </div>
@@ -45,20 +45,20 @@
         <div class="kf-container-header"><h2 id="slack-sync">Fetch channels to sync</h2></div>
         <span class="kf-ts-integrations-marketing-text">
           Refetch your Slack channels to automatically create Kifi libraries.
-          You can always connect one channel at a time with the
+          You can always connect one channel at a time with  the
           <span class="kf-lib-slack-btn-sm"><img src="/img/add-to-slack.png" title="Add to Slack"></span> button on your libraries.
         </span>
         <div class="kf-ts-integrations-sync">
           <div class="kf-ts-integrations-sync-public">
             <button
-              class="kf-button kf-button-large kf-action-button kf-button-cta-blue"
+              class="kf-button kf-button-large kf-action-button kf-button-cta-blue kf-ts-integrations-sync-public-btn"
               tabindex="0"
               ng-click="onClickedSyncAllSlackChannels('public')">Sync new Slack Public channels<svg class="kf-ts-integrations-sync-public-svg symbol-sprite" kf-symbol-sprite icon="org"></svg></button>
             <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackTeam.publicChannelsLastSyncedAt" ng-if="slackTeam.publicChannelsLastSyncedAt"></time><span ng-if="!slackTeam.publicChannelsLastSyncedAt">never</span></div>
           </div>
           <div class="kf-ts-integrations-sync-private">
             <button
-              class="kf-button kf-button-large kf-action-button kf-button-cta-red"
+              class="kf-button kf-button-large kf-action-button kf-button-cta-red kf-ts-integrations-sync-private-btn"
               tabindex="0"
               ng-click="onClickedSyncAllSlackChannels('private')">Sync new Slack Private channels<svg class="kf-ts-integrations-sync-private-svg symbol-sprite" kf-symbol-sprite icon="lock"></svg></button>
             <div class="kf-ts-integrations-fetch-date">Last fetched:&nbsp;<time am-time-ago="::slackMembership.privateChannelsLastSyncedAt" ng-if="slackMembership.privateChannelsLastSyncedAt"></time><span ng-if="!slackMembership.privateChannelsLastSyncedAt">never</span></div>
