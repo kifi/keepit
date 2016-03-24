@@ -13,7 +13,7 @@ import com.keepit.slack.models._
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 
 sealed trait SlackResponse
 object SlackResponse {
