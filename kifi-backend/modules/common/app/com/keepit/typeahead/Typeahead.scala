@@ -64,7 +64,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
           log.info(s"[asyncTopN($ownerId,$query)] filter is EMPTY")
           Future.successful(Seq.empty)
         } else {
-          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+          val queryTerms = PrefixFilter.tokenize(query)
           val hitIds = typeahead.filter.filterBy(queryTerms)
           if (hitIds.nonEmpty) {
             typeahead.getInfos(hitIds).map { infos =>
