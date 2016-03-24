@@ -339,7 +339,7 @@ class TypeaheadCommander @Inject() (
     // Users, emails, and libraries
     query.trim match {
       case q if q.isEmpty && dropOpt.exists(_ >= maxSuggestHistory) => Future.successful(Seq.empty)
-      case q if dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
+      case q if q.nonEmpty && dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
         Future.successful(suggestResults(userId, limitOpt, dropOpt))
       case q =>
@@ -382,7 +382,7 @@ class TypeaheadCommander @Inject() (
             case ((id, lib), idx) =>
               (libScore(id), idx + libIdToImportance(id), lib)
           }
-          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).slice(limit, limit + drop)
+          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).slice(drop, ceil)
 
           // For diagnosis, not for public release!
           val summary = combined.map {
