@@ -399,7 +399,8 @@ class KeepDecoratorImpl @Inject() (
     }
 
     val commentEvents = discussion.map(_.messages.map(ActivityEvent.fromComment)).getOrElse(Seq.empty)
-    ActivityLog(events = (commentEvents :+ initialKeepEvent))
+    val events = commentEvents :+ initialKeepEvent
+    ActivityLog(events = events, numEvents = events.size, numComments = commentEvents.size + keep.note.map(_ => 1).getOrElse(0))
   }
 }
 
