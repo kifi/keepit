@@ -16,18 +16,14 @@ class NotificationController @Inject() (
 
   def postEvent = Action(parse.json) { implicit request =>
     val event = request.body.as[NotificationEvent]
-    val notifWithItems = notificationCommander.processNewEvent(event)
-    event.recipient match {
-      case UserRecipient(id) =>
-        messagingAnalytics.sentGlobalNotification(
-          Set(id),
-          notifWithItems.notification.externalId,
-          notifWithItems.relevantItem.externalId,
-          NotificationCategory("new_system")
-        )
-      case _ =>
-    }
-    Ok(Json.toJson(notifWithItems.notification))
+    notificationCommander.processNewEvents(Seq(event))
+    NoContent
+  }
+
+  def postEvents = Action(parse.json) { implicit request =>
+    val events = request.body.as[Seq[NotificationEvent]]
+    notificationCommander.processNewEvents(events)
+    NoContent
   }
 
   def completeNotification = Action(parse.json) { implicit request =>

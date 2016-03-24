@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.eliza.model._
 import com.keepit.model.Keep
 import com.keepit.notify.delivery.WsNotificationDelivery
@@ -51,10 +52,11 @@ class NotificationCommander @Inject() (
       }
     }
   }
-  private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
-    val res = event.kind.shouldGroupWith(event, items.map(_.event).asInstanceOf[Set[event.N]])
-    log.info(s"notif_debug for event $event with items $items, decided to group? $res")
-    res
+  private def shouldGroupWith(events: Set[NotificationEvent], items: Set[NotificationItem]): Boolean = {
+    events.forall { event =>
+      val existingEvents = items.map(_.event).asInstanceOf[Set[event.N]]
+      event.kind.shouldGroupWith(event, existingEvents)
+    }
   }
 
   private def getGroupIdentifier(event: NotificationEvent): Option[String] = {
@@ -63,49 +65,70 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent): NotificationWithItems = {
+  def processNewEvents(events: Seq[NotificationEvent]): Seq[NotificationWithItems] = {
+    events.groupBy(e => (e.recipient, e.kind, getGroupIdentifier(e))).flatMap {
+      case ((recip, kind, Some(groupIdentifier)), groupedEvents) => Seq(processGroupedEvents(recip, kind, groupIdentifier, groupedEvents.toSet))
+      case (_, ungroupedEvents) => ungroupedEvents.map(processUngroupedEvent)
+    }.toSeq.sortBy(_.notification.lastEvent)
+  }
+  private def processUngroupedEvent(event: NotificationEvent): NotificationWithItems = {
     val notifWithItems = db.readWrite { implicit session =>
-      val groupIdentifier = getGroupIdentifier(event)
-      val existingNotifToGroupWith = groupIdentifier.map { identifier =>
-        notificationRepo.getMostRecentByGroupIdentifier(event.recipient, event.kind, identifier)
-      }.getOrElse {
-        notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
-      }.filter { existingNotif =>
-        val notifItems = notificationItemRepo.getAllForNotification(existingNotif.id.get)
-
-        // God help me for this travesty
-        notifItems.map(_.event) match {
-          case Seq(oldEvent: LibraryNewKeep) => session.onTransactionSuccess {
-            wsNotificationDelivery.delete(oldEvent.recipient, Keep.publicId(oldEvent.keepId).id)
-          }
-          case _ =>
-        }
-
-        shouldGroupWith(event, notifItems.toSet)
-      }
-
-      val notif = existingNotifToGroupWith.getOrElse(notificationRepo.save(Notification(
+      val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
         kind = event.kind,
-        groupIdentifier = groupIdentifier,
+        groupIdentifier = None,
         lastEvent = event.time
-      )))
+      ))
 
-      notificationItemRepo.save(NotificationItem(
+      val item = notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
         event = event,
         eventTime = event.time
       ))
 
+      NotificationWithItems(notif, Set(item))
+    }
+    wsNotificationDelivery.deliver(event.recipient, notifWithItems)
+    notifWithItems
+  }
+  private def processGroupedEvents(recipient: Recipient, kind: NKind, identifier: String, events: Set[NotificationEvent]): NotificationWithItems = {
+    val latestEventTime = events.map(_.time).max
+    val notifWithItems = db.readWrite { implicit session =>
+      val notif = notificationRepo.getMostRecentByGroupIdentifier(recipient, kind, identifier).filter { existingNotif =>
+        val existingItems = notificationItemRepo.getAllForNotification(existingNotif.id.get)
+
+        // God help me for this travesty
+        existingItems.map(_.event) match {
+          case Seq(oldEvent: LibraryNewKeep) => session.onTransactionSuccess {
+            wsNotificationDelivery.delete(recipient, Keep.publicId(oldEvent.keepId).id)
+          }
+          case _ =>
+        }
+        shouldGroupWith(events, existingItems.toSet)
+      }.getOrElse(notificationRepo.save(Notification(
+        recipient = recipient,
+        kind = kind,
+        groupIdentifier = Some(identifier),
+        lastEvent = latestEventTime
+      )))
+
+      events.foreach { event =>
+        notificationItemRepo.save(NotificationItem(
+          notificationId = notif.id.get,
+          kind = event.kind,
+          event = event,
+          eventTime = event.time
+        ))
+      }
+
+      val allItems = notificationItemRepo.getAllForNotification(notif.id.get).toSet
       NotificationWithItems(
-        notification = notificationRepo.save(notif.copy(lastEvent = event.time)),
-        items = notificationItemRepo.getAllForNotification(notif.id.get).toSet
+        notification = notificationRepo.save(notif.copy(lastEvent = allItems.map(_.eventTime).max)),
+        items = allItems
       )
     }
-
-    wsNotificationDelivery.deliver(event.recipient, notifWithItems)
-
+    wsNotificationDelivery.deliver(recipient, notifWithItems)
     notifWithItems
   }
 
