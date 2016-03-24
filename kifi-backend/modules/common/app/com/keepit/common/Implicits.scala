@@ -40,8 +40,8 @@ final class TryExtensionOps[A](val x: scala.util.Try[A]) extends AnyVal {
     case scala.util.Success(t) => f(t)
     case scala.util.Failure(t) => g(t)
   }
-  def safeOption(implicit airbrake: AirbrakeNotifier): Option[A] = x match {
-    case scala.util.Success(t) => Some(t)
+  def airbrakingOption(implicit airbrake: AirbrakeNotifier): Option[A] = x match {
+    case scala.util.Success(t) => Option(t)
     case scala.util.Failure(f) =>
       airbrake.notify(f)
       None

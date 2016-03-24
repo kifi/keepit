@@ -68,8 +68,8 @@ class LibraryQueryCommanderImpl @Inject() (
       for {
         userId <- requester
         preferredArrangementStr <- userValueRepo.getUserValue(userId, UserValueName.DEFAULT_LIBRARY_ARRANGEMENT).map(_.value)
-        preferredArrangementJson <- Try(Json.parse(preferredArrangementStr)).safeOption
-        preferredArrangement <- Try(preferredArrangementJson.as[LibraryQuery.Arrangement]).safeOption
+        preferredArrangementJson <- Try(Json.parse(preferredArrangementStr)).airbrakingOption
+        preferredArrangement <- Try(preferredArrangementJson.as[LibraryQuery.Arrangement]).airbrakingOption
       } yield preferredArrangement
     }
     val customizedQuery = preferredArrangement.fold(query)(query.withArrangement)

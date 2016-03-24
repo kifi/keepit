@@ -32,7 +32,7 @@ class HashtagTypeahead @Inject() (
     collectionRepo: CollectionRepo,
     db: Database) extends Typeahead[User, Hashtag, (Hashtag, Int), UserHashtagTypeahead] {
 
-  protected val refreshRequestConsolidationWindow = 0 seconds
+  protected val refreshRequestConsolidationWindow = 5 seconds
 
   protected val fetchRequestConsolidationWindow = 15 seconds
 

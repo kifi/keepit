@@ -1052,8 +1052,8 @@ class AdminUserController @Inject() (
     }
   }
 
-  def suggestRecipient(userId: Id[User], query: Option[String], limit: Option[Int]) = AdminUserAction.async { request =>
-    typeAheadCommander.searchForKeepRecipients(userId, query.getOrElse(""), limit).map { suggestions =>
+  def suggestRecipient(userId: Id[User], query: Option[String], limit: Option[Int], drop: Option[Int]) = AdminUserAction.async { request =>
+    typeAheadCommander.searchForKeepRecipients(userId, query.getOrElse(""), limit, drop).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)

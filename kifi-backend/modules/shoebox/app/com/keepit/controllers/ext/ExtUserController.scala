@@ -72,8 +72,8 @@ class ExtUserController @Inject() (
     }
   }
 
-  def suggestRecipient(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
-    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit).map { suggestions =>
+  def suggestRecipient(query: Option[String], limit: Option[Int], drop: Option[Int]) = UserAction.async { request =>
+    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, drop).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)
