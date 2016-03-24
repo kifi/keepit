@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.oauth.FakeOAuthConfigurationModule
+import com.keepit.common.path.Path
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.AuthController
@@ -185,7 +186,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val newUserIdOpt = session(result).getUserId()
 
         status(result) === OK
-        contentAsJson(result) === Json.obj("uri" -> org.handle.value)
+        contentAsJson(result) === Json.obj("uri" -> Path(org.handle.value).relativeWithLeadingSlash)
         newUserIdOpt.isDefined === true
         db.readOnlyMaster { implicit session =>
           inject[OrganizationInviteRepo].getByEmailAddress(inviteeEmail).head.decision === InvitationDecision.ACCEPTED
