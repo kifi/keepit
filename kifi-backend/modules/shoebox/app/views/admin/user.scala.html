@@ -8,7 +8,7 @@
   potentialOrganizations: Seq[Organization],
   ignoreForPotentialOrganizations: Boolean,
   recommendedOrganizations: Seq[(Organization, Double)],
-  slackTeamMemberships: Seq[com.keepit.slack.models.SlackTeamMembership]
+  slackTeamMemberships: Seq[(com.keepit.slack.models.SlackTeam, com.keepit.slack.models.SlackTeamMembership)]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {

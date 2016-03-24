@@ -15,7 +15,7 @@ class NotificationKindTest extends Specification {
 
     "serialize and deserialize to json with event properly" in {
 
-      val event = DepressedRobotGrumble(Recipient(Id[User](1)), currentDateTime, "marvin", "life, the universe, and everything")
+      val event = DepressedRobotGrumble(Recipient.fromUser(Id(1)), currentDateTime, "marvin", "life, the universe, and everything")
 
       val str = Json.stringify(Json.toJson(event))
 
@@ -27,7 +27,7 @@ class NotificationKindTest extends Specification {
 
     "fail when deserializing the wrong kind" in {
 
-      val event = DepressedRobotGrumble(Recipient(Id[User](1)), currentDateTime, "marvin", "life, the universe, and everything")
+      val event = DepressedRobotGrumble(Recipient.fromUser(Id(1)), currentDateTime, "marvin", "life, the universe, and everything")
 
       val str = Json.stringify(Json.toJson(event))
 

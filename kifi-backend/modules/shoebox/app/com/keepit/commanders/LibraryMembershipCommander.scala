@@ -155,16 +155,19 @@ class LibraryMembershipCommanderImpl @Inject() (
       }
       val (updatedLib, updatedMem, invitesToAlert) = db.readWrite(attempts = 3) { implicit s =>
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-          case None =>
+          case Some(membership) if membership.isActive =>
+            val maxWithExisting = Seq(maxAccess, membership.access).max
+            val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || membership.subscribedToUpdates)
+            val updated = membership.copy(access = maxWithExisting, subscribedToUpdates = subscribedToUpdates)
+            if (updated == membership) membership else {
+              log.info(s"[joinLibrary] Modifying membership for ${membership.userId} / $userId. Old access: ${membership.access}), new: $maxWithExisting. $maxAccess, $inviteList")
+              libraryMembershipRepo.save(updated)
+            }
+          case inactiveMembershipOpt =>
             val subscribedToUpdates = subscribed.getOrElse(maxAccess == LibraryAccess.READ_WRITE)
             log.info(s"[joinLibrary] New membership for $userId. New access: $maxAccess. $inviteList")
-            val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
-            mem
-          case Some(mem) =>
-            val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
-            val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || mem.subscribedToUpdates)
-            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / $userId. Old access: ${mem.access} (${mem.state}), new: $maxWithExisting. $maxAccess, $inviteList")
-            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
+            val newMembership = LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, subscribedToUpdates = subscribedToUpdates)
+            libraryMembershipRepo.save(newMembership.copy(id = inactiveMembershipOpt.flatMap(_.id)))
         }
 
         inviteList.foreach { inv =>
@@ -323,14 +326,14 @@ class LibraryMembershipCommanderImpl @Inject() (
       access match {
         case LibraryAccess.READ_WRITE =>
           elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
-            Recipient(lib.ownerId),
+            Recipient.fromUser(lib.ownerId),
             currentDateTime,
             newFollowerId,
             lib.id.get
           ))
         case LibraryAccess.READ_ONLY =>
           elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
-            Recipient(lib.ownerId),
+            Recipient.fromUser(lib.ownerId),
             currentDateTime,
             newFollowerId,
             lib.id.get

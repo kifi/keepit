@@ -83,7 +83,7 @@ class LibraryNewKeepsCommander @Inject() (
           category = LibraryPushNotificationCategory.LibraryChanged
         )
         elizaClient.sendNotificationEvent(LibraryNewKeep(
-          Recipient(userId),
+          Recipient.fromUser(userId),
           currentDateTime,
           keeperOpt.flatMap(_.id),
           keep.id.get,

@@ -54,7 +54,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
         val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
-          Recipient(Id[User](1)),
+          Recipient.fromUser(Id(1)),
           currentDateTime,
           robotName = "Marvin",
           grumblingAbout = "Life, the universe, and everything"
@@ -82,7 +82,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
         val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
-          Recipient(Id[User](1)),
+          Recipient.fromUser(Id(1)),
           currentDateTime,
           robotName = "Marvin",
           grumblingAbout = "Life, the universe, and everything"
@@ -113,7 +113,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
         val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
-          Recipient(Id[User](1)),
+          Recipient.fromUser(Id(1)),
           currentDateTime,
           robotName = "Marvin",
           grumblingAbout = "Life, the universe, and everything"

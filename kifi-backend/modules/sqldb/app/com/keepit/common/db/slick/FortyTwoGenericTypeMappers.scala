@@ -116,11 +116,9 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val dollarAmountMapper = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.cents)
 
   implicit val recipientMapper = MappedColumnType.base[Recipient, String](
-    {recip =>
-      val result = Recipient.unapply(recip).get
-    result}, {str =>
-  val result = Recipient.apply(str)
-  result})
+    recip => Recipient.serialize(recip),
+    str => Recipient(str)
+  )
 
   implicit val notificationEventMapper = MappedColumnType.base[NotificationEvent, String]({ event =>
     Json.stringify(Json.toJson(event))

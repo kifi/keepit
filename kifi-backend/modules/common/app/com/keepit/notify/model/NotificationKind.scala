@@ -1,11 +1,8 @@
 package com.keepit.notify.model
 
 import com.keepit.common.reflection.CompanionTypeSystem
-import com.keepit.notify.info._
 import com.keepit.notify.model.event._
 import play.api.libs.json._
-
-import scala.annotation.implicitNotFound
 
 trait NotificationKind[N <: NotificationEvent] {
 

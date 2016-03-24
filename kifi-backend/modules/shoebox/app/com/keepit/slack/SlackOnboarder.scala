@@ -216,7 +216,7 @@ class SlackOnboarderImpl @Inject() (
         slackClient.sendToSlackHoweverPossible(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, msg).andThen(logFTUI(agent, msg)).map { _ =>
           val contextBuilder = heimdalContextBuilder()
           contextBuilder += ("numChannelMembers", 1)
-          contextBuilder += ("slackTeamName", agent.membership.slackTeamName.value)
+          contextBuilder += ("slackTeamName", agent.team.slackTeamName.value)
           slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, agent.membership.slackUserId.asChannel, agent.membership.slackUsername.asChannelName, NotificationCategory.NonUser.INTEGRATOR_PRESYNC)
           ()
         }
@@ -239,7 +239,7 @@ class SlackOnboarderImpl @Inject() (
           case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
           case results =>
             slackLog.error(
-              "Failed to predict the number of ingestable links for", agent.membership.slackTeamName.value,
+              "Failed to predict the number of ingestable links for", agent.team.slackTeamName.value,
               results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
             )
             None
@@ -291,7 +291,7 @@ class SlackOnboarderImpl @Inject() (
             .map { _ =>
               val contextBuilder = heimdalContextBuilder()
               contextBuilder += ("numChannelMembers", 1)
-              contextBuilder += ("slackTeamName", agent.membership.slackTeamName.value)
+              contextBuilder += ("slackTeamName", agent.team.slackTeamName.value)
               slackAnalytics.trackNotificationSent(agent.membership.slackTeamId, sendTo, agent.membership.slackUsername.asChannelName, category, contextBuilder.build)
               ()
             }
@@ -335,7 +335,7 @@ class SlackOnboarderImpl @Inject() (
           case results if results.forall(_.isSuccess) => Some(msgsByChannel.collect { case (_, Success(numMsgs)) => numMsgs }.sum)
           case results =>
             slackLog.error(
-              "Failed to predict the number of ingestable links for", agent.membership.slackTeamName.value,
+              "Failed to predict the number of ingestable links for", agent.team.slackTeamName.value,
               results.collect { case Failure(fail) => fail.getMessage }.mkString("[", ",", "]")
             )
             None

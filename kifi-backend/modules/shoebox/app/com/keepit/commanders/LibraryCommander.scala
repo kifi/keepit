@@ -186,23 +186,23 @@ class LibraryCommanderImpl @Inject() (
     val newOrgMemberAccessOpt = orgIdOpt.map(_ => libCreateReq.orgMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) // Paid feature?
 
     libraryAliasRepo.reclaim(targetSpace, newSlug) // there's gonna be a real library there, dump the alias
-    libraryRepo.getBySpaceAndSlug(targetSpace, newSlug, excludeState = None) match {
-      case None =>
-        val lib = libraryRepo.save(Library(ownerId = ownerId, name = libCreateReq.name, description = libCreateReq.description,
-          visibility = libCreateReq.visibility, slug = newSlug, color = newColor, kind = newKind,
-          memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
-        lib
-      case Some(lib) =>
-        val newLib = libraryRepo.save(Library(id = lib.id, ownerId = ownerId,
-          name = libCreateReq.name, description = libCreateReq.description, visibility = libCreateReq.visibility, slug = newSlug, color = newColor, kind = newKind,
-          memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
-          case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
-          case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
-        }
-        newLib
+    val newLib = {
+      val existingLibOpt = libraryRepo.getBySpaceAndSlug(targetSpace, newSlug, excludeState = None)
+      val newLibrary = Library(
+        ownerId = ownerId, name = libCreateReq.name, description = libCreateReq.description,
+        visibility = libCreateReq.visibility, slug = newSlug, color = newColor, kind = newKind,
+        memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt
+      )
+      libraryRepo.save(newLibrary.copy(id = existingLibOpt.flatMap(_.id)))
     }
+
+    val ownerMembership = {
+      val libraryId = newLib.id.get
+      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = libraryId, userId = ownerId, None)
+      val newMembership = LibraryMembership(libraryId = libraryId, userId = ownerId, access = LibraryAccess.OWNER, subscribedToUpdates = true, listed = newListed)
+      libraryMembershipRepo.save(newMembership.copy(id = existingMembershipOpt.flatMap(_.id)))
+    }
+    newLib
   }
 
   def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifications): Option[LibraryFail] = {
@@ -476,9 +476,16 @@ class LibraryCommanderImpl @Inject() (
     libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, lib.ownerId).foreach { oldOwnerMembership =>
       libraryMembershipRepo.save(oldOwnerMembership.withAccess(LibraryAccess.READ_WRITE))
     }
-    val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, newOwner, excludeState = None)
-    val newMembershipTemplate = LibraryMembership(libraryId = libraryId, userId = newOwner, access = LibraryAccess.OWNER)
-    libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.map(_.id.get)))
+
+    val ownerMembership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = libraryId, userId = newOwner, None) match {
+      case Some(membership) if membership.isActive =>
+        val updatedMembership = membership.copy(access = LibraryAccess.OWNER, subscribedToUpdates = true)
+        if (updatedMembership == membership) membership else libraryMembershipRepo.save(updatedMembership)
+      case inactiveMembershipOpt =>
+        val newMembership = LibraryMembership(libraryId = libraryId, userId = newOwner, access = LibraryAccess.OWNER, subscribedToUpdates = true)
+        libraryMembershipRepo.save(newMembership.copy(id = inactiveMembershipOpt.flatMap(_.id)))
+    }
+
     libraryRepo.save(lib.withOwner(newOwner))
   }
 

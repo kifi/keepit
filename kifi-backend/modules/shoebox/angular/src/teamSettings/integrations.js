@@ -22,13 +22,11 @@ angular.module('kifi')
     var notifSetting = settings.slack_digest_notif && settings.slack_digest_notif.setting;
     var mirroringSetting = settings.slack_comment_mirroring && settings.slack_comment_mirroring.setting;
     var personalDigestSetting = ($scope.slackMembership && $scope.slackMembership.personalDigestSetting !== 'defer') ?
-      $scope.slackMembership.personalDigestSetting : settings.slack_personal_digest_default;
+      $scope.slackMembership.personalDigestSetting : settings.slack_personal_digest_default.setting;
     $scope.slackIntegrationReactionModel = {enabled: reactionSetting === 'enabled'};
     $scope.slackIntegrationDigestModel = {enabled: notifSetting === 'enabled'};
     $scope.slackCommentMirroringModel = {enabled: mirroringSetting === 'enabled'};
-    $scope.slackPersonalDigestModel = {enabled: personalDigestSetting === 'on' };
-
-    $scope.canPrivateSync = me.experiments.indexOf('private_sync') !== -1;
+    $scope.slackPersonalDigestModel = {enabled: personalDigestSetting === 'on' || personalDigestSetting === 'enabled' };
 
     orgProfileService.getSlackIntegrationsForOrg($scope.profile)
     .then(function(res) {

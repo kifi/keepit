@@ -27,7 +27,6 @@ case class LibraryMembership(
     listed: Boolean = true, // whether library appears on user's profile
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None,
-    lastJoinedAt: Option[DateTime] = None,
     subscribedToUpdates: Boolean = false,
     priority: Long = 0) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
@@ -64,7 +63,6 @@ object LibraryMembership {
     (__ \ 'listed).format[Boolean] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
-    (__ \ 'lastJoinedAt).formatNullable[DateTime] and
     (__ \ 'subscribedToUpdates).format[Boolean] and
     (__ \ 'priority).format[Long]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
@@ -159,15 +157,6 @@ case class CountWithLibraryIdByAccessKey(id: Id[Library]) extends Key[CountWithL
 
 class CountWithLibraryIdByAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CountWithLibraryIdByAccessKey, CountWithLibraryIdByAccess](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
-  override val version = 2
-  val namespace = "library_membership_by_id"
-  def toKey(): String = id.id.toString
-}
-
-class LibraryMembershipIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LibraryMembershipIdKey, LibraryMembership](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LibraryMembershipCountKey(userId: Id[User], access: LibraryAccess) extends Key[Int] {
   override val version = 1

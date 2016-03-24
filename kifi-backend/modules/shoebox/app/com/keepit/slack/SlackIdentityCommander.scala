@@ -84,15 +84,14 @@ class SlackIdentityCommanderImpl @Inject() (
       slackUserId = identity.userId,
       slackUsername = identity.username,
       slackTeamId = identity.teamId,
-      slackTeamName = identity.teamName,
       tokenWithScopes = identity.tokenWithScopes,
       slackUser = identity.user
     ))
-    autojoinOrganization(membership)
+    addToOrganization(membership)
     userIdOpt.foreach { userId =>
       if (isNewIdentityOwner) {
         session.onTransactionSuccess {
-          slackChannelCommander.syncChannelMemberships(identity.teamId, Some(identity.userId))
+          slackChannelCommander.syncChannelMemberships(identity.teamId, identity.userId)
           keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.teamId, identity.userId), userId)
         }
       }
@@ -100,7 +99,7 @@ class SlackIdentityCommanderImpl @Inject() (
     isNewIdentityOwner
   }
 
-  private def autojoinOrganization(membership: SlackTeamMembership)(implicit session: RWSession): Unit = {
+  private def addToOrganization(membership: SlackTeamMembership)(implicit session: RWSession): Unit = {
     membership.userId.foreach { userId =>
       slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
         team.organizationId.foreach { orgId =>

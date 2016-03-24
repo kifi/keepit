@@ -89,16 +89,18 @@ class SlackPersonalDigestNotificationActor @Inject() (
         val message = if (membership.lastPersonalDigestAt.isEmpty && membership.userId.isEmpty) digestGenerator.messageForFirstTimeDigest(digest) else digestGenerator.messageForRegularDigest(digest)
         slackClient.sendToSlackHoweverPossible(membership.slackTeamId, membership.slackUserId.asChannel, message).map(_ => ()).andThen {
           case Success(_) =>
-            db.readWrite { implicit s =>
+            val teamOpt = db.readWrite { implicit s =>
               slackMembershipRepo.updateLastPersonalDigest(membershipId)
-              slackTeamRepo.getBySlackTeamId(membership.slackTeamId).foreach { team =>
+              slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
+              slackTeamRepo.getBySlackTeamId(membership.slackTeamId).map { team =>
                 slackTeamRepo.save(team.withNoPersonalDigestsUntil(now plus minDelayInsideTeam))
               }
-              slackMembershipRepo.finishProcessing(membershipId, delayAfterSuccessfulDigest)
             }
             val contextBuilder = heimdalContextBuilder()
             contextBuilder += ("numChannelMembers", 1)
-            contextBuilder += ("slackTeamName", membership.slackTeamName.value)
+            teamOpt.foreach { team =>
+              contextBuilder += ("slackTeamName", team.slackTeamName.value)
+            }
             slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
             slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
           case Failure(fail) =>

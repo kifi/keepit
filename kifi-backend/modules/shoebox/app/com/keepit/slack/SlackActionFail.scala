@@ -31,8 +31,8 @@ object SlackActionFail {
   case class InvalidMembership(userId: Id[User], slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, membership: Option[SlackTeamMembership])
     extends SlackActionFail("invalid_slack_membership", s"User $userId is not a valid member of SlackTeam ${slackTeamName.value} (${slackTeamId.value}): $membership")
 
-  case class MembershipAlreadyConnected(userId: Id[User], ownerId: Id[User], slackTeamId: SlackTeamId, slackTeamName: SlackTeamName, slackUserId: SlackUserId, membership: SlackTeamMembership)
-    extends SlackActionFail("membership_already_connected", s"$userId is trying to steal existing membership from $ownerId on SlackTeam ${slackTeamName.value} (${slackTeamId.value}): $membership")
+  case class MembershipAlreadyConnected(userId: Id[User], ownerId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, membership: SlackTeamMembership)
+    extends SlackActionFail("membership_already_connected", s"$userId is trying to steal existing membership from $ownerId on SlackTeam ${slackTeamId.value}: $membership")
 
   case class MissingWebhook(userId: Id[User])
     extends SlackActionFail("missing_webhook", s"User $userId tried to integrate with a library, but we did not get a webhook from Slack")

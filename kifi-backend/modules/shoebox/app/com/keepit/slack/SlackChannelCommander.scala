@@ -32,7 +32,8 @@ object SlackChannelCommander {
 trait SlackChannelCommander {
   def syncPublicChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackPublicChannelInfo], Future[SlackPublicChannelLibraries])]
   def syncPrivateChannels(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(Id[Organization], Set[SlackPrivateChannelInfo], Future[SlackPrivateChannelLibraries])]
-  def syncChannelMemberships(slackTeamId: SlackTeamId, slackUserIdOpt: Option[SlackUserId]): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]]
+  def syncChannelMemberships(slackTeamId: SlackTeamId, slackUserId: SlackUserId): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]]
+  def syncAllChannelMemberships(slackTeamId: SlackTeamId): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]]
 }
 
 @Singleton
@@ -367,7 +368,15 @@ class SlackChannelCommanderImpl @Inject() (
     }
   }
 
-  def syncChannelMemberships(slackTeamId: SlackTeamId, slackUserIdOpt: Option[SlackUserId]): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]] = {
+  def syncChannelMemberships(slackTeamId: SlackTeamId, slackUserId: SlackUserId): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]] = {
+    syncChannelMemberships(slackTeamId, Some(slackUserId))
+  }
+
+  def syncAllChannelMemberships(slackTeamId: SlackTeamId): Future[Map[(SlackUserId, SlackChannelId), LibraryMembership]] = {
+    syncChannelMemberships(slackTeamId, None)
+  }
+
+  private def syncChannelMemberships(slackTeamId: SlackTeamId, slackUserIdOpt: Option[SlackUserId]) = {
     val futurePublicChannels = slackClient.getPublicChannels(slackTeamId, excludeArchived = false) recover { case _ => Seq.empty }
     val futurePrivateChannels = {
       val slackTokens = db.readOnlyMaster { implicit session =>
@@ -393,4 +402,5 @@ class SlackChannelCommanderImpl @Inject() (
       }
     }
   }
+
 }

@@ -404,7 +404,7 @@ class UserCommanderImpl @Inject() (
             }
             toNotify.foreach { userId =>
               elizaServiceClient.sendNotificationEvent(SocialContactJoined(
-                Recipient(userId),
+                Recipient.fromUser(userId),
                 currentDateTime,
                 newUserId
               ))

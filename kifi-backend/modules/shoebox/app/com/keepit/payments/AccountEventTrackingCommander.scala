@@ -96,7 +96,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
           val sent = members.toSeq.map { member =>
             eliza.sendNotificationEvent(
               RewardCreditApplied(
-                recipient = Recipient(member),
+                recipient = Recipient.fromUser(member),
                 time = currentDateTime,
                 description = DescriptionElements.formatPlain(description),
                 org.id.get)).map(_ => member)

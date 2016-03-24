@@ -121,6 +121,7 @@ class AdminUserController @Inject() (
     userStatisticsCommander: UserStatisticsCommander,
     typeAheadCommander: TypeaheadCommander,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
+    slackTeamRepo: SlackTeamRepo,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 
   def merge = AdminUserPage { implicit request =>
@@ -265,7 +266,9 @@ class AdminUserController @Inject() (
     val fullUserStatisticsF = userStatisticsCommander.fullUserStatistics(userId)
 
     val slackInfoF = db.readOnlyReplicaAsync { implicit s =>
-      slackTeamMembershipRepo.getByUserId(userId)
+      val memberships = slackTeamMembershipRepo.getByUserId(userId)
+      val teamsById = slackTeamRepo.getBySlackTeamIds(memberships.map(_.slackTeamId).toSet)
+      memberships.map(membership => (teamsById(membership.slackTeamId), membership))
     }
     val usersOnlineF = eliza.areUsersOnline(Seq(userId))
 
@@ -1013,10 +1016,10 @@ class AdminUserController @Inject() (
     val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
     FutureHelpers.exists(memberships) { membership =>
       val presence = slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId)
-      presence.foreach(prez => log.info(s"found presence info $prez for membership ${membership.id.get} or slack user ${membership.slackUsername} team ${membership.slackTeamName} "))
+      presence.foreach(prez => log.info(s"found presence info $prez for membership ${membership.id.get} or slack user ${membership.slackUsername} team ${membership.slackUserId} "))
       presence.map(_.state == SlackUserPresenceState.Active).recover {
         case error: Throwable =>
-          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
+          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackUserId} with scopes ${membership.scopes}", error)
           false
       }
     } map { active => Ok(JsBoolean(active)) }
@@ -1024,11 +1027,15 @@ class AdminUserController @Inject() (
 
   //will kill slackUserOnline for this one after it works fine
   def slackUserPresence(id: Id[User]) = AdminUserPage.async { implicit request =>
-    val memberships = db.readOnlyReplica { implicit s => slackTeamMembershipRepo.getByUserId(id) }
+    val (memberships, slackTeamById) = db.readOnlyReplica { implicit s =>
+      val memberships = slackTeamMembershipRepo.getByUserId(id)
+      val slackTeamById = slackTeamRepo.getBySlackTeamIds(memberships.map(_.slackTeamId).toSet)
+      (memberships, slackTeamById)
+    }
     val presencesF = memberships.map { membership =>
       slackClient.checkUserPresence(membership.slackTeamId, membership.slackUserId).recover {
         case error: Throwable =>
-          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackTeamName} with scopes ${membership.scopes}", error)
+          log.error(s"error fetching presence using ${membership.id.get} for slack user ${membership.slackUsername} team ${membership.slackUserId} with scopes ${membership.scopes}", error)
           SlackUserPresence(SlackUserPresenceState.ERROR, None, JsNull)
       } map { p =>
         membership -> p
@@ -1040,7 +1047,7 @@ class AdminUserController @Inject() (
           JsObject.apply(Seq(
             "user" -> JsString(membership.slackUsername.value),
             "slackUserId" -> JsString(membership.slackUserId.value),
-            "team" -> JsString(membership.slackTeamName.value),
+            "team" -> JsString(slackTeamById(membership.slackTeamId).slackTeamName.value),
             "state" -> JsString(presence.state.name),
             "origJson" -> presence.originalJson,
             "since" -> (presence.lastActivity.map { date =>

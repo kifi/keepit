@@ -11,7 +11,7 @@ object LibraryMembershipFactory {
   def membership(): PartialLibraryMembership = {
     new PartialLibraryMembership(LibraryMembership(id = Some(Id[LibraryMembership](idx.incrementAndGet())),
       libraryId = Id[Library](idx.incrementAndGet()), userId = Id[User](idx.incrementAndGet()),
-      access = LibraryAccess.OWNER, lastJoinedAt = Some(currentDateTime)))
+      access = LibraryAccess.OWNER))
   }
 
   def memberships(count: Int): Seq[PartialLibraryMembership] = List.fill(count)(membership())
