@@ -48,7 +48,7 @@ class SlackKeepAttributionActor @Inject() (
       memberships.foreach { membership =>
         membership.userId.foreach { userId =>
           val reattributedKeeps = keepSourceCommander.reattributeKeeps(Author.SlackUser(membership.slackTeamId, membership.slackUserId), userId)
-          if (reattributedKeeps.nonEmpty) slackLog.info(s"Reattributed ${reattributedKeeps.size} keeps from ${membership.slackUsername} in ${membership.slackTeamName} to user $userId")
+          if (reattributedKeeps.nonEmpty) slackLog.info(s"Reattributed ${reattributedKeeps.size} keeps from ${membership.slackUsername} in ${membership.slackTeamId} to user $userId")
         }
       }
       val maxSeq = memberships.map(_.seq).max

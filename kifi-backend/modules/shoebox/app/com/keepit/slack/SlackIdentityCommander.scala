@@ -84,7 +84,6 @@ class SlackIdentityCommanderImpl @Inject() (
       slackUserId = identity.userId,
       slackUsername = identity.username,
       slackTeamId = identity.teamId,
-      slackTeamName = identity.teamName,
       tokenWithScopes = identity.tokenWithScopes,
       slackUser = identity.user
     ))
