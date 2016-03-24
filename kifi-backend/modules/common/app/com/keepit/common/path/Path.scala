@@ -48,6 +48,7 @@ object Path {
 
   private def splitQuery(str: String): (String, Query) = str.split('?').toList match {
     case relative :: params => (relative, params.map(Query.parse).foldLeft(Query.empty)(_ ++ _))
+    case _ => ("", Query.empty)
   }
 
   def apply(value: String): Path = {
