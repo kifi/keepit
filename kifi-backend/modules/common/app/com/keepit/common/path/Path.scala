@@ -13,9 +13,9 @@ sealed class Path(private val value: String, private val query: Query) {
 
   def isEncoded: Boolean = false
 
-  def absolute: String = Path.base + relative.stripPrefix("/") + query.toUrlString
+  def absolute: String = Path.base + relativeWithLeadingSlash + query.toUrlString
 
-  def relative: String = value
+  def relativeWithLeadingSlash: String = "/" + value.stripPrefix("/")
   def queryString: String = query.toUrlString
 
   override def toString: String = value
@@ -44,7 +44,7 @@ class EncodedPath(private val value: String, private val query: Query) extends P
 
 object Path {
 
-  def base: String = "https://www.kifi.com/"
+  def base: String = "https://www.kifi.com"
 
   private def splitQuery(str: String): (String, Query) = str.split('?').toList match {
     case relative :: params => (relative, params.map(Query.parse).foldLeft(Query.empty)(_ ++ _))

@@ -139,7 +139,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           }
           val deepLink = Json.obj("t" -> "m", "id" -> Keep.publicId(keep.id.get), "uri" -> uri.externalId, "at" -> "randomAccessToken")
           val redirect = deepLinkRouter.generateDiscussionViewRedirect(deepLink, redirectToKeepPage = true)
-          redirect === Some(DeepLinkRedirect(keep.path.relative + "?authToken=randomAccessToken", None))
+          redirect === Some(DeepLinkRedirect(keep.path.relativeWithLeadingSlash + "?authToken=randomAccessToken", None))
         }
       }
     }
