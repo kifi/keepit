@@ -14,7 +14,7 @@ k.snap = k.snap || (function () {
   'use strict';
 
   var MIN_IMG_DIM = 35;
-  var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
+  var LOOK_LINK_TEXT = 'look\xa0here';
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
 
   var $aSnapImg, $aSnapSel, timeoutSel, entered;
@@ -55,6 +55,11 @@ k.snap = k.snap || (function () {
   function onWinMouseOver(e) {
     var snapLinkShown = null;  // null: not yet, true: yes, false: no (and stop trying)
     var el = e.target;
+
+    if ($aSnapImg && $aSnapImg[0] && $aSnapImg[0].contains(e.target)) {
+      return;
+    }
+
     if (el.tagName.toUpperCase() === 'IMG') {
       if ($aSnapImg && el === $aSnapImg.data('img')) {
         snapLinkShown = true;
@@ -169,7 +174,7 @@ k.snap = k.snap || (function () {
 
     var parRect = parent.getBoundingClientRect();
     var styles = {
-      top: (imgRect.top - parRect.top) - parseFloat(imgCs.borderTopWidth) - parseFloat(imgCs.paddingTop),
+      top: (imgRect.top - parRect.top) - parseFloat(imgCs.borderTopWidth) - parseFloat(imgCs.paddingTop) + 5,
       left: (imgRect.left - parRect.left) + imgRect.width
     }
     if (fixed) {
@@ -187,30 +192,36 @@ k.snap = k.snap || (function () {
     // TODO: pxTooFarDown (out of viewport)
 
     $aSnapImg = $(k.render('html/keeper/snap_tip', { img: true }))
-    .on('click', '.kifi-snap-icon-quote', function () {
+    .on('click', function () {
       var img = $aSnapImg.data('img');
       $aSnapImg.remove();
       $aSnapImg = null;
-
+      if ($aSnapSel) {
+        $aSnapSel.remove();
+        $aSnapSel = null;
+      }
       var href = 'x-kifi-sel:' + k.snapshot.ofImage(img);
       var rect = k.snapshot.getImgContentRect(img);
       var img2 = $(img.cloneNode()).removeAttr('id').removeAttr('class').removeAttr('style').removeAttr('alt')[0];
-      k.snap.onLookHere.dispatch(img2, rect, href, '');
+      k.snap.onLookHere.dispatch(img2, rect, href, '', 'image');
     })
     .css(styles)
     .appendTo(parent)
     .data('img', img)
     .layout()
+    .addClass('kifi-snap-show')
     .css({
-      transform: 'none',
-      opacity: 1,
-      top: function () {
-        return styles.top - $(this).height() + 10
-      },
       left: function () {
-        return styles.left - ($(this).width() / 2);
+        return styles.left - $(this).width() - 5;
       }
     });
+
+    api.port.emit('track_pane_view', {
+      type: 'quotesOnHighlight',
+      content: 'image',
+      keeperState: getKeeperDiscussionState()
+    });
+
     return true;
   }
 
@@ -245,7 +256,7 @@ k.snap = k.snap || (function () {
     }
     var parRect = parent.getBoundingClientRect();
     var styles = {
-      top: (selRect.top - parRect.top),
+      top: (selRect.top - parRect.top) + selRect.height,
       left: (selRect.left - parRect.left) + selRect.width
     };
     var parentPos;
@@ -255,7 +266,7 @@ k.snap = k.snap || (function () {
     }
 
     $aSnapSel = $(k.render('html/keeper/snap_tip', { sel: true }))
-    .on('click', '.kifi-snap-icon-quote', function () {
+    .on('click', function () {
       var r = $aSnapSel.data('range');
       removeSnapLink.call($aSnapSel);
       $aSnapSel = null;
@@ -265,25 +276,38 @@ k.snap = k.snap || (function () {
     .appendTo(parent)
     .data({range: r, parentPos: parentPos})
     .layout()
+    .addClass('kifi-snap-show')
     .css({
-      transform: 'none',
-      opacity: 1,
-      top: function () {
-        return styles.top - $(this).height() - 10
-      },
       left: function () {
         return styles.left - ($(this).width() / 2);
       }
     });
+
+    api.port.emit('track_pane_view', {
+      type: 'quotesOnHighlight',
+      content: 'selection',
+      keeperState: getKeeperDiscussionState()
+    });
+  }
+
+  function getKeeperDiscussionState() {
+    var toasterIsShowing = !!(k.toaster && k.toaster.showing());
+    var paneIsShowing = !!(k.pane && k.pane.showing());
+    var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
+
+    if (!toasterIsShowing && messagesPaneIsShowing) {
+      return 'thread_pane';
+    } else if (toasterIsShowing) {
+      return 'compose_pane';
+    } else {
+      return 'other';
+    }
   }
 
   function hideSnapLink($a) {
     if ($a) {
       $a.on('transitionend', removeSnapLink)
-      .css({
-        transform: '',
-        opacity: ''
-      });
+      .removeClass('kifi-snap-show');
     }
   }
 
@@ -338,7 +362,7 @@ k.snap = k.snap || (function () {
     clearTimeout(timeoutSel);
     timeoutSel = null;
     var r = getSelRange();
-    if (r && !r.collapsed && !intersectsKifiDom(r) && !/^\s*$/.test(r.toString())) {
+    if (r && !r.collapsed && !intersectsKifiDom(r) && !intersectsAnyTextInput(r) && !/^\s*$/.test(r.toString())) {
       log('[updateSnapSelLink] showing');
       showSnapSel(r);
     } else if ($aSnapSel) {
@@ -354,9 +378,27 @@ k.snap = k.snap || (function () {
   }
 
   function intersectsKifiDom(r) {
-    return elementSelfOrParent(r.startContainer)[MATCHES]('.kifi-root:not(.kifi-snap),.kifi-root *') ||
-           elementSelfOrParent(r.endContainer)[MATCHES]('.kifi-root:not(.kifi-snap),.kifi-root *') ||
-           Array.prototype.some.call(document.querySelectorAll('.kifi-root:not(.kifi-snap)'), r.intersectsNode.bind(r));
+    return rangeIntersectsSelector(r, '.kifi-root:not(.kifi-snap),.kifi-root *', '.kifi-root:not(.kifi-snap)');
+  }
+
+  // Only allow these inputs
+  var inputsExceptAllowed = 'input' + (
+    ['checkbox', 'radio', 'button', 'submit', 'file'].map(function (d) {
+      return ':not([type="' + d + '"])';
+    }).join('')
+  );
+  function intersectsAnyTextInput(r) {
+    return rangeIntersectsSelector(r, '[contenteditable],' + inputsExceptAllowed + ',textarea');
+  }
+
+  function rangeIntersectsSelector(r, startSelector, middleSelector, endSelector) {
+    endSelector = endSelector || startSelector;
+    middleSelector = middleSelector || endSelector;
+    return (
+      elementSelfOrParent(r.startContainer)[MATCHES](startSelector) ||
+      elementSelfOrParent(r.endContainer)[MATCHES](endSelector) ||
+      Array.prototype.some.call(document.querySelectorAll(middleSelector), r.intersectsNode.bind(r))
+    );
   }
 
   function elementSelfOrParent(node) {
@@ -398,12 +440,119 @@ k.snap = k.snap || (function () {
     api.port.emit('screen_capture', info, function (dataUrl) {
       var img = new Image();
       $(img).on('load error', function () {
-        k.snap.onLookHere.dispatch(img, info.bounds, href, title);
+        k.snap.onLookHere.dispatch(img, info.bounds, href, title, 'selection');
       });
       img.src = dataUrl;
     });
     var href = 'x-kifi-sel:' + k.snapshot.ofRange(r);
     var title = formatKifiSelRangeText(href);
+  }
+
+  function finalizeLookHereLink(getDraft, img, bRect, href, title, focusText) {
+    var $draft = getDraft();
+    var ms = 500;
+    var $img = $(img).addClass('kifi-root').css({
+      position: 'fixed',
+      zIndex: 999999999993,
+      top: bRect.top,
+      left: bRect.left,
+      width: bRect.width,
+      height: bRect.height,
+      transformOrigin: '0 0',
+      transition: 'all ' + ms + 'ms ease-in-out,opacity ' + ms + 'ms ease-in'
+    }).appendTo($('body')[0] || 'html');
+    window.getSelection().removeAllRanges();
+
+    var $a = insertLookHereLink($draft);
+    $a.prop('href', href);
+    if (title) {
+      $a.prop('title', title);
+    }
+    positionCursorAfterLookHereLink($draft, $a);
+
+    var aRect = $a[0].getClientRects()[0];
+    var scale = Math.min(1, aRect.width / bRect.width);
+    $img.on('transitionend', onEnd).layout().css({
+      transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
+      opacity: 0
+    });
+    var onEndTimeout = setTimeout(function () {
+      onEnd();
+    }, ms + 5); // in case transition fails
+    function onEnd() {
+      clearTimeout(onEndTimeout);
+      $img.remove();
+      if (focusText) {
+        $draft.focus().triggerHandler('input'); // save draft
+      }
+    }
+  }
+
+  function insertLookHereLink($draft) {
+    var $a = $('<a>', {text: LOOK_LINK_TEXT, href: 'javascript:'});
+    var r = $draft.data('sel');
+    if (r && $draft[0].contains(r.startContainer)) {
+      var sc = r.startContainer;
+      var ec = r.endContainer;
+      if (sc === ec && !$(sc).closest('a').length) {
+        var i = r.startOffset;
+        var j = r.endOffset;
+        if (sc.nodeType === 3) {  // text
+          var s = sc.nodeValue;
+          if (i < j) {
+            $a.text(s.substring(i, j)).data('custom', true);
+          }
+          $(sc).replaceWith($a);
+          if (i > 0) {
+            $a.before(s.substr(0, i))
+          }
+          if (j < s.length) {
+            $a.after(s.substr(j));
+          }
+        } else if (i === j || !r.cloneContents().querySelector('a')) {
+          var next = sc.childNodes[j];
+          if (i < j && r.toString().trim()) {
+            $a.empty().append(r.extractContents()).data('custom', true);
+          }
+          sc.insertBefore($a[0], next);
+        }
+      }
+    }
+    if (!$a[0].parentNode) {
+      $draft.append($a);
+    }
+
+    if (!$a.data('custom')) {
+      var sib = $a[0].previousSibling;
+      var val = sib && sib.nodeType === 3 ? sib.nodeValue : '';
+      if (sib && (sib.nodeType !== 3 || !/\s$/.test(val))) {
+        $a.before(' ').data('before', '');
+      } else if (val && val[val.length - 1] === '\xa0') {
+        sib.nodeValue = val.substr(0, val.length - 1) + ' ';
+        $a.data('before', '\xa0');
+      }
+
+      sib = $a[0].nextSibling;
+      var sp = !sib ? '\xa0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
+      if (sp) {
+        $a.after(sp).data('after', sp);
+      }
+    }
+
+    $draft.triggerHandler('input');
+    return $a;
+  }
+
+  function positionCursorAfterLookHereLink($draft, $a) {
+    var r = document.createRange();
+    if ($a.data('after')) {
+      r.setEnd($a[0].nextSibling, 1);
+      r.collapse();
+    } else {
+      r.setStartAfter($a[0]);
+      r.collapse(true);
+    }
+    $draft.data('sel', r).prop('scrollTop', 999);
   }
 
   // snap API
@@ -418,6 +567,9 @@ k.snap = k.snap || (function () {
       onEnabled();
     },
     onLookHere: new Listeners(),
+    createLookHere: function (draftGetterFn) {
+      return finalizeLookHereLink.bind(null, draftGetterFn);
+    },
     disable: leaveMode
   };
 }());

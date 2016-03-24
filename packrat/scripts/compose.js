@@ -5,6 +5,7 @@
 // @require scripts/formatting.js
 // @require scripts/friend_search.js
 // @require scripts/send_chooser.js
+// @require scripts/snap.js
 // @require scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
 
@@ -116,6 +117,16 @@ k.compose = k.compose || (function() {
     .preventAncestorScroll()
     .handleLookClicks('compose');
 
+    function positionCursorAtEndOfContentEditable(node) {
+      node = (node instanceof Node ? node : node && node[0] ? node[0] : null);
+      var r = document.createRange();
+      r.setStart(node.lastChild, 0);
+      r.collapse(true);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+
     return { // editor API
       supportsLinks: true,
       markdown: function () {
@@ -129,6 +140,7 @@ k.compose = k.compose || (function() {
           html = k.render('html/keeper/kifi_mustache_tags', html);
         }
         $d.empty().append(k.formatting.parseStringToElement(html));
+        positionCursorAtEndOfContentEditable($d);
         notifyEmpty(!html);
       },
       clear: function () {
@@ -279,6 +291,10 @@ k.compose = k.compose || (function() {
       });
     }
 
+    function getDraft() {
+      return $form.find('.kifi-compose-draft');
+    }
+
     $form.hoverfu('.kifi-compose-highlight', function (configureHover) {
       var $a = $(this);
       k.render('html/keeper/titled_tip', {
@@ -367,6 +383,7 @@ k.compose = k.compose || (function() {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
+      lookHere: k.snap.createLookHere(getDraft),
       destroy: function () {
         $forms = $forms.not($form);
         if ($to.length) {

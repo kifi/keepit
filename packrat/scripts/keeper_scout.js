@@ -237,13 +237,37 @@ k.tile = k.tile || (function () {
     }
   }
 
-  function onLookHere(img, bRect, href, title) {
-    if (!(k.toaster && k.toaster.showing())) {
-      loadAndDo('keeper', 'compose', {trigger: 'look_here'}, function () {
-        k.toaster.lookHere(img, bRect, href, title);
+  function onLookHere(img, bRect, href, title, type) {
+    var toasterIsShowing = !!(k.toaster && k.toaster.showing());
+    var paneIsShowing = !!(k.pane && k.pane.showing());
+    var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
+
+    if (!toasterIsShowing && messagesPaneIsShowing) {
+      k.panes.thread.lookHere(img, bRect, href, title);
+      api.port.emit('track_pane_click', {
+        type: 'quotesOnHighlight',
+        action: 'clickedQuotes',
+        keeperState: 'thread_pane',
+        content: type
+      });
+    } else if (toasterIsShowing) {
+      k.toaster.lookHere(img, bRect, href, title, true);
+      api.port.emit('track_pane_view', {
+        type: 'quotesOnHighlight',
+        action: 'clickedQuotes',
+        keeperState: 'compose_pane',
+        content: type
       });
     } else {
-      k.toaster.lookHere(img, bRect, href, title, true);
+      loadAndDo('keeper', 'compose', {trigger: 'look_here'}, function () {
+        k.toaster.lookHere(img, bRect, href, title);
+        api.port.emit('track_pane_click', {
+          type: 'quotesOnHighlight',
+          action: 'clickedQuotes',
+          kepeerState: 'other',
+          content: type
+        });
+      });
     }
   }
 
