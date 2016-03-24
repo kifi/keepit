@@ -339,9 +339,10 @@ class TypeaheadCommander @Inject() (
         Future.successful(suggestResults(userId, limitOpt, dropOpt))
       case q =>
         val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
-        val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) + drop // Fetch too many, we'll drop later.
-        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, Some(limit))
-        val librariesF = libraryTypeahead.topN(userId, q, Some(limit))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+        val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
+        val ceil = drop + limit
+        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, Some(ceil))
+        val librariesF = libraryTypeahead.topN(userId, q, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
 
         val (userScore, emailScore, libScore) = {
           val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
