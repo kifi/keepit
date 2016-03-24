@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Hover, LinkElement, DescriptionElements }
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -30,6 +31,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   basicOrganizationGen: BasicOrganizationGen,
   pathCommander: PathCommander,
+  implicit val imageConfig: S3ImageConfig,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends CreditRewardInfoCommander with Logging {
 

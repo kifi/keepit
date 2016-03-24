@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
@@ -47,6 +48,7 @@ class SlackTeamCommanderImpl @Inject() (
   basicOrganizationGen: BasicOrganizationGen,
   basicUserRepo: BasicUserRepo,
   clock: Clock,
+  implicit val imageConfig: S3ImageConfig,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)

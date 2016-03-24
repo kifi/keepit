@@ -384,7 +384,7 @@ class KeepDecoratorImpl @Inject() (
               val firstMinute = firstKtu.addedAt.plusMinutes(1)
               val firstSentTo = sortedKtus.takeWhile(_.addedAt.getMillis <= firstMinute.getMillis)
                 .collect { case ktu if !keep.userId.contains(ktu.userId) => userById.get(ktu.userId) }.flatten
-              DescriptionElements(authorElement, "sent", if (firstSentTo.nonEmpty) DescriptionElements("to", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "this page")
+              DescriptionElements(authorElement, "started a discussion", if (firstSentTo.nonEmpty) DescriptionElements("with", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "on this page")
           }
       }
       val body = DescriptionElements(keep.note)
