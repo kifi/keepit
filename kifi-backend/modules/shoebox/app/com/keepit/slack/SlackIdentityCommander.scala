@@ -92,7 +92,7 @@ class SlackIdentityCommanderImpl @Inject() (
     userIdOpt.foreach { userId =>
       if (isNewIdentityOwner) {
         session.onTransactionSuccess {
-          slackChannelCommander.syncChannelMemberships(identity.teamId, Some(identity.userId))
+          slackChannelCommander.syncChannelMemberships(identity.teamId, identity.userId)
           keepSourceCommander.reattributeKeeps(Author.SlackUser(identity.teamId, identity.userId), userId)
         }
       }
