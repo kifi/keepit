@@ -249,9 +249,15 @@ class SlackOnboarderImpl @Inject() (
           sendTo = agent.membership.slackUserId.asChannel
           category = NotificationCategory.NonUser.INTEGRATOR_POSTSYNC
           integrationsLink = LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(sendTo, category)))
+          optionalKifiBotMessage = if (agent.team.kifiBot.isEmpty) None else Some(SlackAttachment.simple(DescriptionElements(
+            SlackEmoji.zipperMouthFace,
+            "My binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to many messages you send my way.",
+            "If you want to email my human friends at support@kifi.com they'd be happy to help."
+          )))
           msg <- Some(SlackMessageRequest.fromKifi("Okay, I just got back from Slack and here's what's going on", attachments =
             if (channels.nonEmpty) Seq(
-              SlackAttachment.simple(DescriptionElements("I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
+              SlackAttachment.simple(DescriptionElements(
+                "I just sync'd", if (channels.length > 1) s"${channels.length} channels" else "one channel",
                 "and all the :linked_paperclips: links I could find over to Kifi, and boy are my robotic arms tired.",
                 numMsgsWithLinks.map(numMsgs => DescriptionElements(
                   "I",
@@ -262,16 +268,15 @@ class SlackOnboarderImpl @Inject() (
                   },
                   "inside your", if (channels.length > 1) "newly created libraries" else "new library", "."
                 )),
-                "If you have any questions in the mean time, you can email my human friends at support@kifi.com."
+                "As soon as your libraries and links are nice and tidy, I'll send a welcome message to your team in #general",
+                "to let them know about what Kifi's Slack integration can do for them."
               )),
               SlackAttachment.simple(DescriptionElements(
-                "As soon as your libraries and links are nice and tidy, I'll send a welcome message to your team in #general",
-                "to let them know about what Kifi's Slack integration can do for them.",
-                "As a :robot_face: robot, I pledge to take mission control settings pretty seriously. Take a look at your granular team settings",
-                "here" --> integrationsLink,
+                SlackEmoji.gear, "As a robot, I pledge to take mission control settings pretty seriously.",
+                "Take a look at your granular team settings", "here" --> integrationsLink,
                 "and you can turn off any messages I send to your team (and toggle all of your library integrations)."
               ))
-            )
+            ) ++ optionalKifiBotMessage
             else Seq(SlackAttachment.simple(DescriptionElements(
               SlackEmoji.sweatSmile, "I just looked but I didn't find any",
               agent.team.publicChannelsLastSyncedAt match {
