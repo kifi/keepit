@@ -77,7 +77,7 @@ object LibraryCardInfo {
       (__ \ 'caption).formatNullable[String] and
       (__ \ 'modifiedAt).format[DateTime] and
       (__ \ 'kind).format[LibraryKind] and
-      (__ \ 'path).format[String].inmap[Path](Path(_), _.relative) and
+      (__ \ 'path).format[String].inmap[Path](Path(_), _.relativeWithLeadingSlash) and
       (__ \ 'org).formatNullable[BasicOrganizationView] and
       (__ \ 'orgMemberAccess).formatNullable[LibraryAccess] and
       (__ \ 'whoCanComment).format[LibraryCommentPermissions]

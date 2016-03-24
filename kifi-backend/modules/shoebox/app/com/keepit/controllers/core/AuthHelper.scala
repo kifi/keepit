@@ -286,10 +286,10 @@ class AuthHelper @Inject() (
     intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
         val joined = authCommander.autoJoinLib(userId, libId, authTokenOpt)
-        if (joined) db.readOnlyMaster(implicit s => pathCommander.libraryPageById(libId).relative) else homeOrInstall
+        if (joined) db.readOnlyMaster(implicit s => pathCommander.libraryPageById(libId).relativeWithLeadingSlash) else homeOrInstall
       case AutoJoinOrganization(orgId, authToken) =>
         val joined = authCommander.autoJoinOrg(userId, orgId, authToken)
-        if (joined) db.readOnlyMaster(implicit s => pathCommander.orgPageById(orgId).relative) else homeOrInstall
+        if (joined) db.readOnlyMaster(implicit s => pathCommander.orgPageById(orgId).relativeWithLeadingSlash) else homeOrInstall
       case AutoJoinKeep(keepId, authTokenOpt) =>
         authCommander.autoJoinKeep(userId, keepId, authTokenOpt)
         homeOrInstall
