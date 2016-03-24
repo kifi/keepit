@@ -28,7 +28,8 @@ object LibraryTypeahead {
 
 @json case class LibraryTypeaheadResult(id: Id[Library], name: String, importance: Int) {
   // importance is a measure to assist in ranking of libraries not recently used by the user. Sum of (lowest is best):
-  //  • -2 active membership
+  //  • -1 active membership
+  //  • -1 user is library owner
   //  • -1 visited previously
   //  • -1 has keeps
   //  • -1 keeps in past 3 days
@@ -58,7 +59,6 @@ class LibraryTypeahead @Inject() (
       store.getWithMetadata(userId).map {
         case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
-            log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=$currentDateTime); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
             refresh(userId)
           }
           filter
@@ -70,9 +70,7 @@ class LibraryTypeahead @Inject() (
   private def getInfos(userId: Id[User])(ids: Seq[Id[Library]]): Future[Seq[LibraryTypeaheadResult]] = {
     SafeFuture {
       val idSet = ids.toSet
-      log.info(s"[LibraryTypeahead#getInfos] $userId $ids")
       libResCache(directCacheAccess).bulkGetOrElse(idSet.map(i => LibraryResultTypeaheadKey(userId, i))) { missingKeys =>
-        log.info(s"[LibraryTypeahead#getInfos:missing] Don't have ${missingKeys.map(_.libraryId)}")
         db.readOnlyReplica { implicit session =>
           val missingIds = missingKeys.map(_.libraryId)
           val libs = libraryRepo.getActiveByIds(missingIds)
@@ -86,24 +84,26 @@ class LibraryTypeahead @Inject() (
   }
 
   private def getAllInfos(id: Id[User]): Future[Seq[(Id[Library], LibraryTypeaheadResult)]] = SafeFuture {
+    val infos = getAllRelevantLibraries(id)
+    infos.foreach { l =>
+      libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l._2.id), l._2)
+    }
+    infos
+  }
+
+  def getAllRelevantLibraries(id: Id[User]): Seq[(Id[Library], LibraryTypeaheadResult)] = {
     db.readOnlyReplica { implicit session =>
-      val r = libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
-      log.info(s"[LibraryTypeahead#all] $id ${r.length}: ${r.map(_._1.id.get).mkString(",")}")
-      r
+      libraryInfoCommander.get.getLibrariesUserCanKeepTo(id, includeOrgLibraries = true)
     }.map {
       case (l, mOpt, _) =>
-        val res = LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
-        libResCache(directCacheAccess).set(LibraryResultTypeaheadKey(id, l.id.get), res)
-        l.id.get -> res
-    } tap { r =>
-      log.info(s"[LibraryTypeahead#allDone] $id ${r.length}")
+        l.id.get -> LibraryTypeaheadResult(l.id.get, l.name, calcImportance(l, mOpt))
     }
   }
 
   private def calcImportance(lib: Library, memOpt: Option[LibraryMembership]): Int = {
     Seq(
       memOpt.isDefined,
-      memOpt.isDefined,
+      memOpt.exists(lib.ownerId == _.userId),
       memOpt.exists(_.lastViewed.isDefined),
       lib.keepCount > 0,
       lib.lastKept.exists(_.isAfter(clock.now.minusHours(72))),
@@ -127,7 +127,6 @@ class LibraryTypeahead @Inject() (
   protected def create(userId: Id[User]) = {
     getAllInfos(userId).map { allInfos =>
       val filter = buildFilter(userId, allInfos)
-      log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
       val allMap = allInfos.toMap
       def getter(libs: Seq[Id[Library]]) = Future.successful {
         libs.flatMap(allMap.get)

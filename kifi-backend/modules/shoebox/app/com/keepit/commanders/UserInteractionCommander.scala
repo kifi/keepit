@@ -66,7 +66,7 @@ class UserInteractionCommander @Inject() (
     }
   }
 
-  def getRecentInteractions(uid: Id[User]): Seq[InteractionInfo] = {
+  def getRecentInteractions(uid: Id[User]): Seq[InteractionScore] = {
     val interactions = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
     }
@@ -76,7 +76,7 @@ class UserInteractionCommander @Inject() (
 
     scores.flatten.groupBy(e => e._1).map { b =>
       val sum = b._2.foldLeft(0.0)((r, c) => r + c._2)
-      InteractionInfo(b._1, sum)
+      InteractionScore(b._1, sum)
     }.toSeq.sorted.reverse
   }
 
@@ -88,24 +88,24 @@ class UserInteractionCommander @Inject() (
     (split.users, split.emails)
   }
 
-  def grouped(interactions: Seq[InteractionInfo]): GroupedInteractions = {
+  def grouped(interactions: Seq[InteractionScore]): GroupedInteractions = {
     val userIds = interactions.collect {
-      case InteractionInfo(UserInteractionRecipient(id), _) => id
+      case InteractionScore(UserInteractionRecipient(id), _) => id
     }
     val emailAddresses = interactions.collect {
-      case InteractionInfo(EmailInteractionRecipient(email), _) => email
+      case InteractionScore(EmailInteractionRecipient(email), _) => email
     }
     val libraries = interactions.collect {
-      case InteractionInfo(LibraryInteraction(id), _) => id
+      case InteractionScore(LibraryInteraction(id), _) => id
     }
     GroupedInteractions(userIds, emailAddresses, libraries)
   }
 }
 
-case class InteractionInfo(recipient: InteractionRecipient, score: Double)
-object InteractionInfo {
-  implicit def ord: Ordering[InteractionInfo] = new Ordering[InteractionInfo] {
-    def compare(x: InteractionInfo, y: InteractionInfo): Int = x.score compare y.score
+case class InteractionScore(recipient: InteractionRecipient, score: Double)
+object InteractionScore {
+  implicit def ord: Ordering[InteractionScore] = new Ordering[InteractionScore] {
+    def compare(x: InteractionScore, y: InteractionScore): Int = x.score compare y.score
   }
 }
 

@@ -21,10 +21,10 @@ object PrefixFilter {
 
   private[this] def evalV1[T](in: Array[Long], query: Array[String]): ArrayBuffer[Id[T]] = {
     val result = new ArrayBuffer[Id[T]]
-    var probes = query.map(genFilter).toArray
+    val probes = query.map(genFilter).toArray
     var idx = 1
     while (idx < in.length) {
-      var id = in(idx)
+      val id = in(idx)
       val filter = in(idx + 1)
       if (probes.forall { probe => probe == (probe & filter) }) result += Id[T](id)
       idx += 2

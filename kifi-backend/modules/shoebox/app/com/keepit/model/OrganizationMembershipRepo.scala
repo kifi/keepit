@@ -38,10 +38,12 @@ class OrganizationMembershipRepoImpl @Inject() (
     orgMembersCache: OrganizationMembersCache,
     orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     orgPermissionsCache: OrganizationPermissionsCache,
+    relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
 
   override def deleteCache(model: OrganizationMembership)(implicit session: RSession): Unit = {
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(model.userId))
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(model.userId))
     orgMembersCache.remove(OrganizationMembersKey(model.organizationId))
 
@@ -51,6 +53,7 @@ class OrganizationMembershipRepoImpl @Inject() (
   }
 
   override def invalidateCache(model: OrganizationMembership)(implicit session: RSession): Unit = {
+    relevantSuggestedLibrariesCache.remove(RelevantSuggestedLibrariesKey(model.userId))
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(model.userId))
     orgMembersCache.remove(OrganizationMembersKey(model.organizationId))
 

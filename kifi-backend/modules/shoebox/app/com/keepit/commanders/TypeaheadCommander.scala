@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -10,7 +11,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging.LoggerWithPrefix
-import com.keepit.common.logging.{ LogPrefix, Logging }
+import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImagePath
@@ -24,6 +25,7 @@ import org.joda.time.DateTime
 import com.keepit.common.CollectionHelpers.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
 
 class TypeaheadCommander @Inject() (
@@ -39,6 +41,7 @@ class TypeaheadCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
     libraryTypeahead: LibraryTypeahead,
+    relevantSuggestedLibrariesCache: RelevantSuggestedLibrariesCache,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
     libraryRepo: LibraryRepo,
@@ -329,31 +332,27 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int]): Future[Seq[TypeaheadSearchResult]] = {
+  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
-    val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(20))
     query.trim match {
       case q if q.isEmpty =>
-        Future {
-          libraryTypeahead.prefetch(userId).map { _ =>
-            kifiUserTypeahead.prefetch(userId)
-          }
-        }
-        Future.successful(suggestResults(userId))
+        Future.successful(suggestResults(userId, limitOpt, dropOpt))
       case q =>
-        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
-        val librariesF = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+        val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
+        val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) + drop // Fetch too many, we'll drop later.
+        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, Some(limit))
+        val librariesF = libraryTypeahead.topN(userId, q, Some(limit))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
 
         val (userScore, emailScore, libScore) = {
           val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
           val userScore = interactions.collect {
-            case (InteractionInfo(UserInteractionRecipient(u), score), idx) => u -> idx
+            case (InteractionScore(UserInteractionRecipient(u), score), idx) => u -> idx
           }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
           val emailScore = interactions.collect {
-            case (InteractionInfo(EmailInteractionRecipient(e), score), idx) => e -> idx
+            case (InteractionScore(EmailInteractionRecipient(e), score), idx) => e -> idx
           }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
           val libScore = interactions.collect {
-            case (InteractionInfo(LibraryInteraction(l), score), idx) => l -> idx
+            case (InteractionScore(LibraryInteraction(l), score), idx) => l -> idx
           }.toMap.withDefaultValue(UserInteraction.maximumInteractions)
           (userScore, emailScore, libScore)
         }
@@ -370,14 +369,14 @@ class TypeaheadCommander @Inject() (
           }
           val emailRes = contacts.zipWithIndex.map {
             case (contact, idx) =>
-              (emailScore(contact.email), idx + limit.get, EmailContactResult(email = contact.email, name = contact.name))
+              (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
           }
           val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
           val libRes = libToResult(userId, libraries.map(_.id)).zipWithIndex.map {
             case ((id, lib), idx) =>
               (libScore(id), idx + libIdToImportance(id), lib)
           }
-          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2))
+          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).slice(limit, limit + drop)
 
           // For diagnosis, not for public release!
           val summary = combined.map {
@@ -385,7 +384,7 @@ class TypeaheadCommander @Inject() (
             case (s1, s2, e: EmailContactResult) => s"e($s1,$s2)"
             case (s1, s2, l: LibraryResult) => s"l($s1,$s2)"
           }.mkString(" ")
-          log.info(s"[searchForKeepRecipients] $userId q=$query, l=${combined.length}, s=$summary\nlibs=$libraries")
+          log.info(s"[searchForKeepRecipients] $userId q=$query ($limit/$drop), l=${combined.length}, s=$summary")
           // For diagnosis, not for public release!
 
           combined.map { case (_, _, res) => res }
@@ -393,11 +392,17 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def suggestResults(userId: Id[User]): Seq[TypeaheadSearchResult] = {
+  private val maxHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
+  private def suggestResults(userId: Id[User], limitOpt: Option[Int], dropOpt: Option[Int]): Seq[TypeaheadSearchResult] = {
+    if (dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) }
+
+    val drop = dropOpt.map(Math.min(_, maxHistory)).getOrElse(0)
+    val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10)
+
     val interactions = interactionCommander.getRecentInteractions(userId)
 
     val usersById = {
-      val userIds = interactions.collect { case InteractionInfo(UserInteractionRecipient(u), _) => u }
+      val userIds = interactions.collect { case InteractionScore(UserInteractionRecipient(u), _) => u }
       db.readOnlyMaster { implicit session =>
         basicUserRepo.loadAll(userIds.toSet).map {
           case (id, bu) =>
@@ -405,15 +410,42 @@ class TypeaheadCommander @Inject() (
         }
       }
     }
-    val libsById = {
-      val libIds = interactions.collect { case InteractionInfo(LibraryInteraction(u), _) => u }
-      libToResult(userId, libIds).toMap
+
+    val interactionRecipients: Seq[InteractionRecipient] = interactions.map {
+      case InteractionScore(u: UserInteractionRecipient, _) => u
+      case InteractionScore(e: EmailInteractionRecipient, _) => e
+      case InteractionScore(l: LibraryInteraction, _) => l
     }
 
-    interactions.flatMap {
-      case InteractionInfo(UserInteractionRecipient(u), _) => usersById.get(u)
-      case InteractionInfo(EmailInteractionRecipient(e), _) => Some(EmailContactResult(name = None, email = e))
-      case InteractionInfo(LibraryInteraction(l), _) => libsById.get(l)
+    val ceil = drop + limit
+    val suggestions = if (interactionRecipients.length >= ceil) {
+      interactionRecipients.slice(drop, ceil)
+    } else {
+      val libs = getRelevantLibrariesToSuggest(userId, ceil).map(LibraryInteraction).filter(l => !interactionRecipients.contains(l))
+      (interactionRecipients ++ libs).slice(drop, ceil)
+    }
+
+    val libsById = libToResult(userId, suggestions.collect { case LibraryInteraction(l) => l }).toMap
+
+    suggestions.flatMap {
+      case UserInteractionRecipient(u) => usersById.get(u)
+      case EmailInteractionRecipient(e) => Some(EmailContactResult(name = None, email = e))
+      case LibraryInteraction(l) => libsById.get(l)
+    }
+  }
+
+  private def getRelevantLibrariesToSuggest(userId: Id[User], max: Int) = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+    relevantSuggestedLibrariesCache(directCacheAccess).getOrElse(RelevantSuggestedLibrariesKey(userId)) {
+      libraryTypeahead.getAllRelevantLibraries(userId).map(_._2).filter(_.importance != 0).sortBy(l => (l.importance, l.name.toLowerCase)).map(l => l.id).take(maxHistory)
+    }.take(max)
+  }
+
+  private def prefetchTypeaheads(userId: Id[User]): Unit = {
+    Future {
+      libraryTypeahead.prefetch(userId).map { _ =>
+        kifiUserTypeahead.prefetch(userId)
+      }
     }
   }
 
@@ -455,7 +487,15 @@ class TypeaheadCommander @Inject() (
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     abookServiceClient.hideEmailFromUser(userId, email)
   }
+}
 
+class RelevantSuggestedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[RelevantSuggestedLibrariesKey, Seq[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class RelevantSuggestedLibrariesKey(userId: Id[User]) extends Key[Seq[Id[Library]]] {
+  val namespace = "relevant_libraries"
+  override val version = 1
+  def toKey(): String = userId.id.toString
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)

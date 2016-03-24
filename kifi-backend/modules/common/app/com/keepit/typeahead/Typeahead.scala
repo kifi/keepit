@@ -47,7 +47,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
   protected def extractName(info: I): String
 
   protected def buildFilter(id: Id[T], allInfos: Seq[(Id[E], I)]): PrefixFilter[E] = {
-    timing(s"buildFilter($id)") {
+    timing(s"buildFilter($id)", 0.1) {
       val builder = new PrefixFilterBuilder[E]
       allInfos.foreach { case (infoId, info) => builder.add(infoId, extractName(info)) }
       val filter = builder.build
