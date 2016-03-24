@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.path.Path
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
@@ -38,6 +39,7 @@ class LibraryCardCommanderImpl @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
     permissionCommander: PermissionCommander,
+    pathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryCardCommander with Logging {
@@ -76,7 +78,7 @@ class LibraryCardCommanderImpl @Inject() (
 
       val owner = owners(lib.ownerId)
       val orgViewOpt = lib.organizationId.map(orgViews.apply)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgViewOpt.map(_.basicOrganization.handle), lib.slug)
+      val path = pathCommander.libraryPage(lib)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get)
       val membershipInfoOpt = membershipOpt.map(libraryMembershipCommander.createMembershipInfo)
@@ -116,7 +118,7 @@ class LibraryCardCommanderImpl @Inject() (
       }
       val basicOrgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
       val owner = basicUserRepo.load(lib.ownerId)
-      val path = LibraryPathHelper.formatLibraryPath(owner = owner, basicOrgViewOpt.map(_.basicOrganization.handle), slug = lib.slug)
+      val path = pathCommander.libraryPage(lib)
 
       if (!userIds.contains(lib.ownerId)) {
         airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
@@ -155,7 +157,7 @@ class LibraryCardCommanderImpl @Inject() (
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: Path, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = Library.getDisplayName(lib.name, lib.kind),
