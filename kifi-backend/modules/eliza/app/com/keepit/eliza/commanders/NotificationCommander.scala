@@ -65,6 +65,8 @@ class NotificationCommander @Inject() (
     }
   }
 
+  def processNewEvent(event: NotificationEvent): NotificationWithItems = processNewEvents(Seq(event)).head
+
   def processNewEvents(events: Seq[NotificationEvent]): Seq[NotificationWithItems] = {
     events.groupBy(e => (e.recipient, e.kind, getGroupIdentifier(e))).flatMap {
       case ((recip, kind, Some(groupIdentifier)), groupedEvents) => Seq(processGroupedEvents(recip, kind, groupIdentifier, groupedEvents.toSet))
