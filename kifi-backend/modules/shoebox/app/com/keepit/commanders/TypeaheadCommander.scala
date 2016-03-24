@@ -332,9 +332,14 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  private val maxSearchHistory = 40 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
+  private val maxSuggestHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
+
   def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
     query.trim match {
+      case q if q.isEmpty && dropOpt.exists(_ >= maxSuggestHistory) => Future.successful(Seq.empty)
+      case q if dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
         Future.successful(suggestResults(userId, limitOpt, dropOpt))
       case q =>
@@ -393,11 +398,10 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private val maxHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
   private def suggestResults(userId: Id[User], limitOpt: Option[Int], dropOpt: Option[Int]): Seq[TypeaheadSearchResult] = {
-    if (dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) }
+    if (!dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) }
 
-    val drop = dropOpt.map(Math.min(_, maxHistory)).getOrElse(0)
+    val drop = dropOpt.map(Math.min(_, maxSuggestHistory)).getOrElse(0)
     val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10)
 
     val interactions = interactionCommander.getRecentInteractions(userId)
@@ -438,7 +442,7 @@ class TypeaheadCommander @Inject() (
   private def getRelevantLibrariesToSuggest(userId: Id[User], max: Int) = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     relevantSuggestedLibrariesCache(directCacheAccess).getOrElse(RelevantSuggestedLibrariesKey(userId)) {
-      libraryTypeahead.getAllRelevantLibraries(userId).map(_._2).filter(_.importance != 0).sortBy(l => (l.importance, l.name.toLowerCase)).map(l => l.id).take(maxHistory)
+      libraryTypeahead.getAllRelevantLibraries(userId).map(_._2).filter(_.importance != 0).sortBy(l => (l.importance, l.name.toLowerCase)).map(l => l.id).take(maxSuggestHistory)
     }.take(max)
   }
 
