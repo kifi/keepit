@@ -120,7 +120,7 @@ case class LibraryNewKeep(
 
 object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipient, Id[Library])] {
   override val name: String = "library_new_keep"
-  private val groupingTimeThreshold = Duration.standardMinutes(5)
+  private val groupingTimeThreshold = Duration.standardSeconds(30)
 
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
@@ -133,10 +133,10 @@ object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipien
   override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
 
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
-    val newEventIsCloseToAllExistingEvents = existingEvents.map(_.time).forall { existingEventTime =>
+    val latestEventWasPrettyRecent = existingEvents.map(_.time).maxOpt.forall { existingEventTime =>
       new Duration(existingEventTime, newEvent.time) isShorterThan groupingTimeThreshold
     }
-    newEventIsCloseToAllExistingEvents
+    latestEventWasPrettyRecent
   }
 }
 
