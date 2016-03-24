@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
+import com.keepit.common.controller.{ FakeUserActionsModule }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeHttpClientModule
 import org.specs2.mutable._
@@ -24,8 +24,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
     FakeABookImporterPluginModule(),
     FakeABookStoreModule(),
     FakeUserActionsModule(),
-    FakeHttpClientModule(),
-    FakeSecureSocialClientIdModule()
+    FakeHttpClientModule()
   )
 
   def waitFor(predicate: () => Boolean, maxTries: Int = 50)(f: () => Unit) = {

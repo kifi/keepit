@@ -3,7 +3,6 @@ package com.keepit.eliza
 import com.keepit.common.cache.{ ElizaCacheModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.rover.{ RoverServiceClientModule }
-import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.SearchServiceClientModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
@@ -34,7 +33,6 @@ trait ElizaModule extends ConfigurationModule with CommonServiceModule {
   val abookServiceClientModule: ABookServiceClientModule
   val roverServiceClientModule: RoverServiceClientModule
 
-  val secureSocialModule = RemoteSecureSocialModule()
   val elizaSlickModule = ElizaSlickModule()
   val dbSequencingModule = ElizaDbSequencingModule()
 

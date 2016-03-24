@@ -1,18 +1,15 @@
 package com.keepit.social.providers
 
-import com.keepit.common.controller.KifiSession
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.logging.Logging
 import com.keepit.social.IdentityHelpers
-import play.api.mvc._
+import play.api.Play.current
 import play.api.i18n.Messages
-import securesocial.core._
-import play.api.{ Play, Logger }
-import Play.current
-import providers.utils.RoutesHelper
-import securesocial.core.LoginEvent
-import securesocial.core.AccessDeniedException
+import play.api.mvc._
+import play.api.{ Logger, Play }
 import securesocial.controllers.TemplatesPlugin
-import com.keepit.common.healthcheck.AirbrakeNotifierStatic
+import securesocial.core.providers.utils.RoutesHelper
+import securesocial.core.{ AccessDeniedException, LoginEvent, _ }
 
 /**
  * A controller to provide the authentication entry point
@@ -139,18 +136,18 @@ object ProviderController extends Controller with Logging {
   }
 }
 
+import com.keepit.common.controller.KifiSession._
+import play.api.Play
+import play.api.Play.current
 import play.api.mvc.{ Action, Controller }
 import securesocial.core._
-import play.api.Play
-import Play.current
-import providers.utils.RoutesHelper
-import KifiSession._
+import securesocial.core.providers.utils.RoutesHelper
 
 /**
  * The Login page controller
  */
 object LoginPage extends Controller with Logging {
-  import providers.UsernamePasswordProvider
+  import securesocial.core.providers.UsernamePasswordProvider
   /**
    * The property that specifies the page the user is redirected to after logging out.
    */
@@ -173,7 +170,7 @@ object LoginPage extends Controller with Logging {
       if (SecureSocial.enableRefererAsOriginalUrl) {
         SecureSocial.withRefererAsOriginalUrl(Ok(use[TemplatesPlugin].getLoginPage(request, UsernamePasswordProvider.loginForm)))
       } else {
-        import Play.current
+        import play.api.Play.current
         Ok(use[TemplatesPlugin].getLoginPage(request, UsernamePasswordProvider.loginForm))
 
       }

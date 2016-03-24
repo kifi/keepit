@@ -10,7 +10,6 @@ import com.keepit.search.common.store.SearchStoreModule
 import com.keepit.search.index.IndexModule
 import com.keepit.search.tracking.TrackingModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
-import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
 
@@ -39,7 +38,6 @@ trait SearchModule extends ConfigurationModule with CommonServiceModule {
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val roverServiceClientModule: RoverServiceClientModule
 
-  val secureSocialModule = RemoteSecureSocialModule()
   val searchConfigModule = SearchConfigModule()
 
 }

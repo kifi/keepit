@@ -1,17 +1,14 @@
 package com.keepit.social
 
-import net.codingwell.scalaguice.InjectorExtensions._
-
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.controller.KifiSession
+import com.keepit.common.controller.KifiSession._
 import com.keepit.common.db.ExternalId
-
+import net.codingwell.scalaguice.InjectorExtensions._
+import net.codingwell.scalaguice.ScalaModule
 import play.api.Application
-import play.api.mvc.{ Session, RequestHeader }
+import play.api.mvc.{ RequestHeader, Session }
 import securesocial.core._
 import securesocial.core.providers.Token
-import net.codingwell.scalaguice.ScalaModule
-import KifiSession._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString

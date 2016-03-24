@@ -117,6 +117,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
   val userIdByIdentityId = MutableMap[IdentityId, Id[User]]()
+  val userSessionByExternalId = MutableMap[UserSessionExternalId, UserSessionView]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -129,6 +130,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def saveUserIdentity(identityId: IdentityId, userId: Id[User]): Unit = {
     userIdByIdentityId += (identityId -> userId)
+  }
+
+  def saveUserSession(sessionId: UserSessionExternalId, session: UserSessionView): Unit = {
+    userSessionByExternalId += (sessionId -> session)
   }
 
   def saveUsers(users: User*): Seq[User] = {
@@ -407,11 +412,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(socialUserInfosByUserId(userId))
   }
   def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = Future.successful {
-    if (sessionId.id == "dc6cb121-2a69-47c7-898b-bc2b9356054c") { // This is FakeSecureSocial.FAKE_SID, which is stuck in Eliza for now.
-      Some(UserSessionView(SocialId("fake_user_id"), SocialNetworkType("facebook"), new DateTime(), true, new DateTime(), new DateTime()))
-    } else {
-      None
-    }
+    userSessionByExternalId.get(sessionId)
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
