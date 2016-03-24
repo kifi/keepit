@@ -108,6 +108,7 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
 case class LibraryNewKeep(
   recipient: Recipient,
   time: DateTime,
+  keptAt: DateTime,
   keeperId: Option[Id[User]],
   keepId: Id[Keep],
   libraryId: Id[Library]) extends NotificationEvent {
@@ -120,23 +121,35 @@ case class LibraryNewKeep(
 
 object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipient, Id[Library])] {
   override val name: String = "library_new_keep"
-  private val groupingTimeThreshold = Duration.standardSeconds(30)
 
-  override implicit val format = (
+  def fromOldData(r: Recipient, t: DateTime, kt: Option[DateTime], uId: Option[Id[User]], kId: Id[Keep], lId: Id[Library]) =
+      LibraryNewKeep(r, t, kt getOrElse t, uId, kId, lId)
+  def toOldData(lnk: LibraryNewKeep) =
+    (lnk.recipient, lnk.time, Some(lnk.keptAt), lnk.keeperId, lnk.keepId, lnk.libraryId)
+
+  override implicit val format: Format[LibraryNewKeep] = (
     (__ \ "recipient").format[Recipient] and
-      (__ \ "time").format[DateTime] and
-      (__ \ "keeperId").formatNullable[Id[User]] and
-      (__ \ "keepId").format[Id[Keep]] and
-      (__ \ "libraryId").format[Id[Library]]
-    )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
+    (__ \ "time").format[DateTime] and
+    (__ \ "keptAt").formatNullable[DateTime] and
+    (__ \ "keeperId").formatNullable[Id[User]] and
+    (__ \ "keepId").format[Id[Keep]] and
+    (__ \ "libraryId").format[Id[Library]]
+  )(fromOldData, toOldData)
 
   override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
 
+  private val addedAtThreshold = Duration.standardSeconds(30)
+  private val keptAtThreshold = Duration.standardMinutes(5)
+  private val recentThreshold = Duration.standardMinutes(30)
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
-    val latestEventWasPrettyRecent = existingEvents.map(_.time).maxOpt.forall { existingEventTime =>
-      new Duration(existingEventTime, newEvent.time) isShorterThan groupingTimeThreshold
-    }
-    latestEventWasPrettyRecent
+    val latestAddedAt = existingEvents.map(_.time).max
+    val earliestKeptAt = existingEvents.map(_.keptAt).min
+
+    val keepIsVeryOld = new Duration(newEvent.time, newEvent.keptAt) isLongerThan recentThreshold
+    val keepWasAddedShortlyAfterExistingKeeps = new Duration(newEvent.time, latestAddedAt) isShorterThan addedAtThreshold
+    val keepsWereOriginallyFarApart = new Duration(newEvent.keptAt, earliestKeptAt) isLongerThan keptAtThreshold
+
+    keepWasAddedShortlyAfterExistingKeeps && (keepIsVeryOld || keepsWereOriginallyFarApart)
   }
 }
 
