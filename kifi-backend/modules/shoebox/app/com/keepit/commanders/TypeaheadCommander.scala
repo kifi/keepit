@@ -339,9 +339,9 @@ class TypeaheadCommander @Inject() (
         Future.successful(suggestResults(userId, limitOpt, dropOpt))
       case q =>
         val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
-        val limit = Some(limitOpt.map(Math.min(_, 20)).getOrElse(10) + drop) // Fetch too many, we'll drop later.
-        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
-        val librariesF = libraryTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+        val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) + drop // Fetch too many, we'll drop later.
+        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, Some(limit))
+        val librariesF = libraryTypeahead.topN(userId, q, Some(limit))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
 
         val (userScore, emailScore, libScore) = {
           val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
@@ -369,14 +369,14 @@ class TypeaheadCommander @Inject() (
           }
           val emailRes = contacts.zipWithIndex.map {
             case (contact, idx) =>
-              (emailScore(contact.email), idx + limit.get, EmailContactResult(email = contact.email, name = contact.name))
+              (emailScore(contact.email), idx + limit, EmailContactResult(email = contact.email, name = contact.name))
           }
           val libIdToImportance = libraries.map(r => r.id -> r.importance).toMap
           val libRes = libToResult(userId, libraries.map(_.id)).zipWithIndex.map {
             case ((id, lib), idx) =>
               (libScore(id), idx + libIdToImportance(id), lib)
           }
-          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).drop(drop)
+          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).slice(limit, limit + drop)
 
           // For diagnosis, not for public release!
           val summary = combined.map {
@@ -384,7 +384,7 @@ class TypeaheadCommander @Inject() (
             case (s1, s2, e: EmailContactResult) => s"e($s1,$s2)"
             case (s1, s2, l: LibraryResult) => s"l($s1,$s2)"
           }.mkString(" ")
-          log.info(s"[searchForKeepRecipients] $userId q=$query (${limit.get}/$drop), l=${combined.length}, s=$summary")
+          log.info(s"[searchForKeepRecipients] $userId q=$query ($limit/$drop), l=${combined.length}, s=$summary")
           // For diagnosis, not for public release!
 
           combined.map { case (_, _, res) => res }
