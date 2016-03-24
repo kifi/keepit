@@ -56,10 +56,11 @@ class NotificationGroupingTest extends TestKitSupport with SpecificationLike wit
         val lotsOfRecentKeepsFarApart = (1 to 10).map { x => keep(now.minusHours(12).plusHours(x)) }
         val lotsOfRecentKeepsCloseTogether = (1 to 10).map { x => keep(now.minusMinutes(5).plusSeconds(x)) }
 
-        inject[NotificationCommander].processNewEvents(lotsOfOldKeepsCloseTogether).length === 1
-        inject[NotificationCommander].processNewEvents(lotsOfOldKeepsFarApart).length === 1
-        inject[NotificationCommander].processNewEvents(lotsOfRecentKeepsFarApart).length === 10
-        inject[NotificationCommander].processNewEvents(lotsOfRecentKeepsCloseTogether).length === 10
+        notifCommander.processNewEvents(lotsOfOldKeepsCloseTogether).length === 1
+        notifCommander.processNewEvents(lotsOfOldKeepsCloseTogether).length === 1
+        notifCommander.processNewEvents(lotsOfOldKeepsFarApart).length === 1
+        notifCommander.processNewEvents(lotsOfRecentKeepsFarApart).length === 1
+        notifCommander.processNewEvents(lotsOfRecentKeepsCloseTogether).length === 10
       }
     }
   }
