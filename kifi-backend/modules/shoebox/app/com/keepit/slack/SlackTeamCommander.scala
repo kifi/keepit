@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.SlackLog
+import com.keepit.common.logging.{Logging, SlackLog}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time.{ Clock, _ }
@@ -53,7 +53,7 @@ class SlackTeamCommanderImpl @Inject() (
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val inhouseSlackClient: InhouseSlackClient)
-    extends SlackTeamCommander {
+    extends SlackTeamCommander with Logging {
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   def getSlackTeams(userId: Id[User]): Set[SlackTeam] = {
@@ -77,6 +77,7 @@ class SlackTeamCommanderImpl @Inject() (
   }
 
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(SlackTeam, Boolean)] = {
+    log.info(s"[addSlackTeam] Adding Slack team $slackTeamId for user $userId...")
     val (teamOpt, connectableOrgs) = db.readOnlyMaster { implicit session =>
       (slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId), getOrganizationsToConnectToSlackTeam(userId))
     }
@@ -85,7 +86,10 @@ class SlackTeamCommanderImpl @Inject() (
       case Some(team) => Future.successful((team, false))
       case None => Future.failed(SlackActionFail.TeamNotFound(slackTeamId))
     }
-  }
+  } tap(_.onComplete {
+    case Success((team, isNew)) => log.info(s"[addSlackTeam] ${if (isNew) "Created new" else "Found existing"} organization for Slack team $slackTeamId from user $userId: $team")
+    case Failure(error) => log.error(s"[addSlackTeam] Failed to add Slack team $slackTeamId for user $userId", error)
+  })
 
   def createOrganizationForSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[SlackTeam] = {
     val (slackTeamOpt, membershipOpt) = db.readOnlyMaster { implicit session =>

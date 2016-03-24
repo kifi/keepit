@@ -10,7 +10,6 @@ import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.commanders.NotificationCommander
-import com.keepit.eliza.social.FakeSecureSocialAuthenticatorPluginModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ User, _ }
 import com.keepit.notify.model.Recipient
@@ -30,9 +29,8 @@ class NotificationGroupingTest extends TestKitSupport with SpecificationLike wit
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
-    FakeUserActionsModule(),
-    FakeSecureSocialAuthenticatorPluginModule()
-  )
+    FakeUserActionsModule())
+
 
   "Notifications" should {
     "group properly" in {

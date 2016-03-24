@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.controllers.website.SlackOAuthController
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -12,6 +13,7 @@ import com.keepit.slack.models._
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{Success, Failure}
 
 sealed trait SlackResponse
 object SlackResponse {
@@ -43,7 +45,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
   implicit val executionContext: ExecutionContext,
   stateCache: SlackAuthStateCache,
   airbrake: AirbrakeNotifier)
-    extends SlackAuthenticationCommander {
+    extends SlackAuthenticationCommander with Logging {
 
   private def setNewSlackState(action: SlackAuthenticatedAction): SlackAuthState = {
     SlackAuthState() tap { state => stateCache.direct.set(SlackAuthStateKey(state), action) }
@@ -87,7 +89,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
 
   def processAuthorizedAction(userId: Id[User], slackTeamId: SlackTeamId, slackUserId: SlackUserId, action: SlackAuthenticatedAction, incomingWebhookId: Option[Id[SlackIncomingWebhookInfo]])(implicit context: HeimdalContext): Future[SlackResponse] = {
     def continueWith(nextAction: SlackAuthenticatedAction): Future[SlackResponse] = processAuthorizedAction(userId, slackTeamId, slackUserId, nextAction, incomingWebhookId)
-
+    log.info(s"[processAuthorizedAction] Processing SlackAuthenticatedAction for user $userId ($slackUserId in Slack team $slackTeamId): $action")
     action match {
       case SetupLibraryIntegrations(libId, cachedWebhookId) => (incomingWebhookId orElse cachedWebhookId.map(Id[SlackIncomingWebhookInfo](_))) match {
         case Some(webhookId) =>
@@ -169,7 +171,10 @@ class SlackAuthenticationCommanderImpl @Inject() (
 
       case _ => throw new IllegalStateException(s"Action not handled by SlackController: $action")
     }
-  } tap (_.onFailure { case error => airbrake.notify(error) })
+  } tap (_.onComplete {
+    case Failure(error) => airbrake.notify(error)
+    case Success(response) => log.info(s"[processAuthorizedAction] Successfully processed SlackAuthenticatedAction for user $userId ($slackUserId in Slack team $slackTeamId): $action. Response: $response")
+  })
 
   def processActionOrElseAuthenticate(userId: Id[User], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction)(implicit context: HeimdalContext): Future[SlackResponse] = {
     getIdentityAndMissingScopes(Some(userId), slackTeamIdOpt, action).flatMap {
