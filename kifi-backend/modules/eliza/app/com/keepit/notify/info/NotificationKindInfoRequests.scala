@@ -174,7 +174,7 @@ class NotificationKindInfoRequests @Inject()(
       val body = s"${events.size} new keeps in ${library.name}"
 
       StandardNotificationInfo(
-        url = library.path,
+        url = library.path.absolute,
         image = PublicImage(library.image.map(_.path.getUrl).getOrElse(ImageUrls.KIFI_LOGO)),
         title = body,
         body = body,
@@ -238,7 +238,7 @@ class NotificationKindInfoRequests @Inject()(
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = Path(invitedLib.path).absolute,
+        url = invitedLib.path.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
         body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
@@ -261,7 +261,7 @@ class NotificationKindInfoRequests @Inject()(
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = Path(invitedLib.path).absolute,
+        url = invitedLib.path.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
         body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same

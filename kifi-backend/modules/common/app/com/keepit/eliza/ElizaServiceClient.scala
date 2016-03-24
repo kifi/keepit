@@ -103,7 +103,8 @@ trait ElizaServiceClient extends ServiceClient {
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
-  def sendNotificationEvent(event: NotificationEvent): Future[Unit]
+  def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit]
+  def sendNotificationEvent(event: NotificationEvent): Future[Unit] = sendNotificationEvents(Seq(event))
   def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean]
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
@@ -201,9 +202,9 @@ class ElizaServiceClientImpl @Inject() (
 
   val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
 
-  def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
-    val payload = Json.toJson(event)
-    call(Eliza.internal.sendNotificationEvent(), payload).imap(_ => ())
+  def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit] = {
+    val payload = Json.toJson(events)
+    call(Eliza.internal.sendNotificationEvents(), payload).imap(_ => ())
   }
 
   def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean] = {

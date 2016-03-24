@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.path.Path
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -28,7 +29,7 @@ case class LibraryCardInfo(
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  path: String,
+  path: Path,
   org: Option[BasicOrganizationView],
   orgMemberAccess: Option[LibraryAccess],
   whoCanComment: LibraryCommentPermissions)
@@ -37,7 +38,7 @@ object LibraryCardInfo {
   // Ugh...what choices did I make in my life that have led me here, to this point?
   // TODO(ryan): pray for forgiveness
   private type LibraryCardInfoFirstArguments = (PublicId[Library], String, Option[String], Option[LibraryColor], Option[LibraryImageInfo], LibrarySlug, LibraryVisibility, BasicUser, Int, Int, Seq[BasicUser], Int, Seq[BasicUser])
-  private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, String, Option[BasicOrganizationView], Option[LibraryAccess], LibraryCommentPermissions)
+  private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, Path, Option[BasicOrganizationView], Option[LibraryAccess], LibraryCommentPermissions)
   private def fromSadnessTuples(firsts: LibraryCardInfoFirstArguments, seconds: LibraryCardInfoSecondArguments): LibraryCardInfo = (firsts, seconds) match {
     case (
       (id, name, description, color, image, slug, visibility, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators),
@@ -76,7 +77,7 @@ object LibraryCardInfo {
       (__ \ 'caption).formatNullable[String] and
       (__ \ 'modifiedAt).format[DateTime] and
       (__ \ 'kind).format[LibraryKind] and
-      (__ \ 'path).format[String] and
+      (__ \ 'path).format[String].inmap[Path](Path(_), _.relative) and
       (__ \ 'org).formatNullable[BasicOrganizationView] and
       (__ \ 'orgMemberAccess).formatNullable[LibraryAccess] and
       (__ \ 'whoCanComment).format[LibraryCommentPermissions]

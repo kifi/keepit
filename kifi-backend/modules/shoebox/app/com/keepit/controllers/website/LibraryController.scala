@@ -15,6 +15,7 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.URI
+import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
@@ -612,7 +613,7 @@ class LibraryController @Inject() (
               permissions = permissions,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
-              path = info.path,
+              path = Path(info.path),
               org = info.org,
               orgMemberAccess = info.orgMemberAccess,
               whoCanComment = info.whoCanComment
