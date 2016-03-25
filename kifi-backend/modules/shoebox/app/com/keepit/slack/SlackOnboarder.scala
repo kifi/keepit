@@ -250,8 +250,7 @@ class SlackOnboarderImpl @Inject() (
           category = NotificationCategory.NonUser.INTEGRATOR_POSTSYNC
           integrationsLink = LinkElement(pathCommander.orgIntegrationsPageViaSlack(org, agent.team.slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(sendTo, category)))
           optionalKifiBotMessage = if (agent.team.kifiBot.isEmpty) None else Some(SlackAttachment.simple(DescriptionElements(
-            SlackEmoji.zipperMouthFace,
-            "My binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to many messages you send my way.",
+            "Also, I'm a brand new bot so I don't respond to your messages (yet)", SlackEmoji.zipperMouthFace, ".",
             "If you want to email my human friends at support@kifi.com they'd be happy to help."
           )))
           msg <- Some(SlackMessageRequest.fromKifi("Okay, I just got back from Slack and here's what's going on", attachments =
