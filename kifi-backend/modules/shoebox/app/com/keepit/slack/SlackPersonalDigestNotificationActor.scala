@@ -103,6 +103,7 @@ class SlackPersonalDigestNotificationActor @Inject() (
             }
             slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
             slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
+          case Failure(SlackFail.NoValidPushMethod) =>
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
             db.readWrite { implicit s =>

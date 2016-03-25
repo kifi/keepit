@@ -7,7 +7,7 @@ import org.specs2.mutable._
 
 import com.keepit.model._
 import com.keepit.common.db.{ Id }
-import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.actor.FakeActorSystemModule
 
 import play.api.test.FakeRequest
@@ -60,7 +60,6 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
       FakeActorSystemModule(),
       FakeUserActionsModule(),
       FakeHttpClientModule(),
-      FakeSecureSocialClientIdModule(),
       FakeShoeboxServiceModule(),
       PlayAppConfigurationModule()
     )

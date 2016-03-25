@@ -5,7 +5,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
 import com.keepit.common.json.TestHelper
@@ -51,7 +51,6 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeAppBoyModule(),
-      FakeSecureSocialClientIdModule(),
       FakeUserActionsModule(),
       FakeHttpClientModule(),
       FakeCryptoModule(),

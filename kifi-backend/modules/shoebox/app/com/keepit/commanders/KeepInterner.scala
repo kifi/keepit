@@ -209,10 +209,10 @@ class KeepInternerImpl @Inject() (
       searchClient.updateKeepIndex()
 
       // Make external notifications & fetch
-      if (notifyExternalSources && (KeepSource.discrete.contains(keeps.head.source) || keeps.size == 1)) { // Only report first to not spam
+      if (notifyExternalSources) { // Only report first to not spam
         SafeFuture {
           libraryOpt.foreach { lib =>
-            libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
+            libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps)
             libToSlackProcessor.schedule(Set(lib.id.get))
             if (KeepSource.manual.contains(keeps.head.source)) {
               keeps.groupBy(_.userId).keySet.flatten.foreach { userId =>

@@ -6,6 +6,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
+import com.keepit.common.strings._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
@@ -95,11 +96,17 @@ class AirbrakeSender @Inject() (
              * Error messages, files, components, actions, environment names, request URLs, and error class names are truncated after 255 characters.
              * Any incoming element with text content over 2 kilobytes (not chars) will be truncated.
              */
+            val bodyString = body.toString
             systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
               to = Seq(SystemEmailAddress.ENG42),
               category = NotificationCategory.System.HEALTHCHECK,
               subject = s"[${service.currentService}] [WARNING] Error was too big",
-              htmlBody = ex.getMessage + "\n\n" + body.toString.take(10 * 1024)))
+              htmlBody =
+                s"""${ex.getMessage}
+                   |<br/>
+                   |<h1>Body with ${bodyString.size} total chars, may be trimmed at 70k</h1>
+                   |<br/>
+                   |${bodyString.abbreviate(70 * 1024)}""".stripMargin))
           } else {
             systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG42,
               to = Seq(SystemEmailAddress.ENG42),

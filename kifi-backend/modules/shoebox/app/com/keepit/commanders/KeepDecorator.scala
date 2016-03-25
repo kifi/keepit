@@ -190,8 +190,8 @@ class KeepDecoratorImpl @Inject() (
             }
 
             val bestEffortPath = (keep.title, pageInfoForKeep.title) match {
-              case (None, Some(title)) => keep.copy(title = Some(title)).path.relative
-              case _ => keep.path.relative
+              case (None, Some(title)) => keep.copy(title = Some(title)).path.relativeWithLeadingSlash
+              case _ => keep.path.relativeWithLeadingSlash
             }
 
             val keepMembers = {
@@ -384,7 +384,7 @@ class KeepDecoratorImpl @Inject() (
               val firstMinute = firstKtu.addedAt.plusMinutes(1)
               val firstSentTo = sortedKtus.takeWhile(_.addedAt.getMillis <= firstMinute.getMillis)
                 .collect { case ktu if !keep.userId.contains(ktu.userId) => userById.get(ktu.userId) }.flatten
-              DescriptionElements(authorElement, "sent", if (firstSentTo.nonEmpty) DescriptionElements("to", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "this page")
+              DescriptionElements(authorElement, "started a discussion", if (firstSentTo.nonEmpty) DescriptionElements("with", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "on this page")
           }
       }
       val body = DescriptionElements(keep.note)
@@ -399,7 +399,8 @@ class KeepDecoratorImpl @Inject() (
     }
 
     val commentEvents = discussion.map(_.messages.map(ActivityEvent.fromComment)).getOrElse(Seq.empty)
-    ActivityLog(events = (commentEvents :+ initialKeepEvent))
+    val events = commentEvents :+ initialKeepEvent
+    ActivityLog(events = events, numEvents = events.size, numComments = commentEvents.size + keep.note.map(_ => 1).getOrElse(0))
   }
 }
 

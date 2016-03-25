@@ -4,6 +4,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.time._
 import com.keepit.macros.Location
@@ -88,7 +89,7 @@ case class UserElement(
   def helper = UserElement
 
   val text = name
-  val url = Some(path.relative)
+  val url = Some(path.absolute)
 }
 object UserElement extends DescriptionElementHelper[UserElement]("user") {
   implicit val writes: Writes[UserElement] = Writes { u => Json.obj("id" -> u.id, "text" -> u.text, "image" -> u.image, "url" -> u.url, "kind" -> kind) }
@@ -131,10 +132,10 @@ case class LibraryElement(
   def helper = LibraryElement
 
   val text = name
-  val url = Some(path.relative)
+  val url = Some(path.absolute)
 }
 object LibraryElement extends DescriptionElementHelper[LibraryElement]("library") {
-  implicit val writes: Writes[LibraryElement] = Writes { l => Json.obj("id" -> l.id, "text" -> l.text, "image" -> l.color, "url" -> l.url, "kind" -> kind) }
+  implicit val writes: Writes[LibraryElement] = Writes { l => Json.obj("id" -> l.id, "text" -> l.text, "color" -> l.color, "url" -> l.url, "kind" -> kind) }
 }
 
 case class OrganizationElement(
@@ -147,7 +148,7 @@ case class OrganizationElement(
   def helper = OrganizationElement
 
   val text = name
-  val url = Some(path.relative)
+  val url = Some(path.absolute)
 }
 object OrganizationElement extends DescriptionElementHelper[OrganizationElement]("organization") {
   implicit val writes: Writes[OrganizationElement] = Writes { o => Json.obj("id" -> o.id, "text" -> o.text, "image" -> o.image, "url" -> o.url, "kind" -> kind) }
@@ -173,7 +174,7 @@ object DescriptionElements {
 
   implicit def fromDateTime(time: DateTime): TextElement = new PrettyTime().format(time.toDate)
 
-  implicit def fromBasicUser(bu: BasicUser): UserElement = UserElement(bu.externalId, bu.firstName, bu.pictureName, Path(bu.username.value))
+  implicit def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): UserElement = UserElement(bu.externalId, bu.firstName, bu.picturePath.getUrl, Path(s"/${bu.username.value}"))
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
   implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {

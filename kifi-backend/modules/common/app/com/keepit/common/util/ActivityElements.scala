@@ -75,11 +75,11 @@ object ActivityEvent {
   )(unlift(ActivityEvent.unapply))
 }
 
-case class ActivityLog(events: Seq[ActivityEvent])
+case class ActivityLog(events: Seq[ActivityEvent], numEvents: Int, numComments: Int)
 object ActivityLog {
-  val empty = ActivityLog(Seq.empty)
+  val empty = ActivityLog(Seq.empty, numEvents = 0, numComments = 0)
 
   implicit val writes = new Writes[ActivityLog] {
-    def writes(o: ActivityLog) = Json.obj("events" -> o.events)
+    def writes(o: ActivityLog) = Json.obj("events" -> o.events, "numEvents" -> o.numEvents, "numComments" -> o.numComments)
   }
 }

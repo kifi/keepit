@@ -197,7 +197,7 @@ class PageMetaTagsCommander @Inject() (
 
   private def userPathOnly(username: Username): String = s"/${username.value}"
   private def orgPathOnly(primaryHandle: PrimaryOrganizationHandle): String = s"/${primaryHandle.original.value}"
-  private def keepPathOnly(keep: Keep): String = s"/${keep.path.relative}"
+  private def keepPathOnly(keep: Keep): String = keep.path.relativeWithLeadingSlash
 
   def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
     val urlPath = userPathOnly(user.username)

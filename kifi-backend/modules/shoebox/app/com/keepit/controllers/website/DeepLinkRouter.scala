@@ -63,7 +63,7 @@ class DeepLinkRouterImpl @Inject() (
       accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
     } yield {
       val url = {
-        if (redirectToKeepPage) keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
+        if (redirectToKeepPage) keep.path.relativeWithLeadingSlash + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
         else keep.url
       }
       DeepLinkRedirect(url, Some(s"/messages/${Keep.publicId(keep.id.get).id}").filterNot(_ => redirectToKeepPage))

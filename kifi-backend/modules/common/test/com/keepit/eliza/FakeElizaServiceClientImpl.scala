@@ -22,7 +22,7 @@ import scala.concurrent.{Future, Promise}
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
-  var inbox = List.empty[NotificationEvent]
+  var inbox = Seq.empty[NotificationEvent]
 
   var completedNotifications = List.empty[Recipient]
 
@@ -81,8 +81,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   override def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = Future.successful(Seq.empty)
 
-  override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
-    inbox = event +: inbox
+  override def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit] = {
+    inbox = events ++ inbox
     Future.successful(())
   }
 

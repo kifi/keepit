@@ -3,7 +3,7 @@ package com.keepit.social
 import com.keepit.common.controller.KifiSession._
 import com.keepit.common.logging.Logging
 import play.api.mvc._
-import securesocial.core.{ SocialUser, Identity, IdentityProvider, UserService }
+import securesocial.core.{ Identity, IdentityProvider, SocialUser, UserService }
 
 /**
  * An identity provider which returns UserIdentity instances. This allows us to know the currently logged in user when

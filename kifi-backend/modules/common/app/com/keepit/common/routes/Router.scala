@@ -1,10 +1,8 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
-import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.discussion.Message
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -12,19 +10,14 @@ import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
 import com.keepit.search.index.message.ThreadContent
-import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
-import com.keepit.slack.models.{SlackTeamId, SlackUserId}
-import com.keepit.typeahead.UserPrefixSearchRequest
+import com.keepit.slack.models.SlackTeamId
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.social.{UserIdentity, SocialNetworkType}
-import securesocial.core.IdentityId
-
-import scala.concurrent.Future
+import com.keepit.social.SocialNetworkType
 
 trait Service
 
@@ -250,7 +243,7 @@ object Eliza extends Service {
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
-    def sendNotificationEvent() = ServiceRoute(POST, "/internal/eliza/notifications/post")
+    def sendNotificationEvents() = ServiceRoute(POST, "/internal/eliza/notifications/send")
     def completeNotification() = ServiceRoute(POST, "/internal/eliza/notifications/complete")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
     def getUserThreadStats(userId: Id[User]) = ServiceRoute(GET, "/internal/eliza/getUserThreadStats", Param("userId", userId))
