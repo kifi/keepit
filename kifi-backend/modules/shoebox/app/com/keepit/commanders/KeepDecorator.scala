@@ -202,8 +202,8 @@ class KeepDecoratorImpl @Inject() (
             }
 
             val bestEffortPath = (keep.title, pageInfoForKeep.title) match {
-              case (None, Some(title)) => keep.copy(title = Some(title)).path.relative
-              case _ => keep.path.relative
+              case (None, Some(title)) => keep.copy(title = Some(title)).path.relativeWithLeadingSlash
+              case _ => keep.path.relativeWithLeadingSlash
             }
 
             val keepMembers = {

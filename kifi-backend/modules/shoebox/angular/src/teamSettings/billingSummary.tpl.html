@@ -19,7 +19,7 @@
         on the
         <a
           class="kf-link kf-link-black kf-link-underline"
-          ui-sref="orgProfile.settings.plan"
+          ui-sref="orgProfile.settings.plan({ '#': 'select-plan-' })"
           ng-click="trackOverviewClick('overview:plan')"
         >
           <span ng-bind="billingState.plan.fullName"></span> plan
@@ -48,7 +48,7 @@
         <span ng-if="preview">You will have a</span>
         <a
           class="kf-link kf-link-black kf-link-underline"
-          ui-sref="orgProfile.settings.plan"
+          ui-sref="orgProfile.settings.credits"
           ng-click="trackOverviewClick('overview:credits')"
         >
           credit of
@@ -59,7 +59,7 @@
           which will be applied before your
           <a
             class="kf-link kf-link-black kf-link-underline"
-            ui-sref="orgProfile.settings.plan"
+            ui-sref="orgProfile.settings.plan({ '#': 'select-plan-' })"
             ng-click="trackOverviewClick('overview:card_ending')"
           >
             credit card ending in
@@ -74,7 +74,7 @@
         Your
         <a
           class="kf-link kf-link-black kf-link-underline"
-          ui-sref="orgProfile.settings.plan"
+          ui-sref="orgProfile.settings.plan({ '#': 'select-plan-' })"
           ng-click="trackOverviewClick('overview:card_ending')"
         >
           credit card ending in

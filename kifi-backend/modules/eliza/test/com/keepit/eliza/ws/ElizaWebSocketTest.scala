@@ -2,30 +2,26 @@ package com.keepit.eliza.ws
 
 import java.util.UUID
 
-import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.crypto.{ PublicId }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.MessagingCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
 import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
-import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.{ Keep, MessageThreadFactory, User, SocialUserInfo }
+import com.keepit.model.{ Keep, MessageThreadFactory, User }
 import com.keepit.rover.FakeRoverServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
-import com.keepit.slack.FakeSlackClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.{ JsNull, JsArray, Json }
+import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.WebSocket
 import play.api.test.Helpers._
-import com.keepit.common.time._
 
 class ElizaWebSocketTest extends Specification with ElizaApplicationInjector with NoTimeConversions with WsTestBehavior {
 
@@ -36,9 +32,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
-    FakeUserActionsModule(),
-    FakeSecureSocialAuthenticatorPluginModule(),
-    FakeSecureSocialUserPluginModule()
+    FakeUserActionsModule()
   )
 
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)

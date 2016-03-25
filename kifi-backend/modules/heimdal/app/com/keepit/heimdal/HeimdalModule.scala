@@ -6,7 +6,6 @@ import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.helprank.ReKeepStatsUpdaterModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
-import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
 
@@ -27,6 +26,5 @@ abstract class HeimdalModule(
   val serviceTypeModule = HeimdalServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
-  val secureSocialModule = RemoteSecureSocialModule()
   val heimdalSlickModule = HeimdalSlickModule()
 }

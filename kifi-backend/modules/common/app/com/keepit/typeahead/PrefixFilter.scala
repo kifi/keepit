@@ -33,7 +33,7 @@ object PrefixFilter {
   }
 
   private[this] val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  final val tokenBoundary = "\\s+"
+  final val tokenBoundary = "[\\s#]+" // \p{Punct}
 
   @inline final def normalize(str: String) = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(str.trim, Normalizer.Form.NFD), "").toLowerCase
   @inline final def tokenize(str: String) = tokenizeNormalizedName(normalize(str))
