@@ -2,4 +2,4 @@
 # CLIENT routes #
 #################
 
-GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepController.getExtendedKeepInfo(keepId: PublicId[Keep])
+GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepController.getNewKeepInfo(keepId: PublicId[Keep])

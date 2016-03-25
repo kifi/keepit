@@ -18,10 +18,10 @@ import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.model.keep2.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import com.keepit.shoebox.data.keep.{ KeepInfo, BasicLibraryWithKeptAt }
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
