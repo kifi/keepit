@@ -219,20 +219,35 @@ k.tile = k.tile || (function () {
     }
   }
 
-  function configureLookHere(on) {
-    if (on) {
-      if (k.snap) {
-        k.snap.enable();
-        k.snap.onLookHere.add(onLookHere);
-      } else {
-        loadAndDo('snap', 'enable', function () {
-          k.snap.onLookHere.add(onLookHere);
-        });
-      }
+  function getKeeperDiscussionState() {
+    var toasterIsShowing = !!(k.toaster && k.toaster.showing());
+    var paneIsShowing = !!(k.pane && k.pane.showing());
+    var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
+
+    if (!toasterIsShowing && messagesPaneIsShowing) {
+      return 'thread_pane';
+    } else if (toasterIsShowing) {
+      return 'compose_pane';
     } else {
-      if (k.snap) {
-        k.snap.disable();
-        k.snap.onLookHere.remove(onLookHere);
+      return 'other';
+    }
+  }
+
+  function configureLookHere(alwaysLookHereOn) {
+    if (!k.snap) {
+      loadAndDo('snap', 'enable', function () {
+        k.snap.onLookHere.add(onLookHere);
+        if (!alwaysLookHereOn && getKeeperDiscussionState() === 'other') {
+          k.snap.disable();
+        }
+      });
+    } else {
+      if (alwaysLookHereOn) {
+        k.snap.enable();
+      } else {
+        if (getKeeperDiscussionState() === 'other') {
+          k.snap.disable();
+        }
       }
     }
   }
