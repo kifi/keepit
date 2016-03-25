@@ -349,10 +349,7 @@ class SlackChannelCommanderImpl @Inject() (
           libraryId <- integrations.allLibraries if orgLibraries.contains(libraryId)
         } yield {
           val libraryMembership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-            case Some(existingMembership) if existingMembership.isActive =>
-              // todo(Léo): leave existing `subscribedToUpdates` alone once backfilled
-              if (existingMembership.subscribedToUpdates) existingMembership
-              else libraryMembershipRepo.save(existingMembership.copy(subscribedToUpdates = true))
+            case Some(existingMembership) if existingMembership.isActive => existingMembership
             case inactiveMembershipOpt =>
               val newMembership = LibraryMembership(id = inactiveMembershipOpt.flatMap(_.id), libraryId = libraryId, userId = userId, access = LibraryAccess.READ_WRITE, subscribedToUpdates = true)
               libraryMembershipRepo.save(newMembership)
