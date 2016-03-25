@@ -67,7 +67,6 @@ class AdminOrganizationController @Inject() (
     orgExperimentRepo: OrganizationExperimentRepo,
     pathCommander: PathCommander,
     slackAnalytics: SlackAnalytics,
-    slackChannelCommander: SlackChannelCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
@@ -504,72 +503,5 @@ class AdminOrganizationController @Inject() (
           }
           .recover { case _ => acc + (mem.id.get -> false) }
     }
-  }
-
-  def backfillSlackStuff(fromSlackTeamId: Option[SlackTeamId]) = AdminUserAction { implicit request =>
-    val slackTeamIds = db.readOnlyMaster { implicit session =>
-      val allTeamIds = slackTeamRepo.all.sortBy(_.id.get).map(_.slackTeamId)
-      fromSlackTeamId match {
-        case Some(teamId) => allTeamIds.dropWhile(_ != teamId)
-        case None => allTeamIds
-      }
-    }
-    FutureHelpers.sequentialExec(slackTeamIds) { slackTeamId =>
-      log.info(s"[backfillSlackStuff] Processing Slack team ${slackTeamId.value}")
-      for {
-        _ <- slackClient.getTeamInfo(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching team for Slack team ${slackTeamId.value}", error) }
-        _ <- slackClient.getUsers(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed fetching users for Slack team ${slackTeamId.value}") }
-        _ <- slackChannelCommander.syncAllChannelMemberships(slackTeamId).map(_ => ()) recover { case error => log.error(s"[backfillSlackStuff] Failed syncing channel members for Slack team ${slackTeamId.value}", error) }
-      } yield log.info(s"[backfillSlackStuff] Done processing Slack team ${slackTeamId.value}")
-    }
-    Ok("I'm on it.")
-  }
-
-  def findIllegalSlackKeeps() = AdminUserAction { implicit request =>
-    SafeFuture {
-      val slackChannelsByLibraryId = db.readOnlyMaster { implicit session =>
-        slackToLibraryRepo.all().groupBy(_.libraryId).mapValues(_.map(stl => (stl.slackTeamId, stl.slackChannelId)))
-      }
-
-      val libraryIds = slackChannelsByLibraryId.keys.toSeq.sortBy(_.id)
-      log.info(s"[findIllegalSlackKeeps] Reviewing ${libraryIds.size} libraries...")
-
-      val illegalKeepsByLibraryIds = libraryIds.zipWithIndex.map {
-        case (libraryId, idx) =>
-          if (idx % 100 == 0) log.info(s"[findIllegalSlackKeeps] Reviewed $idx libraries so far...")
-          val expectedSlackChannelIds = slackChannelsByLibraryId(libraryId)
-          libraryId -> db.readOnlyMaster { implicit session =>
-            val allKeepIds = keepToLibraryRepo.getAllByLibraryId(libraryId).map(_.keepId).toSet
-            keepSourceRepo.getByKeepIds(allKeepIds).collect {
-              case (keepId, SlackAttribution(message, teamId)) if !expectedSlackChannelIds.contains((teamId, message.channel.id)) => (keepId, teamId, message.channel.id)
-            }
-          }
-      }.filter(_._2.nonEmpty)
-
-      log.info(s"[findIllegalSlackKeeps] Found ${illegalKeepsByLibraryIds.size} libraries with suspicious keeps...")
-
-      val allKeepIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._1)).toSet
-      val allTeamIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._2)).toSet
-      val allChannelIds = illegalKeepsByLibraryIds.flatMap(_._2.map(_._3)).toSet
-
-      val subject = s"Found ${allKeepIds.size} suspicious keeps in ${illegalKeepsByLibraryIds.size} libraries from ${allChannelIds.size} Slack channels in ${allTeamIds.size} Slack teams."
-
-      val teamSummary = s"All teams: ${allTeamIds.map(_.value).mkString(",")}"
-      val channelSummary = s"All channels: ${allChannelIds.map(_.value).mkString(",")}"
-      val keepSummary = s"All keeps: ${allKeepIds.map(_.id).mkString(",")}"
-
-      val body = Seq(teamSummary, channelSummary, keepSummary).mkString("\n\n")
-
-      val email = ElectronicMail(
-        from = EmailAddress("eng@kifi.com"),
-        to = Seq(EmailAddress("leo@kifi.com")),
-        subject = subject,
-        category = ElectronicMailCategory("admin"),
-        htmlBody = body
-      )
-      db.readWrite { implicit session => postOffice.sendMail(email) }
-    }
-
-    Ok("I'm on it.")
   }
 }

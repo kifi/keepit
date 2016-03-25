@@ -25,7 +25,7 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], limit: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
@@ -124,15 +124,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], limit: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
     val countByKeepFut = db.readOnlyMasterAsync(implicit s => messageRepo.getAllMessageCounts(keepIds))
-    val recentsByKeep = db.readOnlyMaster { implicit s =>
+    val recentsByKeepFut = db.readOnlyMasterAsync { implicit s =>
       keepIds.map { keepId =>
-        keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = limit)
+        keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = maxEventsPerKeep)
       }.toMap
     }
 
-    countByKeepFut.map { countByKeep =>
+    for {
+      countByKeep <- countByKeepFut
+      recentsByKeep <- recentsByKeepFut
+    } yield {
       recentsByKeep.map {
         case (keepId, messages) =>
           keepId -> CrossServiceKeepActivity(

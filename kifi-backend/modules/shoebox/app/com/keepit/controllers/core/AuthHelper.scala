@@ -73,7 +73,7 @@ object PostRegIntent {
     val authKey = "keepAuthToken"
     val cookieKeys = Set(keepIdKey, authKey)
   }
-  case class Slack(slackTeamId: Option[SlackTeamId], slackExtraScopes: Set[SlackAuthScope]) extends PostRegIntent
+  case class Slack(slackTeamId: Option[SlackTeamId], slackExtraScopes: Option[Set[SlackAuthScope]]) extends PostRegIntent
   object Slack {
     val intentValue = "slack"
     val slackTeamIdKey = "slackTeamId"
@@ -125,8 +125,8 @@ object PostRegIntent {
       }
       case Slack.intentValue => {
         val slackTeamIdOpt = cookieByName.get(Slack.slackTeamIdKey).map(c => SlackTeamId(c.value))
-        val extraScopes = cookieByName.get(Slack.extraScopesKey).map(c => SlackAuthScope.setFromString(c.value)).getOrElse(Set.empty)
-        Some(Slack(slackTeamIdOpt, extraScopes))
+        val extraScopesOpt = cookieByName.get(Slack.extraScopesKey).map(c => SlackAuthScope.setFromString(c.value))
+        Some(Slack(slackTeamIdOpt, extraScopesOpt))
       }
       case ApplyCreditCode.intentValue => cookieByName.get(ApplyCreditCode.creditCodeKey).map(c => ApplyCreditCode(CreditCode(c.value)))
       case JoinTwitterWaitlist.intentValue => Some(JoinTwitterWaitlist)
@@ -293,8 +293,8 @@ class AuthHelper @Inject() (
       case AutoJoinKeep(keepId, authTokenOpt) =>
         authCommander.autoJoinKeep(userId, keepId, authTokenOpt)
         homeOrInstall
-      case Slack(slackTeamIdOpt, extraScopes) =>
-        com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamIdOpt, Some(SlackAuthScope.stringifySet(extraScopes))).url
+      case Slack(slackTeamIdOpt, extraScopesOpt) =>
+        com.keepit.controllers.core.routes.AuthController.startWithSlack(slackTeamIdOpt, extraScopesOpt.filter(_.nonEmpty).map(SlackAuthScope.stringifySet)).url
       case ApplyCreditCode(creditCode) =>
         db.readWrite(attempts = 3) { implicit session =>
           userValueRepo.setValue(userId, UserValueName.STORED_CREDIT_CODE, creditCode.value)

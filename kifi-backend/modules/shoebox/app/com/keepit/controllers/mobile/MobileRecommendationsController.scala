@@ -10,7 +10,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.model._
-import com.keepit.model.keep2.BasicLibraryWithKeptAt
+import com.keepit.shoebox.data.keep.BasicLibraryWithKeptAt
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }

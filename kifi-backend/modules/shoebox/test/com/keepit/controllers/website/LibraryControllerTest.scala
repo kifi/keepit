@@ -1038,21 +1038,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions(keep2.id.get))},
                 "activity": {
-                  "numEvents": 1,
+                  "numEvents": 0,
                   "numComments": 0,
-                  "events": [
-                    {
-                      "kind":"initial",
-                      "image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg",
-                      "header":[
-                        {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
-                        {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","color":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
-                      ],
-                      "body": [],
-                      "timestamp":${keep2.keptAt.getMillis}
-                    }
-                  ]
+                  "events": []
                 }
               },
               {
@@ -1083,21 +1071,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
                 "activity" : {
-                  "numEvents": 1,
+                  "numEvents": 0,
                   "numComments": 0,
-                  "events":[
-                    {
-                      "kind":"initial",
-                      "image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg",
-                      "header":[
-                        {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
-                        {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","color":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
-                      ],
-                      "body": [],
-                      "timestamp":${keep1.keptAt.getMillis}
-                    }
-                  ]
+                  "events":[]
                 }
               }
             ],

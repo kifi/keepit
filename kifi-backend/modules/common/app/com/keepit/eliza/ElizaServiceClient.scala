@@ -15,6 +15,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.ElizaServiceClient.{GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -23,7 +24,6 @@ import com.keepit.search.index.message.ThreadContent
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.eliza.ElizaServiceClient._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -126,7 +126,7 @@ trait ElizaServiceClient extends ServiceClient {
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], limit: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
@@ -329,10 +329,10 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].discussions
     }
   }
-  
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], limit: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
+
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
     import GetCrossServiceKeepActivity._
-    val request = Request(keepIds, limit)
+    val request = Request(keepIds, maxEventsPerKeep)
     call(Eliza.internal.getCrossServiceKeepActivity, body = Json.toJson(request)).map { response =>
       response.json.as[Response].activityByKeep
     }
@@ -444,7 +444,7 @@ object ElizaServiceClient {
   }
   
   object GetCrossServiceKeepActivity {
-    case class Request(keepIds: Set[Id[Keep]], limit: Int)
+    case class Request(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int)
     case class Response(activityByKeep: Map[Id[Keep], CrossServiceKeepActivity])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]

@@ -6,13 +6,10 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
-import com.keepit.common.util.ActivityEventData
 import com.keepit.model._
 import com.keepit.common.core.regexExtensionOps
-import com.keepit.social.{ NonUserKinds, NonUserKind, BasicNonUser, BasicUser, BasicUserLikeEntity }
-import com.kifi.macros.json
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -44,7 +41,7 @@ case class CrossServiceMessage(
   sentAt: DateTime,
   sentBy: Option[Either[Id[User], BasicNonUser]],
   text: String,
-  eventData: Option[ActivityEventData],
+  auxData: Option[KeepEvent],
   source: Option[MessageSource])
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
@@ -64,7 +61,7 @@ object CrossServiceMessage {
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).formatNullable[Either[Id[User], BasicNonUser]] and
     (__ \ 'text).format[String] and
-    (__ \ 'auxData).formatNullable[ActivityEventData] and
+    (__ \ 'auxData).formatNullable[KeepEvent] and
     (__ \ 'source).formatNullable[MessageSource](MessageSource.messageSourceFormat)
   )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
 }
@@ -126,13 +123,8 @@ object MessageSource {
   val SITE = MessageSource("Kifi.com")
   val UNKNOWN = MessageSource("unknown")
 
-  implicit val messageSourceFormat = new Format[MessageSource] {
-    def reads(json: JsValue): JsResult[MessageSource] = {
-      json.asOpt[String] match {
-        case Some(str) => JsSuccess(MessageSource(str))
-        case None => JsError()
-      }
-    }
-    def writes(kind: MessageSource): JsValue = JsString(kind.value)
-  }
+  implicit val messageSourceFormat: Format[MessageSource] = Format(
+    Reads { js => js.validate[String].map(MessageSource.apply) },
+    Writes { o => JsString(o.value) }
+  )
 }

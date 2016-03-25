@@ -20,7 +20,7 @@ import com.keepit.common.performance._
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.model.keep2.KeepInfo
+import com.keepit.shoebox.data.keep.KeepInfo
 import com.keepit.social.BasicUser
 import play.twirl.api.Html
 
