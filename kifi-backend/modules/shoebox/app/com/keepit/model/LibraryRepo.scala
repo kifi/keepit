@@ -119,7 +119,7 @@ class LibraryRepoImpl @Inject() (
     def orgMemberAccess = column[Option[LibraryAccess]]("organization_member_access", O.Nullable)
     def whoCanComment = column[LibraryCommentPermissions]("who_can_comment", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, ownerId, orgId, kind, visibility, name, description, slug, color.?, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgMemberAccess, whoCanComment) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId, orgMemberAccess, whoCanComment) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   implicit val getLibraryResult: GetResult[Library] = GetResult { r: PositionedResult =>
