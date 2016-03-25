@@ -21,6 +21,7 @@ import scala.util.Try
 trait KeepSourceCommander {
   // TODO(ryan): once we have made `Keep.userId` optional and have set up proper attribution backfilling, remove the Option[BasicUser] here
   // it is trying to hotfix misattributed keeps, and we should instead just do the Right Thing the first time
+  def getSourceAttributionForKeep(keepId: Id[Keep])(implicit session: RSession): Option[(SourceAttribution, Option[BasicUser])]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])]
 
   def reattributeKeeps(author: Author, user: Id[User], overwriteExistingOwner: Boolean = false): Set[Id[Keep]]
@@ -37,6 +38,10 @@ class KeepSourceCommanderImpl @Inject() (
   keepCommander: KeepCommander,
   implicit val defaultContext: ExecutionContext)
     extends KeepSourceCommander with Logging {
+
+  def getSourceAttributionForKeep(keepId: Id[Keep])(implicit session: RSession): Option[(SourceAttribution, Option[BasicUser])] = {
+    getSourceAttributionForKeeps(Set(keepId)).get(keepId)
+  }
 
   // Get the source attribution for the provided keeps
   // then look at the a couple of tables to see if any of those attributions can be re-assigned to an actual Kifi user

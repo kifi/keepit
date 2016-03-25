@@ -8,14 +8,12 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{ AirbrakeNotifierStatic, AirbrakeNotifier }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.time._
-import com.keepit.controllers.core.PostRegIntent._
-import com.keepit.controllers.website.HomeControllerRoutes
 import com.keepit.heimdal.{ AnonymousEvent, EventType, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -25,7 +23,6 @@ import com.keepit.slack.SlackAnalytics
 import com.keepit.slack.models.SlackTeamId
 import com.keepit.social._
 import com.keepit.social.providers.ProviderController
-import com.keepit.social.providers.ProviderController._
 import com.kifi.macros.json
 import play.api.Play
 import play.api.Play._

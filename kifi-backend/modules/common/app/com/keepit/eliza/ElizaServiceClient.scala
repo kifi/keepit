@@ -15,6 +15,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.ElizaServiceClient.{GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -23,7 +24,6 @@ import com.keepit.search.index.message.ThreadContent
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.eliza.ElizaServiceClient._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -329,7 +329,7 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].discussions
     }
   }
-  
+
   def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
     import GetCrossServiceKeepActivity._
     val request = Request(keepIds, maxEventsPerKeep)

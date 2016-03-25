@@ -401,6 +401,7 @@ POST    /site/keeps/markAsRead                @com.keepit.controllers.website.Di
 
 POST    /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.sendMessageOnKeep(keepId: PublicId[Keep])
 GET     /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.getMessagesOnKeep(keepId: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+GET     /site/keeps/:keepId/activity          @com.keepit.controllers.website.KeepsController.getActivityForKeep(keepId: PublicId[Keep], eventsBefore: Option[DateTime] ?= None, maxEvents: Int ?= 10)
 POST    /site/keeps/:keepId/messages/edit     @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])

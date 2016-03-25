@@ -72,26 +72,26 @@ object KeepEvent {
   )
 }
 
-case class BasicActivityEvent(
+case class BasicKeepEvent(
   kind: KeepEventKind,
   image: String,
   header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
   body: DescriptionElements, // message and keep.note content
   timestamp: DateTime,
   source: Option[KeepEventSource])
-object BasicActivityEvent {
+object BasicKeepEvent {
 
-  implicit val writes: Writes[BasicActivityEvent] = (
+  implicit val writes: Writes[BasicKeepEvent] = (
     (__ \ 'kind).write[KeepEventKind] and
     (__ \ 'image).write[String] and
     (__ \ 'header).write[DescriptionElements] and
     (__ \ 'body).write[DescriptionElements] and
     (__ \ 'timestamp).write[DateTime] and
     (__ \ 'source).writeNullable[KeepEventSource]
-  )(unlift(BasicActivityEvent.unapply))
+  )(unlift(BasicKeepEvent.unapply))
 }
 
-case class KeepActivity(events: Seq[BasicActivityEvent], numEvents: Int, numComments: Int)
+case class KeepActivity(events: Seq[BasicKeepEvent], numEvents: Int, numComments: Int)
 object KeepActivity {
   val empty = KeepActivity(Seq.empty, numEvents = 0, numComments = 0)
 

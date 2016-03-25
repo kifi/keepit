@@ -6,12 +6,10 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.json.EitherFormat
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.common.core.regexExtensionOps
-import com.keepit.social.{ NonUserKinds, NonUserKind, BasicNonUser, BasicUser, BasicUserLikeEntity }
-import com.kifi.macros.json
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

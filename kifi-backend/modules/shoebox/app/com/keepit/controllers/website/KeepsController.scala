@@ -16,7 +16,7 @@ import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.json._
 import scala.util.{ Failure, Success, Try }
-import org.joda.time.Seconds
+import org.joda.time.{ DateTime, Seconds }
 import scala.concurrent.Future
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
@@ -231,6 +231,16 @@ class KeepsController @Inject() (
     val filter = filterKind.flatMap(FeedFilter(_, filterId))
     keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, maxMessagesShown = maxMessagesShown, sanitizeUrls = false, filterOpt = filter).map { keeps =>
       Ok(Json.obj("keeps" -> keeps))
+    }
+  }
+
+  def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = UserAction.async { request =>
+    Keep.decodePublicId(id) match {
+      case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
+      case Success(keepId) =>
+        keepsCommander.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
+          Ok(Json.obj("activity" -> Json.toJson(activity)))
+        }
     }
   }
 }
