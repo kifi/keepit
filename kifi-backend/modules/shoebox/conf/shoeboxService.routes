@@ -40,6 +40,9 @@ POST    /auth/cancel                  @com.keepit.controllers.core.AuthControlle
 # SecureSocial routes need to exist, or it complains and dies.
 GET     /-authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /-authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+GET     /authenticate/:provider      com.keepit.social.providers.ProviderController.authenticate(provider)
+POST    /authenticate/:provider      com.keepit.social.providers.ProviderController.authenticateByPost(provider)
+
 
 # custom auth routes which set some session state
 
