@@ -72,7 +72,7 @@ class DiscussionCommanderImpl @Inject() (
       msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption).flatMap { msgOpt =>
         msgOpt.filter(_.keep == keepId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP))
       }
-      owner <- msg.sentBy.filter(_ == userId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+      owner <- msg.sentBy.filter(_.left.toOption.contains(userId)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
       editedMsg <- eliza.editMessage(msgId, newText)
     } yield editedMsg
   }
@@ -89,7 +89,7 @@ class DiscussionCommanderImpl @Inject() (
       msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption).flatMap { msgOpt =>
         msgOpt.filter(_.keep == keepId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP))
       }
-      owner <- msg.sentBy.filter(userCanDeleteMessagesFrom).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+      owner <- msg.sentBy.filter(_.left.toOption.exists(userCanDeleteMessagesFrom)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
       res <- eliza.deleteMessage(msgId)
     } yield res
   }

@@ -4,14 +4,13 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.json._
-import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Message }
 import com.keepit.notify.model.Recipient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ Keep, User, NormalizedURI }
+import com.keepit.model.{ KeepEvent, Keep, User, NormalizedURI }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
@@ -96,6 +95,11 @@ object SystemMessageData {
         case s: StartWithEmails => StartWithEmails.internalFormat.writes(s)
       }
     }
+  }
+
+  def toKeepEvent(data: SystemMessageData): Option[KeepEvent] = data match {
+    case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
+    case _ => None
   }
 
   def generateMessageText(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): String = data match {
@@ -274,8 +278,10 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       seq = ElizaMessage.toCommonSeq(message.seq),
       keep = message.keepId,
       sentAt = message.createdAt,
-      sentBy = message.from.asUser,
-      text = message.messageText
+      sentBy = message.from.fold(None, userId => Some(Left(userId)), nup => Some(Right(NonUserParticipant.toBasicNonUser(nup)))),
+      text = message.messageText,
+      auxData = message.auxData.flatMap(SystemMessageData.toKeepEvent),
+      source = message.source
     )
   }
 }

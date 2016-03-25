@@ -13,7 +13,7 @@ import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ S3ImageStore, S3ImageConfig, FakeShoeboxStoreModule }
 import com.keepit.common.time._
-import com.keepit.common.util.{ AuthorElement, ActivityKind, TextElement, LibraryElement }
+import com.keepit.common.util.{ AuthorElement, TextElement, LibraryElement }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model.KeepFactoryHelper._

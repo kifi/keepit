@@ -1,25 +1,20 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.discussion.{ DiscussionFail, Message, DiscussionKeep }
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{ Json, JsArray, JsString, JsNumber, JsBoolean, JsValue }
 import com.keepit.model._
-import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
-import org.joda.time.DateTime
+import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.core._
-
-import scala.util.control.NoStackTrace
 
 // todo(Léo): revisit this with full keepscussions
 case class BasicDiscussion(

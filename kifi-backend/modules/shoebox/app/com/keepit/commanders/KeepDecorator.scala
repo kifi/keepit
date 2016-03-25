@@ -13,9 +13,11 @@ import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
-import com.keepit.common.util.{ ImageElement, DescriptionElement, ActivitySource, ActivityKind, LinkElement, DescriptionElements, ActivityLog, ActivityEvent }
+import com.keepit.model._
+import KeepEvent.AddParticipants
+import com.keepit.common.util.{ ImageElement, DescriptionElement, LinkElement, DescriptionElements }
 import com.keepit.common.util.Ord.dateTimeOrdering
-import com.keepit.discussion.{ Discussion, Message }
+import com.keepit.discussion.{ CrossServiceKeepActivity, Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.model.keep2.{ BasicLibraryWithKeptAt, KeepInfo }
@@ -164,6 +166,16 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
+      val activityByKeepFut = eliza.getCrossServiceKeepActivity(keepIds, maxMessagesShown).recover {
+        case fail =>
+          airbrake.notify(s"[KEEP-DECORATOR] Failed to get activity for keeps $keepIds", fail)
+          Map.empty[Id[Keep], CrossServiceKeepActivity]
+      }
+      val activityWithStrictTimeout = TimeoutFuture(activityByKeepFut)(executionContext, 2.seconds).recover {
+        case _ =>
+          log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
+          Map.empty[Id[Keep], CrossServiceKeepActivity]
+      }
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
@@ -173,6 +185,7 @@ class KeepDecoratorImpl @Inject() (
         additionalSourcesByUriId <- additionalSourcesFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
+        activityByKeep <- activityWithStrictTimeout
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.flatMap {
@@ -220,7 +233,7 @@ class KeepDecoratorImpl @Inject() (
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), discussionsByKeep.get(keepId),
+              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
                 ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
                 idToBasicUser, idToBasicLibrary, idToBasicOrg)
               KeepInfo(
@@ -347,9 +360,9 @@ class KeepDecoratorImpl @Inject() (
   }
 
   def generateActivityLog(
-    keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], discussion: Option[Discussion],
+    keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], elizaActivity: Option[CrossServiceKeepActivity],
     ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser], userById: Map[Id[User], BasicUser],
-    libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): ActivityLog = {
+    libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): KeepActivity = {
     import com.keepit.common.util.DescriptionElements._
 
     val initialKeepEvent = {
@@ -388,8 +401,8 @@ class KeepDecoratorImpl @Inject() (
           }
       }
       val body = DescriptionElements(keep.note)
-      ActivityEvent(
-        ActivityKind.Initial,
+      BasicActivityEvent(
+        KeepEventKind.Initial,
         image = authorElement.image,
         header = header,
         body = body,
@@ -398,9 +411,50 @@ class KeepDecoratorImpl @Inject() (
       )
     }
 
-    val commentEvents = discussion.map(_.messages.map(ActivityEvent.fromComment)).getOrElse(Seq.empty)
+    val commentEvents = elizaActivity.map(_.messages.flatMap { message =>
+      message.sentBy match {
+        case Some(userOrNonUser) =>
+          import DescriptionElements._
+          val userOpt = userOrNonUser.left.toOption.flatMap(userById.get)
+          val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](userId => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse {
+            airbrake.notify(s"[activityLog] could not generate message author name on keep ${keep.id.get}")
+            "Someone"
+          }
+          Some(BasicActivityEvent(
+            KeepEventKind.Comment,
+            image = userOpt.map(_.picturePath.getUrl).getOrElse("0.jpg"), // todo(cam): figure out a protocol for non-user images
+            header = DescriptionElements(msgAuthor, "commented on this page"),
+            body = DescriptionElements(message.text),
+            timestamp = message.sentAt,
+            source = KeepEventSource.fromMessageSource(message.source)
+          ))
+        case None =>
+          message.auxData match {
+            case Some(AddParticipants(addedBy, addedUsers, addedNonUsers)) =>
+              val basicAddedBy = userById.get(addedBy)
+              val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
+              Some(BasicActivityEvent(
+                KeepEventKind.AddParticipants,
+                image = basicAddedBy.map(_.picturePath.getUrl).getOrElse {
+                  airbrake.notify(s"[activityLog] can't find user $addedBy for keep ${keep.id.get}")
+                  "0.jpg"
+                },
+                header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
+                body = DescriptionElements(),
+                timestamp = message.sentAt,
+                source = KeepEventSource.fromMessageSource(message.source)
+              ))
+            case dataOpt =>
+              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] messsage ${message.id} has no .sentBy and no .auxData, can't generate event")
+              None
+          }
+      }
+    }).getOrElse(Seq.empty)
     val events = commentEvents :+ initialKeepEvent
-    ActivityLog(events = events, numEvents = events.size, numComments = commentEvents.size + keep.note.map(_ => 1).getOrElse(0))
+    KeepActivity(
+      events = events,
+      numEvents = events.size, // todo(cam): fetch the eliza total event count
+      numComments = elizaActivity.map(_.numComments).getOrElse(0) + keep.note.size)
   }
 }
 
