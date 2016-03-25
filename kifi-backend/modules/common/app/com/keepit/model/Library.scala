@@ -31,21 +31,21 @@ case class Library(
     id: Option[Id[Library]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    name: String,
+    state: State[Library] = LibraryStates.ACTIVE,
+    seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     ownerId: Id[User],
+    organizationId: Option[Id[Organization]] = None,
+    kind: LibraryKind = LibraryKind.USER_CREATED,
     visibility: LibraryVisibility,
+    name: String,
     description: Option[String] = None,
     slug: LibrarySlug,
     color: Option[LibraryColor] = None,
-    state: State[Library] = LibraryStates.ACTIVE,
-    seq: SequenceNumber[Library] = SequenceNumber.ZERO,
-    kind: LibraryKind = LibraryKind.USER_CREATED,
-    universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int,
+    universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     lastKept: Option[DateTime] = None,
     keepCount: Int = 0,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
-    organizationId: Option[Id[Organization]] = None,
     organizationMemberAccess: Option[LibraryAccess] = None,
     whoCanComment: LibraryCommentPermissions = LibraryCommentPermissions.ANYONE) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
@@ -89,23 +89,44 @@ object Library extends PublicIdGenerator[Library] {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[Library],
-    name: String,
+    seq: SequenceNumber[Library],
     ownerId: Id[User],
-    description: Option[String],
+    organizationId: Option[Id[Organization]],
+    kind: LibraryKind,
     visibility: LibraryVisibility,
+    name: String,
+    description: Option[String],
     slug: LibrarySlug,
     color: Option[LibraryColor],
-    seq: SequenceNumber[Library],
-    kind: LibraryKind,
     memberCount: Int,
     universalLink: String,
     lastKept: Option[DateTime],
     keepCount: Int,
     whoCanInvite: Option[LibraryInvitePermissions],
-    organizationId: Option[Id[Organization]],
     organizationMemberAccess: Option[LibraryAccess],
     whoCanComment: LibraryCommentPermissions) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess, whoCanComment)
+    Library(
+      id = id,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      state = state,
+      seq = seq,
+      ownerId = ownerId,
+      organizationId = organizationId,
+      kind = kind,
+      visibility = visibility,
+      name = getDisplayName(name, kind),
+      slug = slug,
+      description = description,
+      color = color,
+      universalLink = universalLink,
+      memberCount = memberCount,
+      lastKept = lastKept,
+      keepCount = keepCount,
+      whoCanInvite = whoCanInvite,
+      organizationMemberAccess = organizationMemberAccess,
+      whoCanComment = whoCanComment
+    )
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -114,20 +135,20 @@ object Library extends PublicIdGenerator[Library] {
       lib.createdAt,
       lib.updatedAt,
       lib.state,
-      lib.name,
+      lib.seq,
       lib.ownerId,
-      lib.description,
+      lib.organizationId,
+      lib.kind,
       lib.visibility,
+      lib.name,
+      lib.description,
       lib.slug,
       lib.color,
-      lib.seq,
-      lib.kind,
       lib.memberCount,
       lib.universalLink,
       lib.lastKept,
       lib.keepCount,
       lib.whoCanInvite,
-      lib.organizationId,
       lib.organizationMemberAccess,
       lib.whoCanComment
     )
@@ -140,24 +161,24 @@ object Library extends PublicIdGenerator[Library] {
     (__ \ 'id).formatNullable(Id.format[Library]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'name).format[String] and
+    (__ \ 'state).format(State.format[Library]) and
+    (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'ownerId).format[Id[User]] and
+    (__ \ "orgId").formatNullable[Id[Organization]] and
+    (__ \ 'kind).format[LibraryKind] and
     (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'name).format[String] and
     (__ \ 'description).format[Option[String]] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'color).formatNullable[LibraryColor] and
-    (__ \ 'state).format(State.format[Library]) and
-    (__ \ 'seq).format(SequenceNumber.format[Library]) and
-    (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int] and
+    (__ \ 'universalLink).format[String] and
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
-    (__ \ "orgId").formatNullable[Id[Organization]] and
     (__ \ "orgMemberAccess").formatNullable[LibraryAccess] and
     (__ \ "whoCanComment").format[LibraryCommentPermissions]
-  )(Library.apply, unlift(Library.unapply))
+  )(applyFromDbRow, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
     name.nonEmpty && name.length <= 200 && !name.contains('"')
