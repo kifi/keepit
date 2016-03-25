@@ -9,24 +9,24 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import play.api.libs.json.Json
+
+import scala.concurrent.ExecutionContext
 
 class ClientKeepController @Inject() (
   val userActionsHelper: UserActionsHelper,
-  db: Database,
-  keepRepo: KeepRepo,
-  keepDecorator: KeepDecorator,
-  collectionRepo: CollectionRepo,
-  collectionCommander: CollectionCommander,
-  keepsCommander: KeepCommander,
-  keepExportCommander: KeepExportCommander,
-  permissionCommander: PermissionCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
-  heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
-  implicit val publicIdConfig: PublicIdConfiguration)
+  private implicit val defaultContext: ExecutionContext,
+  private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getExtendedKeepInfo(pubId: PublicId[Keep]) = MaybeUserAction { implicit request =>
-    NoContent
+  def getNewKeepInfo(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
+    val keepId = Keep.decodePublicId(pubId).get
+    keepInfoAssembler.assembleInfoForKeeps(request.userIdOpt, Seq(keepId)).map {
+      case Seq((keepInfo, viewerInfo)) => Ok(Json.toJson(keepInfo))
+    }
   }
 }

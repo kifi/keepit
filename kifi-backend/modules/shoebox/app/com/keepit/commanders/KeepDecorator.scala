@@ -20,10 +20,10 @@ import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ CrossServiceKeepActivity, Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.model.keep2.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import com.keepit.shoebox.data.keep.{ KeepInfo, BasicLibraryWithKeptAt }
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
@@ -203,8 +203,8 @@ class KeepDecoratorImpl @Inject() (
             }
 
             val bestEffortPath = (keep.title, pageInfoForKeep.title) match {
-              case (None, Some(title)) => keep.copy(title = Some(title)).path.relative
-              case _ => keep.path.relative
+              case (None, Some(title)) => keep.copy(title = Some(title)).path.relativeWithLeadingSlash
+              case _ => keep.path.relativeWithLeadingSlash
             }
 
             val keepMembers = {
@@ -233,7 +233,7 @@ class KeepDecoratorImpl @Inject() (
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
+              val keepActivity = generateKeepActivity(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
                 ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
                 idToBasicUser, idToBasicLibrary, idToBasicOrg)
               KeepInfo(
@@ -265,7 +265,7 @@ class KeepDecoratorImpl @Inject() (
                 sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
                 discussion = discussionsByKeep.get(keepId),
-                activity = activityLog,
+                activity = keepActivity,
                 participants = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
                 members = keepMembers,
                 permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
@@ -359,7 +359,7 @@ class KeepDecoratorImpl @Inject() (
     }
   }
 
-  def generateActivityLog(
+  def generateKeepActivity(
     keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], elizaActivity: Option[CrossServiceKeepActivity],
     ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser], userById: Map[Id[User], BasicUser],
     libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): KeepActivity = {

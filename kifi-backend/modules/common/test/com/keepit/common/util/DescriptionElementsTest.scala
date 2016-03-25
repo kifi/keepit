@@ -2,7 +2,7 @@ package com.keepit.common.util
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.time._
-import com.keepit.model.{BasicActivityEvent, KeepEventKind$, LibraryVisibility, Library, BasicLibrary}
+import com.keepit.model.{ KeepEventKind, BasicActivityEvent, LibraryVisibility, Library, BasicLibrary }
 import com.keepit.social.BasicAuthor
 import org.joda.time.{ Duration, DateTime, Period }
 import org.specs2.mutable.Specification

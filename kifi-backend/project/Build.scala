@@ -77,7 +77,7 @@ object ApplicationBuild extends Build {
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
     Global.macroParadiseSettings: _*
   ).settings(
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.7",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.8",
     libraryDependencies ++= (
       if (scalaVersion.value.startsWith("2.10")) Seq("org.scalamacros" %% "quasiquotes" % "2.0.1")
       else Nil

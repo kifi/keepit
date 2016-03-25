@@ -2,7 +2,6 @@ package com.keepit.abook
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
-import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ShoeboxServiceClientModule, ProdShoeboxServiceClientModule }
 import com.keepit.common.store.StoreModule
@@ -29,7 +28,6 @@ trait ABookModule extends ConfigurationModule with CommonServiceModule {
   val graphServiceClientModule: GraphServiceClientModule = ProdGraphServiceClientModule()
   val shoeboxServiceClientModule: ShoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val abookServiceClientModule: ABookServiceClientModule = ProdABookServiceClientModule()
-  val secureSocialModule = RemoteSecureSocialModule()
   val abookSlickModule = ABookSlickModule()
 
   val dbSequencingModule = ABookDbSequencingModule()

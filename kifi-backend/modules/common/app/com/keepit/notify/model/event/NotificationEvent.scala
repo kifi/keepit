@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
-import org.joda.time.{Duration, DateTime}
+import org.joda.time.{Seconds, Duration, DateTime}
 import com.keepit.common.core.traversableOnceExtensionOps
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -108,6 +108,7 @@ object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionIn
 case class LibraryNewKeep(
   recipient: Recipient,
   time: DateTime,
+  keptAt: DateTime,
   keeperId: Option[Id[User]],
   keepId: Id[Keep],
   libraryId: Id[Library]) extends NotificationEvent {
@@ -120,23 +121,35 @@ case class LibraryNewKeep(
 
 object LibraryNewKeep extends GroupingNotificationKind[LibraryNewKeep, (Recipient, Id[Library])] {
   override val name: String = "library_new_keep"
-  private val groupingTimeThreshold = Duration.standardSeconds(30)
 
-  override implicit val format = (
+  def fromOldData(r: Recipient, t: DateTime, kt: Option[DateTime], uId: Option[Id[User]], kId: Id[Keep], lId: Id[Library]) =
+      LibraryNewKeep(r, t, kt getOrElse t, uId, kId, lId)
+  def toOldData(lnk: LibraryNewKeep) =
+    (lnk.recipient, lnk.time, Some(lnk.keptAt), lnk.keeperId, lnk.keepId, lnk.libraryId)
+
+  override implicit val format: Format[LibraryNewKeep] = (
     (__ \ "recipient").format[Recipient] and
-      (__ \ "time").format[DateTime] and
-      (__ \ "keeperId").formatNullable[Id[User]] and
-      (__ \ "keepId").format[Id[Keep]] and
-      (__ \ "libraryId").format[Id[Library]]
-    )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
+    (__ \ "time").format[DateTime] and
+    (__ \ "keptAt").formatNullable[DateTime] and
+    (__ \ "keeperId").formatNullable[Id[User]] and
+    (__ \ "keepId").format[Id[Keep]] and
+    (__ \ "libraryId").format[Id[Library]]
+  )(fromOldData, toOldData)
 
   override def getIdentifier(that: LibraryNewKeep): (Recipient, Id[Library]) = (that.recipient, that.libraryId)
 
+  private val maxAddedAtDifference = Duration.standardSeconds(30)
+  private val recentThreshold = Duration.standardDays(1)
+  private val minKeptAtDifference = Duration.standardMinutes(5)
   override def shouldGroupWith(newEvent: LibraryNewKeep, existingEvents: Set[LibraryNewKeep]): Boolean = {
-    val latestEventWasPrettyRecent = existingEvents.map(_.time).maxOpt.forall { existingEventTime =>
-      new Duration(existingEventTime, newEvent.time) isShorterThan groupingTimeThreshold
+    def keepWasAddedShortlyAfterExistingKeeps = existingEvents.map(_.time).exists { otherAddedAt =>
+      Seconds.secondsBetween(otherAddedAt, newEvent.time).toStandardDuration isShorterThan maxAddedAtDifference
     }
-    latestEventWasPrettyRecent
+    def keepIsVeryOld = Seconds.secondsBetween(newEvent.keptAt, newEvent.time).toStandardDuration isLongerThan recentThreshold
+    def keepsWereOriginallyFarApart = existingEvents.map(_.keptAt).forall { otherKeptAt =>
+      Seconds.secondsBetween(otherKeptAt, newEvent.keptAt).toStandardDuration isLongerThan minKeptAtDifference
+    }
+    keepWasAddedShortlyAfterExistingKeeps && (keepIsVeryOld || keepsWereOriginallyFarApart)
   }
 }
 

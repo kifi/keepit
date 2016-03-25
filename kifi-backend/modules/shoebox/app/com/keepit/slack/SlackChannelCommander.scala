@@ -262,13 +262,10 @@ class SlackChannelCommanderImpl @Inject() (
       case Left(_) =>
       case Right(library) =>
         db.readWrite { implicit session =>
-          // Turn off notifications for the integrator if not actually a member of the Slack channel
-          if (!channel.members.contains(membership.slackUserId)) {
-            libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId).foreach { libraryMembership =>
-              if (libraryMembership.subscribedToUpdates) {
-                libraryMembershipRepo.save(libraryMembership.copy(subscribedToUpdates = false))
-              }
-            }
+          // Adjust notification settings for the integrator if he's actually a member of the Slack channel
+          libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId).foreach { libraryMembership =>
+            val updatedLibraryMembership = libraryMembership.copy(subscribedToUpdates = channel.members.contains(membership.slackUserId))
+            if (updatedLibraryMembership != libraryMembership) libraryMembershipRepo.save(updatedLibraryMembership)
           }
 
           channelRepo.getOrCreate(team.slackTeamId, channel.channelId, channel.channelName)
@@ -352,13 +349,9 @@ class SlackChannelCommanderImpl @Inject() (
           libraryId <- integrations.allLibraries if orgLibraries.contains(libraryId)
         } yield {
           val libraryMembership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-            case Some(existingMembership) if existingMembership.isActive =>
-              /*  // todo(Léo): leave existing `subscribedToUpdates` alone once backfilled
-              if (existingMembership.subscribedToUpdates) existingMembership
-              else libraryMembershipRepo.save(existingMembership.copy(subscribedToUpdates = true))*/
-              existingMembership
+            case Some(existingMembership) if existingMembership.isActive => existingMembership
             case inactiveMembershipOpt =>
-              val newMembership = LibraryMembership(id = inactiveMembershipOpt.flatMap(_.id), libraryId = libraryId, userId = userId, access = LibraryAccess.READ_WRITE, subscribedToUpdates = false)
+              val newMembership = LibraryMembership(id = inactiveMembershipOpt.flatMap(_.id), libraryId = libraryId, userId = userId, access = LibraryAccess.READ_WRITE, subscribedToUpdates = true)
               libraryMembershipRepo.save(newMembership)
           }
           member -> libraryMembership

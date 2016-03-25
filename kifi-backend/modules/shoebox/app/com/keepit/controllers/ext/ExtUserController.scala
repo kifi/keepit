@@ -6,9 +6,10 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
+import com.kifi.macros.json
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.{ JsValue, JsNull, Json }
 
 import com.google.inject.Inject
 
@@ -72,6 +73,7 @@ class ExtUserController @Inject() (
     }
   }
 
+  @json case class RecipientSuggestion(query: Option[String], results: Seq[JsValue /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], drop: Option[Int])
   def suggestRecipient(query: Option[String], limit: Option[Int], drop: Option[Int]) = UserAction.async { request =>
     typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, drop).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
@@ -79,7 +81,7 @@ class ExtUserController @Inject() (
         case e: EmailContactResult => Json.toJson(e)
         case l: LibraryResult => Json.toJson(l)
       }
-      Ok(Json.toJson(body))
+      Ok(Json.toJson(RecipientSuggestion(query.map(_.trim).filter(_.nonEmpty), body, suggestions.nonEmpty, limit, drop)))
     }
   }
 

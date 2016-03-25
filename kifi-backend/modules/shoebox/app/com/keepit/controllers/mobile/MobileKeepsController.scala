@@ -2,7 +2,6 @@ package com.keepit.controllers.mobile
 
 import com.keepit.commanders._
 import com.keepit.common.json
-import com.keepit.common.json.TupleFormat
 import com.keepit.common.net.URISanitizer
 import com.keepit.heimdal._
 import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
@@ -10,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.model.keep2.KeepInfo
+import com.keepit.shoebox.data.keep.KeepInfo
 
 import play.api.libs.json._
 
@@ -19,7 +18,6 @@ import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.store.ImageSize
-import com.keepit.commanders.CollectionSaveFail
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.core._
 import com.keepit.common.json.TupleFormat

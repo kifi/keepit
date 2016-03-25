@@ -1,6 +1,5 @@
 package com.keepit.eliza.notify
 
-import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
@@ -8,15 +7,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.NotificationCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
-import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.eliza.ws.MockWebSocket
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ User, UserExperiment, UserExperimentType, SocialUserInfo }
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.DepressedRobotGrumble
 import com.keepit.rover.FakeRoverServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
-import com.keepit.slack.FakeSlackClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
@@ -34,8 +30,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
     FakeActorSystemModule(),
-    FakeUserActionsModule(),
-    FakeSecureSocialAuthenticatorPluginModule()
+    FakeUserActionsModule()
   )
 
   implicit def ws: WebSocket[JsArray, JsArray] = inject[SharedWsMessagingController].websocket(None, None)

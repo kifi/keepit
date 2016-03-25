@@ -40,11 +40,12 @@ class LibraryNewKeepsCommander @Inject() (
     FutureHelpers.sequentialExec(relevantFollowers) { toBeNotified =>
       val keepsToSend = keeps.filterNot(_.userId.safely.contains(toBeNotified))
       elizaClient.sendNotificationEvents(keepsToSend.map(keep => LibraryNewKeep(
-        Recipient.fromUser(toBeNotified),
-        clock.now,
-        keep.userId,
-        keep.id.get,
-        library.id.get
+        recipient = Recipient.fromUser(toBeNotified),
+        time = clock.now,
+        keptAt = keep.keptAt,
+        keeperId = keep.userId,
+        keepId = keep.id.get,
+        libraryId = library.id.get
       )))
     }
   }

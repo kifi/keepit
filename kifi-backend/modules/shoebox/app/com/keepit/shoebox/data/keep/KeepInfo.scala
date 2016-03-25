@@ -1,4 +1,4 @@
-package com.keepit.model.keep2
+package com.keepit.shoebox.data.keep
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -116,7 +116,7 @@ object KeepInfo {
 
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
-      bookmark.path.relative, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.lowestLibraryId.map(Library.publicId),
+      bookmark.path.relativeWithLeadingSlash, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.lowestLibraryId.map(Library.publicId),
       sourceAttribution = None, discussion = None, activity = KeepActivity.empty, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }
