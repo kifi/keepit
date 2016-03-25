@@ -235,6 +235,7 @@ k.compose = k.compose || (function() {
       initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
+        placeholder: 'Send to name@example.com or a Kifi user',
         suggestAbove: true,
         onAdd: function () {
           editor.writeDefaultText();
