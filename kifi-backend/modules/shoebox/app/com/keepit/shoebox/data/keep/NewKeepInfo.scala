@@ -3,7 +3,6 @@ package com.keepit.shoebox.data.keep
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.path.Path
 import com.keepit.common.store.{ ImageSize, ImagePath }
-import com.keepit.common.util.{ ActivityLog, ActivityEvent }
 import com.keepit.model._
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.social.{ BasicAuthor, BasicUser }
@@ -21,7 +20,7 @@ final case class NewKeepInfo(
   source: Option[SourceAttribution],
   users: Seq[BasicUser],
   libraries: Seq[BasicLibrary],
-  activity: ActivityLog)
+  activity: KeepActivity)
 
 object NewKeepInfo {
   private implicit val timeFormat: Writes[DateTime] = Writes { dt => DateTimeJsonFormat.writes(dt) }

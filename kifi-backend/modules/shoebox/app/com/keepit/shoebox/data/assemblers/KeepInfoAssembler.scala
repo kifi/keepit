@@ -5,7 +5,7 @@ import com.keepit.commanders._
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.util.{ ActivityLog, RightBias }
+import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -119,7 +119,7 @@ class KeepInfoAssemblerImpl @Inject() (
           source = sourceByKeep.get(keepId).map(_._1),
           users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
           libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get),
-          activity = ActivityLog.empty // TODO(ryan): fill in
+          activity = KeepActivity.empty // TODO(ryan): fill in
         )
         val viewerInfo = NewKeepViewerInfo(
           permissions = permissionsByKeep.getOrElse(keepId, Set.empty)

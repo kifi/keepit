@@ -5,7 +5,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
-import com.keepit.common.util.ActivityLog
 import com.keepit.discussion.{ Discussion, DiscussionKeep }
 import com.keepit.model._
 import com.keepit.social.{ BasicAuthor, BasicUser }
@@ -49,7 +48,7 @@ case class KeepInfo(
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
     discussion: Option[Discussion],
-    activity: ActivityLog,
+    activity: KeepActivity,
     participants: Seq[BasicUser],
     members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {
@@ -118,6 +117,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relativeWithLeadingSlash, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.lowestLibraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, activity = ActivityLog.empty, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, activity = KeepActivity.empty, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }

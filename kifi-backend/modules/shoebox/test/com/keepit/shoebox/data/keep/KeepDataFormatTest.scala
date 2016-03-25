@@ -1,7 +1,6 @@
 package com.keepit.shoebox.data.keep
 
 import com.google.inject.Injector
-import com.keepit.common.util.ActivityLog
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.json.TestHelper
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -52,7 +51,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             // "source" -> JsNull,
             "users" -> Seq(BasicUser.fromUser(user)),
             "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None)),
-            "activity" -> ActivityLog.empty
+            "activity" -> KeepActivity.empty
           )
           TestHelper.deepCompare(actual, expected) must beNone
         }
