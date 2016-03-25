@@ -3,7 +3,7 @@ package com.keepit.commanders.gen
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.common.util.{ LinkElement, ImageElement, DescriptionElements, DescriptionElement }
+import com.keepit.common.util.{ Ord, LinkElement, ImageElement, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.CrossServiceKeepActivity
 import com.keepit.model.KeepEvent.AddParticipants
 import com.keepit.model.{ BasicKeepEvent, BasicKeepEvent$, KeepEventSource, KeepEventKind, KeepEvent, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
@@ -19,12 +19,8 @@ object KeepActivityGen {
     import com.keepit.common.util.DescriptionElements._
 
     lazy val initialKeepEvent = {
-      val sortedKtls = ktls.sortBy {
-        _.addedAt.getMillis * -1
-      }
-      val sortedKtus = ktus.sortBy {
-        _.addedAt.getMillis * -1
-      }
+      val sortedKtls = ktls.sortBy(_.addedAt.getMillis * -1)(Ord.descending)
+      val sortedKtus = ktus.sortBy(_.addedAt.getMillis * -1)(Ord.descending)
 
       val basicAuthor = sourceAttrOpt.map {
         case (sourceAttr, basicUserOpt) => BasicAuthor(sourceAttr, basicUserOpt)

@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.concurrent.TimeoutException
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.{ KeepActivityGen, BasicOrganizationGen }
 import com.keepit.common.akka.TimeoutFuture
@@ -165,14 +167,12 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val activityByKeepFut = eliza.getCrossServiceKeepActivity(keepIds, maxMessagesShown).recover {
-        case fail =>
-          airbrake.notify(s"[KEEP-DECORATOR] Failed to get activity for keeps $keepIds", fail)
-          Map.empty[Id[Keep], CrossServiceKeepActivity]
-      }
-      val activityWithStrictTimeout = TimeoutFuture(activityByKeepFut)(executionContext, 2.seconds).recover {
-        case _ =>
-          log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
+      val activityWithStrictTimeout = TimeoutFuture(eliza.getCrossServiceKeepActivity(keepIds, maxMessagesShown))(executionContext, 2.seconds).recover {
+        case ex =>
+          ex match {
+            case _: TimeoutException => log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
+            case _ => airbrake.notify(s"[KEEP-DECORATOR] failed to fetch cross service keep activity, reason: $ex")
+          }
           Map.empty[Id[Keep], CrossServiceKeepActivity]
       }
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
@@ -226,23 +226,19 @@ class KeepDecoratorImpl @Inject() (
 
               KeepMembers(libraries, users, emails)
             }
-
-            val activityLog = KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
-              ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-              idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
+            val keepActivity = {
+              if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
+                KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
+                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
+                  idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
+              } else KeepActivity.empty
+            }
 
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val keepActivity = {
-                if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                  KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
-                    ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                    idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
-                } else KeepActivity.empty
-              }
               KeepInfo(
                 id = Some(keep.externalId),
                 pubId = Some(Keep.publicId(keepId)),
