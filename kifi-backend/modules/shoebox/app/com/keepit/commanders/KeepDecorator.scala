@@ -53,6 +53,7 @@ class KeepDecoratorImpl @Inject() (
   keepImageCommander: KeepImageCommander,
   libraryCardCommander: LibraryCardCommander,
   userCommander: UserCommander,
+  userExperimentRepo: UserExperimentRepo,
   basicOrganizationGen: BasicOrganizationGen,
   searchClient: SearchServiceClient,
   keepSourceCommander: KeepSourceCommander,
@@ -233,9 +234,13 @@ class KeepDecoratorImpl @Inject() (
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val keepActivity = generateKeepActivity(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
-                ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                idToBasicUser, idToBasicLibrary, idToBasicOrg)
+              val keepActivity = {
+                if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
+                  generateKeepActivity(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
+                    ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
+                    idToBasicUser, idToBasicLibrary, idToBasicOrg)
+                } else KeepActivity.empty
+              }
               KeepInfo(
                 id = Some(keep.externalId),
                 pubId = Some(Keep.publicId(keepId)),
