@@ -347,7 +347,7 @@ class SlackPushingActor @Inject() (
       (oldKeeps, newKeeps, attributionByKeepId) <- keepsToPushFut
       (oldMsgs, newMsgs) <- msgsToPushFut
       users <- db.readOnlyReplicaAsync { implicit s =>
-        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy) ++ newMsgs.flatMap(_._2.sentBy)
+        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption)) ++ newMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption))
         basicUserRepo.loadAll(userIds.toSet)
       }
     } yield {
@@ -380,7 +380,7 @@ class SlackPushingActor @Inject() (
       case PushItem.KeepToPush(k, ktl) =>
         Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
       case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
-        Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get)))
+        Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(_.left.toOption.flatMap(items.users.get))))
       case messageToSwallow: PushItem.MessageToPush =>
         None
     }

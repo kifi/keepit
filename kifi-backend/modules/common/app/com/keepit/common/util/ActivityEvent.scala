@@ -1,15 +1,11 @@
 package com.keepit.common.util
 
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
-import com.keepit.common.path.Path
+import com.keepit.common.db.Id
 import com.keepit.common.reflection.Enumerator
-import com.keepit.common.store.S3ImageConfig
-import com.keepit.common.core._
-import com.keepit.discussion.Message
-import com.keepit.model.{ Organization, Library, User, BasicOrganization, LibraryColor, BasicLibrary }
-import com.keepit.social.BasicAuthor.{ TwitterUser, SlackUser, KifiUser }
-import com.keepit.social.{ BasicAuthor, BasicUser, BasicNonUser }
+import com.keepit.discussion.MessageSource
+import com.keepit.model.User
+import com.keepit.social.BasicNonUser
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -18,14 +14,18 @@ sealed abstract class ActivityKind(val value: String)
 object ActivityKind extends Enumerator[ActivityKind] {
   case object Initial extends ActivityKind("initial")
   case object Comment extends ActivityKind("comment")
-  case object AddedParticipants extends ActivityKind("added_participants")
+  case object AddParticipants extends ActivityKind("add_participants")
   case object AddedLibrary extends ActivityKind("added_library")
   case object EditedTitle extends ActivityKind("edited_title")
 
   val all = _all
   def apply(str: String) = all.find(_.value == str).get
+  def contains(str: String) = all.exists(_.value == str)
 
-  implicit val writes: Writes[ActivityKind] = Writes { o => JsString(o.value) }
+  implicit val format: Format[ActivityKind] = Format(
+    Reads { js => js.validate[String].map(ActivityKind.apply) },
+    Writes { o => JsString(o.value) }
+  )
 }
 
 sealed abstract class ActivitySource(val value: String)
@@ -34,14 +34,43 @@ object ActivitySource extends Enumerator[ActivitySource] {
   case object Twitter extends ActivitySource("Twitter")
   case object iOS extends ActivitySource("iOS")
   case object Android extends ActivitySource("Android")
-  case object Chrome extends ActivitySource("Chrome")
+  case object Chrome extends ActivitySource("Chrome") // refers to ext
   case object Firefox extends ActivitySource("Firefox")
   case object Safari extends ActivitySource("Safari")
+  case object Email extends ActivitySource("Email")
+  case object Site extends ActivitySource("Kifi.com")
 
   val all = _all
   def apply(str: String) = all.find(_.value == str).get
 
   implicit val writes: Writes[ActivitySource] = Writes { o => JsString(o.value) }
+
+  def fromMessageSource(msgSrc: Option[MessageSource]): Option[ActivitySource] = msgSrc.flatMap { src =>
+    src match {
+      case MessageSource.IPAD | MessageSource.IPHONE => Some(iOS)
+      case MessageSource.CHROME | MessageSource.FIREFOX | MessageSource.SAFARI |
+        MessageSource.ANDROID | MessageSource.EMAIL | MessageSource.SITE => Some(ActivitySource.apply(src.value))
+      case _ => None
+    }
+  }
+}
+
+sealed abstract class ActivityEventData(val kind: ActivityKind)
+object ActivityEventData {
+  @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends ActivityEventData(ActivityKind.AddParticipants)
+  implicit val format = Format[ActivityEventData](
+    Reads {
+      js =>
+        (js \ "kind").validate[ActivityKind].flatMap {
+          case ActivityKind.AddParticipants => Json.reads[AddParticipants].reads(js)
+          case kind => throw new Exception(s"unsupported reads for activity event kind $kind, js $js}")
+        }
+    },
+    Writes {
+      case ap: AddParticipants => Json.writes[AddParticipants].writes(ap).as[JsObject] ++ Json.obj("kind" -> ActivityKind.AddParticipants.value)
+      case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
+    }
+  )
 }
 
 case class ActivityEvent(
@@ -52,18 +81,6 @@ case class ActivityEvent(
   timestamp: DateTime,
   source: Option[ActivitySource])
 object ActivityEvent {
-  def fromComment(msg: Message)(implicit iamgeConfig: S3ImageConfig): ActivityEvent = {
-    import com.keepit.common.util.DescriptionElements._
-    val msgAuthor = msg.sentBy.fold(fromNonUser, fromBasicUser)
-    ActivityEvent(
-      ActivityKind.Comment,
-      image = msg.sentBy.right.toOption.map(_.picturePath.getUrl).getOrElse("0.jpg"),
-      header = DescriptionElements(msgAuthor, "commented on this page"),
-      body = DescriptionElements(msg.text),
-      timestamp = msg.sentAt,
-      source = None // todo(cam): add eliza.message.source (column) to Message
-    )
-  }
 
   implicit val writes: Writes[ActivityEvent] = (
     (__ \ 'kind).write[ActivityKind] and
