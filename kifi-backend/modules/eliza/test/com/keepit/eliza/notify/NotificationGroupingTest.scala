@@ -31,7 +31,6 @@ class NotificationGroupingTest extends TestKitSupport with SpecificationLike wit
     FakeActorSystemModule(),
     FakeUserActionsModule())
 
-
   "Notifications" should {
     "group properly" in {
       withDb(modules: _*) { implicit injector =>

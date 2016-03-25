@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
-import com.keepit.commanders.gen.BasicOrganizationGen
+import com.keepit.commanders.gen.{ ActivityLogGen, BasicOrganizationGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -58,7 +58,7 @@ class KeepDecoratorImpl @Inject() (
   permissionCommander: PermissionCommander,
   eliza: ElizaServiceClient,
   rover: RoverServiceClient,
-  airbrake: AirbrakeNotifier,
+  implicit val airbrake: AirbrakeNotifier,
   slackTeamRepo: SlackTeamRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   implicit val imageConfig: S3ImageConfig,
@@ -227,14 +227,15 @@ class KeepDecoratorImpl @Inject() (
               KeepMembers(libraries, users, emails)
             }
 
+            val activityLog = ActivityLogGen.generateActivityLog(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
+              ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
+              idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
+
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), activityByKeep.get(keepId),
-                ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                idToBasicUser, idToBasicLibrary, idToBasicOrg)
               KeepInfo(
                 id = Some(keep.externalId),
                 pubId = Some(Keep.publicId(keepId)),
@@ -356,104 +357,6 @@ class KeepDecoratorImpl @Inject() (
         (slackSources ++ twitterSources).toSeq
       }
     }
-  }
-
-  def generateActivityLog(
-    keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], elizaActivity: Option[CrossServiceKeepActivity],
-    ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser], userById: Map[Id[User], BasicUser],
-    libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): ActivityLog = {
-    import com.keepit.common.util.DescriptionElements._
-
-    val initialKeepEvent = {
-      val sortedKtls = ktls.sortBy {
-        _.addedAt.getMillis * -1
-      }
-      val sortedKtus = ktus.sortBy {
-        _.addedAt.getMillis * -1
-      }
-
-      val authorElement = fromBasicAuthor(author)
-      val header = sortedKtls.headOption match {
-        case Some(ktl) =>
-          val library: DescriptionElement = libById.get(ktl.libraryId).map(fromBasicLibrary).getOrElse("a library")
-          val orgOpt = orgByLibraryId.get(ktl.libraryId).map(fromBasicOrg)
-          sourceAttr match {
-            case Some(SlackAttribution(message, _)) =>
-              DescriptionElements(authorElement, "added this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(message.permalink), ImageUrls.SLACK_LOGO), message.channel.name.map(_.value --> LinkElement(message.permalink)))
-            case Some(TwitterAttribution(tweet)) =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(tweet.permalink), ImageUrls.TWITTER_LOGO), tweet.user.screenName.value --> LinkElement(tweet.permalink))
-            case None =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)))
-          }
-        case None =>
-          sortedKtus.headOption match {
-            case None =>
-              airbrake.notify(s"[activityLog] no ktu or ktls on ${keep.id.get}, can't generate initial keep event")
-              DescriptionElements(authorElement, "kept this page")
-            case Some(firstKtu) =>
-              val firstMinute = firstKtu.addedAt.plusMinutes(1)
-              val firstSentTo = sortedKtus.takeWhile(_.addedAt.getMillis <= firstMinute.getMillis)
-                .collect { case ktu if !keep.userId.contains(ktu.userId) => userById.get(ktu.userId) }.flatten
-              DescriptionElements(authorElement, "started a discussion", if (firstSentTo.nonEmpty) DescriptionElements("with", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "on this page")
-          }
-      }
-      val body = DescriptionElements(keep.note)
-      ActivityEvent(
-        ActivityKind.Initial,
-        image = authorElement.image,
-        header = header,
-        body = body,
-        timestamp = keep.keptAt,
-        source = None
-      )
-    }
-
-    val commentEvents = elizaActivity.map(_.messages.flatMap { message =>
-      message.sentBy match {
-        case Some(userOrNonUser) =>
-          import DescriptionElements._
-          val userOpt = userOrNonUser.left.toOption.flatMap(userById.get)
-          val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](userId => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse {
-            airbrake.notify(s"[activityLog] could not generate message author name on keep ${keep.id.get}")
-            "Someone"
-          }
-          Some(ActivityEvent(
-            ActivityKind.Comment,
-            image = userOpt.map(_.picturePath.getUrl).getOrElse("0.jpg"), // todo(cam): figure out a protocol for non-user images
-            header = DescriptionElements(msgAuthor, "commented on this page"),
-            body = DescriptionElements(message.text),
-            timestamp = message.sentAt,
-            source = ActivitySource.fromMessageSource(message.source)
-          ))
-        case None =>
-          message.eventData match {
-            case Some(AddParticipants(addedBy, addedUsers, addedNonUsers)) =>
-              val basicAddedBy = userById.get(addedBy)
-              val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
-              Some(ActivityEvent(
-                ActivityKind.AddParticipants,
-                image = basicAddedBy.map(_.picturePath.getUrl).getOrElse {
-                  airbrake.notify(s"[activityLog] can't find user $addedBy for keep ${keep.id.get}")
-                  "0.jpg"
-                },
-                header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
-                body = DescriptionElements(),
-                timestamp = message.sentAt,
-                source = ActivitySource.fromMessageSource(message.source)
-              ))
-            case dataOpt =>
-              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] messsage ${message.id} has no .sentBy and no .auxData, can't generate event")
-              None
-          }
-      }
-    }).getOrElse(Seq.empty)
-    val events = commentEvents :+ initialKeepEvent
-    ActivityLog(
-      events = events,
-      numEvents = events.size, // todo(cam): fetch the eliza total event count
-      numComments = elizaActivity.map(_.numComments).getOrElse(0) + keep.note.size)
   }
 }
 

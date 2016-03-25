@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.{ BasicOrganizationGen, ActivityLogGen }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits._
@@ -16,6 +17,7 @@ import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.{ ActivityEvent, ActivityLog }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
@@ -72,6 +74,7 @@ trait KeepCommander {
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
+  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[ActivityLog]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -127,12 +130,13 @@ class KeepCommanderImpl @Inject() (
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
     eliza: ElizaServiceClient,
-    airbrake: AirbrakeNotifier,
+    implicit val airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
     clock: Clock,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
+    basicOrganizationGen: BasicOrganizationGen,
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
     keepDecorator: KeepDecorator,
@@ -873,6 +877,49 @@ class KeepCommanderImpl @Inject() (
         maxMessagesShown = maxMessagesShown,
         getTimestamp = getKeepTimestamp
       )
+    }
+  }
+
+  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[ActivityLog] = {
+    val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
+      val keep = keepRepo.get(keepId)
+      val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
+      val ktus = ktuRepo.getAllByKeepId(keepId)
+      val ktls = ktlRepo.getAllByKeepId(keepId)
+      (keep, sourceAttr, ktus, ktls)
+    }
+    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), maxEvents).map(_.get(keepId))
+
+    val basicModelFut = shoeboxFut.map {
+      case (keep, sourceAttr, ktus, ktls) =>
+        db.readOnlyMaster { implicit s =>
+          val libById = libraryRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
+          val basicOrgById = basicOrganizationGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
+          val basicOrgByLibId = libById.flatMap {
+            case (libId, library) =>
+              library.organizationId
+                .flatMap(basicOrgById.get)
+                .map(org => libId -> org)
+          }
+          val basicUserById = {
+            val ktuUsers = ktus.map(_.userId)
+            val libOwners = libById.map { case (libId, library) => library.ownerId }
+            basicUserRepo.loadAllActive((ktuUsers ++ libOwners).toSet)
+          }
+          val basicLibById = libById.map {
+            case (libId, library) =>
+              libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
+          }
+          (basicUserById, basicLibById, basicOrgByLibId)
+        }
+    }
+
+    for {
+      (keep, sourceAttrOpt, ktus, ktls) <- shoeboxFut
+      (elizaActivityOpt) <- elizaFut
+      (userById, libById, orgByLibId) <- basicModelFut
+    } yield {
+      ActivityLogGen.generateActivityLog(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, eventsBefore, maxEvents)
     }
   }
 
