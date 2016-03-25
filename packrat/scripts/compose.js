@@ -117,16 +117,6 @@ k.compose = k.compose || (function() {
     .preventAncestorScroll()
     .handleLookClicks('compose');
 
-    function positionCursorAtEndOfContentEditable(node) {
-      node = (node instanceof Node ? node : node && node[0] ? node[0] : null);
-      var r = document.createRange();
-      r.setStart(node.lastChild, 0);
-      r.collapse(true);
-      var sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(r);
-    }
-
     return { // editor API
       supportsLinks: true,
       markdown: function () {
@@ -140,7 +130,6 @@ k.compose = k.compose || (function() {
           html = k.render('html/keeper/kifi_mustache_tags', html);
         }
         $d.empty().append(k.formatting.parseStringToElement(html));
-        positionCursorAtEndOfContentEditable($d);
         notifyEmpty(!html);
       },
       clear: function () {
@@ -361,6 +350,9 @@ k.compose = k.compose || (function() {
         sendChooser.reflectPrefs(prefs);
         var alwaysLookHereMode = editor.supportsLinks && prefs.lookHereMode;
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !alwaysLookHereMode);
+        if (!alwaysLookHereMode && !k.snap.enabled()) {
+          k.snap.enable(); // enable it because it isn't already on
+        }
       },
       prefill: function (to) {
         log('[compose.prefill]', to);

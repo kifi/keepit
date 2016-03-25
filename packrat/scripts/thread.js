@@ -79,10 +79,10 @@ k.panes.thread = k.panes.thread || function () {
         }, 5000);
       }
     },
-    lookHere: function (img, bRect, href, title) {
+    lookHere: function (img, bRect, href, title, focusText) {
       var compose = $holder && $holder.data('compose');
       if (compose) {
-        compose.lookHere(img, bRect, href, title);
+        compose.lookHere(img, bRect, href, title, focusText);
       }
     }
   };

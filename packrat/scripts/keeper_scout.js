@@ -67,11 +67,9 @@ k.tile = k.tile || (function () {
         tileCard.classList.remove('kifi-0s');
       });
 
-      if (!k.snap) {
-        api.port.emit('prefs', function (prefs) {
-          configureLookHere(prefs.lookHereMode);
-        });
-      }
+      api.port.emit('prefs', function (prefs) {
+        configureLookHere(prefs.lookHereMode);
+      });
     },
     show_keeper: function(show) {
       tile.style.display = show ? '' : 'none';
@@ -242,12 +240,10 @@ k.tile = k.tile || (function () {
         }
       });
     } else {
-      if (alwaysLookHereOn) {
-        k.snap.enable();
+      if (!alwaysLookHereOn && getKeeperDiscussionState() === 'other') {
+        k.snap.disable();
       } else {
-        if (getKeeperDiscussionState() === 'other') {
-          k.snap.disable();
-        }
+        k.snap.enable();
       }
     }
   }
@@ -258,7 +254,7 @@ k.tile = k.tile || (function () {
     var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
 
     if (!toasterIsShowing && messagesPaneIsShowing) {
-      k.panes.thread.lookHere(img, bRect, href, title);
+      k.panes.thread.lookHere(img, bRect, href, title, true);
       api.port.emit('track_pane_click', {
         type: 'quotesOnHighlight',
         action: 'clickedQuotes',
