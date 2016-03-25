@@ -13,7 +13,7 @@
 k.snap = k.snap || (function () {
   'use strict';
 
-  var MIN_IMG_DIM = 35;
+  var MIN_IMG_DIM = 50;
   var LOOK_LINK_TEXT = 'look\xa0here';
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
 
