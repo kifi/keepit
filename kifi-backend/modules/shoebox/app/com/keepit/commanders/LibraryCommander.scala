@@ -502,7 +502,7 @@ class LibraryCommanderImpl @Inject() (
         .sortBy(_._2.id.get.id)
         .groupBy(_._2.kind).flatMap {
           case (kind, libs) =>
-            val (slug, name, visibility) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", LibraryVisibility.DISCOVERABLE) else ("secret", "Secret Library", LibraryVisibility.SECRET)
+            val (slug, name, visibility) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", Library.SYSTEM_MAIN_DISPLAY_NAME, LibraryVisibility.DISCOVERABLE) else ("secret", Library.SYSTEM_SECRET_DISPLAY_NAME, LibraryVisibility.SECRET)
 
             if (user.state == UserStates.ACTIVE) {
               val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
@@ -536,7 +536,7 @@ class LibraryCommanderImpl @Inject() (
 
       // If user is missing a system lib, create it
       val mainOpt = if (!sysLibs.exists(_._2.kind == LibraryKind.SYSTEM_MAIN)) {
-        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1, keepCount = 0))
+        val mainLib = libraryRepo.save(Library(name = Library.SYSTEM_MAIN_DISPLAY_NAME, ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1, keepCount = 0))
         libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER))
         if (!generateNew) {
           airbrake.notify(s"$userId missing main library")
@@ -546,7 +546,7 @@ class LibraryCommanderImpl @Inject() (
       } else None
 
       val secretOpt = if (!sysLibs.exists(_._2.kind == LibraryKind.SYSTEM_SECRET)) {
-        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1, keepCount = 0))
+        val secretLib = libraryRepo.save(Library(name = Library.SYSTEM_SECRET_DISPLAY_NAME, ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1, keepCount = 0))
         libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER))
         if (!generateNew) {
           airbrake.notify(s"$userId missing secret library")
