@@ -2,6 +2,7 @@ package com.keepit.shoebox.data.keep
 
 import com.keepit.model.{ Hashtag, BasicLibrary, SourceAttribution }
 import com.keepit.social.BasicUser
+import play.api.libs.json.{ Writes, Json }
 
 case class NewPageContext(
   keeps: Seq[NewKeepInfo],
@@ -20,3 +21,7 @@ case class NewPageContext(
   numVisibleTags: Int,
   numTotalTags: Int)
 
+object NewPageContext {
+  private implicit val sourceWrites = SourceAttribution.externalWrites
+  implicit val writes: Writes[NewPageContext] = Json.writes[NewPageContext]
+}

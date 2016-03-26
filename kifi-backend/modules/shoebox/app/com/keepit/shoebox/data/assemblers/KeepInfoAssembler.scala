@@ -14,7 +14,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepInfoAssemblyOptions
-import com.keepit.shoebox.data.keep.{ NewKeepImageInfo, NewKeepViewerInfo, NewKeepInfo }
+import com.keepit.shoebox.data.keep.{ NewKeepView, NewKeepImageInfo, NewKeepViewerInfo, NewKeepInfo }
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.BasicAuthor
 
@@ -22,7 +22,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepInfoAssembler {
-  def assembleInfoForKeeps(viewer: Option[Id[User]], keepIds: Seq[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Seq[(NewKeepInfo, NewKeepViewerInfo)]]
+  def assembleKeepViews(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], NewKeepView]]
+  def assembleKeepInfos(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], (NewKeepInfo, NewKeepViewerInfo)]]
 }
 
 object KeepInfoAssemblerConfig {
@@ -56,8 +57,9 @@ class KeepInfoAssemblerImpl @Inject() (
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
-  def assembleInfoForKeeps(viewer: Option[Id[User]], keepIds: Seq[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Seq[(NewKeepInfo, NewKeepViewerInfo)]] = {
-    val keepSet = keepIds.toSet
+  def assembleKeepViews(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], NewKeepView]] = ???
+
+  def assembleKeepInfos(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepInfoAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], (NewKeepInfo, NewKeepViewerInfo)]] = {
     val (keepsById, ktlsByKeep, ktusByKeep) = db.readOnlyReplica { implicit s =>
       val keepsById = keepRepo.getByIds(keepSet)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepSet)
@@ -94,14 +96,14 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionCommander.getKeepsPermissions(keepSet, viewer)
     }
 
-    val assembledInfoFut = for {
+    for {
       sourceByKeep <- sourceInfoFut
       libsById <- libInfoFut
       usersById <- userInfoFut
       imagesByKeep <- imageInfoFut
       permissionsByKeep <- permissionsFut
-    } yield keepIds.map { keepId =>
-      for {
+    } yield keepSet.flatMap { keepId =>
+      val result = for {
         keep <- keepsById.get(keepId).withLeft(s"keep $keepId does not exist")
         author <- sourceByKeep.get(keepId).map {
           case (attr, userOpt) => BasicAuthor(attr, userOpt)
@@ -126,14 +128,14 @@ class KeepInfoAssemblerImpl @Inject() (
         )
         (keepInfo, viewerInfo)
       }
-    }
 
-    assembledInfoFut.map(_.flatMap {
-      case LeftSide(errMsg) =>
-        slackLog.warn(errMsg)
-        None
-      case RightSide((keepInfo, viewerInfo)) =>
-        Some((keepInfo, viewerInfo))
-    })
+      result match {
+        case LeftSide(errMsg) =>
+          slackLog.warn(errMsg)
+          None
+        case RightSide((keepInfo, viewerInfo)) =>
+          Some(keepId -> (keepInfo, viewerInfo))
+      }
+    }.toMap
   }
 }

@@ -25,8 +25,15 @@ class ClientKeepController @Inject() (
 
   def getNewKeepInfo(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
-    keepInfoAssembler.assembleInfoForKeeps(request.userIdOpt, Seq(keepId)).map {
-      case Seq((keepInfo, viewerInfo)) => Ok(Json.toJson(keepInfo))
+    keepInfoAssembler.assembleKeepInfos(request.userIdOpt, Set(keepId)).map { infoMap =>
+      Ok(Json.toJson(infoMap(keepId)._1))
+    }
+  }
+
+  def getNewKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
+    val keepId = Keep.decodePublicId(pubId).get
+    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId)).map { viewMap =>
+      Ok(Json.toJson(viewMap(keepId)))
     }
   }
 }
