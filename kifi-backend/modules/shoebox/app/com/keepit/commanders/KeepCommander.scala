@@ -714,6 +714,7 @@ class KeepCommanderImpl @Inject() (
         ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
       }
       diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
+      session.onTransactionSuccess { slackPusher.schedule(diff.libraries.added) }
     }
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
