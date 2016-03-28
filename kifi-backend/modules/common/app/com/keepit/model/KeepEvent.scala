@@ -42,12 +42,10 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
   case object Site extends KeepEventSourceKind("Kifi.com")
 
   val all = _all
-  def apply(str: String) = all.find(_.value == str).get
+  def fromStr(str: String) = all.find(_.value == str)
+  def apply(str: String) = fromStr(str).get
 
-  implicit val format: Format[KeepEventSourceKind] = Format(
-    Reads { _.validate[String].map(this.apply) },
-    Writes { o => JsString(o.value) }
-  )
+  implicit val format: Format[KeepEventSourceKind] = EnumFormat.format(fromStr, _.value)
 
   def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap { src =>
     src match {
