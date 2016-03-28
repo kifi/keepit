@@ -474,7 +474,6 @@ GET     /site/rpb/user/:userId/libraries   @com.keepit.controllers.website.UserC
 GET     /site/rpb/org/:orgId/libraries     @com.keepit.controllers.website.UserController.rpbGetOrgLibraries(orgId: PublicId[Organization], fromId: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
 
 POST  /site/libraries/:id/slack/add         @com.keepit.controllers.website.SlackController.setupLibraryIntegrations(id: PublicId[Library])
-POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/push/:ltsId        @com.keepit.controllers.website.SlackController.pushLibrary(id: PublicId[Library], ltsId: String, turnOn: Boolean)
 POST  /site/libraries/:id/slack/ingest/:stlId      @com.keepit.controllers.website.SlackController.ingestChannel(id: PublicId[Library], stlId: String, turnOn: Boolean)
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])

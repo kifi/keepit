@@ -77,7 +77,7 @@ class SlackIngestingActor @Inject() (
   }
 
   protected def processTasks(integrationIds: Seq[Id[SlackChannelToLibrary]]): Map[Id[SlackChannelToLibrary], Future[Unit]] = {
-    val (integrationsByIds, isAllowed, getIntegrationInfo, getSettings) = db.readOnlyMaster { implicit session =>
+    val (integrationsByIds, isAllowed, getIntegrationInfo) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
       val isAllowed = integrationsByIds.map {
@@ -89,6 +89,7 @@ class SlackIngestingActor @Inject() (
 
       val getIntegrationInfo = {
         val slackTeamsById = slackTeamRepo.getBySlackTeamIds(integrationsByIds.values.map(_.slackTeamId).toSet)
+        val settingsByOrgIds = orgConfigRepo.getByOrgIds(slackTeamsById.values.flatMap(_.organizationId).toSet).mapValues(_.settings)
         val slackIdentities = integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackUserId)).toSet
         val slackMembershipsByIdentity = slackTeamMembershipRepo.getBySlackIdentities(slackIdentities)
         val slackChannelBySlackTeamAndChannelId = slackChannelRepo.getByChannelIds(integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackChannelId)).toSet)
@@ -98,30 +99,25 @@ class SlackIngestingActor @Inject() (
             val slackTeam = slackTeamsById(integration.slackTeamId)
             val slackChannel = slackChannelBySlackTeamAndChannelId((integration.slackTeamId, integration.slackChannelId))
             val userTokenWithScopes = slackMembershipsByIdentity.get((integration.slackTeamId, integration.slackUserId)).flatMap(_.tokenWithScopes)
-            integrationId -> (slackTeam, slackChannel, userTokenWithScopes)
+            val settings = slackTeam.organizationId.flatMap(orgId => settingsByOrgIds.get(orgId))
+            integrationId -> (slackTeam, slackChannel, userTokenWithScopes, settings)
         }
       }
 
-      val getSettings = {
-        val orgIdsByIntegrationIds = integrationsByIds.mapValues(_.space).collect { case (integrationId, OrganizationSpace(orgId)) => integrationId -> orgId }
-        val settingsByOrgIds = orgConfigRepo.getByOrgIds(orgIdsByIntegrationIds.values.toSet).mapValues(_.settings)
-        orgIdsByIntegrationIds.mapValues(settingsByOrgIds.apply).get _
-      }
-
-      (integrationsByIds, isAllowed, getIntegrationInfo, getSettings)
+      (integrationsByIds, isAllowed, getIntegrationInfo)
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> ingestMaybe(integration, isAllowed, getIntegrationInfo, getSettings).imap(_ => ())
+        integrationId -> ingestMaybe(integration, isAllowed, getIntegrationInfo).imap(_ => ())
     }
   }
 
-  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getIntegrationInfo: Id[SlackChannelToLibrary] => (SlackTeam, SlackChannel, Option[SlackTokenWithScopes]), getSettings: Id[SlackChannelToLibrary] => Option[OrganizationSettings]): Future[Option[SlackTimestamp]] = {
-    val (team, channel, tokenOpt) = getIntegrationInfo(integration.id.get)
+  private def ingestMaybe(integration: SlackChannelToLibrary, isAllowed: Id[SlackChannelToLibrary] => Boolean, getIntegrationInfo: Id[SlackChannelToLibrary] => (SlackTeam, SlackChannel, Option[SlackTokenWithScopes], Option[OrganizationSettings])): Future[Option[SlackTimestamp]] = {
+    val (team, channel, tokenOpt, settingsOpt) = getIntegrationInfo(integration.id.get)
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
         tokenOpt match {
-          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(team, channel, tokenWithScopes, getSettings(integration.id.get), integration)
+          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(team, channel, tokenWithScopes, settingsOpt, integration)
           case invalidTokenOpt => Future.failed(BrokenSlackIntegration(integration, invalidTokenOpt.map(_.token), None))
         }
       } else {

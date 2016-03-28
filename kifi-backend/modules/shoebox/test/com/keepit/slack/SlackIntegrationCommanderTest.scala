@@ -37,7 +37,7 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
             val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val channel1 = SlackChannelFactory.channel().withTeam(slackTeam).withName("#1").saved
             val channel2 = SlackChannelFactory.channel().withTeam(slackTeam).withName("#2").saved
-            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withScopes(SlackAuthScope.integrationSetup).saved
             val siw1 = SlackIncomingWebhookFactory.webhook().withChannel(channel1).withMembership(stm).saved
             val siw2 = SlackIncomingWebhookFactory.webhook().withChannel(channel2).withMembership(stm).saved
             (user, lib, slackTeam, stm, siw1, siw2)
@@ -58,93 +58,14 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
         }
       }
     }
-    "modify/delete existing integrations" in {
-      "turn integrations on/off" in {
-        withDb(modules: _*) { implicit injector =>
-          val (user, lib, libToSlack, slackToLib) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team().saved
-            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
-
-            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
-
-            (user, lib, lts, stl)
-          }
-          db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].all
-            val stls = inject[SlackChannelToLibraryRepo].all
-            ltss.map(_.id.get) === Seq(libToSlack.id.get)
-            stls.map(_.id.get) === Seq(slackToLib.id.get)
-            ltss.foreach { lts => lts.status === SlackIntegrationStatus.On }
-            stls.foreach { stl => stl.status === SlackIntegrationStatus.Off }
-          }
-          val modRequest = SlackIntegrationModifyRequest(
-            user.id.get,
-            libToSlack = Map(libToSlack.id.get -> SlackIntegrationModification(status = Some(SlackIntegrationStatus.Off))),
-            slackToLib = Map(slackToLib.id.get -> SlackIntegrationModification(status = Some(SlackIntegrationStatus.On)))
-          )
-          slackIntegrationCommander.modifyIntegrations(modRequest) must beSuccessfulTry
-          db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].all
-            val stls = inject[SlackChannelToLibraryRepo].all
-            ltss.map(_.id.get) === Seq(libToSlack.id.get)
-            stls.map(_.id.get) === Seq(slackToLib.id.get)
-            ltss.foreach { lts => lts.status === SlackIntegrationStatus.Off }
-            stls.foreach { stl => stl.status === SlackIntegrationStatus.On }
-          }
-          1 === 1
-        }
-      }
-      "move integrations to different spaces" in {
-        withDb(modules: _*) { implicit injector =>
-          val (user, lib, org, libToSlack, slackToLib) = db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().withOwner(user).saved
-            val org = OrganizationFactory.organization().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team().saved
-            val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
-
-            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel(channel).on.saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).saved
-
-            (user, lib, org, lts, stl)
-          }
-          db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].all
-            val stls = inject[SlackChannelToLibraryRepo].all
-            ltss.map(_.id.get) === Seq(libToSlack.id.get)
-            stls.map(_.id.get) === Seq(slackToLib.id.get)
-            ltss.foreach { lts => lts.space === LibrarySpace.fromUserId(user.id.get) }
-            stls.foreach { stl => stl.space === LibrarySpace.fromUserId(user.id.get) }
-          }
-          val modRequest = SlackIntegrationModifyRequest(
-            user.id.get,
-            libToSlack = Map(libToSlack.id.get -> SlackIntegrationModification(space = Some(LibrarySpace.fromOrganizationId(org.id.get)))),
-            slackToLib = Map(slackToLib.id.get -> SlackIntegrationModification(space = Some(LibrarySpace.fromOrganizationId(org.id.get))))
-          )
-          slackIntegrationCommander.modifyIntegrations(modRequest) must beSuccessfulTry
-          db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].all
-            val stls = inject[SlackChannelToLibraryRepo].all
-            ltss.map(_.id.get) === Seq(libToSlack.id.get)
-            stls.map(_.id.get) === Seq(slackToLib.id.get)
-            ltss.foreach { lts => lts.space === LibrarySpace.fromOrganizationId(org.id.get) }
-            stls.foreach { stl => stl.space === LibrarySpace.fromOrganizationId(org.id.get) }
-          }
-          1 === 1
-        }
-      }
-
+    "delete /modify existing integrations" in {
       "delete integrations" in {
         withDb(modules: _*) { implicit injector =>
           val (user, lib, libToSlack, slackToLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team().saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
@@ -188,20 +109,6 @@ class SlackIntegrationCommanderTest extends TestKitSupport with SpecificationLik
           // At first, if Member tries to modify they fail because they don't have access (the integration is in a personal space)
           val delRequest = SlackIntegrationDeleteRequest(member.id.get, libToSlack = Set(libToSlack.id.get), slackToLib = Set.empty)
           slackIntegrationCommander.deleteIntegrations(delRequest) must beFailedTry
-
-          // If the Owner moves it into an org space, though
-          val moveRequest = SlackIntegrationModifyRequest(
-            owner.id.get,
-            libToSlack = Map(libToSlack.id.get -> SlackIntegrationModification(space = Some(LibrarySpace.fromOrganizationId(org.id.get)))),
-            slackToLib = Map.empty
-          )
-          slackIntegrationCommander.modifyIntegrations(moveRequest) must beSuccessfulTry
-
-          // Then the Member can modify it
-          slackIntegrationCommander.deleteIntegrations(delRequest) must beSuccessfulTry
-          db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].all.filter(_.isActive) === Seq.empty
-          }
           1 === 1
         }
       }

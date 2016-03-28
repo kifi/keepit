@@ -46,9 +46,9 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam = SlackTeamFactory.team().saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
-            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withScopes(SlackAuthScope.ingest).saved
             val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).withNextIngestionAt(now).on().saved
             (user, lib, channel, stm, stl)
           }
@@ -82,10 +82,10 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             ))
             val org = OrganizationFactory.organization().withOwner(user).withSettings(Map(ClassFeature.SlackIngestionDomainBlacklist -> blacklist)).saved
             val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved
-            val slackTeam = SlackTeamFactory.team().saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
-            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel(channel).withNextIngestionAt(now).on().saved
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withScopes(SlackAuthScope.ingest).saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel(channel).withNextIngestionAt(now).on().saved
             (user, lib, channel, stm, stl)
           }
 
@@ -118,8 +118,8 @@ class SlackIngestionTest extends TestKitSupport with SpecificationLike with Shoe
             val lib = LibraryFactory.library().withOwner(user).withOrganization(org).saved
             val slackTeam = SlackTeamFactory.team().withKifiBot(SlackUserId("B4242"), SlackBotAccessToken("LETMEIN")).saved
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
-            val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").saved
-            val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withSpace(OrganizationSpace(org.id.get)).withLibrary(lib).withChannel(channel).withNextIngestionAt(fakeClock.now).on().saved
+            val userMembership = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).withUsername("ryanpbrewster").withScopes(SlackAuthScope.ingest).saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(userMembership).withLibrary(lib).withChannel(channel).withNextIngestionAt(fakeClock.now).on().saved
             val slackUser = (userMembership.slackUserId, userMembership.slackUsername, userMembership.token.get)
             val kifiBot = (slackTeam.kifiBot.get.userId, SlackUsername("Kifi"), slackTeam.kifiBot.get.token)
             (slackTeam.slackTeamId, slackUser, kifiBot, lib, channel, stl)

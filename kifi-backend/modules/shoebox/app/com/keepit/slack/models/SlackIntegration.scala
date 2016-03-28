@@ -30,7 +30,6 @@ object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
 }
 
 trait SlackIntegration {
-  def space: LibrarySpace
   def slackUserId: SlackUserId
   def slackTeamId: SlackTeamId
   def slackChannelId: SlackChannelId
@@ -45,18 +44,14 @@ object SlackIntegration {
 
 sealed abstract class SlackIntegrationRequest
 case class SlackIntegrationCreateRequest(
-    requesterId: Id[User],
-    space: LibrarySpace,
-    slackUserId: SlackUserId,
-    slackTeamId: SlackTeamId,
-    slackChannelId: SlackChannelId,
-    libraryId: Id[Library],
-    status: SlackIntegrationStatus) extends SlackIntegrationRequest {
-}
+  requesterId: Id[User],
+  slackUserId: SlackUserId,
+  slackTeamId: SlackTeamId,
+  slackChannelId: SlackChannelId,
+  libraryId: Id[Library],
+  status: SlackIntegrationStatus) extends SlackIntegrationRequest
 
-case class SlackIntegrationModification(
-  space: Option[LibrarySpace] = None,
-  status: Option[SlackIntegrationStatus] = None)
+case class SlackIntegrationModification(status: Option[SlackIntegrationStatus] = None)
 
 case class ExternalSlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
