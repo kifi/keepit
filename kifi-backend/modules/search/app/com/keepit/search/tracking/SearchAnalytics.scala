@@ -150,7 +150,7 @@ class SearchAnalytics @Inject() (
     val context = contextBuilder.build
     val event = kifiOrSlackUserId.fold[HeimdalEvent](
       { userId => UserEvent(userId, context, UserEventTypes.SEARCHED) },
-      { slackUserId => NonUserEvent(slackUserId.value, NonUserKinds.slack, context, NonUserEventTypes.SEARCHED) }
+      { slackUserId => NonUserEvent(slackUserId.value, TrackingNonUserKind.slack, context, NonUserEventTypes.SEARCHED) }
     )
     heimdal.trackEvent(event)
   }

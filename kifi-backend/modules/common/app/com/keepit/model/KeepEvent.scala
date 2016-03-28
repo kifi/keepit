@@ -1,11 +1,14 @@
 package com.keepit.model
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.json.EnumFormat
+import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
-import com.keepit.discussion.MessageSource
-import com.keepit.social.BasicNonUser
+import com.keepit.discussion.{ Message, MessageSource }
+import com.keepit.social.{ NonUserKinds, BasicAuthor, BasicUser, ImageUrls, BasicNonUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -72,18 +75,72 @@ object KeepEvent {
   )
 }
 
+sealed abstract class KeepEventAuthor(val kind: String) {
+  val image: String
+  val url: Option[String]
+}
+object KeepEventAuthor {
+  import com.keepit.common.core._
+  case class User(id: String, override val image: String, url: Option[String]) extends KeepEventAuthor("user")
+  object User {
+    implicit val writes: Writes[User] = Writes { o => Json.obj("kind" -> o.kind, "id" -> o.id, "image" -> o.image, "url" -> o.url).nonNullFields }
+  }
+
+  case class Slack(url: Option[String]) extends KeepEventAuthor("slack") {
+    val image = ImageUrls.SLACK_LOGO
+  }
+  object Slack {
+    implicit val writes: Writes[Slack] = Writes { o => Json.obj("kind" -> o.kind, "image" -> o.image, "url" -> o.url).nonNullFields }
+  }
+
+  case class Twitter(url: Option[String]) extends KeepEventAuthor("twitter") {
+    val image = ImageUrls.TWITTER_LOGO
+  }
+  object Twitter {
+    implicit val writes: Writes[Twitter] = Writes { o => Json.obj("kind" -> o.kind, "image" -> o.image, "url" -> o.url).nonNullFields }
+  }
+
+  case class Email(email: String) extends KeepEventAuthor("email") {
+    val image = BasicUser.defaultImageForEmail(email)
+    val url = None
+  }
+  object Email {
+    implicit val writes: Writes[Email] = Writes { o => Json.obj("kind" -> o.kind, "image" -> o.image, "email" -> o.email) }
+  }
+
+  def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): KeepEventAuthor = User(bu.externalId.id, bu.picturePath.getUrl, Some(Path(bu.username.value).absolute))
+
+  def fromBasicAuthor(ba: BasicAuthor): KeepEventAuthor = ba match {
+    case k: BasicAuthor.KifiUser => User(k.id, k.picture, Some(k.url))
+    case s: BasicAuthor.SlackUser => Slack(Some(s.url))
+    case t: BasicAuthor.TwitterUser => Twitter(Some(t.url))
+  }
+
+  def fromBasicNonUser(bn: BasicNonUser): KeepEventAuthor = bn.kind match {
+    case NonUserKinds.email => Email(bn.id)
+  }
+
+  implicit def writes: Writes[KeepEventAuthor] = Writes {
+    case o: User => User.writes.writes(o)
+    case o: Slack => Slack.writes.writes(o)
+    case o: Twitter => Twitter.writes.writes(o)
+    case o: Email => Email.writes.writes(o)
+  }
+}
+
 case class BasicKeepEvent(
+  id: Option[PublicId[Message]],
+  author: KeepEventAuthor,
   kind: KeepEventKind,
-  image: String,
   header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
   body: DescriptionElements, // message and keep.note content
   timestamp: DateTime,
   source: Option[KeepEventSource])
 object BasicKeepEvent {
-
   implicit val writes: Writes[BasicKeepEvent] = (
+    (__ \ 'id).writeNullable[PublicId[Message]] and
+    (__ \ 'author).write[KeepEventAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
-    (__ \ 'image).write[String] and
     (__ \ 'header).write[DescriptionElements] and
     (__ \ 'body).write[DescriptionElements] and
     (__ \ 'timestamp).write[DateTime] and
@@ -91,11 +148,11 @@ object BasicKeepEvent {
   )(unlift(BasicKeepEvent.unapply))
 }
 
-case class KeepActivity(events: Seq[BasicKeepEvent], numEvents: Int, numComments: Int)
+case class KeepActivity(events: Seq[BasicKeepEvent], numComments: Int)
 object KeepActivity {
-  val empty = KeepActivity(Seq.empty, numEvents = 0, numComments = 0)
+  val empty = KeepActivity(Seq.empty, numComments = 0)
 
   implicit val writes = new Writes[KeepActivity] {
-    def writes(o: KeepActivity) = Json.obj("events" -> o.events, "numEvents" -> o.numEvents, "numComments" -> o.numComments)
+    def writes(o: KeepActivity) = Json.obj("events" -> o.events, "numComments" -> o.numComments)
   }
 }
