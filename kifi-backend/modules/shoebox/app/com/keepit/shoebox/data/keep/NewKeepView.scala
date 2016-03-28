@@ -4,9 +4,7 @@ import play.api.libs.json.{ Json, Writes }
 
 case class NewKeepView(
   keep: NewKeepInfo,
-  viewer: NewKeepViewerInfo,
-  content: Option[NewPageContent],
-  context: Option[NewPageContext])
+  page: Option[NewPageInfo])
 
 object NewKeepView {
   implicit val writes: Writes[NewKeepView] = Json.writes[NewKeepView]
