@@ -8,7 +8,6 @@ import com.keepit.common.time._
 import com.keepit.common.service.IpAddress
 import com.keepit.common.reflection.Enumerator
 
-
 case class AmazonInstanceId(id: String) extends AnyVal {
   override def toString(): String = id
 }
@@ -111,7 +110,6 @@ object AmazonInstanceType extends Enumerator[AmazonInstanceType] {
   case object I2XLARGE extends AmazonInstanceType("i2.xlarge", 4, 14)
   case object I2XXLARGE extends AmazonInstanceType("i2.2xlarge", 8, 27)
   case object I2XXXXLARGE extends AmazonInstanceType("i2.4xlarge", 16, 53)
-
 
   case object UNKNOWN extends AmazonInstanceType("UNKNOWN", 6, 12)
 

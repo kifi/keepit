@@ -38,6 +38,8 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
 
+  def getRecentByKeeps(keepIds: Set[Id[Keep]], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]]
+
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
 }
 
@@ -187,6 +189,37 @@ class MessageRepoImpl @Inject() (
 
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage] = {
     rows.filter(msg => msg.keepId.inSet(keepIds) && msg.seq > seq).sortBy(_.seq).list
+  }
+
+  /**
+   * Grabs the `limitPerKeep` most recent messages for each keep in `keepIds`
+   * This is a non-trivial thing to do in a SQL database, so this query abuses user-variables.
+   * The sad part is that this is both complicated AND sensitive to the exactly db engine being used
+   * The happy part is that it's actually quite efficient compared to `keepIds.size` independent queries
+   * Use it if you desire efficiency at the cost of happiness
+   */
+  def getRecentByKeeps(keepIds: Set[Id[Keep]], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (keepIds.isEmpty) Map.empty
+    else {
+      val keepIdSetStr = keepIds.mkString("(", ",", ")")
+      StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
+      val updateRankStatement = db match {
+        case _: com.keepit.common.db.slick.H2 => "@idx := CASEWHEN(@curKeep = keep_id, @idx + 1, 1) AS rank"
+        case _: com.keepit.common.db.slick.MySQL => "@idx := IF(@curKeep = keep_id, @idx + 1, 1) AS rank"
+        case _ => throw new RuntimeException("unexpected db type, not one of {H2, MySQL}")
+      }
+      StaticQuery.queryNA[(Id[Keep], Id[ElizaMessage])] {
+        s"""
+        SELECT keep_id, id FROM (
+          SELECT keep_id, id,
+              $updateRankStatement,
+              @curKeep := keep_id AS dummy
+          FROM (SELECT * FROM message WHERE keep_id IN $keepIdSetStr ORDER BY keep_id, created_at DESC, id DESC) x
+        ) sub WHERE sub.rank <= $limitPerKeep;
+        """
+      }.list.groupBy(_._1).mapValues(_.map(_._2))
+    }
   }
 
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
