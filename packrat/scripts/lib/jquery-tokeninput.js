@@ -525,7 +525,7 @@
     }
 
     function resizeInput(force) {
-      var text = $tokenInput.val();
+      var text = $tokenInput.val() || $tokenInput.attr('placeholder');
       if (force === true || measuredText !== text) {
         var tokenListWidth = $tokenList.width();
         var widthAvailable = tokenListWidth - ($tokenInput.offset().left - $tokenList.offset().left);
