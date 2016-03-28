@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -21,7 +22,7 @@ object KeepFactory {
       userId = Some(userId),
       source = KeepSource.keeper,
       note = None,
-      connections = KeepConnections(Set.empty, Set(userId)),
+      connections = KeepConnections(libraries = Set.empty, users = Set(userId), emails = Set.empty),
       originalKeeperId = Some(userId),
       lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
     ), explicitLibs = Seq.empty, implicitLibs = Seq.empty)
@@ -33,6 +34,7 @@ object KeepFactory {
     def withNoUser() = this.copy(keep = keep.copy(userId = None, connections = keep.connections.copy(users = Set.empty)))
     def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
     def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
+    def withEmail(address: String) = this.copy(keep = keep.copy(connections = keep.connections.plusEmailAddress(EmailAddress(address))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
     def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
     def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))

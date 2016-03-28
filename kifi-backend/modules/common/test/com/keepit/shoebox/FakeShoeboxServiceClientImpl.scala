@@ -263,7 +263,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
           url = url.url,
           source = source,
           originalKeeperId = Some(user.id.get),
-          connections = KeepConnections(Set(library.id.get), Set(user.id.get))
+          connections = KeepConnections(libraries = Set(library.id.get), users = Set(user.id.get), emails = Set.empty)
         )
     }
     saveBookmarks(bookmarks: _*)
@@ -571,7 +571,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
     val changedKeepsAndTags = changedKeeps.map { keep =>
-      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
     }
     Future.successful(changedKeepsAndTags)
   }
@@ -687,6 +687,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       state = KeepStates.ACTIVE,
       owner = Some(Id[User](1)),
       users = Set(Id[User](1)),
+      emails = Set.empty,
       libraries = Set.empty,
       url = "http://www.kifi.com",
       uriId = Id[NormalizedURI](1),
@@ -716,6 +717,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       state = KeepStates.ACTIVE,
       owner = Some(creator),
       users = users,
+      emails = Set.empty,
       libraries = Set.empty,
       url = url,
       uriId = uriId,

@@ -12,15 +12,10 @@ import org.joda.time.DateTime
 import scala.util.control.NoStackTrace
 import scala.util.{ Failure, Success, Try }
 
-sealed abstract class KeepToUserFail(val message: String) extends Exception(message) with NoStackTrace
-object KeepToUserFail {
-  case object NOT_CONNECTED_TO_USER extends KeepToUserFail("keep_not_connected_to_user")
-}
-
 @ImplementedBy(classOf[KeepToUserCommanderImpl])
 trait KeepToUserCommander {
   def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Option[Id[User]], addedAt: Option[DateTime] = None)(implicit session: RWSession): KeepToUser
-  def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Try[Unit]
+  def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Boolean
   def removeKeepFromAllUsers(keep: Keep)(implicit session: RWSession): Unit
 
   def deactivate(ktu: KeepToUser)(implicit session: RWSession): Unit
@@ -57,12 +52,12 @@ class KeepToUserCommanderImpl @Inject() (
   def deactivate(ktu: KeepToUser)(implicit session: RWSession): Unit = {
     ktuRepo.deactivate(ktu)
   }
-  def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Try[Unit] = {
+  def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Boolean = {
     ktuRepo.getByKeepIdAndUserId(keepId, userId) match {
-      case None => Failure(KeepToUserFail.NOT_CONNECTED_TO_USER)
+      case None => false
       case Some(activeKtu) =>
         deactivate(activeKtu)
-        Success(())
+        true
     }
   }
   def removeKeepFromAllUsers(keep: Keep)(implicit session: RWSession): Unit = {

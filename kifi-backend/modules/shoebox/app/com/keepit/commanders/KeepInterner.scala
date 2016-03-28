@@ -6,6 +6,7 @@ import java.util.UUID
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.Author
 import scala.concurrent.duration._
@@ -40,6 +41,7 @@ final case class KeepInternRequest(
     note: Option[String],
     keptAt: Option[DateTime],
     users: Set[Id[User]],
+    emails: Set[EmailAddress],
     libraries: Set[Id[Library]]) {
   def trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 }
@@ -121,7 +123,7 @@ class KeepInternerImpl @Inject() (
         keptAt = keptAt,
         note = existingKeepOpt.flatMap(_.note), // The internReq.note is intended to represent a comment
         originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-        connections = KeepConnections(internReq.libraries, internReq.users ++ userIdOpt) union existingKeepOpt.map(_.connections),
+        connections = KeepConnections(libraries = internReq.libraries, users = internReq.users ++ userIdOpt, emails = internReq.emails) union existingKeepOpt.map(_.connections),
         lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
       )
       val internedKeep = try {
@@ -212,7 +214,7 @@ class KeepInternerImpl @Inject() (
       keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet),
+      connections = KeepConnections(libraries = libraryOpt.map(_.id.get).toSet, users = userIdOpt.toSet, emails = Set.empty),
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {

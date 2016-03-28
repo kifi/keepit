@@ -13,6 +13,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
@@ -71,6 +72,7 @@ final case class ExternalKeepCreateRequest(
   note: Option[String], // will be recorded as the first comment
   keptAt: Option[DateTime],
   users: Set[ExternalId[User]],
+  emails: Set[EmailAddress],
   libraries: Set[PublicId[Library]])
 object ExternalKeepCreateRequest {
   implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
@@ -144,6 +146,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander: KeepToLibraryCommander,
     ktuRepo: KeepToUserRepo,
     ktuCommander: KeepToUserCommander,
+    kteCommander: KeepToEmailCommander,
     keepSourceCommander: KeepSourceCommander,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
@@ -742,6 +745,8 @@ class KeepCommanderImpl @Inject() (
     keepRepo.save(oldKeep.withConnections(oldKeep.connections.diffed(diff))) tap { newKeep =>
       diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
       diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
+      diff.emails.added.foreach { added => kteCommander.internKeepInEmail(newKeep, added, userAttribution) }
+      diff.emails.removed.foreach { removed => kteCommander.removeKeepFromEmail(newKeep.id.get, removed) }
       libraryRepo.getActiveByIds(diff.libraries.added).values.foreach { newLib =>
         ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
       }
@@ -785,6 +790,7 @@ class KeepCommanderImpl @Inject() (
       val newKeep = keepRepo.save(keep.withUriId(newUri.id.get))
       ktlCommander.syncKeep(newKeep)
       ktuCommander.syncKeep(newKeep)
+      kteCommander.syncKeep(newKeep)
     } else {
       val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
       val similarKeeps = getKeepsByUriAndLibraries(newUri.id.get, libIds)
@@ -800,6 +806,7 @@ class KeepCommanderImpl @Inject() (
         val migratedKeep = keepRepo.deactivate(keep.withUriId(newUri.id.get))
         ktlCommander.syncAndDeleteKeep(migratedKeep)
         ktuCommander.syncAndDeleteKeep(migratedKeep)
+        kteCommander.syncAndDeleteKeep(migratedKeep)
       } else {
         val soonToBeDeadKeeps = similarKeeps.filter(_.isOlderThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
@@ -811,6 +818,7 @@ class KeepCommanderImpl @Inject() (
         val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)
+        kteCommander.syncKeep(newKeep)
       }
     }
   }
@@ -818,6 +826,7 @@ class KeepCommanderImpl @Inject() (
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep.id.get)
     ktuCommander.removeKeepFromAllUsers(keep)
+    kteCommander.removeKeepFromAllEmails(keep)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
   }
@@ -845,7 +854,7 @@ class KeepCommanderImpl @Inject() (
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      connections = KeepConnections(Set(toLibrary.id.get), Set(userId)),
+      connections = KeepConnections(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
       title = k.title,
       note = k.note
     )

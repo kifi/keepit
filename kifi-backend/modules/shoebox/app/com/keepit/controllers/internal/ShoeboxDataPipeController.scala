@@ -27,6 +27,7 @@ class ShoeboxDataPipeController @Inject() (
     keepRepo: KeepRepo,
     ktuRepo: KeepToUserRepo,
     ktlRepo: KeepToLibraryRepo,
+    kteRepo: KeepToEmailRepo,
     sourceRepo: KeepSourceAttributionRepo,
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
@@ -191,16 +192,18 @@ class ShoeboxDataPipeController @Inject() (
 
   def getCrossServiceKeepsByIds() = Action(parse.tolerantJson) { request =>
     val ids = request.body.as[Set[Id[Keep]]]
-    val (keeps, ktus, ktls) = db.readOnlyMaster { implicit s =>
+    val (keeps, ktus, ktes, ktls) = db.readOnlyMaster { implicit s =>
       val keepsById = keepRepo.getByIds(ids)
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepsById.keySet)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepsById.keySet)
-      (keepsById, ktusByKeep, ktlsByKeep)
+      val ktesByKeep = kteRepo.getAllByKeepIds(keepsById.keySet)
+      (keepsById, ktusByKeep, ktesByKeep, ktlsByKeep)
     }
     val keepDataById = keeps.map {
       case (keepId, keep) => keepId -> CrossServiceKeep.fromKeepAndRecipients(
         keep = keep,
         users = ktus.getOrElse(keepId, Seq.empty).map(_.userId).toSet,
+        emails = ktes.getOrElse(keepId, Seq.empty).map(_.emailAddress).toSet,
         libraries = ktls.getOrElse(keepId, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
       )
     }
@@ -214,10 +217,12 @@ class ShoeboxDataPipeController @Inject() (
         val attributionById = sourceRepo.getByKeepIds(keepIds)
         val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
         val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
+        val ktesByKeep = kteRepo.getAllByKeepIds(keepIds)
         changedKeeps.map { keep =>
           val csKeep = CrossServiceKeep.fromKeepAndRecipients(
             keep = keep,
             users = ktusByKeep.getOrElse(keep.id.get, Seq.empty).map(_.userId).toSet,
+            emails = ktesByKeep.getOrElse(keep.id.get, Seq.empty).map(_.emailAddress).toSet,
             libraries = ktlsByKeep.getOrElse(keep.id.get, Seq.empty).map(CrossServiceKeep.LibraryInfo.fromKTL).toSet
           )
           val tags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply).distinctBy(_.normalized)

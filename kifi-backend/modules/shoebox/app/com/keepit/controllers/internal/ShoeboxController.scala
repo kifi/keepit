@@ -632,7 +632,7 @@ class ShoeboxController @Inject() (
     val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, source = KeepSource.discussion)
     val csKeep = db.readWrite { implicit s =>
       val keep = keepCommander.persistKeep(internResponse.newKeeps.head.withParticipants(input.users))
-      CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty)
+      CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty, emails = Set.empty)
     }
     Ok(Json.toJson(csKeep))
   }

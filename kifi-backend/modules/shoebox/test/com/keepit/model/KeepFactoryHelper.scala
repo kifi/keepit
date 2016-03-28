@@ -70,6 +70,17 @@ object KeepFactoryHelper {
         )
         injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
       }
+      finalKeep.connections.emails.foreach { emailAddress =>
+        val kte = KeepToEmail(
+          keepId = finalKeep.id.get,
+          emailAddress = emailAddress,
+          addedAt = finalKeep.keptAt,
+          addedBy = finalKeep.userId,
+          uriId = finalKeep.uriId,
+          lastActivityAt = finalKeep.lastActivityAt
+        )
+        injector.getInstance(classOf[KeepToEmailRepo]).save(kte)
+      }
       finalKeep
     }
 
