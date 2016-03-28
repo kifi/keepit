@@ -149,7 +149,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty)
+        messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, Seq.empty, updateShoebox = true)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }

@@ -9,6 +9,9 @@ import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
 import com.keepit.model.KeepEvent.AddParticipants
 import com.keepit.model.{ KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.social.{ BasicUser, BasicAuthor }
+import com.keepit.model.KeepEvent.{ AddLibraries, AddParticipants }
+import com.keepit.model.{ BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.social.{ ImageUrls, BasicUser, BasicAuthor }
 import org.joda.time.DateTime
 
 object KeepActivityGen {
@@ -91,6 +94,18 @@ object KeepActivityGen {
                 id = None, // could use message.id, but system message ids don't need to be exposed to clients yet
                 author = BasicAuthor.fromUser(basicAddedBy.get),
                 KeepEventKind.AddParticipants,
+                header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
+                body = DescriptionElements(),
+                timestamp = message.sentAt,
+                source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
+              ))
+            case Some(AddLibraries(addedBy, addedLibraries)) =>
+              val basicAddedBy = userById.get(addedBy)
+              val addedElement = unwordsPretty(addedLibraries.flatMap(libById.get).map(fromBasicLibrary).toSeq)
+              Some(BasicKeepEvent(
+                id = None,
+                author = BasicAuthor.fromUser(basicAddedBy.get),
+                KeepEventKind.AddLibraries,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),
                 timestamp = message.sentAt,

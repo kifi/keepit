@@ -17,7 +17,7 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
   case object Comment extends KeepEventKind("comment")
   case object AddParticipants extends KeepEventKind("add_participants")
-  case object AddedLibrary extends KeepEventKind("added_library")
+  case object AddLibraries extends KeepEventKind("add_libraries")
   case object EditedTitle extends KeepEventKind("edited_title")
 
   val all = _all
@@ -61,16 +61,19 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
 sealed abstract class KeepEvent(val kind: KeepEventKind)
 object KeepEvent {
   @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends KeepEvent(KeepEventKind.AddParticipants)
+  @json case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends KeepEvent(KeepEventKind.AddLibraries)
   implicit val format = Format[KeepEvent](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.AddParticipants => Json.reads[AddParticipants].reads(js)
+          case KeepEventKind.AddLibraries => Json.reads[AddLibraries].reads(js)
           case kind => throw new Exception(s"unsupported reads for activity event kind $kind, js $js}")
         }
     },
     Writes {
       case ap: AddParticipants => Json.writes[AddParticipants].writes(ap).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddParticipants.value)
+      case al: AddLibraries => Json.writes[AddLibraries].writes(al).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddLibraries.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
