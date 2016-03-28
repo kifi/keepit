@@ -78,7 +78,7 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
 
           // With the correct Scopes
           db.readWrite { implicit s =>
-            val requiredScopes = TurnChannelIngestion(integrationId = stl.id.get.id, turnOn = true).getMissingScopes(Set.empty)
+            val requiredScopes = TurnChannelIngestion(integrationId = stl.id.get.id, turnOn = true).requiredScopes
             inject[SlackTeamMembershipRepo].save(stm.copy(tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken("fake"), requiredScopes))))
           }
 
@@ -146,7 +146,7 @@ class SlackControllerTest extends Specification with ShoeboxTestInjector {
 
           // With the correct Scopes
           db.readWrite { implicit s =>
-            val requiredScopes = TurnChannelIngestion(integrationId = stl.id.get.id, turnOn = true).getMissingScopes(Set.empty)
+            val requiredScopes = TurnChannelIngestion(integrationId = stl.id.get.id, turnOn = true).requiredScopes
             inject[SlackTeamMembershipRepo].save(stm.copy(tokenWithScopes = Some(SlackTokenWithScopes(SlackUserAccessToken("fake"), requiredScopes))))
           }
 
