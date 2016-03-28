@@ -5,7 +5,7 @@ import com.keepit.common.crypto.KifiUrlRedirectHelper
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ Param, Query }
-import com.keepit.heimdal.{ HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
+import com.keepit.heimdal.{ TrackingNonUserKind, HeimdalContext, NonUserEventTypes, HeimdalContextBuilderFactory, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model.NotificationCategory
 import com.keepit.slack.models._
 import com.keepit.social.NonUserKinds
@@ -67,7 +67,7 @@ class SlackAnalytics @Inject() (
       contextBuilder += ("slackChannelId", slackChannelId.value)
       log.info(s"[clickTracking] processed slack $category, $slackTeamId, $slackChannelId, sending to heimdal")
       val nonUserIdentifier = s"${slackTeamId.value}:${slackChannelId.value}"
-      heimdal.trackEvent(NonUserEvent(nonUserIdentifier, NonUserKinds.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
+      heimdal.trackEvent(NonUserEvent(nonUserIdentifier, TrackingNonUserKind.slack, contextBuilder.build, NonUserEventTypes.WAS_NOTIFIED))
     }
   }
 

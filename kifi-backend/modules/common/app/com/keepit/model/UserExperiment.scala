@@ -81,7 +81,7 @@ object UserExperimentType {
   val CUSTOM_LIBRARY_ORDERING = UserExperimentType("custom_library_ordering")
   val DISCUSSION_FEED_FILTERS = UserExperimentType("discussion_feed_filters")
   val KEEP_PAGE_RHR = UserExperimentType("keep_page_rhr")
-  val ACTIVITY_LOG = UserExperimentType("activity_log")
+  val ACTIVITY_LOG = UserExperimentType("activity_log") // when you remove this, make sure you run LibraryControllerTest before merging ;) // todo(cam): make separate tests for `KeepActivity` ya dingus
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
