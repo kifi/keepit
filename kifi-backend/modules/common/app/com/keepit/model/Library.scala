@@ -382,18 +382,21 @@ object BasicLibraryStatistics {
 // For service-to-Shoebox calls needing library metadata. Specialized for search's needs, ask search before changing.
 @json
 case class BasicLibraryDetails(
-  name: String,
-  slug: LibrarySlug,
-  color: Option[LibraryColor],
-  imageUrl: Option[String],
-  description: Option[String],
-  numFollowers: Int,
-  numCollaborators: Int,
-  keepCount: Int,
-  membership: Option[LibraryMembershipInfo], // viewer
-  ownerId: Id[User],
-  url: Path,
-  permissions: Set[LibraryPermission])
+    name: String,
+    slug: LibrarySlug,
+    color: Option[LibraryColor],
+    imageUrl: Option[String],
+    description: Option[String],
+    numFollowers: Int,
+    numCollaborators: Int,
+    keepCount: Int,
+    membership: Option[LibraryMembershipInfo], // viewer
+    ownerId: Id[User],
+    organizationId: Option[Id[Organization]],
+    url: Path,
+    permissions: Set[LibraryPermission]) {
+  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+}
 
 sealed abstract class LibraryColor(val value: String, val hex: String)
 object LibraryColor extends Enumerator[LibraryColor] {

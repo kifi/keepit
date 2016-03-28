@@ -291,12 +291,10 @@ case class SlackChannelIntegrations(
   channelId: SlackChannelId,
   allLibraries: Set[Id[Library]],
   toLibraries: Set[Id[Library]],
-  fromLibraries: Set[Id[Library]],
-  spaces: Map[Id[Library], Set[LibrarySpace]] // there's currently no unique constraint on (teamId: SlackTeamId, channelId: SlackChannelId, libraryId: Id[Library])
-  )
+  fromLibraries: Set[Id[Library]])
 
 object SlackChannelIntegrations {
-  def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty, Map.empty)
+  def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty)
 }
 
 case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {

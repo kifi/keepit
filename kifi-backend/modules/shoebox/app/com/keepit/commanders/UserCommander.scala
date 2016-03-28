@@ -199,7 +199,7 @@ class UserCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext,
     experimentRepo: UserExperimentRepo,
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
-    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    slackTeamRepo: SlackTeamRepo,
     slackInfoCommander: SlackInfoCommander,
     airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
 
@@ -594,12 +594,10 @@ class UserCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       prefSet.collect {
         case pref if pref == SLACK_INT_PROMO || pref == SLACK_UPSELL_WIDGET =>
-          val teamOpt = organizationMembershipRepo.getByUserId(userId, Limit(1), Offset(0)).headOption
-          def hasIntegrations = {
-            slackTeamMembershipRepo.getByUserId(userId).nonEmpty ||
-              teamOpt.flatMap(team => slackChannelToLibraryRepo.getIntegrationsByOrg(team.organizationId).headOption).nonEmpty
-          }
-          pref -> JsBoolean(teamOpt.nonEmpty && !hasIntegrations)
+          val orgIds = organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet
+          def hasAnOrg = orgIds.nonEmpty
+          def hasIntegrations = slackTeamRepo.getByOrganizationIds(orgIds).nonEmpty || slackTeamMembershipRepo.getByUserId(userId).nonEmpty
+          pref -> JsBoolean(hasAnOrg && !hasIntegrations)
       }.toMap
     }
   }

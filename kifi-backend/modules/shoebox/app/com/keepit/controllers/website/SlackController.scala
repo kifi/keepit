@@ -39,48 +39,6 @@ class SlackController @Inject() (
   implicit val ec: ExecutionContext)
     extends UserActions with OrganizationAccessActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def modifyIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    (request.body \ "integrations").validate[Seq[ExternalSlackIntegrationModification]] match {
-      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
-      case JsSuccess(mods, _) =>
-        val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }.toSet
-        val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }.toSet
-        val extToIntUserId = db.readOnlyMaster { implicit s =>
-          userRepo.getAllUsersByExternalId(extUserIds)
-        }.map { case (extId, u) => extId -> u.id.get }
-        val externalToInternalSpace: Map[ExternalLibrarySpace, LibrarySpace] = {
-          extToIntUserId.map { case (extId, intId) => ExternalUserSpace(extId) -> UserSpace(intId) } ++
-            pubOrgIds.map { pubId => ExternalOrganizationSpace(pubId) -> OrganizationSpace(Organization.decodePublicId(pubId).get) }.toMap
-        }
-
-        val libToSlackMods = mods.collect {
-          case ExternalSlackIntegrationModification(Left(ltsId), extSpace, status) =>
-            LibraryToSlackChannel.decodePublicId(ltsId).get -> SlackIntegrationModification(extSpace.map(x => externalToInternalSpace(x)), status)
-        }.toMap
-        val slackToLibMods = mods.collect {
-          case ExternalSlackIntegrationModification(Right(stlId), extSpace, status) =>
-            SlackChannelToLibrary.decodePublicId(stlId).get -> SlackIntegrationModification(extSpace.map(externalToInternalSpace(_)), status)
-        }.toMap
-
-        val libsUserNeedsToWriteTo = db.readOnlyMaster { implicit s =>
-          slackToLibMods.flatMap {
-            case (stlId, mod) =>
-              val stl = slackToLibRepo.get(stlId)
-              if (mod.status.contains(SlackIntegrationStatus.On) && stl.status != SlackIntegrationStatus.On) Some(stl.libraryId)
-              else None
-          }.toSet
-        }
-        if (libraryAccessCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
-          slackIntegrationCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
-            Ok(Json.toJson(response))
-          }.recover {
-            case fail: LibraryFail => fail.asErrorResponse
-          }.get
-        } else {
-          LibraryFail(FORBIDDEN, "cannot_write_to_library").asErrorResponse
-        }
-    }
-  }
   def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
     implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
     (request.body \ "integrations").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
@@ -158,8 +116,7 @@ class SlackController @Inject() (
         val integration = db.readOnlyMaster { implicit session => libToSlackRepo.get(integrationId) }
         val isBroken = integration.status == SlackIntegrationStatus.Broken
         val turnAction = TurnLibraryPush(integrationId.id, isBroken = isBroken, turnOn = turnOn)
-        val action = if (turnOn) AddSlackTeam(andThen = Some(turnAction)) else turnAction // Wrapping with AddSlackTeam for now to encourage people to backfill / connect
-        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), action)
+        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), turnAction)
         handleAsAPIRequest(res)
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))
     }
@@ -171,8 +128,7 @@ class SlackController @Inject() (
       case Success(integrationId) =>
         val integration = db.readOnlyMaster { implicit session => slackToLibRepo.get(integrationId) }
         val turnAction = TurnChannelIngestion(integrationId.id, turnOn = turnOn)
-        val action = if (turnOn) AddSlackTeam(andThen = Some(turnAction)) else turnAction // Wrapping with AddSlackTeam for now to encourage people to backfill / connect
-        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), action)
+        val res = slackAuthCommander.processActionOrElseAuthenticate(request.userId, Some(integration.slackTeamId), turnAction)
         handleAsAPIRequest(res)
       case Failure(_) => Future.successful(BadRequest("invalid_integration_id"))
     }

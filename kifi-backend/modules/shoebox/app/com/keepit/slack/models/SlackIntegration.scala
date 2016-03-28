@@ -30,7 +30,6 @@ object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
 }
 
 trait SlackIntegration {
-  def space: LibrarySpace
   def slackUserId: SlackUserId
   def slackTeamId: SlackTeamId
   def slackChannelId: SlackChannelId
@@ -45,18 +44,12 @@ object SlackIntegration {
 
 sealed abstract class SlackIntegrationRequest
 case class SlackIntegrationCreateRequest(
-    requesterId: Id[User],
-    space: LibrarySpace,
-    slackUserId: SlackUserId,
-    slackTeamId: SlackTeamId,
-    slackChannelId: SlackChannelId,
-    libraryId: Id[Library],
-    status: SlackIntegrationStatus) extends SlackIntegrationRequest {
-}
-
-case class SlackIntegrationModification(
-  space: Option[LibrarySpace] = None,
-  status: Option[SlackIntegrationStatus] = None)
+  requesterId: Id[User],
+  slackUserId: SlackUserId,
+  slackTeamId: SlackTeamId,
+  slackChannelId: SlackChannelId,
+  libraryId: Id[Library],
+  status: SlackIntegrationStatus) extends SlackIntegrationRequest
 
 case class ExternalSlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
@@ -70,12 +63,6 @@ object ExternalSlackIntegrationModification {
     (__ \ 'status).formatNullable[SlackIntegrationStatus]
   )(ExternalSlackIntegrationModification.apply, unlift(ExternalSlackIntegrationModification.unapply))
 }
-
-case class SlackIntegrationModifyRequest(
-  requesterId: Id[User],
-  libToSlack: Map[Id[LibraryToSlackChannel], SlackIntegrationModification],
-  slackToLib: Map[Id[SlackChannelToLibrary], SlackIntegrationModification]) extends SlackIntegrationRequest
-@json case class SlackIntegrationModifyResponse(modified: Int)
 
 case class SlackIntegrationDeleteRequest(
   requesterId: Id[User],

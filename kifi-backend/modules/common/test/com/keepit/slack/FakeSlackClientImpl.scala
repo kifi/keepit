@@ -33,7 +33,7 @@ class FakeSlackClientImpl extends SlackClient {
 
   val inChannelQuery = """in:([^ ]*)""".r
 
-  def testToken(token: SlackAccessToken): Future[Unit] = ???
+  def testToken(token: SlackAccessToken): Future[Unit] = Future.successful(())
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = ???
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse] = ???
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit] = () match {

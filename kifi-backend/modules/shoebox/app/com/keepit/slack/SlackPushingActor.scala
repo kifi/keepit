@@ -114,7 +114,7 @@ class SlackPushingActor @Inject() (
 
   protected def processTasks(integrationIds: Seq[Id[LibraryToSlackChannel]]): Map[Id[LibraryToSlackChannel], Future[Unit]] = {
     log.info(s"[SLACK-PUSH-ACTOR] Processing $integrationIds")
-    val (integrationsByIds, isAllowed, getChannel, getSettings) = db.readOnlyMaster { implicit session =>
+    val (integrationsByIds, isAllowed, getIntegrationInfo) = db.readOnlyMaster { implicit session =>
       val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
 
       val isAllowed = integrationsByIds.map {
@@ -124,26 +124,24 @@ class SlackPushingActor @Inject() (
           }
       }
 
-      val getChannel = {
+      val getIntegrationInfo = {
+        val slackTeamsById = slackTeamRepo.getBySlackTeamIds(integrationsByIds.values.map(_.slackTeamId).toSet)
+        val settingsByOrgIds = orgConfigRepo.getByOrgIds(slackTeamsById.values.flatMap(_.organizationId).toSet).mapValues(_.settings)
         val slackChannelBySlackTeamAndChannelId = slackChannelRepo.getByChannelIds(integrationsByIds.values.map(sctl => (sctl.slackTeamId, sctl.slackChannelId)).toSet)
         integrationsByIds.map {
           case (integrationId, integration) =>
+            val slackTeam = slackTeamsById(integration.slackTeamId)
             val slackChannel = slackChannelBySlackTeamAndChannelId((integration.slackTeamId, integration.slackChannelId))
-            integrationId -> slackChannel
+            val settings = slackTeam.organizationId.flatMap(orgId => settingsByOrgIds.get(orgId))
+            integrationId -> (slackChannel, settings)
         }
       }
 
-      val getSettings = {
-        val orgIdsByIntegrationIds = integrationsByIds.mapValues(_.space).collect { case (integrationId, OrganizationSpace(orgId)) => integrationId -> orgId }
-        val settingsByOrgIds = orgConfigRepo.getByOrgIds(orgIdsByIntegrationIds.values.toSet).mapValues(_.settings)
-        orgIdsByIntegrationIds.mapValues(settingsByOrgIds.apply).get _
-      }
-
-      (integrationsByIds, isAllowed, getChannel, getSettings)
+      (integrationsByIds, isAllowed, getIntegrationInfo)
     }
     integrationsByIds.map {
       case (integrationId, integration) =>
-        integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getChannel, getSettings)).map {
+        integrationId -> FutureHelpers.robustly(pushMaybe(integration, isAllowed, getIntegrationInfo)).map {
           case Success(_) =>
             ()
           case Failure(fail) =>
@@ -153,11 +151,11 @@ class SlackPushingActor @Inject() (
     }
   }
 
-  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getChannel: Id[LibraryToSlackChannel] => SlackChannel, getSettings: Id[LibraryToSlackChannel] => Option[OrganizationSettings]): Future[Unit] = {
-    val channel = getChannel(integration.id.get)
+  private def pushMaybe(integration: LibraryToSlackChannel, isAllowed: Id[LibraryToSlackChannel] => Boolean, getIntegrationInfo: Id[LibraryToSlackChannel] => (SlackChannel, Option[OrganizationSettings])): Future[Unit] = {
+    val (channel, settings) = getIntegrationInfo(integration.id.get)
 
     val futurePushMaybe = {
-      if (isAllowed(integration.id.get)) doPush(integration, channel, getSettings(integration.id.get))
+      if (isAllowed(integration.id.get)) doPush(integration, channel, settings)
       else Future.failed(ForbiddenSlackIntegration(integration))
     }
 

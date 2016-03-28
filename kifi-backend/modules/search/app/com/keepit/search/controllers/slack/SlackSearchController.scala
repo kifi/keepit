@@ -87,8 +87,16 @@ class SlackSearchController @Inject() (
       }
       else {
         val futureLibraries = shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None)
-        val futureUsers = shoeboxClient.getBasicUsers(integrations.spaces.values.flatten.collect { case UserSpace(userId) => userId }.toSeq)
-        val futureOrgs = shoeboxClient.getBasicOrganizationsByIds(integrations.spaces.values.flatten.collect { case OrganizationSpace(orgId) => orgId }.toSet)
+        val futureUsers = futureLibraries.flatMap { libraries =>
+          val userIds = libraries.values.map(_.space).collect { case UserSpace(userId) => userId }.toSet
+          shoeboxClient.getBasicUsers(userIds.toSeq)
+        }
+
+        val futureOrgs = futureLibraries.flatMap { libraries =>
+          val orgIds = libraries.values.map(_.space).collect { case OrganizationSpace(orgId) => orgId }.toSet
+          shoeboxClient.getBasicOrganizationsByIds(orgIds)
+        }
+
         for {
           libraries <- futureLibraries
           users <- futureUsers
@@ -96,14 +104,11 @@ class SlackSearchController @Inject() (
         } yield {
           def listLibraries(ids: Set[Id[Library]]): Elements = Elements.unlines(ids.flatMap(id => libraries.get(id).map(id -> _)).toSeq.sortBy(_._2.name).map {
             case (libId, lib) =>
-              val spaces = integrations.spaces.get(libId).map { spaces =>
-                val spaceElements = Elements(spaces.map {
-                  case UserSpace(userId) => users.get(userId): Elements
-                  case OrganizationSpace(orgId) => orgs.get(orgId): Elements
-                }.toSeq: _*)
-                Elements("(", Elements.mkElements(spaceElements.flatten.sortBy(_.text), ","), ")")
+              val spaceElement = lib.space match {
+                case UserSpace(userId) => Elements("(", users.get(userId), ")")
+                case OrganizationSpace(orgId) => Elements("(", orgs.get(orgId), ")")
               }
-              Elements(lib.name --> LinkElement(lib.url), spaces)
+              Elements(lib.name --> LinkElement(lib.url), spaceElement)
           })
           val allLibraries: Elements = Elements(
             s"The following Kifi libraries are connected with #${channelName.value}, use */kifi* to search them:", "\n",

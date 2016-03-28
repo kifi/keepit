@@ -271,7 +271,6 @@ class SlackChannelCommanderImpl @Inject() (
           channelRepo.getOrCreate(team.slackTeamId, channel.channelId, channel.channelName)
           libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
-            space = library.space,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,
@@ -280,7 +279,6 @@ class SlackChannelCommanderImpl @Inject() (
           ))
           channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
             requesterId = userId,
-            space = library.space,
             libraryId = library.id.get,
             slackUserId = membership.slackUserId,
             slackTeamId = membership.slackTeamId,

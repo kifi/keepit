@@ -34,8 +34,9 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
         withDb(modules: _*) { implicit injector =>
           val (user, lib1, lib2) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(user).saved
             val Seq(lib1, lib2) = LibraryFactory.libraries(2).map(_.withOwner(user)).saved
-            val slackTeam = SlackTeamFactory.team().saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).saved
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val engChannel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
             val aChannel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#a").saved
@@ -62,9 +63,11 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           // you subscribe a library to both of these channels
           val (user, lib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
+            val org1 = OrganizationFactory.organization().withOwner(user).saved
+            val org2 = OrganizationFactory.organization().withOwner(user).saved
             val lib = LibraryFactory.library().withOwner(user).saved
-            val slackTeam1 = SlackTeamFactory.team().withName("kifi").saved
-            val slackTeam2 = SlackTeamFactory.team().withName("kifi").saved
+            val slackTeam1 = SlackTeamFactory.team().withOrg(org1).withName("kifi").saved
+            val slackTeam2 = SlackTeamFactory.team().withOrg(org2).withName("kifi").saved
             val team1EngChannel = SlackChannelFactory.channel().withTeam(slackTeam1).withName("#eng").saved
             val team2EngChannel = SlackChannelFactory.channel().withTeam(slackTeam2).withName("#eng").saved
 
@@ -89,45 +92,47 @@ class SlackInfoCommanderTest extends TestKitSupport with SpecificationLike with 
           val (owner, member, org, libs) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
             val member = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
 
-            val slackTeam = SlackTeamFactory.team().withName("slack").saved
+            val slackTeam = SlackTeamFactory.team().withOrg(org).withName("slack").saved
             val stmOwner = SlackTeamMembershipFactory.membership().withUser(owner).withTeam(slackTeam).saved
             val stmMember = SlackTeamMembershipFactory.membership().withUser(member).withTeam(slackTeam).saved
             val channel = SlackChannelFactory.channel().withTeam(slackTeam).withName("#eng").saved
 
-            val personalSpace = LibrarySpace.fromUserId(member.id.get)
-            LibraryFactory.libraries(5).map(_.withOwner(member).withVisibility(LibraryVisibility.SECRET)).saved.foreach { lib =>
-              LibraryToSlackChannelFactory.lts().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel(channel).saved
-              SlackChannelToLibraryFactory.stl().withMembership(stmMember).withLibrary(lib).withSpace(personalSpace).withChannel(channel).saved
+            val memberLibs = LibraryFactory.libraries(5).map(_.withOwner(member).withVisibility(LibraryVisibility.SECRET)).saved
+            memberLibs.foreach { lib =>
+              LibraryToSlackChannelFactory.lts().withMembership(stmMember).withLibrary(lib).withChannel(channel).saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmMember).withLibrary(lib).withChannel(channel).saved
             }
 
-            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
-            val orgSpace = LibrarySpace.fromOrganizationId(org.id.get)
-
-            val personalLibs = List(
+            val ownerLibs = List(
               LibraryFactory.library().withOwner(owner).withVisibility(LibraryVisibility.PUBLISHED).saved,
               LibraryFactory.library().withOwner(owner).withVisibility(LibraryVisibility.SECRET).saved
             )
+
             val orgLibs = List(
               LibraryFactory.library().withOwner(owner).withOrganization(org).saved,
               LibraryFactory.library().withOwner(member).withOrganization(org).saved
             )
-            for (lib <- personalLibs ++ orgLibs) yield {
-              LibraryToSlackChannelFactory.lts().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel(channel).saved
-              SlackChannelToLibraryFactory.stl().withMembership(stmOwner).withLibrary(lib).withSpace(orgSpace).withChannel(channel).saved
+            for (lib <- ownerLibs ++ orgLibs) yield {
+              LibraryToSlackChannelFactory.lts().withMembership(stmOwner).withLibrary(lib).withChannel(channel).saved
+              SlackChannelToLibraryFactory.stl().withMembership(stmOwner).withLibrary(lib).withChannel(channel).saved
             }
-            (owner, member, org, orgLibs ++ personalLibs)
+            (owner, member, org, memberLibs ++ ownerLibs ++ orgLibs)
           }
 
-          val slackInfo = db.readOnlyMaster { implicit s =>
-            slackInfoCommander.getOrganizationSlackInfo(org.id.get, member.id.get)
-          }
-          // Uncomment to visually inspect the slack info
-          // println(Json.prettyPrint(Json.toJson(slackInfo)))
+          db.readOnlyMaster { implicit s =>
+            Seq(owner.id.get, member.id.get).foreach { userId =>
+              val slackInfo = slackInfoCommander.getOrganizationSlackInfo(org.id.get, userId)
+              // Uncomment to visually inspect the slack info
+              // println(Json.prettyPrint(Json.toJson(slackInfo)))
+              val expected = libs.filter(lib => (lib.ownerId == userId || lib.visibility != LibraryVisibility.SECRET)).map(_.id.get).toSet
+              val actual = slackInfo.libraries.map(_._1.id).map(pubId => Library.decodePublicId(pubId).get).toSet
+              actual === expected
+            }
 
-          val expected = libs.filter(_.visibility != LibraryVisibility.SECRET).map(_.id.get).toSet
-          val actual = slackInfo.libraries.map(_._1.id).map(pubId => Library.decodePublicId(pubId).get).toSet
-          actual === expected
+            1 === 1
+          }
         }
       }
     }

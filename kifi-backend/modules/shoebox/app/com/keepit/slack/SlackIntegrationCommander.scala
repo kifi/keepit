@@ -29,7 +29,6 @@ trait SlackIntegrationCommander {
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhookId: Id[SlackIncomingWebhookInfo]): Try[SlackTeam]
   def turnLibraryPush(integrationId: Id[LibraryToSlackChannel], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Id[Library]
   def turnChannelIngestion(integrationId: Id[SlackChannelToLibrary], slackTeamId: SlackTeamId, slackUserId: SlackUserId, turnOn: Boolean): Id[Library]
-  def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
   def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
   def getBySlackChannels(teamId: SlackTeamId, channelIds: Set[SlackChannelId])(implicit session: RSession): Map[SlackChannelId, SlackChannelIntegrations]
@@ -70,10 +69,8 @@ class SlackIntegrationCommanderImpl @Inject() (
         case Some(team) =>
           team.organizationId match {
             case Some(orgId) =>
-              val space = LibrarySpace.fromOrganizationId(orgId)
               val ltsc = libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
                 requesterId = userId,
-                space = space,
                 libraryId = libId,
                 slackUserId = slackUserId,
                 slackTeamId = slackTeamId,
@@ -82,7 +79,6 @@ class SlackIntegrationCommanderImpl @Inject() (
               ))
               val sctl = channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
                 requesterId = userId,
-                space = space,
                 libraryId = libId,
                 slackUserId = slackUserId,
                 slackTeamId = slackTeamId,
@@ -120,46 +116,20 @@ class SlackIntegrationCommanderImpl @Inject() (
   }
 
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
+    def hasAccessToOrg(userId: Id[User], slackTeamId: SlackTeamId) = slackTeamRepo.getBySlackTeamId(slackTeamId).exists { team =>
+      team.organizationId.exists { orgId =>
+        orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined
+      }
+    }
     request match {
       case r: SlackIntegrationCreateRequest =>
-        val userHasAccessToSpace = r.space match {
-          case UserSpace(uid) => r.requesterId == uid
-          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isDefined
-        }
-        if (!userHasAccessToSpace) Some(LibraryFail(FORBIDDEN, "insufficient_permissions_for_target_space"))
+        if (!hasAccessToOrg(r.requesterId, r.slackTeamId)) Some(LibraryFail(FORBIDDEN, "insufficient_permissions_for_target_space"))
         else None
 
-      case r: SlackIntegrationModifyRequest =>
-        val toSlacks = libToChannelRepo.getActiveByIds(r.libToSlack.keySet)
-        val fromSlacks = channelToLibRepo.getActiveByIds(r.slackToLib.keySet)
-        val oldSpaces = fromSlacks.map(_.space) ++ toSlacks.map(_.space)
-        val newSpaces = (r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)).toSet
-        val spacesUserCannotAccess = (oldSpaces ++ newSpaces).filter {
-          case UserSpace(uid) => r.requesterId != uid
-          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
-        }
-        def userCanWriteToIngestingLibraries = r.slackToLib.filter {
-          case (stlId, mod) => mod.status.contains(SlackIntegrationStatus.On)
-        }.forall {
-          case (stlId, mod) =>
-            fromSlacks.find(_.id.get == stlId).exists { stl =>
-              // TODO(ryan): I don't know if it's a good idea to ignore permissions if the integration is already on...
-              stl.status == SlackIntegrationStatus.On || permissionCommander.getLibraryPermissions(stl.libraryId, Some(r.requesterId)).contains(LibraryPermission.ADD_KEEPS)
-            }
-        }
-        Stream(
-          (oldSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "permission_to_modify_denied"),
-          (newSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "illegal_destination_space"),
-          !userCanWriteToIngestingLibraries -> LibraryFail(FORBIDDEN, "cannot_write_to_library")
-        ).collect { case (true, fail) => fail }.headOption
-
       case r: SlackIntegrationDeleteRequest =>
-        val spaces = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.space)
-        val spacesUserCannotModify = spaces.filter {
-          case UserSpace(uid) => r.requesterId != uid
-          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
-        }
-        if (spacesUserCannotModify.nonEmpty) Some(LibraryFail(FORBIDDEN, "permission_denied"))
+
+        val slackTeamIds = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.slackTeamId) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.slackTeamId)
+        if (!slackTeamIds.forall(hasAccessToOrg(r.requesterId, _))) Some(LibraryFail(FORBIDDEN, "permission_denied"))
         else None
     }
   }
@@ -192,23 +162,6 @@ class SlackIntegrationCommanderImpl @Inject() (
     }
   }
 
-  def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse] = db.readWrite { implicit s =>
-    validateRequest(request) match {
-      case Some(fail) => Failure(fail)
-      case None =>
-        Success(unsafeModifyIntegrations(request))
-    }
-  }
-  private def unsafeModifyIntegrations(request: SlackIntegrationModifyRequest)(implicit session: RWSession): SlackIntegrationModifyResponse = {
-    request.libToSlack.foreach {
-      case (ltsId, mods) => libToChannelRepo.save(libToChannelRepo.get(ltsId).withModifications(mods))
-    }
-    request.slackToLib.foreach {
-      case (stlId, mods) => channelToLibRepo.save(channelToLibRepo.get(stlId).withModifications(mods))
-    }
-    SlackIntegrationModifyResponse(request.libToSlack.size + request.slackToLib.size)
-  }
-
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse] = db.readWrite { implicit s =>
     validateRequest(request) match {
       case Some(fail) => Failure(fail)
@@ -232,14 +185,12 @@ class SlackIntegrationCommanderImpl @Inject() (
     channelIds.map { channelId =>
       val channelToLibIntegrations = channelToLibIntegrationsByChannelId.getOrElse(channelId, Set.empty)
       val libToChannelIntegrations = libToChannelIntegrationsByChannelId.getOrElse(channelId, Set.empty)
-      val integrationSpaces = (channelToLibIntegrations.map(stl => stl.libraryId -> stl.space) ++ libToChannelIntegrations.map(lts => lts.libraryId -> lts.space)).groupBy(_._1).mapValues(_.map(_._2))
       channelId -> SlackChannelIntegrations(
         teamId = teamId,
         channelId = channelId,
         allLibraries = channelToLibIntegrations.map(_.libraryId).toSet ++ libToChannelIntegrations.map(_.libraryId),
         toLibraries = channelToLibIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
-        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
-        spaces = integrationSpaces
+        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet
       )
     }.toMap
   }

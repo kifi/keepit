@@ -22,7 +22,6 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[SlackTeamCommanderImpl])
 trait SlackTeamCommander {
-  def getSlackTeams(userId: Id[User]): Set[SlackTeam]
   def getSlackTeamOpt(slackTeamId: SlackTeamId): Option[SlackTeam]
   def setupSlackTeam(userId: Id[User], slackTeamId: SlackTeamId, organizationId: Option[Id[Organization]])(implicit context: HeimdalContext): Future[SlackTeam]
   def addSlackTeam(userId: Id[User], slackTeamId: SlackTeamId)(implicit context: HeimdalContext): Future[(SlackTeam, Boolean)]
@@ -55,13 +54,6 @@ class SlackTeamCommanderImpl @Inject() (
   implicit val inhouseSlackClient: InhouseSlackClient)
     extends SlackTeamCommander with Logging {
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
-
-  def getSlackTeams(userId: Id[User]): Set[SlackTeam] = {
-    db.readOnlyMaster { implicit session =>
-      val slackTeamIds = slackTeamMembershipRepo.getByUserId(userId).map(_.slackTeamId).toSet
-      slackTeamRepo.getBySlackTeamIds(slackTeamIds).values.toSet
-    }
-  }
 
   def getSlackTeamOpt(slackTeamId: SlackTeamId): Option[SlackTeam] = db.readOnlyMaster(implicit s => slackTeamRepo.getBySlackTeamIdNoCache(slackTeamId))
 
