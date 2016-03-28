@@ -86,6 +86,11 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
+  def setQuoteAnywhereFtue(show: Boolean) = UserAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.userId, UserValues.quoteAnywhereFtue.name, show))
+    Ok(JsNumber(0))
+  }
+
   // Note: can delete this action after 22 Feb 2015
   def setShowLibraryIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValueName.EXT_SHOW_LIBRARY_INTRO, show))
