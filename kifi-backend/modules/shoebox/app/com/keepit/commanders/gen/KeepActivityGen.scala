@@ -6,7 +6,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, LinkElement, ImageElement, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.CrossServiceKeepActivity
 import com.keepit.model.KeepEvent.AddParticipants
-import com.keepit.model.{ BasicKeepEvent, BasicKeepEvent$, KeepEventSource, KeepEventKind, KeepEvent, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{ KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.social.{ ImageUrls, BasicUser, BasicAuthor }
 import org.joda.time.DateTime
 
@@ -32,16 +32,10 @@ object KeepActivityGen {
         case Some(ktl) =>
           val library: DescriptionElement = libById.get(ktl.libraryId).map(fromBasicLibrary).getOrElse("a library")
           val orgOpt = orgByLibraryId.get(ktl.libraryId).map(fromBasicOrg)
-          sourceAttrOpt.map(_._1) match {
-            case Some(SlackAttribution(message, _)) =>
-              DescriptionElements(authorElement, "added this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(message.permalink), ImageUrls.SLACK_LOGO), message.channel.name.map(_.value --> LinkElement(message.permalink)))
-            case Some(TwitterAttribution(tweet)) =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(tweet.permalink), ImageUrls.TWITTER_LOGO), tweet.user.screenName.value --> LinkElement(tweet.permalink))
-            case None =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)))
-          }
+          DescriptionElements(
+            authorElement, "kept this into", library,
+            orgOpt.map(org => DescriptionElements("in", org))
+          )
         case None =>
           sortedKtus.headOption match {
             case None =>
@@ -54,6 +48,12 @@ object KeepActivityGen {
               DescriptionElements(authorElement, "started a discussion", if (firstSentTo.nonEmpty) DescriptionElements("with", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "on this page")
           }
       }
+
+      val source = sourceAttrOpt.map(_._1).map {
+        case SlackAttribution(message, _) => KeepEventSource(KeepEventSourceKind.Slack, Some(message.permalink))
+        case TwitterAttribution(tweet) => KeepEventSource(KeepEventSourceKind.Twitter, Some(tweet.permalink))
+      }
+
       val body = DescriptionElements(keep.note)
       BasicKeepEvent(
         KeepEventKind.Initial,
@@ -61,7 +61,7 @@ object KeepActivityGen {
         header = header,
         body = body,
         timestamp = keep.keptAt,
-        source = None
+        source = source
       )
     }
 
@@ -80,7 +80,7 @@ object KeepActivityGen {
             header = DescriptionElements(msgAuthor, "commented on this page"),
             body = DescriptionElements(message.text),
             timestamp = message.sentAt,
-            source = KeepEventSource.fromMessageSource(message.source)
+            source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
           ))
         case None =>
           message.auxData match {
@@ -96,7 +96,7 @@ object KeepActivityGen {
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),
                 timestamp = message.sentAt,
-                source = KeepEventSource.fromMessageSource(message.source)
+                source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
             case dataOpt =>
               if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] messsage ${message.id} has no .sentBy and no .auxData, can't generate event")
