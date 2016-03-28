@@ -201,7 +201,7 @@ class SlackIngestingActor @Inject() (
     }
     val ingestedMessages = rawBookmarksByUser.flatMap {
       case (kifiUserOpt, rawBookmarks) =>
-        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
+        val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), None, KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
     // Record a bit of information based on the messages we ingested: the channel, and any slack members

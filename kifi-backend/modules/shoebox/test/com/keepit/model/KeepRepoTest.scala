@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.Id
 import com.keepit.common.time._
+import com.keepit.model.KeepEvent.InitialKeep
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -25,7 +26,8 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             userId = Some(Id[User](3)),
             originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
-            connections = KeepConnections(Set(Id(4)), Set(Id(3)))
+            connections = KeepConnections(Set(Id(4)), Set(Id(3))),
+            initialEvent = Some(InitialKeep(Some(Id[User](3)), Set.empty, Set.empty, Set(Id(4))))
           ))
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
           val cacheKeep = keepRepo.get(savedKeep.id.get)
