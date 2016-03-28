@@ -177,6 +177,11 @@ class KeepInfoAssemblerImpl @Inject() (
           val viewerInfo = NewKeepViewerInfo(
             permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
           )
+          val recipients = KeepRecipientsInfo(
+            users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
+            emails = Seq.empty, // TODO(ryan): fill this in
+            libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get)
+          )
           val keepInfo = NewKeepInfo(
             id = Keep.publicId(keepId),
             path = keep.path,
@@ -186,8 +191,7 @@ class KeepInfoAssemblerImpl @Inject() (
             author = author,
             keptAt = keep.keptAt,
             source = sourceByKeep.get(keepId).map(_._1),
-            users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
-            libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get),
+            recipients = recipients,
             activity = activityByKeep.getOrElse(keepId, KeepActivity.empty),
             viewer = viewerInfo
           )

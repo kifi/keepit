@@ -13,7 +13,7 @@ import com.keepit.model.LibraryFactoryHelper.LibraryPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import com.keepit.social.{ BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.SpecificationLike
 import play.api.libs.json.{ JsNull, Json }
@@ -52,8 +52,11 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             "author" -> BasicAuthor.fromUser(BasicUser.fromUser(user)),
             "keptAt" -> DateTimeJsonFormat.writes(keep.keptAt),
             // "source" -> JsNull,
-            "users" -> Seq(BasicUser.fromUser(user)),
-            "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None)),
+            "recipients" -> Json.obj(
+              "users" -> Seq(BasicUser.fromUser(user)),
+              "emails" -> Seq.empty[BasicNonUser],
+              "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None))
+            ),
             "activity" -> activity,
             "viewer" -> Json.obj(
               "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
