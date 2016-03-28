@@ -14,13 +14,13 @@ object NewPageContent {
 }
 
 case class NewPageSummary(
-  author: Option[PageAuthor],
+  authors: Seq[PageAuthor],
   siteName: Option[String],
   publishedAt: Option[DateTime],
   description: Option[String],
-  wordCount: Int,
-  fetchedAt: DateTime,
-  version: ArticleVersion)
+  wordCount: Option[Int]) // TODO(ryan): should this be Int instead of Option[Int]?
+// fetchedAt: DateTime, // TODO(ryan): how do you retrieve this?
+// version: ArticleVersion)
 
 object NewPageSummary {
   implicit val writes: Writes[NewPageSummary] = Json.writes[NewPageSummary]
