@@ -53,7 +53,6 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
             val library = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
               visibility = LibraryVisibility.SECRET, ownerId = user1.id.get, createdAt = t1, memberCount = 1))
             val uri = uriRepo.save(NormalizedURI.withHash("http://www.avengers.org/", Some("Avengers")))
-            val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
             val keep = KeepFactory.keep().withTitle("Avengers$1.org").withUser(user1).withUri(uri).withLibrary(library).saved
             (library, keep)
           }

@@ -32,18 +32,15 @@ class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
     uriRepo: NormalizedURIRepo,
-    urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
     domainRepo: DomainRepo,
     domainTagRepo: DomainTagRepo,
     domainToTagRepo: DomainToTagRepo,
     sensitivityUpdater: SensitivityUpdater,
-    urlRenormalizeCommander: URLRenormalizeCommander,
     orphanCleaner: OrphanCleaner,
     uriIntegrityPlugin: UriIntegrityPlugin,
     normalizationService: NormalizationService,
     urlPatternRuleRepo: UrlPatternRuleRepo,
-    renormRepo: RenormalizedURLRepo,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
@@ -55,22 +52,6 @@ class UrlController @Inject() (
 
   def index = AdminUserPage { implicit request =>
     Ok(html.admin.adminDashboard())
-  }
-
-  private def asyncSafelyRenormalize(readOnly: Boolean, clearSeq: Boolean, regex: DomainOrURLRegex) = {
-    Future {
-      try {
-        urlRenormalizeCommander.doRenormalize(readOnly, clearSeq, regex = regex)
-      } catch {
-        case ex: Throwable => airbrake.notify(ex)
-      }
-    }
-  }
-
-  // old secret admin endpoint
-  def renormalize(readOnly: Boolean = true, clearSeq: Boolean = false, domainRegex: Option[String] = None) = AdminUserPage { implicit request =>
-    asyncSafelyRenormalize(readOnly, clearSeq, regex = DomainOrURLRegex(domainRegex = domainRegex))
-    Ok("Started!")
   }
 
   def orphanCleanup(readOnly: Boolean = true) = AdminUserPage { implicit request =>
@@ -119,56 +100,6 @@ class UrlController @Inject() (
   def clearRedirects(toUriId: Id[NormalizedURI]) = AdminUserPage { request =>
     uriIntegrityPlugin.clearRedirects(toUriId)
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
-  }
-
-  def urlRenormalizeConsole() = AdminUserPage { implicit request =>
-    Ok(html.admin.urlRenormalization())
-  }
-
-  def urlRenormalizeConsoleSubmit() = AdminUserPage { request =>
-    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-    val regexStr = body.get("regex").get
-    val urlSelection = body.get("urlSelection").get
-    val mode = body.get("mode").get
-
-    val regex = if (urlSelection == "domain") DomainOrURLRegex(domainRegex = Some(regexStr)) else DomainOrURLRegex(urlRegex = Some(regexStr))
-
-    if (mode == "preview") {
-
-      val urls = db.readOnlyReplica { implicit s =>
-        if (regex.isDomainRegex) urlRepo.getByDomainRegex(regex.domainRegex.get)
-        else if (regex.isUrlRegex) urlRepo.getByURLRegex(regex.urlRegex.get)
-        else Seq()
-      }
-
-      val msg = urls.map { _.url }.mkString("\n")
-      Ok(msg.replaceAll("\n", "\n<br>"))
-
-    } else {
-
-      val readOnly = if (mode == "readWrite") false else true
-      asyncSafelyRenormalize(readOnly, clearSeq = false, regex = regex)
-
-      Ok(s"Started! readOnlyMode = $readOnly")
-    }
-
-  }
-
-  def renormalizationView(page: Int = 0) = AdminUserPage { implicit request =>
-    val PAGE_SIZE = 200
-    val (renorms, totalCount) = db.readOnlyReplica { implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount()) }
-    val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt
-    val info = db.readOnlyMaster { implicit s =>
-      renorms.map { renorm =>
-        (
-          renorm.state.toString,
-          urlRepo.get(renorm.urlId).url,
-          uriRepo.get(renorm.oldUriId).url,
-          uriRepo.get(renorm.newUriId).url
-        )
-      }
-    }
-    Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
   }
 
   def submitNormalization = AdminUserPage.async { implicit request =>

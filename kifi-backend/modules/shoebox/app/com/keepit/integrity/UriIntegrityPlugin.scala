@@ -24,9 +24,7 @@ import scala.concurrent.duration._
 trait UriChangeMessage
 
 case class URIMigration(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
-case class URLMigration(url: URL, newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchURIMigration(batchSize: Int)
-case class BatchURLMigration(batchSize: Int)
 case class FixDuplicateKeeps()
 
 class UriIntegrityActor @Inject() (
@@ -34,11 +32,9 @@ class UriIntegrityActor @Inject() (
     clock: Clock,
     val normUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
-    urlRepo: URLRepo,
     val keepRepo: KeepRepo,
     keepCommander: KeepCommander,
     changedUriRepo: ChangedURIRepo,
-    renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
     helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
@@ -48,7 +44,6 @@ class UriIntegrityActor @Inject() (
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
     oldKeepIds.foreach { keepId =>
-      // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val keep = keepRepo.getNoCache(keepId)
       val newUri = urlToUriMap.getOrElse(keep.url, {
         val newUri = normalizedURIInterner.internByUri(keep.url, contentWanted = true)
@@ -86,13 +81,6 @@ class UriIntegrityActor @Inject() (
         updateNewUri(oldUriId, newUriId)
       }
 
-      val urls = db.readWrite(attempts = 3) { implicit s =>
-        urlRepo.getByNormUri(oldUriId)
-      }
-      db.readWriteSeq(urls) { (s, url) =>
-        handleURLMigrationNoBookmarks(url, newUriId)(s)
-      }
-
       // fix up redirections
       val previouslyRedirectedUris = db.readWrite { implicit s =>
         normUriRepo.getByRedirection(oldUriId)
@@ -105,7 +93,6 @@ class UriIntegrityActor @Inject() (
         normUriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
       }
 
-      // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
       val bms = db.readOnlyMaster { implicit s =>
         keepRepo.getByUri(oldUriId, excludeState = None)
       }
@@ -127,21 +114,6 @@ class UriIntegrityActor @Inject() (
 
     val t2 = System.currentTimeMillis()
     log.info(s"one uri migration from $oldUriId to $newUriId takes ${t2 - t1} millis")
-  }
-
-  /**
-   * url now pointing to a new uri, any entity related to that url should update its uri reference.
-   */
-  private def handleURLMigration(url: URL, newUriId: Id[NormalizedURI]): Unit = {
-    db.readWrite { implicit s => handleURLMigrationNoBookmarks(url, newUriId) }
-  }
-
-  private def handleURLMigrationNoBookmarks(url: URL, newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    log.info(s"migrating url ${url.id} to new uri: $newUriId")
-
-    val oldUriId = url.normalizedUriId
-    urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-    updateNewUri(oldUriId, newUriId)
   }
 
   private def updateNewUri(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
@@ -196,33 +168,6 @@ class UriIntegrityActor @Inject() (
     db.readOnlyReplica { implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE) }
   }
 
-  private def batchURLMigration(batchSize: Int) = {
-    val toMigrate = getOverDueURLMigrations(batchSize)
-    log.info(s"${toMigrate.size} urls need renormalization")
-
-    toMigrate.foreach { renormURL =>
-      try {
-        db.readWrite { implicit s =>
-          val url = urlRepo.get(renormURL.urlId)
-          handleURLMigration(url, renormURL.newUriId)
-          renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.APPLIED))
-        }
-      } catch {
-        case e: Exception =>
-          airbrake.notify(e)
-          db.readWrite { implicit s => renormRepo.saveWithoutIncreSeqnum(renormURL.withState(RenormalizedURLStates.INACTIVE)) }
-      }
-    }
-
-    toMigrate.sortBy(_.seq).lastOption.foreach { x => centralConfig.update(URLMigrationSeqNumKey, x.seq) }
-    log.info(s"${toMigrate.size} urls renormalized.")
-  }
-
-  private def getOverDueURLMigrations(fetchSize: Int = -1) = {
-    val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-    db.readOnlyReplica { implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE) }
-  }
-
   private def fixDuplicateKeeps(): Unit = {
     val seq = centralConfig(FixDuplicateKeepsSeqNumKey) getOrElse SequenceNumber.ZERO
 
@@ -253,8 +198,6 @@ class UriIntegrityActor @Inject() (
   def receive = {
     case BatchURIMigration(batchSize) => Future.successful(batchURIMigration(batchSize)) pipeTo sender
     case URIMigration(oldUri, newUri) => db.readWrite { implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) } // process later
-    case URLMigration(url, newUri) => handleURLMigration(url, newUri)
-    case BatchURLMigration(batchSize) => batchURLMigration(batchSize)
     case FixDuplicateKeeps() => fixDuplicateKeeps()
     case m => throw new UnsupportedActorMessage(m)
   }
@@ -264,7 +207,6 @@ class UriIntegrityActor @Inject() (
 trait UriIntegrityPlugin extends SchedulerPlugin {
   def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
-  def batchURLMigration(batchSize: Int = -1): Unit
   def setFixDuplicateKeepsSeq(seq: Long): Unit
   def clearRedirects(toUriId: Id[NormalizedURI]): Unit
 }
@@ -279,7 +221,6 @@ class UriIntegrityPluginImpl @Inject() (
   override def enabled = true
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }
 
@@ -288,7 +229,6 @@ class UriIntegrityPluginImpl @Inject() (
   }
 
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
-  def batchURLMigration(batchSize: Int) = actor.ref ! BatchURLMigration(batchSize)
 
   def setFixDuplicateKeepsSeq(seq: Long): Unit = { centralConfig.update(FixDuplicateKeepsSeqNumKey.longKey, seq) }
 
@@ -305,13 +245,12 @@ class UriIntegrityPluginImpl @Inject() (
 }
 
 @Singleton
-class UriIntegrityHelpers @Inject() (urlRepo: URLRepo, keepRepo: KeepRepo) extends Logging {
+class UriIntegrityHelpers @Inject() (keepRepo: KeepRepo) extends Logging {
   def improveKeepSafely(uri: NormalizedURI, keep: Keep)(implicit session: RWSession): Keep = {
     require(keep.uriId == uri.id.get, "URI and Keep don't match.")
     val keepWithTitle = if (keep.title.isEmpty) keep.withTitle(uri.title) else keep
     if (HttpRedirect.isShortenedUrl(keepWithTitle.url)) {
-      val urlObj = urlRepo.get(uri.url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-      keepWithTitle.copy(url = urlObj.url)
+      keepWithTitle.copy(url = uri.url)
     } else keepWithTitle
   }
 
