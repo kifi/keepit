@@ -22,7 +22,6 @@ class MessageRepoTest extends Specification with ElizaTestInjector {
   "MessageRepo" should {
     def rand(lo: Int, hi: Int) = lo + Random.nextInt(hi - lo + 1)
     "grab recent messages grouped by keep" in {
-      skipped("To make this test pass, change the IF to a CASEWHEN")
       withDb(modules: _*) { implicit injector =>
         val now = inject[Clock].now
         db.readWrite { implicit s =>
@@ -39,9 +38,6 @@ class MessageRepoTest extends Specification with ElizaTestInjector {
           (1 to 10).foreach { _ =>
             val randomKeeps = Random.shuffle(keepIds).take(10)
             val numMsgs = rand(5, 15)
-            // NB: This will fail because our testing suite uses H2 as the database engine, and H2 does
-            // not have an IF statement. Instead, it has a CASEWHEN statement which is exactly the same.
-            // To get this test to pass, go to MessageRepo.getRecentByKeeps and change the IF to a CASEWHEN
             messageRepo.getRecentByKeeps(randomKeeps.toSet, numMsgs).foreach {
               case (keepId, recentMsgIds) => recentMsgIds === messagesByKeep(keepId).take(numMsgs)
             }
