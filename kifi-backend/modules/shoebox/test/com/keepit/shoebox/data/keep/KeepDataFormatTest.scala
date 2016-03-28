@@ -38,8 +38,8 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("foo bar").saved
             (keep, user, lib)
           }
-          val Seq((info, viewerInfo)) = Await.result(inject[KeepInfoAssembler].assembleInfoForKeeps(viewer = Some(user.id.get), keepIds = Seq(keep.id.get)), Duration.Inf)
-          val actual = NewKeepInfo.writes.writes(info)
+          val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get)
+          val actual = NewKeepInfo.writes.writes(view.keep)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),
             "path" -> keep.path.absolute,

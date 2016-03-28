@@ -140,24 +140,24 @@ object Library extends PublicIdGenerator[Library] {
     (__ \ 'id).formatNullable(Id.format[Library]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'state).format(State.format[Library]) and
     (__ \ 'name).format[String] and
     (__ \ 'ownerId).format[Id[User]] and
-    (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'description).format[Option[String]] and
+    (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'color).formatNullable[LibraryColor] and
-    (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int] and
+    (__ \ 'universalLink).format[String] and
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
     (__ \ "orgId").formatNullable[Id[Organization]] and
     (__ \ "orgMemberAccess").formatNullable[LibraryAccess] and
     (__ \ "whoCanComment").format[LibraryCommentPermissions]
-  )(Library.apply, unlift(Library.unapply))
+  )(applyFromDbRow, unlift(unapplyToDbRow))
 
   def isValidName(name: String): Boolean = {
     name.nonEmpty && name.length <= 200 && !name.contains('"')

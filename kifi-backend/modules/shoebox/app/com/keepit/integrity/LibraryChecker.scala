@@ -111,7 +111,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
-    log.info("start processing user's system generated libraries. One Main & one Secret Library per user")
+    log.info("start processing user's system generated libraries. One main & one secret Library per user")
     val timer = new NamedStatsdTimer("LibraryChecker.checkSystemLibraries")
     val (index, numIntervals) = getIndex()
 
