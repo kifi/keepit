@@ -39,6 +39,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             (keep, user, lib)
           }
           val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get)
+          val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
           val actual = NewKeepInfo.writes.writes(view.keep)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),
@@ -51,7 +52,10 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             // "source" -> JsNull,
             "users" -> Seq(BasicUser.fromUser(user)),
             "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None)),
-            "activity" -> KeepActivity.empty
+            "activity" -> activity,
+            "viewer" -> Json.obj(
+              "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
+            )
           )
           TestHelper.deepCompare(actual, expected) must beNone
         }

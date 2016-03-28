@@ -895,11 +895,8 @@ class KeepCommanderImpl @Inject() (
         db.readOnlyMaster { implicit s =>
           val libById = libraryRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
           val basicOrgById = basicOrganizationGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
-          val basicOrgByLibId = libById.flatMap {
-            case (libId, library) =>
-              library.organizationId
-                .flatMap(basicOrgById.get)
-                .map(org => libId -> org)
+          val basicOrgByLibId = libById.flatMapValues { library =>
+            library.organizationId.flatMap(basicOrgById.get)
           }
           val basicUserById = {
             val ktuUsers = ktus.map(_.userId)

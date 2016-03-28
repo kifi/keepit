@@ -20,7 +20,8 @@ final case class NewKeepInfo(
   source: Option[SourceAttribution],
   users: Seq[BasicUser],
   libraries: Seq[BasicLibrary],
-  activity: KeepActivity)
+  activity: KeepActivity,
+  viewer: NewKeepViewerInfo)
 
 object NewKeepInfo {
   private implicit val timeFormat: Writes[DateTime] = Writes { dt => DateTimeJsonFormat.writes(dt) }
@@ -34,4 +35,11 @@ final case class NewKeepImageInfo(
 
 object NewKeepImageInfo {
   implicit val write: Writes[NewKeepImageInfo] = Json.writes[NewKeepImageInfo]
+}
+
+case class NewKeepViewerInfo(
+  permissions: Set[KeepPermission])
+
+object NewKeepViewerInfo {
+  implicit val writes: Writes[NewKeepViewerInfo] = Json.writes[NewKeepViewerInfo]
 }

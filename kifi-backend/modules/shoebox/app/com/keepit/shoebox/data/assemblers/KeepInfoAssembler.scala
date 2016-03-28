@@ -3,6 +3,7 @@ package com.keepit.shoebox.data.assemblers
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.util.{ SetHelpers, RightBias }
@@ -31,6 +32,7 @@ trait KeepInfoAssembler {
 object KeepInfoAssemblerConfig {
   final case class KeepViewAssemblyOptions(
     idealImageSize: ImageSize,
+    numEventsPerKeep: Int,
     showPublishedLibraries: Boolean,
     numContextualKeeps: Int,
     numContextualKeepers: Int,
@@ -40,6 +42,7 @@ object KeepInfoAssemblerConfig {
 
   val default = KeepViewAssemblyOptions(
     idealImageSize = ProcessedImageSize.Large.idealSize,
+    numEventsPerKeep = 5,
     showPublishedLibraries = true,
     numContextualKeeps = 1,
     numContextualKeepers = 1,
@@ -59,6 +62,7 @@ class KeepInfoAssemblerImpl @Inject() (
   ktuRepo: KeepToUserRepo,
   keepSourceCommander: KeepSourceCommander,
   permissionCommander: PermissionCommander,
+  keepCommander: KeepCommander,
   keepImageCommander: KeepImageCommander,
   rover: RoverServiceClient,
   search: SearchServiceClient,
@@ -114,6 +118,10 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionCommander.getKeepsPermissions(keepSet, viewer)
     }
 
+    val activityFut = FutureHelpers.accumulateOneAtATime(keepSet) { keepId =>
+      keepCommander.getActivityForKeep(keepId, eventsBefore = None, maxEvents = config.numEventsPerKeep)
+    }
+
     val (augmentationFut, summaryFut) = {
       val uriIds = keepsById.values.map(_.uriId).toSeq.sorted.distinct
 
@@ -140,6 +148,7 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionsByKeep <- permissionsFut
       augmentationByUri <- augmentationFut
       summaryByUri <- summaryFut
+      activityByKeep <- activityFut
     } yield {
       val usersById = db.readOnlyMaster { implicit s =>
         val userSet = SetHelpers.unions(Seq(
@@ -156,6 +165,9 @@ class KeepInfoAssemblerImpl @Inject() (
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
           }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(s"no author for keep $keepId")
         } yield {
+          val viewerInfo = NewKeepViewerInfo(
+            permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
+          )
           val keepInfo = NewKeepInfo(
             id = Keep.publicId(keepId),
             path = keep.path,
@@ -167,10 +179,8 @@ class KeepInfoAssemblerImpl @Inject() (
             source = sourceByKeep.get(keepId).map(_._1),
             users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
             libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get),
-            activity = KeepActivity.empty // TODO(ryan): fill in
-          )
-          val viewerInfo = NewKeepViewerInfo(
-            permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
+            activity = activityByKeep.getOrElse(keepId, KeepActivity.empty),
+            viewer = viewerInfo
           )
 
           val context = augmentationByUri.get(keep.uriId).map(augmentation => NewPageContext(
@@ -196,7 +206,9 @@ class KeepInfoAssemblerImpl @Inject() (
             history = Seq.empty
           ))
 
-          NewKeepView(keep = keepInfo, viewer = viewerInfo, context = context, content = content)
+          val pageInfo = Some(NewPageInfo(content = content, context = context)).filter(_.nonEmpty)
+
+          NewKeepView(keep = keepInfo, page = pageInfo)
         }
 
         result match {
