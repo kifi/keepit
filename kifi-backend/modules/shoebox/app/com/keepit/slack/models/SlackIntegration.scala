@@ -51,8 +51,6 @@ case class SlackIntegrationCreateRequest(
   libraryId: Id[Library],
   status: SlackIntegrationStatus) extends SlackIntegrationRequest
 
-case class SlackIntegrationModification(status: Option[SlackIntegrationStatus] = None)
-
 case class ExternalSlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
   space: Option[ExternalLibrarySpace],
@@ -65,12 +63,6 @@ object ExternalSlackIntegrationModification {
     (__ \ 'status).formatNullable[SlackIntegrationStatus]
   )(ExternalSlackIntegrationModification.apply, unlift(ExternalSlackIntegrationModification.unapply))
 }
-
-case class SlackIntegrationModifyRequest(
-  requesterId: Id[User],
-  libToSlack: Map[Id[LibraryToSlackChannel], SlackIntegrationModification],
-  slackToLib: Map[Id[SlackChannelToLibrary], SlackIntegrationModification]) extends SlackIntegrationRequest
-@json case class SlackIntegrationModifyResponse(modified: Int)
 
 case class SlackIntegrationDeleteRequest(
   requesterId: Id[User],
