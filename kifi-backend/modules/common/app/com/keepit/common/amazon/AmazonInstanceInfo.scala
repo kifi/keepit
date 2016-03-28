@@ -113,7 +113,7 @@ object AmazonInstanceType extends Enumerator[AmazonInstanceType] {
   case object I2XXXXLARGE extends AmazonInstanceType("i2.4xlarge", 16, 53)
 
 
-  case object UNKNOWN extends AmazonInstanceType("UNKNOWN", 2, 4)
+  case object UNKNOWN extends AmazonInstanceType("UNKNOWN", 6, 12)
 
   val all = _all
   def apply(str: String) = all.find(_.name == str).getOrElse(UNKNOWN)
