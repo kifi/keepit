@@ -2,7 +2,7 @@ package com.keepit.common.util
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.time._
-import com.keepit.model.{ LibraryVisibility, Library, BasicLibrary }
+import com.keepit.model.{ BasicKeepEvent, KeepEventKind, LibraryVisibility, Library, BasicLibrary }
 import com.keepit.social.BasicAuthor
 import org.joda.time.{ Duration, DateTime, Period }
 import org.specs2.mutable.Specification
@@ -49,9 +49,10 @@ class DescriptionElementsTest extends Specification {
       val header = DescriptionElements(author, "kept in", library)
       val body = DescriptionElements("Here is a note with [#hashtags] all over") // maybe todo(Cam): create a HashtagElement
 
-      val event = ActivityEvent(
-        ActivityKind.Comment,
-        "0,jpg",
+      val event = BasicKeepEvent(
+        id = None,
+        author = author,
+        KeepEventKind.Initial,
         header = header,
         body = body,
         timestamp = currentDateTime,

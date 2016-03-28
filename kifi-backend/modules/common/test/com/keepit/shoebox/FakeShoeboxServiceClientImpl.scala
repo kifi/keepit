@@ -241,7 +241,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       case false => LibraryVisibility.DISCOVERABLE
     }
     allLibraries.values.find(library => library.ownerId == userId && library.visibility == visibility) getOrElse {
-      val name = if (isPrivate) "Private Library" else "Main Library"
+      val name = if (isPrivate) Library.SYSTEM_SECRET_DISPLAY_NAME else Library.SYSTEM_MAIN_DISPLAY_NAME
       val slug = LibrarySlug(if (isPrivate) "private" else "main")
       val library = Library(name = name, ownerId = userId, visibility = visibility, slug = slug, memberCount = 0)
       val libraryId = saveLibraries(library).head.id.get

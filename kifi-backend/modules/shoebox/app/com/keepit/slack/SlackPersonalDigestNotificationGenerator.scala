@@ -11,7 +11,7 @@ import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.common.util.RandomChoice._
-import com.keepit.common.util.{ RightBias, DescriptionElements, LinkElement }
+import com.keepit.common.util.{ SpecialCharacters, RightBias, DescriptionElements, LinkElement }
 import com.keepit.common.util.RightBias._
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -119,10 +119,18 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     val attachments = List(
       SlackAttachment(color = None, text = Some("")).withImageUrl(superAwesomeWelcomeMessageGIF),
       SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.magnifyingGlass, "Google Search Integration", SpecialCharacters.emDash,
+        "See the pages your coworkers are sharing on top of  Google Search results."
+      )))),
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
+        SlackEmoji.pencil, "On the page", SpecialCharacters.emDash,
+        "Ever wonder if your coworkers are already talking about an article you're looking at?",
+        "If they are, I'll give you a link to the conversation."
+      )))),
+      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
         SlackEmoji.robotFace,
-        "Also, my binary code is a mess right now, so while I'm in the midst of spring cleaning I won't be responding to any messages you send my way  :zipper_mouth_face:.",
-        "You can still", "opt to stop receiving notifications" --> linkToSquelch,
-        "or if you've got questions email my human friends at support@kifi.com."
+        "Also, I'm a brand new bot so I don't respond to your messages (yet)", SlackEmoji.zipperMouthFace, ".",
+        "You can still", "opt to stop receiving notifications" --> linkToSquelch, "or if you've got questions email my human friends at support@kifi.com."
       ))))
     )
     SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet

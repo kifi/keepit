@@ -71,7 +71,7 @@ class PathCommander @Inject() (
   /**
    * LIBRARY
    */
-  private def libPageByHandleAndSlug(handle: Handle, slug: LibrarySlug): Path = Path(s"${handle.value}/${slug.value}")
+  def libPageByHandleAndSlug(handle: Handle, slug: LibrarySlug): Path = Path(s"${handle.value}/${slug.value}")
 
   def libraryPage(lib: Library)(implicit session: RSession): Path = {
     val handle: Handle = lib.space match {

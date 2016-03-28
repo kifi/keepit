@@ -3,15 +3,13 @@ package com.keepit.discussion
 import java.net.URLDecoder
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
-import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
-import com.keepit.common.json.{ TraversableFormat, TupleFormat }
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
+import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.json.EitherFormat
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
-import com.keepit.common.core.{ regexExtensionOps, tryExtensionOps }
-import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
-import com.kifi.macros.json
+import com.keepit.common.core.regexExtensionOps
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -41,8 +39,10 @@ case class CrossServiceMessage(
   seq: SequenceNumber[Message],
   keep: Id[Keep],
   sentAt: DateTime,
-  sentBy: Option[Id[User]],
-  text: String)
+  sentBy: Option[Either[Id[User], BasicNonUser]],
+  text: String,
+  auxData: Option[KeepEvent],
+  source: Option[MessageSource])
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
   def stripLookHeresToPointerText(str: String): String = lookHereRe.replaceAllIn(str, _.group(1))
@@ -52,15 +52,28 @@ object CrossServiceMessage {
     case Right(m) => Right(Try(m.group(1) -> URLDecoder.decode(m.group(2).split('|').last, "UTF-8")))
   }
 
+  implicit val sentByFormat = EitherFormat(Id.format[User], BasicNonUser.format)
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
     (__ \ 'isDeleted).format[Boolean] and
     (__ \ 'seq).format[SequenceNumber[Message]] and
     (__ \ 'keep).format[Id[Keep]] and
     (__ \ 'sentAt).format[DateTime] and
-    (__ \ 'sentBy).formatNullable[Id[User]] and
-    (__ \ 'text).format[String]
+    (__ \ 'sentBy).formatNullable[Either[Id[User], BasicNonUser]] and
+    (__ \ 'text).format[String] and
+    (__ \ 'auxData).formatNullable[KeepEvent] and
+    (__ \ 'source).formatNullable[MessageSource](MessageSource.messageSourceFormat)
   )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
+}
+
+case class CrossServiceKeepActivity( // a subset of messages + system messages on a keep
+  numComments: Int, // # of non-system messages
+  messages: Seq[CrossServiceMessage])
+object CrossServiceKeepActivity {
+  implicit val format: Format[CrossServiceKeepActivity] = (
+    (__ \ 'numBasicMessages).format[Int] and
+    (__ \ 'messages).format[Seq[CrossServiceMessage]]
+  )(CrossServiceKeepActivity.apply, unlift(CrossServiceKeepActivity.unapply))
 }
 
 case class Discussion(
@@ -110,15 +123,8 @@ object MessageSource {
   val SITE = MessageSource("Kifi.com")
   val UNKNOWN = MessageSource("unknown")
 
-  implicit val messageSourceFormat = new Format[MessageSource] {
-    def reads(json: JsValue): JsResult[MessageSource] = {
-      json.asOpt[String] match {
-        case Some(str) => JsSuccess(MessageSource(str))
-        case None => JsError()
-      }
-    }
-    def writes(kind: MessageSource): JsValue = {
-      JsString(kind.value)
-    }
-  }
+  implicit val messageSourceFormat: Format[MessageSource] = Format(
+    Reads { js => js.validate[String].map(MessageSource.apply) },
+    Writes { o => JsString(o.value) }
+  )
 }

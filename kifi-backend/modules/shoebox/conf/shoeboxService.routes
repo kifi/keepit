@@ -40,6 +40,9 @@ POST    /auth/cancel                  @com.keepit.controllers.core.AuthControlle
 # SecureSocial routes need to exist, or it complains and dies.
 GET     /-authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /-authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+GET     /authenticate/:provider      com.keepit.social.providers.ProviderController.authenticate(provider)
+POST    /authenticate/:provider      com.keepit.social.providers.ProviderController.authenticateByPost(provider)
+
 
 # custom auth routes which set some session state
 
@@ -126,6 +129,7 @@ POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/showExtMoveIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMoveIntro(show: Boolean)
+POST    /ext/pref/quoteAnywhereFtue @com.keepit.controllers.ext.ExtPreferenceController.setQuoteAnywhereFtue(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
@@ -398,6 +402,7 @@ POST    /site/keeps/markAsRead                @com.keepit.controllers.website.Di
 
 POST    /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.sendMessageOnKeep(keepId: PublicId[Keep])
 GET     /site/keeps/:keepId/messages          @com.keepit.controllers.website.DiscussionController.getMessagesOnKeep(keepId: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+GET     /site/keeps/:keepId/activity          @com.keepit.controllers.website.KeepsController.getActivityForKeep(keepId: PublicId[Keep], eventsBefore: Option[DateTime] ?= None, maxEvents: Int ?= 10)
 POST    /site/keeps/:keepId/messages/edit     @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/messages/delete   @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
 POST    /site/keeps/:keepId/participants/edit @com.keepit.controllers.website.DiscussionController.editParticipantsOnKeep(keepId: PublicId[Keep])

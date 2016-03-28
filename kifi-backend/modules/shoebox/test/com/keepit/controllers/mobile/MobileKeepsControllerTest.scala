@@ -13,7 +13,7 @@ import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ S3ImageStore, S3ImageConfig, FakeShoeboxStoreModule }
 import com.keepit.common.time._
-import com.keepit.common.util.{ AuthorElement, ActivityKind, TextElement, LibraryElement }
+import com.keepit.common.util.{ AuthorElement, TextElement, LibraryElement }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model.KeepFactoryHelper._
@@ -221,9 +221,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         uriRepo.count === 0
         val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
         val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
-
-        val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-        val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))

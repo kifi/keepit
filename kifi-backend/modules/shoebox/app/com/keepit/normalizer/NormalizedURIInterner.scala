@@ -20,7 +20,6 @@ class NormalizedURIInterner @Inject() (
     db: Database,
     normalizedURIRepo: NormalizedURIRepo,
     updateQueue: SQSQueue[NormalizationUpdateTask],
-    urlRepo: URLRepo,
     normalizationService: NormalizationService,
     implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging {
@@ -46,7 +45,6 @@ class NormalizedURIInterner @Inject() (
             statsd.timing("normalizedURIRepo.internByUri.new", timer, ONE_IN_THOUSAND)
             saved
           }
-          urlRepo.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
           session.onTransactionSuccess {
             updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
           }

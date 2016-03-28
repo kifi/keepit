@@ -34,10 +34,6 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
-      val url0 = urlRepo.save(URLFactory(url = uri0.url, normalizedUriId = uri0.id.get))
-      val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-      val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
       KeepFactory.keep().withTitle("Kifi").withUri(uri0).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 5).saved
       KeepFactory.keep().withTitle("Google").withUri(uri1).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 10).saved
       KeepFactory.keep().withTitle("Amazon").withUri(uri2).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 15).saved

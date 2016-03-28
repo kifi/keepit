@@ -15,7 +15,7 @@ import com.keepit.common.net.{ Param, Query }
 import com.keepit.controllers.core.PostRegIntent
 import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilderFactory, EventType, HeimdalContext, HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
+import com.keepit.heimdal.{ TrackingNonUserKind, ContextStringData, HeimdalContextBuilderFactory, EventType, HeimdalContext, HeimdalContextBuilder, UserEvent, NonUserEvent, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackUserId, SlackTeamId }
 import com.keepit.social.{ IdentityHelpers, NonUserKinds }
@@ -110,7 +110,7 @@ class KifiSiteRouter @Inject() (
       val context = contextBuilder.build
       val event = request.userIdOpt match {
         case None =>
-          NonUserEvent(context.get[String]("slackUserId").getOrElse("unknown"), NonUserKinds.slack, context, EventType(eventType)) // needs to be developed if used outside of slack
+          NonUserEvent(context.get[String]("slackUserId").getOrElse("unknown"), TrackingNonUserKind.slack, context, EventType(eventType)) // needs to be developed if used outside of slack
         case Some(userId) =>
           UserEvent(userId, context, EventType(eventType))
       }

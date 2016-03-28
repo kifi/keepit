@@ -1,16 +1,35 @@
 package com.keepit.eliza.model
 
+import com.keepit.common.mail.EmailAddress
+import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
 import com.keepit.model.{ Keep, User, NormalizedURI }
-import play.api.libs.json._
-import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import com.keepit.common.mail.EmailAddress
-import com.keepit.common.crypto.ModelWithPublicId
+import play.api.libs.json.{ JsString, JsObject, JsError, JsValue, Format }
+
+case class NonUserThread(
+    id: Option[Id[NonUserThread]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    createdBy: Id[User],
+    participant: NonUserParticipant,
+    keepId: Id[Keep],
+    uriId: Option[Id[NormalizedURI]],
+    notifiedCount: Int,
+    lastNotifiedAt: Option[DateTime],
+    threadUpdatedByOtherAt: Option[DateTime],
+    muted: Boolean = false,
+    state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
+    accessToken: ThreadAccessToken = ThreadAccessToken()) extends ModelWithState[NonUserThread] with ParticipantThread {
+  def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
+  def withState(state: State[NonUserThread]) = copy(state = state)
+
+  def sanitizeForDelete = this.copy(state = NonUserThreadStates.INACTIVE)
+}
+
+object NonUserThreadStates extends States[NonUserThread]
 
 sealed trait NonUserParticipant {
   val identifier: String
@@ -55,26 +74,3 @@ case class NonUserEmailParticipant(address: EmailAddress) extends NonUserPartici
   def shortName = identifier
   def fullName = identifier
 }
-
-case class NonUserThread(
-    id: Option[Id[NonUserThread]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    createdBy: Id[User],
-    participant: NonUserParticipant,
-    keepId: Id[Keep],
-    uriId: Option[Id[NormalizedURI]],
-    notifiedCount: Int,
-    lastNotifiedAt: Option[DateTime],
-    threadUpdatedByOtherAt: Option[DateTime],
-    muted: Boolean = false,
-    state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
-    accessToken: ThreadAccessToken = ThreadAccessToken()) extends ModelWithState[NonUserThread] with ParticipantThread {
-  def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
-  def withState(state: State[NonUserThread]) = copy(state = state)
-
-  def sanitizeForDelete = this.copy(state = NonUserThreadStates.INACTIVE)
-}
-
-object NonUserThreadStates extends States[NonUserThread]

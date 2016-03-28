@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -87,9 +88,21 @@ case object VisitorEvent extends HeimdalEventCompanion[VisitorEvent] {
   implicit val typeCode = "visitor"
 }
 
+@json case class TrackingNonUserKind(value: String)
+object TrackingNonUserKind {
+  val email = TrackingNonUserKind("email")
+  val slack = TrackingNonUserKind("slack")
+
+  implicit def fromNonUserKind(nuk: NonUserKind): TrackingNonUserKind = nuk.name match {
+    case "email" => email
+    case "slack" => slack
+    case _ => TrackingNonUserKind("unknown")
+  }
+}
+
 case class NonUserEvent(
     identifier: String,
-    kind: NonUserKind,
+    kind: TrackingNonUserKind,
     context: HeimdalContext,
     eventType: EventType,
     time: DateTime = currentDateTime) extends HeimdalEvent {

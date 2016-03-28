@@ -1,7 +1,9 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
-import com.keepit.commanders.gen.BasicOrganizationGen
+import java.util.concurrent.TimeoutException
+
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.gen.{ KeepActivityGen, BasicOrganizationGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -13,18 +15,18 @@ import com.keepit.common.logging.{ SlackLog, Logging }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
-import com.keepit.common.util.{ ImageElement, DescriptionElement, ActivitySource, ActivityKind, LinkElement, DescriptionElements, ActivityLog, ActivityEvent }
+import com.keepit.model._
 import com.keepit.common.util.Ord.dateTimeOrdering
-import com.keepit.discussion.{ Discussion, Message }
+import com.keepit.discussion.{ CrossServiceKeepActivity, Discussion }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.model.keep2.{ BasicLibraryWithKeptAt, KeepInfo }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import com.keepit.shoebox.data.keep.{ KeepInfo, BasicLibraryWithKeptAt }
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
-import com.keepit.slack.{ SlackInfoCommander, InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
+import com.keepit.slack.{ SlackInfoCommander, InhouseSlackChannel, InhouseSlackClient }
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -51,14 +53,15 @@ class KeepDecoratorImpl @Inject() (
   keepImageCommander: KeepImageCommander,
   libraryCardCommander: LibraryCardCommander,
   userCommander: UserCommander,
+  userExperimentRepo: UserExperimentRepo,
   basicOrganizationGen: BasicOrganizationGen,
   searchClient: SearchServiceClient,
   keepSourceCommander: KeepSourceCommander,
   permissionCommander: PermissionCommander,
   eliza: ElizaServiceClient,
   rover: RoverServiceClient,
-  airbrake: AirbrakeNotifier,
   slackInfoCommander: SlackInfoCommander,
+  implicit val airbrake: AirbrakeNotifier,
   implicit val imageConfig: S3ImageConfig,
   implicit val s3: S3ImageStore,
   implicit val executionContext: ExecutionContext,
@@ -163,6 +166,14 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
+      val activityWithStrictTimeout = TimeoutFuture(eliza.getCrossServiceKeepActivity(keepIds, maxMessagesShown))(executionContext, 2.seconds).recover {
+        case ex =>
+          ex match {
+            case _: TimeoutException => log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
+            case _ => airbrake.notify(s"[KEEP-DECORATOR] failed to fetch cross service keep activity, reason: $ex")
+          }
+          Map.empty[Id[Keep], CrossServiceKeepActivity]
+      }
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
@@ -172,6 +183,7 @@ class KeepDecoratorImpl @Inject() (
         additionalSourcesByUriId <- additionalSourcesFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
+        activityByKeep <- activityWithStrictTimeout
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.flatMap {
@@ -213,15 +225,19 @@ class KeepDecoratorImpl @Inject() (
 
               KeepMembers(libraries, users, emails)
             }
+            val keepActivity = {
+              if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
+                KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
+                  ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
+                  idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
+              } else KeepActivity.empty
+            }
 
             (for {
               author <- sourceAttrs.get(keepId).map {
                 case (attr, userOpt) => BasicAuthor(attr, userOpt)
               } orElse keep.userId.flatMap(keeper => idToBasicUser.get(keeper).map(BasicAuthor.fromUser))
             } yield {
-              val activityLog = generateActivityLog(keep, author, sourceAttrs.get(keepId).map(_._1), discussionsByKeep.get(keepId),
-                ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                idToBasicUser, idToBasicLibrary, idToBasicOrg)
               KeepInfo(
                 id = Some(keep.externalId),
                 pubId = Some(Keep.publicId(keepId)),
@@ -251,7 +267,7 @@ class KeepDecoratorImpl @Inject() (
                 sourceAttribution = sourceAttrs.get(keepId),
                 note = keep.note,
                 discussion = discussionsByKeep.get(keepId),
-                activity = activityLog,
+                activity = keepActivity,
                 participants = ktusByKeep.getOrElse(keepId, Seq.empty).flatMap(ktu => idToBasicUser.get(ktu.userId)),
                 members = keepMembers,
                 permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
@@ -326,7 +342,7 @@ class KeepDecoratorImpl @Inject() (
           )
         }.toSet
         uriId -> userKeeps
-    }.toMap
+    }
   }
 
   def getAdditionalSources(viewerIdOpt: Option[Id[User]], keepsByUriId: Map[Id[NormalizedURI], Seq[Id[Keep]]]): Map[Id[NormalizedURI], Seq[SourceAttribution]] = {
@@ -343,63 +359,6 @@ class KeepDecoratorImpl @Inject() (
         (slackSources ++ twitterSources).toSeq
       }
     }
-  }
-
-  def generateActivityLog(
-    keep: Keep, author: BasicAuthor, sourceAttr: Option[SourceAttribution], discussion: Option[Discussion],
-    ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser], userById: Map[Id[User], BasicUser],
-    libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization]): ActivityLog = {
-    import com.keepit.common.util.DescriptionElements._
-
-    val initialKeepEvent = {
-      val sortedKtls = ktls.sortBy {
-        _.addedAt.getMillis * -1
-      }
-      val sortedKtus = ktus.sortBy {
-        _.addedAt.getMillis * -1
-      }
-
-      val authorElement = fromBasicAuthor(author)
-      val header = sortedKtls.headOption match {
-        case Some(ktl) =>
-          val library: DescriptionElement = libById.get(ktl.libraryId).map(fromBasicLibrary).getOrElse("a library")
-          val orgOpt = orgByLibraryId.get(ktl.libraryId).map(fromBasicOrg)
-          sourceAttr match {
-            case Some(SlackAttribution(message, _)) =>
-              DescriptionElements(authorElement, "added this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(message.permalink), ImageUrls.SLACK_LOGO), message.channel.name.map(_.value --> LinkElement(message.permalink)))
-            case Some(TwitterAttribution(tweet)) =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)),
-                ImageElement(Some(tweet.permalink), ImageUrls.TWITTER_LOGO), tweet.user.screenName.value --> LinkElement(tweet.permalink))
-            case None =>
-              DescriptionElements(authorElement, "kept this into", library, orgOpt.map(org => DescriptionElements("in", org)))
-          }
-        case None =>
-          sortedKtus.headOption match {
-            case None =>
-              airbrake.notify(s"[activityLog] no ktu or ktls on ${keep.id.get}, can't generate initial keep event")
-              DescriptionElements(authorElement, "kept this page")
-            case Some(firstKtu) =>
-              val firstMinute = firstKtu.addedAt.plusMinutes(1)
-              val firstSentTo = sortedKtus.takeWhile(_.addedAt.getMillis <= firstMinute.getMillis)
-                .collect { case ktu if !keep.userId.contains(ktu.userId) => userById.get(ktu.userId) }.flatten
-              DescriptionElements(authorElement, "started a discussion", if (firstSentTo.nonEmpty) DescriptionElements("with", DescriptionElements.unwordsPretty(firstSentTo.map(fromBasicUser))) else "on this page")
-          }
-      }
-      val body = DescriptionElements(keep.note)
-      ActivityEvent(
-        ActivityKind.Initial,
-        image = authorElement.image,
-        header = header,
-        body = body,
-        timestamp = keep.keptAt,
-        source = None
-      )
-    }
-
-    val commentEvents = discussion.map(_.messages.map(ActivityEvent.fromComment)).getOrElse(Seq.empty)
-    val events = commentEvents :+ initialKeepEvent
-    ActivityLog(events = events, numEvents = events.size, numComments = commentEvents.size + keep.note.map(_ => 1).getOrElse(0))
   }
 }
 

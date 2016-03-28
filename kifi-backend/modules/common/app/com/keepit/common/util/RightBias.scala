@@ -2,6 +2,8 @@ package com.keepit.common.util
 
 // A right-biased either. Implemented as a pretty lightweight wrapper around Either
 final class RightBias[L, R](ethr: Either[L, R]) {
+  def getRight: Option[R] = ethr.right.toOption
+  def getLeft: Option[L] = ethr.left.toOption
   def foreach(f: R => Unit): Unit = ethr.right.foreach(f)
   def map[R1](f: R => R1): RightBias[L, R1] = new RightBias(ethr.right.map(f))
   def flatMap[R1](f: R => RightBias[L, R1]): RightBias[L, R1] = ethr.fold[RightBias[L, R1]](l => RightBias.left(l), r => f(r))

@@ -12,7 +12,6 @@ import com.keepit.common.db.slick.DBSession.RWSession
 class OrphanCleaner @Inject() (
     val db: Database,
     changedURIRepo: ChangedURIRepo,
-    renormalizedURLRepo: RenormalizedURLRepo,
     val keepRepo: KeepRepo,
     val normUriRepo: NormalizedURIRepo,
     libraryRepo: LibraryRepo,
@@ -27,7 +26,6 @@ class OrphanCleaner @Inject() (
     }
   }
 
-  val renormalizedURLSeqKey = OrphanCleanerSequenceNumberKey[RenormalizedURL]("RenormalizedURLSeq")
   val changedURISeqKey = OrphanCleanerSequenceNumberKey[ChangedURI]("ChangedURISeq")
   val bookmarkSeqKey = OrphanCleanerSequenceNumberKey[Keep]("BookmarkSeq")
   val normalizedURISeqKey = OrphanCleanerSequenceNumberKey[NormalizedURI]("NormalizedURISeq")
@@ -37,39 +35,12 @@ class OrphanCleaner @Inject() (
   private[this] val lock = new AnyRef
 
   def clean(readOnly: Boolean = true): Unit = lock.synchronized {
-    cleanNormalizedURIsByRenormalizedURL(readOnly)
     cleanNormalizedURIsByChangedURIs(readOnly)
     cleanNormalizedURIsByBookmarks(readOnly)
   }
 
   def fullClean(readOnly: Boolean = true): Unit = lock.synchronized {
     cleanNormalizedURIsByNormalizedURIs(readOnly)
-  }
-
-  private[integrity] def cleanNormalizedURIsByRenormalizedURL(readOnly: Boolean = true): Unit = {
-    var numProcessed = 0
-    var numUrisChangedToActive = 0
-    var seq = getSequenceNumber(renormalizedURLSeqKey)
-    var done = false
-
-    log.info("start processing RenormalizedURL")
-    while (!done) {
-      val renormalizedURLs = db.readOnlyReplica { implicit s => renormalizedURLRepo.getChangesSince(seq, 10) } // get applied changes
-      done = renormalizedURLs.isEmpty
-
-      def collector(renormalizedURL: RenormalizedURL, turnedActive: Boolean): Unit = {
-        if (turnedActive) numUrisChangedToActive += 1
-        numProcessed += 1
-        seq = renormalizedURL.seq
-      }
-
-      db.readWriteSeq(renormalizedURLs, collector) { (s, renormalizedURL) =>
-        checkIntegrity(renormalizedURL.oldUriId, readOnly)(s)
-      }
-      if (!done && !readOnly) centralConfig.update(renormalizedURLSeqKey, seq) // update high watermark
-    }
-
-    logProgress(seq.value, numProcessed, numUrisChangedToActive, readOnly)
   }
 
   private[integrity] def cleanNormalizedURIsByChangedURIs(readOnly: Boolean = true): Unit = {

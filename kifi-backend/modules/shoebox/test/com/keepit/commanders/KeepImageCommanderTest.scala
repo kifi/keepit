@@ -55,7 +55,6 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
       val lib = library().saved
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
-      val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
       val keep1 = KeepFactory.keep().withUri(uri).withUser(user).withLibrary(lib).saved
       val keep2 = KeepFactory.keep().withUri(uri).withUser(user).withLibrary(lib).saved

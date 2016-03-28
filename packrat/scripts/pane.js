@@ -469,6 +469,9 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         paneHistory.unshift(loc);
       }
     },
+    getLocator: function () {
+      return paneHistory[0];
+    },
     back: function (fallbackLocator) {
       showPane(paneHistory[1] || fallbackLocator || '/messages:all', 'back');
     },

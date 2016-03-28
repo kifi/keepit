@@ -319,11 +319,13 @@ class SlackPushingActor @Inject() (
     }
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
-    val keepsById = db.readOnlyMaster { implicit s => keepRepo.getByIds(changedKeepIds) }
+    val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
+      val keepById = keepRepo.getByIds(changedKeepIds)
+      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
+      changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
+    }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
-
       val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
       // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
       def comesFromDestinationChannel(keep: Keep): Boolean = keep.source == KeepSource.slack
@@ -332,20 +334,23 @@ class SlackPushingActor @Inject() (
       def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
         ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
       }
-      val (oldKeeps, newKeeps) = changedKeeps.flatAugmentWith { k => ktlsByKeepId.get(k.id.get) }.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+      val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
       (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
-      val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepsById.get(msg.keep)).map(_.swap)
-      msgsWithKeep.partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
+      def wasSentAfterKeepWasAddedToLibrary(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists { case (k, ktl) => ktl.addedAt isBefore msg.sentAt }
+      val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
+      msgsWithKeep
+        .filter { case (k, msg) => wasSentAfterKeepWasAddedToLibrary(msg) }
+        .partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
     }
 
     for {
       (oldKeeps, newKeeps, attributionByKeepId) <- keepsToPushFut
       (oldMsgs, newMsgs) <- msgsToPushFut
       users <- db.readOnlyReplicaAsync { implicit s =>
-        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy) ++ newMsgs.flatMap(_._2.sentBy)
+        val userIds = oldKeeps.flatMap(_._2.addedBy) ++ newKeeps.flatMap(_._2.addedBy) ++ oldMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption)) ++ newMsgs.flatMap(_._2.sentBy.flatMap(_.left.toOption))
         basicUserRepo.loadAll(userIds.toSet)
       }
     } yield {
@@ -378,7 +383,7 @@ class SlackPushingActor @Inject() (
       case PushItem.KeepToPush(k, ktl) =>
         Some(keepAsSlackMessage(k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), ktl.addedBy.flatMap(items.users.get)))
       case PushItem.MessageToPush(k, msg) if msg.text.nonEmpty && orgSettings.exists(_.settingFor(StaticFeature.SlackCommentMirroring).safely.contains(StaticFeatureSetting.ENABLED)) =>
-        Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(items.users.get)))
+        Some(messageAsSlackMessage(msg, k, items.lib, items.slackTeamId, items.attribution.get(k.id.get), msg.sentBy.flatMap(_.left.toOption.flatMap(items.users.get))))
       case messageToSwallow: PushItem.MessageToPush =>
         None
     }

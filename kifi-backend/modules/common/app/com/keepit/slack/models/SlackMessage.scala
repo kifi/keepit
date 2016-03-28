@@ -193,6 +193,7 @@ object SlackEmoji {
   val star = SlackEmoji(":star:")
   val sweatSmile = SlackEmoji(":sweat_smile:")
   val wave = SlackEmoji(":wave:")
+  val zipperMouthFace = SlackEmoji(":zipper_mouth_face:")
 }
 
 sealed abstract class SlackCommand(val value: String)

@@ -985,9 +985,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
           val keep1 = KeepFactory.keep().withTitle("k1").withUser(user1).withUri(uri1).withLibrary(library1).saved
           val keep2 = KeepFactory.keep().withTitle("k2").withUser(user1).withUri(uri2).withLibrary(library1).saved
 
@@ -1038,21 +1035,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "members": ${Json.toJson(toSimpleKeepMembers(keep2, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions(keep2.id.get))},
                 "activity": {
-                  "numEvents": 1,
                   "numComments": 0,
-                  "events": [
-                    {
-                      "kind":"initial",
-                      "image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg",
-                      "header":[
-                        {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
-                        {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","color":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
-                      ],
-                      "body": [],
-                      "timestamp":${keep2.keptAt.getMillis}
-                    }
-                  ]
+                  "events": []
                 }
               },
               {
@@ -1083,21 +1067,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "members": ${Json.toJson(toSimpleKeepMembers(keep1, BasicUser.fromUser(user1), libraryCard(lib1.id.get)))},
                 "permissions": ${Json.toJson(keepPermissions(keep1.id.get))},
                 "activity" : {
-                  "numEvents": 1,
                   "numComments": 0,
-                  "events":[
-                    {
-                      "kind":"initial",
-                      "image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg",
-                      "header":[
-                        {"id":"${user1.externalId}","text":"Aaron Hsu","image":"http://localhost/users/${user1.externalId}/pics/200/0.jpg","url":"https://www.kifi.com/test","kind":"author"},
-                        {"text":" kept this into ","url":null,"hover":null,"kind":"text"},
-                        {"id":"l7jlKlnA36Su","text":"${lib1.name}","color":null,"url":"https://www.kifi.com/test/${lib1.slug.value}","kind":"library"}
-                      ],
-                      "body": [],
-                      "timestamp":${keep1.keptAt.getMillis}
-                    }
-                  ]
+                  "events":[]
                 }
               }
             ],
@@ -1122,8 +1093,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val keep1 = KeepFactory.keep().withTitle("G1").withUser(userA).withUri(uri1).withLibrary(library1).saved
           val keep2 = KeepFactory.keep().withTitle("A1").withUser(userA).withUri(uri2).withLibrary(library1).saved
 

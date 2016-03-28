@@ -19,7 +19,7 @@ object NonUserIdentifierAugmentor extends EventAugmentor[NonUserEvent] {
   def isDefinedAt(nonUserEvent: NonUserEvent) = true
   def apply(nonUserEvent: NonUserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq(
     "nonUserIdentifier" -> ContextStringData(nonUserEvent.identifier),
-    "nonUserKind" -> ContextStringData(nonUserEvent.kind.name)
+    "nonUserKind" -> ContextStringData(nonUserEvent.kind.value)
   ))
 }
 

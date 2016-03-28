@@ -5,9 +5,9 @@
 // @require scripts/formatting.js
 // @require scripts/friend_search.js
 // @require scripts/send_chooser.js
+// @require scripts/snap.js
 // @require scripts/look.js
 // @require scripts/prevent_ancestor_scroll.js
-// @require scripts/snap.js
 
 k.compose = k.compose || (function() {
   'use strict';
@@ -32,7 +32,7 @@ k.compose = k.compose || (function() {
           $to.tokenInput('add', draft.to[i]);
         }
       }
-      editor.setRaw(draft.html);
+      editor.setRaw(draft.html + editor.getRaw());
     }
   }
 
@@ -215,21 +215,27 @@ k.compose = k.compose || (function() {
   return function compose($container, handleSubmit) {
     var $form = $container.find('.kifi-compose').data('empty', true);
     $forms = $forms.add($form);
-
     var $to = $form.find('.kifi-compose-to');
     var throttledSaveDraft = _.throttle(function () {
       saveDraft($form, $to, editor);
     }, 2000, {leading: false});
-
     var editor = (richEditorBorked() ? newPoorEditor : newRichEditor)(
-      $form.find('.kifi-compose-draft'), throttledSaveDraft, toggleEmpty.bind(null, $form));
-
+      $form.find('.kifi-compose-draft'), throttledSaveDraft, toggleEmpty.bind(null, $form)
+    );
     api.port.emit('load_draft', {to: !!$to.length}, restoreDraft.bind(null, $to, editor));
+
+    var handlers = {
+      'look_here_mode': function (on) {
+        $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !on);
+      }
+    };
+    api.port.on(handlers);
 
     if ($to.length) {
       initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
+        placeholder: 'name@example.com, Kifi user, etc.',
         suggestAbove: true,
         onAdd: function () {
           editor.writeDefaultText();
@@ -280,11 +286,15 @@ k.compose = k.compose || (function() {
       });
     }
 
+    function getDraft() {
+      return $form.find('.kifi-compose-draft');
+    }
+
     $form.hoverfu('.kifi-compose-highlight', function (configureHover) {
       var $a = $(this);
       k.render('html/keeper/titled_tip', {
-        title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Look here” mode',
-        html: k.formatting.jsonDom('“Look here” mode lets you<br/>reference text or images<br/>from the page in your<br/>message.')
+        title: 'Turn ' + ($a.hasClass('kifi-disabled') ? 'on' : 'off') + ' “Highlight anywhere” mode',
+        html: k.formatting.jsonDom('“Highlight anywhere” mode lets you<br/>start a discussion by referencing<br/>text or images on the fly<br />from any page.')
       }, {
         'kifi_mustache_tags': 'kifi_mustache_tags'
       }, function (html) {
@@ -299,11 +309,6 @@ k.compose = k.compose || (function() {
       if (editor.supportsLinks) {
         var enabled = !this.classList.toggle('kifi-disabled');
         api.port.emit('set_look_here_mode', {on: enabled, from: $to.length ? 'compose' : 'chat'});
-        if (enabled) {
-          k.snap.enable(editor.$el);
-        } else {
-          k.snap.disable();
-        }
       } else {
         $('<div class="kifi-compose-highlight-unavailable">“Look here” mode is<br/>not available on this page<br/>in this browser.</div>')
         .insertAfter(this)
@@ -344,12 +349,18 @@ k.compose = k.compose || (function() {
       },
       reflectPrefs: function (prefs) {
         sendChooser.reflectPrefs(prefs);
-        var lookHereMode = editor.supportsLinks && prefs.lookHereMode;
-        $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !lookHereMode);
-        if (lookHereMode) {
-          k.snap.enable(editor.$el);
-        } else {
-          k.snap.disable();
+        var alwaysLookHereMode = editor.supportsLinks && prefs.lookHereMode;
+        $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !alwaysLookHereMode);
+        if (!alwaysLookHereMode && !k.snap.enabled()) {
+          k.snap.enable(); // enable it because it isn't already on
+        }
+
+        if (window.innerWidth > 688 && prefs.quoteAnywhereFtue) {
+          setTimeout(function () {
+            api.require('scripts/quote_anywhere_ftue.js', function () {
+              k.quoteAnywhereFtue.show();
+            });
+          }, 1000);
         }
       },
       prefill: function (to) {
@@ -371,15 +382,17 @@ k.compose = k.compose || (function() {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
       save: saveDraft.bind(null, $form, $to, editor),
+      lookHere: k.snap.createLookHere(getDraft),
       destroy: function () {
         $forms = $forms.not($form);
         if ($to.length) {
           $to.tokenInput('destroy');
         }
         editor.$el.handleLookClicks(false);
-        if (!$forms.length) {
+        if (!$forms.length && $form.find('.kifi-compose-highlight').hasClass('kifi-disabled')) {
           k.snap.disable();
         }
+        api.port.off(handlers);
       }
     };
   };

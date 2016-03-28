@@ -147,7 +147,6 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
 
     db.readWrite { implicit s =>
       val muricaUris = for (site <- muricaSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
-      val muricaUrls = for (uri <- muricaUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val muricaKeeps = KeepFactory.keeps(muricaSites.length).zipWithIndex.map {
         case (keep, i) =>
           keep.withTitle("Reddit").withUser(userCaptain).withUri(muricaUris(i)).withKeptAt(t1.plusMinutes(i)).withLibrary(libMurica)
@@ -155,14 +154,12 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
 
       // The Science keeps are all newer than the Murica keeps (see keptAt = t1...)
       val scienceUris = for (site <- scienceSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
-      val scienceUrls = for (uri <- scienceUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val scienceKeeps = KeepFactory.keeps(scienceSites.length).zipWithIndex.map {
         case (keep, i) =>
           keep.withTitle("Reddit").withUser(userCaptain).withUri(scienceUris(i)).withKeptAt(t1.plusMinutes(muricaSites.length + i)).withLibrary(libScience)
       } saved
 
       val ironUris = for (site <- ironSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
-      val ironUrls = for (uri <- ironUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
       val ironKeeps = KeepFactory.keeps(ironSites.length).zipWithIndex.map {
         case (keep, i) =>
           keep.withTitle("Reddit").withUser(userIron).withUri(ironUris(i)).withKeptAt(t1.plusMinutes(i)).withLibrary(libIron)
