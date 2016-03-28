@@ -8,7 +8,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
-import com.keepit.common.util.RightBias.{ RightSide, LeftSide }
+import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.RightBias.{ LeftSide, RightSide }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.slack.models._
@@ -102,7 +103,10 @@ class SlackPersonalDigestNotificationActor @Inject() (
               contextBuilder += ("slackTeamName", team.slackTeamName.value)
             }
             slackAnalytics.trackNotificationSent(membership.slackTeamId, membership.slackUserId.asChannel, membership.slackUsername.asChannelName, NotificationCategory.NonUser.PERSONAL_DIGEST, contextBuilder.build)
-            slackLog.info("Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value)
+            slackLog.info(
+              "Personal digest to", membership.slackUsername.value, "in team", membership.slackTeamId.value,
+              membership.lastPersonalDigestAt.fold[DescriptionElements]("ever")(DescriptionElements("since", _))
+            )
           case Failure(SlackFail.NoValidPushMethod) =>
           case Failure(fail) =>
             slackLog.warn(s"Failed to push personal digest to ${membership.slackUsername} in ${membership.slackTeamId} because", fail.getMessage)
