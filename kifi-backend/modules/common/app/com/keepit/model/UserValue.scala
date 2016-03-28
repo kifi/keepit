@@ -163,7 +163,7 @@ object UserValues {
   val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
   val showExtMoveIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_MOVE_INTRO, true)
-  val quoteAnywhereFtue = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, true)
+  val quoteAnywhereFtue = UserValueBooleanHandler(UserValueName.QUOTE_ANYWHERE_FTUE, true)
 
   val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showExtMoveIntro, quoteAnywhereFtue).map(_.name)
 
