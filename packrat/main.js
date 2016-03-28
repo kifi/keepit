@@ -944,8 +944,16 @@ api.port.on({
     }
   },
   terminate_ftue: function (data) {
-    var prefName = {e: 'showExtMsgIntro', m: 'showExtMoveIntro'}[data.type];
-    var handlerName = {e: 'hide_ext_msg_intro', m: 'hide_move_keeper_intro'}[data.type];
+    var prefName = {
+      e: 'showExtMsgIntro',
+      m: 'showExtMoveIntro',
+      q: 'quoteAnywhereFtue'
+    }[data.type];
+    var handlerName = {
+      e: 'hide_ext_msg_intro',
+      m: 'hide_move_keeper_intro',
+      q: 'hide_quote_anywhere_ftue'
+    }[data.type];
     if (!prefName) {
       return;
     }
@@ -964,7 +972,12 @@ api.port.on({
     }
   },
   track_ftue: function (type) {
-    var category = {l: 'libFTUE', m: 'moveKeepFtue', s: 'safariInstallUpdate'}[type];
+    var category = {
+      l: 'libFTUE',
+      m: 'moveKeepFtue',
+      s: 'safariInstallUpdate',
+      q: 'quoteAnywhere'
+    }[type];
     if (!category) return;
     tracker.track('user_was_notified', {
       category: category,

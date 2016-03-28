@@ -235,7 +235,7 @@ k.compose = k.compose || (function() {
       initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
-        placeholder: 'Send to name@example.com or a Kifi user',
+        placeholder: 'name@example.com, Kifi user, etc.',
         suggestAbove: true,
         onAdd: function () {
           editor.writeDefaultText();
@@ -353,6 +353,14 @@ k.compose = k.compose || (function() {
         $form.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !alwaysLookHereMode);
         if (!alwaysLookHereMode && !k.snap.enabled()) {
           k.snap.enable(); // enable it because it isn't already on
+        }
+
+        if (window.innerWidth > 688 && prefs.quoteAnywhereFtue) {
+          setTimeout(function () {
+            api.require('scripts/quote_anywhere_ftue.js', function () {
+              k.quoteAnywhereFtue.show();
+            });
+          }, 1000);
         }
       },
       prefill: function (to) {

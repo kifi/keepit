@@ -7,7 +7,7 @@
   transition: transform .1s ease-out, opacity .1s linear;
   white-space: nowrap;
   font-size: 0;
-  cursor: pointer; // TODO(carlos): remove this if we add multiple buttons
+  cursor: pointer;
 }
 
 .kifi-sel-snap {
@@ -18,18 +18,20 @@
   display: inline-block;
 }
 
-.kifi-snap.kifi-snap.kifi-snap ul {
-  padding: 0;
-  margin: 0;
+.kifi-snap ul,
+.kifi-snap li  {
+  padding: 0!important;
+  margin: 0!important;
+  background: none!important;
 }
 
 .kifi-snap-wrapper {
-  position: relative;
-  width: auto;
-  height: 23px;
-  padding: 3px 5px;
-  border-radius: 5px;
-  background: linear-gradient(to bottom, rgba(77,77,77,1) 0%,rgba(51,51,51,1) 60%);
+  position: relative!important;
+  width: auto!important;
+  height: 23px!important;
+  padding: 3px 5px!important;
+  border-radius: 5px!important;
+  background: linear-gradient(to bottom, rgba(77,77,77,1) 0%,rgba(51,51,51,1) 60%)!important;
   opacity: 0;
 }
 
@@ -46,15 +48,15 @@
 }
 
 .kifi-snap-arrow {
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  left: 0;
-  width: 0;
-  height: 0;
-  margin: auto;
-  border: 6px solid transparent;
-  border-bottom-color: rgba(77,77,77, 1);
+  position: absolute!important;
+  right: 0!important;
+  bottom: 100%!important;
+  left: 0!important;
+  width: 0!important;
+  height: 0!important;
+  margin: auto!important;
+  border: 6px solid transparent!important;
+  border-bottom-color: rgba(77,77,77, 1)!important;
 }
 
 .kifi-snap-icon {
