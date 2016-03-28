@@ -23,7 +23,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
     "work" in {
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
-        val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val bmRepo = inject[KeepRepo]
         val seqAssigner = inject[ChangedURISeqAssigner]
@@ -37,10 +36,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
             val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com", Some("Bing")))
 
-            val url0 = urlRepo.save(URLFactory("http://www.google.com/", nuri0.id.get)) // to be redirected to nuri1
-            val url1 = urlRepo.save(URLFactory("http://www.bing.com/", nuri2.id.get))
-            val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get)) // to be splitted, to be pointing to
-
             val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
             val user2 = UserFactory.user().withName("abc", "xyz").withUsername("test").saved
 
@@ -51,22 +46,16 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main).saved
             val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main).saved
 
-            (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
+            (Array(nuri0, nuri1, nuri2, nuri3), Array(bm1, bm2, bm3))
           }
         }
 
-        val (uris, urls, bms) = setup()
+        val (uris, bms) = setup()
 
         // check init status
         db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === 2
           uriRepo.getByState(NormalizedURIStates.SCRAPED, -1).size === 2
-
-          urlRepo.getByNormUri(uris(0).id.get).head.url === urls(0).url
-          urlRepo.getByNormUri(uris(1).id.get) === Nil
-
-          urlRepo.getByNormUri(uris(2).id.get).size === 2
-          urlRepo.getByNormUri(uris(3).id.get).size === 0
         }
 
         // merge
@@ -77,31 +66,16 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         // check redirection
         db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
-
-          urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
-          urlRepo.getByNormUri(uris(0).id.get) === Nil
         }
 
         val centralConfig = inject[CentralConfig]
         centralConfig(URIMigrationSeqNumKey) === Some(SequenceNumber[ChangedURI](1))
-
-        // split
-
-        plugin.handleChangedUri(URLMigration(urls(2), uris(3).id.get))
-
-        db.readOnlyMaster { implicit s =>
-          uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
-          urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
-          urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
-        }
-
       }
     }
 
     "handle collections correctly when migrating bookmarks" in {
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
-        val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val collectionRepo = inject[CollectionRepo]
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
@@ -138,10 +112,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/mail", Some("Google")))
             val uri2better = uriRepo.save(NormalizedURI.withHash("http://google.com/mail", Some("Google")))
-
-            val url0 = urlRepo.save(URLFactory("http://www.google.com/", uri0.id.get))
-            val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
-            val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 

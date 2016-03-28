@@ -6,6 +6,7 @@
 // @require scripts/lib/purify.js
 // @require scripts/formatting.js
 // @require scripts/lib/jquery.js
+// @require scripts/lib/jquery.layout.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/mustache.js
@@ -32,10 +33,6 @@ var pageSession = Math.random().toString(16).slice(2);
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function () {
   log('[google_inject]');
-
-  $.fn.layout = function () {
-    return this.each(function () {this.clientHeight});  // forces layout
-  };
 
   var origin = location.origin;
   var $res = $(k.render('html/search/google'));   // a reference to our search results (kept so that we can reinsert when removed)

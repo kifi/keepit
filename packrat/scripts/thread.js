@@ -15,6 +15,7 @@
 // @require scripts/look.js
 // @require scripts/render.js
 // @require scripts/compose.js
+// @require scripts/snap.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 // @require scripts/maintain_height.js
@@ -76,6 +77,12 @@ k.panes.thread = k.panes.thread || function () {
         setTimeout(function () {
           $redirected.triggerHandler('click');
         }, 5000);
+      }
+    },
+    lookHere: function (img, bRect, href, title, focusText) {
+      var compose = $holder && $holder.data('compose');
+      if (compose) {
+        compose.lookHere(img, bRect, href, title, focusText);
       }
     }
   };

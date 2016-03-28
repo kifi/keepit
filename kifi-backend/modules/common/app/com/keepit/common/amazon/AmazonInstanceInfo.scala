@@ -6,6 +6,7 @@ import com.google.inject.{ Inject, Singleton }
 
 import com.keepit.common.time._
 import com.keepit.common.service.IpAddress
+import com.keepit.common.reflection.Enumerator
 
 case class AmazonInstanceId(id: String) extends AnyVal {
   override def toString(): String = id
@@ -60,31 +61,12 @@ case class AmazonInstanceInfo(
     }
   }
 
-  lazy val instantTypeInfo: AmazonInstanceType = instanceType match {
-    case AmazonInstanceType.C1Medium.name => AmazonInstanceType.C1Medium
-    case AmazonInstanceType.C1XLarge.name => AmazonInstanceType.C1XLarge
-    case AmazonInstanceType.C3Large.name => AmazonInstanceType.C3Large
-    case AmazonInstanceType.C3XLarge.name => AmazonInstanceType.C3XLarge
-    case AmazonInstanceType.C3XXLarge.name => AmazonInstanceType.C3XXLarge
-    case AmazonInstanceType.M2XXLarge.name => AmazonInstanceType.M2XXLarge
-    case AmazonInstanceType.M2XXXXLarge.name => AmazonInstanceType.M2XXXXLarge
-    case AmazonInstanceType.M3Medium.name => AmazonInstanceType.M3Medium
-    case AmazonInstanceType.M3Large.name => AmazonInstanceType.M3Large
-    case AmazonInstanceType.M3XLarge.name => AmazonInstanceType.M3XLarge
-    case AmazonInstanceType.M3XXLarge.name => AmazonInstanceType.M3XXLarge
-    case AmazonInstanceType.R3XLarge.name => AmazonInstanceType.R3XLarge
-    case AmazonInstanceType.M1Large.name => AmazonInstanceType.M1Large
-    case AmazonInstanceType.M1Medium.name => AmazonInstanceType.M1Medium
-    case AmazonInstanceType.M1Small.name => AmazonInstanceType.M1Small
-    case AmazonInstanceType.T1Micro.name => AmazonInstanceType.T1Micro
-    case _ => AmazonInstanceType.UNKNOWN //we don't want to kill a cluster because we can't parse a machine type
-  }
-
+  lazy val instantTypeInfo: AmazonInstanceType = AmazonInstanceType(instanceType)
 }
 
 sealed abstract class AmazonInstanceType(val name: String, val cores: Int, val ecu: Int)
 
-object AmazonInstanceType {
+object AmazonInstanceType extends Enumerator[AmazonInstanceType] {
   // C1 class
   case object C1Medium extends AmazonInstanceType("c1.medium", 2, 5)
   case object C1XLarge extends AmazonInstanceType("c1.xlarge", 8, 20)
@@ -93,6 +75,18 @@ object AmazonInstanceType {
   case object C3Large extends AmazonInstanceType("c3.large", 2, 7)
   case object C3XLarge extends AmazonInstanceType("c3.xlarge", 4, 14)
   case object C3XXLarge extends AmazonInstanceType("c3.2xlarge", 8, 24)
+  case object C3XXXXLarge extends AmazonInstanceType("c3.4xlarge", 16, 55)
+
+  // C4 class
+  case object C4Large extends AmazonInstanceType("c4.large", 2, 8)
+  case object C4XLarge extends AmazonInstanceType("c4.xlarge", 4, 16)
+  case object C4XXLarge extends AmazonInstanceType("c4.2xlarge", 8, 31)
+  case object C4XXXXLarge extends AmazonInstanceType("c4.4xlarge", 16, 62)
+
+  // M1 class
+  case object M1Small extends AmazonInstanceType("m1.small", 1, 1)
+  case object M1Medium extends AmazonInstanceType("m1.medium", 1, 2)
+  case object M1Large extends AmazonInstanceType("m1.large", 2, 4)
 
   // M2 class
   case object M2XXLarge extends AmazonInstanceType("m2.2xlarge", 4, 13)
@@ -103,17 +97,23 @@ object AmazonInstanceType {
   case object M3Large extends AmazonInstanceType("m3.large", 2, 6)
   case object M3XLarge extends AmazonInstanceType("m3.xlarge", 4, 13)
   case object M3XXLarge extends AmazonInstanceType("m3.2xlarge", 8, 26)
+  case object M3XXXXLarge extends AmazonInstanceType("m3.4xlarge", 16, 54)
 
   // R3 class
   case object R3XLarge extends AmazonInstanceType("r3.xlarge", 4, 13)
-
-  // M1 class
-  case object M1Small extends AmazonInstanceType("m1.small", 1, 1)
-  case object M1Medium extends AmazonInstanceType("m1.medium", 1, 2)
-  case object M1Large extends AmazonInstanceType("m1.large", 2, 4)
+  case object R3XXLarge extends AmazonInstanceType("r3.2xlarge", 8, 26)
 
   // T1 class
   case object T1Micro extends AmazonInstanceType("t1.micro", 1, 1) //actually 1/2 of an ecu
-  case object UNKNOWN extends AmazonInstanceType("UNKNOWN", 2, 4)
+
+  // I2 class
+  case object I2XLARGE extends AmazonInstanceType("i2.xlarge", 4, 14)
+  case object I2XXLARGE extends AmazonInstanceType("i2.2xlarge", 8, 27)
+  case object I2XXXXLARGE extends AmazonInstanceType("i2.4xlarge", 16, 53)
+
+  case object UNKNOWN extends AmazonInstanceType("UNKNOWN", 6, 12)
+
+  val all = _all
+  def apply(str: String) = all.find(_.name == str).getOrElse(UNKNOWN)
 }
 

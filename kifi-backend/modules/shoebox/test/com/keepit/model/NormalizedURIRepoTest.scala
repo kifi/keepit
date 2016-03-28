@@ -24,8 +24,6 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       uriRepo.assignSequenceNumbers(1000)
       val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
       uriRepo.assignSequenceNumbers(1000)
-      val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-      val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
       KeepFactory.keep().withTitle("my title is short").withUser(user1).withUri(uri1).withLibrary(lib1).saved
       KeepFactory.keep().withTitle("my title is short").withUser(user1).withUri(uri2).withLibrary(lib1).saved

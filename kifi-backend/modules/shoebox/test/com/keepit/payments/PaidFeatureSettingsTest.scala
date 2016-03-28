@@ -139,9 +139,9 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val publicId = Library.publicId(library.id.get)
         val libraryCommander = inject[LibraryCommander]
 
-        val ownerModifyRequest = LibraryModifications(name = Some("Elon's Main Library"))
-        val adminModifyRequest = LibraryModifications(name = Some("Larry's Main Library"))
-        val memberModifyRequest = LibraryModifications(name = Some("Sergey's Main Library"))
+        val ownerModifyRequest = LibraryModifications(name = Some("Elon's Favorite Library"))
+        val adminModifyRequest = LibraryModifications(name = Some("Larry's Favorite Library"))
+        val memberModifyRequest = LibraryModifications(name = Some("Sergey's Favorite Library"))
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beLeft

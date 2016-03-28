@@ -34,9 +34,6 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
           val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
           val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri2).withNote("Amazon Note").withLibrary(library).saved
           library
@@ -69,9 +66,6 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
             val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
-            val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-            val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
             val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
             val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri1).withLibrary(library).saved
             library
@@ -100,9 +94,6 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
             val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
-
-            val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-            val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
             val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
             val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri1).withLibrary(library).saved

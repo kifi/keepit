@@ -37,6 +37,7 @@ k.tile = k.tile || (function () {
   api.port.emit('me', onMeChange);
   api.port.on({
     me_change: onMeChange,
+    look_here_mode: configureLookHere,
     guide: loadAndDo.bind(null, 'guide', 'show'),
     show_pane: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'icon'),
@@ -64,6 +65,10 @@ k.tile = k.tile || (function () {
         }
         tile.offsetHeight;
         tileCard.classList.remove('kifi-0s');
+      });
+
+      api.port.emit('prefs', function (prefs) {
+        configureLookHere(prefs.lookHereMode);
       });
     },
     show_keeper: function(show) {
@@ -209,6 +214,71 @@ k.tile = k.tile || (function () {
     function extractCssUrl(path) {
       var match = cssUrlRe.exec(path);
       return match && match[1];
+    }
+  }
+
+  function getKeeperDiscussionState() {
+    var toasterIsShowing = !!(k.toaster && k.toaster.showing());
+    var paneIsShowing = !!(k.pane && k.pane.showing());
+    var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
+
+    if (!toasterIsShowing && messagesPaneIsShowing) {
+      return 'thread_pane';
+    } else if (toasterIsShowing) {
+      return 'compose_pane';
+    } else {
+      return 'other';
+    }
+  }
+
+  function configureLookHere(alwaysLookHereOn) {
+    if (!k.snap) {
+      loadAndDo('snap', 'enable', function () {
+        k.snap.onLookHere.add(onLookHere);
+        if (!alwaysLookHereOn && getKeeperDiscussionState() === 'other') {
+          k.snap.disable();
+        }
+      });
+    } else {
+      if (!alwaysLookHereOn && getKeeperDiscussionState() === 'other') {
+        k.snap.disable();
+      } else {
+        k.snap.enable();
+      }
+    }
+  }
+
+  function onLookHere(img, bRect, href, title, type) {
+    var toasterIsShowing = !!(k.toaster && k.toaster.showing());
+    var paneIsShowing = !!(k.pane && k.pane.showing());
+    var messagesPaneIsShowing = (paneIsShowing && k.pane.getLocator().indexOf('/messages/') === 0);
+
+    if (!toasterIsShowing && messagesPaneIsShowing) {
+      k.panes.thread.lookHere(img, bRect, href, title, true);
+      api.port.emit('track_pane_click', {
+        type: 'quotesOnHighlight',
+        action: 'clickedQuotes',
+        keeperState: 'thread_pane',
+        content: type
+      });
+    } else if (toasterIsShowing) {
+      k.toaster.lookHere(img, bRect, href, title, true);
+      api.port.emit('track_pane_view', {
+        type: 'quotesOnHighlight',
+        action: 'clickedQuotes',
+        keeperState: 'compose_pane',
+        content: type
+      });
+    } else {
+      loadAndDo('keeper', 'compose', {trigger: 'look_here'}, function () {
+        k.toaster.lookHere(img, bRect, href, title);
+        api.port.emit('track_pane_click', {
+          type: 'quotesOnHighlight',
+          action: 'clickedQuotes',
+          kepeerState: 'other',
+          content: type
+        });
+      });
     }
   }
 

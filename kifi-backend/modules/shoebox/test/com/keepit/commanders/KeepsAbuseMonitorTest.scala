@@ -50,10 +50,6 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.kifi.com/"), Some("kifi")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-
           val lib1 = library().saved
 
           KeepFactory.keep().withUser(user1).saved
@@ -81,10 +77,6 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.kifi.com/"), Some("kifi")))
-
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           val lib1 = library().saved
 

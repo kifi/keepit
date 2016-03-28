@@ -28,28 +28,31 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   implicit val format: Format[KeepEventKind] = EnumFormat.format(fromStr, _.value)
 }
 
-sealed abstract class KeepEventSource(val value: String)
-object KeepEventSource extends Enumerator[KeepEventSource] {
-  case object Slack extends KeepEventSource("Slack")
-  case object Twitter extends KeepEventSource("Twitter")
-  case object iOS extends KeepEventSource("iOS")
-  case object Android extends KeepEventSource("Android")
-  case object Chrome extends KeepEventSource("Chrome") // refers to ext
-  case object Firefox extends KeepEventSource("Firefox")
-  case object Safari extends KeepEventSource("Safari")
-  case object Email extends KeepEventSource("Email")
-  case object Site extends KeepEventSource("Kifi.com")
+@json case class KeepEventSource(kind: KeepEventSourceKind, url: Option[String])
+
+sealed abstract class KeepEventSourceKind(val value: String)
+object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
+  case object Slack extends KeepEventSourceKind("Slack")
+  case object Twitter extends KeepEventSourceKind("Twitter")
+  case object iOS extends KeepEventSourceKind("iOS")
+  case object Android extends KeepEventSourceKind("Android")
+  case object Chrome extends KeepEventSourceKind("Chrome") // refers to ext
+  case object Firefox extends KeepEventSourceKind("Firefox")
+  case object Safari extends KeepEventSourceKind("Safari")
+  case object Email extends KeepEventSourceKind("Email")
+  case object Site extends KeepEventSourceKind("Kifi.com")
 
   val all = _all
-  def apply(str: String) = all.find(_.value == str).get
+  def fromStr(str: String) = all.find(_.value == str)
+  def apply(str: String) = fromStr(str).get
 
-  implicit val writes: Writes[KeepEventSource] = Writes { o => JsString(o.value) }
+  implicit val format: Format[KeepEventSourceKind] = EnumFormat.format(fromStr, _.value)
 
-  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSource] = msgSrc.flatMap { src =>
+  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap { src =>
     src match {
       case MessageSource.IPAD | MessageSource.IPHONE => Some(iOS)
       case MessageSource.CHROME | MessageSource.FIREFOX | MessageSource.SAFARI |
-        MessageSource.ANDROID | MessageSource.EMAIL | MessageSource.SITE => Some(KeepEventSource.apply(src.value))
+        MessageSource.ANDROID | MessageSource.EMAIL | MessageSource.SITE => Some(KeepEventSourceKind.apply(src.value))
       case _ => None
     }
   }

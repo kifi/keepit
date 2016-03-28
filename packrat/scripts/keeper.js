@@ -3,6 +3,7 @@
 // @require styles/keeper/keeper.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery.js
+// @require scripts/lib/jquery.layout.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/q.min.js
@@ -13,13 +14,6 @@
 // @require scripts/repair_transitionend.js
 // @require scripts/html/keeper/kifi_mustache_tags.js
 // @require scripts/html/keeper/keeper.js
-
-$.fn.layout = function () {
-  'use strict';
-  return this.each(function () { /*jshint expr:true */
-    this.clientHeight;  // forces layout
-  });
-};
 
 var MOD_KEYS = /^Mac/.test(navigator.platform) ? {c: '⌘', alt: 'Option'} : {c: 'Ctrl', alt: 'Alt'};
 
@@ -715,7 +709,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       }
       showKeepBox(trigger);
     },
-    compose: function (opts) {
+    compose: function (opts, onComposeOpened) {
+      onComposeOpened = onComposeOpened || api.noop;
       var trigger = opts.trigger || opts;
       log('[keeper:compose]', trigger);
       if (!$slider) {
@@ -733,6 +728,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
             k.toaster.show($slider, trigger, opts.guided, opts.to);
             k.toaster.onHide.add(onToasterHide);
           }
+          onComposeOpened();
         });
       });
     },

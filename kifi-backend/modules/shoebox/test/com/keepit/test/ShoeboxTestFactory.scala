@@ -82,15 +82,6 @@ class ShoeboxTestFactory @Inject() (
       val uri7 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds4")))
       val uri8 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds5")))
 
-      val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-      val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-      val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-      val url4 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri4.id.get))
-      val url5 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri5.id.get))
-      val url6 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri6.id.get))
-      val url7 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri7.id.get))
-      val url8 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri8.id.get))
-
       Seq(
         KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1)
           .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(20)).withKeptAt(t1.plusMinutes(20))

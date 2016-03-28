@@ -34,7 +34,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   def normalizedURIInterner(implicit injector: Injector) = inject[NormalizedURIInterner]
   def normalizationService(implicit injector: Injector) = inject[NormalizationService]
-  def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def keepRepo(implicit injector: Injector) = inject[KeepRepo]
   def ktlRepo(implicit injector: Injector) = inject[KeepToLibraryRepo]
   def ktuRepo(implicit injector: Injector) = inject[KeepToUserRepo]

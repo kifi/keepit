@@ -34,7 +34,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
     "clean up uris by changed uris" in {
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
-        val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
@@ -62,19 +61,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4, nuri5, nuri6, nuri7)
         }
-        val urls = db.readWrite { implicit session =>
-          val url0 = urlRepo.save(URLFactory("http://www.google.com/", uris(0).id.get))
-          val url1 = urlRepo.save(URLFactory("http://www.bing.com/", uris(1).id.get))
-          val url2 = urlRepo.save(URLFactory("http://www.yahooo.com/", uris(2).id.get))
-          val url3 = urlRepo.save(URLFactory("http://www.ask.com/", uris(3).id.get))
-          val url4 = urlRepo.save(URLFactory("http://www.inktomi.com/", uris(4).id.get))
-          val url5 = urlRepo.save(URLFactory("http://www.lycos.com/", uris(5).id.get))
-          val url6 = urlRepo.save(URLFactory("http://www.infoseek.com/", uris(6).id.get))
-          val url7 = urlRepo.save(URLFactory("http://www.altavista.com/", uris(7).id.get))
-
-          Seq(url0, url1, url2, url3, url4, url5, url6, url7)
-        }
-
         val bms = db.readWrite { implicit session =>
           val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved
           val bm1 = KeepFactory.keep().withTitle("bing").withUser(user).withUri(uris(1)).withLibrary(lib1).saved
@@ -119,7 +105,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
     "clean up uris by bookmarks" in {
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
-        val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
@@ -149,16 +134,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4)
         }
-        val urls = db.readWrite { implicit session =>
-          val url0 = urlRepo.save(URLFactory("http://www.google.com/", uris(0).id.get))
-          val url1 = urlRepo.save(URLFactory("http://www.bing.com/", uris(1).id.get))
-          val url2 = urlRepo.save(URLFactory("http://www.yahooo.com/", uris(2).id.get))
-          val url3 = urlRepo.save(URLFactory("http://www.altavista.com/", uris(3).id.get))
-          val url4 = urlRepo.save(URLFactory("http://www.inktomi.com/", uris(4).id.get))
-
-          Seq(url0, url1, url2, url3, url4)
-        }
-
         var bms = doAssign {
           db.readWrite { implicit session =>
             val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved
@@ -295,7 +270,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
     "clean up uris by normalized uris" in {
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
-        val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val cleaner = inject[OrphanCleaner]
@@ -323,19 +297,6 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
           Seq(nuri0, nuri1, nuri2, nuri3, nuri4, nuri5, nuri6, nuri7)
         }
-        val urls = db.readWrite { implicit session =>
-          val url0 = urlRepo.save(URLFactory("http://www.google.com/", uris(0).id.get))
-          val url1 = urlRepo.save(URLFactory("http://www.bing.com/", uris(1).id.get))
-          val url2 = urlRepo.save(URLFactory("http://www.yahooo.com/", uris(2).id.get))
-          val url3 = urlRepo.save(URLFactory("http://www.ask.com/", uris(3).id.get))
-          val url4 = urlRepo.save(URLFactory("http://www.inktomi.com/", uris(4).id.get))
-          val url5 = urlRepo.save(URLFactory("http://www.lycos.com/", uris(5).id.get))
-          val url6 = urlRepo.save(URLFactory("http://www.infoseek.com/", uris(6).id.get))
-          val url7 = urlRepo.save(URLFactory("http://www.altavista.com/", uris(7).id.get))
-
-          Seq(url0, url1, url2, url3, url4, url5, url6, url7)
-        }
-
         val bms = db.readWrite { implicit session =>
           Seq(
             KeepFactory.keep().withTitle("google").withUser(user).withUri(uris(0)).withLibrary(lib1).saved,

@@ -1,19 +1,14 @@
 package com.keepit.controllers.admin
 
-import java.util.regex.{ Pattern, PatternSyntaxException }
-
 import com.google.inject.Inject
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ NormalizedURI, URLRepo, NormalizedURIRepo }
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model._
-import play.api.libs.json.Json
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.matching.Regex
+import scala.concurrent.{ ExecutionContext, Future }
 
 class AdminRoverController @Inject() (
     val userActionsHelper: UserActionsHelper,
