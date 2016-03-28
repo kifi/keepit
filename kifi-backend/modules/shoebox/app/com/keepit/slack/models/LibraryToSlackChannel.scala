@@ -31,7 +31,7 @@ case class LibraryToSlackChannel(
   lastProcessedMsgSeq: Option[SequenceNumber[Message]] = None,
   lastProcessingAt: Option[DateTime] = None,
   nextPushAt: Option[DateTime] = None)
-    extends ModelWithState[LibraryToSlackChannel] with ModelWithPublicId[LibraryToSlackChannel] with ModelWithMaybeCopy[LibraryToSlackChannel] with SlackIntegration {
+    extends ModelWithState[LibraryToSlackChannel] with ModelWithPublicId[LibraryToSlackChannel] with SlackIntegration {
   def withId(id: Id[LibraryToSlackChannel]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == LibraryToSlackChannelStates.ACTIVE
@@ -62,7 +62,7 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Map[Id[LibraryToSlackChannel], LibraryToSlackChannel]
   def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel]
-  def getAllBySlackTeamAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[LibraryToSlackChannel]
+  def getAllBySlackTeamsAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[LibraryToSlackChannel]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): LibraryToSlackChannel
 
   def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[LibraryToSlackChannel]
@@ -191,8 +191,8 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     activeRows.filter(_.libraryId === libraryId).list.toSet
   }
 
-  def getAllBySlackTeamAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[LibraryToSlackChannel] = {
-    (for (r <- activeRows if r.slackTeamId.inSet(slackTeamIds) && r.libraryId.inSet(libraryIds)) yield r).list
+  def getAllBySlackTeamsAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[LibraryToSlackChannel] = {
+    activeRows.filter(r => r.slackTeamId.inSet(slackTeamIds) && r.libraryId.inSet(libraryIds)).list
   }
 
   def getBySlackTeam(teamId: SlackTeamId)(implicit session: RSession): Seq[LibraryToSlackChannel] = {

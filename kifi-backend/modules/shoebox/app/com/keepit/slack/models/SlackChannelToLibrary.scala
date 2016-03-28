@@ -27,7 +27,7 @@ case class SlackChannelToLibrary(
   lastIngestingAt: Option[DateTime] = None,
   lastIngestedAt: Option[DateTime] = None,
   lastMessageTimestamp: Option[SlackTimestamp] = None)
-    extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with ModelWithMaybeCopy[SlackChannelToLibrary] with SlackIntegration {
+    extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackChannelToLibraryStates.ACTIVE
@@ -49,7 +49,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getAllBySlackUserIds(teamId: SlackTeamId, userIds: Set[SlackUserId])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary]
-  def getAllBySlackTeamAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
+  def getAllBySlackTeamsAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
@@ -159,15 +159,15 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   }
 
   def getAllBySlackUserIds(teamId: SlackTeamId, userIds: Set[SlackUserId])(implicit session: RSession): Set[SlackChannelToLibrary] = {
-    (for (r <- activeRows if r.slackTeamId === teamId && r.slackUserId.inSet(userIds)) yield r).list.toSet
+    activeRows.filter(r => r.slackTeamId === teamId && r.slackUserId.inSet(userIds)).list.toSet
   }
 
   def getAllByLibs(libIds: Set[Id[Library]])(implicit session: RSession): Set[SlackChannelToLibrary] = {
-    (for (r <- activeRows if r.libraryId inSet libIds) yield r).list.toSet
+    activeRows.filter(r => r.libraryId inSet libIds).list.toSet
   }
 
-  def getAllBySlackTeamAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
-    (for (r <- activeRows if r.slackTeamId.inSet(slackTeamIds) && r.libraryId.inSet(libraryIds)) yield r).list
+  def getAllBySlackTeamsAndLibraries(slackTeamIds: Set[SlackTeamId], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
+    activeRows.filter(r => r.slackTeamId.inSet(slackTeamIds) && r.libraryId.inSet(libraryIds)).list
   }
 
   private def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {

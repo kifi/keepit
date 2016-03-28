@@ -109,8 +109,8 @@ class SlackInfoCommanderImpl @Inject() (
   def getSlackIntegrationsForLibraries(viewerId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo] = {
     val integrationInfosByLib = db.readOnlyMaster { implicit session =>
       val slackTeamIds = getOrganizationSlackTeamsForUser(viewerId)
-      val slackToLibs = channelToLibRepo.getAllBySlackTeamAndLibraries(slackTeamIds, libraryIds)
-      val libToSlacks = libToChannelRepo.getAllBySlackTeamAndLibraries(slackTeamIds, libraryIds)
+      val slackToLibs = channelToLibRepo.getAllBySlackTeamsAndLibraries(slackTeamIds, libraryIds)
+      val libToSlacks = libToChannelRepo.getAllBySlackTeamsAndLibraries(slackTeamIds, libraryIds)
       generateLibrarySlackIntegrationInfos(viewerId, slackToLibs, libToSlacks)
     }
     assembleLibrarySlackInfos(libraryIds, integrationInfosByLib)
