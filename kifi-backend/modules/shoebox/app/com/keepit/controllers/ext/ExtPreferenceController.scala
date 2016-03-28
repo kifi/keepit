@@ -37,7 +37,8 @@ class ExtPreferenceController @Inject() (
     maxResults: Int,
     showExtMsgIntro: Boolean,
     showExtMoveIntro: Boolean,
-    messagingEmails: Boolean)
+    messagingEmails: Boolean,
+    quoteAnywhereFtue: Boolean)
 
   private implicit val userPrefsFormat = (
     (__ \ 'lookHereMode).write[Boolean] and
@@ -45,7 +46,8 @@ class ExtPreferenceController @Inject() (
     (__ \ 'maxResults).write[Int] and
     (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'showExtMoveIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+    (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'quoteAnywhereFtue).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
   )(unlift(UserPrefs.unapply))
 
   private val crypt = new RatherInsecureDESCrypt
@@ -174,7 +176,8 @@ class ExtPreferenceController @Inject() (
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
         showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals),
-        messagingEmails = messagingEmails)
+        messagingEmails = messagingEmails,
+        quoteAnywhereFtue = UserValues.quoteAnywhereFtue.parseFromMap(userVals))
     }
   }
 }
