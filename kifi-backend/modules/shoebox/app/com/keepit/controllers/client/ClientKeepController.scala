@@ -23,10 +23,10 @@ class ClientKeepController @Inject() (
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getNewKeepInfo(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
+  def getNewKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
-    keepInfoAssembler.assembleInfoForKeeps(request.userIdOpt, Seq(keepId)).map {
-      case Seq((keepInfo, viewerInfo)) => Ok(Json.toJson(keepInfo))
+    keepInfoAssembler.assembleKeepViews(request.userIdOpt, Set(keepId)).map { viewMap =>
+      Ok(Json.toJson(viewMap(keepId)))
     }
   }
 }
