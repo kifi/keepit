@@ -75,10 +75,6 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("Kifi")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val keep1 = KeepFactory.keep().withTitle("k1").withUser(user1).withUri(uri1).withLibrary(lib1).saved

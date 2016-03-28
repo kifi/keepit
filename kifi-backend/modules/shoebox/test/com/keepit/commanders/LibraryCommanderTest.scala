@@ -181,10 +181,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
       val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
 
-      val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-      val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-      val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-
       val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).withKeptAt(t1.plusMinutes(3)).saved
       val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).withKeptAt(t1.plusMinutes(15)).saved
       val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).withKeptAt(t1.plusMinutes(30)).saved
@@ -1333,10 +1329,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
-
           // libMurica has 3 keeps
           val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
           val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
@@ -1408,10 +1400,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
-
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           // libMurica has 3 keeps
           val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
