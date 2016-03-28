@@ -6,9 +6,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.json.{ Writes, Json }
 
 case class NewPageContext(
-  keeps: Seq[RestrictedKeepInfo], // TODO(ryan): should this switch to NewKeepInfo?
   numVisibleKeeps: Int,
-  // numTotalKeeps: Int, // TODO(ryan): is it even possible to retrive this information? LimitedAugmentationInfo doesn't have it?
   // sources: Seq[SourceAttribution], // TODO(ryan): figure out how to retrieve
   // numVisibleSources: Int,
   // numTotalSources: Int,
@@ -20,7 +18,6 @@ case class NewPageContext(
   numTotalLibraries: Int,
   tags: Seq[Hashtag],
   numVisibleTags: Int)
-// numTotalTags: Int)
 
 object NewPageContext {
   private implicit val sourceWrites = SourceAttribution.externalWrites

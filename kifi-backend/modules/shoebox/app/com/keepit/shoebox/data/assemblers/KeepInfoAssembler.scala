@@ -5,7 +5,7 @@ import com.keepit.commanders._
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.util.RightBias
+import com.keepit.common.util.{ SetHelpers, RightBias }
 import com.keepit.common.util.RightBias._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -102,13 +102,6 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       basicLibById
     }
-    val userInfoFut = db.readOnlyReplicaAsync { implicit s =>
-      val basicUserById = {
-        val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet
-        basicUserRepo.loadAllActive(userSet)
-      }
-      basicUserById
-    }
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
         case (keepId, Some(keepImage)) => keepId -> NewKeepImageInfo(
@@ -143,70 +136,78 @@ class KeepInfoAssemblerImpl @Inject() (
     for {
       sourceByKeep <- sourceInfoFut
       libsById <- libInfoFut
-      usersById <- userInfoFut
       imagesByKeep <- imageInfoFut
       permissionsByKeep <- permissionsFut
       augmentationByUri <- augmentationFut
       summaryByUri <- summaryFut
-    } yield keepSet.flatMap { keepId =>
-      val result = for {
-        keep <- keepsById.get(keepId).withLeft(s"keep $keepId does not exist")
-        _ <- RightBias.unit.filter(permissionsByKeep.get(keepId).exists(_.contains(KeepPermission.VIEW_KEEP)), s"keep $keepId is not visible to $viewer")
-        author <- sourceByKeep.get(keepId).map {
-          case (attr, userOpt) => BasicAuthor(attr, userOpt)
-        }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(s"no author for keep $keepId")
-        augmentation <- augmentationByUri.get(keep.uriId).withLeft(s"keep $keepId with uri ${keep.uriId} does not have augmentations")
-        summary <- summaryByUri.get(keep.uriId).withLeft(s"keep $keepId with uri ${keep.uriId} does not have content summary")
-      } yield {
-        val keepInfo = NewKeepInfo(
-          id = Keep.publicId(keepId),
-          path = keep.path,
-          url = keep.url,
-          title = keep.title,
-          image = imagesByKeep.get(keepId),
-          author = author,
-          keptAt = keep.keptAt,
-          source = sourceByKeep.get(keepId).map(_._1),
-          users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
-          libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get),
-          activity = KeepActivity.empty // TODO(ryan): fill in
-        )
-        val viewerInfo = NewKeepViewerInfo(
-          permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
-        )
-        val context = NewPageContext(
-          keeps = augmentation.keeps,
-          numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
-          keepers = augmentation.keepers.flatMap { case (userId, time) => usersById.get(userId) }, // TODO(ryan): actually ensure that the user ids are in that map
-          numVisibleKeepers = augmentation.keepers.length + augmentation.keepersOmitted,
-          numTotalKeepers = augmentation.keepersTotal,
-          libraries = augmentation.libraries.flatMap { case (libId, time, x) => libsById.get(libId) },
-          numVisibleLibraries = augmentation.libraries.length + augmentation.librariesOmitted,
-          numTotalLibraries = augmentation.librariesTotal,
-          tags = augmentation.tags,
-          numVisibleTags = augmentation.tags.length + augmentation.tagsOmitted)
-
-        val content = NewPageContent(
-          summary = NewPageSummary(
-            authors = summary.article.authors,
-            siteName = summary.article.title,
-            publishedAt = summary.article.publishedAt,
-            description = summary.article.description,
-            wordCount = summary.article.wordCount),
-          history = ???
-        )
-
-        NewKeepView(keep = keepInfo, viewer = viewerInfo, context = context, content = content)
+    } yield {
+      val usersById = db.readOnlyMaster { implicit s =>
+        val userSet = SetHelpers.unions(Seq(
+          ktusByKeep.values.flatMap(_.map(_.userId)).toSet,
+          augmentationByUri.values.flatMap(_.keepers.map(_._1)).toSet
+        ))
+        basicUserRepo.loadAllActive(userSet)
       }
+      keepSet.flatMap { keepId =>
+        val result = for {
+          keep <- keepsById.get(keepId).withLeft(s"keep $keepId does not exist")
+          _ <- RightBias.unit.filter(permissionsByKeep.get(keepId).exists(_.contains(KeepPermission.VIEW_KEEP)), s"keep $keepId is not visible to $viewer")
+          author <- sourceByKeep.get(keepId).map {
+            case (attr, userOpt) => BasicAuthor(attr, userOpt)
+          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(s"no author for keep $keepId")
+        } yield {
+          val keepInfo = NewKeepInfo(
+            id = Keep.publicId(keepId),
+            path = keep.path,
+            url = keep.url,
+            title = keep.title,
+            image = imagesByKeep.get(keepId),
+            author = author,
+            keptAt = keep.keptAt,
+            source = sourceByKeep.get(keepId).map(_._1),
+            users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
+            libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get),
+            activity = KeepActivity.empty // TODO(ryan): fill in
+          )
+          val viewerInfo = NewKeepViewerInfo(
+            permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
+          )
 
-      result match {
-        case LeftSide(errMsg) =>
-          slackLog.warn(errMsg)
-          None
-        case RightSide(view) =>
-          Some(keepId -> view)
-      }
-    }.toMap
+          val context = augmentationByUri.get(keep.uriId).map(augmentation => NewPageContext(
+            numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
+            keepers = augmentation.keepers.flatMap { case (userId, time) => usersById.get(userId) },
+            numVisibleKeepers = augmentation.keepers.length + augmentation.keepersOmitted,
+            numTotalKeepers = augmentation.keepersTotal,
+            libraries = augmentation.libraries.flatMap { case (libId, time, x) => libsById.get(libId) },
+            numVisibleLibraries = augmentation.libraries.length + augmentation.librariesOmitted,
+            numTotalLibraries = augmentation.librariesTotal,
+            tags = augmentation.tags,
+            numVisibleTags = augmentation.tags.length + augmentation.tagsOmitted
+          ))
+
+          val content = summaryByUri.get(keep.uriId).map(summary => NewPageContent(
+            summary = NewPageSummary(
+              authors = summary.article.authors,
+              siteName = summary.article.title,
+              publishedAt = summary.article.publishedAt,
+              description = summary.article.description,
+              wordCount = summary.article.wordCount
+            ),
+            history = Seq.empty
+          ))
+
+          NewKeepView(keep = keepInfo, viewer = viewerInfo, context = context, content = content)
+        }
+
+        result match {
+          case LeftSide(errMsg) =>
+            slackLog.warn(errMsg)
+            None
+          case RightSide(view) =>
+            Some(keepId -> view)
+        }
+      }.toMap
+    }
   }
 
   private def sanitizeContexts(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo] = {
