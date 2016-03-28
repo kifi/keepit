@@ -39,7 +39,9 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             (keep, user, lib)
           }
           val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get)
-          val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
+          // TODO(ryan): when the activity log is released, uncomment this line and use it instead of `KeepActivity.empty`
+          // val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
+          val activity = KeepActivity.empty
           val actual = NewKeepInfo.writes.writes(view.keep)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),

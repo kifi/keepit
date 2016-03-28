@@ -66,6 +66,7 @@ class KeepInfoAssemblerImpl @Inject() (
   keepImageCommander: KeepImageCommander,
   rover: RoverServiceClient,
   search: SearchServiceClient,
+  userExperimentRepo: UserExperimentRepo,
   userCommander: UserCommander, // TODO(ryan): used only to filter out fake users, can replace with user experiment repo?
   private implicit val airbrake: AirbrakeNotifier,
   private implicit val imageConfig: S3ImageConfig,
@@ -118,8 +119,16 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionCommander.getKeepsPermissions(keepSet, viewer)
     }
 
-    val activityFut = FutureHelpers.accumulateOneAtATime(keepSet) { keepId =>
-      keepCommander.getActivityForKeep(keepId, eventsBefore = None, maxEvents = config.numEventsPerKeep)
+    val activityFut = {
+      val viewerHasActivityLogExperiment = viewer.exists { viewerId =>
+        db.readOnlyMaster { implicit s =>
+          userExperimentRepo.hasExperiment(viewerId, UserExperimentType.ACTIVITY_LOG)
+        }
+      }
+      if (!viewerHasActivityLogExperiment) Future.successful(Map.empty[Id[Keep], KeepActivity])
+      else FutureHelpers.accumulateOneAtATime(keepSet) { keepId =>
+        keepCommander.getActivityForKeep(keepId, eventsBefore = None, maxEvents = config.numEventsPerKeep)
+      }
     }
 
     val (augmentationFut, summaryFut) = {
