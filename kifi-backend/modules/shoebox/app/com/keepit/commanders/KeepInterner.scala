@@ -159,7 +159,8 @@ class KeepInternerImpl @Inject() (
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
       connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], userIdOpt.toSet),
-      lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
+      lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt),
+      initialEvent = Some(existingKeepOpt.flatMap(_.initialEvent).getOrElse(KeepEvent.InitialKeep(userIdOpt, Set.empty, Set.empty, libraryOpt.map(_.id.get).toSet)))
     )
     val internedKeep = try {
       keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>

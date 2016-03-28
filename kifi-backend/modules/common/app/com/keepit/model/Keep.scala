@@ -42,7 +42,8 @@ case class Keep(
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
-  connections: KeepConnections)
+  connections: KeepConnections,
+  initialEvent: Option[KeepEvent])
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
@@ -109,7 +110,8 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'keptAt).format[DateTime] and
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
-    (__ \ 'connections).format[KeepConnections]
+    (__ \ 'connections).format[KeepConnections] and
+    (__ \ 'initialEvent).formatNullable[KeepEvent]
   )(Keep.apply, unlift(Keep.unapply))
 }
 

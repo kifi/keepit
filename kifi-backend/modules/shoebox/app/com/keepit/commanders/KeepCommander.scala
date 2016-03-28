@@ -815,7 +815,8 @@ class KeepCommanderImpl @Inject() (
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
       connections = KeepConnections(Set(toLibrary.id.get), Set(userId)),
       title = k.title,
-      note = k.note
+      note = k.note,
+      initialEvent = Some(KeepEvent.InitialKeep(addedBy = Some(userId), addedUsers = Set.empty, addedNonUsers = Set.empty, addedLibraries = Set(toLibrary.id.get)))
     )
     currentKeeps match {
       case existingKeep +: _ =>

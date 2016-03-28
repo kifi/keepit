@@ -89,7 +89,7 @@ class KeepRepoImpl @Inject() (
   DateTime, // lastActivityAt
   Option[SequenceNumber[Message]], // messageSeq
   KeepConnections, // connections
-  Option[Boolean], // isPrimary
+  Option[KeepEvent], Option[Boolean], // isPrimary
   LibrariesHash, // librariesHash
   ParticipantsHash // participantsHash
   )
@@ -111,6 +111,7 @@ class KeepRepoImpl @Inject() (
       lastActivityAt: DateTime,
       messageSeq: Option[SequenceNumber[Message]],
       connections: KeepConnections,
+      initialEvent: Option[KeepEvent],
       // These fields are discarded, they are DB-only
       isPrimary: Option[Boolean],
       lh: LibrariesHash,
@@ -132,7 +133,8 @@ class KeepRepoImpl @Inject() (
         keptAt,
         lastActivityAt,
         messageSeq,
-        connections
+        connections,
+        initialEvent
       )
   }
 
@@ -155,6 +157,7 @@ class KeepRepoImpl @Inject() (
         k.lastActivityAt,
         k.messageSeq,
         k.connections,
+        k.initialEvent,
         if (k.isActive) Some(true) else None,
         k.connections.librariesHash,
         k.connections.participantsHash
@@ -174,6 +177,7 @@ class KeepRepoImpl @Inject() (
     def lastActivityAt = column[DateTime]("last_activity_at", O.NotNull)
     def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
     def connections = column[KeepConnections]("connections", O.NotNull)
+    def initialEvent = column[Option[KeepEvent]]("initial_event", O.Nullable)
 
     // Used only within the DB to ensure integrity and make queries more efficient
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -183,7 +187,7 @@ class KeepRepoImpl @Inject() (
     def * = (
       (id.?, createdAt, updatedAt, state, seq, externalId, title, note, uriId, url),
       (userId, originalKeeperId, source, keptAt, lastActivityAt, messageSeq,
-        connections, isPrimary, librariesHash, participantsHash)
+        connections, initialEvent, isPrimary, librariesHash, participantsHash)
     ).shaped <> ((fromDbRow _).tupled, toDbRow)
   }
 
@@ -197,6 +201,7 @@ class KeepRepoImpl @Inject() (
   implicit val setSeqParameter = setParameterFromMapper[SequenceNumber[Keep]]
 
   implicit val getConnectionsResult = getResultFromMapper[KeepConnections]
+  implicit val getInitialEventResult = getResultOptionFromMapper[KeepEvent]
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
@@ -219,6 +224,7 @@ class KeepRepoImpl @Inject() (
         r.<<[DateTime],
         r.<<[Option[SequenceNumber[Message]]],
         r.<<[KeepConnections],
+        r.<<[Option[KeepEvent]],
         r.<<[Option[Boolean]],
         r.<<[LibrariesHash],
         r.<<[ParticipantsHash])
