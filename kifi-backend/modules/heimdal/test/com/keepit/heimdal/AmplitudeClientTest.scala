@@ -63,7 +63,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val userKept = new UserEvent(testUserId, heimdalContext("os" -> ContextStringData("Windows 95"), "client" -> ContextStringData("androidApp")), UserEventTypes.KEPT, now)
       val userRecoAction = new UserEvent(testUserId, heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
       val userUsedKifi = new UserEvent(testUserId, heimdalContext(), UserEventTypes.USED_KIFI, now)
-      val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", NonUserKinds.email, heimdalContext(), NonUserEventTypes.MESSAGED)
+      val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", TrackingNonUserKind.email, heimdalContext(), NonUserEventTypes.MESSAGED)
       val visitorViewedLib: VisitorEvent = new VisitorEvent(heimdalContext(), VisitorEventTypes.VIEWED_LIBRARY)
       val anonKept: AnonymousEvent = new AnonymousEvent(heimdalContext(), AnonymousEventTypes.KEPT)
       val pingdomEvent = new VisitorEvent(heimdalContext("userAgent" -> ContextStringData("Pingdom.com_bot_version_1.4_(http://www.pingdom.com/)")), VisitorEventTypes.VIEWED_LIBRARY)

@@ -14,6 +14,10 @@ import scala.annotation.switch
 import scala.concurrent.duration.Duration
 import play.api.Play
 
+import scala.util.hashing.MurmurHash3
+
+import scala.util.Random
+
 trait BasicUserFields {
   def externalId: ExternalId[User]
   def firstName: String
@@ -75,7 +79,13 @@ object BasicUser {
     // Keep this stable! There are 42 images. If this is changed, treat old user ids differently.
     // The CDN will cache for 6 hours, so don't expect immediate updates. If you need changes, you can
     // modify this to be a function from id -> whatever file name you actually need
-    val variant = (userId.id % 42).toInt
+    chooseImage(userId.id)
+  }
+
+  def defaultImageForEmail(email: String): String = chooseImage(MurmurHash3.stringHash(email))
+
+  private def chooseImage(randomLong: Long): String = {
+    val variant = (randomLong % 42).toInt
     val choice = (variant: @switch) match {
       case 0 => "bat"
       case 1 => "bear"

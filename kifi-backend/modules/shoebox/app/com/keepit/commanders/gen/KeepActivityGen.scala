@@ -1,13 +1,14 @@
 package com.keepit.commanders.gen
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.common.util.{ Ord, LinkElement, ImageElement, DescriptionElements, DescriptionElement }
-import com.keepit.discussion.CrossServiceKeepActivity
+import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
+import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
 import com.keepit.model.KeepEvent.AddParticipants
 import com.keepit.model.{ KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
-import com.keepit.social.{ ImageUrls, BasicUser, BasicAuthor }
+import com.keepit.social.{ BasicUser, BasicAuthor }
 import org.joda.time.DateTime
 
 object KeepActivityGen {
@@ -15,7 +16,7 @@ object KeepActivityGen {
     keep: Keep, sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])], elizaActivity: Option[CrossServiceKeepActivity],
     ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser],
     userById: Map[Id[User], BasicUser], libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization],
-    eventsBefore: Option[DateTime], maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig): KeepActivity = {
+    eventsBefore: Option[DateTime], maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
     import com.keepit.common.util.DescriptionElements._
 
     lazy val initialKeepEvent = {
@@ -56,8 +57,9 @@ object KeepActivityGen {
 
       val body = DescriptionElements(keep.note)
       BasicKeepEvent(
+        id = None,
+        author = basicAuthor.get,
         KeepEventKind.Initial,
-        image = basicAuthor.map(_.image).getOrElse("0.jpg"),
         header = header,
         body = body,
         timestamp = keep.keptAt,
@@ -70,13 +72,11 @@ object KeepActivityGen {
         case Some(userOrNonUser) =>
           import DescriptionElements._
           val userOpt = userOrNonUser.left.toOption.flatMap(userById.get)
-          val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](userId => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse {
-            airbrake.notify(s"[activityLog] could not generate message author name on keep ${keep.id.get}")
-            "Someone"
-          }
+          val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
           Some(BasicKeepEvent(
+            id = Some(Message.publicId(message.id)),
+            author = userOrNonUser.fold(userId => userOpt.map(BasicAuthor.fromUser).get, nonUser => BasicAuthor.fromNonUser(nonUser)),
             KeepEventKind.Comment,
-            image = userOpt.map(_.picturePath.getUrl).getOrElse("0.jpg"), // todo(cam): figure out a protocol for non-user images
             header = DescriptionElements(msgAuthor, "commented on this page"),
             body = DescriptionElements(message.text),
             timestamp = message.sentAt,
@@ -88,11 +88,9 @@ object KeepActivityGen {
               val basicAddedBy = userById.get(addedBy)
               val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
               Some(BasicKeepEvent(
+                id = None, // could use message.id, but system message ids don't need to be exposed to clients yet
+                author = BasicAuthor.fromUser(basicAddedBy.get),
                 KeepEventKind.AddParticipants,
-                image = basicAddedBy.map(_.picturePath.getUrl).getOrElse {
-                  airbrake.notify(s"[activityLog] can't find user $addedBy for keep ${keep.id.get}")
-                  "0.jpg"
-                },
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),
                 timestamp = message.sentAt,
@@ -105,7 +103,6 @@ object KeepActivityGen {
       }
     }).getOrElse(Seq.empty)
 
-    import com.keepit.common.util.Ord._
     val events = {
       val trimmedElizaEvents = elizaEvents.filter(ev => eventsBefore.forall(_.getMillis > ev.timestamp.getMillis)).take(maxEvents) // todo(cam): do this on eliza
       if (trimmedElizaEvents.size == maxEvents) trimmedElizaEvents else trimmedElizaEvents :+ initialKeepEvent
@@ -113,7 +110,6 @@ object KeepActivityGen {
 
     KeepActivity(
       events = events,
-      numEvents = events.size, // todo(cam): fetch the eliza total event count
       numComments = elizaActivity.map(_.numComments).getOrElse(0) + keep.note.size)
   }
 }
