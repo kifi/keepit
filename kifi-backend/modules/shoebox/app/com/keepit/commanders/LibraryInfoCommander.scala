@@ -124,6 +124,7 @@ class LibraryInfoCommanderImpl @Inject() (
             lib.keepCount,
             membershipOpt.map(libraryMembershipCommander.createMembershipInfo),
             lib.ownerId,
+            lib.organizationId,
             path,
             permissionsById(libId)
           )

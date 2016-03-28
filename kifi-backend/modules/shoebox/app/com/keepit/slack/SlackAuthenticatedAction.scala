@@ -15,7 +15,7 @@ sealed trait SlackAuthenticatedAction { self =>
   type A >: self.type <: SlackAuthenticatedAction
   def instance: A = self
   def helper: SlackAuthenticatedActionHelper[A]
-  def getMissingScopes(existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = SlackAuthenticatedActionHelper.getMissingScopes(this, existingScopes)
+  def requiredScopes: Set[SlackAuthScope] = SlackAuthenticatedActionHelper.getRequiredScopes(this)
 }
 
 object Signup extends SlackAuthenticatedActionHelper[Signup]("signup")
@@ -135,7 +135,7 @@ object SlackAuthenticatedActionHelper {
     case BackfillScopes => implicitly[Format[BackfillScopes]]
   }
 
-  private def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
+  def getRequiredScopes(action: SlackAuthenticatedAction): Set[SlackAuthScope] = action match {
     case Signup() => SlackAuthScope.userSignup
     case Login() => SlackAuthScope.userLogin
     case SetupLibraryIntegrations(_, incomingWebhookId) => if (incomingWebhookId.isDefined) Set.empty else SlackAuthScope.integrationSetup
@@ -148,11 +148,6 @@ object SlackAuthenticatedActionHelper {
     case SyncPrivateChannels() => SlackAuthScope.syncPrivateChannels
     case TurnCommentMirroring(turnOn) => if (turnOn) SlackAuthScope.pushToPublicChannels else Set.empty
     case BackfillScopes(scopes) => scopes
-  }
-
-  def getMissingScopes(action: SlackAuthenticatedAction, existingScopes: Set[SlackAuthScope]): Set[SlackAuthScope] = {
-    val requiredScopes = SlackAuthenticatedActionHelper.getRequiredScopes(action)
-    requiredScopes -- existingScopes
   }
 }
 

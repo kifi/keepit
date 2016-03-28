@@ -190,7 +190,7 @@ class SlackAuthenticationCommanderImpl @Inject() (
   def getIdentityAndMissingScopes(userIdOpt: Option[Id[User]], slackTeamIdOpt: Option[SlackTeamId], action: SlackAuthenticatedAction): Future[(Option[(SlackTeamId, SlackUserId)], Set[SlackAuthScope])] = {
     slackIdentityCommander.getIdentityAndExistingScopes(userIdOpt, slackTeamIdOpt).imap {
       case (identityOpt, existingScopes) =>
-        (identityOpt, action.getMissingScopes(existingScopes))
+        (identityOpt, action.requiredScopes -- existingScopes)
     }
   }
 }

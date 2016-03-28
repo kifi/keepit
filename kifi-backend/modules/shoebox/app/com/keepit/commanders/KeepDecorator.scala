@@ -25,8 +25,8 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 import com.keepit.shoebox.data.keep.{ KeepInfo, BasicLibraryWithKeptAt }
 import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.social.BasicAuthor
+import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
+import com.keepit.slack.{ SlackInfoCommander, InhouseSlackChannel, InhouseSlackClient }
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
@@ -60,9 +60,8 @@ class KeepDecoratorImpl @Inject() (
   permissionCommander: PermissionCommander,
   eliza: ElizaServiceClient,
   rover: RoverServiceClient,
+  slackInfoCommander: SlackInfoCommander,
   implicit val airbrake: AirbrakeNotifier,
-  slackTeamRepo: SlackTeamRepo,
-  orgMembershipRepo: OrganizationMembershipRepo,
   implicit val imageConfig: S3ImageConfig,
   implicit val s3: S3ImageStore,
   implicit val executionContext: ExecutionContext,
@@ -350,7 +349,7 @@ class KeepDecoratorImpl @Inject() (
     db.readOnlyMaster { implicit session =>
       val slackTeamIds = viewerIdOpt match {
         case None => Set.empty[SlackTeamId]
-        case Some(userId) => slackTeamRepo.getSlackTeamIds(orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).toSet).values.toSet
+        case Some(userId) => slackInfoCommander.getOrganizationSlackTeamsForUser(userId)
       }
       val sourcesByKeepId = keepSourceCommander.getSourceAttributionForKeeps(keepsByUriId.values.flatten.toSet).mapValues(_._1)
       keepsByUriId.mapValues { keepIds =>

@@ -11,7 +11,7 @@ import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
 import com.keepit.payments.{ PaidAccountRepo, PaidAccountStates, PlanManagementCommander }
-import com.keepit.slack.models.{ SlackChannelToLibraryStates, SlackChannelToLibraryRepo }
+import com.keepit.slack.models.{ SlackTeamRepo, SlackChannelToLibraryStates, SlackChannelToLibraryRepo }
 
 import scala.concurrent.duration.{ Duration, SECONDS }
 import scala.concurrent.{ Await, ExecutionContext, Future }
@@ -34,6 +34,7 @@ class OrganizationChecker @Inject() (
     systemValueRepo: SystemValueRepo,
     handleOwnershipRepo: HandleOwnershipRepo,
     handleCommander: HandleCommander,
+    slackTeamRepo: SlackTeamRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     organizationConfigurationRepo: OrganizationConfigurationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
@@ -87,7 +88,7 @@ class OrganizationChecker @Inject() (
       val zombieHandles = handleOwnershipRepo.getByOwnerId(Some(HandleOwner.fromOrganizationId(org.id.get)), excludeState = Some(HandleOwnershipStates.INACTIVE))
       val zombieConfig = Some(organizationConfigurationRepo.getByOrgId(org.id.get)).filter(_.state == OrganizationConfigurationStates.ACTIVE)
       val zombieKtls = keepToLibraryRepo.getByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE), 0, 20000)
-      val zombieSlackIngestions = slackChannelToLibraryRepo.getIntegrationsByOrg(org.id.get).filter(_.state == SlackChannelToLibraryStates.ACTIVE)
+      val zombieSlackIngestions = slackTeamRepo.getByOrganizationId(org.id.get).map { slackTeam => slackChannelToLibraryRepo.getBySlackTeam(slackTeam.slackTeamId) } getOrElse Seq.empty
 
       zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined ||
         zombieLibs.nonEmpty || zombieHandles.nonEmpty || zombieConfig.isDefined || zombieKtls.nonEmpty || zombieSlackIngestions.nonEmpty
@@ -149,7 +150,7 @@ class OrganizationChecker @Inject() (
           zombieKtls.foreach(keepToLibraryRepo.deactivate)
         }
 
-        val zombieSlackIngestions = slackChannelToLibraryRepo.getIntegrationsByOrg(org.id.get)
+        val zombieSlackIngestions = slackTeamRepo.getByOrganizationId(org.id.get).map { slackTeam => slackChannelToLibraryRepo.getBySlackTeam(slackTeam.slackTeamId) } getOrElse Seq.empty
         if (zombieSlackIngestions.nonEmpty) {
           log.warn(s"[ORG-STATE-MATCH] Dead org $orgId has zombie slack ingestions: ${zombieSlackIngestions.flatMap(_.id)}")
           zombieSlackIngestions.foreach(slackChannelToLibraryRepo.deactivate)
