@@ -5,7 +5,6 @@
 // @require scripts/html/keeper/sent.js
 // @require scripts/lib/q.min.js
 // @require scripts/formatting.js
-// @require scripts/look.js
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/listen.js
@@ -53,6 +52,12 @@ k.toaster = k.toaster || (function () {
     onHide: new Listeners(),
     showing: function () {
       return !!$toast;
+    },
+    lookHere: function (img, bRect, href, title, focusText) {
+      var compose = $toast && $toast.data('compose');
+      if (compose) {
+        compose.lookHere(img, bRect, href, title, focusText);
+      }
     }
   };
 

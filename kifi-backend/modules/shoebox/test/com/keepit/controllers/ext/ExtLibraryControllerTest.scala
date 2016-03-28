@@ -693,7 +693,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
-    val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withUrl(url).withTitle(title).saved
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId.get, name = Hashtag(tag)))

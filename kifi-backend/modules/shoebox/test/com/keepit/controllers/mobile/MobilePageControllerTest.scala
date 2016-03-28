@@ -63,8 +63,6 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
-          val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
-
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val keep1 = KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri).withLibrary(lib1).saved
@@ -124,8 +122,6 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           val user2 = UserFactory.user().withName("Shachaf", "Smith").withId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
-
-          val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 

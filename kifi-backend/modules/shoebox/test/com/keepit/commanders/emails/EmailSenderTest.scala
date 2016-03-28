@@ -407,7 +407,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
     def setup(withDescription: Boolean = true)(implicit injector: Injector) = {
       val keepRepo = inject[KeepRepo]
-      val urlRepo = inject[URLRepo]
       val uriRepo = inject[NormalizedURIRepo]
 
       db.readWrite { implicit rw =>
@@ -420,7 +419,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
-        val url_ = urlRepo.save(URL(url = "http://www.kifi.com", domain = None, normalizedUriId = uri.id.get))
         val keep = KeepFactory.keep().withLibrary(lib1).withUri(uri).withUser(user1).saved
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))

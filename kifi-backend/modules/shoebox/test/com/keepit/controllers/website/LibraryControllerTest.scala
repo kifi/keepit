@@ -985,9 +985,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
 
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
           val keep1 = KeepFactory.keep().withTitle("k1").withUser(user1).withUri(uri1).withLibrary(library1).saved
           val keep2 = KeepFactory.keep().withTitle("k2").withUser(user1).withUri(uri2).withLibrary(library1).saved
 
@@ -1096,8 +1093,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
-          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val keep1 = KeepFactory.keep().withTitle("G1").withUser(userA).withUri(uri1).withLibrary(library1).saved
           val keep2 = KeepFactory.keep().withTitle("A1").withUser(userA).withUri(uri2).withLibrary(library1).saved
 

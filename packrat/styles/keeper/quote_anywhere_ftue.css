@@ -1,0 +1,42 @@
+.kifi-tile-tooltip.kifi-quote-anywhere-ftue {
+  position: absolute;
+  top: auto;
+  right: calc(100% - 30px);
+  bottom: 42px;
+}
+
+.kifi-tile-tooltip.kifi-quote-anywhere-ftue .kifi-tile-tooltip-body {
+  padding-left: 55px;
+  padding-right: 55px;
+}
+
+.kifi-pane .kifi-tile-tooltip.kifi-quote-anywhere-ftue {
+  bottom: 108px;
+}
+
+.kifi-tile-tooltip.kifi-quote-anywhere-ftue .kifi-tile-tooltip-body {
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+.kifi-quote-anywhere-ftue-highlighted {
+  padding-top: 4px;
+  margin-top: -4px;
+  background-color: #B1D7FE;
+}
+
+.kifi-quote-anywhere-ftue-wave-emoji:before {
+  content: '\01F44B';
+  font-size: 20px;
+}
+.kifi-quote-anywhere-ftue-bulb-emoji:before {
+  content: '\01F4A1';
+  position: relative;
+  top: 2px;
+  font-size: 20px;
+}
+
+.kifi-quote-anywhere-ftue-ciao {
+  font-style: italic;
+}
