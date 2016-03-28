@@ -6,8 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
-import com.keepit.model.KeepEvent.AddParticipants
-import com.keepit.model.{ KeepEventAuthor, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{ KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 import org.joda.time.DateTime
 
@@ -58,7 +57,7 @@ object KeepActivityGen {
       val body = DescriptionElements(keep.note)
       BasicKeepEvent(
         id = None,
-        author = basicAuthor.map(KeepEventAuthor.fromBasicAuthor).get,
+        author = basicAuthor.get,
         KeepEventKind.Initial,
         header = header,
         body = body,
@@ -75,7 +74,7 @@ object KeepActivityGen {
           val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
           Some(BasicKeepEvent(
             id = Some(Message.publicId(message.id)),
-            author = userOrNonUser.fold(userId => userOpt.map(KeepEventAuthor.fromBasicUser).get, nonUser => KeepEventAuthor.fromBasicNonUser(nonUser)),
+            author = userOrNonUser.fold(userId => userOpt.map(BasicAuthor.fromUser).get, nonUser => BasicAuthor.fromNonUser(nonUser)),
             KeepEventKind.Comment,
             header = DescriptionElements(msgAuthor, "commented on this page"),
             body = DescriptionElements(message.text),
@@ -89,7 +88,7 @@ object KeepActivityGen {
               val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
               Some(BasicKeepEvent(
                 id = None, // could use message.id, but system message ids don't need to be exposed to clients yet
-                author = basicAddedBy.map(KeepEventAuthor.fromBasicUser).get,
+                author = BasicAuthor.fromUser(basicAddedBy.get),
                 KeepEventKind.AddParticipants,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),

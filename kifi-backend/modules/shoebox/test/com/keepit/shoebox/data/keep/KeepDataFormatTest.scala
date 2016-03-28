@@ -13,7 +13,7 @@ import com.keepit.model.LibraryFactoryHelper.LibraryPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import com.keepit.social.{ BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.SpecificationLike
 import play.api.libs.json.{ JsNull, Json }
@@ -39,6 +39,9 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             (keep, user, lib)
           }
           val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get)
+          // TODO(ryan): when the activity log is released, uncomment this line and use it instead of `KeepActivity.empty`
+          // val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
+          val activity = KeepActivity.empty
           val actual = NewKeepInfo.writes.writes(view.keep)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),
@@ -49,9 +52,15 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             "author" -> BasicAuthor.fromUser(BasicUser.fromUser(user)),
             "keptAt" -> DateTimeJsonFormat.writes(keep.keptAt),
             // "source" -> JsNull,
-            "users" -> Seq(BasicUser.fromUser(user)),
-            "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None)),
-            "activity" -> KeepActivity.empty
+            "recipients" -> Json.obj(
+              "users" -> Seq(BasicUser.fromUser(user)),
+              "emails" -> Seq.empty[BasicNonUser],
+              "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None))
+            ),
+            "activity" -> activity,
+            "viewer" -> Json.obj(
+              "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
+            )
           )
           TestHelper.deepCompare(actual, expected) must beNone
         }

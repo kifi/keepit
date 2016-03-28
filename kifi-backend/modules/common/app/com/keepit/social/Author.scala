@@ -50,6 +50,7 @@ object AuthorKind {
   case object Kifi extends AuthorKind("kifi")
   case object Slack extends AuthorKind("slack")
   case object Twitter extends AuthorKind("twitter")
+  case object Email extends AuthorKind("email")
 }
 
 sealed abstract class BasicAuthor(val kind: AuthorKind) {
@@ -69,6 +70,7 @@ object BasicAuthor {
   case class KifiUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Kifi)
   case class SlackUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Slack)
   case class TwitterUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Twitter)
+  case class EmailUser(id: String, name: String, picture: String) extends BasicAuthor(AuthorKind.Email)
 
   def apply(attr: SourceAttribution, basicUserOpt: Option[BasicUser])(implicit imageConfig: S3ImageConfig): BasicAuthor = {
     basicUserOpt.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.fromSource(attr))
@@ -94,16 +96,26 @@ object BasicAuthor {
       url = tweet.permalink
     )
   }
+  def fromNonUser(nonUser: BasicNonUser): BasicAuthor = nonUser.kind match {
+    case NonUserKinds.email =>
+      EmailUser(
+        nonUser.id,
+        nonUser.firstName.getOrElse(nonUser.id),
+        BasicUser.defaultImageForEmail(nonUser.id)
+      )
+  }
 
   private val kifiFormat = Json.format[KifiUser]
   private val slackFormat = Json.format[SlackUser]
   private val twitterFormat = Json.format[TwitterUser]
+  private val emailFormat = Json.format[EmailUser]
   implicit val format: Format[BasicAuthor] = Format(
     Reads[BasicAuthor] { js: JsValue =>
       (js \ "kind").as[String] match {
         case AuthorKind.Kifi.value => kifiFormat.reads(js)
         case AuthorKind.Slack.value => slackFormat.reads(js)
         case AuthorKind.Twitter.value => twitterFormat.reads(js)
+        case AuthorKind.Email.value => emailFormat.reads(js)
       }
     },
     Writes[BasicAuthor] { author =>
@@ -111,6 +123,7 @@ object BasicAuthor {
         case ba: KifiUser => kifiFormat.writes(ba)
         case ba: SlackUser => slackFormat.writes(ba)
         case ba: TwitterUser => twitterFormat.writes(ba)
+        case ba: EmailUser => emailFormat.writes(ba)
       }) ++ Json.obj("kind" -> author.kind.value)
     }
   )
