@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.macros.Location
 import com.keepit.model.{ BasicLibrary, Organization, LibraryColor, Library, User, BasicOrganization, OrganizationRole }
 import com.keepit.slack.models.{ SlackUsername, SlackEmoji }
-import com.keepit.social.BasicAuthor.{ TwitterUser, SlackUser, KifiUser }
+import com.keepit.social.BasicAuthor.{EmailUser, TwitterUser, SlackUser, KifiUser}
 import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
 import org.joda.time.{ Duration, DateTime, Period }
 import org.ocpsoft.prettytime.PrettyTime
@@ -181,6 +181,7 @@ object DescriptionElements {
     case KifiUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
     case SlackUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
     case TwitterUser(id, name, picture, url) => AuthorElement(id, name, picture, Some(url))
+    case EmailUser(id, name, picture) => AuthorElement(id, name, picture, None)
   }
   implicit def fromBasicLibrary(bl: BasicLibrary): LibraryElement = LibraryElement(bl.id, bl.name, bl.color, Path(bl.path))
 

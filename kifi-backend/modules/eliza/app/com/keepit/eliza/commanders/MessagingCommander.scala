@@ -464,7 +464,7 @@ class MessagingCommander @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
-          shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
+          if (updateShoebox) shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
 
           Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
 

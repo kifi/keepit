@@ -6,13 +6,10 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
-import com.keepit.model.KeepEvent.AddParticipants
-import com.keepit.model.{ KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
-import com.keepit.social.{ BasicUser, BasicAuthor }
+import com.keepit.model.KeepEventSourceKind
 import com.keepit.model.KeepEvent.{ AddLibraries, AddParticipants }
 import com.keepit.model.{ BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
-import com.keepit.social.{ ImageUrls, BasicUser, BasicAuthor }
-import org.joda.time.DateTime
+import com.keepit.social.{ BasicUser, BasicAuthor }
 
 object KeepActivityGen {
   def generateKeepActivity(

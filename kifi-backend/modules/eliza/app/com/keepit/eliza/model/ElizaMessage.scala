@@ -129,7 +129,7 @@ object SystemMessageData {
   def publish(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): JsArray = data match {
     case AddParticipants(addedById, addedUserIds, addedNonUsers) => Json.arr(AddParticipants.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
     case StartWithEmails(addedById, addedUserIds, addedNonUsers) => Json.arr(StartWithEmails.kind, basicUserById.get(addedById), addedUserIds.flatMap(basicUserById.get(_).map(BasicUserLikeEntity(_))) ++ addedNonUsers.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup))))
-    case _ => Json.arr() // todo(cam): add serialization + consumption for AddLibrary
+    case _ => Json.arr()
   }
 
   case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(AddParticipants.kind)
