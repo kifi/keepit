@@ -1,5 +1,6 @@
 package com.keepit.integrity
 
+import com.google.inject.Injector
 import com.keepit.common.time.FakeClock
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
@@ -8,7 +9,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
@@ -18,6 +19,12 @@ import scala.util.Random
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   val modules = Seq(FakeActorSystemModule())
+
+  private def migrateUriPlease(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI])(implicit injector: Injector): Unit = {
+    db.readWrite { implicit session =>
+      inject[ChangedURIRepo].save(ChangedURI(oldUriId = oldUriId, newUriId = newUriId))
+    }
+  }
 
   "uri integrity plugin" should {
     "work" in {
@@ -59,7 +66,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         }
 
         // merge
-        plugin.handleChangedUri(URIMigration(uris(0).id.get, uris(1).id.get))
+        migrateUriPlease(uris(0).id.get, uris(1).id.get)
         seqAssigner.assignSequenceNumbers()
         plugin.batchURIMigration()
 
@@ -155,9 +162,9 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 1
         }
 
-        plugin.handleChangedUri(URIMigration(uris(0).id.get, betterUris(0).id.get))
-        plugin.handleChangedUri(URIMigration(uris(1).id.get, betterUris(1).id.get))
-        plugin.handleChangedUri(URIMigration(uris(2).id.get, betterUris(2).id.get))
+        migrateUriPlease(uris(0).id.get, betterUris(0).id.get)
+        migrateUriPlease(uris(1).id.get, betterUris(1).id.get)
+        migrateUriPlease(uris(2).id.get, betterUris(2).id.get)
         seqAssigner.assignSequenceNumbers()
         plugin.batchURIMigration()
 
@@ -204,7 +211,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         val plugin = inject[UriIntegrityPlugin]
         plugin.onStart()
         for ((origUri, dupUri) <- origUris zip dupUris) {
-          plugin.handleChangedUri(URIMigration(dupUri.id.get, origUri.id.get))
+          migrateUriPlease(dupUri.id.get, origUri.id.get)
         }
         inject[ChangedURISeqAssigner].assignSequenceNumbers()
 

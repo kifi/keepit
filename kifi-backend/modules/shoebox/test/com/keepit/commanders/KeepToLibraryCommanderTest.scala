@@ -2,8 +2,9 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
+import com.keepit.integrity.{ UriIntegrityPlugin }
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
@@ -17,6 +18,12 @@ import scala.util.Random
 
 class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
+
+  private def migrateUriPlease(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI])(implicit injector: Injector): Unit = {
+    db.readWrite { implicit session =>
+      inject[ChangedURIRepo].save(ChangedURI(oldUriId = oldUriId, newUriId = newUriId))
+    }
+  }
 
   def modules = Seq()
 
@@ -156,7 +163,7 @@ class KeepToLibraryCommanderTest extends TestKitSupport with SpecificationLike w
           val plugin = inject[UriIntegrityPlugin]
           plugin.onStart()
           for ((origUri, dupUri) <- origUris zip dupUris) {
-            plugin.handleChangedUri(URIMigration(dupUri.id.get, origUri.id.get))
+            migrateUriPlease(dupUri.id.get, origUri.id.get)
           }
           inject[ChangedURISeqAssigner].assignSequenceNumbers()
 

@@ -21,9 +21,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-trait UriChangeMessage
-
-case class URIMigration(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) extends UriChangeMessage
 case class BatchURIMigration(batchSize: Int)
 case class FixDuplicateKeeps()
 
@@ -197,7 +194,6 @@ class UriIntegrityActor @Inject() (
 
   def receive = {
     case BatchURIMigration(batchSize) => Future.successful(batchURIMigration(batchSize)) pipeTo sender
-    case URIMigration(oldUri, newUri) => db.readWrite { implicit s => changedUriRepo.save(ChangedURI(oldUriId = oldUri, newUriId = newUri)) } // process later
     case FixDuplicateKeeps() => fixDuplicateKeeps()
     case m => throw new UnsupportedActorMessage(m)
   }
@@ -205,7 +201,6 @@ class UriIntegrityActor @Inject() (
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends SchedulerPlugin {
-  def handleChangedUri(change: UriChangeMessage): Unit
   def batchURIMigration(batchSize: Int = -1): Future[Int]
   def setFixDuplicateKeepsSeq(seq: Long): Unit
   def clearRedirects(toUriId: Id[NormalizedURI]): Unit
@@ -222,10 +217,6 @@ class UriIntegrityPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
-  }
-
-  def handleChangedUri(change: UriChangeMessage) = {
-    actor.ref ! change
   }
 
   def batchURIMigration(batchSize: Int) = actor.ref.ask(BatchURIMigration(batchSize))(1 minute).mapTo[Int]
