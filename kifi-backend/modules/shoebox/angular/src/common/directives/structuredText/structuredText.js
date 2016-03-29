@@ -3,14 +3,14 @@
 angular.module('kifi')
 
 .directive('kfStructuredText', [
-  'RecursionHelper',
-  function (RecursionHelper) {
+  'extensionLiaison', 'RecursionHelper',
+  function (extensionLiaison, RecursionHelper) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/structuredText/structuredText.tpl.html',
       scope: {
-        getSegments: '&segments'
+        segments: '='
       },
       compile: function (element) {
         function link($scope) {
@@ -25,6 +25,12 @@ angular.module('kifi')
           $scope.isSegmentHover = function (segment) {
             return !!segment.hover && segment.hover.length > 0;
           };
+
+          $scope.openLookHere = function(event, segment) {
+            event.preventDefault();
+            extensionLiaison.openDeepLink(segment.url, segment.locator);
+          };
+
         }
 
         return RecursionHelper.compile(element, link);

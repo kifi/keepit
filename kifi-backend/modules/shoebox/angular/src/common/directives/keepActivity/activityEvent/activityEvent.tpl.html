@@ -1,0 +1,53 @@
+<div class="kf-keep-activity-event-container">
+  <a ng-href="{{::activityEvent.author.url|pathFromUrl}}"
+     ng-style="{ 'background-image' : 'url(' + (activityEvent.author.picture) + ')' }"
+     class="kf-keep-activity-event-img"></a>
+
+  <div class="kf-keep-activity-event-content">
+    <div class="kf-keep-activity-event-header-container">
+      <div class="kf-keep-activity-event-header">
+        <span kf-structured-text segments="activity">
+        </span>
+        <span class="kf-keep-activity-event-time" ng-if="::activityEvent.timestamp || activityEvent.source">·</span>
+        <a class="kf-keep-activity-event-page-link kf-link" ng-if="::showKeepPageLink && activityEvent.timestamp" ng-href="{{::keep.path}}">
+          <time class="kf-keep-activity-event-time"
+                ng-attr-datetime="{{::activityEvent.timestamp}}" am-time-ago="::activityEvent.timestamp"
+                title="{{::activityEvent.timestamp|localTime}}" ng-href="{{::keep.path}}"></time>
+        </a>
+        <time class="kf-keep-activity-event-time"
+              ng-attr-datetime="{{::activityEvent.timestamp}}" am-time-ago="::activityEvent.timestamp"
+              title="{{::activityEvent.timestamp|localTime}}" ng-if="::activityEvent.timestamp && !showKeepPageLink"></time>
+        <!--Add a space between the time and source-->
+        <span></span>
+        <span class="kf-keep-activity-event-time" ng-if="::activityEvent.source.kind" ng-bind-template=" via {{::activityEvent.source.kind}}"></span>
+      </div>
+      <span class="kf-keep-activity-event-actions" kf-click-menu ng-if="eventActionItems.length > 0">
+        <menu class="kf-dropdown-menu kf-keep-activity-event-actions-menu">
+          <button class="kf-dropdown-menu-item kf-keep-activity-event-actions-item"
+            ng-click="item.action($event, keep.pubId, activityEvent.id)"
+            ng-repeat="item in eventActionItems"
+            ng-bind="item.title">
+          </button>
+        </menu>
+        <button class="kf-keep-activity-event-actions-button kf-button kf-button-image">
+          <svg kf-symbol-sprite class="kf-keep-activity-event-actions-icon" icon="dropdown-arrow"></svg>
+        </button>
+      </span>
+    </div>
+    <div kf-structured-text ng-if="body.length && activityEvent.kind !== 'initial'" segments="body" class="kf-keep-activity-event-commenter-text">
+    </div>
+    <div class="kf-keep-card-note-container" ng-if="activityEvent.kind === 'initial'">
+      <div class="kf-keep-card-note" ng-show="::keep.displayNote"><!--
+          --><span ng-if="!keep.noteAttribution" ng-bind-html="::keep.displayNote|noteHtml"></span><!--
+          --><span ng-if="keep.noteAttribution" ng-bind-html="::keep.displayNote"></span>
+          <span ng-if="keep.noteAttribution" class="kf-keep-card-note-via" ng-bind-template="(via {{keep.noteAttribution}})"></span>
+      </div>
+      <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
+              ng-if="editKeepNote && !keep.displayNote && keep.author.id === me.id">Add a note
+        (type # to add a tag)
+      </button>
+    </div>
+
+  </div>
+
+</div>

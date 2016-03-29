@@ -1,0 +1,80 @@
+.kf-keep-activity-container
+  display: flex
+  width: 100%
+  height: auto
+  flex-flow: row wrap
+  justify-content: space-around
+
+  > * + *
+    margin: 5px 0 0
+
+.kf-keep-activity
+  display: flex
+  flex-direction: column
+  width: 100%
+  padding: 5px 0px 0px 0px
+
+.kf-keep-activity-view-previous
+  font-size: 14px
+  font-weight: bold
+  color: accentGreen
+  font-smoothing: antialiased
+  align-self: center
+  margin-bottom: 10px
+
+  &:hover
+    text-decoration: underline
+    cursor: pointer
+
+.kf-keep-activity-input-container
+  flex-direction: row
+  flex-wrap: nowrap
+  display: flex
+
+[contenteditable]:empty:before
+  content: attr(placeholder)
+  display: block
+  font-smoothing: antialiased
+  color: #AAA
+
+.kf-keep-activity-input-user-img
+  align-self: flex-start
+  width: 30px
+  height: 30px
+  background: #3e495533
+  border-radius: 17px
+  flex-shrink: 0
+  margin-right: 10px
+  margin-top: 2px
+  border: none
+  outline: none
+
+.kf-keep-activity-input
+  height: auto
+  white-space: pre-wrap
+  word-wrap: break-word
+  background-color: #FBFBFB
+  max-height: 300px
+  flex-grow: 1
+  border: 1px solid #3e495533
+  border-radius: 1px
+  font-size: 14px
+  padding: 7px
+  padding-right: 10px
+  padding-left: 10px
+  color: #333333
+  box-sizing: border-box
+  cursor: text
+
+.kf-keep-activity-error
+  margin-right: 15px
+  margin-left: auto
+  font-size: 14px
+  text-align: left
+  color: errorRed
+
+.kf-keep-activity-event + .kf-keep-activity-event
+  margin-top: 15px
+
+.kf-keep-activity-event + .kf-keep-activity-input-container
+  margin-top: 15px
