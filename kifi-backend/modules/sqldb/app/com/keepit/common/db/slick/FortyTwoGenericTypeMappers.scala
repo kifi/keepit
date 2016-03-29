@@ -113,6 +113,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
     { o => Json.stringify(KeepConnections.format.writes(o)) },
     { j => Json.parse(j).as[KeepConnections] }
   )
+  implicit val keepEventMapper: BaseColumnType[KeepEvent] = jsonMapper[KeepEvent](KeepEvent.format, ClassTag(KeepEvent.getClass))
   implicit val dollarAmountMapper = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.cents)
 
   implicit val recipientMapper = MappedColumnType.base[Recipient, String](

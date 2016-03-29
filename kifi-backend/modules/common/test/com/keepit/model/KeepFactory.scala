@@ -23,7 +23,8 @@ object KeepFactory {
       note = None,
       connections = KeepConnections(Set.empty, Set(userId)),
       originalKeeperId = Some(userId),
-      lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
+      lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
+      initialEvent = None
     ), explicitLibs = Seq.empty, implicitLibs = Seq.empty)
   }
 

@@ -397,7 +397,7 @@ class KeepCommanderImpl @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, Some(userId), Some(library), source)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, Some(userId), Some(library), None, source)
 
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
@@ -815,7 +815,8 @@ class KeepCommanderImpl @Inject() (
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
       connections = KeepConnections(Set(toLibrary.id.get), Set(userId)),
       title = k.title,
-      note = k.note
+      note = k.note,
+      initialEvent = Some(KeepEvent.InitialKeep(addedBy = Some(userId), addedUsers = Set.empty, addedNonUsers = Set.empty, addedLibraries = Set(toLibrary.id.get)))
     )
     currentKeeps match {
       case existingKeep +: _ =>
