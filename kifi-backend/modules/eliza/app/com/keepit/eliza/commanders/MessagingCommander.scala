@@ -396,7 +396,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -425,6 +425,31 @@ class MessagingCommander @Inject() (
 
         val actuallyNewUsers = (newUserParticipants ++ newOrgParticipants).filterNot(oldThread.containsUser)
         val actuallyNewNonUsers = newNonUserParticipants.filterNot(oldThread.containsNonUser)
+        val actuallyNewLibraries = {
+          if (newLibs.isEmpty) Set.empty[Id[Library]]
+          else {
+            val existingLibs = messageRepo.getAllByKeep(keepId).foldLeft(Set.empty[Id[Library]]) {
+              case (allLibs, message) =>
+                message.auxData match {
+                  case Some(SystemMessageData.AddLibraries(_, libraries)) => allLibs ++ libraries
+                  case _ => allLibs
+                }
+            }
+            newLibs.filterNot(existingLibs.contains).toSet
+          }
+        }
+
+        if (actuallyNewLibraries.nonEmpty) {
+          messageRepo.save(ElizaMessage(
+            keepId = oldThread.keepId,
+            from = MessageSender.System,
+            messageText = "",
+            source = None, // todo(cam): add source
+            auxData = Some(AddLibraries(adderUserId, actuallyNewLibraries)),
+            sentOnUrl = None,
+            sentOnUriId = None
+          ))
+        }
 
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
