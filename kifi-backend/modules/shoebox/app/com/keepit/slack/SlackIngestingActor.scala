@@ -163,8 +163,10 @@ class SlackIngestingActor @Inject() (
     val shouldAddReactions = settings.exists(_.settingFor(StaticFeature.SlackIngestionReaction).contains(StaticFeatureSetting.ENABLED))
     FutureHelpers.foldLeftUntil[Unit, Option[SlackTimestamp]](Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
-        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, lastMessageTimestamp).flatMap { messages =>
-          airbrake.verify(messages.forall(_.channel.id == integration.slackChannelId), s"Ingested a message from the wrong channel (id ${integration.id.get})")
+        getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackTeamId, integration.slackChannelId, channel.slackChannelName, lastMessageTimestamp).flatMap { allMessages =>
+          val (messages, invalidMessages) = allMessages.partition(_.channel.id == integration.slackChannelId)
+          airbrake.verify(invalidMessages.isEmpty, s"Fetched messages from the wrong channel (integration ${integration.id.get}): $invalidMessages")
+
           val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, settings, messages)
           val futureReactions = if (shouldAddReactions) {
             FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
@@ -200,6 +202,7 @@ class SlackIngestingActor @Inject() (
         val interned = keepInterner.internRawBookmarksWithStatus(rawBookmarks, kifiUserOpt, Some(library), KeepSource.slack)(HeimdalContext.empty)
         (rawBookmarks.toSet -- interned.failures).flatMap(_.sourceAttribution.collect { case slack: RawSlackAttribution => slack.message })
     }.toSet
+    airbrake.verify(ingestedMessages.forall(_.channel.id == integration.slackChannelId), s"Ingested a message from the wrong channel (integration ${integration.id.get}): ${ingestedMessages.filter(_.channel.id != integration.slackChannelId)}")
     // Record a bit of information based on the messages we ingested: the channel, and any slack members
     val now = clock.now
     db.readWrite { implicit s =>

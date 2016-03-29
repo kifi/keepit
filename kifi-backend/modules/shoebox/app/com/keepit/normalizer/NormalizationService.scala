@@ -6,7 +6,6 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
 import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.core._
@@ -26,7 +25,7 @@ class NormalizationServiceImpl @Inject() (
     db: Database,
     failedContentCheckRepo: FailedContentCheckRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    uriIntegrityPlugin: UriIntegrityPlugin,
+    changedUriRepo: ChangedURIRepo,
     priorKnowledge: PriorNormalizationKnowledge,
     implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
@@ -56,23 +55,13 @@ class NormalizationServiceImpl @Inject() (
   private def processUpdate(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
     val now = currentDateTime
     val recentFailedChecks = db.readOnlyReplica { implicit s => failedContentCheckRepo.getRecentCountByURL(currentReference.url, now.minusMinutes(5)) }
-    val somethingBadIsHappening = {
-      // Léo: Please improve/fix this properly
-      currentReference.url.length >= URLFactory.MAX_URL_SIZE || candidates.exists(_.url.length >= URLFactory.MAX_URL_SIZE)
-    }
-    if (recentFailedChecks > 10 || somethingBadIsHappening) {
+
+    if (recentFailedChecks > 10) {
       log.warn(s"[NormalizationService] Stopping normalization for ${currentReference.uriId}. ${currentReference.url}. Candidates: ${candidates.map(_.url).mkString("  ")}")
       Future.successful(None)
     } else {
       log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
-      val contentChecks = {
-        URI.parse(currentReference.url) match {
-          // for debugging bad reference urls -- this is the only place that invokes getContentChecks
-          case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
-          case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
-        }
-        priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
-      }
+      val contentChecks = priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
       val findStrongerCandidate = FindStrongerCandidate(currentReference, Action(currentReference, contentChecks))
 
       for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
@@ -154,6 +143,7 @@ class NormalizationServiceImpl @Inject() (
           latestCurrentUri.normalization == currentReference.persistedNormalization
       if (isWriteSafe) {
         val betterReference = internCandidate(successfulCandidate)
+        log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         val shouldMigrate = currentReference.uriId != betterReference.uriId
         if (shouldMigrate) {
           val correctNormalization = currentReference.normalization orElse {
@@ -162,20 +152,14 @@ class NormalizationServiceImpl @Inject() (
           if (currentReference.persistedNormalization != correctNormalization) {
             saveAndLog(latestCurrentUri.withNormalization(correctNormalization.get))
           }
+          changedUriRepo.save(ChangedURI(oldUriId = currentReference.uriId, newUriId = betterReference.uriId))
+          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
         }
-        log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
-        Some((betterReference, shouldMigrate))
+        Some(betterReference)
       } else {
         log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
         None
       }
-    } map {
-      case (betterReference, shouldMigrate) =>
-        if (shouldMigrate) {
-          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
-        }
-        betterReference
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
