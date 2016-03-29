@@ -37,9 +37,8 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   // PSA: please just use this method going forward, it has the cleanest API
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
+  def getByKeepBefore(keepId: Id[Keep], fromOpt: Option[DateTime], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
-
-  def getRecentByKeeps(keepIds: Set[Id[Keep]], beforeOpt: Option[DateTime], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]]
 
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
 }
@@ -186,6 +185,23 @@ class MessageRepoImpl @Inject() (
       sortedThreads.take(limit).list
     }
   }
+  def getByKeepBefore(keepId: Id[Keep], fromOpt: Option[DateTime], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    if (limit <= 0) Seq.empty
+    else {
+      val threadMessages = activeRows.filter(_.keepId === keepId)
+      val filteredMessages = fromOpt match {
+        case None => threadMessages
+        case Some(from) if dir == SortDirection.DESCENDING => threadMessages.filter(_.createdAt < from)
+        case Some(from) if dir == SortDirection.ASCENDING => threadMessages.filter(_.createdAt > from)
+      }
+      val sortedMessages = dir match {
+        case SortDirection.DESCENDING => filteredMessages.sortBy(r => (r.createdAt desc, r.id desc))
+        case SortDirection.ASCENDING => filteredMessages.sortBy(r => (r.createdAt asc, r.id asc))
+      }
+      sortedMessages.take(limit).list
+    }
+  }
+
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage] = {
     activeRows.filter(_.keepId === keepId).list
   }
@@ -201,30 +217,32 @@ class MessageRepoImpl @Inject() (
    * The happy part is that it's actually quite efficient compared to `keepIds.size` independent queries
    * Use it if you desire efficiency at the cost of happiness
    */
-  def getRecentByKeeps(keepIds: Set[Id[Keep]], beforeOpt: Option[DateTime], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    if (keepIds.isEmpty) Map.empty
-    else {
-      val keepIdSetStr = keepIds.mkString("(", ",", ")")
-      val beforeStr = beforeOpt.map(before => s"created_at < '$before'").getOrElse("true")
-      StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
-      val updateRankStatement = db match {
-        case _: com.keepit.common.db.slick.H2 => "@idx := CASEWHEN(@curKeep = keep_id, @idx + 1, 1) AS rank"
-        case _: com.keepit.common.db.slick.MySQL => "@idx := IF(@curKeep = keep_id, @idx + 1, 1) AS rank"
-        case _ => throw new RuntimeException("unexpected db type, not one of {H2, MySQL}")
-      }
-      StaticQuery.queryNA[(Id[Keep], Id[ElizaMessage])] {
-        s"""
-        SELECT keep_id, id FROM (
-          SELECT keep_id, id,
-              $updateRankStatement,
-              @curKeep := keep_id AS dummy
-          FROM (SELECT * FROM message WHERE keep_id IN $keepIdSetStr AND $beforeStr AND state = 'active' ORDER BY keep_id, created_at DESC, id DESC) x
-        ) sub WHERE sub.rank <= $limitPerKeep;
-        """
-      }.list.groupBy(_._1).mapValues(_.map(_._2))
-    }
-  }
+  // MySQLSyntaxErrorException in prod: "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'SET @curKeep = 0'"
+  // There are no syntax errors when running the queries manually, not sure what the issue is but should be resolved before using in prod.
+  //  def getRecentByKeeps(keepIds: Set[Id[Keep]], beforeOpt: Option[DateTime], limitPerKeep: Int)(implicit session: RSession): Map[Id[Keep], Seq[Id[ElizaMessage]]] = {
+  //    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+  //    if (keepIds.isEmpty) Map.empty
+  //    else {
+  //      val keepIdSetStr = keepIds.mkString("(", ",", ")")
+  //      val beforeStr = beforeOpt.map(before => s"created_at < '$before'").getOrElse("true")
+  //      StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
+  //      val updateRankStatement = db match {
+  //        case _: com.keepit.common.db.slick.H2 => "@idx := CASEWHEN(@curKeep = keep_id, @idx + 1, 1) AS rank"
+  //        case _: com.keepit.common.db.slick.MySQL => "@idx := IF(@curKeep = keep_id, @idx + 1, 1) AS rank"
+  //        case _ => throw new RuntimeException("unexpected db type, not one of {H2, MySQL}")
+  //      }
+  //      StaticQuery.queryNA[(Id[Keep], Id[ElizaMessage])] {
+  //        s"""
+  //        SELECT keep_id, id FROM (
+  //          SELECT keep_id, id,
+  //              $updateRankStatement,
+  //              @curKeep := keep_id AS dummy
+  //          FROM (SELECT * FROM message WHERE keep_id IN $keepIdSetStr AND $beforeStr AND state = 'active' ORDER BY keep_id, created_at DESC, id DESC) x
+  //        ) sub WHERE sub.rank <= $limitPerKeep;
+  //        """
+  //      }.list.groupBy(_._1).mapValues(_.map(_._2))
+  //    }
+  //  }
 
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit = save(get(messageId).sanitizeForDelete)
