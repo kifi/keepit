@@ -86,7 +86,10 @@ case class BasicKeepEvent(
   header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
   body: DescriptionElements, // message and keep.note content
   timestamp: DateTime,
-  source: Option[KeepEventSource])
+  source: Option[KeepEventSource]) {
+
+  def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
+}
 object BasicKeepEvent {
   implicit val writes: Writes[BasicKeepEvent] = (
     (__ \ 'id).writeNullable[PublicId[Message]] and
@@ -99,11 +102,9 @@ object BasicKeepEvent {
   )(unlift(BasicKeepEvent.unapply))
 }
 
-case class KeepActivity(events: Seq[BasicKeepEvent], numComments: Int)
+case class KeepActivity(latestEvent: BasicKeepEvent, events: Seq[BasicKeepEvent], numComments: Int)
 object KeepActivity {
-  val empty = KeepActivity(Seq.empty, numComments = 0)
-
   implicit val writes = new Writes[KeepActivity] {
-    def writes(o: KeepActivity) = Json.obj("events" -> o.events, "numComments" -> o.numComments)
+    def writes(o: KeepActivity) = Json.obj("latestEvent" -> o.latestEvent, "events" -> o.events, "numComments" -> o.numComments)
   }
 }

@@ -192,7 +192,7 @@ class KeepInfoAssemblerImpl @Inject() (
             keptAt = keep.keptAt,
             source = sourceByKeep.get(keepId).map(_._1),
             recipients = recipients,
-            activity = activityByKeep.getOrElse(keepId, KeepActivity.empty),
+            activity = activityByKeep.get(keepId),
             viewer = viewerInfo
           )
 
