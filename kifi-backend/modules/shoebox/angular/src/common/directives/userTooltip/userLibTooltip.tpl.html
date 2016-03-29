@@ -1,3 +1,57 @@
-<div class="kf-ult" ng-if="tipping" ng-class="{ 'kf-ult-below': below }">
-  <div class="kf-ult-card" kf-small-library-card library="library" action="clickedLibraryTooltip" origin="libraryTooltip"></div>
+<div class="kf-ult"
+     ng-if="tipping"
+     ng-class="{
+      'kf-ult-below': below,
+      'kf-ult-show-options': shouldShowLibraryOptions()
+     }"
+     ng-click="openLibrary($event)">
+  <div class="user-lib-tooltip"
+    ng-style="{'background': library.color}">
+    <div class="user-lib-tooltip-top"
+      ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}">
+      <div class="user-lib-tooltip-title">
+        <svg kf-symbol-sprite
+              ng-if="library|libPrivacyIcon"
+              icon="{{::library|libPrivacyIcon}}"></svg>
+        <span ng-bind="library.name"></span>
+      </div>
+      <div class="user-lib-tooltip-authors">
+        <div class="user-lib-tooltip-author-org"
+              ng-if="library.org">
+          <img ng-src="{{library.org|pic:100}}"></img>
+          <span ng-bind="library.org.name"></span>
+        </div>
+        <div class="user-lib-tooltip-author">
+          <img ng-src="{{library.owner|pic:100}}"></img>
+          <span ng-bind="library.owner.firstName"></span>
+        </div>
+        <div class="user-lib-tooltip-author"
+              ng-repeat="author in library.collaborators|limitTo: (library.org ? 1 : 2)">
+          <img ng-src="{{author|pic:100}}"></img>
+          <span ng-bind="author.firstName"></span>
+        </div>
+        <div class="user-lib-tooltip-author-more"
+              ng-bind-template="+{{library.collaborators.length}}"
+              ng-if="library.collaborators.length > (library.org ? 1 : 2)"></div>
+      </div>
+    </div>
+    <div class="user-lib-tooltip-bottom" ng-if="shouldShowLibraryOptions()">
+      <div class="user-lib-tooltip-follow-button"
+           ng-class="{
+            'user-lib-tooltip-follow-button-follow': !library.membership.access,
+            'user-lib-tooltip-follow-button-following': library.membership.access
+           }"
+           ng-click="toggleLibraryFollow($event)"></div>
+      <svg kf-symbol-sprite
+           class="user-lib-tooltip-notification-bell"
+           icon="notification-on"
+           ng-if="library.membership.subscribed"
+           ng-click="toggleLibrarySubscription($event)"></svg>
+       <svg kf-symbol-sprite
+           class="user-lib-tooltip-notification-bell"
+           icon="notification-off"
+           ng-if="library.membership.subscribed === false"
+           ng-click="toggleLibrarySubscription($event)"></svg>
+    </div>
+  </div>
 </div>

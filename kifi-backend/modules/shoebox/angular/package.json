@@ -70,7 +70,7 @@
     "requirejs": "2.1.14",
     "run-sequence": "0.3.6",
     "shelljs": "^0.5.1",
-    "symbol-sprites": "github:kifi/symbol-sprites#bfcdf04",
+    "symbol-sprites": "github:kifi/symbol-sprites#cfe39e2",
     "through": "2.3.4",
     "vinyl-map": "1.0.1"
   }
