@@ -888,7 +888,7 @@ class KeepCommanderImpl @Inject() (
       val ktls = ktlRepo.getAllByKeepId(keepId)
       (keep, sourceAttr, ktus, ktls)
     }
-    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), maxEvents).map(_.get(keepId))
+    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), eventsBefore, maxEvents).map(_.get(keepId))
 
     val basicModelFut = shoeboxFut.map {
       case (keep, sourceAttr, ktus, ktls) =>
@@ -916,7 +916,7 @@ class KeepCommanderImpl @Inject() (
       (elizaActivityOpt) <- elizaFut
       (userById, libById, orgByLibId) <- basicModelFut
     } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, eventsBefore, maxEvents)
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, maxEvents)
     }
   }
 
