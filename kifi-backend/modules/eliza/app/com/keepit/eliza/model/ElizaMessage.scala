@@ -10,7 +10,7 @@ import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ KeepEvent, Keep, User, NormalizedURI }
+import com.keepit.model.{ BasicLibrary, Library, KeepEvent, Keep, User, NormalizedURI }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
@@ -86,19 +86,22 @@ object SystemMessageData {
       js match {
         case JsArray(Seq(JsString(AddParticipants.kind), _*)) => AddParticipants.internalFormat.reads(js)
         case JsArray(Seq(JsString(StartWithEmails.kind), _*)) => StartWithEmails.internalFormat.reads(js)
+        case js if (js \ "kind").as[String] == AddLibraries.kind => AddLibraries.internalFormat.reads(js)
         case _ => JsError("can't parse SystemMessageData")
       }
     }
     def writes(o: SystemMessageData): JsValue = {
       o match {
-        case a: AddParticipants => AddParticipants.internalFormat.writes(a)
+        case p: AddParticipants => AddParticipants.internalFormat.writes(p)
         case s: StartWithEmails => StartWithEmails.internalFormat.writes(s)
+        case l: AddLibraries => AddLibraries.internalFormat.writes(l)
       }
     }
   }
 
   def toKeepEvent(data: SystemMessageData): Option[KeepEvent] = data match {
     case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
+    case AddLibraries(addedBy, addedLibraries) => Some(KeepEvent.AddLibraries(addedBy, addedLibraries))
     case _ => None
   }
 
@@ -131,7 +134,7 @@ object SystemMessageData {
 
   case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(AddParticipants.kind)
   object AddParticipants {
-    val kind: String = "add_participants"
+    val kind = "add_participants"
     val internalFormat = new Format[AddParticipants] {
       def writes(o: AddParticipants): JsArray = Json.arr(kind, o.addedBy.id.toString, o.addedUsers.map(Json.toJson(_)) ++ o.addedNonUsers.map(Json.toJson(_)))
 
@@ -153,7 +156,7 @@ object SystemMessageData {
 
   case class StartWithEmails(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[NonUserParticipant]) extends SystemMessageData(StartWithEmails.kind)
   object StartWithEmails {
-    val kind: String = "start_with_emails"
+    val kind = "start_with_emails"
     val internalFormat = new Format[StartWithEmails] {
       def writes(o: StartWithEmails): JsArray = Json.arr(kind, o.addedBy.id.toString, o.addedUsers.map(Json.toJson(_)) ++ o.addedNonUsers.map(Json.toJson(_)))
 
@@ -171,6 +174,15 @@ object SystemMessageData {
         }
       }
     }
+  }
+
+  case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends SystemMessageData(AddLibraries.kind)
+  object AddLibraries {
+    val kind = "add_libraries"
+    val internalFormat: Format[AddLibraries] = Format(
+      Reads { js => Json.reads[AddLibraries].reads(js) },
+      Writes { o => Json.writes[AddLibraries].writes(o).as[JsObject] ++ Json.obj("kind" -> kind) }
+    )
   }
 }
 

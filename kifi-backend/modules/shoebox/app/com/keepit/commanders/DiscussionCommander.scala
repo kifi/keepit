@@ -106,7 +106,7 @@ class DiscussionCommanderImpl @Inject() (
       val keep = db.readWrite { implicit s =>
         keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUsers(newUsers), userAttribution = Some(userId))
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers)
+      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers, newLibraries = Set.empty)
       elizaEdit.onSuccess {
         case elizaUsers =>
           airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
@@ -132,7 +132,7 @@ class DiscussionCommanderImpl @Inject() (
       val keep = db.readWrite { implicit s =>
         keepCommander.unsafeModifyKeepConnections(keepId, diff, userAttribution = Some(userId))
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added) // TODO(ryan): needs to be modified once we can remove participants
+      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added, diff.libraries.added) // TODO(ryan): needs to be modified once we can remove participants
       elizaEdit.onSuccess {
         case elizaUsers =>
           airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
