@@ -242,20 +242,21 @@ k.snap = k.snap || (function () {
   function elementContainsSelector(container, selector) {
     selector = selector || '*';
     var cr = container.getBoundingClientRect();
-    var x1 = cr.left;
-    var x2 = cr.right;
-    var y1 = cr.top;
-    var y2 = cr.bottom;
+    var FUZZ = 10;
+    var x1 = cr.left - FUZZ;
+    var x2 = cr.right + FUZZ;
+    var y1 = cr.top - FUZZ;
+    var y2 = cr.bottom + FUZZ;
 
     var elements = Array.prototype.slice.call(document.querySelectorAll(selector));
     return elements.filter(function(e) {
       var er = e.getBoundingClientRect();
-      var x = er.left;
-      var y = er.top;
-      var w = er.width;
-      var h = er.height;
+      var ex1 = er.left;
+      var ey1 = er.top;
+      var ex2 = er.right;
+      var ey2 = er.bottom;
 
-      var isContained = (x >= (x1 - 10) && y >= (y1 - 10) && x + w <= (x2 + 10) && y + h <= (y2 + 10));
+      var isContained = (ex1 >= x1 && ey1 >= y1  && ex2 <= x2 && ey2 <= y2);
       return isContained;
     });
   }
