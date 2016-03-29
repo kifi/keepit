@@ -6,6 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.discussion.Message
+import com.keepit.eliza.model.SystemMessageData.AddLibraries
 import com.keepit.eliza.model._
 import com.keepit.model.{ DeepLocator, Keep, NotificationCategory, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -152,6 +153,13 @@ class MessageThreadNotificationBuilderImpl @Inject() (
       }
       val lastMsgById = precomputed.flatMap(_.lastMsgById).getOrElse {
         keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
+      }.map {
+        case (kid, msg) =>
+          val isUnsupportedSystemMessage = msg.exists(_.auxData.exists {
+            case _: AddLibraries => true
+            case _ => false
+          })
+          if (isUnsupportedSystemMessage) kid -> None else kid -> msg
       }
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
