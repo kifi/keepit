@@ -68,13 +68,14 @@ object KeepActivityGen {
     }
 
     val elizaEvents = elizaActivity.map(_.messages.flatMap { message =>
+      val messageId = Message.publicId(message.id)
       message.sentBy match {
         case Some(userOrNonUser) =>
           import DescriptionElements._
           val userOpt = userOrNonUser.left.toOption.flatMap(userById.get)
           val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
           Some(BasicKeepEvent(
-            id = Some(Message.publicId(message.id)),
+            id = Some(messageId),
             author = userOrNonUser.fold(userId => userOpt.map(BasicAuthor.fromUser).get, nonUser => BasicAuthor.fromNonUser(nonUser)),
             KeepEventKind.Comment,
             header = DescriptionElements(msgAuthor, "commented on this page"),
@@ -88,7 +89,7 @@ object KeepActivityGen {
               val basicAddedBy = userById.get(addedBy)
               val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
               Some(BasicKeepEvent(
-                id = None, // could use message.id, but system message ids don't need to be exposed to clients yet
+                id = Some(messageId),
                 author = BasicAuthor.fromUser(basicAddedBy.get),
                 KeepEventKind.AddParticipants,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
@@ -100,7 +101,7 @@ object KeepActivityGen {
               val basicAddedBy = userById.get(addedBy)
               val addedElement = unwordsPretty(addedLibraries.flatMap(libById.get).map(fromBasicLibrary).toSeq)
               Some(BasicKeepEvent(
-                id = None,
+                id = Some(messageId),
                 author = BasicAuthor.fromUser(basicAddedBy.get),
                 KeepEventKind.AddLibraries,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
