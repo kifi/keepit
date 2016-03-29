@@ -166,7 +166,7 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val activityWithStrictTimeout = TimeoutFuture(eliza.getCrossServiceKeepActivity(keepIds, eventsBefore = None, maxMessagesShown))(executionContext, 2.seconds).recover {
+      val activityWithStrictTimeout = TimeoutFuture(eliza.getCrossServiceKeepActivity(keepIds, maxMessagesShown))(executionContext, 2.seconds).recover {
         case ex =>
           ex match {
             case _: TimeoutException => log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
@@ -229,7 +229,7 @@ class KeepDecoratorImpl @Inject() (
               if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
                 KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
                   ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                  idToBasicUser, idToBasicLibrary, idToBasicOrg, maxMessagesShown)
+                  idToBasicUser, idToBasicLibrary, idToBasicOrg, eventsBefore = None, maxMessagesShown)
               } else KeepActivity.empty
             }
 

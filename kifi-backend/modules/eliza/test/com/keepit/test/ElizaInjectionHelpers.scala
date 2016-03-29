@@ -2,7 +2,7 @@ package com.keepit.test
 
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ MessageRepoImpl, UserThreadRepo, MessageRepo, MessageThreadRepo }
+import com.keepit.eliza.model.{ UserThreadRepo, MessageRepo, MessageThreadRepo }
 import com.google.inject.Injector
 
 trait ElizaInjectionHelpers { self: TestInjectorProvider =>
