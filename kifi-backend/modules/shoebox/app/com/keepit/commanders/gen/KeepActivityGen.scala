@@ -16,7 +16,7 @@ object KeepActivityGen {
     keep: Keep, sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])], elizaActivity: Option[CrossServiceKeepActivity],
     ktls: Seq[KeepToLibrary], ktus: Seq[KeepToUser],
     userById: Map[Id[User], BasicUser], libById: Map[Id[Library], BasicLibrary], orgByLibraryId: Map[Id[Library], BasicOrganization],
-    eventsBefore: Option[DateTime], maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
+    maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
     import com.keepit.common.util.DescriptionElements._
 
     lazy val initialKeepEvent = {
@@ -103,10 +103,7 @@ object KeepActivityGen {
       }
     }).getOrElse(Seq.empty)
 
-    val events = {
-      val trimmedElizaEvents = elizaEvents.filter(ev => eventsBefore.forall(_.getMillis > ev.timestamp.getMillis)).take(maxEvents) // todo(cam): do this on eliza
-      if (trimmedElizaEvents.size == maxEvents) trimmedElizaEvents else trimmedElizaEvents :+ initialKeepEvent
-    }
+    val events = if (elizaEvents.size >= maxEvents) elizaEvents.take(maxEvents) else elizaEvents :+ initialKeepEvent
 
     KeepActivity(
       events = events,

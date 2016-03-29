@@ -25,7 +25,7 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
@@ -124,23 +124,26 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
+  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
+    import com.keepit.common.core._
+    import com.keepit.common.util.Ord.dateTimeOrdering
+    import com.keepit.common.util.Ord.descending
     val countByKeepFut = db.readOnlyMasterAsync(implicit s => messageRepo.getAllMessageCounts(keepIds))
-    val recentsByKeepFut = db.readOnlyMasterAsync { implicit s =>
-      keepIds.map { keepId =>
-        keepId -> messageRepo.getByKeep(keepId, fromId = None, limit = maxEventsPerKeep)
-      }.toMap
+    val msgFut = db.readOnlyMasterAsync { implicit s =>
+      val msgsByKeepId = messageRepo.getRecentByKeeps(keepIds, eventsBefore, maxEventsPerKeep)
+      val msgsByMsgId = messageRepo.getAll(msgsByKeepId.values.flatten.toSeq)
+      (msgsByKeepId, msgsByMsgId)
     }
 
     for {
       countByKeep <- countByKeepFut
-      recentsByKeep <- recentsByKeepFut
+      (msgsByKeepId, msgsById) <- msgFut
     } yield {
-      recentsByKeep.map {
-        case (keepId, messages) =>
+      msgsByKeepId.map {
+        case (keepId, msgIds) =>
           keepId -> CrossServiceKeepActivity(
             numComments = countByKeep.getOrElse(keepId, 0),
-            messages = messages.map(ElizaMessage.toCrossServiceMessage)
+            messages = msgIds.map(id => ElizaMessage.toCrossServiceMessage(msgsById(id)))
           )
       }
     }

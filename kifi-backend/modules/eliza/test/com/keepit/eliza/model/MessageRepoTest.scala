@@ -38,9 +38,12 @@ class MessageRepoTest extends Specification with ElizaTestInjector {
           (1 to 10).foreach { _ =>
             val randomKeeps = Random.shuffle(keepIds).take(10)
             val numMsgs = rand(5, 15)
-            messageRepo.getRecentByKeeps(randomKeeps.toSet, numMsgs).foreach {
+            messageRepo.getRecentByKeeps(randomKeeps.toSet, beforeOpt = None, numMsgs).foreach {
               case (keepId, recentMsgIds) => recentMsgIds === messagesByKeep(keepId).take(numMsgs)
             }
+            val before = now
+            val recentMsgsBeforeX = messageRepo.getAll(messageRepo.getRecentByKeeps(randomKeeps.toSet, beforeOpt = Some(before), numMsgs).values.flatten.toSeq).values
+            recentMsgsBeforeX.forall(_.createdAt < before) === true
           }
           1 === 1
         }
