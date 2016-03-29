@@ -203,6 +203,16 @@ k.snap = k.snap || (function () {
         return styles.left - $(this).width() - 5;
       }
     });
+
+    var contained = elementContainsSelector($aSnapImg.get(0), '*').filter(isNotContainedByKifi);
+    if (contained.length) {
+      $aSnapImg.css({
+        left: function () {
+          return styles.left - (2 * $(this).width()) - 5;
+        }
+      });
+    }
+
     $aSnapImg.get(0).addEventListener('click', function (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -227,6 +237,34 @@ k.snap = k.snap || (function () {
     });
 
     return true;
+  }
+
+  function elementContainsSelector(container, selector) {
+    selector = selector || '*';
+    var cr = container.getBoundingClientRect();
+    var x1 = cr.left;
+    var x2 = cr.right;
+    var y1 = cr.top;
+    var y2 = cr.bottom;
+
+    var elements = Array.prototype.slice.call(document.querySelectorAll(selector));
+    return elements.filter(function(e) {
+      var er = e.getBoundingClientRect();
+      var x = er.left;
+      var y = er.top;
+      var w = er.width;
+      var h = er.height;
+
+      var isContained = (x >= (x1 - 10) && y >= (y1 - 10) && x + w <= (x2 + 10) && y + h <= (y2 + 10));
+      return isContained;
+    });
+  }
+
+  function isNotContainedByKifi(element) {
+    var kifis = Array.prototype.slice.call(document.querySelectorAll('.kifi-root'));
+    return kifis.filter(function (k) {
+      return k.contains(element);
+    }).length === 0;
   }
 
   function showSnapSel(r) {

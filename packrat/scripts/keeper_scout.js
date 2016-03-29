@@ -263,7 +263,7 @@ k.tile = k.tile || (function () {
       });
     } else if (toasterIsShowing) {
       k.toaster.lookHere(img, bRect, href, title, true);
-      api.port.emit('track_pane_view', {
+      api.port.emit('track_pane_click', {
         type: 'quotesOnHighlight',
         action: 'clickedQuotes',
         keeperState: 'compose_pane',
