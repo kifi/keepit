@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.URI
-import com.keepit.model.{ UrlPatternRulesCommander }
+import com.keepit.model.{ URLFactory, URL, UrlPatternRulesCommander }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.document.utils.Signature
@@ -17,16 +17,18 @@ class PriorNormalizationKnowledge @Inject() (
     implicit val articlePolicy: ArticleFetchPolicy) {
 
   def prenormalize(uriString: String): Try[String] = {
-    URI.parse(uriString).flatMap { parsedUri =>
-      Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
-        val uriWithPreferredSchemeOption = getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
+    if (uriString.length > URLFactory.MAX_URL_SIZE) Failure(new IllegalAccessException(s"Url is too long."))
+    else URI.parse(uriString).flatMap {
+      parsedUri =>
+        Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
+          val uriWithPreferredSchemeOption = getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
 
-        val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
-        result.toString()
-      }
-    }.recoverWith {
-      case cause: Throwable => Failure(PrenormalizationException(uriString, cause))
+          val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
+          result.toString()
+        }
     }
+  } recoverWith {
+    case cause: Throwable => Failure(PrenormalizationException(uriString, cause))
   }
 
   def getContentChecks(referenceUrl: String, referenceSignature: Option[Signature] = None): Seq[ContentCheck] = {
