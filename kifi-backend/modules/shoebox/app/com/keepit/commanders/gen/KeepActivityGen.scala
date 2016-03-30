@@ -72,13 +72,20 @@ object KeepActivityGen {
       message.sentBy match {
         case Some(userOrNonUser) =>
           import DescriptionElements._
+          userOrNonUser.left.foreach { uid =>
+            if (!userById.contains(uid)) airbrake.notify(s"[activityLog] no basic user stored for user $uid on keep ${keep.id.get}, message ${message.id}")
+          }
           val userOpt = userOrNonUser.left.toOption.flatMap(userById.get)
-          val msgAuthor: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
+          val msgAuthor = userOrNonUser.fold(
+            userId => userOpt.map(BasicAuthor.fromUser).getOrElse { BasicAuthor.Fake },
+            nonUser => BasicAuthor.fromNonUser(nonUser)
+          )
+          val authorElement: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
           Some(BasicKeepEvent(
             id = Some(messageId),
-            author = userOrNonUser.fold(userId => userOpt.map(BasicAuthor.fromUser).get, nonUser => BasicAuthor.fromNonUser(nonUser)),
+            author = msgAuthor,
             KeepEventKind.Comment,
-            header = DescriptionElements(msgAuthor, "commented on this page"),
+            header = DescriptionElements(authorElement, "commented on this page"),
             body = DescriptionElements(message.text),
             timestamp = message.sentAt,
             source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
@@ -86,11 +93,12 @@ object KeepActivityGen {
         case None =>
           message.auxData match {
             case Some(AddParticipants(addedBy, addedUsers, addedNonUsers)) =>
+              if (!userById.contains(addedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $addedBy on keep ${keep.id.get}, message ${message.id}")
               val basicAddedBy = userById.get(addedBy)
               val addedElement = unwordsPretty(addedUsers.flatMap(userById.get).map(fromBasicUser) ++ addedNonUsers.map(fromNonUser))
               Some(BasicKeepEvent(
                 id = Some(messageId),
-                author = BasicAuthor.fromUser(basicAddedBy.get),
+                author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
                 KeepEventKind.AddParticipants,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),
@@ -98,11 +106,16 @@ object KeepActivityGen {
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
             case Some(AddLibraries(addedBy, addedLibraries)) =>
+              if (!userById.contains(addedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $addedBy on keep ${keep.id.get}, message ${message.id}")
+
+              val basicAddedLibs = addedLibraries.flatMap(libById.get)
+              if (basicAddedLibs.isEmpty) airbrake.notify(s"[activityLog] no basic lib stored for libs ${addedLibraries.mkString(",")} on keep ${keep.id.get}, message ${message.id}")
+
               val basicAddedBy = userById.get(addedBy)
-              val addedElement = unwordsPretty(addedLibraries.flatMap(libById.get).map(fromBasicLibrary).toSeq)
+              val addedElement = unwordsPretty(basicAddedLibs.map(fromBasicLibrary).toSeq)
               Some(BasicKeepEvent(
                 id = Some(messageId),
-                author = BasicAuthor.fromUser(basicAddedBy.get),
+                author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
                 KeepEventKind.AddLibraries,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),

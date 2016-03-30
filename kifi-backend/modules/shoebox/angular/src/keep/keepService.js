@@ -49,6 +49,15 @@ angular.module('kifi')
         } else {
           return $q.reject('Cannot mark empty discussion as read.');
         }
+      },
+
+      getActivityForKeepId: function (keepPubId, beforeTime, maxEvents) {
+        return net.getActivityForKeepId(keepPubId, {
+          eventsBefore: beforeTime,
+          maxEvents: maxEvents || 10
+        }).then(function (result) {
+          return result.data;
+        });
       }
     };
 

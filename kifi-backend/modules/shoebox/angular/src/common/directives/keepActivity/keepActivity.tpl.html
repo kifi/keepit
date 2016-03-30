@@ -1,0 +1,25 @@
+<div class="kf-keep-activity-container">
+  <div class="kf-keep-activity" ng-if="visibleCount > 0 || canAddComments" ng-attr-kf-inview="{{ keep.discussion && keep.discussion.messages.length > 0 ? 'onInview' : undefined }}">
+    <span class="kf-keep-activity-view-previous" ng-if="showViewPreviousComments" ng-click="onViewPreviousComments()">View Previous Comments</span>
+    <div
+      class="kf-keep-activity-event"
+      ng-repeat="activity in activity.slice(-visibleCount)"
+      kf-activity-event="activity"
+      threadId="keep.pubId"
+      keep="keep"
+      delete-comment="deleteComment"
+      edit-keep-note="canEditKeep && editKeepNote"
+    ></div>
+    <div class="kf-keep-activity-input-container" ng-if="canAddComments" ng-click="clickedInputBox($event)">
+      <img ng-src="{{me|pic:100}}" class="kf-keep-activity-input-user-img"/>
+      <div
+        class="kf-keep-activity-input"
+        contenteditable="true"
+        placeholder="Write a comment…"
+        ng-keydown="keydown($event)"
+        ng-keyup="keyup($event)"
+      ></div>
+    </div>
+  </div>
+  <p class="kf-keep-activity-error" ng-if="error" ng-bind="error"></p>
+</div>

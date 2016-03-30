@@ -1,0 +1,44 @@
+<span><span ng-repeat="segment in segments">
+    <span ng-if="!segment.type"
+          kf-structured-segment="segment"></span><!--
+    --><div ng-if="segment.type === 'IMAGE'"
+            class="kf-keep-activity-event-block"
+            ng-class="{
+              'kf-keep-activity-event-v-space': !$last,
+              'kf-keep-activity-event-v-space-top': $index - 1 >= 0 && commentParts[$index - 1].type !== 'IMAGE'
+            }">
+      <img class="kf-keep-activity-event-embedded-img"
+           ng-src="{{segment.data.src}}"/>
+    </div><!--
+    --><span ng-if="segment.type === 'TEXT_PLAIN'"
+             ng-bind="segment.data.text"
+             class="kf-keep-activity-event-inline"></span><!--
+    --><div ng-if="segment.type === 'EMAIL'"
+            class="kf-keep-activity-event-inline">
+      <a ng-href="mail-to:{{segment.data.text}}"
+         ng-bind="segment.data.text"
+         class="kf-link-blue kf-keep-activity-event-inline"></a>
+    </div><!--
+    --><div ng-if="segment.type === 'LINK'"
+            class="kf-keep-activity-event-inline">
+      <a ng-href="{{segment.data.link}}"
+         kf-maybe-external-target
+         ng-bind="segment.data.text"
+         class="kf-link-blue kf-keep-activity-event-inline"></a>
+    </div><!--
+    --><span ng-if="segment.type === 'LOOK_HERE'">
+      <div class="kf-keep-activity-event-inline">
+        <a ng-href="#"
+           ng-click="openLookHere($event, segment)"
+           title="{{segment.data.title}}"
+           ng-bind="segment.data.text"
+           class="kf-link-blue kf-keep-activity-event-look-here-link kf-keep-activity-event-inline"/>
+      </div>
+      <div class="kf-keep-activity-event-look-here-container">
+        <div class="kf-keep-activity-event-look-here-left-divider"></div>
+        <div class="kf-keep-activity-event-look-here-inside">
+          <span kf-activity-event-segments="segment.data.parts"></span>
+        </div>
+      </div>
+    </span>
+  </span></span>

@@ -1,0 +1,157 @@
+.kf-keep-activity-event-embedded-data
+  display: flex
+  flex-direction: column
+
+.kf-keep-activity-event-container
+  width: 100%
+  height: auto
+  display: flex
+  flex-direction: row
+  font-smoothing: antialiased
+
+.kf-keep-activity-event-img
+  align-self: flex-start
+  width: 30px
+  height: 30px
+  background: #3E495533
+  border-radius: 17px
+  background-size: cover
+  flex-shrink: 0
+  margin-right: 10px
+
+.kf-keep-activity-event-content
+  display: flex
+  width: 1px
+  flex-grow: 1
+  flex-direction: column
+  justify-content: center
+  font-size: 14px
+
+.kf-keep-activity-event-look-here-container
+  margin-top: 5px
+  margin-bottom: 5px
+  background-color: #F9F6DE
+  display: flex
+  flex-direction: row
+  padding: 10px
+  color: #898989
+  font-style: italic
+
+.kf-keep-activity-event-look-here-inside
+  width: 1px
+  flex-grow: 1
+
+.kf-keep-activity-event-look-here-left-divider
+  background-color: #CDCDCD
+  width: 3px
+  height: auto
+  margin-right: 10px
+
+
+.kf-keep-activity-event-look-here-link
+  font-weight: bold
+  font-style: italic
+
+
+.kf-keep-activity-event-embedded-img
+  max-width: 100px
+  max-height: 100px
+
+.kf-keep-activity-event-body
+  word-wrap: break-word
+  color: #333333
+
+.kf-keep-activity-event-commenter-text
+  word-wrap: break-word
+  flex-grow: 1
+  color: #333333
+  margin-top: 2px
+
+.kf-keep-activity-event-inline
+  display: inline
+  white-space: pre-wrap
+
+.kf-keep-activity-event-block
+  display: block
+
+.kf-keep-activity-event-v-space
+  margin-bottom: 4px
+
+.kf-keep-activity-event-v-space-top
+  margin-top: 4px
+
+.kf-keep-activity-event-commenter-name
+  font-weight: normal
+  color: accentGreen
+  margin-right: 5px
+
+  &:hover
+    text-decoration: underline
+    cursor: pointer
+
+.kf-keep-activity-event-time
+  color: #ABABAB
+  font-size: 12px
+  -webkit-font-smoothing: antialiased
+
+.kf-keep-activity-event-page-link
+  display: inline
+
+  &.kf-link
+    &:hover
+      text-decoration: none
+      opacity: .7
+
+.kf-keep-activity-event-actions
+  position: relative
+
+  .kf-keep-activity-event-actions-menu
+    position: absolute
+    top: 15px
+    right: 5px
+    font-size: 14px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+  &:not(.kf-open)>.kf-keep-activity-event-actions-menu
+    dur = .08s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+.kf-keep-activity -event-actions-item
+  padding: 0 16px
+  color: #556179
+  white-space: nowrap
+  cursor: pointer
+
+  &:hover
+    background-color: #eee
+
+  &:active
+    background-color: #ccc
+
+.kf-keep-activity-event-actions-button
+  display: block
+  visibility: hidden
+  padding-left: 4px
+
+  .kf-keep-activity-event-actions-icon
+    width: 15px
+    height: 15px
+
+.kf-keep-activity-event-container:hover .kf-keep-activity-event-actions-button
+.kf-keep-activity-event-actions.kf-open .kf-keep-activity-event-actions-button
+  display: block
+  visibility: visible
+
+.kf-keep-activity-event-header
+  color: #808a92
+  width: 100px
+  flex-grow: 1
+
+.kf-keep-activity-event-header-container
+  display: flex
+  flex-direction: row

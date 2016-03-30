@@ -1,0 +1,65 @@
+<span ng-switch="segment.kind"><!--
+  --><a ng-switch-when="author"
+      class="kf-feed-tooltip-target kf-link kf-structured-text-user"
+      ng-href="{{segment.url}}"
+      ng-style="{'background': library.color}"
+      kf-maybe-external-target
+      ng-init="user={firstName: segment.text, image: segment.image}"
+      kf-user-tooltip="user">
+    <span ng-bind="segment.text"></span>
+  </a><!--
+  --><a ng-switch-when="user"
+      class="kf-feed-tooltip-target kf-link kf-structured-text-user"
+      ng-href="{{segment.url}}"
+      kf-maybe-external-target
+      ng-style="{'background': library.color}"
+      ng-init="user={firstName: segment.text, image: segment.image}"
+      kf-user-tooltip="user">
+    <span ng-bind="segment.text"></span>
+  </a><!--
+  --><span ng-switch-when="library"
+      class="kf-structured-text-library kf-feed-tooltip-target"
+      kf-user-tooltip
+      library="library"
+      ng-init="library = {id: segment.id}">
+    <a class="kf-link" ng-href="{{segment.url}}" ng-bind="segment.text"></a>
+  </span><!--
+  --><a ng-switch-when="organization"
+      class="kf-feed-tooltip-target kf-link kf-structured-text-organization"
+      ng-init="org={name: segment.text, avatarPath: segment.image}"
+      ng-href="{{segment.url}}"
+      kf-user-tooltip="org">
+    <span ng-bind="segment.text"></span>
+  </a><!--
+  --><span ng-switch-default
+        ng-if="segment.text"
+        class="kf-structured-text-text">
+    <a
+      class="kf-link kf-link-underline"
+      ng-if="isSegmentLink(segment)"
+      ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose': isSegmentHover(segment) }"
+      ng-href="{{ segment.url }}"
+      kf-maybe-external-target
+      ng-click="trackActivityClick(descriptionSegment.url)"
+    >
+      <span ng-bind="segment.text"></span>
+      <div ng-if="isSegmentHover(segment)" class="kf-tooltip-body">
+        <span kf-structured-text segments="segment.hover"></span>
+      </div>
+    </a><!--
+    --><div
+      class="kf-link kf-link-underline kf-link-black kf-structured-text-hover kf-tooltip-parent kf-tooltip-parent-noclose"
+      ng-if="isSegmentHover(segment) && !isSegmentLink(segment)"
+    >
+      <span ng-bind="segment.text"></span>
+      <div class="kf-tooltip-body">
+        <span kf-structured-text segments="segment.hover"></span>
+      </div>
+    </div><!--
+    --><span
+      ng-if="isSegmentText(segment)"
+      ng-bind="segment.text"
+    ></span>
+  </span><!--
+--></span>
+

@@ -3,31 +3,17 @@
 angular.module('kifi')
 
 .directive('kfStructuredText', [
-  'RecursionHelper',
-  function (RecursionHelper) {
+  'extensionLiaison', 'RecursionHelper',
+  function (extensionLiaison, RecursionHelper) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/structuredText/structuredText.tpl.html',
       scope: {
-        getSegments: '&segments'
+        segments: '='
       },
       compile: function (element) {
-        function link($scope) {
-          $scope.isSegmentText = function (segment) {
-            return !$scope.isSegmentLink(segment) && !$scope.isSegmentHover(segment);
-          };
-
-          $scope.isSegmentLink = function (segment) {
-            return !!segment.url;
-          };
-
-          $scope.isSegmentHover = function (segment) {
-            return !!segment.hover && segment.hover.length > 0;
-          };
-        }
-
-        return RecursionHelper.compile(element, link);
+        return RecursionHelper.compile(element);
       }
     };
   }

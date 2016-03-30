@@ -243,7 +243,7 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   private def onRevokedBotToken[T](token: SlackBotAccessToken): PartialFunction[Try[T], Unit] = {
-    case Failure(SlackErrorCode(TOKEN_REVOKED)) =>
+    case Failure(SlackErrorCode(TOKEN_REVOKED) | SlackErrorCode(ACCOUNT_INACTIVE)) =>
       db.readWrite { implicit s =>
         slackTeamRepo.getByKifiBotToken(token).foreach { slackTeam =>
           slackTeamRepo.save(slackTeam.withNoKifiBot)
