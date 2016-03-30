@@ -63,9 +63,11 @@ k.toaster = k.toaster || (function () {
 
   function show($parent, trigger, guided, recipient) {
     log('[toaster:show]', trigger, guided ? 'guided' : '', recipient || '');
-    api.port.emit('prefs', function (prefs) {
-      compose.reflectPrefs(prefs || {});
-    });
+    if (!guided) {
+      api.port.emit('prefs', function (prefs) {
+        compose.reflectPrefs(prefs || {});
+      });
+    }
     if ($sent) {
       hideSent(true);
     }
