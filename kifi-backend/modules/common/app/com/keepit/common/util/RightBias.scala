@@ -5,13 +5,17 @@ final class RightBias[L, R](ethr: Either[L, R]) {
   def getRight: Option[R] = ethr.right.toOption
   def getLeft: Option[L] = ethr.left.toOption
   def foreach(f: R => Unit): Unit = ethr.right.foreach(f)
-  def map[R1](f: R => R1): RightBias[L, R1] = new RightBias(ethr.right.map(f))
-  def flatMap[R1](f: R => RightBias[L, R1]): RightBias[L, R1] = ethr.fold[RightBias[L, R1]](l => RightBias.left(l), r => f(r))
   def fold[T](lf: L => T, rf: R => T): T = ethr.fold(lf, rf)
+  def map[R1](f: R => R1): RightBias[L, R1] =
+    fold(l => RightBias.left(l), r => RightBias.right(f(r)))
+  def flatMap[R1](f: R => RightBias[L, R1]): RightBias[L, R1] =
+    fold(l => RightBias.left(l), r => f(r))
+  def getOrElse(fallback: L => R): R =
+    fold(fallback, identity)
 
-  def filter[L1](test: => Boolean, l: => L1): RightBias[L1, R] = ethr match {
-    case Right(r) if test => RightBias.right(r)
-    case _ => RightBias.left(l)
+  def filter[L1](test: R => Boolean, fallback: => L1): RightBias[L1, R] = ethr match {
+    case Right(r) if test(r) => RightBias.right(r)
+    case _ => RightBias.left(fallback)
   }
 }
 

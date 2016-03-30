@@ -169,7 +169,7 @@ class KeepInfoAssemblerImpl @Inject() (
       keepSet.flatMap { keepId =>
         val result = for {
           keep <- keepsById.get(keepId).withLeft(s"keep $keepId does not exist")
-          _ <- RightBias.unit.filter(permissionsByKeep.get(keepId).exists(_.contains(KeepPermission.VIEW_KEEP)), s"keep $keepId is not visible to $viewer")
+          _ <- RightBias.unit.filter(_ => permissionsByKeep.get(keepId).exists(_.contains(KeepPermission.VIEW_KEEP)), s"keep $keepId is not visible to $viewer")
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
           }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(s"no author for keep $keepId")
