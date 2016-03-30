@@ -26,7 +26,7 @@ angular.module('kifi')
       }
 
       function getCommentBox(element) {
-        return element.find('.kf-keep-comments-input')[0];
+        return element.find('.kf-keep-activity-input')[0];
       }
 
       return {

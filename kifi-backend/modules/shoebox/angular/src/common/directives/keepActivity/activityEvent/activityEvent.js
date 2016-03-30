@@ -44,7 +44,7 @@ angular.module('kifi')
             return processedElements;
           }
 
-          $scope.activity = processElements($scope.activityEvent.header || [{kind: 'user', text: $scope.activityEvent.sentBy.firstName}]);
+          $scope.activity = $scope.activityEvent.header || [{kind: 'user', text: $scope.activityEvent.sentBy.firstName}];
           $scope.body = processElements($scope.activityEvent.body || [{kind: 'text', text: $scope.activityEvent.text}]);
 
           var canDeleteMessage = $scope.activityEvent.kind === 'comment' && (
