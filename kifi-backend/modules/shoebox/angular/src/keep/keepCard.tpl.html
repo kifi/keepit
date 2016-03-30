@@ -174,7 +174,8 @@
          </span>
       </div>
 
-      <div ng-if="galleryView" kf-keep-comments keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>
+      <div ng-if="galleryView && !showActivityEvents" kf-keep-comments keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>
+      <div ng-if="galleryView && showActivityEvents" kf-keep-activity keep="keep" max-initial-comments="maxInitialComments" edit-keep-note="editKeepNote" can-edit-keep="canEditKeep"></div>
     </div>
 
     <div class="kf-keep-checkbox-wrap">
