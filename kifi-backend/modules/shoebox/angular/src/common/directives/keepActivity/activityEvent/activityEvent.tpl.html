@@ -9,7 +9,7 @@
         <span kf-structured-text segments="activity">
         </span>
         <span class="kf-keep-activity-event-time" ng-if="::activityEvent.timestamp || activityEvent.source">·</span>
-        <a class="kf-keep-activity-event-page-link kf-link" ng-if="::showKeepPageLink && activityEvent.timestamp" ng-href="{{::keep.path}}">
+        <a class="kf-keep-activity-event-page-link" ng-if="::showKeepPageLink && activityEvent.timestamp" ng-href="{{::keep.path}}">
           <time class="kf-keep-activity-event-time"
                 ng-attr-datetime="{{::activityEvent.timestamp}}" am-time-ago="::activityEvent.timestamp"
                 title="{{::activityEvent.timestamp|localTime}}" ng-href="{{::keep.path}}"></time>
@@ -19,7 +19,13 @@
               title="{{::activityEvent.timestamp|localTime}}" ng-if="::activityEvent.timestamp && !showKeepPageLink"></time>
         <!--Add a space between the time and source-->
         <span></span>
-        <span class="kf-keep-activity-event-time" ng-if="::activityEvent.source.kind" ng-bind-template=" via {{::activityEvent.source.kind}}"></span>
+        <a class="kf-keep-activity-event-time"
+           ng-class="{
+            'kf-keep-activity-event-page-link': keep.activity.latestEvent.source.url
+           }"
+           ng-if="::activityEvent.source.kind"
+           ng-href="{{::activityEvent.source.url}}"
+           ng-bind-template=" via {{::activityEvent.source.kind}}"></a>
       </div>
       <span class="kf-keep-activity-event-actions" kf-click-menu ng-if="eventActionItems.length > 0">
         <menu class="kf-dropdown-menu kf-keep-activity-event-actions-menu">

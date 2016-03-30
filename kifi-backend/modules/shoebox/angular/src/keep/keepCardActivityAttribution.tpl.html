@@ -1,5 +1,29 @@
 <div class="kf-keep-card-activity-attribution">
-  <div class="kf-keep-card-activity-attribution-wrapper" ng-if="lastComment">
+  <div class="kf-keep-card-activity-attribution-wrapper"
+       ng-if="keep.activity.latestEvent">
+    <a class="kf-keep-card-attribution-keeper-pic"
+      ng-href="{{::keep.activity.latestEvent.author.url|pathFromUrl}}"
+      ng-style="{ 'background-image' : 'url(' + (keep.activity.latestEvent.author.picture) + ')' }"></a>
+    <div class="kf-keep-card-activity-attribution-message">
+      <span kf-structured-text segments="keep.activity.latestEvent.header"></span>
+      <span ng-if="::keep.activity.latestEvent.timestamp" class="kf-keep-card-activity-attribution-time">·
+        <a class="kf-keep-card-activity-attribution-page-link" ng-if="showKeepPageLink" ng-href="{{::keep.path}}">
+          <time ng-attr-datetime="{{::keep.activity.latestEvent.timestamp}}" am-time-ago="::keep.activity.latestEvent.timestamp"
+            title="{{::keep.activity.latestEvent.timestamp|localTime}}"></time>
+        </a>
+        <span ng-if="!showKeepPageLink"><time ng-attr-datetime="{{::keep.activity.latestEvent.timestamp}}" am-time-ago="::keep.activity.latestEvent.timestamp"
+            title="{{::keep.activity.latestEvent.timestamp|localTime}}"></time></span>
+        <a ng-class="{
+            'kf-keep-card-activity-attribution-page-link': keep.activity.latestEvent.source.url
+           }"
+           ng-if="::keep.activity.latestEvent.source.kind"
+           ng-href="{{::keep.activity.latestEvent.source.url}}"
+           ng-bind-template=" via {{::keep.activity.latestEvent.source.kind}}"></a>
+      </span>
+    </div>
+  </div>
+  <div class="kf-keep-card-activity-attribution-wrapper"
+       ng-if="!keep.activity.latestEvent && lastComment">
     <a class="kf-keep-card-attribution-keeper-pic"
       ng-href="{{::lastComment.sentBy|profileUrl}}"
       ng-style="{ 'background-image' : 'url(' + (lastComment.sentBy|pic:100) + ')' }"></a>
@@ -26,5 +50,5 @@
        is-first-item="::isFirstItem"
        title-only="false"
        short-message="true"
-       ng-if="!lastComment"></div>
+       ng-if="!keep.activity.latestEvent && !lastComment"></div>
 </div>
