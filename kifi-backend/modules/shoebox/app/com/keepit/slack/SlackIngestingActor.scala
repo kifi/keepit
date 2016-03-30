@@ -149,8 +149,13 @@ class SlackIngestingActor @Inject() (
             slackLog.warn("Integration between", broken.integration.libraryId, "and", broken.integration.slackChannelId.value, "in team", broken.integration.slackTeamId.value, "is broken")
             SafeFuture {
               val cause = broken.cause.map(_.toString).getOrElse("???")
+              val (teamNameOpt, channelNameOpt) = db.readOnlyMaster { implicit s =>
+                slackTeamRepo.getBySlackTeamId(integration.slackTeamId) -> slackChannelRepo.getByChannelId(integration.slackTeamId, integration.slackChannelId)
+              }
+              val teamName = teamNameOpt.map(_.slackTeamName.value).getOrElse(integration.slackTeamId.value)
+              val channelName = channelNameOpt.map(_.slackChannelName.value).getOrElse(integration.slackChannelId.value)
               inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(DescriptionElements(
-                "Can't Ingest - Broken Slack integration of team", integration.slackTeamId.value, "channel", broken.integration.slackChannelId.value, "cause", cause)))
+                "Can't Ingest - Broken Slack integration of team", teamName, "channel", channelName, "cause", cause)))
             }
             (None, Some(SlackIntegrationStatus.Broken))
           case Failure(error) =>
