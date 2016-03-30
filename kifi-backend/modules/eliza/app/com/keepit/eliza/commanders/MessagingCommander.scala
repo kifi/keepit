@@ -290,6 +290,7 @@ class MessagingCommander @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
+      from.asUser.foreach(user => shoebox.addUsersToKeep(adderId = user, keepId = thread.keepId, newUsers = Set(user)))
     }
 
     val participantSet = thread.participants.allUsers
@@ -464,6 +465,21 @@ class MessagingCommander @Inject() (
             sentOnUrl = None,
             sentOnUriId = None
           ))
+
+          actuallyNewUsers.foreach(pUserId => userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId)))
+          actuallyNewNonUsers.foreach { nup =>
+            nonUserThreadRepo.save(NonUserThread(
+              createdBy = adderUserId,
+              participant = nup,
+              keepId = thread.keepId,
+              uriId = Some(thread.uriId),
+              notifiedCount = 0,
+              lastNotifiedAt = None,
+              threadUpdatedByOtherAt = Some(message.createdAt),
+              muted = false
+            ))
+          }
+
           if (updateShoebox) shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
 
           Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
@@ -480,8 +496,11 @@ class MessagingCommander @Inject() (
             }
           }
 
-          notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
-          messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
+          if (newUsers.nonEmpty || newNonUsers.nonEmpty) {
+            notificationDeliveryCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+            messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
+          }
+
           true
 
       }
