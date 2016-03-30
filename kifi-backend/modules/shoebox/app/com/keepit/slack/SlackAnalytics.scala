@@ -10,13 +10,13 @@ import com.keepit.model.NotificationCategory
 import com.keepit.slack.models._
 import com.keepit.social.NonUserKinds
 import com.keepit.common.core._
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 object SlackAnalytics {
   def generateTrackingParams(slackChannelId: SlackChannelId, category: NotificationCategory, subaction: Option[String] = None): Query = {
-    val queryParams = Query("slackChannelId" -> Some(slackChannelId.value), "category" -> Some(category.category), "subaction" -> subaction)
-    Query(Param("t", Some(KifiUrlRedirectHelper.signTrackingParams(queryParams, Some("ascii")))))
+    Query("slackChannelId" -> slackChannelId.value, "category" -> category.category) ++ subaction.map(sa => Query("subaction" -> sa)).getOrElse(Query())
   }
 }
 
