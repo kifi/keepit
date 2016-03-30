@@ -43,6 +43,7 @@ k.quoteAnywhereFtue = k.quoteAnywhereFtue || (function () {
     api.onEnd.push(hide);
     k.hideKeeperCallout = hide;
     api.port.emit('track_ftue', 'q');
+    api.port.emit('dont_show_ftue_again', {type: 'q'});
   }
 
   function onClickX(e) {

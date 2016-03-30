@@ -943,26 +943,22 @@ api.port.on({
       respond({ show: false });
     }
   },
+  dont_show_ftue_again: function (data) {
+    dontShowFtueAgain(data.type);
+  },
   terminate_ftue: function (data) {
-    var prefName = {
-      e: 'showExtMsgIntro',
-      m: 'showExtMoveIntro',
-      q: 'quoteAnywhereFtue'
-    }[data.type];
     var handlerName = {
       e: 'hide_ext_msg_intro',
       m: 'hide_move_keeper_intro',
       q: 'hide_quote_anywhere_ftue'
     }[data.type];
-    if (!prefName) {
-      return;
-    }
 
-    ajax('POST', '/ext/pref/' + prefName + '?show=false');
+    dontShowFtueAgain(data.type);
+
     api.tabs.each(function (tab) {
       api.tabs.emit(tab, handlerName);
     });
-    (prefs || {})[prefName] = false;
+
     if (data.action) {
       tracker.track('user_clicked_notification', {
         category: {e: 'extMsgFTUE'}[data.type],
@@ -2646,6 +2642,19 @@ function compilePatterns(arr) {
     arr[i] = new RegExp(arr[i], '');
   }
   return arr;
+}
+
+function dontShowFtueAgain(type) {
+  var prefName = {
+    e: 'showExtMsgIntro',
+    m: 'showExtMoveIntro',
+    q: 'quoteAnywhereFtue'
+  }[type];
+  if (!prefName) {
+    return;
+  }
+  (prefs || {})[prefName] = false;
+  ajax('POST', '/ext/pref/' + prefName + '?show=false');
 }
 
 function toContactResult(o) {
