@@ -159,7 +159,7 @@ class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugi
 
 object KeepStates extends States[Keep]
 
-case class KeepSource(value: String) {
+final case class KeepSource(value: String) {
   override def toString = value
 }
 object KeepSource {

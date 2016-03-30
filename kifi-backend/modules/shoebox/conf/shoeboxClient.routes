@@ -2,5 +2,8 @@
 # CLIENT routes #
 #################
 
-GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepController.getNewKeepView(keepId: PublicId[Keep])
-GET    /client/1/keeps/stream           @com.keepit.controllers.client.ClientKeepController.getKeepStream(fromId: Option[String] ?= None)
+POST    /client/1/keeps/send            @com.keepit.controllers.client.ClientKeepMutationController.createKeep()
+POST    /client/1/keeps/:id/recipients  @com.keepit.controllers.client.ClientKeepMutationController.modifyKeepRecipients(id: PublicId[Keep])
+
+GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepInfoController.getNewKeepView(keepId: PublicId[Keep])
+GET    /client/1/keeps/stream           @com.keepit.controllers.client.ClientKeepInfoController.getKeepStream(fromId: Option[String] ?= None)

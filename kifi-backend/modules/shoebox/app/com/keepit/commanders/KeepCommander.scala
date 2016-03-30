@@ -7,7 +7,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -17,6 +17,7 @@ import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.RightBias
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
@@ -63,6 +64,17 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply, unlift(BulkKeepSelection.unapply))
 }
 
+final case class ExternalKeepCreateRequest(
+  url: String,
+  source: KeepSource,
+  title: Option[String],
+  note: Option[String], // will be recorded as the first comment
+  users: Set[ExternalId[User]],
+  libraries: Set[PublicId[Library]])
+object ExternalKeepCreateRequest {
+  implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
+}
+
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
   // Getting
@@ -76,6 +88,7 @@ trait KeepCommander {
   def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[KeepActivity]
 
   // Creating
+  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
@@ -382,6 +395,9 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
+  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
+    ???
+  }
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean) = {
     log.info(s"[keep] $rawBookmark")

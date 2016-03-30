@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.search.SearchServiceClient
+import com.keepit.social.Author
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -30,7 +31,16 @@ import scala.util.{ Failure, Success, Try }
 
 private case class InternedUriAndKeep(keep: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
-case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
+final case class KeepInternRequest(
+  author: Author,
+  url: String,
+  source: KeepSource,
+  attribution: Option[RawSourceAttribution],
+  title: Option[String],
+  note: Option[String],
+  users: Set[Id[User]],
+  libraries: Set[Id[Library]])
+final case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
   def successes = newKeeps ++ existingKeeps
 }
 
