@@ -14,13 +14,13 @@
     {{/canEdit}}
   </div>
   {{/keep.libraries.length}}
-  {{^keep.libraries.length}}
+  {{^keep.libraries.length}}{{#canEdit}}
     <a href="javascript:" class="kifi-message-keepscussion-header-lib-add">
       <span class="kifi-message-keepscussion-header-lib-add-icon"></span>
       <span class="kifi-message-keepscussion-header-lib-add-icon kifi-message-keepscussion-header-lib-add-icon-dummy"></span>
       Add a library to this discussion
     </a>
-  {{/keep.libraries.length}}
+  {{/canEdit}}{{/keep.libraries.length}}
   <div class="kifi-message-keepscussion-dialog">
     <div class="kifi-message-keepscussion-dialog-title">Add a library to this discussion</div>
     <input class="kifi-message-keepscussion-dialog-input" type="text" placeholder="Type a name..."/>
