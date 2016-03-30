@@ -297,7 +297,7 @@ k.panes.notices = k.panes.notices || function () {
   }
 
   function renderGlobal(notice) {
-    notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
+    notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml || notice.text);
     return k.render('html/keeper/notice_global', notice, partials);
   }
 
