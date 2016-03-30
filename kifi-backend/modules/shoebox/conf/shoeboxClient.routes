@@ -3,3 +3,4 @@
 #################
 
 GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepController.getNewKeepView(keepId: PublicId[Keep])
+GET    /client/1/keeps/stream           @com.keepit.controllers.client.ClientKeepController.getKeepStream(fromId: Option[String] ?= None)
