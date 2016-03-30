@@ -103,7 +103,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 					this.collapseParticipants();
 					e.participantsClosed = true;
 				}
-				else if (this.isDialogOpened() && !$target.closest('.kifi-message-participant-dialog').length) {
+				else if (this.isDialogOpened() && !$target.closest('.kifi-message-participant-dialog').length && !this.getAddDialog().hasClass('kifi-non-empty')) {
 					this.hideAddDialog();
 					e.addDialogClosed = true;
 				}
@@ -154,6 +154,9 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 */
 		initAndAsyncFocusInput: function () {
 			var $input = this.$input;
+			var keptBy = this.parent.keep && this.parent.keep.keptBy;
+			var canChangeLibrary = (keptBy && keptBy.id === k.me.id);
+
 			if (!$input) {
 				$input = this.$input = this.get$('.kifi-message-participant-dialog-input');
 				initFriendSearch($input, 'threadPane', this.getParticipants(), api.noop, {
@@ -166,7 +169,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 							this.getAddDialog().removeClass('kifi-non-empty');
 						}
 					}.bind(this)
-				});
+				}, { objects: canChangeLibrary, participants: !canChangeLibrary });
 			}
 
 			setTimeout(function () {
@@ -428,11 +431,41 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 
 		addParticipantTokens: function () {
 			var $input = this.$input,
-				users = $input.tokenInput('get');
+				participants = $input.tokenInput('get'),
+				users = participants.filter(function (p) { return p.id[0] !== 'l'; }),
+				libraries = participants.filter(function (p) { return p.id[0] === 'l'; });
+
+			if (libraries.length) {
+				this.sendModifyKeep(libraries);
+			}
 			this.addParticipant.apply(this, users);
 			$input.tokenInput('clear');
 			this.toggleAddDialog();
 			this.sendAddParticipants(users);
+		},
+
+		sendModifyKeep: function (libraries) {
+			var keep = this.parent.keep;
+			return api.port.emit('update_discussion_keep_library', {
+				discussionKeep: keep,
+				newLibrary: libraries[0]
+			}, function success(d) {
+				var keep = d.response;
+				if (d.success) {
+					this.parent.keep = keep;
+					this.parent.refresh();
+				} else {
+					// TODO(carlos): Add a progress bar to seem snappier
+					var $toShake = this.get$();
+					$toShake
+					.on('animationend', function onEnd() {
+						$toShake.off('animationend', onEnd);
+						$toShake.removeClass('kifi-shake');
+						this.parent.refresh();
+					}.bind(this))
+					.addClass('kifi-shake');
+				}
+			}.bind(this));
 		},
 
 		sendAddParticipants: function (users) {
