@@ -1373,7 +1373,10 @@ api.port.on({
       }});
   },
   search_recipients: function (data, respond, tab) {
-    ajax('GET', '/ext/keeps/suggestRecipients', { query: data.q, limit: data.n, drop: 0 }, function (responseData) {
+    data = data || {};
+    data.drop = data.drop || 0;
+
+    ajax('GET', '/ext/keeps/suggestRecipients', { query: data.q, limit: data.n, drop: data.drop }, function (responseData) {
       var recipients = responseData.results;
       respond(toResults(recipients, data.q, me, data.n, data.exclude, data.includeSelf));
     }, function () {
