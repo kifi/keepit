@@ -158,7 +158,7 @@ object UserValues {
     def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
   }
 
-  val lookHereMode = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, true)
+  val lookHereMode = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, false)
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
   val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
