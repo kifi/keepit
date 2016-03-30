@@ -99,24 +99,6 @@ class NotificationDeliveryCommander @Inject() (
         "unread" -> true,
         "category" -> NotificationCategory.User.MESSAGE.category
       )
-      db.readWrite { implicit session =>
-        newParticipants.map { pUserId =>
-          userThreadRepo.intern(UserThread.forMessageThread(thread)(user = pUserId))
-        }
-
-        newNonUserParticipants.foreach { nup =>
-          nonUserThreadRepo.save(NonUserThread(
-            createdBy = adderUserId,
-            participant = nup,
-            keepId = thread.keepId,
-            uriId = Some(thread.uriId),
-            notifiedCount = 0,
-            lastNotifiedAt = None,
-            threadUpdatedByOtherAt = Some(message.createdAt),
-            muted = false
-          ))
-        }
-      }
 
       Future.sequence(newParticipants.map { userId =>
         recreateNotificationForAddedParticipant(userId, thread)
