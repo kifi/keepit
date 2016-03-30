@@ -119,7 +119,7 @@ object KeepActivityGen {
     val events = if (elizaEvents.size >= maxEvents) elizaEvents.take(maxEvents) else elizaEvents :+ initialKeepEvent
 
     val latestEvent = {
-      val lastEvent = events.lastOption.getOrElse(initialKeepEvent)
+      val lastEvent = events.headOption.getOrElse(initialKeepEvent)
       val newHeader = lastEvent.kind match {
         case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
         case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
