@@ -19,7 +19,7 @@ final case class NewKeepInfo(
   keptAt: DateTime,
   source: Option[SourceAttribution],
   recipients: KeepRecipientsInfo,
-  activity: KeepActivity,
+  activity: Option[KeepActivity],
   viewer: NewKeepViewerInfo)
 
 object NewKeepInfo {

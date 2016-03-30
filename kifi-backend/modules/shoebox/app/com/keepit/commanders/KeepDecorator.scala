@@ -227,10 +227,10 @@ class KeepDecoratorImpl @Inject() (
             }
             val keepActivity = {
               if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
+                Some(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
                   ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
-                  idToBasicUser, idToBasicLibrary, idToBasicOrg, maxMessagesShown)
-              } else KeepActivity.empty
+                  idToBasicUser, idToBasicLibrary, idToBasicOrg, maxMessagesShown))
+              } else None
             }
 
             (for {

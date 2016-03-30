@@ -48,7 +48,7 @@ case class KeepInfo(
     sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
     note: Option[String] = None,
     discussion: Option[Discussion],
-    activity: KeepActivity,
+    activity: Option[KeepActivity], // todo(cam): make non-optional when removing activity_log experiment
     participants: Seq[BasicUser],
     members: KeepMembers, // Léo: this was Derek's idea.
     permissions: Set[KeepPermission]) {
@@ -117,6 +117,6 @@ object KeepInfo {
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
       bookmark.path.relativeWithLeadingSlash, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.lowestLibraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, activity = KeepActivity.empty, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
+      sourceAttribution = None, discussion = None, activity = None, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
   }
 }

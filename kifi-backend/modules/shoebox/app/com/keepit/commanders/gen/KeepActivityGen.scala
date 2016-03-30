@@ -123,7 +123,7 @@ object KeepActivityGen {
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
             case dataOpt =>
-              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] messsage ${message.id} has no .sentBy and no .auxData, can't generate event")
+              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] message ${message.id} has no .sentBy and no .auxData, can't generate event")
               None
           }
       }
@@ -131,7 +131,19 @@ object KeepActivityGen {
 
     val events = if (elizaEvents.size >= maxEvents) elizaEvents.take(maxEvents) else elizaEvents :+ initialKeepEvent
 
+    val latestEvent = {
+      val lastEvent = events.lastOption.getOrElse(initialKeepEvent)
+      val newHeader = lastEvent.kind match {
+        case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
+        case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
+        case KeepEventKind.AddParticipants | KeepEventKind.AddLibraries => DescriptionElements(lastEvent.author, "added a recipient to this discussion")
+        case KeepEventKind.EditedTitle => DescriptionElements(lastEvent.author, "edited the title")
+      }
+      lastEvent.withHeader(newHeader)
+    }
+
     KeepActivity(
+      latestEvent = latestEvent,
       events = events,
       numComments = elizaActivity.map(_.numComments).getOrElse(0) + keep.note.size)
   }
