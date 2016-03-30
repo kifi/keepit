@@ -48,7 +48,7 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
       slackTeam <- slackTeamRepo.getBySlackTeamId(membership.slackTeamId).withLeft("no slack team")
       orgId <- slackTeam.organizationId.withLeft("no org id on slack team")
       org <- basicOrganizationGen.getBasicOrganizationHelper(orgId).withLeft(s"no basic org for $orgId")
-      _ <- RightBias.unit.filter(membership.personalDigestSetting match {
+      _ <- RightBias.unit.filter(_ => membership.personalDigestSetting match {
         case SlackPersonalDigestSetting.On => true
         case SlackPersonalDigestSetting.Defer => orgConfigRepo.getByOrgId(orgId).settings.settingFor(StaticFeature.SlackPersonalDigestDefault).safely.contains(StaticFeatureSetting.ENABLED)
         case _ => false
@@ -61,8 +61,8 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
         org = org,
         ingestedMessagesByChannel = getIngestedMessagesForSlackUser(membership)
       )
-      _ <- RightBias.unit.filter(digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, s"only ${digest.numIngestedMessages} ingested messages since ${membership.unnotifiedSince}")
-      _ <- RightBias.unit.filter(
+      _ <- RightBias.unit.filter(_ => digest.numIngestedMessages >= minIngestedMessagesForPersonalDigest, s"only ${digest.numIngestedMessages} ingested messages since ${membership.unnotifiedSince}")
+      _ <- RightBias.unit.filter(_ =>
         membership.lastPersonalDigestAt.isDefined || digest.mostRecentMessage._2.timestamp.toDateTime.isAfter(now minus maxDelayFromMessageToInitialDigest),
         s"this is the first digest and the most recent message is ${Minutes.minutesBetween(digest.mostRecentMessage._2.timestamp.toDateTime, now).getMinutes} minutes old"
       )

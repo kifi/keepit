@@ -80,13 +80,13 @@ object KeepEvent {
 }
 
 case class BasicKeepEvent(
-  id: Option[PublicId[Message]],
-  author: BasicAuthor,
-  kind: KeepEventKind,
-  header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
-  body: DescriptionElements, // message and keep.note content
-  timestamp: DateTime,
-  source: Option[KeepEventSource]) {
+    id: Option[PublicId[Message]],
+    author: BasicAuthor,
+    kind: KeepEventKind,
+    header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
+    body: DescriptionElements, // message and keep.note content
+    timestamp: DateTime,
+    source: Option[KeepEventSource]) {
 
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
