@@ -159,7 +159,7 @@ class PageCommander @Inject() (
   private def filteredPage(url: String): Boolean = {
     // Hides social tooltip on popular domains: if URL is top-level and all domain segments are in HandleOps.topDomains, hide.
     val domainSegments = for {
-      uri <- URI.parse(url).toOption.toSeq if !uri.path.exists(_.length > 1) && uri.fragment.isEmpty && uri.query.isEmpty
+      uri <- URI.parse(url).toOption.toSeq if !uri.path.exists(_.length > 1) && uri.query.isEmpty // && uri.fragment.isEmpty
       host <- uri.host.toSeq
       sig <- host.domain.drop(1).reverse // www.kifi.co.uk → List(www, kifi, co)
     } yield sig
