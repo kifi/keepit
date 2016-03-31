@@ -18,14 +18,12 @@ case class EmailAddress(address: String) {
 }
 
 object EmailAddress {
-  implicit val format = new Format[EmailAddress] {
-    def reads(json: JsValue) = for {
-      address <- json.validate[String]
-      validAddress <- validate(address).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
-    } yield validAddress
+  implicit val format: Format[EmailAddress] = Format(
+    Reads { js => js.validate[String].flatMap(str => validate(str).map(JsSuccess(_)).recover { case ex => JsError(ex.getMessage) }.get) },
+    Writes { email => JsString(email.address) }
+  )
 
-    def writes(email: EmailAddress) = JsString(email.address)
-  }
+  implicit val caseInsensitiveOrdering: Ordering[EmailAddress] = Ordering.fromLessThan { case (x, y) => (x compareToIgnoreCase y) < 0 }
 
   implicit val queryStringBinder = new QueryStringBindable[EmailAddress] {
     private val stringBinder = implicitly[QueryStringBindable[String]]

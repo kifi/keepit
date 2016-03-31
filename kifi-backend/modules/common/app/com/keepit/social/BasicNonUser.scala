@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3UserPictureConfig
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -26,6 +27,7 @@ object NonUserKinds {
 case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
 
 object BasicNonUser {
+  def fromEmail(email: EmailAddress): BasicNonUser = BasicNonUser(NonUserKinds.email, id = email.address, firstName = None, lastName = None)
   val DefaultPictureName = S3UserPictureConfig.defaultName + ".jpg"
   // The following formatter can be replaced with the functional Play formatter once we can break backwards compatibility.
   //  (
