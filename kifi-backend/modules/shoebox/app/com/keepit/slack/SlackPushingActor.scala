@@ -266,7 +266,7 @@ class SlackPushingActor @Inject() (
         val updatedMessage = keepAsSlackMessage(k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
         if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
         else {
-          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, updatedMessage).map { response =>
+          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
             db.readWrite { implicit s =>
               slackPushForKeepRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
             }
@@ -293,7 +293,7 @@ class SlackPushingActor @Inject() (
         val updatedMessage = messageAsSlackMessage(msg, k, pushItems.lib, pushItems.slackTeamId, pushItems.attribution.get(k.id.get), k.userId.flatMap(pushItems.users.get))
         if (oldPush.messageRequest.safely.contains(updatedMessage)) Future.successful(())
         else {
-          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, updatedMessage).map { response =>
+          slackClient.updateMessage(botToken, integration.slackChannelId, oldPush.timestamp, SlackMessageUpdateRequest.fromMessageRequest(updatedMessage)).map { response =>
             db.readWrite { implicit s =>
               slackPushForMessageRepo.save(oldPush.withMessageRequest(updatedMessage).withTimestamp(response.timestamp))
             }

@@ -19,7 +19,7 @@ object SlackIncomingWebhook {
   )(SlackIncomingWebhook.apply _)
 }
 
-case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
+final case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
     text: String,
     username: String,
     iconUrl: String,
@@ -71,6 +71,26 @@ object SlackMessageRequest {
     (__ \ 'unfurl_media).format[Boolean] and
     (__ \ 'parse).format[String]
   )(SlackMessageRequest.apply, unlift(SlackMessageRequest.unapply))
+}
+
+final case class SlackMessageUpdateRequest(
+    text: String,
+    attachments: Seq[SlackAttachment],
+    unfurlLinks: Boolean,
+    unfurlMedia: Boolean,
+    parseMode: String) {
+  def withAttachments(newAttachments: Seq[SlackAttachment]) = this.copy(attachments = newAttachments)
+  def asUrlParams: Seq[Param] = Seq("text" -> text, "attachments" -> Json.stringify(Json.toJson(attachments)), "unfurl_links" -> unfurlLinks, "unfurl_media" -> unfurlMedia, "parse" -> parseMode)
+}
+
+object SlackMessageUpdateRequest {
+  def fromMessageRequest(msg: SlackMessageRequest): SlackMessageUpdateRequest = SlackMessageUpdateRequest(
+    text = msg.text,
+    attachments = msg.attachments,
+    unfurlLinks = msg.unfurlLinks,
+    unfurlMedia = msg.unfurlMedia,
+    parseMode = msg.parseMode
+  )
 }
 
 case class SlackMessageResponse(
