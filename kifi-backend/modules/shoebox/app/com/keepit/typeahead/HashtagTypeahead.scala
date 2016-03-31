@@ -3,7 +3,7 @@ package com.keepit.typeahead
 import com.keepit.model.{ User, CollectionRepo, Hashtag }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import com.google.inject.Inject
 import play.api.libs.json.Json
 import org.joda.time.DateTime
@@ -30,7 +30,8 @@ class HashtagTypeahead @Inject() (
     cache: UserHashtagTypeaheadCache,
     clock: Clock,
     collectionRepo: CollectionRepo,
-    db: Database) extends Typeahead[User, Hashtag, (Hashtag, Int), UserHashtagTypeahead] {
+    db: Database,
+    implicit val executionContext: ExecutionContext) extends Typeahead[User, Hashtag, (Hashtag, Int), UserHashtagTypeahead] {
 
   protected val refreshRequestConsolidationWindow = 5 seconds
 
