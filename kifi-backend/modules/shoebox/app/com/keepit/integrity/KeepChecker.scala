@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ Hashtags, KeepCommander, KeepToLibraryCommander, KeepToUserCommander }
+import com.keepit.commanders._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -27,8 +27,10 @@ class KeepChecker @Inject() (
     keepCommander: KeepCommander,
     ktlRepo: KeepToLibraryRepo,
     ktuRepo: KeepToUserRepo,
+    kteRepo: KeepToEmailRepo,
     ktlCommander: KeepToLibraryCommander,
     ktuCommander: KeepToUserCommander,
+    kteCommander: KeepToEmailCommander,
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
     collectionRepo: CollectionRepo,
@@ -78,11 +80,18 @@ class KeepChecker @Inject() (
   private def ensureUriIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.get(keepId)
     val allKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = None)
+    val allKtes = kteRepo.getAllByKeepId(keepId, excludeStateOpt = None)
     val allKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = None)
     for (ktu <- allKtus) {
       if (ktu.uriId != keep.uriId) {
         airbrake.notify(s"[KTU-URI-MATCH] KTU ${ktu.id.get}'s URI Id (${ktu.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
         ktuCommander.syncWithKeep(ktu, keep)
+      }
+    }
+    for (kte <- allKtes) {
+      if (kte.uriId != keep.uriId) {
+        airbrake.notify(s"[KTE-URI-MATCH] KTE ${kte.id.get}'s URI Id (${kte.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
+        kteCommander.syncWithKeep(kte, keep)
       }
     }
     for (ktl <- allKtls) {
@@ -100,6 +109,12 @@ class KeepChecker @Inject() (
       for (ktu <- zombieKtus) {
         debouncer.debounce(ktu.userId.id.toString, 1 minute) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
+      }
+
+      val zombieKtes = kteRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToEmailStates.INACTIVE))
+      for (kte <- zombieKtes) {
+        debouncer.debounce(kte.emailAddress.address, 1 minute) { airbrake.notify(s"[KTE-STATE-MATCH] KTE ${kte.id.get} (keep ${kte.keepId} --- address ${kte.emailAddress}) is a zombie!") }
+        kteCommander.deactivate(kte)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))

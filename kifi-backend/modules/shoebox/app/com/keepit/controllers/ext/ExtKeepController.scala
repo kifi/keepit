@@ -66,7 +66,7 @@ class ExtKeepController @Inject() (
       diff <- db.readOnlyReplicaAsync { implicit s =>
         val userIdMap = userRepo.convertExternalIds(input.users.all)
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
-        KeepConnectionsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)))
+        KeepConnectionsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
       _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff)
     } yield {

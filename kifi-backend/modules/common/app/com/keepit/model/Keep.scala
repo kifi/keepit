@@ -7,6 +7,7 @@ import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfigura
 import com.keepit.common.db._
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.common.reflection.Enumerator
@@ -271,6 +272,7 @@ case class CrossServiceKeep(
     seq: SequenceNumber[Keep],
     owner: Option[Id[User]], // the person who "owns" the keep, if any
     users: Set[Id[User]], // all the users directly connected to the keep
+    emails: Set[EmailAddress], // all the emails directly connected to the keep
     libraries: Set[CrossServiceKeep.LibraryInfo], // all the libraries directly connected to the keep
     url: String,
     uriId: Id[NormalizedURI],
@@ -293,6 +295,7 @@ object CrossServiceKeep {
     (__ \ 'seq).format[SequenceNumber[Keep]] and
     (__ \ 'owner).formatNullable[Id[User]] and
     (__ \ 'users).format[Set[Id[User]]] and
+    (__ \ 'emails).format[Set[EmailAddress]] and
     (__ \ 'libraries).format[Set[CrossServiceKeep.LibraryInfo]] and
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
@@ -301,7 +304,7 @@ object CrossServiceKeep {
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
 
-  def fromKeepAndRecipients(keep: Keep, users: Set[Id[User]], libraries: Set[LibraryInfo]): CrossServiceKeep = {
+  def fromKeepAndRecipients(keep: Keep, users: Set[Id[User]], emails: Set[EmailAddress], libraries: Set[LibraryInfo]): CrossServiceKeep = {
     CrossServiceKeep(
       id = keep.id.get,
       externalId = keep.externalId,
@@ -309,6 +312,7 @@ object CrossServiceKeep {
       seq = keep.seq,
       owner = keep.userId,
       users = users,
+      emails = emails,
       libraries = libraries,
       url = keep.url,
       uriId = keep.uriId,

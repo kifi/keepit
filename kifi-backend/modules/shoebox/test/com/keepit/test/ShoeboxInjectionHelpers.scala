@@ -37,6 +37,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def keepRepo(implicit injector: Injector) = inject[KeepRepo]
   def ktlRepo(implicit injector: Injector) = inject[KeepToLibraryRepo]
   def ktuRepo(implicit injector: Injector) = inject[KeepToUserRepo]
+  def kteRepo(implicit injector: Injector) = inject[KeepToEmailRepo]
   def keepCommander(implicit injector: Injector) = inject[KeepCommander]
   def ktlCommander(implicit injector: Injector) = inject[KeepToLibraryCommander]
   def ktuCommander(implicit injector: Injector) = inject[KeepToUserCommander]

@@ -48,6 +48,7 @@ class ClientKeepMutationController @Inject() (
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
         users = users,
+        emails = externalCreateRequest.emails,
         libraries = libraries
       )
       (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
@@ -70,7 +71,7 @@ class ClientKeepMutationController @Inject() (
       diff <- for {
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
-      } yield KeepConnectionsDiff(users = users, libraries = libraries)
+      } yield KeepConnectionsDiff(users = users, libraries = libraries, emails = input.emails)
       _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff)
     } yield {
       NoContent
