@@ -194,7 +194,6 @@ k.panes.notices = k.panes.notices || function () {
     api.port.emit('pane', {old: locatorOld, new: locatorNew, how: 'menu'});
   }
 
-  var partials = { 'kifi_mustache_tags': 'kifi_mustache_tags' };
   function renderOne(notice) {
 
     notice.isVisited = !notice.unread;
@@ -272,7 +271,7 @@ k.panes.notices = k.panes.notices || function () {
     }
     notice.picturedParticipants.map(formatParticipant);
     notice.bodyHtmlTree = formatMessage.snippet()(notice.text);
-    return k.render('html/keeper/notice_message', notice, partials);
+    return k.render('html/keeper/notice_message', notice, { 'kifi_mustache_tags': 'kifi_mustache_tags' });
   }
 
   function renderTriggered(notice) {
@@ -289,16 +288,16 @@ k.panes.notices = k.panes.notices || function () {
       }
       notice.text = message;
 
-      return k.render('html/keeper/notice_new_keep', notice, partials);
+      return k.render('html/keeper/notice_new_keep', notice, { 'kifi_mustache_tags': 'kifi_mustache_tags' });
     } else {
       notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml);
-      return k.render('html/keeper/notice_triggered', notice, partials);
+      return k.render('html/keeper/notice_triggered', notice, { 'kifi_mustache_tags': 'kifi_mustache_tags' });
     }
   }
 
   function renderGlobal(notice) {
     notice.bodyHtmlTree = formatMessage.snippet()(notice.bodyHtml || notice.text);
-    return k.render('html/keeper/notice_global', notice, partials);
+    return k.render('html/keeper/notice_global', notice, { 'kifi_mustache_tags': 'kifi_mustache_tags' });
   }
 
   function showNew(th) {
