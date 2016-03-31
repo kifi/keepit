@@ -93,7 +93,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
 
         // 2. finalize
         val path2 = "/auth/email-finalize"
-        val request2 = FakeRequest("POST", path2).withBody(Json.obj("firstName" -> "Foo", "lastName" -> "Bar")).withSession(session1.data.toSeq: _*).withCookies(cookies1.toSeq: _*)
+        val request2 = FakeRequest("POST", path2).withBody(Json.obj("firstName" -> "Foo", "lastName" -> "Bar")).withSession(session1.data.toSeq: _*).withCookies(cookies1.toSeq: _*).withHeaders("User-Agent" -> "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2693.2 Safari/537.36")
         val result2 = authController.userPassFinalizeAccountAction()(request2)
         status(result2) === OK
         contentType(result2) must beSome("application/json")
@@ -139,7 +139,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val fooEmail = EmailAddress("foo@bar.com")
         val fooPwd = "1234567"
         val payload = Json.obj("email" -> fooEmail.address, "password" -> fooPwd, "firstName" -> "Foo", "lastName" -> "Bar")
-        val request = FakeRequest("POST", path).withBody(payload)
+        val request = FakeRequest("POST", path).withBody(payload).withHeaders("User-Agent" -> "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2693.2 Safari/537.36")
         val result = authController.emailSignup()(request)
         status(result) === OK
         contentType(result) must beSome("application/json")
