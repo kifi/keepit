@@ -14,8 +14,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.common.json.TupleFormat
 
-case class UserHashtagTypeahead(ownerId: Id[User], tags: Seq[(Hashtag, Int)], filter: PrefixFilter[Hashtag], createdAt: DateTime) extends PersonalTypeahead[User, Hashtag, (Hashtag, Int)] {
-  def getInfos(tagIds: Seq[Id[Hashtag]]) = Future.successful(tagIds.map(id => tags(id.id.toInt)))
+case class UserHashtagTypeahead(ownerId: Id[User], tags: Seq[(Hashtag, Int)], filter: PrefixFilter[Hashtag], createdAt: DateTime, updatedAt: DateTime) extends PersonalTypeahead[User, Hashtag, (Hashtag, Int)] {
+  def getInfos(tagIds: Seq[Id[Hashtag]]) = Future.successful(tagIds.map(id => tags(id.id.toInt)).filter(_._2 > 0))
 }
 
 object UserHashtagTypeahead {
@@ -46,12 +46,28 @@ class HashtagTypeahead @Inject() (
     }
   }
 
+  private def makeCanonicalTagsAndCounts(allTagsAndCounts: Seq[(Hashtag, Int)]): Map[String, (Hashtag, Int)] = {
+    allTagsAndCounts.groupBy(_._1.normalized).mapValues { tagsAndCounts =>
+      val canonicalTag = tagsAndCounts.maxBy(_._2)._1
+      val totalCount = tagsAndCounts.map(_._2).sum
+      (canonicalTag, totalCount)
+    }
+  }
+
+  private def sortTagsAndBuildFilter(userId: Id[User], tagsAndCounts: Iterable[(Hashtag, Int)]): (Seq[(Hashtag, Int)], PrefixFilter[Hashtag]) = {
+    val sortedTags = tagsAndCounts.toSeq.sortBy { case (_, count) => -count }
+    val filter = buildFilter(userId, sortedTags.zipWithIndex.map { case (tagAndKeepCount, idx) => (Id[Hashtag](idx), tagAndKeepCount) })
+    (sortedTags, filter)
+  }
+
   protected def create(userId: Id[User]): Future[UserHashtagTypeahead] = Future.successful {
     val allTagsWithKeepCount = db.readOnlyMaster { implicit session =>
       collectionRepo.getAllTagsByUserSortedByNumKeeps(userId)
     }
-    val filter = buildFilter(userId, allTagsWithKeepCount.zipWithIndex.map { case (tagAndKeepCount, idx) => (Id[Hashtag](idx), tagAndKeepCount) })
-    UserHashtagTypeahead(userId, allTagsWithKeepCount, filter, clock.now())
+    val canonicalTagsWithKeepCount = makeCanonicalTagsAndCounts(allTagsWithKeepCount).values
+    val (sortedTags, filter) = sortTagsAndBuildFilter(userId, canonicalTagsWithKeepCount)
+    val now = clock.now()
+    UserHashtagTypeahead(userId, sortedTags, filter, now, now)
   }
 
   protected def invalidate(typeahead: UserHashtagTypeahead): Unit = {
@@ -59,12 +75,31 @@ class HashtagTypeahead @Inject() (
     cache.set(UserHashtagTypeaheadUserIdKey(typeahead.ownerId), typeahead)
   }
 
-  protected def extractName(hashtagWithKeepCount: (Hashtag, Int)) = hashtagWithKeepCount._1.tag
+  def update(userId: Id[User], updates: Seq[(Hashtag, Int)]): Future[Unit] = {
+    get(userId).map {
+      case None => Future.successful(())
+      case Some(typeahead) =>
+        val updatesByNormalizedTag = makeCanonicalTagsAndCounts(updates)
+        val updatedTags = typeahead.tags.map {
+          case (tag, count) =>
+            updatesByNormalizedTag.get(tag.normalized) match {
+              case Some((canonicalTag, increment)) => (canonicalTag, count + increment)
+              case None => (tag, count)
+            }
+        }
+        val newTags = (updatesByNormalizedTag -- typeahead.tags.map(_._1.normalized)).values
+        // Actually reordering tags and rebuilding the filter from scratch. If we don't reorder we can append, worth it?
+        val (sortedTags, filter) = sortTagsAndBuildFilter(userId, updatedTags ++ newTags)
+        val updatedTypeahead = UserHashtagTypeahead(userId, sortedTags, filter, typeahead.createdAt, clock.now())
+        invalidate(updatedTypeahead)
+    }
+  }
 
+  protected def extractName(hashtagWithKeepCount: (Hashtag, Int)) = hashtagWithKeepCount._1.tag
 }
 
 case class UserHashtagTypeaheadUserIdKey(id: Id[User]) extends Key[UserHashtagTypeahead] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_hashtag_typeahead_by_user_id"
   def toKey(): String = id.id.toString
 }

@@ -35,7 +35,7 @@ class PrefixFilterTest extends Specification {
       filter.filterBy(Array("a", "k")) === Seq[Id[Person]](2)
     }
 
-    "intern incremental updates" in {
+    "behave like a set (add is idempotent)" in {
       val builder = new PrefixFilterBuilder[Person]
 
       builder.add(1, "Alan Turing")
