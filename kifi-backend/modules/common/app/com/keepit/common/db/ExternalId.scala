@@ -18,8 +18,8 @@ object ExternalId {
   }
 
   implicit def format[T]: Format[ExternalId[T]] = Format(
-    __.read[String].map(ExternalId(_)),
-    new Writes[ExternalId[T]] { def writes(o: ExternalId[T]) = JsString(o.id) }
+    Reads { js => js.validate[String].flatMap(str => asOpt[T](str).map(JsSuccess(_)).getOrElse(JsError(s"$js does not match UUID pattern"))) },
+    Writes { extId => JsString(extId.id) }
   )
 
   val UUIDPattern = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".r
