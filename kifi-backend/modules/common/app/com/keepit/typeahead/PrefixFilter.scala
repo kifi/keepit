@@ -1,7 +1,7 @@
 package com.keepit.typeahead
 
 import com.keepit.common.db.Id
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ ArrayBuffer, Set => MutableSet }
 import scala.math.min
 import java.text.Normalizer
 import java.nio.ByteBuffer
@@ -84,23 +84,50 @@ object PrefixFilter {
 }
 
 class PrefixFilter[T](val data: Array[Long]) {
+  require(data.length % 2 == 1, s"Invalid PrefixFilter data of length ${data.length}: $data")
   def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
   def isEmpty = (data.length == 1)
-  override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map { t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}" }.mkString(",")}"
+  def length = (data.length - 1) / 2
+  def version = data.head
+  override def toString = s"[PrefixFilter] (len=$length) ${data.drop(1).take(10).grouped(2).map { t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}" }.mkString(",")}"
 }
 
-class PrefixFilterBuilder[T] {
+class PrefixFilterBuilder[T]() {
   private[this] val out = new ArrayBuffer[Long]
+  private[this] val distinct = MutableSet[(Long, Long)]()
 
-  out += 1L // version
+  private[this] val version = 1L
+  out += version
 
-  def add(id: Id[T], name: String) = { // expects two tokens (first/last names) usually, three tokens may be ok, four tokens will significantly compromise filtering precision
-    val filter = PrefixFilter.tokenize(name).foldLeft(0L) { (filter, token) => (filter | PrefixFilter.genFilter(token)) }
-    out += id.id
-    out += filter
+  private def add(id: Long, filter: Long): Unit = {
+    if (!distinct.contains(id, filter)) {
+      distinct += (id -> filter)
+      out += id
+      out += filter
+    }
   }
+
+  def add(id: Id[T], name: String): Unit = { // expects two tokens (first/last names) usually, three tokens may be ok, four tokens will significantly compromise filtering precision
+    val filter = PrefixFilter.tokenize(name).foldLeft(0L) { (filter, token) => (filter | PrefixFilter.genFilter(token)) }
+    add(id.id, filter)
+  }
+
+  def add(prefixFilter: PrefixFilter[T]): Unit = {
+    require(prefixFilter.version == version, s"PrefixFilter has incompatible version: ${prefixFilter.version}")
+    prefixFilter.data.drop(1).grouped(2).foreach { case Array(id, filter) => add(id, filter) }
+  }
+
+  def length = (out.length - 1) / 2
 
   def build(): PrefixFilter[T] = {
     new PrefixFilter(out.toArray)
+  }
+}
+
+object PrefixFilterBuilder {
+  def apply[T](filter: PrefixFilter[T]): PrefixFilterBuilder[T] = {
+    val builder = new PrefixFilterBuilder[T]()
+    builder.add(filter)
+    builder
   }
 }
