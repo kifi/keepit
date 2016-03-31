@@ -2,9 +2,13 @@
 
 angular.module('kifi')
 
-.controller('KeepPageCtrl', [ '$rootScope', '$location', '$scope', '$state',
-    '$stateParams', '$timeout', '$window', '$analytics', 'keepActionService', 'modalService', 'util',
-  function ($rootScope, $location, $scope, $state, $stateParams, $timeout, $window, $analytics, keepActionService, modalService, util) {
+.controller('KeepPageCtrl', [
+  '$rootScope', '$location', '$scope', '$state', '$stateParams', '$timeout',
+  '$window', '$analytics', 'keepActionService', 'modalService', 'profileService',
+  'util',
+  function ($rootScope, $location, $scope, $state, $stateParams, $timeout,
+    $window, $analytics, keepActionService, modalService, profileService,
+    util) {
 
     $scope.unkeepFromLibrary = function (event, keep) {
       if (keep.libraryId && keep.id) {
