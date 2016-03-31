@@ -13,6 +13,7 @@ import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.routes.Eliza
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.common.util.MapHelpers
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.ElizaServiceClient.{GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
@@ -255,24 +256,10 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]] = {
-    if (users.isEmpty) {
-      Future.successful(Map.empty)
-    } else {
-      def mergeMaps(maps: Seq[Map[Id[User], Boolean]]): Map[Id[User], Boolean] = {
-        val merged = collection.mutable.Map[Id[User], Boolean](maps.head.toSeq: _*)
-        maps.tail.foreach { tomerge =>
-          tomerge.foreach { case (id, online) =>
-            if (online) merged(id) = online
-          }
-        }
-        Map(merged.toSeq: _*)
-      }
-      def read(json: JsValue): Map[Id[User], Boolean] = {
-        json.as[JsObject].fieldSet.map{ case (key, value) => Id[User](key.toInt) -> value.as[Boolean] }.toMap
-      }
-      Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
-        mergeMaps(responses.map(res => read(res.json)))
-      }
+    if (users.isEmpty) Future.successful(Map.empty)
+    else Future.sequence(broadcast(Eliza.internal.areUsersOnline(users)).values.toSeq).map { responses =>
+      val machineResponses = responses.map(_.json.as[Map[Id[User], Boolean]])
+      MapHelpers.unionsWith[Id[User], Boolean](_ || _)(machineResponses)
     }
   }
 
