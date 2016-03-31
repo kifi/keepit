@@ -10,6 +10,7 @@ import com.keepit.common.core.traversableOnceExtensionOps
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
+import com.keepit.social.BasicUser
 import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
@@ -50,9 +51,11 @@ object KeepFields {
   object Source {
     def apply(teamId: SlackTeamId, channelId: SlackChannelId): String = s"slack|${channelId.value}" // TODO(Léo): this should be "slack|teamId_channelId"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
+    def apply(source: KeepSource): String = s"kifi|${source.value}"
     def apply(source: SourceAttribution): String = source match {
       case TwitterAttribution(tweet) => Source(tweet.user.screenName)
       case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)
+      case KifiAttribution(keptBy, _, _, _, keepSource) => Source(keepSource)
     }
   }
 

@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.json.EnumFormat
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.{ SlackTeamName, SlackTeamId, SlackMessage }
@@ -34,6 +35,7 @@ sealed abstract class KeepAttributionType(val name: String)
 object KeepAttributionType extends Enumerator[KeepAttributionType] {
   case object Twitter extends KeepAttributionType("twitter")
   case object Slack extends KeepAttributionType("slack")
+  case object Kifi extends KeepAttributionType("kifi")
   private def all = _all
   def fromString(name: String): Option[KeepAttributionType] = all.find(_.name equalsIgnoreCase name)
 
@@ -47,6 +49,7 @@ object RawSourceAttribution {
     attr match {
       case t: RawTwitterAttribution => (Twitter, RawTwitterAttribution.format.writes(t))
       case s: RawSlackAttribution => (Slack, RawSlackAttribution.format.writes(s))
+      case k: RawKifiAttribution => (Kifi, RawKifiAttribution.format.writes(k))
     }
   }
 
@@ -54,6 +57,7 @@ object RawSourceAttribution {
     attrType match {
       case Twitter => RawTwitterAttribution.format.reads(attrJson)
       case Slack => RawSlackAttribution.format.reads(attrJson)
+      case Kifi => RawKifiAttribution.format.reads(attrJson)
     }
   }
 
@@ -83,4 +87,9 @@ object RawTwitterAttribution {
 case class RawSlackAttribution(message: SlackMessage, teamId: SlackTeamId) extends RawSourceAttribution
 object RawSlackAttribution {
   implicit val format = Json.format[RawSlackAttribution]
+}
+
+case class RawKifiAttribution(keptBy: Id[User], connections: KeepConnections, source: KeepSource) extends RawSourceAttribution
+object RawKifiAttribution {
+  implicit val format = Json.format[RawKifiAttribution]
 }
