@@ -116,6 +116,22 @@ class JsonTest extends Specification {
         Foo.dropFormat.reads(Json.obj("x" -> 1, "y" -> 2, "z" -> 3)) === JsSuccess(x.copy(y = 5))
       }
     }
+    "give schema hints" in {
+      "for simple case classes" in {
+        case class Foo(x: Int, y: String, z: Seq[String])
+        object Foo {
+          val reads: Reads[Foo] = (
+            (__ \ 'x).read[Int] and
+            (__ \ 'y).read[String] and
+            (__ \ 'z).read[Seq[String]]
+          )(Foo.apply _)
+        }
+        val hinter = schemaHelper(Foo.reads)
+        hinter.hint(Json.obj("x" -> 1, "y" -> "asdf", "z" -> Seq("foo", "bar", "baz"))) === JsString("input is valid")
+        hinter.hint(Json.arr()) === Json.obj("obj.x" -> "required field", "obj.y" -> "required field", "obj.z" -> "required field")
+        hinter.hint(Json.obj("x" -> 1, "y" -> Seq(1, 2, 3))) === Json.obj("obj.y" -> "expected a string", "obj.z" -> "required field")
+      }
+    }
   }
 
 }
