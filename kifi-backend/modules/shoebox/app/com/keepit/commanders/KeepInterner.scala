@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.search.SearchServiceClient
+import com.keepit.social.Author
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -30,13 +31,28 @@ import scala.util.{ Failure, Success, Try }
 
 private case class InternedUriAndKeep(keep: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
-case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
+final case class KeepInternRequest(
+    author: Author,
+    url: String,
+    source: KeepSource,
+    attribution: Option[RawSourceAttribution],
+    title: Option[String],
+    note: Option[String],
+    keptAt: Option[DateTime],
+    users: Set[Id[User]],
+    libraries: Set[Id[Library]]) {
+  def trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
+}
+final case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
   def successes = newKeeps ++ existingKeeps
 }
 
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
+  // This is a modern API that supports multiple libraries, use it preferentially when possible
+  def internKeepByRequest(req: KeepInternRequest)(implicit session: RWSession): Try[(Keep, Boolean)]
 
+  // This is an older API that supports [0,1] libraries
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
 
   // Because we're nice, you get some extras:
@@ -81,7 +97,47 @@ class KeepInternerImpl @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends KeepInterner with Logging {
 
+  private val httpPrefix = "https?://".r
   implicit private val fj = ExecutionContext.fj
+
+  def internKeepByRequest(internReq: KeepInternRequest)(implicit session: RWSession): Try[(Keep, Boolean)] = {
+    val urlIsCompletelyUnusable = httpPrefix.findPrefixOf(internReq.url.toLowerCase).isEmpty || normalizationService.prenormalize(internReq.url).isFailure
+    if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
+    else {
+      val uri = normalizedURIInterner.internByUri(internReq.url, contentWanted = true, candidates = Set.empty)
+      val existingKeepOpt = keepRepo.getByUriAndLibrariesHash(uri.id.get, internReq.libraries).headOption
+      val userIdOpt = Author.kifiUserId(internReq.author)
+
+      val title = Seq(internReq.trimmedTitle, existingKeepOpt.flatMap(_.title), uri.title).flatten.headOption
+      val keptAt = existingKeepOpt.map(_.keptAt).orElse(internReq.keptAt).getOrElse(clock.now)
+      val keep = Keep(
+        id = existingKeepOpt.map(_.id.get),
+        externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
+        title = title,
+        userId = userIdOpt,
+        uriId = uri.id.get,
+        url = internReq.url,
+        source = internReq.source,
+        keptAt = keptAt,
+        note = existingKeepOpt.flatMap(_.note), // The internReq.note is intended to represent a comment
+        originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
+        connections = KeepConnections(internReq.libraries, internReq.users ++ userIdOpt) union existingKeepOpt.map(_.connections),
+        lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
+      )
+      val internedKeep = try {
+        keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+          internReq.attribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
+        }
+      } catch {
+        case ex: UndeclaredThrowableException =>
+          log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
+          throw ex.getUndeclaredThrowable
+      }
+
+      val isNewKeep = existingKeepOpt.isEmpty
+      Success((internedKeep, isNewKeep))
+    }
+  }
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerIdOpt, libraryOpt, source)
@@ -116,8 +172,6 @@ class KeepInternerImpl @Inject() (
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList ++ invalidUrls
     (keeps, failedRaws)
   }
-
-  private val httpPrefix = "https?://".r
 
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, ownerIdOpt: Option[Id[User]], libraryOpt: Option[Library], source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {

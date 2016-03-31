@@ -159,7 +159,7 @@ class KeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlugi
 
 object KeepStates extends States[Keep]
 
-case class KeepSource(value: String) {
+final case class KeepSource(value: String) {
   override def toString = value
 }
 object KeepSource {
@@ -381,6 +381,7 @@ object KeepFail extends Enumerator[KeepFail] {
   case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
+  case object MALFORMED_URL extends KeepFail(BAD_REQUEST, "malformed_url")
 }
 
 abstract class FeedFilter(val kind: String)

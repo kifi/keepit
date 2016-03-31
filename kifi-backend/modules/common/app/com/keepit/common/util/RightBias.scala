@@ -1,5 +1,8 @@
 package com.keepit.common.util
 
+import scala.collection.IterableLike
+import scala.collection.generic.CanBuildFrom
+
 // A right-biased either. Implemented as a pretty lightweight wrapper around Either
 final class RightBias[L, R](ethr: Either[L, R]) {
   def getRight: Option[R] = ethr.right.toOption
@@ -13,6 +16,8 @@ final class RightBias[L, R](ethr: Either[L, R]) {
   def getOrElse(fallback: L => R): R =
     fold(fallback, identity)
 
+  def mapLeft[L1](f: L => L1): RightBias[L1, R] =
+    fold(l => RightBias.left(f(l)), r => RightBias.right(r))
   def filter[L1](test: R => Boolean, fallback: => L1): RightBias[L1, R] = ethr match {
     case Right(r) if test(r) => RightBias.right(r)
     case _ => RightBias.left(fallback)
@@ -28,6 +33,23 @@ object RightBias {
 
   final implicit class FromOption[R](opt: Option[R]) {
     def withLeft[L](l: L): RightBias[L, R] = opt.fold[RightBias[L, R]](left(l))(r => right(r))
+  }
+  final implicit class FromSeq[T, TS, LS, RS](xs: IterableLike[T, TS]) {
+    def fragileMap[L, R](f: T => RightBias[L, R])(implicit cbfL: CanBuildFrom[TS, L, LS], cbfR: CanBuildFrom[TS, R, RS]): RightBias[LS, RS] = {
+      val lbuilder = cbfL(xs.repr)
+      val rbuilder = cbfR(xs.repr)
+      var anyLefts = false
+      xs.foreach { x =>
+        f(x) match {
+          case LeftSide(l) =>
+            anyLefts = true
+            lbuilder += l
+          case RightSide(r) => rbuilder += r
+        }
+      }
+      if (anyLefts) RightBias.left(lbuilder.result())
+      else RightBias.right(rbuilder.result())
+    }
   }
 
   object LeftSide { def unapply[L, R](rb: RightBias[L, R]): Option[L] = rb.fold(l => Some(l), r => None) }

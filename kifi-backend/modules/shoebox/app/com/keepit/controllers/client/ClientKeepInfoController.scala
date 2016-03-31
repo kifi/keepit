@@ -11,14 +11,13 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias.FromOption
-import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
 import play.api.libs.json.Json
 
 import scala.concurrent.{ Future, ExecutionContext }
 
-class ClientKeepController @Inject() (
+class ClientKeepInfoController @Inject() (
   db: Database,
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,

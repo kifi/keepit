@@ -25,6 +25,9 @@ case class KeepConnections(
   def plusLibrary(lib: Id[Library]) = this.withLibraries(libraries + lib)
 
   def diffed(diff: KeepConnectionsDiff) = this.copy(users = users ++ diff.users.added -- diff.users.removed, libraries = libraries ++ diff.libraries.added -- diff.libraries.removed)
+
+  def union(that: KeepConnections): KeepConnections = KeepConnections(libraries = libraries ++ that.libraries, users = users ++ that.users)
+  def union(that: Option[KeepConnections]): KeepConnections = that.fold(this)(_ union this)
 }
 object KeepConnections {
   val EMPTY: KeepConnections = KeepConnections(libraries = Set.empty, users = Set.empty)
