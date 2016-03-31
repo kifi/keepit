@@ -209,8 +209,7 @@ class KeepInternerImpl @Inject() (
     thirdPartyAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
     airbrake.verify(userIdOpt.isDefined || thirdPartyAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
-    val initialRecipients = KeepConnections(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded)
-    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, initialRecipients, source)))
+    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, KeepConnections(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
 
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
 
@@ -227,7 +226,7 @@ class KeepInternerImpl @Inject() (
       keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-      connections = initialRecipients,
+      connections = KeepConnections(libraryOpt.map(_.id.get).toSet, Set.empty, userIdOpt.toSet ++ usersAdded),
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {
