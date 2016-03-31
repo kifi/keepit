@@ -6,6 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import org.joda.time.DateTime
@@ -48,6 +49,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
+  def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
 
   def deactivate(model: Keep)(implicit session: RWSession): Keep
 
@@ -322,6 +324,11 @@ class KeepRepoImpl @Inject() (
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep] = {
     val hash = LibrariesHash(libIds)
     activeRows.filter(k => k.uriId === uriId && k.librariesHash === hash).list.filter(_.connections.libraries == libIds)
+  }
+  def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep] = {
+    // TODO(ryan): make this filter by emails hash as well
+    val userHash = ParticipantsHash(users)
+    activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.connections.users == users && k.connections.emails == emails)
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
