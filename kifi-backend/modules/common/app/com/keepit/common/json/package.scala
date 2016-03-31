@@ -7,6 +7,31 @@ import play.api.data.validation.ValidationError
 import scala.util.{Success, Failure, Try}
 
 package object json {
+  abstract class FormatSchemaHelper {
+    def hint(input: JsValue): JsValue
+  }
+  def schemaHelper[T](reads: Reads[T]): FormatSchemaHelper = new FormatSchemaHelper {
+    override def hint(input: JsValue): JsValue = {
+      reads.reads(input).fold(brokenPaths => JsObject(brokenPaths.map {
+        case (path, errs) =>
+          val pathIsMissing = errs.exists(_.message.startsWith("error.path.missing"))
+          val wrongInputType = errs.collect {
+            case ValidationError(str) if str.startsWith("error.expected.jsobject") => "object"
+            case ValidationError(str) if str.startsWith("error.expected.jsarray") => "array"
+            case ValidationError(str) if str.startsWith("error.expected.jsnumber") => "number"
+            case ValidationError(str) if str.startsWith("error.expected.jsstring") => "string"
+          }
+          val firstHint = Seq(
+            pathIsMissing -> "required field",
+            wrongInputType.nonEmpty -> (wrongInputType match {
+              case Seq(t) => s"expected a $t"
+              case _ => wrongInputType.mkString("expected one of: [", ",", "]")
+            })
+          ).collectFirst { case (true, hint) => hint }
+          path.toJsonString -> JsString(firstHint.getOrElse("badly formatted"))
+      }), _ => JsString("input is valid"): JsValue)
+    }
+  }
   object ReadIfPossible {
     def emptyReads[T] = Reads { j => JsSuccess(Option.empty[T]) }
     implicit class PimpedJsPath(jsp: JsPath) {

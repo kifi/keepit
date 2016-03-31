@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
-import com.keepit.common.CollectionHelpers
+import com.keepit.common.{ json, CollectionHelpers }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
@@ -75,11 +75,7 @@ final case class ExternalKeepCreateRequest(
 object ExternalKeepCreateRequest {
   implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
 
-  def formattingHint(input: JsValue): JsValue = {
-    reads.reads(input).fold(errs => JsArray(errs.map {
-      case (path, err) => JsString(s"""${path.toJsonString} is broken because $err""")
-    }), _ => JsString("your input was formatted correctly"))
-  }
+  val schemaHelper = json.schemaHelper(reads)
 }
 
 @ImplementedBy(classOf[KeepCommanderImpl])

@@ -56,7 +56,7 @@ class ClientKeepMutationController @Inject() (
     goodResult.map { keep =>
       Ok(Json.obj("id" -> Keep.publicId(keep.id.get)))
     }.recover {
-      case DiscussionFail.COULD_NOT_PARSE => BadRequest(Json.obj("error" -> "malformed_payload", "hint" -> ExternalKeepCreateRequest.formattingHint(request.body)))
+      case DiscussionFail.COULD_NOT_PARSE => BadRequest(Json.obj("error" -> "malformed_payload", "hint" -> ExternalKeepCreateRequest.schemaHelper.hint(request.body)))
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
     }.get
