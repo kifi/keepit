@@ -114,7 +114,6 @@ trait SearchControllerUtil {
   // todo(Léo): include enough source info in RestrictedKeepInfo and introduce AugmentedItem.hasRelevantSource
   def getSources(augmentedItem: AugmentedItem, sourceAttributionByKeepId: Map[Id[Keep], SourceAttribution]): Seq[SourceAttribution] = {
     augmentedItem.keeps.flatMap(keep => sourceAttributionByKeepId.get(keep.id)).filter {
-      case k: KifiAttribution => false
       case s: SlackAttribution => augmentedItem.allSlackTeamIds.contains(s.teamId)
       case _ => true
     } distinctBy (KeepFields.Source(_))

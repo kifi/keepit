@@ -43,7 +43,7 @@ class ClientKeepMutationController @Inject() (
         author = Author.KifiUser(request.userId),
         url = externalCreateRequest.url,
         source = externalCreateRequest.source,
-        attribution = RawKifiAttribution(request.userId, KeepConnections(libraries, externalCreateRequest.emails, users), externalCreateRequest.source),
+        attribution = None,
         title = externalCreateRequest.title,
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,

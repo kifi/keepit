@@ -408,14 +408,12 @@ class SlackPushingActor @Inject() (
           text = DescriptionElements.formatForSlack(keepElement),
           attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
         )
-      case (None, attrOpt) =>
-        SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(keepElement),
-          attachments = attrOpt.collect {
-            case TwitterAttribution(tweet) => SlackAttachment.simple(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text)))
-            case SlackAttribution(msg, team) => SlackAttachment.simple(DescriptionElements(s"*${msg.username.value}:*", msg.text))
-          }.toSeq
-        )
+      case (None, Some(attr)) =>
+        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
+          attachments = Seq(SlackAttachment.simple(attr match {
+            case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
+            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username.value}:*", msg.text)
+          })))
     }
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
