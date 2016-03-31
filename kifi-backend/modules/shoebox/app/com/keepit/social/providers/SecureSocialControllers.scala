@@ -1,7 +1,9 @@
 package com.keepit.social.providers
 
+import com.keepit.common.controller.FortyTwoCookies
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.logging.Logging
+import com.keepit.controllers.core.PostRegIntent
 import com.keepit.social.IdentityHelpers
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -155,6 +157,7 @@ object LoginPage extends Controller with Logging {
 
   /**
    * Renders the login page
+   *
    * @return
    */
   def login = Action { implicit request =>
@@ -192,7 +195,8 @@ object LoginPage extends Controller with Logging {
       Authenticator.delete(authenticator.id)
       user
     }
-    val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
+    val cookies = new FortyTwoCookies.KifiInstallationCookie(current.configuration.getString("session.domain")).discard +: Authenticator.discardingCookie +: PostRegIntent.discardingCookies
+    val result = Redirect(to).discardingCookies(cookies: _*)
     log.info(s"[logout] user.email=${user.map(_.email)} user.class=${user.getClass}")
     user match {
       case Some(u) =>

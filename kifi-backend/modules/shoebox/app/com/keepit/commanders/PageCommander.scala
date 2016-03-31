@@ -167,7 +167,8 @@ class PageCommander @Inject() (
   }
 
   private val doNotMoveKeeperDomains = Set(
-    371L // ted.com
+    371L, // ted.com
+    1586519L // kifi.com
   ).map(Id[Domain](_))
   @StatsdTiming("PageCommander.inferKeeperPosition")
   private def inferKeeperPosition(domainId: Id[Domain])(implicit session: RSession): Option[JsObject] = {

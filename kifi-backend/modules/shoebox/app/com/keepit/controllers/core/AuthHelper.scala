@@ -279,7 +279,7 @@ class AuthHelper @Inject() (
   def processIntent(userId: Id[User], intent: PostRegIntent)(implicit request: MaybeUserRequest[_]): String = {
     import com.keepit.controllers.website.HomeControllerRoutes
     val homeOrInstall = request match {
-      case ur: UserRequest[_] if ur.kifiInstallationId.isEmpty && !hasSeenInstall(userId) => HomeControllerRoutes.install
+      case ur: UserRequest[_] if request.userAgentOpt.exists(_.canRunExtensionIfUpToDate) && !hasSeenInstall(userId) => HomeControllerRoutes.install
       case _ => HomeControllerRoutes.home
     }
 
