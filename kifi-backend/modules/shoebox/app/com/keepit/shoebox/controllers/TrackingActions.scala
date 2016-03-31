@@ -17,17 +17,18 @@ trait TrackingActions {
   def SlackClickTracking(slackTeamIdOpt: Option[SlackTeamId], subactionFallback: String)(implicit slackAnalytics: SlackAnalytics) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, MaybeUserRequest] {
     override def invokeBlock[A](request: MaybeUserRequest[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       Future {
-        request.getQueryString("t").foreach { signedTrackingParams =>
-          val params = KifiUrlRedirectHelper.extractTrackingParams(signedTrackingParams, Some("ascii"))
-          for {
-            slackTeamId <- slackTeamIdOpt
-            slackChannelId <- params.getParam("slackChannelId").flatMap(_.value.map(SlackChannelId(_)))
-            category <- params.getParam("category").flatMap(_.value.map(NotificationCategory(_)))
-            subaction = params.getParam("subaction").flatMap(_.value).getOrElse(subactionFallback)
-          } {
-            slackAnalytics.trackNotificationClicked(slackTeamId, slackChannelId, category, subaction)
-          }
+        val signedParamsOpt = request.getQueryString("t").map(KifiUrlRedirectHelper.extractTrackingParams(_, Some("ascii")))
+        def getParam(key: String): Option[String] = {
+          val signedOpt = signedParamsOpt.flatMap(_.getParam(key).flatMap(_.value))
+          signedOpt.orElse(request.getQueryString(key))
         }
+
+        for {
+          slackTeamId <- slackTeamIdOpt
+          slackChannelId <- getParam("slackChannelId").map(SlackChannelId(_))
+          category <- getParam("category").map(NotificationCategory(_))
+          subaction = getParam("subaction").getOrElse(subactionFallback)
+        } slackAnalytics.trackNotificationClicked(slackTeamId, slackChannelId, category, subaction)
       }
       block(request)
     }
