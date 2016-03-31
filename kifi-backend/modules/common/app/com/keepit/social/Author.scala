@@ -24,6 +24,7 @@ object Author {
   def fromSource(attr: RawSourceAttribution): Author = attr match {
     case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
     case RawSlackAttribution(msg, teamId) => SlackUser(teamId, msg.userId)
+    case RawKifiAttribution(userId, _, _) => KifiUser(userId)
   }
 
   def toIndexableString(author: Author): String = {
@@ -87,7 +88,7 @@ object BasicAuthor {
     picture = user.picturePath.getUrl,
     url = user.path.absolute
   )
-  def fromSource(source: SourceAttribution): BasicAuthor = source match {
+  def fromSource(source: SourceAttribution)(implicit imageConfig: S3ImageConfig): BasicAuthor = source match {
     case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
       name = s"@${msg.username.value}",
@@ -100,6 +101,7 @@ object BasicAuthor {
       picture = ImageUrls.TWITTER_LOGO,
       url = tweet.permalink
     )
+    case KifiAttribution(keptBy, _, _, _, _) => fromUser(keptBy)
   }
   def fromNonUser(nonUser: BasicNonUser): BasicAuthor = nonUser.kind match {
     case NonUserKinds.email =>
