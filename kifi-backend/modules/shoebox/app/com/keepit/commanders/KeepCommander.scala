@@ -74,6 +74,12 @@ final case class ExternalKeepCreateRequest(
   libraries: Set[PublicId[Library]])
 object ExternalKeepCreateRequest {
   implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
+
+  def formattingHint(input: JsValue): JsValue = {
+    reads.reads(input).fold(errs => JsArray(errs.map {
+      case (path, err) => JsString(s"""${path.toJsonString} is broken because $err""")
+    }), _ => JsString("your input was formatted correctly"))
+  }
 }
 
 @ImplementedBy(classOf[KeepCommanderImpl])
