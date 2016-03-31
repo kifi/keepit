@@ -18,9 +18,9 @@ object ImageUrls {
 
 sealed abstract class Author(val kind: AuthorKind)
 object Author {
-  case class KifiUser(userId: Id[User]) extends Author(AuthorKind.Kifi)
-  case class SlackUser(teamId: SlackTeamId, userId: SlackUserId) extends Author(AuthorKind.Slack)
-  case class TwitterUser(userId: TwitterUserId) extends Author(AuthorKind.Twitter)
+  final case class KifiUser(userId: Id[User]) extends Author(AuthorKind.Kifi)
+  final case class SlackUser(teamId: SlackTeamId, userId: SlackUserId) extends Author(AuthorKind.Slack)
+  final case class TwitterUser(userId: TwitterUserId) extends Author(AuthorKind.Twitter)
   def fromSource(attr: RawSourceAttribution): Author = attr match {
     case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
     case RawSlackAttribution(msg, teamId) => SlackUser(teamId, msg.userId)
@@ -42,6 +42,11 @@ object Author {
     case kifi(ValidLong(id)) => KifiUser(Id[User](id))
     case slack(teamId, userId) => SlackUser(SlackTeamId(teamId), SlackUserId(userId))
     case twitter(ValidLong(id)) => TwitterUser(TwitterUserId(id))
+  }
+
+  def kifiUserId(author: Author): Option[Id[User]] = author match {
+    case KifiUser(userId) => Some(userId)
+    case _ => None
   }
 }
 

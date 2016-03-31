@@ -46,14 +46,15 @@ class ClientKeepMutationController @Inject() (
         attribution = None,
         title = externalCreateRequest.title,
         note = externalCreateRequest.note,
+        keptAt = externalCreateRequest.keptAt,
         users = users,
         libraries = libraries
       )
       (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
     } yield keep
 
-    goodResult.map { result =>
-      Ok(Json.toJson(result))
+    goodResult.map { keep =>
+      Ok(Json.obj("id" -> Keep.publicId(keep.id.get)))
     }.recover {
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
