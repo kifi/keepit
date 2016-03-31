@@ -33,6 +33,7 @@ case class UserThread(
   startedBy: Id[User], // denormalized from MessageThread
   accessToken: ThreadAccessToken = ThreadAccessToken())
     extends Model[UserThread] with ModelWithState[UserThread] with ParticipantThread {
+  def isActive = state == UserThreadStates.ACTIVE
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
@@ -51,7 +52,7 @@ object UserThread {
     keepId = mt.keepId,
     uriId = Some(mt.uriId),
     lastSeen = None,
-    unread = true,
+    unread = user != mt.startedBy,
     latestMessageId = None,
     startedBy = mt.startedBy
   )

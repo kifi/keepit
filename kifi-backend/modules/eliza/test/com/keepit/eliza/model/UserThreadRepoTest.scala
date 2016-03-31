@@ -62,7 +62,8 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           userThreadRepo.getUserStats(user1) === UserThreadStats(0, 0, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           val thread1 = MessageThreadFactory.thread().saved
-          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1))
+          val ut1 = userThreadRepo.save(UserThread.forMessageThread(thread1)(user1))
+          userThreadRepo.markUnread(user1, thread1.keepId)
           userThreadRepo.count === 1
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))
           toMail.size === 1
@@ -85,7 +86,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
         }
         db.readWrite { implicit s =>
           val thread1 = MessageThreadFactory.thread().withOnlyStarter(user1).saved
-          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1).copy(lastActive = Some(inject[Clock].now)))
+          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1).copy(lastActive = Some(inject[Clock].now), unread = true))
         }
         db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(3, 2, 1)

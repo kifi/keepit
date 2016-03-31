@@ -108,9 +108,10 @@ class UserThreadRepoImpl @Inject() (
 
   def intern(model: UserThread)(implicit session: RWSession): UserThread = {
     // There is a unique index on (userId, keepId), so snake the id from any dead model that collides
-    save(model.copy(
-      deadRows.filter(row => row.user === model.user && row.keepId === model.keepId).map(_.id).firstOption
-    ))
+    rows.filter(row => row.user === model.user && row.keepId === model.keepId).firstOption match {
+      case Some(existingModel) if existingModel.isActive => existingModel
+      case deadModelOpt => save(model.copy(id = deadModelOpt.map(_.id.get)))
+    }
   }
 
   def getByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[UserThread] = {
@@ -124,7 +125,7 @@ class UserThreadRepoImpl @Inject() (
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
     activeRows
       .filter(row => row.user === userId && row.unread && !row.muted)
-      .sortBy(row => row.notificationUpdatedAt desc)
+      .sortBy(row => (row.notificationUpdatedAt desc, row.id desc))
       .take(howMany)
       .list
   }

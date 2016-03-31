@@ -318,8 +318,7 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[(Seq[NotificationJson], Int)] = {
-    val noticesFuture = getNotificationsByUser(userId, UserThreadQuery(onlyUnread = Some(true), limit = howMany), includeUriSummary)
-    new SafeFuture(noticesFuture map { notices =>
+    getNotificationsByUser(userId, UserThreadQuery(onlyUnread = Some(true), limit = howMany), includeUriSummary).map { notices =>
       val numTotal = if (notices.length < howMany) {
         notices.length
       } else {
@@ -328,7 +327,7 @@ class NotificationDeliveryCommander @Inject() (
         }
       }
       (notices, numTotal)
-    })
+    }
   }
 
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
