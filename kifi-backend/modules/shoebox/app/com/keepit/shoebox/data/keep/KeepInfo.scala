@@ -9,13 +9,13 @@ import com.keepit.discussion.{ Discussion, DiscussionKeep }
 import com.keepit.model._
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsObject, Json, OWrites, Writes }
+import play.api.libs.json.{ Json, OWrites, Writes }
 
 case class BasicLibraryWithKeptAt(library: BasicLibrary, keptAt: DateTime)
 object BasicLibraryWithKeptAt {
   implicit val writes: OWrites[BasicLibraryWithKeptAt] = OWrites[BasicLibraryWithKeptAt] {
     case BasicLibraryWithKeptAt(library, keptAt) =>
-      BasicLibrary.format.writes(library).as[JsObject] + ("keptAt" -> Json.toJson(keptAt))
+      BasicLibrary.libraryWrites.writes(library) + ("keptAt" -> Json.toJson(keptAt))
   }
 }
 

@@ -178,7 +178,7 @@ class SlackSearchController @Inject() (
           val keepId = hit.keepId.map(Id[Keep](_))
           val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
           val pretext = {
-            val attribution = keepId.flatMap(sourceAttributions.get).collect {
+            val attribution = keepId.flatMap(sourceAttributions.get).map {
               case TwitterAttribution(tweet) =>
                 val tweetUrl = convertUrlToKifiRedirect(tweet.permalink, command, "clickedTweetUrl")
                 Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweetUrl), "on Twitter")

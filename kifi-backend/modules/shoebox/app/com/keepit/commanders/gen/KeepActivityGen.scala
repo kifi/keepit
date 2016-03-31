@@ -50,7 +50,7 @@ object KeepActivityGen {
           }
       }
 
-      val source = sourceAttrOpt.map(_._1).collect {
+      val source = sourceAttrOpt.map(_._1).map {
         case SlackAttribution(message, _) => KeepEventSource(KeepEventSourceKind.Slack, Some(message.permalink))
         case TwitterAttribution(tweet) => KeepEventSource(KeepEventSourceKind.Twitter, Some(tweet.permalink))
       }

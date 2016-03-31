@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -40,14 +39,14 @@ class KeepSourceCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends KeepSourceCommander with Logging {
 
-  def getSourceAttributionForKeep(keepId: Id[Keep])(implicit session: RSession): Option[(SourceAttribution, Option[BasicUser])] = { //todo(cam): make this non-optional after migration
+  def getSourceAttributionForKeep(keepId: Id[Keep])(implicit session: RSession): Option[(SourceAttribution, Option[BasicUser])] = {
     getSourceAttributionForKeeps(Set(keepId)).get(keepId)
   }
 
   // Get the source attribution for the provided keeps
   // then look at the a couple of tables to see if any of those attributions can be re-assigned to an actual Kifi user
   // if they have, provide that basic user as well
-  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], (SourceAttribution, Option[BasicUser])] = {
+  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession) = {
     val sourcesByKeepId = sourceAttributionRepo.getByKeepIds(keepIds)
     val attributions = sourcesByKeepId.values.toSeq
 
@@ -62,12 +61,11 @@ class KeepSourceCommanderImpl @Inject() (
     val userIds = (userByTwitterId.values ++ userBySlackIdentity.values).toSet
     val basicUserById = basicUserRepo.loadAll(userIds)
     sourcesByKeepId.mapValuesStrict { attr =>
-      val basicUserOpt = attr match {
-        case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id).flatMap(basicUserById.get)
-        case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId)).flatMap(basicUserById.get)
-        case KifiAttribution(keptBy, _, _, _, _) => Some(keptBy)
+      val userIdOpt = attr match {
+        case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id)
+        case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId))
       }
-      (attr, basicUserOpt)
+      (attr, userIdOpt.flatMap(basicUserById.get))
     }
   }
 
@@ -96,18 +94,11 @@ class KeepSourceCommanderImpl @Inject() (
 @Singleton
 class KeepSourceAugmentor @Inject() (
     slackTeamMembershipRepo: SlackTeamMembershipRepo,
-    slackChannelRepo: SlackChannelRepo,
-    basicUserRepo: BasicUserRepo,
-    basicLibGen: BasicLibraryGen) extends Logging {
+    slackChannelRepo: SlackChannelRepo) extends Logging {
 
   def rawToSourceAttribution(source: RawSourceAttribution)(implicit session: RSession): SourceAttribution = source match {
     case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
     case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
-    case RawKifiAttribution(keptBy, KeepConnections(libraries, nonUsers, users), keepSource) => {
-      val userById = basicUserRepo.loadAllActive(users + keptBy)
-      val libById = basicLibGen.getBasicLibraries(libraries)
-      KifiAttribution(userById(keptBy), users.flatMap(userById.get), nonUsers, libraries.flatMap(libById.get), keepSource)
-    }
   }
 
   private val slackIdentifier = """<[@#][A-Z].*?>""".r
