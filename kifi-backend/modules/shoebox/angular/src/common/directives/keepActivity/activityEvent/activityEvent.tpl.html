@@ -19,9 +19,9 @@
               title="{{::activityEvent.timestamp|localTime}}" ng-if="::activityEvent.timestamp && !showKeepPageLink"></time>
         <!--Add a space between the time and source-->
         <span></span>
-        <a class="kf-keep-activity-event-time"
+        <a class="kf-keep-activity-event-source"
            ng-class="{
-            'kf-keep-activity-event-page-link': keep.activity.latestEvent.source.url
+            'kf-keep-activity-event-source-link': activityEvent.source.url
            }"
            ng-if="::activityEvent.source.kind"
            ng-href="{{::activityEvent.source.url}}"

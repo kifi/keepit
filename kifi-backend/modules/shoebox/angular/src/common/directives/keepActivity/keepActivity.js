@@ -54,7 +54,8 @@ angular.module('kifi')
           $scope.activity = $scope.keep.activity.events.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
 
           $scope.visibleCount = Math.min($scope.maxInitialComments || 3, $scope.activity.length);
-          $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.keep.discussion.numMessages;
+          $scope.hasMoreToFetch = $scope.activity[0].kind !== 'initial';
+          $scope.showViewPreviousComments = $scope.hasMoreToFetch || $scope.visibleCount < $scope.activity.length;
 
           // listeners
 
