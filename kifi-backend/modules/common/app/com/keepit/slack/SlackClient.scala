@@ -49,7 +49,7 @@ object SlackAPI {
   def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
   def PostMessage(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest) =
     Route(GET, "https://slack.com/api/chat.postMessage", Seq[Param](token, channelId) ++ msg.asUrlParams: _*)
-  def UpdateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, msg: SlackMessageRequest) =
+  def UpdateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, msg: SlackMessageUpdateRequest) =
     Route(GET, "https://slack.com/api/chat.update", Seq[Param](token, channelId, timestamp) ++ msg.asUrlParams: _*)
   def DeleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp) =
     Route(GET, "https://slack.com/api/chat.delete", Seq[Param](token, channelId, timestamp): _*)
@@ -64,7 +64,7 @@ trait SlackClient {
   def pushToWebhook(url: String, msg: SlackMessageRequest): Future[Unit]
   def postToChannel(token: SlackAccessToken, channelId: SlackChannelId, msg: SlackMessageRequest): Future[SlackMessageResponse]
   def processAuthorizationResponse(code: SlackAuthorizationCode, redirectUri: String): Future[SlackAuthorizationResponse]
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse]
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageUpdateRequest): Future[SlackMessageResponse]
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit]
   def testToken(token: SlackAccessToken): Future[Unit]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
@@ -133,7 +133,7 @@ class SlackClientImpl(
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code, redirectUri))
   }
 
-  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageRequest): Future[SlackMessageResponse] = {
+  def updateMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp, newMsg: SlackMessageUpdateRequest): Future[SlackMessageResponse] = {
     slackCall[SlackMessageResponse](SlackAPI.UpdateMessage(token, channelId, timestamp, newMsg))
   }
   def deleteMessage(token: SlackAccessToken, channelId: SlackChannelId, timestamp: SlackTimestamp): Future[Unit] = {
