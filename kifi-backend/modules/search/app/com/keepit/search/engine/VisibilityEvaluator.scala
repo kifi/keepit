@@ -138,7 +138,7 @@ final class KeepVisibilityEvaluator(
         Visibility.MEMBER // the keep is in an authorized library
       } else {
         val visibility = visibilityDocValues.get(docId)
-        if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
+        if (orgIds.findIndex(orgId) >= 0) {
           if (visibility == organization || visibility == published) Visibility.MEMBER // library is owned by an org that I am a member of
           else Visibility.RESTRICTED
         } else if (visibility == published) {
@@ -199,11 +199,10 @@ final class LibraryVisibilityEvaluator(
         }
       } else {
         val visibility = visibilityDocValues.get(docId)
-        if (orgIds.findIndex(orgIdDocValues.get(docId)) >= 0) {
+        if (orgIds.findIndex(orgId) >= 0) {
           if (visibility == organization || visibility == published) Visibility.MEMBER // library is owned by an org that I am a member of
           else Visibility.RESTRICTED
         } else if (visibility == published) {
-          val ownerId = ownerIdDocValues.get(docId)
           if (myFriendIds.findIndex(ownerId) >= 0) {
             Visibility.NETWORK // a published library owned by my friend
           } else if (restrictedUserIds.findIndex(ownerId) >= 0) {
