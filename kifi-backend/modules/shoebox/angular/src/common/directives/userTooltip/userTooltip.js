@@ -36,9 +36,12 @@ angular.module('kifi')
         scope.below = false;
 
         element.on('mouseenter', function (e) {
+          if (scope.tipping) {
+            return;
+          }
           // For some reason, there is no way to compute the tooltip height on the fly.
           // This works because the tooltip heights never change.
-          var tooltipHeight = scope.library ? 280 : 100;
+          var tooltipHeight = scope.library ? 150 : 100;
 
           // These values are relative to the full page, so scrolling won't change behavior.
           // Use the standard element.getBoundingClientRect() if you want to render the tooltip
@@ -80,6 +83,55 @@ angular.module('kifi')
             });
           }
         });
+
+        scope.shouldShowLibraryOptions = function () {
+          return scope.library &&
+                 scope.library.kind &&
+                 scope.library.kind !== 'system_main' &&
+                 scope.library.kind !== 'system_secret';
+        };
+
+        scope.toggleLibraryFollow = function ($event) {
+          $event.stopPropagation();
+          $event.preventDefault();
+          if (!scope.library || !scope.library.id) {
+            return;
+          }
+          if (scope.library.membership) {
+            libraryService.leaveLibrary(scope.library.id).then(function() {
+              scope.library.membership = undefined;
+            });
+          } else {
+            libraryService.joinLibrary(scope.library.id).then(function(membership) {
+              scope.library.membership = membership;
+            });
+          }
+        };
+
+        scope.toggleLibrarySubscription = function ($event) {
+          $event.stopPropagation();
+          $event.preventDefault();
+          if (!scope.library || !scope.library.id || !scope.library.membership) {
+            return;
+          }
+          if (scope.library.membership.subscribed) {
+            libraryService.updateSubscriptionToLibrary(scope.library.id, false).then(function () {
+              scope.library.membership.subscribed = false;
+            });
+          } else {
+            libraryService.updateSubscriptionToLibrary(scope.library.id, true).then(function () {
+              scope.library.membership.subscribed = true;
+            });
+          }
+        };
+
+        scope.openLibrary = function ($event) {
+          $event.stopPropagation();
+          $event.preventDefault();
+          if (scope.library && scope.library.path) {
+            $window.location = scope.library.path;
+          }
+        };
 
         scope.$on('$destroy', function () {
           $timeout.cancel(timeout);
