@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.strings.StringWithReplacements
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
@@ -19,6 +20,7 @@ object SourceAttribution {
     attr match {
       case t: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(t))
       case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
+      case k: KifiAttribution => (Kifi, KifiAttribution.format.writes(k))
     }
   }
 
@@ -26,6 +28,7 @@ object SourceAttribution {
     attrType match {
       case Twitter => TwitterAttribution.format.reads(attrJson)
       case Slack => SlackAttribution.format.reads(attrJson)
+      case Kifi => KifiAttribution.format.reads(attrJson)
     }
   }
 
@@ -99,6 +102,11 @@ object PrettySlackMessage {
 case class SlackAttribution(message: PrettySlackMessage, teamId: SlackTeamId) extends SourceAttribution
 object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
+}
+
+case class KifiAttribution(keptBy: BasicUser, users: Set[BasicUser], nonUsers: Set[EmailAddress], libraries: Set[BasicLibrary], source: KeepSource) extends SourceAttribution
+object KifiAttribution {
+  implicit val format = Json.format[KifiAttribution]
 }
 
 case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
