@@ -198,6 +198,7 @@ class KeepInfoAssemblerImpl @Inject() (
 
           val context = augmentationByUri.get(keep.uriId).map(augmentation => NewPageContext(
             numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
+            numTotalKeeps = augmentation.keepsTotal,
             keepers = augmentation.keepers.flatMap { case (userId, time) => usersById.get(userId) },
             numVisibleKeepers = augmentation.keepers.length + augmentation.keepersOmitted,
             numTotalKeepers = augmentation.keepersTotal,
