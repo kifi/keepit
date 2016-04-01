@@ -101,7 +101,7 @@ trait KeepCommander {
 
   // Updating / managing
   def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind])(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -505,14 +505,14 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep] = {
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind])(implicit session: RWSession): Try[Keep] = {
     def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
     for {
       oldKeep <- keepRepo.getOption(keepId).map(Success(_)).getOrElse(Failure(KeepFail.KEEP_NOT_FOUND))
       _ <- if (canEdit(oldKeep.id.get)) Success(()) else Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
     } yield {
       val newKeep = keepRepo.save(oldKeep.withTitle(Some(title.trim)))
-      session.onTransactionSuccess(eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title)))
+      session.onTransactionSuccess(eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title), source))
       newKeep
     }
   }

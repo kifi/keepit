@@ -137,10 +137,10 @@ trait ElizaServiceClient extends ServiceClient {
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit]
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent, source: Option[KeepEventSourceKind]): Future[Unit]
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]]): Future[Set[Id[User]]]
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
 }
@@ -392,9 +392,9 @@ class ElizaServiceClientImpl @Inject() (
       Unit
     }
   }
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]]): Future[Set[Id[User]]] = {
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
     import EditParticipantsOnKeep._
-    val request = Request(keepId, editor, newUsers, newLibraries)
+    val request = Request(keepId, editor, newUsers, newLibraries, source)
     call(Eliza.internal.editParticipantsOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].users
     }
@@ -416,7 +416,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent, source: Option[KeepEventSourceKind]): Future[Unit] = {
     import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
     val request = Request(keepId, userId, event)
     call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
@@ -504,7 +504,7 @@ object ElizaServiceClient {
     )
   }
   object EditParticipantsOnKeep {
-    case class Request(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]])
+    case class Request(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind])
     case class Response(users: Set[Id[User]])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]

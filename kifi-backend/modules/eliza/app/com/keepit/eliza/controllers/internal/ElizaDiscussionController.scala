@@ -128,7 +128,7 @@ class ElizaDiscussionController @Inject() (
   def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
     import EditParticipantsOnKeep._
     val input = request.body.as[Request]
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries).map { allUsers =>
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries, input.source).map { allUsers =>
       val output = Response(allUsers)
       Ok(Json.toJson(output))
     }

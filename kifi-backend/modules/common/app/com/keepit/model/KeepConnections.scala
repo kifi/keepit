@@ -83,11 +83,12 @@ object KeepConnectionsDiff {
   def addUsers(users: Set[Id[User]]) = KeepConnectionsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addLibrary(library: Id[Library]) = KeepConnectionsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
 }
-case class ExternalKeepConnectionsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress])
+case class ExternalKeepConnectionsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSourceKind])
 object ExternalKeepConnectionsDiff {
   implicit val reads: Reads[ExternalKeepConnectionsDiff] = (
     (__ \ 'users).readNullable[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'libraries).readNullable[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
-    (__ \ 'emails).readNullable[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty)
+    (__ \ 'emails).readNullable[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
+    (__ \ 'source).readNullable[KeepEventSourceKind]
   )(ExternalKeepConnectionsDiff.apply _)
 }

@@ -397,7 +397,10 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(
+    adderUserId: Id[User], keepId: Id[Keep],
+    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]],
+    source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -445,7 +448,7 @@ class MessagingCommander @Inject() (
             keepId = oldThread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = None, // todo(cam): add source
+            source = source.flatMap(KeepEventSourceKind.toMessageSource),
             auxData = Some(AddLibraries(adderUserId, actuallyNewLibraries)),
             sentOnUrl = None,
             sentOnUriId = None
@@ -460,7 +463,7 @@ class MessagingCommander @Inject() (
             keepId = thread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = None,
+            source = source.flatMap(KeepEventSourceKind.toMessageSource),
             auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
             sentOnUrl = None,
             sentOnUriId = None
