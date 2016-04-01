@@ -39,7 +39,8 @@ var notifier = function () {
           sticky: false,
           showForMs: o.showForMs || 12000,
           onClick: $.proxy(onClickWithLocator, null, o.thread, o.id, o.url, o.locator, false),
-          threadId: o.thread
+          threadId: o.thread,
+          fullCategory: o.fullCategory
         });
         break;
       case 'global':
@@ -60,7 +61,8 @@ var notifier = function () {
           sticky: o.isSticky,
           showForMs: o.showForMs || 12000,
           onClick: clickAction,
-          threadId: o.thread
+          threadId: o.thread,
+          fullCategory: o.fullCategory
         });
         break;
       }
@@ -85,7 +87,7 @@ var notifier = function () {
     }))
     .appendTo($wrap)
     .fadeIn(params.fadeInMs || 500)
-    .click($.proxy(onClick, null, category, params.onClick));
+    .click($.proxy(onClick, null, category, params.onClick, id));
 
     if (!params.sticky) {
       $item.mouseenter(function() {
@@ -102,11 +104,12 @@ var notifier = function () {
 
     api.port.emit('track_notification', {id: id, properties: {
       category: category,
+      subcategory: params.fullCategory || 'unknown',
       sticky: params.sticky || undefined
     }});
   }
 
-  function onClick(category, visit, e) {
+  function onClick(category, visit, id, e) {
     if (e.which !== 1) return;
     var $item = $(this);
     api.port.emit('remove_notification', $item.data('threadId'));
@@ -116,6 +119,8 @@ var notifier = function () {
     var xClicked = e.target.classList.contains('kifi-notify-close');
     if (!xClicked) {
       visit.call(this, e);
+    } else {
+      api.port.emit('set_message_read', {threadId: $item.data('threadId'), messageId: id, from: 'notifierX'});
     }
     api.port.emit('track_notification_click', {
       subsource: 'popup',
