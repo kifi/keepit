@@ -50,7 +50,7 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
   implicit val format: Format[KeepEventSourceKind] = EnumFormat.format(fromStr, _.value)
 
   def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap {
-    case MessageSource.IPAD | MessageSource.IPHONE => Some(iOS)
+    case MessageSource.IPHONE => Some(iOS)
     case src => KeepEventSourceKind.fromStr(src.value)
   }
   def toMessageSource(eventSrc: KeepEventSourceKind): Option[MessageSource] = eventSrc match {
