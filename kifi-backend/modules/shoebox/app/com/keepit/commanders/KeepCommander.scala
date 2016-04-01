@@ -145,6 +145,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander: KeepToUserCommander,
     kteCommander: KeepToEmailCommander,
     keepSourceCommander: KeepSourceCommander,
+    keepSourceRepo: KeepSourceAttributionRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
@@ -828,6 +829,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander.removeKeepFromAllLibraries(keep.id.get)
     ktuCommander.removeKeepFromAllUsers(keep)
     kteCommander.removeKeepFromAllEmails(keep)
+    keepSourceRepo.deactivateByKeepId(keep.id.get)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
   }
