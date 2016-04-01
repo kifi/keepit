@@ -7,7 +7,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
 import com.keepit.model.KeepEventSourceKind
-import com.keepit.model.KeepEvent.{ AddLibraries, AddParticipants }
+import com.keepit.model.KeepEvent.{ EditTitle, AddLibraries, AddParticipants }
 import com.keepit.model.{ BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
@@ -119,6 +119,19 @@ object KeepActivityGen {
                 KeepEventKind.AddLibraries,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
                 body = DescriptionElements(),
+                timestamp = message.sentAt,
+                source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
+              ))
+            case Some(EditTitle(editedBy, original, updated)) =>
+              if (!userById.contains(editedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $editedBy on keep ${keep.id.get}, message ${message.id}")
+              val basicAddedBy = userById.get(editedBy)
+
+              Some(BasicKeepEvent(
+                id = Some(messageId),
+                author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
+                KeepEventKind.EditTitle,
+                header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "edited the title"),
+                body = DescriptionElements(original, "--->", updated),
                 timestamp = message.sentAt,
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
