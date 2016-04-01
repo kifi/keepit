@@ -255,7 +255,7 @@ var tracker = {
   consolidating: {},
   sendBatch: function () {
     if (this.batch.length > 0) {
-      if (api.isPackaged() || api.mode.isDev()) {
+      if (true) {
         ajax('POST', '/ext/events', this.batch);
       }
       this.batch.length = 0;
@@ -990,6 +990,7 @@ api.port.on({
     tracker.track('user_was_notified', data);
   },
   track_notification: function (data) {
+    console.log('XXXXXXXXXXXXXX', "user was notified", data);
     tracker.trackConsolidated('user_was_notified', extend({action: 'shown'}, data.properties), 'windows', data.id, 1200);
   },
   track_notification_click: function (data) {
