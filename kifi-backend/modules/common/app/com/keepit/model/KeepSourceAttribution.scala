@@ -24,6 +24,7 @@ case class KeepSourceAttribution(
 
   def withId(id: Id[KeepSourceAttribution]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withState(state: State[KeepSourceAttribution]) = this.copy(state = state)
 }
 
 case class UnknownAttributionTypeException(name: String) extends Exception(s"Unknown keep attribution type: $name")

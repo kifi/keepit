@@ -19,6 +19,7 @@ trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution]
   def getKeepIdsByAuthor(author: Author)(implicit session: RSession): Set[Id[Keep]]
   def intern(keepId: Id[Keep], attribution: RawSourceAttribution)(implicit session: RWSession): KeepSourceAttribution
+  def deactivateByKeepId(keepId: Id[Keep])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -88,5 +89,9 @@ class KeepSourceAttributionRepoImpl @Inject() (
     val keepAttributionOpt = rows.filter(_.keepId === keepId).firstOption
     save(KeepSourceAttribution(id = keepAttributionOpt.map(_.id.get), keepId = keepId, author = Author.fromSource(attribution), attribution = attribution))
   }
+
+  def deactivate(model: KeepSourceAttribution)(implicit session: RWSession): Unit = save(model.withState(KeepSourceAttributionStates.INACTIVE))
+  def deactivateById(id: Id[KeepSourceAttribution])(implicit session: RWSession): Unit = deactivate(get(id))
+  def deactivateByKeepId(keepId: Id[Keep])(implicit session: RWSession): Unit = rows.filter(_.keepId === keepId).list.headOption.map(deactivate(_))
 }
 

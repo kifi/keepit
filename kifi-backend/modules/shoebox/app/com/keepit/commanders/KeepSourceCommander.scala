@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
