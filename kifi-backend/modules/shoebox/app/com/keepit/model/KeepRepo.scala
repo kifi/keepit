@@ -56,7 +56,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
 
   //admin
-  def pageAscendingWithUserExcludingSources(page: Int, pageSize: Int, excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE), excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep]
+  def pageAscendingWithUserExcludingSources(fromId: Option[Id[Keep]], pageSize: Int, excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE), excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -606,11 +606,11 @@ class KeepRepoImpl @Inject() (
     q.as[Keep].list
   }
 
-  def pageAscendingWithUserExcludingSources(page: Int, size: Int, excludeStates: Set[State[Keep]], excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep] = {
+  def pageAscendingWithUserExcludingSources(fromId: Option[Id[Keep]], size: Int, excludeStates: Set[State[Keep]], excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep] = {
     val q = for {
-      k <- rows if (k.userId.isDefined && !k.state.inSet(excludeStates) && !k.source.inSet(excludeSources))
+      k <- rows if k.id > fromId.getOrElse(Id[Keep](0)) && k.userId.isDefined && !k.state.inSet(excludeStates) && !k.source.inSet(excludeSources)
     } yield k
-    q.sortBy(_.id asc).drop(page * size).take(size).list
+    q.sortBy(_.id asc).take(size).list
   }
 
 }
