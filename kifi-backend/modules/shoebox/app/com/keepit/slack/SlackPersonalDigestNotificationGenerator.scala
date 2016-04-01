@@ -102,38 +102,21 @@ class SlackPersonalDigestNotificationGenerator @Inject() (
     val slackTeamId = digest.slackMembership.slackTeamId
     def trackingParams(subaction: String) = SlackAnalytics.generateTrackingParams(digest.slackMembership.slackUserId.asChannel, NotificationCategory.NonUser.PERSONAL_DIGEST, Some(subaction))
     val (mostRecentKeep, mostRecentIngestedMsg) = digest.mostRecentMessage
+    val linkToOrg = LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org")))
     val linkToMostRecentKeep = LinkElement(pathCommander.keepPageOnKifiViaSlack(mostRecentKeep, slackTeamId).withQuery(trackingParams("latestMessage")))
     val linkToSquelch = LinkElement(pathCommander.slackPersonalDigestToggle(slackTeamId, digest.slackMembership.slackUserId, turnOn = false).withQuery(trackingParams("turnOff")))
     val numMembersOnKifi = digest.allMembers.count(stm => stm.userId.isDefined)
     val text = DescriptionElements.unlines(Seq(
       DescriptionElements(
-        SlackEmoji.wave, s"Hey! Kifibot here, just letting you know that your team set up a Kifi integration so I saved the link you just shared",
+        "The link you recently sent",
         mostRecentIngestedMsg.channel.name.map(chName => s"in #${chName.value}" --> LinkElement(mostRecentIngestedMsg.permalink)),
-        "(", "archived", "here" --> linkToMostRecentKeep, ")", "."
-      ),
-      DescriptionElements(
-        "Here's a bit of what I do; you can",
-        (if (numMembersOnKifi <= 1) "join your team on Kifi" else s"join $numMembersOnKifi of your team members on Kifi") --> LinkElement(pathCommander.orgPageViaSlack(digest.org, slackTeamId).withQuery(trackingParams("org"))),
-        "to get access to these features:"
+        "was saved in", s"${digest.org.name}'s" --> linkToOrg, "resository on Kifi."
+      ), DescriptionElements(
+        "Get your team's links on top of Google Search results w/ the", "browser add-on" --> LinkElement(PathCommander.browserExtension), "."
+      ), DescriptionElements(
+        "Click", "here" --> linkToSquelch, "to opt out of these notifications."
       )))
-    val attachments = List(
-      SlackAttachment(color = None, text = Some("")).withImageUrl(superAwesomeWelcomeMessageGIF),
-      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.magnifyingGlass, "Google Search Integration", SpecialCharacters.emDash,
-        "See the pages your coworkers are sharing on top of  Google Search results."
-      )))),
-      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.pencil, "On the page", SpecialCharacters.emDash,
-        "Ever wonder if your coworkers are already talking about an article you're looking at?",
-        "If they are, I'll give you a link to the conversation."
-      )))),
-      SlackAttachment(color = None, text = Some(DescriptionElements.formatForSlack(DescriptionElements(
-        SlackEmoji.robotFace,
-        "Also, I'm a brand new bot so I don't respond to your messages (yet)", SlackEmoji.zipperMouthFace, ".",
-        "You can still", "opt to stop receiving notifications" --> linkToSquelch, "or if you've got questions email my human friends at support@kifi.com."
-      ))))
-    )
-    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text), attachments).quiet
+    SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(text)).quiet
   }
   def messageForRegularDigest(digest: SlackPersonalDigest): SlackMessageRequest = {
     import DescriptionElements._
