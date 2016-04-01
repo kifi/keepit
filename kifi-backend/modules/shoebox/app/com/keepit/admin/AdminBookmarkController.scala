@@ -318,4 +318,55 @@ class AdminBookmarksController @Inject() (
     }
 
   }
+<<<<<<< Updated upstream
+=======
+
+  def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean = true) = AdminUserAction { implicit request =>
+    val fromId = startFrom.map(Id[Keep])
+    val chunkSize = 10000
+    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync))).toSet
+    val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
+      val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
+      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get)).map { connectionsByKeep =>
+        discussionKeeps.flatMap { keep =>
+          connectionsByKeep.get(keep.id.get).map { connections =>
+            keep.id.get -> RawKifiAttribution(keep.userId.get, connections, keep.source)
+          }
+        }.toMap
+      }
+
+      val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
+        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
+        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
+        otherKeeps.collect {
+          case keep if keep.source != KeepSource.discussion && ktls.contains(keep.id.get) =>
+            val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, Set.empty), keep.source)
+            keep.id.get -> rawAttribution
+          case keep if keep.source != KeepSource.discussion && ktus.contains(keep.id.get) =>
+            slackLog.info(s"${keep.id.get} is from ${keep.source.value} but has no KTLs")
+            val firstUsers = ktus(keep.id.get).filter(ktu => keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set.empty, Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            keep.id.get -> rawAttribution
+        }.toMap
+      }
+
+      for {
+        discussionConnections <- discussionConnectionsFut
+        nonDiscussionConnections <- nonDiscussionConnectionsFut
+        (success, fail) <- db.readWriteAsync { implicit s =>
+          val allConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keepsToBackfill.map(_.id.get).filter(!allConnections.contains(_))
+          val internedKeeps = allConnections.map {
+            case (kid, attr) =>
+              if (!dryRun) sourceRepo.intern(kid, attr) else slackLog.info(s"$kid: ${Json.stringify(Json.toJson(attr))}")
+              kid
+          }
+          (internedKeeps, missingKeeps)
+        }
+      } yield s"${keeps.headOption.map(_.id.get)}-${keeps.lastOption.map(_.id.get)}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}"
+    }
+    Ok.chunked(enum)
+  }
+>>>>>>> Stashed changes
 }
