@@ -104,7 +104,7 @@ class KeepSourceAugmentor @Inject() (
     case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
     case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
     case RawKifiAttribution(keptBy, KeepConnections(libraries, nonUsers, users), keepSource) => {
-      val userById = basicUserRepo.loadAllActive(users + keptBy)
+      val userById = basicUserRepo.loadAll(users + keptBy)
       val libById = basicLibGen.getBasicLibraries(libraries)
       KifiAttribution(userById(keptBy), users.flatMap(userById.get), nonUsers, libraries.flatMap(libById.get), keepSource)
     }
