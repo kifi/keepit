@@ -21,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
+import com.keepit.slack.models._
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -60,6 +61,7 @@ class AdminLibraryController @Inject() (
     clock: Clock,
     searchClient: SearchServiceClient,
     suggestedSearchCommander: LibrarySuggestedSearchCommander,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -342,5 +344,28 @@ class AdminLibraryController @Inject() (
     val lib = db.readOnlyMaster { implicit session => libraryRepo.get(libId) }
     val response = libraryCommander.unsafeModifyLibrary(lib, mods)
     Ok(Json.obj("lib" -> response.modifiedLibrary))
+  }
+
+  def backfillSlackLibraryNames = AdminUserPage { implicit request =>
+    def formatSlackChannelName(name: String): String = {
+      name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.head.toUpper + s.tail).mkString(" ")
+    }
+
+    val actuallySaveLibs = request.rawQueryString.contains("doItForReal")
+
+    (0 to 100).map { idx => // ~18k existing rows
+      db.readWrite { implicit session =>
+        val libIds = slackChannelToLibraryRepo.pageAscending(0, 200, Set(SlackChannelToLibraryStates.INACTIVE)).map(_.libraryId)
+        libraryRepo.getActiveByIds(libIds.toSet).values.filter(_.kind == LibraryKind.SLACK_CHANNEL).foreach { library =>
+          val newName = formatSlackChannelName(library.name)
+          log.info(s"[backfillSlackLibraryNames] Changing ${library.id.get} from ${library.name} to $newName")
+          if (actuallySaveLibs && library.name != newName) {
+            libraryRepo.save(library.withName(newName))
+          }
+        }
+      }
+    }
+
+    Ok
   }
 }

@@ -301,7 +301,7 @@ class SlackChannelCommanderImpl @Inject() (
 
     maybeOrgGeneralLibrary.map(Right(_)).getOrElse {
       val initialValues = LibraryInitialValues(
-        name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
+        name = formatSlackChannelName((SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value),
         visibility = LibraryVisibility.ORGANIZATION,
         kind = Some(LibraryKind.SLACK_CHANNEL),
         description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
@@ -313,13 +313,17 @@ class SlackChannelCommanderImpl @Inject() (
 
   private def createLibraryForPrivateChannel(organizationId: Id[Organization], userId: Id[User], channel: SlackPrivateChannelInfo)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val initialValues = LibraryInitialValues(
-      name = (SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value,
+      name = formatSlackChannelName((SlackChannelIdAndPrettyName.from(channel.channelId, channel.channelName).name getOrElse channel.channelName).value),
       visibility = LibraryVisibility.SECRET,
       kind = Some(LibraryKind.SLACK_CHANNEL),
       description = channel.purpose.map(_.value) orElse channel.topic.map(_.value),
       space = Some(organizationId)
     )
     libraryCommander.createLibrary(initialValues, userId)
+  }
+
+  private def formatSlackChannelName(name: String): String = {
+    name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.head.toUpper + s.tail).mkString(" ")
   }
 
   private def addChannelMembersToChannelLibraries(slackTeamId: SlackTeamId, channels: Seq[SlackChannelInfo])(implicit session: RWSession): Map[SlackChannelInfo, Set[LibraryMembership]] = {
