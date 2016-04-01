@@ -118,10 +118,8 @@ object MessageSource extends Enumerator[MessageSource] {
   case object SAFARI extends MessageSource("Safari")
   case object EMAIL extends MessageSource("Email")
   case object IPHONE extends MessageSource("iPhone")
-  case object IPAD extends MessageSource("iPad")
   case object ANDROID extends MessageSource("Android")
   case object SITE extends MessageSource("Kifi.com")
-  case object UNKNOWN extends MessageSource("unknown")
 
   val all = _all
   def fromStr(str: String) = all.find(_.value == str)

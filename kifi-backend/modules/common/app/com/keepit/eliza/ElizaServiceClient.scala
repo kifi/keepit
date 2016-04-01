@@ -350,7 +350,7 @@ class ElizaServiceClientImpl @Inject() (
   }
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], sourceOpt: Option[MessageSource]): Future[Message] = {
     import SendMessageOnKeep._
-    val source = sourceOpt.getOrElse { airbrakeNotifier.notify(s"[messageSource] $userId sent a message on $keepId with no source"); MessageSource.UNKNOWN }
+    val source = sourceOpt
     val request = Request(userId, text, keepId, source)
     call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].msg
@@ -462,7 +462,7 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object SendMessageOnKeep {
-    case class Request(userId: Id[User], text: String, keepId: Id[Keep], source: MessageSource)
+    case class Request(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource])
     case class Response(msg: Message)
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
