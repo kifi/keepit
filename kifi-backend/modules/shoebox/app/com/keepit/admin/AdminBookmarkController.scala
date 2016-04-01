@@ -3,12 +3,14 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
@@ -49,6 +51,7 @@ class AdminBookmarksController @Inject() (
   keepSourceCommander: KeepSourceCommander,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
+  eliza: ElizaServiceClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
@@ -317,5 +320,47 @@ class AdminBookmarksController @Inject() (
       case None => BadRequest("invalid_author")
     }
 
+  }
+
+  def backfillKifiSourceAttribution() = AdminUserAction { implicit request =>
+    val PAGE_SIZE = 1000
+    val keepTotalCount = db.readOnlyMaster(implicit s => keepRepo.count)
+    FutureHelpers.sequentialExec(0 until (keepTotalCount / PAGE_SIZE)) { page =>
+      val keepsToBackfill = db.readOnlyMaster { implicit s =>
+        keepRepo.pageAscendingWithUserExcludingSources(page, PAGE_SIZE, excludeStates = Set(KeepStates.INACTIVE), excludeSources = Set(KeepSource.slack, KeepSource.twitterSync, KeepSource.twitterFileImport)).toSet
+      }
+
+      val (discussionKeeps, otherKeeps) = keepsToBackfill.partition(_.source == KeepSource.discussion)
+      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get)).map { connectionsByKeep =>
+        discussionKeeps.flatMap { keep =>
+          connectionsByKeep.get(keep.id.get).map { connections =>
+            keep.id.get -> RawKifiAttribution(keep.userId.get, connections, keep.source)
+          }
+        }.toMap
+      }
+
+      val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
+        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
+        otherKeeps.collect {
+          case keep if keep.source != KeepSource.discussion =>
+            val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minBy(_.addedAt).libraryId
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, Set.empty), keep.source)
+            keep.id.get -> rawAttribution
+        }.toMap
+      }
+
+      for {
+        discussionConnections <- discussionConnectionsFut
+        nonDiscussionConnections <- nonDiscussionConnectionsFut
+      } yield {
+        db.readWriteAsync { implicit s =>
+          val allConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keepsToBackfill.map(_.id.get).filter(!allConnections.contains(_))
+          log.warn(s"[backfillAttr] couldn't attribute keeps ${missingKeeps.mkString(",")}")
+          allConnections.map { case (kid, attr) => sourceRepo.intern(kid, attr) }
+        }
+      }
+    }
+    Ok
   }
 }

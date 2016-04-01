@@ -277,6 +277,7 @@ object Eliza extends Service {
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
+    def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")
   }
 }
 

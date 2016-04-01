@@ -54,6 +54,9 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def deactivate(model: Keep)(implicit session: RWSession): Keep
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+
+  //admin
+  def pageAscendingWithUserExcludingSources(page: Int, pageSize: Int, excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE), excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -601,6 +604,13 @@ class KeepRepoImpl @Inject() (
             ORDER BY bm.seq ASC
             """
     q.as[Keep].list
+  }
+
+  def pageAscendingWithUserExcludingSources(page: Int, size: Int, excludeStates: Set[State[Keep]], excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep] = {
+    val q = for {
+      k <- rows if (k.userId.isDefined && !k.state.inSet(excludeStates) && !k.source.inSet(excludeSources))
+    } yield k
+    q.sortBy(_.id asc).drop(page * size).take(size).list
   }
 
 }
