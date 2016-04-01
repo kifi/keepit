@@ -136,7 +136,7 @@ object KeepActivityGen {
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
             case dataOpt =>
-              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] message ${message.id} has no .sentBy and no .auxData, can't generate event")
+              if (dataOpt.isEmpty) airbrake.notify(s"[activityLog] message ${message.id} has no .sentBy and .auxData=$dataOpt, can't generate event")
               None
           }
       }

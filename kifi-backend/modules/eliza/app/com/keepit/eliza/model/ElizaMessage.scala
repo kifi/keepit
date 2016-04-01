@@ -104,6 +104,7 @@ object SystemMessageData {
   def toKeepEvent(data: SystemMessageData): Option[KeepEvent] = data match {
     case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
     case AddLibraries(addedBy, addedLibraries) => Some(KeepEvent.AddLibraries(addedBy, addedLibraries))
+    case EditTitle(editedBy, original, updated) => Some(KeepEvent.EditTitle(editedBy, original, updated))
     case _ => None
   }
 
