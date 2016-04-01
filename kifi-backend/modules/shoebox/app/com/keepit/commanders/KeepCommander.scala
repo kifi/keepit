@@ -91,7 +91,6 @@ trait KeepCommander {
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
-  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[KeepActivity]
 
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
@@ -921,46 +920,6 @@ class KeepCommanderImpl @Inject() (
         maxMessagesShown = maxMessagesShown,
         getTimestamp = getKeepTimestamp
       )
-    }
-  }
-
-  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[KeepActivity] = {
-    val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
-      val keep = keepRepo.get(keepId)
-      val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
-      val ktus = ktuRepo.getAllByKeepId(keepId)
-      val ktls = ktlRepo.getAllByKeepId(keepId)
-      (keep, sourceAttr, ktus, ktls)
-    }
-    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), eventsBefore, maxEvents).map(_.get(keepId))
-
-    val basicModelFut = shoeboxFut.map {
-      case (keep, sourceAttr, ktus, ktls) =>
-        db.readOnlyMaster { implicit s =>
-          val libById = libraryRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
-          val basicOrgById = basicOrganizationGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
-          val basicOrgByLibId = libById.flatMapValues { library =>
-            library.organizationId.flatMap(basicOrgById.get)
-          }
-          val basicUserById = {
-            val ktuUsers = ktus.map(_.userId)
-            val libOwners = libById.map { case (libId, library) => library.ownerId }
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners).toSet)
-          }
-          val basicLibById = libById.map {
-            case (libId, library) =>
-              libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
-          }
-          (basicUserById, basicLibById, basicOrgByLibId)
-        }
-    }
-
-    for {
-      (keep, sourceAttrOpt, ktus, ktls) <- shoeboxFut
-      (elizaActivityOpt) <- elizaFut
-      (userById, libById, orgByLibId) <- basicModelFut
-    } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, maxEvents)
     }
   }
 

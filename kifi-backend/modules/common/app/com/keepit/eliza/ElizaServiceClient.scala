@@ -16,7 +16,7 @@ import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.util.MapHelpers
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
-import com.keepit.eliza.ElizaServiceClient.{GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
+import com.keepit.eliza.ElizaServiceClient.{GetInitialRecipientsByKeepId, GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -123,6 +123,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
+  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepConnections]]
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
@@ -350,7 +351,7 @@ class ElizaServiceClientImpl @Inject() (
   }
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], sourceOpt: Option[MessageSource]): Future[Message] = {
     import SendMessageOnKeep._
-    val source = sourceOpt.getOrElse { airbrakeNotifier.notify(s"[messageSource] $userId sent a message on $keepId with no source"); MessageSource.UNKNOWN }
+    val source = sourceOpt
     val request = Request(userId, text, keepId, source)
     call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[Response].msg
@@ -416,6 +417,13 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepConnections]] = {
+    import GetInitialRecipientsByKeepId._
+    call(Eliza.internal.getInitialRecipientsByKeepId, body = Json.toJson(Request(keepIds))).map {
+      _.json.as[Response].connections
+    }
+  }
+
   def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent, source: Option[KeepEventSourceKind]): Future[Unit] = {
     import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
     val request = Request(keepId, userId, event)
@@ -462,7 +470,7 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object SendMessageOnKeep {
-    case class Request(userId: Id[User], text: String, keepId: Id[Keep], source: MessageSource)
+    case class Request(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource])
     case class Response(msg: Message)
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
@@ -506,6 +514,13 @@ object ElizaServiceClient {
   object EditParticipantsOnKeep {
     case class Request(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind])
     case class Response(users: Set[Id[User]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object GetInitialRecipientsByKeepId {
+    case class Request(keepIds: Set[Id[Keep]])
+    case class Response(connections: Map[Id[Keep], KeepConnections])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }

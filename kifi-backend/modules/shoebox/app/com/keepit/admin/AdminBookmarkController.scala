@@ -3,16 +3,20 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import com.keepit.social.{ IdentityHelpers, UserIdentityHelper, Author }
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -24,7 +28,7 @@ import com.keepit.common.core._
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
-import scala.util.{ Try, Success }
+import scala.util.Try
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -49,8 +53,12 @@ class AdminBookmarksController @Inject() (
   keepSourceCommander: KeepSourceCommander,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
+  eliza: ElizaServiceClient,
+  implicit val inhouseSlackClient: InhouseSlackClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
+
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_CAM)
 
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
@@ -318,8 +326,6 @@ class AdminBookmarksController @Inject() (
     }
 
   }
-<<<<<<< Updated upstream
-=======
 
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean = true) = AdminUserAction { implicit request =>
     val fromId = startFrom.map(Id[Keep])
@@ -368,5 +374,4 @@ class AdminBookmarksController @Inject() (
     }
     Ok.chunked(enum)
   }
->>>>>>> Stashed changes
 }

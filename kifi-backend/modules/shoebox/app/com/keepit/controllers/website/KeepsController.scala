@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.common.crypto.{ InternalOrExternalId, PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
@@ -33,6 +34,7 @@ class KeepsController @Inject() (
   collectionRepo: CollectionRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   keepExportCommander: KeepExportCommander,
   permissionCommander: PermissionCommander,
   clock: Clock,
@@ -239,7 +241,7 @@ class KeepsController @Inject() (
     Keep.decodePublicId(id) match {
       case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(keepId) =>
-        keepsCommander.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
+        keepInfoAssembler.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
           Ok(Json.obj("activity" -> Json.toJson(activity)))
         }
     }
