@@ -4,20 +4,19 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.discussion.DiscussionFail
+import com.keepit.discussion.{ Message, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.social.Author
-import play.api.libs.json.{ Json, Reads }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
-class ClientKeepMutationController @Inject() (
+class KeepMutationController @Inject() (
   db: Database,
   userRepo: UserRepo,
   val userActionsHelper: UserActionsHelper,
@@ -78,5 +77,24 @@ class ClientKeepMutationController @Inject() (
     }).recover {
       case fail: DiscussionFail => fail.asErrorResponse
     }
+  }
+
+  def markKeepsAsRead() = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
+  }
+  def deleteKeep(id: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
+  }
+  def editKeepTitle(id: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
+  }
+  def sendMessageOnKeep(id: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
+  }
+  def deleteMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
+  }
+  def editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    ???
   }
 }
