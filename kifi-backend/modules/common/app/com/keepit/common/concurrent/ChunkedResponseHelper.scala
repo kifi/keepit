@@ -14,7 +14,7 @@ object ChunkedResponseHelper {
         process(x).imap(str => channel.push(if (str.endsWith("\n")) str else str + "\n"))
       } andThen {
         case res =>
-          if (res.isFailure) channel.push("server error\n")
+          if (res.isFailure) channel.push(s"${res.failed.get.getMessage}\n")
           channel.eofAndEnd()
       }
     })
