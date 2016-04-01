@@ -279,6 +279,7 @@ object Eliza extends Service {
     def saveKeepEvent = ServiceRoute(POST, "/internal/eliza/saveKeepEvent")
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
+    def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")
   }
 }
 

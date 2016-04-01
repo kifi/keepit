@@ -3,16 +3,20 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import com.keepit.social.{ IdentityHelpers, UserIdentityHelper, Author }
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -24,7 +28,7 @@ import com.keepit.common.core._
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
-import scala.util.{ Try, Success }
+import scala.util.Try
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -49,8 +53,12 @@ class AdminBookmarksController @Inject() (
   keepSourceCommander: KeepSourceCommander,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
+  eliza: ElizaServiceClient,
+  implicit val inhouseSlackClient: InhouseSlackClient,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
+
+  val slackLog = new SlackLog(InhouseSlackChannel.TEST_CAM)
 
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
@@ -317,5 +325,47 @@ class AdminBookmarksController @Inject() (
       case None => BadRequest("invalid_author")
     }
 
+  }
+
+  def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean = true) = AdminUserAction { implicit request =>
+    val fromId = startFrom.map(Id[Keep])
+    val chunkSize = 10000
+    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync))).toSet
+    val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
+      val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
+      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get)).map { connectionsByKeep =>
+        discussionKeeps.flatMap { keep =>
+          connectionsByKeep.get(keep.id.get).map { connections =>
+            keep.id.get -> RawKifiAttribution(keep.userId.get, connections, keep.source)
+          }
+        }.toMap
+      }
+
+      val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
+        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
+        otherKeeps.collect {
+          case keep if keep.source != KeepSource.discussion =>
+            val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minBy(_.addedAt).libraryId
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, Set.empty), keep.source)
+            keep.id.get -> rawAttribution
+        }.toMap
+      }
+
+      for {
+        discussionConnections <- discussionConnectionsFut
+        nonDiscussionConnections <- nonDiscussionConnectionsFut
+        (success, fail) <- db.readWriteAsync { implicit s =>
+          val allConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keepsToBackfill.map(_.id.get).filter(!allConnections.contains(_))
+          val internedKeeps = allConnections.map {
+            case (kid, attr) =>
+              if (!dryRun) sourceRepo.intern(kid, attr) else slackLog.info(s"$kid: ${Json.stringify(Json.toJson(attr))}")
+              kid
+          }
+          (internedKeeps, missingKeeps)
+        }
+      } yield s"${keeps.headOption.map(_.id.get)}-${keeps.lastOption.map(_.id.get)}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}"
+    }
+    Ok.chunked(enum)
   }
 }
