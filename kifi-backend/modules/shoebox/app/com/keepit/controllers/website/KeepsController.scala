@@ -125,10 +125,11 @@ class KeepsController @Inject() (
   }
 
   def updateKeepTitle(pubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    import com.keepit.common.http._
     val keepTry: Try[Keep] = for {
       keepId <- Keep.decodePublicId(pubId).map(Success(_)).getOrElse(Failure(KeepFail.INVALID_ID))
       title = (request.body \ "title").as[String]
-      keep <- db.readWrite(implicit s => keepsCommander.updateKeepTitle(keepId, request.userId, title))
+      keep <- db.readWrite(implicit s => keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)))
     } yield keep
 
     keepTry match {

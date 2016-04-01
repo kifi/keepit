@@ -291,13 +291,14 @@ class ExtLibraryController @Inject() (
 
   // Maintainers: Let's keep this endpoint simple, quick and reliable. Complex updates deserve their own endpoints.
   def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    import com.keepit.common.http._
     (request.body \ "title").validate[Option[String]] match {
       case JsError(errs) => throw new Exception(s"invalid request: ${request.body.toString} for updateKeep, expected 'title'")
       case JsSuccess(titleOpt, _) =>
         titleOpt.map { title =>
           db.readWrite { implicit s =>
             Try(keepRepo.convertExternalId(keepExtId)).map { keepId =>
-              keepsCommander.updateKeepTitle(keepId, request.userId, title) match {
+              keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)) match {
                 case Failure(fail: KeepFail) => fail.asErrorResponse
                 case Failure(unhandled) => throw unhandled
                 case Success(keep) => NoContent

@@ -64,6 +64,10 @@ object NonUserParticipant {
     // todo: Add other data, like econtact data
     BasicNonUser(kind = nonUser.kind, id = nonUser.identifier, firstName = Some(nonUser.identifier), lastName = None)
   }
+
+  def fromBasicNonUser(nonUser: BasicNonUser) = nonUser.kind match {
+    case NonUserKinds.email => NonUserEmailParticipant(EmailAddress(nonUser.id))
+  }
 }
 
 case class NonUserEmailParticipant(address: EmailAddress) extends NonUserParticipant {

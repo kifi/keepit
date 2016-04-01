@@ -155,11 +155,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
       }.map {
         case (kid, msg) =>
-          val isUnsupportedSystemMessage = msg.exists(_.auxData.exists {
-            case _: AddLibraries => true
-            case _ => false
-          })
-          if (isUnsupportedSystemMessage) kid -> None else kid -> msg
+          if (msg.forall(_.auxData.forall(SystemMessageData.isFullySupported))) kid -> msg else kid -> None
       }
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap

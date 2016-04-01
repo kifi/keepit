@@ -261,7 +261,6 @@ object Eliza extends Service {
 
     def getCrossServiceMessages = ServiceRoute(POST, "/internal/eliza/getCrossServiceMessages")
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
-    def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
     def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
     def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
@@ -275,6 +274,9 @@ object Eliza extends Service {
     def deleteThreadsForKeeps() = ServiceRoute(POST, "/internal/eliza/deleteThreadsForKeeps")
     def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
+
+    def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
+    def saveKeepEvent = ServiceRoute(POST, "/internal/eliza/saveKeepEvent")
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
     def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")

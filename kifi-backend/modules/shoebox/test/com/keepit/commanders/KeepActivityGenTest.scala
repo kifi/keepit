@@ -51,11 +51,11 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val eventHeaders = Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
           case (ids, true) => // users
             val adding = ids.map(id => Id[User](id.id))
-            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, adding.toSet, Set.empty)
+            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, adding.toSet, Set.empty, source = None)
             DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(adding.map(id => fromBasicUser(basicUserById(id))).toSeq)))
           case (ids, false) => // libraries
             val adding = ids.map(id => Id[Library](id.id))
-            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, Set.empty, adding)
+            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, Set.empty, adding, source = None)
             DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq)))
         }.toSeq
 

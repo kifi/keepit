@@ -15,11 +15,21 @@ angular.module('kifi')
       link: function (scope) {
         scope.libraries = [];
         scope.orgs = [];
-        var sortOpts = {
-          ordering: 'most_recent_keeps_by_user',
-          direction: 'desc',
-          windowSize: 14
-        };
+        var sortOpts;
+        var isAlphabeticSorting = ((profileService.me.experiments || []).indexOf('rhr_alpha_sorting') !== -1);
+        if (isAlphabeticSorting) {
+          sortOpts = {
+            ordering: 'alphabetical',
+            direction: 'asc',
+            windowSize: 14
+          };
+        } else {
+          sortOpts = {
+            ordering: 'most_recent_keeps_by_user',
+            direction: 'desc',
+            windowSize: 14
+          };
+        }
 
         var mql = $window.matchMedia('(min-width: 480px)');
         $rootScope.leftHandNavIsOpen = mql.matches;

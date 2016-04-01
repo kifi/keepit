@@ -2,9 +2,13 @@
 
 angular.module('kifi')
 
-.controller('KeepPageCtrl', [ '$rootScope', '$location', '$scope', '$state',
-    '$stateParams', '$timeout', '$window', '$analytics', 'keepActionService', 'modalService', 'util',
-  function ($rootScope, $location, $scope, $state, $stateParams, $timeout, $window, $analytics, keepActionService, modalService, util) {
+.controller('KeepPageCtrl', [
+  '$rootScope', '$location', '$scope', '$state', '$stateParams', '$timeout',
+  '$window', '$analytics', 'keepActionService', 'modalService', 'profileService',
+  'util',
+  function ($rootScope, $location, $scope, $state, $stateParams, $timeout,
+    $window, $analytics, keepActionService, modalService, profileService,
+    util) {
 
     $scope.unkeepFromLibrary = function (event, keep) {
       if (keep.libraryId && keep.id) {
@@ -31,7 +35,7 @@ angular.module('kifi')
       $analytics.eventTrack($rootScope.userLoggedIn ? 'user_viewed_page' : 'visitor_viewed_page', props);
     }
 
-    $scope.enableRHR = $scope.me.experiments.indexOf('keep_page_rhr') !== -1;
+    $scope.enableRHR = profileService.hasExperiment('keep_page_rhr');
     $scope.maxInitialComments = 15;
     keepActionService.getFullKeepInfo($stateParams.pubId, $stateParams.authToken, $scope.maxInitialComments * 2).then(function (result) {
       $scope.loaded = true;

@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
@@ -104,7 +104,7 @@ class KeepSourceAugmentor @Inject() (
     case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
     case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
     case RawKifiAttribution(keptBy, KeepConnections(libraries, nonUsers, users), keepSource) => {
-      val userById = basicUserRepo.loadAllActive(users + keptBy)
+      val userById = basicUserRepo.loadAll(users + keptBy)
       val libById = basicLibGen.getBasicLibraries(libraries)
       KifiAttribution(userById(keptBy), users.flatMap(userById.get), nonUsers, libraries.flatMap(libById.get), keepSource)
     }

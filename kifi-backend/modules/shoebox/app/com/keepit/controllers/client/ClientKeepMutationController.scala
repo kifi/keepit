@@ -72,7 +72,7 @@ class ClientKeepMutationController @Inject() (
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
       } yield KeepConnectionsDiff(users = users, libraries = libraries, emails = input.emails)
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff)
+      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
     } yield {
       NoContent
     }).recover {

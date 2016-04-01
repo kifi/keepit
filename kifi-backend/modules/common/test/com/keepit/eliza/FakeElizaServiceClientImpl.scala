@@ -98,23 +98,23 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   var idX = 0
   var keepEvents = Map.empty[Id[Keep], Seq[CrossServiceMessage]].withDefaultValue(Seq.empty)
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]]): Future[Set[Id[User]]] = {
+  private def crossServiceMessageFromEvent(keepId: Id[Keep], event: KeepEvent, source: Option[KeepEventSourceKind]) = CrossServiceMessage(
+    Id[Message](idX),
+    isDeleted = false,
+    SequenceNumber[Message](idX),
+    keepId,
+    sentAt = currentDateTime,
+    sentBy = None,
+    text = "",
+    auxData = Some(event),
+    source = source.flatMap(KeepEventSourceKind.toMessageSource)
+  )
+
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
     val events: Stream[KeepEvent] = Stream(AddParticipants(editor, newUsers.toSeq, Seq.empty) -> newUsers.nonEmpty, AddLibraries(editor, newLibraries) -> newLibraries.nonEmpty).collect {
       case (event, true) => event
     }
-    val msgs = events.map { event =>
-      CrossServiceMessage (
-        Id[Message](idX),
-        isDeleted = false,
-        SequenceNumber[Message](idX),
-        keepId,
-        sentAt = currentDateTime,
-        sentBy = None,
-        text = "",
-        auxData = Some(event),
-        source = None
-      )
-    }
+    val msgs = events.map(crossServiceMessageFromEvent(keepId, _, source))
     keepEvents += (keepId -> (keepEvents(keepId) ++ msgs))
     Future.successful(Set.empty)
   }
@@ -124,6 +124,10 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
       keepId -> CrossServiceKeepActivity(numComments = 0, messages = keepEvents(keepId).filter(msg => eventsBefore.forall(_ < msg.sentAt)).take(maxEventsPerKeep))
     }.toMap
     Future.successful(activityByKeepId)
+  }
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent, source: Option[KeepEventSourceKind]): Future[Unit] = {
+    keepEvents += (keepId -> (keepEvents(keepId) :+ crossServiceMessageFromEvent(keepId, event, source)))
+    Future.successful(())
   }
 
 

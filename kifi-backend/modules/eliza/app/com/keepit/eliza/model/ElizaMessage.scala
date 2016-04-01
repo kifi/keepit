@@ -87,6 +87,7 @@ object SystemMessageData {
         case JsArray(Seq(JsString(AddParticipants.kind), _*)) => AddParticipants.internalFormat.reads(js)
         case JsArray(Seq(JsString(StartWithEmails.kind), _*)) => StartWithEmails.internalFormat.reads(js)
         case js if (js \ "kind").as[String] == AddLibraries.kind => AddLibraries.internalFormat.reads(js)
+        case js if (js \ "kind").as[String] == EditTitle.kind => EditTitle.internalFormat.reads(js)
         case _ => JsError("can't parse SystemMessageData")
       }
     }
@@ -95,6 +96,7 @@ object SystemMessageData {
         case p: AddParticipants => AddParticipants.internalFormat.writes(p)
         case s: StartWithEmails => StartWithEmails.internalFormat.writes(s)
         case l: AddLibraries => AddLibraries.internalFormat.writes(l)
+        case t: EditTitle => EditTitle.internalFormat.writes(t)
       }
     }
   }
@@ -103,6 +105,17 @@ object SystemMessageData {
     case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
     case AddLibraries(addedBy, addedLibraries) => Some(KeepEvent.AddLibraries(addedBy, addedLibraries))
     case _ => None
+  }
+
+  def fromKeepEvent(event: KeepEvent): Option[SystemMessageData] = event match {
+    case KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.fromBasicNonUser)))
+    case KeepEvent.AddLibraries(addedBy, addedLibs) => Some(AddLibraries(addedBy, addedLibs))
+    case KeepEvent.EditTitle(addedBy, original, updated) => Some(EditTitle(addedBy, original, updated))
+  }
+
+  def isFullySupported(data: SystemMessageData): Boolean = data match {
+    case _: AddParticipants | _: StartWithEmails => true
+    case _ => false
   }
 
   def generateMessageText(data: SystemMessageData, basicUserById: Map[Id[User], BasicUser]): String = data match {
@@ -182,6 +195,15 @@ object SystemMessageData {
     val internalFormat: Format[AddLibraries] = Format(
       Reads { js => Json.reads[AddLibraries].reads(js) },
       Writes { o => Json.writes[AddLibraries].writes(o).as[JsObject] ++ Json.obj("kind" -> kind) }
+    )
+  }
+
+  case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends SystemMessageData(EditTitle.kind)
+  object EditTitle {
+    val kind = "edit_title"
+    val internalFormat: Format[EditTitle] = Format(
+      Reads { js => Json.reads[EditTitle].reads(js) },
+      Writes { o => Json.writes[EditTitle].writes(o).as[JsObject] ++ Json.obj("kind" -> kind) }
     )
   }
 }
