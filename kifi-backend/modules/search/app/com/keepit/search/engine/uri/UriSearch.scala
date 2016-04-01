@@ -36,11 +36,11 @@ abstract class UriSearch(articleSearcher: Searcher, keepSearcher: Searcher, time
     if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.secondaryId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.secondaryId}"))
-      UriShardHit(h.id, h.score, h.visibility, r.libraryId.map(_.id).getOrElse(-1L), h.secondaryId, r.title, r.url, r.externalId)
+      UriShardHit(h.id, h.score, h.visibility, h.secondaryId, r.title, r.url, r.externalId)
     } else {
       // has a primary id (uri id) only
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      UriShardHit(h.id, h.score, h.visibility, -1L, -1L, r.title, r.url, null)
+      UriShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
     }
   }
 

@@ -158,17 +158,19 @@ class SlackSearchController @Inject() (
     uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, Future.successful(searchContext), maxUris, None, None, None).flatMap { uriSearchResult =>
       val relevantHits = uriSearchResult.hits.take(uriSearchResult.cutPoint)
 
-      val uriIds = relevantHits.map(hit => Id[NormalizedURI](hit.id))
-      val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
-      val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
-      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = shoeboxClient.getKeepImages(keepIds.toSet)
-      val futureSourceAttributions: Future[Map[Id[Keep], SourceAttribution]] = shoeboxClient.getSourceAttributionForKeeps(keepIds.toSet)
+      val uriIds = relevantHits.map(hit => Id[NormalizedURI](hit.id)).toSet
+      val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_))).toSet
+      val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds)
+      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = shoeboxClient.getKeepImages(keepIds)
+      val futureSourceAttributions: Future[Map[Id[Keep], SourceAttribution]] = shoeboxClient.getSourceAttributionForKeeps(keepIds)
+      val futureKeeps: Future[Map[Id[Keep], CrossServiceKeep]] = shoeboxClient.getCrossServiceKeepsByIds(keepIds)
 
       for {
         summaries <- futureUriSummaries
         keepImages <- futureKeepImages
         sourceAttributions <- futureSourceAttributions
         libraries <- futureLibraries
+        keeps <- futureKeeps
       } yield {
         val attachments = relevantHits.map { hit =>
           val url = hit.url
@@ -177,6 +179,7 @@ class SlackSearchController @Inject() (
           val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
           val keepId = hit.keepId.map(Id[Keep](_))
           val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
+          val keepOpt = keepId.flatMap(keeps.get)
           val pretext = {
             val attribution = keepId.flatMap(sourceAttributions.get).map {
               case TwitterAttribution(tweet) =>
@@ -184,7 +187,7 @@ class SlackSearchController @Inject() (
                 Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweetUrl), "on Twitter")
               case SlackAttribution(message, teamId) => Elements("via", "@" + message.username.value, message.channel.name.map(name => Seq("in", "#" + name.value)), "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
             }
-            val library = hit.libraryId.flatMap(id => libraries.get(Id(id)))
+            val library = keepOpt.flatMap(_.libraries.map(_.id).flatMap(libraries.get).headOption)
             val domain = DomainToNameMapper.getNameFromUrl(url)
             Elements.formatForSlack(Elements(domain, library.map(lib => Elements("kept in", lib.name --> LinkElement(convertUrlToKifiRedirect(lib.url.absolute, command, "clickedLibraryUrl")))), attribution))
           }
@@ -214,7 +217,6 @@ class SlackSearchController @Inject() (
             filterByTime = None,
             maxResults = Some(maxUris),
             kifiResults = relevantHits.size,
-            kifiResultsWithLibraries = Some(relevantHits.count(_.libraryId.isDefined)),
             kifiExpanded = None,
             kifiTime = Some(processingTime.toInt),
             kifiShownTime = None,

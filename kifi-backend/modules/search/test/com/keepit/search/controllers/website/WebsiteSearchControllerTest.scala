@@ -105,7 +105,6 @@ object ExtSearchControllerTest {
             id = 234,
             score = .999f,
             visibility = 0,
-            libraryId = 678,
             keepId = 456,
             title = Some("Example Site"),
             url = "http://example.com",
