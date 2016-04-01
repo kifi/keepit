@@ -22,6 +22,7 @@ import com.keepit.common.util.RightBias
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
+import com.keepit.model.KeepEvent.EditTitle
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
@@ -509,7 +510,11 @@ class KeepCommanderImpl @Inject() (
     for {
       oldKeep <- keepRepo.getOption(keepId).map(Success(_)).getOrElse(Failure(KeepFail.KEEP_NOT_FOUND))
       _ <- if (canEdit(oldKeep.id.get)) Success(()) else Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
-    } yield keepRepo.save(oldKeep.withTitle(Some(title.trim)))
+    } yield {
+      val newKeep = keepRepo.save(oldKeep.withTitle(Some(title.trim)))
+      session.onTransactionSuccess(eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title)))
+      newKeep
+    }
   }
 
   // Updates note on keep, making sure tags are in sync.

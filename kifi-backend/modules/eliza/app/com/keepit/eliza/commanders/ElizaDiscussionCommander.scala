@@ -26,6 +26,7 @@ trait ElizaDiscussionCommander {
   def getDiscussionForKeep(keepId: Id[Keep], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
@@ -142,6 +143,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
             numComments = countByKeep.getOrElse(keepId, 0),
             messages = messages.map(ElizaMessage.toCrossServiceMessage)
           )
+      }
+    }
+  }
+
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit] = {
+    getOrCreateMessageThreadWithUser(keepId, userId).map { thread =>
+      db.readWrite { implicit s =>
+        messageRepo.save(ElizaMessage(
+          keepId = thread.keepId,
+          from = MessageSender.System,
+          messageText = "",
+          source = None, // todo(cam): add source
+          auxData = SystemMessageData.fromKeepEvent(event),
+          sentOnUrl = None,
+          sentOnUriId = None
+        ))
       }
     }
   }

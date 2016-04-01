@@ -137,7 +137,7 @@ object KeepActivityGen {
         case KeepEventKind.Initial => DescriptionElements(lastEvent.author, "sent this page")
         case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
         case KeepEventKind.AddParticipants | KeepEventKind.AddLibraries => DescriptionElements(lastEvent.author, "added a recipient to this discussion")
-        case KeepEventKind.EditedTitle => DescriptionElements(lastEvent.author, "edited the title")
+        case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
       }
       lastEvent.withHeader(newHeader)
     }
