@@ -282,10 +282,9 @@ case class CrossServiceKeep(
   def isActive: Boolean = state == KeepStates.ACTIVE
 }
 object CrossServiceKeep {
-  case class LibraryInfo(id: Id[Library], visibility: LibraryVisibility, organizationId: Option[Id[Organization]])
+  case class LibraryInfo(id: Id[Library], visibility: LibraryVisibility, organizationId: Option[Id[Organization]], addedBy: Option[Id[User]])
   object LibraryInfo {
-    def fromLibrary(lib: Library) = LibraryInfo(lib.id.get, lib.visibility, lib.organizationId)
-    def fromKTL(ktl: KeepToLibrary) = LibraryInfo(ktl.libraryId, ktl.visibility, ktl.organizationId)
+    def fromKTL(ktl: KeepToLibrary) = LibraryInfo(ktl.libraryId, ktl.visibility, ktl.organizationId, ktl.addedBy)
   }
   private implicit val libraryFormat = Json.format[LibraryInfo]
   implicit val format: Format[CrossServiceKeep] = (
