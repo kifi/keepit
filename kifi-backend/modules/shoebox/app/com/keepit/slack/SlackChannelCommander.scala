@@ -323,7 +323,7 @@ class SlackChannelCommanderImpl @Inject() (
   }
 
   private def formatSlackChannelName(name: String): String = {
-    name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.head.toUpper + s.tail).mkString(" ")
+    name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.capitalize).mkString(" ")
   }
 
   private def addChannelMembersToChannelLibraries(slackTeamId: SlackTeamId, channels: Seq[SlackChannelInfo])(implicit session: RWSession): Map[SlackChannelInfo, Set[LibraryMembership]] = {
