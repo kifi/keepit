@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationDeliveryCommander }
+import com.keepit.eliza.commanders.{ MessagingCommanderImpl, MessageFetchingCommander, MessagingCommander, NotificationDeliveryCommander }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -17,14 +17,14 @@ import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.social.BasicUser
-import com.keepit.test.ElizaTestInjector
+import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable._
 import play.api.libs.json.{ JsObject, Json }
 
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
-class MessagingTest extends Specification with ElizaTestInjector {
+class MessagingTest extends Specification with ElizaTestInjector with ElizaInjectionHelpers {
 
   implicit val context = HeimdalContext.empty
 
@@ -69,7 +69,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
-        val messagingCommander = inject[MessagingCommander]
+        val messagingCommander = inject[MessagingCommanderImpl]
         val messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationDeliveryCommander]
 
@@ -95,7 +95,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         withDb(modules: _*) { implicit injector =>
 
           val (user1, user2, user3, user2n3Seq, shoebox) = setup()
-          val messagingCommander = inject[MessagingCommander]
+          val messagingCommander = inject[MessagingCommanderImpl]
           val notificationCommander = inject[NotificationDeliveryCommander]
           var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
@@ -139,19 +139,17 @@ class MessagingTest extends Specification with ElizaTestInjector {
       withDb(modules: _*) { implicit injector =>
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
-        val messagingCommander = inject[MessagingCommander]
-        val notificationCommander = inject[NotificationDeliveryCommander]
 
         val (thread, msg) = waitFor(messagingCommander.sendNewMessage(user1, Seq(user2), Nil, "http://kifi.com", Some("title"), "Fortytwo", None))
 
         inject[WatchableExecutionContext].drain()
-        waitFor(notificationCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
-        waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
+        waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false)).length === 1
+        waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
         messagingCommander.addParticipantsToThread(user1, thread.keepId, Seq(user3), Seq.empty, Seq.empty, Seq.empty, source = None, updateShoebox = true)
         inject[WatchableExecutionContext].drain()
-        waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
+        waitFor(notificationDeliveryCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }
     }
 
@@ -159,7 +157,6 @@ class MessagingTest extends Specification with ElizaTestInjector {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, _, user2n3Seq, _) = setup()
         val userThreadRepo = inject[UserThreadRepo]
-        val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "https://kifi.com", Some("title"), "Search!", None))
 
         val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId) }

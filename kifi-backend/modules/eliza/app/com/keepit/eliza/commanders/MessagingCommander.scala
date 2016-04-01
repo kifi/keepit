@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import java.util.concurrent.TimeoutException
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.core.anyExtensionOps
@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.{ MessageSource, DiscussionKeep, Message }
+import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
@@ -45,7 +45,42 @@ object MessagingCommander {
   def maxEmailRecipientsPerThreadErrorMessage(user: Id[User], emailCount: Int) = s"You (user #$user) have hit the limit on the number of emails ($emailCount) you are able to send through Kifi."
 }
 
-class MessagingCommander @Inject() (
+@ImplementedBy(classOf[MessagingCommanderImpl])
+trait MessagingCommander {
+  // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
+  def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])]
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]]
+  def hasThreads(userId: Id[User], url: String): Future[Boolean]
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessageAction(title: Option[String], text: String, source: Option[MessageSource], userExtRecipients: Seq[ExternalId[User]], nonUserRecipients: Seq[BasicContact], validOrgRecipients: Seq[PublicId[Organization]],
+    url: String, userId: Id[User], initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])]
+  def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread]
+  def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread]
+  def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread]
+  def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread]
+
+  def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit
+  def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit
+  def setLastSeen(userId: Id[User], keepId: Id[Keep], timestampOpt: Option[DateTime] = None): Unit
+  def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit
+  def getUnreadUnmutedThreadCount(userId: Id[User]): Int
+  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean
+  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean
+  def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
+  def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
+    orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
+
+  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
+  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]])
+}
+
+class MessagingCommanderImpl @Inject() (
     threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
     nonUserThreadRepo: NonUserThreadRepo,
@@ -60,7 +95,7 @@ class MessagingCommander @Inject() (
     notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends MessagingCommander with Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
@@ -586,7 +621,7 @@ class MessagingCommander @Inject() (
     }.contains(true)
   }
 
-  def getChatter(userId: Id[User], urls: Seq[String]) = {
+  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]] = {
     implicit val timeout = Duration(3, "seconds")
     TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
