@@ -24,6 +24,9 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
   def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
   def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
+
+  // Note: this method is sad and I am sad having written it. Please do not use it.
+  def getAllUnreadByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Seq[Notification]
 }
 
 @Singleton
@@ -147,6 +150,11 @@ class NotificationRepoImpl @Inject() (
       notif <- activeRows if notif.recipient === recipient && notif.lastEvent < time
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
+  }
+
+  def getAllUnreadByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Seq[Notification] = {
+    val kindStr = kind.name
+    activeRows.filter(n => n.recipient === recipient && n.kind === kindStr && n.unread).list
   }
 
 }

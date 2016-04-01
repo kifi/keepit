@@ -20,6 +20,8 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.LibraryNewKeep
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
@@ -59,6 +61,10 @@ class MessagingCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
+    // TODO(ryan): these notif classes are only here because of hacky NewKeep notification id collisions
+    notifRepo: NotificationRepo,
+    notifItemRepo: NotificationItemRepo,
+    notifCommander: NotificationCommander,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -325,6 +331,27 @@ class MessagingCommander @Inject() (
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
     }
+    // Anyone who got this new notification might have a NewKeep notification that is going to be
+    // passively replaced by this message thread. The client will then have no way of ever marking or
+    // displaying that notification, so they cannot mark it as read (resulting in a persistent
+    // incorrect unread-notification count). Try and find this notification and murder it.
+    SafeFuture {
+      val newKeepNotifsToMarkAsRead = db.readOnlyMaster { implicit s =>
+        thread.participants.allUsers.flatMap { user =>
+          notifRepo.getAllUnreadByRecipientAndKind(Recipient.fromUser(user), LibraryNewKeep).find { newKeepNotif =>
+            notifItemRepo.getAllForNotification(newKeepNotif.id.get) match {
+              case Seq(oneItem) => oneItem.event match {
+                case lnk: LibraryNewKeep => lnk.keepId == thread.keepId
+                case _ => false
+              }
+              case _ => false
+            }
+          }
+        }
+      }
+      newKeepNotifsToMarkAsRead.foreach { notif => notifCommander.setNotificationUnreadTo(notif.id.get, unread = false) }
+    }
+
     // For everyone except the sender, mark their thread as unread
     db.readWrite { implicit s =>
       (thread.participants.allUsers -- from.asUser).foreach { user =>
