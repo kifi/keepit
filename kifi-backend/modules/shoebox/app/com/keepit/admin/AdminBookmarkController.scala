@@ -336,24 +336,20 @@ class AdminBookmarksController @Inject() (
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get)).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
-            keep.id.get -> RawKifiAttribution(keep.userId.get, connections, keep.source)
+            keep.id.get -> (RawKifiAttribution(keep.userId.get, connections, keep.source), keep.state == KeepStates.ACTIVE)
           }
         }.toMap
       }
 
       val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
-        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
-        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
+        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get), excludeStateOpt = None)
+        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get), excludeState = None)
         otherKeeps.collect {
-          case keep if keep.source != KeepSource.discussion && ktls.getOrElse(keep.id.get, Seq.empty).nonEmpty =>
+          case keep =>
             val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, Set.empty), keep.source)
-            keep.id.get -> rawAttribution
-          case keep if keep.source != KeepSource.discussion && ktus.getOrElse(keep.id.get, Seq.empty).nonEmpty =>
-            slackLog.info(s"${keep.id.get} is from ${keep.source.value} but has no KTLs")
             val firstUsers = ktus(keep.id.get).filter(ktu => keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set.empty, Set.empty, firstUsers.map(_.userId).toSet), keep.source)
-            keep.id.get -> rawAttribution
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }
 
@@ -364,8 +360,9 @@ class AdminBookmarksController @Inject() (
           val allConnections = discussionConnections ++ nonDiscussionConnections
           val missingKeeps = keepsToBackfill.map(_.id.get).filter(!allConnections.contains(_))
           val internedKeeps = allConnections.map {
-            case (kid, attr) =>
-              if (!dryRun) sourceRepo.intern(kid, attr) else slackLog.info(s"$kid: ${Json.stringify(Json.toJson(attr))}")
+            case (kid, (attr, isActive)) =>
+              val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
+              if (!dryRun) sourceRepo.intern(kid, attr, state = state) else slackLog.info(s"$kid: ${Json.stringify(Json.toJson(attr))}")
               kid
           }
           (internedKeeps, missingKeeps)

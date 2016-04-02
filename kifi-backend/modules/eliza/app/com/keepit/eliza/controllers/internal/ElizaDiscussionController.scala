@@ -171,7 +171,7 @@ class ElizaDiscussionController @Inject() (
     import GetInitialRecipientsByKeepId._
     val keepIds = request.body.as[Request].keepIds
     db.readOnlyMasterAsync { implicit s =>
-      val threads = threadRepo.getByKeepIds(keepIds)
+      val threads = threadRepo.getByKeepIds(keepIds, excludeState = None)
       val recipientsByKeepId = threads.map {
         case (keepId, thread) =>
           def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis < thread.createdAt.getMillis
