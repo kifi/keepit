@@ -1,14 +1,18 @@
 package com.keepit.common
 
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
-import play.api.libs.json._
 import play.api.data.validation.ValidationError
+import play.api.http.Status._
+import play.api.libs.json._
+import play.api.mvc.Result
+import play.api.mvc.Results.Status
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 package object json {
   abstract class FormatSchemaHelper {
     def hint(input: JsValue): JsValue
+    def hintResponse(input: JsValue): Result = Status(BAD_REQUEST)(Json.obj("error" -> "malformed_payload", "hint" -> hint(input)))
   }
   def schemaHelper[T](reads: Reads[T]): FormatSchemaHelper = new FormatSchemaHelper {
     override def hint(input: JsValue): JsValue = {

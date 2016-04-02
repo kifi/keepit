@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.{ json, CollectionHelpers }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.util.RightBias.FromOption
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
@@ -66,23 +67,11 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply, unlift(BulkKeepSelection.unapply))
 }
 
-final case class ExternalKeepCreateRequest(
-  url: String,
-  source: KeepSource,
-  title: Option[String],
-  note: Option[String], // will be recorded as the first comment
-  keptAt: Option[DateTime],
-  users: Set[ExternalId[User]],
-  emails: Set[EmailAddress],
-  libraries: Set[PublicId[Library]])
-object ExternalKeepCreateRequest {
-  implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
-
-  val schemaHelper = json.schemaHelper(reads)
-}
-
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
+  // Open db sessions, intended to be called directly from controllers
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep]
+
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
@@ -100,7 +89,6 @@ trait KeepCommander {
 
   // Updating / managing
   def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind])(implicit session: RWSession): Try[Keep]
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -505,16 +493,21 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind])(implicit session: RWSession): Try[Keep] = {
-    def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
-    for {
-      oldKeep <- keepRepo.getOption(keepId).map(Success(_)).getOrElse(Failure(KeepFail.KEEP_NOT_FOUND))
-      _ <- if (canEdit(oldKeep.id.get)) Success(()) else Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
-    } yield {
-      val newKeep = keepRepo.save(oldKeep.withTitle(Some(title.trim)))
-      session.onTransactionSuccess(eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title), source))
-      newKeep
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep] = {
+    val result = db.readWrite { implicit s =>
+      def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
+      for {
+        oldKeep <- keepRepo.getOption(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+      } yield {
+        (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))
+      }
     }
+    result.getRight.foreach {
+      case (oldKeep, newKeep) =>
+        eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title), source)
+    }
+    result.map(_._2)
   }
 
   // Updates note on keep, making sure tags are in sync.
