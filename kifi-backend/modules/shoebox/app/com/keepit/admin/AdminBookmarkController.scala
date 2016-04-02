@@ -345,11 +345,11 @@ class AdminBookmarksController @Inject() (
         val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
         val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get))
         otherKeeps.collect {
-          case keep if keep.source != KeepSource.discussion && ktls.contains(keep.id.get) =>
+          case keep if keep.source != KeepSource.discussion && ktls.getOrElse(keep.id.get, Seq.empty).nonEmpty =>
             val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
             val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, Set.empty), keep.source)
             keep.id.get -> rawAttribution
-          case keep if keep.source != KeepSource.discussion && ktus.contains(keep.id.get) =>
+          case keep if keep.source != KeepSource.discussion && ktus.getOrElse(keep.id.get, Seq.empty).nonEmpty =>
             slackLog.info(s"${keep.id.get} is from ${keep.source.value} but has no KTLs")
             val firstUsers = ktus(keep.id.get).filter(ktu => keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
             val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set.empty, Set.empty, firstUsers.map(_.userId).toSet), keep.source)
