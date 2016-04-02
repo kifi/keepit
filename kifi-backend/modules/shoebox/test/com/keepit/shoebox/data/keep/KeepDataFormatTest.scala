@@ -2,21 +2,21 @@ package com.keepit.shoebox.data.keep
 
 import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.json.TestHelper
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.TestHelpers.matchJson
 import com.keepit.model.KeepFactoryHelper.KeepPersister
 import com.keepit.model.LibraryFactoryHelper.LibraryPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.SpecificationLike
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.Json
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -60,7 +60,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
               "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
             )
           )
-          TestHelper.deepCompare(actual, expected) must beNone
+          actual must matchJson(expected)
         }
       }
     }
