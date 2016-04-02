@@ -296,15 +296,12 @@ class ExtLibraryController @Inject() (
       case JsError(errs) => throw new Exception(s"invalid request: ${request.body.toString} for updateKeep, expected 'title'")
       case JsSuccess(titleOpt, _) =>
         titleOpt.map { title =>
-          db.readWrite { implicit s =>
-            Try(keepRepo.convertExternalId(keepExtId)).map { keepId =>
-              keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)) match {
-                case Failure(fail: KeepFail) => fail.asErrorResponse
-                case Failure(unhandled) => throw unhandled
-                case Success(keep) => NoContent
-              }
-            }.getOrElse(KeepFail.KEEP_NOT_FOUND.asErrorResponse)
-          }
+          Try(db.readOnlyMaster { implicit s => keepRepo.convertExternalId(keepExtId) }).map { keepId =>
+            keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)).fold(
+              fail => fail.asErrorResponse,
+              _ => NoContent
+            )
+          }.getOrElse(KeepFail.KEEP_NOT_FOUND.asErrorResponse)
         }.getOrElse(NoContent)
     }
   }
