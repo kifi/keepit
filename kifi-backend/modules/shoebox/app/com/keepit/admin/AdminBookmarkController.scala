@@ -360,7 +360,7 @@ class AdminBookmarksController @Inject() (
         nonDiscussionConnections <- nonDiscussionConnectionsFut
         (success, fail) <- db.readWriteAsync { implicit s =>
           val allConnections = discussionConnections ++ nonDiscussionConnections
-          val missingKeeps = keepsToBackfill.map(_.id.get).filter(!allConnections.contains(_))
+          val missingKeeps = keeps.map(_.id.get).filter(!allConnections.contains(_))
           val internedKeeps = allConnections.map {
             case (kid, (attr, isActive)) =>
               val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
