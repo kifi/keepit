@@ -327,7 +327,7 @@ class AdminBookmarksController @Inject() (
 
   }
 
-  def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean = true) = AdminUserAction { implicit request =>
+  def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
     val fromId = startFrom.map(Id[Keep])
     val chunkSize = 100
     val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync))).toSet
@@ -368,7 +368,7 @@ class AdminBookmarksController @Inject() (
           (internedKeeps, missingKeeps)
         }
       } yield {
-        s"${keeps.minByOpt(_.id.get)}-${keeps.maxByOpt(_.id.get)}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
+        s"${keeps.map(_.id.get).minByOpt(_.id)}-${keeps.map(_.id.get).maxByOpt(_.id)}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
       }
     }
     Ok.chunked(enum)
