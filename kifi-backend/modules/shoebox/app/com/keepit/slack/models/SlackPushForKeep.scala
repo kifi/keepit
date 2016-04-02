@@ -45,7 +45,7 @@ object SlackPushForKeep {
       keepId = keepId,
       timestamp = response.timestamp,
       text = response.text,
-      lastKnownEditability = SlackMessageEditability.EDITABLE,
+      lastKnownEditability = if (!response.sentByAnonymousBot) SlackMessageEditability.EDITABLE else SlackMessageEditability.UNEDITABLE,
       messageRequest = Some(request)
     )
   }
