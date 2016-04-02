@@ -25,7 +25,7 @@ GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmar
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
 POST    /admin/bookmarks/reattributeKeeps             @com.keepit.controllers.admin.AdminBookmarksController.reattributeKeeps(author: String, userId: Option[Long] ?= None, overwriteExistingOwner: Boolean ?= false, doIt: Boolean ?= false)
-POST    /admin/bookmarks/backfillKifiAttribution      @com.keepit.controllers.admin.AdminBookmarksController.backfillKifiSourceAttribution(startFrom: Option[Long] ?= None, limit: Int, dryRun: Boolean = true)
+POST    /admin/bookmarks/backfillKifiAttribution      @com.keepit.controllers.admin.AdminBookmarksController.backfillKifiSourceAttribution(startFrom: Option[Long] ?= None, limit: Int, dryRun: Boolean ?= true)
 
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
