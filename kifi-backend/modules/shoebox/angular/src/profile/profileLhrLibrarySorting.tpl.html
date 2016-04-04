@@ -1,0 +1,29 @@
+  <a class="profile-lhr-lib-sort-title-wrapper" href="javascript:" ng-click="toggleOpen()">
+    <div class="profile-setting-arrow" ng-class="{'active':isOpen}"></div>
+    <div class="profile-lhr-lib-sort-title" ng-class="{'active':isOpen}">Sort Libraries</div>
+  </a>
+
+  <div class="profile-lhr-lib-sort-change" ng-show="isOpen">
+
+    <div class="profile-lhr-lib-sort-group">
+
+      <div class="profile-lhr-lib-sort-option">
+        <label class="profile-manage-label">
+          <input type="radio" class="profile-manage-input" ng-model="userProfileSettings.lhrSort" ng-value="alphabetical" ng-change="saveSettings()">
+          <span class="profile-manage-radio-check"></span>
+          <span class="profile-settings-option-text">Alphabetically</span>
+        </label>
+      </div>
+
+      <div class="profile-lhr-lib-sort-option">
+        <label class="profile-manage-label">
+          <input type="radio" class="profile-manage-input" ng-model="userProfileSettings.lhrSort" ng-value="last_kept_into" ng-change="saveSettings()">
+          <span class="profile-manage-radio-check"></span>
+          <span class="profile-settings-option-text">By Activity</span>
+        </label>
+      </div>
+
+    </div>
+
+  </div>
+
