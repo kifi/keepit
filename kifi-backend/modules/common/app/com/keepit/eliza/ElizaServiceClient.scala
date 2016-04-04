@@ -420,7 +420,7 @@ class ElizaServiceClientImpl @Inject() (
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]] = {
     import GetInitialRecipientsByKeepId._
     call(Eliza.internal.getInitialRecipientsByKeepId, body = Json.toJson(Request(keepIds))).map {
-      _.json.as[Response].connections
+      _.json.as[Response].recipients
     }
   }
 
@@ -520,7 +520,7 @@ object ElizaServiceClient {
 
   object GetInitialRecipientsByKeepId {
     case class Request(keepIds: Set[Id[Keep]])
-    case class Response(connections: Map[Id[Keep], KeepRecipients])
+    case class Response(recipients: Map[Id[Keep], KeepRecipients])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
