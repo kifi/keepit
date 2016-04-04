@@ -1,6 +1,7 @@
 package com.keepit.shoebox.data.keep
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.common.store.{ ImageSize, ImagePath }
 import com.keepit.model._
@@ -38,7 +39,7 @@ object NewKeepImageInfo {
 
 final case class KeepRecipientsInfo(
   users: Seq[BasicUser],
-  emails: Seq[BasicNonUser],
+  emails: Seq[EmailAddress],
   libraries: Seq[BasicLibrary])
 
 object KeepRecipientsInfo {
