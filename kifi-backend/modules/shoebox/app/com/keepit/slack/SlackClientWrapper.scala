@@ -71,8 +71,8 @@ class SlackClientWrapperImpl @Inject() (
   val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
 
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
-    pushToSlackViaWebhook(slackTeamId, slackChannelId, msg).map(_ => None).recoverWith {
-      case _ => pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v))
+    pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
+      case _ => pushToSlackViaWebhook(slackTeamId, slackChannelId, msg).map(_ => None)
     }
   }
 
