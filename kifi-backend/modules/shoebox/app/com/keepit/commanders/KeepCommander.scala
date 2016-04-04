@@ -88,7 +88,7 @@ trait KeepCommander {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
-  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
+  def unsafeModifyKeepConnections(keep: Keep, diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -734,8 +734,7 @@ class KeepCommanderImpl @Inject() (
 
     newKeep
   }
-  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
-    val oldKeep = keepRepo.get(keepId)
+  def unsafeModifyKeepConnections(oldKeep: Keep, diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     keepRepo.save(oldKeep.withConnections(oldKeep.connections.diffed(diff))) tap { newKeep =>
       diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
       diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
@@ -745,7 +744,9 @@ class KeepCommanderImpl @Inject() (
         ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
       }
       diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
-      session.onTransactionSuccess { slackPusher.schedule(diff.libraries.added) }
+      session.onTransactionSuccess {
+        slackPusher.schedule(diff.libraries.added)
+      }
     }
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {

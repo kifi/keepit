@@ -24,7 +24,12 @@ object NonUserKinds {
   val email = NonUserKind("email")
 }
 
-case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String])
+case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String], lastName: Option[String]) {
+  def asEmailAddress: Option[EmailAddress] = kind match {
+    case NonUserKinds.email => Some(EmailAddress(id))
+    case _ => None
+  }
+}
 
 object BasicNonUser {
   def fromEmail(email: EmailAddress): BasicNonUser = BasicNonUser(NonUserKinds.email, id = email.address, firstName = None, lastName = None)
