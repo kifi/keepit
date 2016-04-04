@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers
 
 import com.keepit.common.strings._
-import com.keepit.common.controller.{ UserActionsHelper, KifiSession, ElizaServiceController }
+import com.keepit.common.controller.{ KifiSession, ElizaServiceController }
 import com.keepit.common.db.Id
 import com.keepit.model.{ UserExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -64,7 +64,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val websocketRouter: WebSocketRouter
   protected val shoutdownListener: WebsocketsShutdownListener
 
-  val userActionsHelper: UserActionsHelper
   val kifInstallationStore: KifiInstallationStore
   val accessLog: AccessLog
 
@@ -114,8 +113,36 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       })
   }
 
+  private def getUserIdFromRequest(implicit request: RequestHeader): Future[Option[Id[User]]] = {
+    // 3 ways we could figure out who this user is:
+    // • Play sesssion exists, and has a userId. Super fast.
+    // • SecureSocial cookie exists, containing sessionId. Look it up on shoebox.
+    // • sessionId was passed in directly. Look it up on shoebox.
+    request.session.get(KifiSession.FORTYTWO_USER_ID).map { userIdStr =>
+      Future.successful(Try(userIdStr.toLong).map(Id[User](_)).toOption)
+    }.getOrElse {
+      val sessionIdOpt = request.cookies.get(Authenticator.cookieName).map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption))
+      sessionIdOpt.map { sid =>
+        shoebox.getSessionByExternalId(UserSessionExternalId(sid)).flatMap {
+          case Some(session) if session.valid =>
+            val identityId = IdentityId(session.socialId.id, session.provider.name)
+            shoebox.getUserIdByIdentityId(identityId).map {
+              case Some(userId) => Some(userId)
+              case None => log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${identityId.providerId} :: ${identityId.userId}."); None
+            }
+          case otherwise =>
+            log.info(s"[getUserIdFromRequest] Refusing auth because not valid: ${request.headers.toSimpleMap.toString}")
+            Future.successful(None)
+        }
+      }.getOrElse {
+        log.warn(s"[getUserIdFromRequest] Could not find user. ${request.headers.toSimpleMap.toString}")
+        Future.successful(None)
+      }
+    }
+  }
+
   private def authenticate(implicit request: RequestHeader): Future[Option[StreamSession]] = {
-    userActionsHelper.getUserIdOptWithFallback(request).flatMap { userIdOpt =>
+    getUserIdFromRequest(request).flatMap { userIdOpt =>
       userIdOpt.map { userId =>
         userExperimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
           val userAgent = request.headers.get("User-Agent").getOrElse("NA")

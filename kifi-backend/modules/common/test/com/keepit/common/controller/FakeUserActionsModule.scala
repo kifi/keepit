@@ -5,10 +5,8 @@ import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, Im
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ SocialUserInfo, User, UserExperimentType }
-import com.keepit.shoebox.model.ids.UserSessionExternalId
-import play.api.mvc.{ RequestHeader, Request }
+import play.api.mvc.Request
 import securesocial.core.{ IdentityId, Identity }
 
 import scala.concurrent.Future
@@ -31,7 +29,6 @@ class FakeUserActionsHelper(
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[UserExperimentType] = Set[UserExperimentType]()
-  var authedUserIdOpt: Option[Id[User]] = None // Useful when no User object exists
 
   def setUser(user: User, experiments: Set[UserExperimentType] = Set[UserExperimentType]()): FakeUserActionsHelper = {
     fixedUser = Some(user)
@@ -40,21 +37,16 @@ class FakeUserActionsHelper(
     this
   }
 
-  def setUserId(userIdOpt: Option[Id[User]]): FakeUserActionsHelper = {
-    authedUserIdOpt = userIdOpt
-    this
-  }
-
   def unsetUser(): Unit = {
     fixedUser = None
-    authedUserIdOpt = None
     fixedExperiments = Set()
   }
 
-  def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id).orElse(authedUserIdOpt))
-  def isAdmin(userId: Id[User]): Future[Boolean] = Future.successful(fixedExperiments.contains(UserExperimentType.ADMIN))
-  def getUserOpt(userId: Id[User]): Future[Option[User]] = Future.successful(fixedUser)
+  override def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(UserExperimentType.ADMIN))
+  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
-  def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
-  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = Future.successful(None)
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId] = None
 }
