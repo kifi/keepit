@@ -73,6 +73,7 @@ object UserValueName {
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
+  val LEFT_HAND_RAIL_SORT = UserValueName("left_hand_rail_sort") // show libraries I follow
   // ↑↑↑↑↑ Should be combined with preferences
 
   // Site user preferences
@@ -191,31 +192,4 @@ object UserValues {
   val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 
   val pendingOrgDomainOwnershipByEmail = UserValueJsValueHandler(UserValueName.PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL, default = Json.obj())
-}
-
-@json case class UserValueSettings(showFollowedLibraries: Boolean)
-
-object UserValueSettings {
-
-  val defaultSettings: Map[UserValueName, Boolean] = Map(
-    UserValueName.SHOW_FOLLOWED_LIBRARIES -> true
-  )
-
-  def readFromJsValue(body: JsValue): UserValueSettings = {
-    val showFollowedLibrariesOpt = (body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
-
-    UserValueSettings(
-      showFollowedLibraries = showFollowedLibrariesOpt.getOrElse(UserValueSettings.defaultSettings(UserValueName.SHOW_FOLLOWED_LIBRARIES))
-    )
-  }
-
-  def retrieveSetting(targetVal: UserValueName, userVals: JsValue): Boolean = {
-    retrieveSettings(Set(targetVal), userVals)(targetVal)
-  }
-
-  def retrieveSettings(targetVals: Set[UserValueName], userVals: JsValue): Map[UserValueName, Boolean] = {
-    targetVals.map { userVal =>
-      userVal -> (userVals \ userVal.name).asOpt[Boolean].getOrElse(defaultSettings(userVal))
-    }.toMap
-  }
 }
