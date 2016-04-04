@@ -333,17 +333,21 @@ class KeepRepoImpl @Inject() (
   }
 
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val uriIdSet = uriIds.map(_.id).mkString("(", ",", ")")
-    val q = sql"""(
-      SELECT ktu.uri_id, ktu.keep_id FROM keep_to_user ktu
+    if (uriIds.isEmpty) Map.empty[Id[NormalizedURI], Set[Id[Keep]]]
+    else {
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+      val uriIdSet = uriIds.map(_.id).mkString("(", ",", ")")
+      val q = sql"""(
+        SELECT ktu.uri_id, ktu.keep_id FROM keep_to_user ktu
 
-      WHERE ktu.state = 'active' AND ktu.user_id = $userId AND ktu.uri_id in #$uriIdSet
-    ) UNION (
-      SELECT ktl.uri_id, ktl.keep_id FROM keep_to_library ktl INNER JOIN library_membership lm ON ktl.library_id = lm.library_id
-      WHERE ktl.state = 'active' AND lm.state = 'active' AND lm.user_id = $userId AND ktl.uri_id in #$uriIdSet
-    );"""
-    q.as[(Id[NormalizedURI], Id[Keep])].list.groupBy(_._1).mapValues(_.map(_._2).toSet)
+        WHERE ktu.state = 'active' AND ktu.user_id = $userId AND ktu.uri_id in #$uriIdSet
+      ) UNION (
+        SELECT ktl.uri_id, ktl.keep_id FROM keep_to_library ktl INNER JOIN library_membership lm ON ktl.library_id = lm.library_id
+        WHERE ktl.state = 'active' AND lm.state = 'active' AND lm.user_id = $userId AND ktl.uri_id in #$uriIdSet
+      );"""
+      val uriAndKeepIdsByUriId = q.as[(Id[NormalizedURI], Id[Keep])].list.groupBy(_._1)
+      uriIds.map { uriId => uriId -> uriAndKeepIdsByUriId.get(uriId).map(_.map(_._2).toSet).getOrElse(Set.empty) }.toMap
+    }
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
