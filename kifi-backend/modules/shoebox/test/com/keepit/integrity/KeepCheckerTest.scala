@@ -103,7 +103,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         }
 
         db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).connections.libraries !== Set(library.id.get)
+          keepRepo.get(keep.id.get).recipients.libraries !== Set(library.id.get)
         }
 
         // Let's see if the checker will fix it
@@ -111,7 +111,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         keepChecker.check()
 
         db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).connections.libraries === Set(library.id.get)
+          keepRepo.get(keep.id.get).recipients.libraries === Set(library.id.get)
         }
       }
     }
@@ -128,7 +128,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         }
 
         db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).connections.users !== Set(user.id.get)
+          keepRepo.get(keep.id.get).recipients.users !== Set(user.id.get)
         }
 
         // Let's see if the checker will fix it
@@ -136,7 +136,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
         keepChecker.check()
 
         db.readOnlyMaster { implicit session =>
-          keepRepo.get(keep.id.get).connections.users === Set(user.id.get)
+          keepRepo.get(keep.id.get).recipients.users === Set(user.id.get)
         }
       }
     }

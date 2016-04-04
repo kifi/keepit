@@ -350,7 +350,7 @@ class AdminBookmarksController @Inject() (
           case keep =>
             val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
             val firstUsers = ktus(keep.id.get).filter(ktu => !keep.userId.contains(ktu.userId) && keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepConnections(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepRecipients(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
             keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }

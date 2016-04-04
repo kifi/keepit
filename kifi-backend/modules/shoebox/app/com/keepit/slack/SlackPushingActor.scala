@@ -428,7 +428,7 @@ class SlackPushingActor @Inject() (
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
-    airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
+    airbrake.verify(keep.recipients.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)

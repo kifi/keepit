@@ -59,7 +59,7 @@ class ShoeboxMessageIngestionActor @Inject() (
       db.readWrite { implicit session =>
         val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
         session.onTransactionSuccess {
-          slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
+          slackPusher.schedule(keeps.flatMap(_.recipients.libraries).toSet)
         }
         keeps.foreach { initialKeep =>
           messagesByKeep.get(initialKeep.id.get).foreach { msgs =>
@@ -72,12 +72,12 @@ class ShoeboxMessageIngestionActor @Inject() (
             def handleKeepEvents(keep: Keep) = msgs.flatMap(_.auxData).foldLeft(keep) { case (k, e) => handleKeepEvent(k, e) }
             def handleKeepEvent(keep: Keep, event: KeepEvent): Keep = event match {
               case KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers) =>
-                val diff = KeepConnectionsDiff(
+                val diff = KeepRecipientsDiff(
                   users = DeltaSet.empty.addAll(addedUsers.toSet),
                   emails = DeltaSet.empty.addAll(addedNonUsers.flatMap(_.asEmailAddress).toSet),
                   libraries = DeltaSet.empty
                 )
-                keepCommander.unsafeModifyKeepConnections(keep, diff, userAttribution = Some(addedBy))
+                keepCommander.unsafeModifyKeepRecipients(keep, diff, userAttribution = Some(addedBy))
               case KeepEvent.AddLibraries(_, _) => keep
               case KeepEvent.EditTitle(_, _, _) => keep
             }

@@ -10,7 +10,7 @@ import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.eliza.model.SystemMessageData.StartWithEmails
-import com.keepit.model.{ KeepConnections, ElizaFeedFilter, User, Keep }
+import com.keepit.model.{ KeepRecipients$, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.{ MessageSource, Message }
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
@@ -177,7 +177,7 @@ class ElizaDiscussionController @Inject() (
           def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis < thread.createdAt.getMillis
           val firstUsers = thread.participants.userParticipants.collect { case (uid, added) if uid != thread.startedBy && addedNearStart(added) => uid }
           val firstNonUsers = thread.participants.nonUserParticipants.collect { case (NonUserEmailParticipant(email), added) if addedNearStart(added) => email }
-          keepId -> KeepConnections(libraries = Set.empty, firstNonUsers.toSet, firstUsers.toSet)
+          keepId -> KeepRecipients(libraries = Set.empty, firstNonUsers.toSet, firstUsers.toSet)
       }
       Ok(Json.toJson(Response(recipientsByKeepId)))
     }

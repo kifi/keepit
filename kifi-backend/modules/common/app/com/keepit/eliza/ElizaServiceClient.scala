@@ -123,7 +123,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
-  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepConnections]]
+  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]]
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
@@ -417,10 +417,10 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepConnections]] = {
+  def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]] = {
     import GetInitialRecipientsByKeepId._
     call(Eliza.internal.getInitialRecipientsByKeepId, body = Json.toJson(Request(keepIds))).map {
-      _.json.as[Response].connections
+      _.json.as[Response].recipients
     }
   }
 
@@ -520,7 +520,7 @@ object ElizaServiceClient {
 
   object GetInitialRecipientsByKeepId {
     case class Request(keepIds: Set[Id[Keep]])
-    case class Response(connections: Map[Id[Keep], KeepConnections])
+    case class Response(recipients: Map[Id[Keep], KeepRecipients])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }

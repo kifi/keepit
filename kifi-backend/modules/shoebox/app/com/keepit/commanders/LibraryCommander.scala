@@ -601,14 +601,14 @@ class LibraryCommanderImpl @Inject() (
       libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId) match {
         case Some(membership) if membership.canWrite =>
           val toLibrary = libraryRepo.get(toLibraryId)
-          val validSourceLibraryIds = keeps.flatMap(_.connections.libraries).toSet.filter { fromLibraryId =>
+          val validSourceLibraryIds = keeps.flatMap(_.recipients.libraries).toSet.filter { fromLibraryId =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId).exists(_.canWrite)
           }
           val failures = collection.mutable.ListBuffer[(Keep, LibraryError)]()
           val successes = collection.mutable.ListBuffer[Keep]()
 
           keeps.foreach {
-            case keep if keep.connections.libraries.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId) match {
+            case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId) match {
               case Right(movedKeep) => successes += movedKeep
               case Left(error) => failures += (keep -> error)
             }
@@ -639,12 +639,12 @@ class LibraryCommanderImpl @Inject() (
         case Some(membership) if membership.canWrite =>
           val toLibrary = libraryRepo.get(toLibraryId)
           val validSourceLibraryIds = {
-            val allKeepLibraries = sortedKeeps.flatMap(_.connections.libraries).toSet
+            val allKeepLibraries = sortedKeeps.flatMap(_.recipients.libraries).toSet
             libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeepLibraries, userId).keySet
           }
 
           val (failures, successes) = sortedKeeps.map {
-            case keep if keep.connections.libraries.exists(validSourceLibraryIds.contains) =>
+            case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) =>
               keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
                 case Right(copied) => Right(copied)
                 case Left(error) => Left(keep -> error)
@@ -686,7 +686,7 @@ class LibraryCommanderImpl @Inject() (
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit = {
     // persist when we last sent an email for each library membership
     db.readWrite { implicit rw =>
-      val libIds: Set[Id[Library]] = keeps.flatMap(_.connections.libraries).toSet
+      val libIds: Set[Id[Library]] = keeps.flatMap(_.recipients.libraries).toSet
       libIds.foreach { libId =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId).foreach { libMembership =>
           libraryMembershipRepo.updateLastEmailSent(libMembership.id.get)

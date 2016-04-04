@@ -43,10 +43,10 @@ case class Keep(
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
-  connections: KeepConnections)
+  recipients: KeepRecipients)
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
+  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, recipients = KeepRecipients.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -60,9 +60,9 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
-  def withConnections(newConnections: KeepConnections): Keep = this.copy(connections = newConnections)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withConnections(connections.withLibraries(libraries))
-  def withParticipants(users: Set[Id[User]]): Keep = this.withConnections(connections.withUsers(users))
+  def withRecipients(newRecipients: KeepRecipients): Keep = this.copy(recipients = newRecipients)
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withRecipients(recipients.withLibraries(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.withRecipients(recipients.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
   def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
@@ -79,7 +79,7 @@ case class Keep(
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 
   // Only for use in old code which expects keeps to have a single library
-  def lowestLibraryId: Option[Id[Library]] = connections.libraries.minByOpt(_.id)
+  def lowestLibraryId: Option[Id[Library]] = recipients.libraries.minByOpt(_.id)
 }
 
 object Keep extends PublicIdGenerator[Keep] {
@@ -110,7 +110,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'keptAt).format[DateTime] and
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
-    (__ \ 'connections).format[KeepConnections]
+    (__ \ 'connections).format[KeepRecipients]
   )(Keep.apply, unlift(Keep.unapply))
 }
 

@@ -263,7 +263,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
           url = url.url,
           source = source,
           originalKeeperId = Some(user.id.get),
-          connections = KeepConnections(libraries = Set(library.id.get), users = Set(user.id.get), emails = Set.empty)
+          recipients = KeepRecipients(libraries = Set(library.id.get), users = Set(user.id.get), emails = Set.empty)
         )
     }
     saveBookmarks(bookmarks: _*)
