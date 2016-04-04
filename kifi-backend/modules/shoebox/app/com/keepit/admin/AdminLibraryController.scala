@@ -355,9 +355,11 @@ class AdminLibraryController @Inject() (
 
     val total = (0 to 100).flatMap { idx => // ~18k existing rows
       db.readWrite { implicit session =>
-        val libIds = slackChannelToLibraryRepo.pageAscending(0, 200, Set(SlackChannelToLibraryStates.INACTIVE)).map(_.libraryId)
-        log.info(s"[backfillSlackLibraryNames] Page $idx, ${libIds.length} libs grabbed.")
-        libraryRepo.getActiveByIds(libIds.toSet).values.toList.filter(_.kind.value == "slack_channel").map { library =>
+        val libIds = slackChannelToLibraryRepo.pageAscending(idx, 200, Set(SlackChannelToLibraryStates.INACTIVE)).map(_.libraryId)
+        val libs = libraryRepo.getActiveByIds(libIds.toSet).values.toList
+        log.info(s"[backfillSlackLibraryNames] Got ${libs.length} libs, ${libs.headOption.map(_.id.get)}")
+        val filtered = libs.filter(_.kind == LibraryKind.SLACK_CHANNEL)
+        filtered.map { library =>
           val newName = formatSlackChannelName(library.name)
           log.info(s"[backfillSlackLibraryNames] Changing ${library.id.get} from ${library.name} to $newName")
           if (actuallySaveLibs && library.name != newName) {
