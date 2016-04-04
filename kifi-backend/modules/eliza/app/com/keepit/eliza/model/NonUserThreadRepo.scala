@@ -15,27 +15,16 @@ import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {
-
   def getKeepsByEmail(emailAddress: EmailAddress)(implicit session: RSession): Seq[Id[Keep]]
-
   def getNonUserThreadsForEmailing(lastNotifiedBefore: DateTime, threadUpdatedByOtherAfter: DateTime)(implicit session: RSession): Seq[NonUserThread]
-
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[NonUserThread]
-
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[NonUserThread]]
-
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
-
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean
-
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean
-
   def setLastNotifiedAndIncCount(nut: Id[NonUserThread])(implicit session: RWSession): Unit
-
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread]
-
   def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int]
-
   def deactivate(model: NonUserThread)(implicit session: RWSession): Unit
 }
 

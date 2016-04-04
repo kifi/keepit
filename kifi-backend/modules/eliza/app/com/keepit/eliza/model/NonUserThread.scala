@@ -31,6 +31,18 @@ case class NonUserThread(
 
 object NonUserThreadStates extends States[NonUserThread]
 
+object NonUserThread {
+  def forMessageThread(mt: MessageThread)(nu: NonUserParticipant) = NonUserThread(
+    createdBy = mt.startedBy,
+    participant = nu,
+    keepId = mt.keepId,
+    uriId = Some(mt.uriId),
+    notifiedCount = 0,
+    lastNotifiedAt = None,
+    threadUpdatedByOtherAt = None
+  )
+}
+
 sealed trait NonUserParticipant {
   val identifier: String
   val referenceId: Option[String]
