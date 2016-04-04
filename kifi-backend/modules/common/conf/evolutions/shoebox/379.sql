@@ -15,7 +15,7 @@ CREATE TABLE keep_to_user (
 
   PRIMARY KEY(id),
   UNIQUE INDEX `keep_to_user_u_keep_id_user_id` (`keep_id`, `user_id`),
-  INDEX `keep_to_user_i_user_id_uri_id` (`user_id`, `uri_id`),
+  INDEX `keep_to_user_i_uri_id_user_id` (`uri_id`, `user_id`),
   CONSTRAINT `keep_to_user_f_keep_id_uri_id` FOREIGN KEY (`keep_id`, `uri_id`) REFERENCES bookmark(`id`, `uri_id`),
   CONSTRAINT `keep_to_user_f_user_id` FOREIGN KEY (`user_id`) REFERENCES user(`id`),
   CONSTRAINT `keep_to_user_f_added_by` FOREIGN KEY (`added_by`) REFERENCES user(`id`)
