@@ -144,7 +144,9 @@ class AugmentationCommanderImpl @Inject() (
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
     var otherDiscoverableKeeps = 0
-    val uniqueKeepers = MutableSet[Long]() // todo(Léo, Yasu): This won't scale with very popular pages, will have to implement something like HyperLogLog counting
+    // todo(Léo, Yasu): This won't scale with very popular pages, will have to implement something like HyperLogLog counting
+    val uniqueKeepers = MutableSet[Long]()
+    val uniqueLibraries = MutableSet[Long]()
 
     (keepSearcher.indexReader.getContext.leaves()).foreach { atomicReaderContext =>
       val reader = atomicReaderContext.reader().asInstanceOf[WrappedSubReader]
@@ -166,7 +168,11 @@ class AugmentationCommanderImpl @Inject() (
         Some(Id(userId))
       }
 
-      @inline def getLibraryId(libraryId: Long): Option[Id[Library]] = if (libraryId < 0) None else Some(Id(libraryId))
+      @inline def getAndCountLibraryId(libraryId: Long): Option[Id[Library]] = if (libraryId < 0) None else {
+        uniqueLibraries += libraryId
+        Some(Id(libraryId))
+      }
+
       @inline def getOrganizationId(orgId: Long): Option[Id[Organization]] = if (orgId < 0) None else Some(Id(orgId))
 
       if (docs != null) {
@@ -181,20 +187,20 @@ class AugmentationCommanderImpl @Inject() (
 
           if (item.keepId.isDefined && item.keepId.get.id == keepId) { // canonical keep, get note
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), record.note, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
           } else if (organizationIdFilter.findIndex(orgId) >= 0) visibility match { // kept in my organizations
             case PUBLISHED | ORGANIZATION =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
             case SECRET | DISCOVERABLE => // ignore
           }
           else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
               keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, None, getAndCountUserId(userId), None, Set.empty)
@@ -204,7 +210,7 @@ class AugmentationCommanderImpl @Inject() (
             case PUBLISHED =>
               if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }
@@ -218,7 +224,7 @@ class AugmentationCommanderImpl @Inject() (
         }
       }
     }
-    FullAugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueKeepers.size)
+    FullAugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueLibraries.size, uniqueKeepers.size)
   }
 
   private def computeAugmentationScores(weightedAugmentationInfos: Iterable[(FullAugmentationInfo, Float)]): AugmentationScores = {

@@ -43,6 +43,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       None,
       Seq.empty,
       0,
+      1,
       keepers = Seq(Id[User](1) -> now),
       keepersOmitted = 0,
       keepersTotal = 1,

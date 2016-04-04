@@ -1,7 +1,7 @@
 package com.keepit.search.controllers.website
 
 import com.keepit.commanders.ProcessedImageSize
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }

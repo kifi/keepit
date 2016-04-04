@@ -42,7 +42,6 @@ case class BasicSearchContext(
   filterByTime: Option[String],
   maxResults: Option[Int],
   kifiResults: Int,
-  kifiResultsWithLibraries: Option[Int],
   kifiExpanded: Option[Boolean],
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
@@ -65,7 +64,6 @@ object BasicSearchContext {
     (__ \\ 'when).readNullable[String].fmap(filterByTime) and
     (__ \ 'maxResults).readNullable[Int] and
     (__ \ 'kifiResults).read[Int] and
-    (__ \ 'kifiResultsWithLibraries).readNullable[Int] and
     (__ \ 'kifiExpanded).readNullable[Boolean] and
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
@@ -250,7 +248,6 @@ class SearchAnalytics @Inject() (
 
       contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
       contextBuilder += ("displayedKifiResults", searchContext.kifiResults)
-      searchContext.kifiResultsWithLibraries.foreach { count => contextBuilder += ("kifiResultsWithLibrariesShown", count) }
       searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
       searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
       searchContext.chunkDelta.foreach { ms => contextBuilder += ("chunkDelta", ms) }

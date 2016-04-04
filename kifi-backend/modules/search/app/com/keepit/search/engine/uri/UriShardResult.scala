@@ -55,7 +55,6 @@ class UriShardHit(val json: JsObject) extends AnyVal {
   def id: Long = (json \ "id").as[Long]
   def score: Float = (json \ "score").as[Float]
   def visibility: Int = (json \ "visibility").as[Int]
-  def libraryId: Option[Long] = (json \ "libId").asOpt[Long]
   def keepId: Option[Long] = (json \ "keepId").asOpt[Long]
   def title: String = titleJson.as[String]
   def url: String = urlJson.as[String]
@@ -76,7 +75,7 @@ class UriShardHit(val json: JsObject) extends AnyVal {
 }
 
 object UriShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: Option[String], url: String, externalId: ExternalId[Keep]): UriShardHit = {
+  def apply(id: Long, score: Float, visibility: Int, keepId: Long, title: Option[String], url: String, externalId: ExternalId[Keep]): UriShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
@@ -86,7 +85,6 @@ object UriShardHit extends Logging {
         "url" -> JsString(url)
       ))
 
-      if (libraryId >= 0) { json = json + ("libId" -> JsNumber(libraryId)) }
       if (keepId >= 0) { json = json + ("keepId" -> JsNumber(keepId)) }
       if (externalId != null) { json = json + ("externalId" -> JsString(externalId.id)) }
       new UriShardHit(json)
