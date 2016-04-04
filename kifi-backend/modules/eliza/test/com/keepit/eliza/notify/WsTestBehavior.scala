@@ -1,6 +1,7 @@
 package com.keepit.eliza.notify
 
 import com.google.inject.Injector
+import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.db.Id
 import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ User, UserExperimentType, UserExperiment }
@@ -35,6 +36,7 @@ trait WsTestBehavior { self: TestInjectorProvider =>
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveUserIdentity(WsTestBehavior.FAKE_IDENTITY_ID, userId)
     fakeShoeboxServiceClient.saveUserSession(WsTestBehavior.FAKE_SID, WsTestBehavior.FAKE_SESSION)
+    inject[FakeUserActionsHelper].setUserId(Some(userId))
   }
 
   def setupUserExperiment(enabled: Boolean)(implicit injector: Injector): Unit = {

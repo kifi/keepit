@@ -8,8 +8,10 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
+import com.keepit.model.view.UserSessionView
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import play.api.Play
-import play.api.mvc.Request
+import play.api.mvc.{ RequestHeader, Request }
 import securesocial.core.{ IdentityId, Identity }
 
 import scala.concurrent.Future
@@ -46,15 +48,14 @@ class MaybeAppFakeUserActionsHelper(
     this
   }
 
-  override def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful {
+  override def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]] = Future.successful {
     fixedUser flatMap { _.id } orElse Play.maybeApplication flatMap { _ => request.session.getUserId }
   }
-  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(UserExperimentType.ADMIN))
-  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful {
+  def isAdmin(userId: Id[User]): Future[Boolean] = Future.successful(fixedExperiments.contains(UserExperimentType.ADMIN))
+  def getUserOpt(userId: Id[User]): Future[Option[User]] = Future.successful {
     fixedUser orElse Play.maybeApplication map { _ => User(id = Some(userId), firstName = "foo", lastName = "bar", primaryUsername = Some(PrimaryUsername(Username("foo-bar"), Username("foo-bar")))) }
   }
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
-  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
-  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
-  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId] = None
+  def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = Future.successful(None)
 }

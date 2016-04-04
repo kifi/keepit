@@ -3,14 +3,14 @@ package com.keepit.common.controller
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, UserExperimentType, SocialUserInfo }
-import com.keepit.social.{ UserIdentityHelper, SocialNetworkType, SocialId }
-import play.api.mvc.{ WrappedRequest, Request, Controller }
-import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
+import com.keepit.model.view.UserSessionView
+import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.social.UserIdentityHelper
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
@@ -21,18 +21,19 @@ class ShoeboxUserActionsHelper @Inject() (
     userRepo: UserRepo,
     identityHelper: UserIdentityHelper,
     userExperimentCommander: LocalUserExperimentCommander,
+    userSessionRepo: UserSessionRepo,
     val impersonateCookie: ImpersonateCookie,
-    val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with SecureSocialHelper with Logging {
+    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
 
-  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
+  def isAdmin(userId: Id[User]): Future[Boolean] = Future.successful {
     userExperimentCommander.userHasExperiment(userId, UserExperimentType.ADMIN)
   }
 
-  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful {
+  def getUserOpt(userId: Id[User]): Future[Option[User]] = Future.successful {
     db.readOnlyMaster { implicit s => Some(userRepo.get(userId)) }
   }
 
-  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = Future.successful {
+  def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]] = Future.successful {
     userExperimentCommander.getExperimentsByUser(userId)
   }
 
@@ -40,8 +41,23 @@ class ShoeboxUserActionsHelper @Inject() (
     db.readOnlyMaster { implicit s => Some(userRepo.get(extId)) }
   }
 
-  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]] = Future.successful {
-    db.readOnlyMaster { implicit s => identityHelper.getOwnerId(identityId) }
+  def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]] = {
+    getUserIdFromSession(request).toOption.flatten match {
+      case Some(userId) =>
+        Future.successful(Some(userId))
+      case None =>
+        getSessionIdFromRequest(request).map { sessionId =>
+          db.readOnlyMaster { implicit session => //using cache
+            Future.successful(userSessionRepo.getOpt(ExternalId[UserSession](sessionId.id)).flatMap(_.userId))
+          }
+        }.getOrElse(Future.successful(None))
+    }
+  }
+
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    db.readOnlyMaster { implicit session => //using cache
+      Future.successful(userSessionRepo.getOpt(ExternalId[UserSession](sessionId.id)).map(_.toUserSessionView))
+    }
   }
 
 }
