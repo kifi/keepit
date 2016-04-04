@@ -878,9 +878,12 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = {
-    import GetPersonalKeepRecipientsOnUris._
-    val request = Request(userId, uriIds)
-    call(Shoebox.internal.getPersonalKeepRecipientsOnUris(), body = Json.toJson(request)).map(_.json.as[Response].keepRecipientsByUriId)
+    if (uriIds.isEmpty) Future.successful(Map.empty)
+    else {
+      import GetPersonalKeepRecipientsOnUris._
+      val request = Request(userId, uriIds)
+      call(Shoebox.internal.getPersonalKeepRecipientsOnUris(), body = Json.toJson(request)).map(_.json.as[Response].keepRecipientsByUriId)
+    }
   }
 
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = {
