@@ -106,6 +106,18 @@ object BasicKeepEvent {
     (__ \ 'timestamp).write[DateTime] and
     (__ \ 'source).writeNullable[KeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
+
+  def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
+    BasicKeepEvent(
+      id = Some(id),
+      author = author,
+      kind = KeepEventKind.Comment,
+      header = DescriptionElements(author.name, "commented on this page"),
+      body = text,
+      timestamp = sentAt,
+      source = KeepEventSourceKind.fromMessageSource(source).map(KeepEventSource(_, url = None))
+    )
+  }
 }
 
 case class KeepActivity(latestEvent: BasicKeepEvent, events: Seq[BasicKeepEvent], numComments: Int)
