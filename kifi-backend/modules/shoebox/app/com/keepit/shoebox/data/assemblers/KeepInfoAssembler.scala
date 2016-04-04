@@ -6,7 +6,7 @@ import com.keepit.commanders.gen.{ KeepActivityGen, BasicLibraryGen, BasicOrgani
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.util.{ SetHelpers, RightBias }
 import com.keepit.common.core.{ anyExtensionOps, iterableExtensionOps, mapExtensionOps }
 import com.keepit.common.util.RightBias._
@@ -193,7 +193,7 @@ class KeepInfoAssemblerImpl @Inject() (
           )
           val recipients = KeepRecipientsInfo(
             users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
-            emails = ktesByKeep.getOrElse(keepId, Seq.empty).map(_.emailAddress).sorted(EmailAddress.caseInsensitiveOrdering),
+            emails = ktesByKeep.getOrElse(keepId, Seq.empty).map(_.emailAddress).sorted(EmailAddress.caseInsensitiveOrdering).map(BasicContact(_)),
             libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get)
           )
           val keepInfo = NewKeepInfo(
