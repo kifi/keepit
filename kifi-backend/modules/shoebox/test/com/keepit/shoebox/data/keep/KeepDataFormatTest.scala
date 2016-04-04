@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
@@ -53,7 +54,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             // "source" -> JsNull,
             "recipients" -> Json.obj(
               "users" -> Seq(BasicUser.fromUser(user)),
-              "emails" -> Seq.empty[BasicNonUser],
+              "emails" -> Seq.empty[EmailAddress],
               "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None))
             ),
             "viewer" -> Json.obj(
