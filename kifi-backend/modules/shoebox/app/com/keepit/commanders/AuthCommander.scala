@@ -390,8 +390,7 @@ class AuthCommander @Inject() (
     val hasPermission = db.readOnlyMaster(implicit s => permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.ADD_MESSAGE))
     if (hasPermission) {
       db.readWrite { implicit s =>
-        val keep = keepRepo.get(keepId)
-        keepCommander.unsafeModifyKeepRecipients(keep, KeepRecipientsDiff.addUser(userId), userAttribution = None)
+        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = None)
       }
     }
     // user may not have explicit permission to be added, but implicit via access token from email participation. add them.
@@ -400,8 +399,7 @@ class AuthCommander @Inject() (
         case (emailOpt, addedByOpt) =>
           db.readWrite { implicit s =>
             emailOpt.map(email => emailAddressCommander.saveAsVerified(UserEmailAddress.create(userId = userId, address = email)))
-            val keep = keepRepo.get(keepId)
-            keepCommander.unsafeModifyKeepRecipients(keep, KeepRecipientsDiff.addUser(userId), userAttribution = None)
+            keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = None)
           }
       }
     }

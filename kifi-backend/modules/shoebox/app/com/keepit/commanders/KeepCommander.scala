@@ -88,7 +88,7 @@ trait KeepCommander {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
-  def unsafeModifyKeepRecipients(keep: Keep, diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
+  def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -734,7 +734,8 @@ class KeepCommanderImpl @Inject() (
 
     newKeep
   }
-  def unsafeModifyKeepRecipients(oldKeep: Keep, diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
+  def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
+    val oldKeep = keepRepo.get(keepId)
     keepRepo.save(oldKeep.withRecipients(oldKeep.recipients.diffed(diff))) tap { newKeep =>
       diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
       diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
