@@ -27,6 +27,7 @@ import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import org.joda.time.{ DateTime, Duration }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -219,6 +220,7 @@ class SlackPushingActor @Inject() (
               case PushItem.KeepToPush(k, ktl) =>
                 log.info(s"[SLACK-PUSH-ACTOR] for integration ${integration.id.get}, keep ${k.id.get} had message ${pushedMessageOpt.map(_.timestamp)}")
                 pushedMessageOpt.foreach { response =>
+                  if (integration.id.get.id == 689) slackLog.info("Cam's demon channel got a response of", Json.stringify(response.originalJson))
                   slackPushForKeepRepo.intern(SlackPushForKeep.fromMessage(integration, k.id.get, itemMsg, response))
                 }
                 integrationRepo.updateLastProcessedKeep(integration.id.get, ktl.id.get)
