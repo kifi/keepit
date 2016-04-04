@@ -11,7 +11,7 @@ import play.api.libs.functional.syntax._
 
 import scala.util.hashing.MurmurHash3
 
-case class KeepConnections(
+case class KeepRecipients(
     libraries: Set[Id[Library]],
     emails: Set[EmailAddress],
     users: Set[Id[User]]) {
@@ -26,22 +26,22 @@ case class KeepConnections(
   def plusEmailAddress(emailAddress: EmailAddress) = this.withEmailAddresses(emails + emailAddress)
   def plusLibrary(lib: Id[Library]) = this.withLibraries(libraries + lib)
 
-  def union(that: KeepConnections): KeepConnections = KeepConnections(libraries = libraries ++ that.libraries, users = users ++ that.users, emails = emails ++ that.emails)
-  def union(that: Option[KeepConnections]): KeepConnections = that.fold(this)(_ union this)
+  def union(that: KeepRecipients): KeepRecipients = KeepRecipients(libraries = libraries ++ that.libraries, users = users ++ that.users, emails = emails ++ that.emails)
+  def union(that: Option[KeepRecipients]): KeepRecipients = that.fold(this)(_ union this)
 
-  def diffed(diff: KeepConnectionsDiff) = this.copy(
+  def diffed(diff: KeepRecipientsDiff) = this.copy(
     users = users ++ diff.users.added -- diff.users.removed,
     emails = emails ++ diff.emails.added -- diff.emails.removed,
     libraries = libraries ++ diff.libraries.added -- diff.libraries.removed
   )
 }
-object KeepConnections {
-  val EMPTY: KeepConnections = KeepConnections(libraries = Set.empty, users = Set.empty, emails = Set.empty)
-  implicit val format: Format[KeepConnections] = (
+object KeepRecipients {
+  val EMPTY: KeepRecipients = KeepRecipients(libraries = Set.empty, users = Set.empty, emails = Set.empty)
+  implicit val format: Format[KeepRecipients] = (
     (__ \ 'libraries).formatNullable[Set[Id[Library]]].inmap[Set[Id[Library]]](_ getOrElse Set.empty, Some(_)) and
     (__ \ 'emails).formatNullable[Set[EmailAddress]].inmap[Set[EmailAddress]](_ getOrElse Set.empty, Some(_)) and
     (__ \ 'users).formatNullable[Set[Id[User]]].inmap[Set[Id[User]]](_ getOrElse Set.empty, Some(_))
-  )(KeepConnections.apply, unlift(KeepConnections.unapply))
+  )(KeepRecipients.apply, unlift(KeepRecipients.unapply))
 }
 
 case class LibrariesHash(value: Int) extends AnyVal
@@ -77,18 +77,18 @@ object KeepMembers {
   val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
 }
 
-case class KeepConnectionsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])
-object KeepConnectionsDiff {
-  def addUser(user: Id[User]) = KeepConnectionsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
-  def addUsers(users: Set[Id[User]]) = KeepConnectionsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
-  def addLibrary(library: Id[Library]) = KeepConnectionsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
+case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])
+object KeepRecipientsDiff {
+  def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
+  def addUsers(users: Set[Id[User]]) = KeepRecipientsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
+  def addLibrary(library: Id[Library]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
 }
-case class ExternalKeepConnectionsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSourceKind])
-object ExternalKeepConnectionsDiff {
-  implicit val reads: Reads[ExternalKeepConnectionsDiff] = (
+case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSourceKind])
+object ExternalKeepRecipientsDiff {
+  implicit val reads: Reads[ExternalKeepRecipientsDiff] = (
     (__ \ 'users).readNullable[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'libraries).readNullable[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'emails).readNullable[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'source).readNullable[KeepEventSourceKind]
-  )(ExternalKeepConnectionsDiff.apply _)
+  )(ExternalKeepRecipientsDiff.apply _)
 }

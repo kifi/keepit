@@ -273,7 +273,7 @@ class PageMetaTagsCommander @Inject() (
       val source = keepSourceCommander.getSourceAttributionForKeeps(Set(keep.id.get)).get(keep.id.get)
       source.map { case (attr, userOpt) => BasicAuthor(attr, userOpt) }
     }
-    val librariesFut = db.readOnlyMasterAsync(implicit s => libraryRepo.getActiveByIds(keep.connections.libraries))
+    val librariesFut = db.readOnlyMasterAsync(implicit s => libraryRepo.getActiveByIds(keep.recipients.libraries))
     val imageFut = db.readOnlyMasterAsync { implicit s =>
       keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ProcessedImageSize.XLarge.idealSize)).flatten
     }

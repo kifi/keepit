@@ -640,7 +640,7 @@ class ShoeboxController @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
     val users = (request.body \ "users").as[Set[Id[User]]]
     db.readWrite { implicit s =>
-      keepCommander.unsafeModifyKeepConnections(keepRepo.get(keepId), KeepConnectionsDiff.addUsers(users), userAttribution = Some(adderId))
+      keepCommander.unsafeModifyKeepRecipients(keepRepo.get(keepId), KeepRecipientsDiff.addUsers(users), userAttribution = Some(adderId))
     }
     NoContent
   }
@@ -651,7 +651,7 @@ class ShoeboxController @Inject() (
     val keep = db.readWrite { implicit s =>
       keepRepo.saveAndIncrementSequenceNumber(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
     }
-    libToSlackPusher.schedule(keep.connections.libraries)
+    libToSlackPusher.schedule(keep.recipients.libraries)
     NoContent
   }
 }

@@ -94,7 +94,7 @@ class KeepRepoImpl @Inject() (
   DateTime, // keptAt
   DateTime, // lastActivityAt
   Option[SequenceNumber[Message]], // messageSeq
-  KeepConnections, // connections
+  KeepRecipients, // connections
   Option[Boolean], // isPrimary
   LibrariesHash, // librariesHash
   ParticipantsHash // participantsHash
@@ -116,7 +116,7 @@ class KeepRepoImpl @Inject() (
       keptAt: DateTime,
       lastActivityAt: DateTime,
       messageSeq: Option[SequenceNumber[Message]],
-      connections: KeepConnections,
+      connections: KeepRecipients,
       // These fields are discarded, they are DB-only
       isPrimary: Option[Boolean],
       lh: LibrariesHash,
@@ -160,10 +160,10 @@ class KeepRepoImpl @Inject() (
         k.keptAt,
         k.lastActivityAt,
         k.messageSeq,
-        k.connections,
+        k.recipients,
         if (k.isActive) Some(true) else None,
-        k.connections.librariesHash,
-        k.connections.participantsHash
+        k.recipients.librariesHash,
+        k.recipients.participantsHash
       ))
   }
 
@@ -179,7 +179,7 @@ class KeepRepoImpl @Inject() (
     def keptAt = column[DateTime]("kept_at", O.NotNull)
     def lastActivityAt = column[DateTime]("last_activity_at", O.NotNull)
     def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
-    def connections = column[KeepConnections]("connections", O.NotNull)
+    def connections = column[KeepRecipients]("connections", O.NotNull)
 
     // Used only within the DB to ensure integrity and make queries more efficient
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -202,7 +202,7 @@ class KeepRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
   implicit val setSeqParameter = setParameterFromMapper[SequenceNumber[Keep]]
 
-  implicit val getConnectionsResult = getResultFromMapper[KeepConnections]
+  implicit val getConnectionsResult = getResultFromMapper[KeepRecipients]
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
@@ -224,7 +224,7 @@ class KeepRepoImpl @Inject() (
         r.<<[DateTime],
         r.<<[DateTime],
         r.<<[Option[SequenceNumber[Message]]],
-        r.<<[KeepConnections],
+        r.<<[KeepRecipients],
         r.<<[Option[Boolean]],
         r.<<[LibrariesHash],
         r.<<[ParticipantsHash])
@@ -323,13 +323,13 @@ class KeepRepoImpl @Inject() (
 
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep] = {
     val hash = LibrariesHash(libIds)
-    activeRows.filter(k => k.uriId === uriId && k.librariesHash === hash).list.filter(_.connections.libraries == libIds)
+    activeRows.filter(k => k.uriId === uriId && k.librariesHash === hash).list.filter(_.recipients.libraries == libIds)
   }
 
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep] = {
     // TODO(ryan): make this filter by emails hash as well
     val userHash = ParticipantsHash(users)
-    activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.connections.users == users && k.connections.emails == emails)
+    activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.recipients.users == users && k.recipients.emails == emails)
   }
 
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]] = {
@@ -514,7 +514,7 @@ class KeepRepoImpl @Inject() (
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
     // TODO(ryan): deprecate ASAP
-    getByExtId(extId, excludeSet).filter { keep => keep.connections.libraries.contains(libraryId) }
+    getByExtId(extId, excludeSet).filter { keep => keep.recipients.libraries.contains(libraryId) }
   }
 
   def getByIdGreaterThan(lowerBoundId: Id[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = {

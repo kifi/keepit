@@ -88,7 +88,7 @@ case class KeepGraphUpdate(id: Id[Keep], userId: Option[Id[User]], uriId: Id[Nor
 
 case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   val code = "keep_graph_update"
-  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.connections.libraries, keep.state, keep.source, keep.createdAt, keep.seq)
+  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.recipients.libraries, keep.state, keep.source, keep.createdAt, keep.seq)
 }
 
 case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeatures: UriSparseLDAFeatures) extends GraphUpdate {

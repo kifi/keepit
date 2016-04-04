@@ -66,7 +66,7 @@ class KeepMutationController @Inject() (
         author = Author.KifiUser(request.userId),
         url = externalCreateRequest.url,
         source = externalCreateRequest.source,
-        attribution = RawKifiAttribution(request.userId, KeepConnections(libraries, externalCreateRequest.emails, users), externalCreateRequest.source),
+        attribution = RawKifiAttribution(request.userId, KeepRecipients(libraries, externalCreateRequest.emails, users), externalCreateRequest.source),
         title = externalCreateRequest.title,
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
@@ -89,12 +89,12 @@ class KeepMutationController @Inject() (
   def modifyKeepRecipients(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      input <- request.body.validate[ExternalKeepConnectionsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(input.users.all) }
       diff <- for {
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
-      } yield KeepConnectionsDiff(users = users, libraries = libraries, emails = input.emails)
+      } yield KeepRecipientsDiff(users = users, libraries = libraries, emails = input.emails)
       _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
     } yield {
       NoContent
