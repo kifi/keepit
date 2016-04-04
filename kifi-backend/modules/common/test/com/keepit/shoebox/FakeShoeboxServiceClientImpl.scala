@@ -628,7 +628,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(newKeepsInLibrariesExpectation(userId).take(max))
 
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]] = Future.successful {
-    (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
+    (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId).filterKeys(uriIds.contains)).mapValues(_.map { keep =>
       PersonalKeep(
         keep.externalId,
         keep.userId.safely.contains(userId),
@@ -707,6 +707,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
   def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = Future.successful(Seq.empty)
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = Future.successful {
+    val userLibraryIds = allLibraryMemberships.values.collect { case lm if lm.userId == userId => lm.libraryId }.toSet
+    val personalKeeps = allBookmarks.values.filter(keep => keep.recipients.users.contains(userId) || keep.recipients.libraries.exists(userLibraryIds.contains)).toSet
+    (personalKeeps.groupBy(_.uriId).filterKeys(uriIds.contains)).mapValues(_.map(CrossServiceKeepRecipients.fromKeep))
+  }
+
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = Future.successful(Map.empty)
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]] = Future.successful(None)
   def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {

@@ -23,7 +23,7 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetSlackTeamInfo }
+import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetPersonalKeepRecipientsOnUris, GetSlackTeamInfo }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -134,6 +134,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]]
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
@@ -876,6 +877,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = {
+    import GetPersonalKeepRecipientsOnUris._
+    val request = Request(userId, uriIds)
+    call(Shoebox.internal.getPersonalKeepRecipientsOnUris(), body = Json.toJson(request)).map(_.json.as[Response].keepRecipientsByUriId)
+  }
+
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]] = {
     cacheProvider.slackTeamIdByOrganizationIdCache.bulkGetOrElseFutureOpt(orgIds.map(SlackTeamIdOrgIdKey(_))) { missingKeys =>
       val payload = Json.obj("orgIds" -> missingKeys.map(_.organizationId))
@@ -925,6 +932,13 @@ object ShoeboxServiceClient {
 
   object GetSlackTeamInfo {
     case class Response(teamInfo: InternalSlackTeamInfo)
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object GetPersonalKeepRecipientsOnUris {
+    case class Request(userId: Id[User], uriIds: Set[Id[NormalizedURI]])
+    case class Response(keepRecipientsByUriId: Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

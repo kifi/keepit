@@ -80,6 +80,7 @@ trait KeepCommander {
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[Keep]]
 
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
@@ -293,6 +294,14 @@ class KeepCommanderImpl @Inject() (
     }.map(s => s._1.id -> s._2)
 
     keepIds.flatMap { kId => basicKeeps.get(kId).map(BasicKeepWithId(kId, _)) }
+  }
+
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[Keep]] = {
+    db.readOnlyMaster { implicit session =>
+      val keepIdsByUriIds = keepRepo.getPersonalKeepsOnUris(userId, uriIds)
+      val keepsById = keepRepo.getByIds(keepIdsByUriIds.values.flatten.toSet)
+      keepIdsByUriIds.map { case (uriId, keepIds) => uriId -> keepIds.flatMap(keepsById.get) }
+    }
   }
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
