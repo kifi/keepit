@@ -174,7 +174,12 @@ class NotificationDeliveryCommander @Inject() (
 
   def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     val uts = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadsForUser(userId, utq)
+      // TODO(ryan): we should find a way to ensure that we can construction a NotificationJson for every thread we retrieve
+      // either by retrieving threads more intelligently
+      // or by constructing NotificationJsons more robustly
+      // For now, this is a hack to deal with the issue that for some threads we cannot produce a NotificationJson,
+      // and the frontend will assume that if we return 7 objects when they requested 8, we must be out of objects
+      userThreadRepo.getThreadsForUser(userId, utq.copy(limit = 2 * utq.limit))
     }
     utq.onUri.collect {
       case nUriId if uts.length < utq.limit =>
@@ -190,7 +195,7 @@ class NotificationDeliveryCommander @Inject() (
 
       notifJsonsByThreadFut.flatMap { notifJsonsByKeep =>
         val inputs = keeps.flatMap { b => notifJsonsByKeep.get(b._1).map(notif => (Json.toJson(notif), b._2, b._3)) }
-        notificationJsonMaker.make(inputs, includeUriSummary)
+        notificationJsonMaker.make(inputs, includeUriSummary).map(_.take(utq.limit)) // TODO(ryan): here is where we filter after-the-fact
       }
     }
   }
