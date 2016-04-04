@@ -9,6 +9,7 @@ import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 final case class NewKeepInfo(
   id: PublicId[Keep],
@@ -43,7 +44,12 @@ final case class KeepRecipientsInfo(
   libraries: Seq[BasicLibrary])
 
 object KeepRecipientsInfo {
-  implicit val writes: Writes[KeepRecipientsInfo] = Json.writes[KeepRecipientsInfo]
+  private implicit val bastardizedBasicContactWrites: Writes[BasicContact] = Writes { bc => BasicContact.format.writes(bc) ++ Json.obj("id" -> bc.email) }
+  implicit val writes: Writes[KeepRecipientsInfo] = (
+    (__ \ 'users).write[Seq[BasicUser]] and
+    (__ \ 'emails).write[Seq[BasicContact]] and
+    (__ \ 'libraries).write[Seq[BasicLibrary]]
+  )(unlift(KeepRecipientsInfo.unapply))
 }
 
 case class NewKeepViewerInfo(
