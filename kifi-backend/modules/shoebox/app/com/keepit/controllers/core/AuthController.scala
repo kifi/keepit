@@ -448,7 +448,7 @@ class AuthController @Inject() (
                 Ok(views.html.authMinimal.signupGetName())
             }
           } else {
-            log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state}")
+            log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state} ${ur.identityId}")
             // User but no identity. Huh?
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
             Redirect("/logout")
