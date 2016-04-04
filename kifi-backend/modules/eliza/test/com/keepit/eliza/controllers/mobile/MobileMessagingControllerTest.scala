@@ -8,7 +8,6 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
-import com.keepit.common.json.TestHelper
 import com.keepit.common.net.{ URISanitizer, FakeHttpClientModule }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._

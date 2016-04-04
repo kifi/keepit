@@ -9,7 +9,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
-import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ S3ImageStore, S3ImageConfig, FakeShoeboxStoreModule }
 import com.keepit.common.time._

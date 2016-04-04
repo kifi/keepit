@@ -2,6 +2,7 @@ package com.keepit.controllers.mobile
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
+import com.keepit.common.util.TestHelpers.matchJson
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
@@ -10,7 +11,6 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.json.TestHelper
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -105,7 +105,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
             Json.obj("id" -> "aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672", "firstName" -> "Shanee", "lastName" -> "Smith", "pictureName" -> "0.jpg", "username" -> "test1")),
           "keeps" -> 1)
         val actual = contentAsJson(result)
-        TestHelper.deepCompare(actual, expected) must beNone
+        actual must matchJson(expected)
       }
     }
 
