@@ -23,7 +23,7 @@ import com.keepit.common.util.RightBias
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
-import com.keepit.model.KeepEvent.EditTitle
+import com.keepit.model.KeepEventData.EditTitle
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
@@ -132,6 +132,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander: KeepToUserCommander,
     kteCommander: KeepToEmailCommander,
     keepSourceCommander: KeepSourceCommander,
+    eventCommander: KeepEventCommander,
     keepSourceRepo: KeepSourceAttributionRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
@@ -505,7 +506,7 @@ class KeepCommanderImpl @Inject() (
     }
     result.getRight.foreach {
       case (oldKeep, newKeep) =>
-        eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title), source)
+        db.readWrite(implicit s => eventCommander.updatedKeepTitle(keepId, userId, oldKeep.title, newKeep.title, source))
     }
     result.map(_._2)
   }

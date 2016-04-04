@@ -30,6 +30,7 @@ class DiscussionCommanderImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   keepCommander: KeepCommander,
+  eventCommander: KeepEventCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
   airbrake: AirbrakeNotifier,
@@ -129,15 +130,11 @@ class DiscussionCommanderImpl @Inject() (
     ).collect { case (true, fail) => fail }
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
-      val keep = db.readWrite { implicit s =>
+      db.readWrite { implicit s =>
         keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+        eventCommander.addedRecipients(keepId, userId, KeepRecipients(diff.libraries.added, diff.emails.added, diff.users.added), source) // TODO(ryan): needs to be modified once we can remove participants
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added, diff.libraries.added, source)
-      elizaEdit.onSuccess {
-        case elizaUsers =>
-          airbrake.verify(elizaUsers == keep.recipients.users, s"Shoebox keep.users (${keep.recipients.users}) does not match Eliza participants ($elizaUsers)")
-      }
-      elizaEdit.map { res => Unit }
+      Future.successful(Unit)
     }
   }
 }

@@ -3,8 +3,10 @@ package com.keepit.model
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.json.EnumFormat
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.time._
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.social.{ BasicAuthor, BasicNonUser }
@@ -17,9 +19,12 @@ sealed abstract class KeepEventKind(val value: String)
 object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
   case object Comment extends KeepEventKind("comment")
+  case object EditTitle extends KeepEventKind("edit_title")
+
+  // todo(cam): deprecate AddParticipants + AddLibraries for the superset AddRecipients
+  case object AddRecipients extends KeepEventKind("add_recipients")
   case object AddParticipants extends KeepEventKind("add_participants")
   case object AddLibraries extends KeepEventKind("add_libraries")
-  case object EditTitle extends KeepEventKind("edit_title")
 
   val all = _all
   def contains(str: String) = all.exists(_.value == str)
@@ -61,25 +66,31 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
   def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
 }
 
-sealed abstract class KeepEvent(val kind: KeepEventKind)
-object KeepEvent {
-  @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends KeepEvent(KeepEventKind.AddParticipants)
-  @json case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends KeepEvent(KeepEventKind.AddLibraries)
-  @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEvent(KeepEventKind.EditTitle)
-  implicit val format = Format[KeepEvent](
+sealed abstract class KeepEventData(val kind: KeepEventKind)
+object KeepEventData {
+
+  // should deprecate AddParticipants and AddLibraries in favor of AddMembers
+  @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends KeepEventData(KeepEventKind.AddParticipants)
+  @json case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends KeepEventData(KeepEventKind.AddLibraries)
+  @json case class AddRecipients(addedBy: Id[User], keepRecipients: KeepRecipients) extends KeepEventData(KeepEventKind.AddRecipients)
+
+  @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
+  implicit val format = Format[KeepEventData](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.AddParticipants => Json.reads[AddParticipants].reads(js)
           case KeepEventKind.AddLibraries => Json.reads[AddLibraries].reads(js)
           case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case kind => throw new Exception(s"unsupported reads for activity event kind $kind, js $js}")
+          case KeepEventKind.AddRecipients => Json.reads[AddRecipients].reads(js)
+          case KeepEventKind.Initial | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
       case ap: AddParticipants => Json.writes[AddParticipants].writes(ap).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddParticipants.value)
       case al: AddLibraries => Json.writes[AddLibraries].writes(al).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddLibraries.value)
       case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
+      case ar: AddRecipients => Json.writes[AddRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
