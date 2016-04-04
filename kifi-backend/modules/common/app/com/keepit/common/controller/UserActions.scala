@@ -6,15 +6,13 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
-import com.keepit.shoebox.model.ids.UserSessionExternalId
 import play.api.Play
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core._
+import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
 import scala.util.{ Failure, Success, Try }
@@ -54,7 +52,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   def experimentsF = experiments0.get
   def experiments = experiments0.awaitGet
 
-  def identityId = helper.getIdentityIdFromRequestBlocking(request)
+  def identityId = helper.getIdentityIdFromRequest(request)
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
 }
@@ -66,59 +64,77 @@ trait MaybeCostlyUserAttributes[T] { self: UserRequest[T] =>
   def kifiInstallationId: Option[ExternalId[KifiInstallation]]
 }
 
-import KifiSession._
-
-trait UserActionsHelper extends Logging {
+trait UserActionsRequirements {
 
   def airbrake: AirbrakeNotifier
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request, () => getIdentityIdFromRequestBlocking(request))
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request, () => getIdentityIdFromRequest(request))
 
   def kifiInstallationCookie: KifiInstallationCookie
 
   def impersonateCookie: ImpersonateCookie
 
-  def isAdmin(userId: Id[User]): Future[Boolean]
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean]
 
-  def getUserOpt(userId: Id[User]): Future[Option[User]]
+  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]]
 
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]]
 
-  def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]]
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]]
 
-  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId]
 
-  def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]]
+  def getUserIdOptFromSecureSocialIdentity(identityId: IdentityId): Future[Option[Id[User]]]
 
-  ///////////////////////////////////////////////////
-  // Implementations based on above used elsewhere:
+}
 
-  def getSessionIdFromRequest(request: RequestHeader): Option[UserSessionExternalId] = {
-    // Unsure if `sid` is used anymore, or even is a good idea. Cookie name needs to be SecureSocial's `Authenticator.cookieName`
-    request.cookies.get("KIFI_SECURESOCIAL").map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption)).map(UserSessionExternalId(_))
-  }
-
-  def getIdentityIdFromRequestBlocking(implicit request: RequestHeader): Option[IdentityId] = {
-    getSessionIdFromRequest(request) flatMap { sessionId =>
-      val idF = getSessionByExternalId(sessionId).map {
-        case Some(session) =>
-          Some(IdentityId(session.socialId.id, session.provider.name))
-        case None => None
+trait SecureSocialHelper extends Logging {
+  def getIdentityIdFromRequest(implicit request: Request[_]): Option[IdentityId] = {
+    try {
+      val maybeAuthenticator = SecureSocial.authenticatorFromRequest
+      maybeAuthenticator map { authenticator =>
+        log.info(s"[getIdentityIdFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId}")
+        authenticator.identityId
       }
-      Await.result(idF, 10.seconds)
+    } catch {
+      case t: Throwable =>
+        log.error(s"[getIdentityIdFromRequest] Caught exception $t; cause=${t.getCause}", t)
+        None
     }
   }
+}
 
-  def getUserIdFromSession(implicit request: RequestHeader): Try[Option[Id[User]]] =
+import KifiSession._
+
+trait UserActionsHelper extends UserActionsRequirements with Logging {
+
+  def getUserIdFromSession(implicit request: Request[_]): Try[Option[Id[User]]] =
     Try {
       Play.maybeApplication.flatMap { _ => request.session.getUserId }
     }
 
-  def getKifiInstallationIdOpt(implicit request: RequestHeader): Option[ExternalId[KifiInstallation]] = {
+  def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = {
+    val kifiIdOpt = getUserIdFromSession.recover {
+      case t: Throwable =>
+        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}. Path: ${request.path}, headers: ${request.headers.toMap}", t)
+        None
+    }.get
+
+    kifiIdOpt match {
+      case Some(userId) =>
+        Future.successful(Some(userId))
+      case None => getIdentityIdFromRequest match {
+        case None => Future.successful(None)
+        case Some(identityId) => getUserIdOptFromSecureSocialIdentity(identityId)
+      }
+    }
+  }
+
+  def getKifiInstallationIdOpt(implicit request: Request[_]): Option[ExternalId[KifiInstallation]] = {
     kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
   }
 
-  def getImpersonatedUserIdOpt(implicit request: RequestHeader): Option[ExternalId[User]] = {
+  def getImpersonatedUserIdOpt(implicit request: Request[_]): Option[ExternalId[User]] = {
     impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
   }
 
@@ -133,7 +149,7 @@ trait UserActions extends Logging { self: Controller =>
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     Play.maybeApplication.map { app =>
-      userActionsHelper.getUserIdFromSession(request) match {
+      userActionsHelper.getUserIdFromSession match {
         case Success(Some(id)) if id == userId => res
         case Success(_) =>
           res.withSession(res.session.setUserId(userId))
@@ -217,9 +233,9 @@ trait AdminUserActions extends UserActions with ShoeboxServiceController {
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
-      if (request.adminUserId.exists(id => Await.result(userActionsHelper.isAdmin(id), 5 seconds))
+      if (request.adminUserId.exists(id => Await.result(userActionsHelper.isAdmin(id)(request), 5 seconds))
         || (Play.maybeApplication.exists(Play.isDev(_) && request.userId.id == 1L))) Future.successful(None)
-      else userActionsHelper.isAdmin(request.userId).map { isAdmin =>
+      else userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
         if (isAdmin) None
         else Some(Forbidden) tap { res => log.warn(s"[AdminCheck] User ${request.userId} is denied access to ${request.path}") }
       }
