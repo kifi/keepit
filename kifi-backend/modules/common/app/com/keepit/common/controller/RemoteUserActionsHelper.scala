@@ -5,16 +5,15 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ User, UserExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.social.{ SocialNetworkType, SocialId }
-import play.api.mvc.{ RequestHeader, Request }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ SecureSocial, Authenticator, IdentityId, Identity }
-import scala.concurrent.duration._
+import play.api.mvc.RequestHeader
+import securesocial.core.{ IdentityId }
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 import scala.util.Try
 
 @Singleton
@@ -55,9 +54,8 @@ class RemoteUserActionsHelper @Inject() (
   }
 
   private def getIdentityIdFromRequestAsync(implicit request: RequestHeader): Future[Option[IdentityId]] = {
-    val sessionIdOpt = request.cookies.get(Authenticator.cookieName).map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption))
-    sessionIdOpt.map { sid =>
-      shoebox.getSessionByExternalId(UserSessionExternalId(sid)).map {
+    getSessionIdFromRequest(request).map { sid =>
+      getSessionByExternalId(sid).map {
         case Some(session) if session.valid =>
           Some(IdentityId(session.socialId.id, session.provider.name))
         case otherwise =>
@@ -70,7 +68,14 @@ class RemoteUserActionsHelper @Inject() (
     }
   }
 
-  def getIdentityIdFromRequest(implicit request: RequestHeader): Option[IdentityId] = {
-    Await.result(getIdentityIdFromRequestAsync, 10.seconds) // Heavily cached
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    shoebox.getSessionByExternalId(sessionId).map {
+      case Some(session) if session.valid =>
+        Some(session)
+      case otherwise =>
+        log.info(s"[getIdentityIdFromRequestAsync] Refusing auth because not valid: $sessionId $otherwise")
+        None
+    }
   }
+
 }

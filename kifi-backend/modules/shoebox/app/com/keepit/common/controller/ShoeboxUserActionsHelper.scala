@@ -3,14 +3,14 @@ package com.keepit.common.controller
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, UserExperimentType, SocialUserInfo }
-import com.keepit.social.{ UserIdentityHelper, SocialNetworkType, SocialId }
-import play.api.mvc.{ RequestHeader, WrappedRequest, Request, Controller }
-import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
+import com.keepit.model.view.UserSessionView
+import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.social.UserIdentityHelper
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 
@@ -21,6 +21,7 @@ class ShoeboxUserActionsHelper @Inject() (
     userRepo: UserRepo,
     identityHelper: UserIdentityHelper,
     userExperimentCommander: LocalUserExperimentCommander,
+    userSessionRepo: UserSessionRepo,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
 
@@ -41,34 +42,21 @@ class ShoeboxUserActionsHelper @Inject() (
   }
 
   def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]] = {
-    val kifiIdOpt = getUserIdFromSession.recover {
-      case t: Throwable =>
-        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}. Path: ${request.path}, headers: ${request.headers.toMap}", t)
-        None
-    }.get
-
-    kifiIdOpt match {
+    getUserIdFromSession(request).toOption.flatten match {
       case Some(userId) =>
         Future.successful(Some(userId))
-      case None => getIdentityIdFromRequest match {
-        case None => Future.successful(None)
-        case Some(identityId) =>
-          db.readOnlyMaster { implicit s => Future.successful(identityHelper.getOwnerId(identityId)) }
-      }
+      case None =>
+        getSessionIdFromRequest(request).map { sessionId =>
+          db.readOnlyMaster { implicit session => //using cache
+            Future.successful(userSessionRepo.getOpt(ExternalId[UserSession](sessionId.id)).flatMap(_.userId))
+          }
+        }.getOrElse(Future.successful(None))
     }
   }
 
-  def getIdentityIdFromRequest(implicit request: RequestHeader): Option[IdentityId] = {
-    try {
-      val maybeAuthenticator = SecureSocial.authenticatorFromRequest
-      maybeAuthenticator map { authenticator =>
-        log.info(s"[getIdentityIdFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId}")
-        authenticator.identityId
-      }
-    } catch {
-      case t: Throwable =>
-        log.error(s"[getIdentityIdFromRequest] Caught exception $t; cause=${t.getCause}", t)
-        None
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    db.readOnlyMaster { implicit session => //using cache
+      Future.successful(userSessionRepo.getOpt(ExternalId[UserSession](sessionId.id)).map(_.toUserSessionView))
     }
   }
 

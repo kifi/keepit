@@ -6,13 +6,15 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
+import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ UserExperimentType, KifiInstallation, User }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import play.api.Play
 import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ IdentityId, UserService, SecureSocial, Identity }
+import securesocial.core._
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
 import scala.util.{ Failure, Success, Try }
@@ -52,7 +54,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
   def experimentsF = experiments0.get
   def experiments = experiments0.awaitGet
 
-  def identityId = helper.getIdentityIdFromRequest(request)
+  def identityId = helper.getIdentityIdFromRequestBlocking(request)
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
 }
@@ -70,7 +72,7 @@ trait UserActionsHelper extends Logging {
 
   def airbrake: AirbrakeNotifier
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request, () => getIdentityIdFromRequest(request))
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request, () => getIdentityIdFromRequestBlocking(request))
 
   def kifiInstallationCookie: KifiInstallationCookie
 
@@ -84,9 +86,28 @@ trait UserActionsHelper extends Logging {
 
   def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]]
 
-  def getIdentityIdFromRequest(implicit request: RequestHeader): Option[IdentityId]
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
 
   def getUserIdOptWithFallback(implicit request: RequestHeader): Future[Option[Id[User]]]
+
+  ///////////////////////////////////////////////////
+  // Implementations based on above used elsewhere:
+
+  def getSessionIdFromRequest(request: RequestHeader): Option[UserSessionExternalId] = {
+    // Unsure if `sid` is used anymore, or even is a good idea. Cookie name needs to be SecureSocial's `Authenticator.cookieName`
+    request.cookies.get("KIFI_SECURESOCIAL").map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption)).map(UserSessionExternalId(_))
+  }
+
+  def getIdentityIdFromRequestBlocking(implicit request: RequestHeader): Option[IdentityId] = {
+    getSessionIdFromRequest(request) flatMap { sessionId =>
+      val idF = getSessionByExternalId(sessionId).map {
+        case Some(session) =>
+          Some(IdentityId(session.socialId.id, session.provider.name))
+        case None => None
+      }
+      Await.result(idF, 10.seconds)
+    }
+  }
 
   def getUserIdFromSession(implicit request: RequestHeader): Try[Option[Id[User]]] =
     Try {

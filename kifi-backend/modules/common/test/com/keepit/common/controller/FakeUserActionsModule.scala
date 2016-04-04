@@ -5,7 +5,9 @@ import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, Im
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.model.view.UserSessionView
 import com.keepit.model.{ SocialUserInfo, User, UserExperimentType }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import play.api.mvc.{ RequestHeader, Request }
 import securesocial.core.{ IdentityId, Identity }
 
@@ -54,5 +56,5 @@ class FakeUserActionsHelper(
   def getUserOpt(userId: Id[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserExperiments(userId: Id[User]): Future[Set[UserExperimentType]] = Future.successful(fixedExperiments)
-  def getIdentityIdFromRequest(implicit request: RequestHeader): Option[IdentityId] = None
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = Future.successful(None)
 }
