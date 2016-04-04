@@ -348,24 +348,26 @@ class AdminLibraryController @Inject() (
 
   def backfillSlackLibraryNames = AdminUserPage { implicit request =>
     def formatSlackChannelName(name: String): String = {
-      name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.head.toUpper + s.tail).mkString(" ")
+      name.replaceAll("[_\\-#@]", " ").split(" ").map(_.trim).filter(_.nonEmpty).map(s => s.capitalize).mkString(" ")
     }
 
     val actuallySaveLibs = request.rawQueryString.contains("doItForReal")
 
-    (0 to 100).map { idx => // ~18k existing rows
+    val total = (0 to 100).flatMap { idx => // ~18k existing rows
       db.readWrite { implicit session =>
         val libIds = slackChannelToLibraryRepo.pageAscending(0, 200, Set(SlackChannelToLibraryStates.INACTIVE)).map(_.libraryId)
-        libraryRepo.getActiveByIds(libIds.toSet).values.filter(_.kind == LibraryKind.SLACK_CHANNEL).foreach { library =>
+        log.info(s"[backfillSlackLibraryNames] Page $idx, ${libIds.length} libs grabbed.")
+        libraryRepo.getActiveByIds(libIds.toSet).values.filter(_.kind == LibraryKind.SLACK_CHANNEL).map { library =>
           val newName = formatSlackChannelName(library.name)
           log.info(s"[backfillSlackLibraryNames] Changing ${library.id.get} from ${library.name} to $newName")
           if (actuallySaveLibs && library.name != newName) {
             libraryRepo.save(library.withName(newName))
           }
+          1
         }
       }
-    }
+    }.sum
 
-    Ok
+    Ok(total.toString)
   }
 }
