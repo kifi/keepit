@@ -19,6 +19,7 @@ CREATE TABLE keep_to_library (
   PRIMARY KEY(id),
   UNIQUE INDEX `keep_to_library_u_keep_id_library_id` (`keep_id`, `library_id`),
   UNIQUE INDEX `keep_to_library_u_library_id_is_primary_uri_id` (`library_id`, `is_primary`, `uri_id`),
+  INDEX `keep_to_library_i_uri_id_library_id` (`uri_id`, `library_id`),
   CONSTRAINT `keep_to_library_f_keep_id_uri_id` FOREIGN KEY (`keep_id`, `uri_id`) REFERENCES bookmark(`id`, `uri_id`),
   CONSTRAINT `keep_to_library_f_library_id` FOREIGN KEY (`library_id`) REFERENCES library(`id`),
   CONSTRAINT `keep_to_library_f_added_by` FOREIGN KEY (`added_by`) REFERENCES user(`id`),

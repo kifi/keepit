@@ -36,7 +36,7 @@ case class Keep(
   title: Option[String] = None,
   note: Option[String] = None,
   uriId: Id[NormalizedURI],
-  url: String, // denormalized for efficiency
+  url: String,
   userId: Option[Id[User]], // userId is None iff the message was imported from a foreign source (Slack, etc) and we don't have a Kifi user to attribute it to
   originalKeeperId: Option[Id[User]],
   source: KeepSource,
