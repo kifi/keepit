@@ -2,17 +2,20 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
-import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
+import com.keepit.commanders.gen.{ KeepActivityGen, BasicLibraryGen, BasicOrganizationGen }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.util.{ SetHelpers, RightBias }
+import com.keepit.common.core.{ anyExtensionOps, iterableExtensionOps, mapExtensionOps }
 import com.keepit.common.util.RightBias._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
@@ -20,13 +23,15 @@ import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem
 import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
 import com.keepit.shoebox.data.keep._
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.social.BasicAuthor
+import com.keepit.social.{ BasicNonUser, BasicAuthor }
+import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepInfoAssembler {
-  def assembleKeepViews(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], NewKeepView]]
+  def assembleKeepViews(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]]
+  def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
 }
 
 object KeepInfoAssemblerConfig {
@@ -58,12 +63,15 @@ class KeepInfoAssemblerImpl @Inject() (
   libRepo: LibraryRepo,
   basicUserRepo: BasicUserRepo,
   basicLibGen: BasicLibraryGen,
+  basicOrgGen: BasicOrganizationGen,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
+  kteRepo: KeepToEmailRepo,
   keepSourceCommander: KeepSourceCommander,
   permissionCommander: PermissionCommander,
   keepCommander: KeepCommander,
   keepImageCommander: KeepImageCommander,
+  eliza: ElizaServiceClient,
   rover: RoverServiceClient,
   search: SearchServiceClient,
   userExperimentRepo: UserExperimentRepo,
@@ -77,9 +85,13 @@ class KeepInfoAssemblerImpl @Inject() (
 
   val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
-  private final case class KeepsAndConnections(keepsById: Map[Id[Keep], Keep], ktlsByKeep: Map[Id[Keep], Seq[KeepToLibrary]], ktusByKeep: Map[Id[Keep], Seq[KeepToUser]])
+  private final case class KeepsAndConnections(
+    keepsById: Map[Id[Keep], Keep],
+    ktlsByKeep: Map[Id[Keep], Seq[KeepToLibrary]],
+    ktusByKeep: Map[Id[Keep], Seq[KeepToUser]],
+    ktesByKeep: Map[Id[Keep], Seq[KeepToEmail]])
 
-  def assembleKeepViews(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], NewKeepView]] = {
+  def assembleKeepViews(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
     viewAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
   }
 
@@ -88,13 +100,15 @@ class KeepInfoAssemblerImpl @Inject() (
       val keepsById = keepRepo.getByIds(keepIds)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
-      KeepsAndConnections(keepsById, ktlsByKeep, ktusByKeep)
+      val ktesByKeep = kteRepo.getAllByKeepIds(keepIds)
+      KeepsAndConnections(keepsById, ktlsByKeep, ktusByKeep, ktesByKeep)
     }
   }
-  private def viewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], NewKeepView]] = {
+  private def viewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
     val keepsById = keepsAndConnections.keepsById
     val ktlsByKeep = keepsAndConnections.ktlsByKeep
     val ktusByKeep = keepsAndConnections.ktusByKeep
+    val ktesByKeep = keepsAndConnections.ktesByKeep
     val keepSet = keepsById.keySet
 
     val sourceInfoFut = db.readOnlyReplicaAsync { implicit s =>
@@ -127,7 +141,7 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       if (!viewerHasActivityLogExperiment) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else FutureHelpers.accumulateOneAtATime(keepSet) { keepId =>
-        keepCommander.getActivityForKeep(keepId, eventsBefore = None, maxEvents = config.numEventsPerKeep)
+        getActivityForKeep(keepId, fromTime = None, limit = config.numEventsPerKeep)
       }
     }
 
@@ -166,20 +180,20 @@ class KeepInfoAssemblerImpl @Inject() (
         ))
         basicUserRepo.loadAllActive(userSet)
       }
-      keepSet.flatMap { keepId =>
-        val result = for {
-          keep <- keepsById.get(keepId).withLeft(s"keep $keepId does not exist")
-          _ <- RightBias.unit.filter(_ => permissionsByKeep.get(keepId).exists(_.contains(KeepPermission.VIEW_KEEP)), s"keep $keepId is not visible to $viewer")
+      keepSet.toSeq.augmentWith { keepId =>
+        for {
+          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+          permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
-          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(s"no author for keep $keepId")
+          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_ID: KeepFail)
         } yield {
           val viewerInfo = NewKeepViewerInfo(
-            permissions = permissionsByKeep.getOrElse(keepId, Set.empty)
+            permissions = permissions
           )
           val recipients = KeepRecipientsInfo(
             users = ktusByKeep.getOrElse(keepId, Seq.empty).map(_.userId).sorted.flatMap(usersById.get),
-            emails = Seq.empty, // TODO(ryan): fill this in
+            emails = ktesByKeep.getOrElse(keepId, Seq.empty).map(_.emailAddress).sorted(EmailAddress.caseInsensitiveOrdering).map(BasicContact(_)),
             libraries = ktlsByKeep.getOrElse(keepId, Seq.empty).map(_.libraryId).sorted.flatMap(libsById.get)
           )
           val keepInfo = NewKeepInfo(
@@ -224,15 +238,50 @@ class KeepInfoAssemblerImpl @Inject() (
 
           NewKeepView(keep = keepInfo, page = pageInfo)
         }
+      }
+    }.toMap tap { result =>
+      val failures = result.collect { case (kId, LeftSide(fail)) => kId -> fail }
+      if (failures.nonEmpty) slackLog.error(s"When generating keep views for $viewer, ran into errors: " + failures)
+    }
+  }
 
-        result match {
-          case LeftSide(errMsg) =>
-            slackLog.warn(errMsg)
-            None
-          case RightSide(view) =>
-            Some(keepId -> view)
+  def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity] = {
+    val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
+      val keep = keepRepo.get(keepId)
+      val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
+      val ktus = ktuRepo.getAllByKeepId(keepId)
+      val ktls = ktlRepo.getAllByKeepId(keepId)
+      (keep, sourceAttr, ktus, ktls)
+    }
+    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), fromTime, limit).map(_.get(keepId))
+
+    val basicModelFut = shoeboxFut.map {
+      case (keep, sourceAttr, ktus, ktls) =>
+        db.readOnlyMaster { implicit s =>
+          val libById = libRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
+          val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
+          val basicOrgByLibId = libById.flatMapValues { library =>
+            library.organizationId.flatMap(basicOrgById.get)
+          }
+          val basicUserById = {
+            val ktuUsers = ktus.map(_.userId)
+            val libOwners = libById.map { case (libId, library) => library.ownerId }
+            basicUserRepo.loadAllActive((ktuUsers ++ libOwners).toSet)
+          }
+          val basicLibById = libById.map {
+            case (libId, library) =>
+              libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
+          }
+          (basicUserById, basicLibById, basicOrgByLibId)
         }
-      }.toMap
+    }
+
+    for {
+      (keep, sourceAttrOpt, ktus, ktls) <- shoeboxFut
+      (elizaActivityOpt) <- elizaFut
+      (userById, libById, orgByLibId) <- basicModelFut
+    } yield {
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
     }
   }
 

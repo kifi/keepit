@@ -400,20 +400,28 @@ class SlackPushingActor @Inject() (
       "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
     )
 
+    // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
     (keep.note, attribution) match {
-      case (None, None) =>
-        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement)))
-      case (Some(note), _) =>
-        SlackMessageRequest.fromKifi(
-          text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+      case (Some(note), _) => SlackMessageRequest.fromKifi(
+        text = DescriptionElements.formatForSlack(keepElement),
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+      )
+      case (None, None) => SlackMessageRequest.fromKifi(
+        text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
+      )
+      case (None, Some(attr)) => attr match {
+        case ka: KifiAttribution => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(DescriptionElements(s"*${ka.keptBy.firstName}*", "sent", keepElement))
         )
-      case (None, Some(attr)) =>
-        SlackMessageRequest.fromKifi(text = DescriptionElements.formatForSlack(keepElement),
-          attachments = Seq(SlackAttachment.simple(attr match {
-            case TwitterAttribution(tweet) => DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))
-            case SlackAttribution(msg, team) => DescriptionElements(s"*${msg.username.value}:*", msg.text)
-          })))
+        case TwitterAttribution(tweet) => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(keepElement),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*${tweet.user.name}:*", Hashtags.format(tweet.text))))
+        )
+        case SlackAttribution(msg, team) => SlackMessageRequest.fromKifi(
+          text = DescriptionElements.formatForSlack(keepElement),
+          attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*${msg.username.value}:*", msg.text)))
+        )
+      }
     }
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {

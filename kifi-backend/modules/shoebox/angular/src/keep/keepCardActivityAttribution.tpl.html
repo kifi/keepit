@@ -13,8 +13,9 @@
         </a>
         <span ng-if="!showKeepPageLink"><time ng-attr-datetime="{{::keep.activity.latestEvent.timestamp}}" am-time-ago="::keep.activity.latestEvent.timestamp"
             title="{{::keep.activity.latestEvent.timestamp|localTime}}"></time></span>
-        <a ng-class="{
-            'kf-keep-card-activity-attribution-page-link': keep.activity.latestEvent.source.url
+        <a class="kf-keep-card-activity-attribution-source"
+           ng-class="{
+            'kf-keep-card-activity-attribution-source-link': keep.activity.latestEvent.source.url
            }"
            ng-if="::keep.activity.latestEvent.source.kind"
            ng-href="{{::keep.activity.latestEvent.source.url}}"

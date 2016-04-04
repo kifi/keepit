@@ -368,9 +368,18 @@ object BasicLibrary {
     val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
-  implicit val libraryWrites = OWrites[BasicLibrary] { library =>
-    Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
-  }
+  implicit val format: Format[BasicLibrary] = Format(
+    Reads { js =>
+      for {
+        id <- (js \ "id").validate[PublicId[Library]]
+        name <- (js \ "name").validate[String]
+        path <- (js \ "path").validate[String]
+        visibility <- (js \ "visibility").validate[LibraryVisibility]
+        color = (js \ "color").asOpt[LibraryColor]
+      } yield BasicLibrary.apply(id, name, path, visibility, color)
+    },
+    Writes { library => Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) } //todo(Léo): remove secret field }
+  )
 }
 
 // Replaced by BasicLibraryDetails, please remove dependencies on this

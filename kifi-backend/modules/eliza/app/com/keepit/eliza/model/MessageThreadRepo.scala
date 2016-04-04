@@ -19,7 +19,7 @@ trait MessageThreadRepo extends Repo[MessageThread] {
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
-  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
+  def getByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[MessageThread]] = Some(MessageThreadStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], MessageThread]
   def deactivate(model: MessageThread)(implicit session: RWSession): Unit
 }
 
@@ -101,13 +101,13 @@ class MessageThreadRepoImpl @Inject() (
     activeRows.filter(_.id.inSet(ids)).list.map(x => x.id.get -> x).toMap
   }
 
-  private def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
-    activeRows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (kid, Seq(thread)) => kid -> thread }
+  private def getByKeepIdsNoCache(keepIds: Set[Id[Keep]], excludeState: Option[State[MessageThread]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
+    rows.filter(r => r.keepId.inSet(keepIds) && r.state =!= excludeState.orNull).list.groupBy(_.keepId).collect { case (kid, Seq(thread)) => kid -> thread }
   }
 
-  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
+  def getByKeepIds(keepIds: Set[Id[Keep]], excludeState: Option[State[MessageThread]] = Some(MessageThreadStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], MessageThread] = {
     threadKeepIdCache.bulkGetOrElse(keepIds.map(MessageThreadKeepIdKey(_))) { missingKeys =>
-      getByKeepIdsNoCache(missingKeys.map(_.keepId)).map { case (keepId, thread) => MessageThreadKeepIdKey(keepId) -> thread }
+      getByKeepIdsNoCache(missingKeys.map(_.keepId), excludeState).map { case (keepId, thread) => MessageThreadKeepIdKey(keepId) -> thread }
     }.map { case (MessageThreadKeepIdKey(keepId), thread) => keepId -> thread }
   }
 

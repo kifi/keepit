@@ -2,8 +2,28 @@
 # CLIENT routes #
 #################
 
-POST    /client/1/keeps/send            @com.keepit.controllers.client.ClientKeepMutationController.createKeep()
-POST    /client/1/keeps/:id/recipients  @com.keepit.controllers.client.ClientKeepMutationController.modifyKeepRecipients(id: PublicId[Keep])
 
-GET    /client/1/keeps/:keepId          @com.keepit.controllers.client.ClientKeepInfoController.getNewKeepView(keepId: PublicId[Keep])
-GET    /client/1/keeps/stream           @com.keepit.controllers.client.ClientKeepInfoController.getKeepStream(fromId: Option[String] ?= None)
+##
+# KEEPS
+##
+
+# Creation/modification
+POST    /api/1/keeps/markAsRead      @com.keepit.controllers.client.KeepMutationController.markKeepsAsRead()
+
+POST    /api/1/keeps                              @com.keepit.controllers.client.KeepMutationController.createKeep()
+DELETE  /api/1/keeps/:id                          @com.keepit.controllers.client.KeepMutationController.deleteKeep(id: PublicId[Keep])
+POST    /api/1/keeps/:id/title                    @com.keepit.controllers.client.KeepMutationController.editKeepTitle(id: PublicId[Keep])
+POST    /api/1/keeps/:id/recipients               @com.keepit.controllers.client.KeepMutationController.modifyKeepRecipients(id: PublicId[Keep])
+POST    /api/1/keeps/:id/messages                 @com.keepit.controllers.client.KeepMutationController.sendMessageOnKeep(id: PublicId[Keep])
+DELETE  /api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client.KeepMutationController.deleteMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
+POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
+
+# Info
+GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None)
+
+GET    /api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep])
+GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
+
+# Exports
+GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
+GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()

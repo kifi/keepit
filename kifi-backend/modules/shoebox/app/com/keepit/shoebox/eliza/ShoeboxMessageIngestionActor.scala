@@ -8,6 +8,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -60,13 +61,35 @@ class ShoeboxMessageIngestionActor @Inject() (
         session.onTransactionSuccess {
           slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
         }
-        keeps.foreach { keep =>
-          messagesByKeep.get(keep.id.get).foreach { msgs =>
-            val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
-            if (updatedKeep.messageSeq != keep.messageSeq) keepRepo.save(updatedKeep)
+        keeps.foreach { initialKeep =>
+          messagesByKeep.get(initialKeep.id.get).foreach { msgs =>
+            // Functions that handle keep changes
+            def updateMessageSeq(keep: Keep) = keep.withMessageSeq(msgs.map(_.seq).max)
+            def updateLastActivity(keep: Keep) = {
+              val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
+              keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
+            }
+            def handleKeepEvents(keep: Keep) = msgs.flatMap(_.auxData).foldLeft(keep) { case (k, e) => handleKeepEvent(k, e) }
+            def handleKeepEvent(keep: Keep, event: KeepEvent): Keep = event match {
+              case KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers) =>
+                val diff = KeepConnectionsDiff(
+                  users = DeltaSet.empty.addAll(addedUsers.toSet),
+                  emails = DeltaSet.empty.addAll(addedNonUsers.flatMap(_.asEmailAddress).toSet),
+                  libraries = DeltaSet.empty
+                )
+                keepCommander.unsafeModifyKeepConnections(keep, diff, userAttribution = Some(addedBy))
+              case KeepEvent.AddLibraries(_, _) => keep
+              case KeepEvent.EditTitle(_, _, _) => keep
+            }
 
-            val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
-            keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
+            // Apply all of the functions in sequence
+            val updatedKeep = Seq[Keep => Keep](
+              updateMessageSeq,
+              updateLastActivity,
+              handleKeepEvents
+            ).foldLeft(initialKeep) { case (k, fn) => fn(k) }
+
+            if (updatedKeep != initialKeep) keepRepo.save(updatedKeep)
           }
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)

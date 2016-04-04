@@ -2,21 +2,22 @@ package com.keepit.shoebox.data.keep
 
 import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.json.TestHelper
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.TestHelpers.matchJson
 import com.keepit.model.KeepFactoryHelper.KeepPersister
 import com.keepit.model.LibraryFactoryHelper.LibraryPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
-import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
+import com.keepit.social.{ BasicAuthor, BasicNonUser, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.SpecificationLike
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.Json
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,7 +39,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("foo bar").saved
             (keep, user, lib)
           }
-          val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get)
+          val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get).getRight.get
           // TODO(ryan): when the activity log is released, uncomment this line and use it in `expected`
           // val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
           val actual = NewKeepInfo.writes.writes(view.keep)
@@ -53,14 +54,14 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             // "source" -> JsNull,
             "recipients" -> Json.obj(
               "users" -> Seq(BasicUser.fromUser(user)),
-              "emails" -> Seq.empty[BasicNonUser],
+              "emails" -> Seq.empty[BasicContact],
               "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None))
             ),
             "viewer" -> Json.obj(
               "permissions" -> db.readOnlyMaster { implicit s => permissionCommander.getKeepPermissions(keep.id.get, Some(user.id.get)) }
             )
           )
-          TestHelper.deepCompare(actual, expected) must beNone
+          actual must matchJson(expected)
         }
       }
     }

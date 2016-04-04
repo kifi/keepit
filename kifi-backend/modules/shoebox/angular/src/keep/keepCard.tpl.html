@@ -147,7 +147,7 @@
               ng-click="!galleryView && toggleExpandCard()"></span>
         <a class="kf-feed-tooltip-target kf-keep-card-library-chip"
            ng-style="{'background': library.color}"
-           kf-user-tooltip="library.owner"
+           kf-user-tooltip
            library="library"
            ng-href="{{::library.path}}"
            ng-repeat="addedLibrary in keep.members.libraries"

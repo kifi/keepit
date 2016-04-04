@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import java.util.concurrent.TimeoutException
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.core.anyExtensionOps
@@ -15,11 +15,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
-import com.keepit.discussion.{ MessageSource, DiscussionKeep, Message }
+import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.LibraryNewKeep
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
@@ -45,7 +47,42 @@ object MessagingCommander {
   def maxEmailRecipientsPerThreadErrorMessage(user: Id[User], emailCount: Int) = s"You (user #$user) have hit the limit on the number of emails ($emailCount) you are able to send through Kifi."
 }
 
-class MessagingCommander @Inject() (
+@ImplementedBy(classOf[MessagingCommanderImpl])
+trait MessagingCommander {
+  // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
+  def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])]
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]]
+  def hasThreads(userId: Id[User], url: String): Future[Boolean]
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage)
+  def sendMessageAction(title: Option[String], text: String, source: Option[MessageSource], userExtRecipients: Seq[ExternalId[User]], nonUserRecipients: Seq[BasicContact], validOrgRecipients: Seq[PublicId[Organization]],
+    url: String, userId: Id[User], initContext: HeimdalContext): Future[(ElizaMessage, ElizaThreadInfo, Seq[MessageWithBasicUser])]
+  def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread]
+  def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread]
+  def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread]
+  def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread]
+
+  def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit
+  def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit
+  def setLastSeen(userId: Id[User], keepId: Id[Keep], timestampOpt: Option[DateTime] = None): Unit
+  def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit
+  def getUnreadUnmutedThreadCount(userId: Id[User]): Int
+  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean
+  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean
+  def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
+  def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
+    orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
+
+  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
+  def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
+  def validateEmailContacts(rawNonUsers: Seq[JsValue]): Seq[JsResult[BasicContact]]
+  def parseRecipients(rawRecipients: Seq[JsValue]): (Seq[ExternalId[User]], Seq[BasicContact], Seq[PublicId[Organization]])
+}
+
+class MessagingCommanderImpl @Inject() (
     threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
     nonUserThreadRepo: NonUserThreadRepo,
@@ -59,8 +96,12 @@ class MessagingCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
+    // TODO(ryan): these notif classes are only here because of hacky NewKeep notification id collisions
+    notifRepo: NotificationRepo,
+    notifItemRepo: NotificationItemRepo,
+    notifCommander: NotificationCommander,
     implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends MessagingCommander with Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
@@ -325,6 +366,27 @@ class MessagingCommander @Inject() (
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
     }
+    // Anyone who got this new notification might have a NewKeep notification that is going to be
+    // passively replaced by this message thread. The client will then have no way of ever marking or
+    // displaying that notification, so they cannot mark it as read (resulting in a persistent
+    // incorrect unread-notification count). Try and find this notification and murder it.
+    SafeFuture {
+      val newKeepNotifsToMarkAsRead = db.readOnlyMaster { implicit s =>
+        thread.participants.allUsers.flatMap { user =>
+          notifRepo.getAllUnreadByRecipientAndKind(Recipient.fromUser(user), LibraryNewKeep).find { newKeepNotif =>
+            notifItemRepo.getAllForNotification(newKeepNotif.id.get) match {
+              case Seq(oneItem) => oneItem.event match {
+                case lnk: LibraryNewKeep => lnk.keepId == thread.keepId
+                case _ => false
+              }
+              case _ => false
+            }
+          }
+        }
+      }
+      newKeepNotifsToMarkAsRead.foreach { notif => notifCommander.setNotificationUnreadTo(notif.id.get, unread = false) }
+    }
+
     // For everyone except the sender, mark their thread as unread
     db.readWrite { implicit s =>
       (thread.participants.allUsers -- from.asUser).foreach { user =>
@@ -397,7 +459,10 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(
+    adderUserId: Id[User], keepId: Id[Keep],
+    newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]], newLibs: Seq[Id[Library]],
+    source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -445,7 +510,7 @@ class MessagingCommander @Inject() (
             keepId = oldThread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = None, // todo(cam): add source
+            source = source.flatMap(KeepEventSourceKind.toMessageSource),
             auxData = Some(AddLibraries(adderUserId, actuallyNewLibraries)),
             sentOnUrl = None,
             sentOnUriId = None
@@ -460,7 +525,7 @@ class MessagingCommander @Inject() (
             keepId = thread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = None,
+            source = source.flatMap(KeepEventSourceKind.toMessageSource),
             auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
             sentOnUrl = None,
             sentOnUriId = None
@@ -583,7 +648,7 @@ class MessagingCommander @Inject() (
     }.contains(true)
   }
 
-  def getChatter(userId: Id[User], urls: Seq[String]) = {
+  def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]] = {
     implicit val timeout = Duration(3, "seconds")
     TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()

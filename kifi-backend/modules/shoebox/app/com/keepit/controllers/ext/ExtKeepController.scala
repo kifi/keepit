@@ -39,7 +39,7 @@ class ExtKeepController @Inject() (
       }
     } yield lib
 
-    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(request.userId), libOpt, KeepSource.keeper)
+    val response = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(request.userId), libOpt, usersAdded = Set.empty, KeepSource.keeper)
 
     response.successes.headOption.map { k =>
       Ok(Json.obj("id" -> Keep.publicId(k.id.get)))
@@ -47,7 +47,8 @@ class ExtKeepController @Inject() (
   }
 
   def sendMessageOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
-    val source = (request.body \ "source").asOpt[MessageSource]
+    import com.keepit.common.http._
+    val source = (request.body \ "source").asOpt[MessageSource].orElse(request.userAgentOpt.flatMap(ua => MessageSource.fromStr(ua.name)))
     (for {
       text <- (request.body \ "text").asOpt[String].map(Future.successful).getOrElse(Future.failed(DiscussionFail.MISSING_MESSAGE_TEXT))
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
@@ -68,7 +69,7 @@ class ExtKeepController @Inject() (
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
         KeepConnectionsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff)
+      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
     } yield {
       NoContent
     }).recover {

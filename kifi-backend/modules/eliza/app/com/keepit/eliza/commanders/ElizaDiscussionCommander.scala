@@ -26,16 +26,17 @@ trait ElizaDiscussionCommander {
   def getDiscussionForKeep(keepId: Id[Keep], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean]
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSourceKind])(implicit context: HeimdalContext): Future[Boolean]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]]): Future[Set[Id[User]]]
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
 }
 
@@ -146,6 +147,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit] = {
+    getOrCreateMessageThreadWithUser(keepId, userId).map { thread =>
+      db.readWrite { implicit s =>
+        messageRepo.save(ElizaMessage(
+          keepId = thread.keepId,
+          from = MessageSender.System,
+          messageText = "",
+          source = None, // todo(cam): add source
+          auxData = SystemMessageData.fromKeepEvent(event),
+          sentOnUrl = None,
+          sentOnUriId = None
+        ))
+      }
+    }
+  }
+
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]] = {
     db.readOnlyMaster { implicit session =>
       nonUserThreadRepo.getByKeepIds(keepIds)
@@ -205,9 +222,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSourceKind])(implicit context: HeimdalContext): Future[Boolean] = {
     getOrCreateMessageThreadWithUser(keepId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, keepId, newUsers, emailContacts, orgs, newLibs = Seq.empty, updateShoebox = true)
+      messagingCommander.addParticipantsToThread(adderUserId, keepId, newUsers, emailContacts, orgs, newLibs = Seq.empty, source = None, updateShoebox = true)
     }
   }
 
@@ -259,11 +276,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
     nonUserThreadRepo.getByAccessToken(accessToken).exists(_.keepId == keepId)
   }
 
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]]): Future[Set[Id[User]]] = {
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      _ <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, Seq.empty, Seq.empty, newLibraries.toSeq, updateShoebox = false)
+      _ <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, Seq.empty, Seq.empty, newLibraries.toSeq, source, updateShoebox = false)
     } yield thread.allParticipants ++ newUsers
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>

@@ -1,29 +1,24 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.crypto.{ InternalOrExternalId, PublicId, PublicIdConfiguration }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-
-import com.keepit.heimdal._
 import com.keepit.commanders._
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.{ InternalOrExternalId, PublicId, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.common.akka.SafeFuture
-
-import play.api.libs.json._
-import scala.util.{ Failure, Success, Try }
-import org.joda.time.{ DateTime, Seconds }
-import scala.concurrent.Future
-import com.keepit.commanders.CollectionSaveFail
-import play.api.libs.json.JsString
-import play.api.libs.json.JsObject
-import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
-import com.keepit.common.core._
+import com.keepit.common.time._
+import com.keepit.common.util.RightBias.FromOption
+import com.keepit.heimdal._
+import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsObject, JsString, _ }
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 class KeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -33,6 +28,7 @@ class KeepsController @Inject() (
   collectionRepo: CollectionRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   keepExportCommander: KeepExportCommander,
   permissionCommander: PermissionCommander,
   clock: Clock,
@@ -125,17 +121,17 @@ class KeepsController @Inject() (
   }
 
   def updateKeepTitle(pubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    val keepTry: Try[Keep] = for {
-      keepId <- Keep.decodePublicId(pubId).map(Success(_)).getOrElse(Failure(KeepFail.INVALID_ID))
-      title = (request.body \ "title").as[String]
-      keep <- db.readWrite(implicit s => keepsCommander.updateKeepTitle(keepId, request.userId, title))
-    } yield keep
+    import com.keepit.common.http._
+    val edit = for {
+      keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_ID: KeepFail)
+      title <- (request.body \ "title").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
+      editedKeep <- keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent))
+    } yield editedKeep
 
-    keepTry match {
-      case Failure(fail: KeepFail) => fail.asErrorResponse
-      case Failure(unhandled) => throw unhandled
-      case Success(keep) => Ok
-    }
+    edit.fold(
+      fail => fail.asErrorResponse,
+      _ => NoContent
+    )
   }
 
   def editKeepNote(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
@@ -238,7 +234,7 @@ class KeepsController @Inject() (
     Keep.decodePublicId(id) match {
       case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(keepId) =>
-        keepsCommander.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
+        keepInfoAssembler.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
           Ok(Json.obj("activity" -> Json.toJson(activity)))
         }
     }

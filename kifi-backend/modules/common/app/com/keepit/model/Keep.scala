@@ -385,6 +385,7 @@ object KeepFail extends Enumerator[KeepFail] {
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
   case object MALFORMED_URL extends KeepFail(BAD_REQUEST, "malformed_url")
+  case object COULD_NOT_PARSE extends KeepFail(BAD_REQUEST, "could_not_parse")
 }
 
 abstract class FeedFilter(val kind: String)

@@ -2,16 +2,20 @@ package com.keepit.eliza.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.Ord
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ ElizaFeedFilter, User, Keep }
+import com.keepit.eliza.model.SystemMessageData.StartWithEmails
+import com.keepit.model.{ KeepConnections, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.{ MessageSource, Message }
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -24,6 +28,7 @@ class ElizaDiscussionController @Inject() (
   messageRepo: MessageRepo,
   threadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   implicit val publicIdConfig: PublicIdConfiguration,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
@@ -58,6 +63,12 @@ class ElizaDiscussionController @Inject() (
     }
   }
 
+  def saveKeepEvent = Action.async(parse.tolerantJson) { request =>
+    import SaveKeepEvent._
+    val input = request.body.as[Request]
+    discussionCommander.saveKeepEvent(input.keepId, input.userId, input.event).map(_ => NoContent)
+  }
+
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
     import GetMessagesOnKeep._
     val input = request.body.as[Request]
@@ -86,8 +97,8 @@ class ElizaDiscussionController @Inject() (
     import SendMessageOnKeep._
     val input = request.body.as[Request]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    contextBuilder += ("source", input.source.value)
-    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = Some(input.source))(contextBuilder.build).map { msg =>
+    input.source.foreach { src => contextBuilder += ("source", src.value) }
+    discussionCommander.sendMessage(input.userId, input.text, input.keepId, source = input.source)(contextBuilder.build).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }
@@ -122,7 +133,7 @@ class ElizaDiscussionController @Inject() (
   def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
     import EditParticipantsOnKeep._
     val input = request.body.as[Request]
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries).map { allUsers =>
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries, input.source).map { allUsers =>
       val output = Response(allUsers)
       Ok(Json.toJson(output))
     }
@@ -154,5 +165,21 @@ class ElizaDiscussionController @Inject() (
     val keepIds = request.body.as[Request].keepIds
     val emailParticipantsByKeepIds = discussionCommander.getEmailParticipantsForKeeps(keepIds)
     Ok(Json.toJson(Response(emailParticipantsByKeepIds)))
+  }
+
+  def getInitialRecipientsByKeepId() = Action.async(parse.tolerantJson) { request =>
+    import GetInitialRecipientsByKeepId._
+    val keepIds = request.body.as[Request].keepIds
+    db.readOnlyMasterAsync { implicit s =>
+      val threads = threadRepo.getByKeepIds(keepIds, excludeState = None)
+      val recipientsByKeepId = threads.map {
+        case (keepId, thread) =>
+          def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis < thread.createdAt.getMillis
+          val firstUsers = thread.participants.userParticipants.collect { case (uid, added) if uid != thread.startedBy && addedNearStart(added) => uid }
+          val firstNonUsers = thread.participants.nonUserParticipants.collect { case (NonUserEmailParticipant(email), added) if addedNearStart(added) => email }
+          keepId -> KeepConnections(libraries = Set.empty, firstNonUsers.toSet, firstUsers.toSet)
+      }
+      Ok(Json.toJson(Response(recipientsByKeepId)))
+    }
   }
 }

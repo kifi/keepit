@@ -6,6 +6,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import org.joda.time.DateTime
@@ -48,11 +49,15 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
+  def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]]
 
   def deactivate(model: Keep)(implicit session: RWSession): Keep
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+
+  //admin
+  def pageAscendingWithUserExcludingSources(fromId: Option[Id[Keep]], pageSize: Int, excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE), excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -319,6 +324,12 @@ class KeepRepoImpl @Inject() (
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep] = {
     val hash = LibrariesHash(libIds)
     activeRows.filter(k => k.uriId === uriId && k.librariesHash === hash).list.filter(_.connections.libraries == libIds)
+  }
+
+  def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep] = {
+    // TODO(ryan): make this filter by emails hash as well
+    val userHash = ParticipantsHash(users)
+    activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.connections.users == users && k.connections.emails == emails)
   }
 
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]] = {
@@ -605,6 +616,13 @@ class KeepRepoImpl @Inject() (
             ORDER BY bm.seq ASC
             """
     q.as[Keep].list
+  }
+
+  def pageAscendingWithUserExcludingSources(fromId: Option[Id[Keep]], size: Int, excludeStates: Set[State[Keep]], excludeSources: Set[KeepSource])(implicit session: RSession): Seq[Keep] = {
+    val q = for {
+      k <- rows if k.id > fromId.getOrElse(Id[Keep](0)) && k.userId.isDefined && !k.state.inSet(excludeStates) && !k.source.inSet(excludeSources)
+    } yield k
+    q.sortBy(_.id asc).take(size).list
   }
 
 }

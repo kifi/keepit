@@ -17,7 +17,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ MessageThreadFactory, NormalizedURI, User }
+import com.keepit.model.{ UserThreadFactory, MessageThreadFactory, NormalizedURI, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -105,11 +105,11 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
         val sender1 = Id[User](43)
         val sender2 = Id[User](44)
 
-        val threadList = db.readWrite { implicit rw =>
-          Seq("Reddit", "HackerNews").zipWithIndex.map {
+        db.readWrite { implicit rw =>
+          Seq("HackerNews", "Reddit").zipWithIndex.map {
             case (title, idx) =>
-              val thread = createMessageThread(title, sender1)
-              val userThread = createUserThread(thread, userId)
+              val thread = MessageThreadFactory.thread().withTitle(title).withOnlyStarter(sender1).saved
+              val userThread = UserThreadFactory.userThread().withThread(thread).forUserId(userId).unread().saved
               val messages = Seq(
                 createMessage(thread, sender1, s"check out $title"),
                 createMessage(thread, sender2, s"look here $title")

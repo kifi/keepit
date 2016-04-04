@@ -1,14 +1,18 @@
 package com.keepit.common
 
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
-import play.api.libs.json._
 import play.api.data.validation.ValidationError
+import play.api.http.Status._
+import play.api.libs.json._
+import play.api.mvc.Result
+import play.api.mvc.Results.Status
 
-import scala.util.{Success, Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 package object json {
   abstract class FormatSchemaHelper {
     def hint(input: JsValue): JsValue
+    def hintResponse(input: JsValue): Result = Status(BAD_REQUEST)(Json.obj("error" -> "malformed_payload", "hint" -> hint(input)))
   }
   def schemaHelper[T](reads: Reads[T]): FormatSchemaHelper = new FormatSchemaHelper {
     override def hint(input: JsValue): JsValue = {
@@ -261,25 +265,5 @@ package object json {
       },
       Writes(None => JsNull)
     )
-  }
-
-  object TestHelper {
-    def deepCompare(a: JsValue, b: JsValue, path: String = "obj"): Option[String] = {
-      (a.asOpt[JsObject], b.asOpt[JsObject]) match {
-        case (Some(aObj), Some(bObj)) =>
-          (aObj.keys ++ bObj.keys).flatMap(k => deepCompare(aObj \ k, bObj \ k, s"$path.$k")).headOption
-        case _ =>
-          (a.asOpt[JsArray], b.asOpt[JsArray]) match {
-            case (Some(aArr), Some(bArr)) if aArr.value.length != bArr.value.length =>
-              Some(s"$path: lengths unequal")
-            case (Some(aArr), Some(bArr)) =>
-              (aArr.value zip bArr.value).zipWithIndex.flatMap { case ((av, bv), i) => deepCompare(av, bv, s"$path[$i]") }.headOption
-            case _ if a != b =>
-              Some(s"$path: $a != $b")
-            case _ => None
-          }
-      }
-    }
-
   }
 }

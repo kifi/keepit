@@ -94,13 +94,17 @@ object SlackMessageUpdateRequest {
 }
 
 case class SlackMessageResponse(
-  slackChannelId: SlackChannelId,
-  timestamp: SlackTimestamp,
-  text: String)
+    slackChannelId: SlackChannelId,
+    timestamp: SlackTimestamp,
+    text: String,
+    originalJson: JsValue) {
+  def sentByAnonymousBot = (originalJson \ "message" \ "bot_id").asOpt[String].exists(_.nonEmpty)
+}
 object SlackMessageResponse {
   implicit val reads: Reads[SlackMessageResponse] = (
     (__ \ 'channel).read[SlackChannelId] and
     (__ \ 'ts).read[SlackTimestamp] and
-    (__ \ 'message \ 'text).read[String]
+    (__ \ 'message \ 'text).read[String] and
+    __.read[JsValue]
   )(SlackMessageResponse.apply _)
 }

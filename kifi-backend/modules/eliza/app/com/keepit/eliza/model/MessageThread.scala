@@ -20,13 +20,13 @@ import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin }
 import com.keepit.common.strings.StringWithNoLineBreaks
 
 class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
-
   def contains(user: Id[User]): Boolean = userParticipants.contains(user)
   def contains(nonUser: NonUserParticipant): Boolean = nonUserParticipants.contains(nonUser)
   def allUsersExcept(user: Id[User]): Set[Id[User]] = userParticipants.keySet - user
 
   lazy val allUsers = userParticipants.keySet
   lazy val allNonUsers = nonUserParticipants.keySet
+  lazy val allEmails = allNonUsers.collect { case NonUserEmailParticipant(address) => address }
   lazy val userHash: Int = MurmurHash3.setHash(allUsers)
   lazy val nonUserHash: Int = MurmurHash3.setHash(allNonUsers)
   lazy val hash = if (allNonUsers.isEmpty) userHash else nonUserHash + userHash

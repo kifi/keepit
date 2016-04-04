@@ -257,6 +257,7 @@ angular.module('kifi')
       },
 
       updateSubscriptionToLibrary: function(libraryId, subscribed) {
+        net.getLibraryInfoById.clearCache();
         return $http.post(routeService.updateSubscriptionToLibrary(libraryId, subscribed)).then(function(resp) {
           return resp.data;
         });

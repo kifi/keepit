@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.{ json, CollectionHelpers }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.util.RightBias.FromOption
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
@@ -22,6 +23,7 @@ import com.keepit.common.util.RightBias
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
+import com.keepit.model.KeepEvent.EditTitle
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
@@ -65,23 +67,11 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply, unlift(BulkKeepSelection.unapply))
 }
 
-final case class ExternalKeepCreateRequest(
-  url: String,
-  source: KeepSource,
-  title: Option[String],
-  note: Option[String], // will be recorded as the first comment
-  keptAt: Option[DateTime],
-  users: Set[ExternalId[User]],
-  emails: Set[EmailAddress],
-  libraries: Set[PublicId[Library]])
-object ExternalKeepCreateRequest {
-  implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
-
-  val schemaHelper = json.schemaHelper(reads)
-}
-
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
+  // Open db sessions, intended to be called directly from controllers
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep]
+
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
@@ -90,7 +80,6 @@ trait KeepCommander {
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
   def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
-  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[KeepActivity]
 
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
@@ -99,8 +88,7 @@ trait KeepCommander {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
-  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep]
+  def unsafeModifyKeepConnections(keep: Keep, diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -144,6 +132,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander: KeepToUserCommander,
     kteCommander: KeepToEmailCommander,
     keepSourceCommander: KeepSourceCommander,
+    keepSourceRepo: KeepSourceAttributionRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
@@ -428,7 +417,7 @@ class KeepCommanderImpl @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, Some(userId), Some(library), source)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, Some(userId), Some(library), usersAdded = Set.empty, source)
 
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
@@ -504,12 +493,21 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String)(implicit session: RWSession): Try[Keep] = {
-    def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
-    for {
-      oldKeep <- keepRepo.getOption(keepId).map(Success(_)).getOrElse(Failure(KeepFail.KEEP_NOT_FOUND))
-      _ <- if (canEdit(oldKeep.id.get)) Success(()) else Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
-    } yield keepRepo.save(oldKeep.withTitle(Some(title.trim)))
+  def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep] = {
+    val result = db.readWrite { implicit s =>
+      def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
+      for {
+        oldKeep <- keepRepo.getOption(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
+      } yield {
+        (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))
+      }
+    }
+    result.getRight.foreach {
+      case (oldKeep, newKeep) =>
+        eliza.saveKeepEvent(keepId, userId, EditTitle(userId, oldKeep.title, newKeep.title), source)
+    }
+    result.map(_._2)
   }
 
   // Updates note on keep, making sure tags are in sync.
@@ -736,8 +734,7 @@ class KeepCommanderImpl @Inject() (
 
     newKeep
   }
-  def unsafeModifyKeepConnections(keepId: Id[Keep], diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
-    val oldKeep = keepRepo.get(keepId)
+  def unsafeModifyKeepConnections(oldKeep: Keep, diff: KeepConnectionsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     keepRepo.save(oldKeep.withConnections(oldKeep.connections.diffed(diff))) tap { newKeep =>
       diff.users.added.foreach { added => ktuCommander.internKeepInUser(newKeep, added, userAttribution) }
       diff.users.removed.foreach { removed => ktuCommander.removeKeepFromUser(newKeep.id.get, removed) }
@@ -747,7 +744,9 @@ class KeepCommanderImpl @Inject() (
         ktlCommander.internKeepInLibrary(newKeep, newLib, userAttribution)
       }
       diff.libraries.removed.foreach { removed => ktlCommander.removeKeepFromLibrary(newKeep.id.get, removed) }
-      session.onTransactionSuccess { slackPusher.schedule(diff.libraries.added) }
+      session.onTransactionSuccess {
+        slackPusher.schedule(diff.libraries.added)
+      }
     }
   }
   def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
@@ -823,6 +822,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander.removeKeepFromAllLibraries(keep.id.get)
     ktuCommander.removeKeepFromAllUsers(keep)
     kteCommander.removeKeepFromAllEmails(keep)
+    keepSourceRepo.deactivateByKeepId(keep.id.get)
     collectionCommander.deactivateKeepTags(keep)
     keepRepo.deactivate(keep)
   }
@@ -914,46 +914,6 @@ class KeepCommanderImpl @Inject() (
         maxMessagesShown = maxMessagesShown,
         getTimestamp = getKeepTimestamp
       )
-    }
-  }
-
-  def getActivityForKeep(keepId: Id[Keep], eventsBefore: Option[DateTime], maxEvents: Int): Future[KeepActivity] = {
-    val shoeboxFut = db.readOnlyMasterAsync { implicit s =>
-      val keep = keepRepo.get(keepId)
-      val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
-      val ktus = ktuRepo.getAllByKeepId(keepId)
-      val ktls = ktlRepo.getAllByKeepId(keepId)
-      (keep, sourceAttr, ktus, ktls)
-    }
-    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), eventsBefore, maxEvents).map(_.get(keepId))
-
-    val basicModelFut = shoeboxFut.map {
-      case (keep, sourceAttr, ktus, ktls) =>
-        db.readOnlyMaster { implicit s =>
-          val libById = libraryRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
-          val basicOrgById = basicOrganizationGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
-          val basicOrgByLibId = libById.flatMapValues { library =>
-            library.organizationId.flatMap(basicOrgById.get)
-          }
-          val basicUserById = {
-            val ktuUsers = ktus.map(_.userId)
-            val libOwners = libById.map { case (libId, library) => library.ownerId }
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners).toSet)
-          }
-          val basicLibById = libById.map {
-            case (libId, library) =>
-              libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
-          }
-          (basicUserById, basicLibById, basicOrgByLibId)
-        }
-    }
-
-    for {
-      (keep, sourceAttrOpt, ktus, ktls) <- shoeboxFut
-      (elizaActivityOpt) <- elizaFut
-      (userById, libById, orgByLibId) <- basicModelFut
-    } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, maxEvents)
     }
   }
 

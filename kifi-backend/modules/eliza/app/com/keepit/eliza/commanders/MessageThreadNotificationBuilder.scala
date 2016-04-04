@@ -2,8 +2,10 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.core.optionExtensionOps
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.model.SystemMessageData.AddLibraries
@@ -38,34 +40,43 @@ case class MessageThreadNotification(
   category: NotificationCategory,
   firstAuthor: Int,
   numAuthors: Int,
-  numUnseenAuthors: Int,
+  numUnseenAuthors: Int, // if non-zero, counts as "unread = true"
   numMessages: Int,
-  numUnreadMessages: Int,
+  numUnreadMessages: Int, // used only for client bookkeeping
   forceOverwrite: Boolean) // this flag will tell the extension to overwrite any existing notifications with this keep id
 object MessageThreadNotification {
   // TODO(ryan): pray for forgiveness for this travesty
-  def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
-    unread: Boolean, originalAuthorIdx: Int, numUnseenAuthors: Int, numAuthors: Int,
-    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration): MessageThreadNotification = MessageThreadNotification(
-    id = message.pubId,
-    time = message.createdAt,
-    author = messageWithBasicUser.user,
-    text = message.messageText,
-    threadId = thread.pubKeepId,
-    locator = thread.deepLocator,
-    url = message.sentOnUrl.getOrElse(thread.url),
-    title = thread.pageTitle,
-    participants = messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName))),
-    unread = unread,
-    muted = muted,
-    category = NotificationCategory.User.MESSAGE,
-    firstAuthor = originalAuthorIdx,
-    numAuthors = numAuthors,
-    numUnseenAuthors = numUnseenAuthors,
-    numMessages = numMessages,
-    numUnreadMessages = numUnread,
-    forceOverwrite = false
-  )
+  def apply(message: ElizaMessage, thread: MessageThread, threadStarter: ExternalId[User], messageWithBasicUser: MessageWithBasicUser,
+    unread: Boolean, numUnseenAuthors: Int, numAuthors: Int,
+    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): MessageThreadNotification = {
+    val orderedParticipants = messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
+    val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
+      case (Right(user), idx) if user.externalId == threadStarter => idx
+    }.getOrElse {
+      airbrake.notify(s"Thread starter is not one of the participants for keep ${thread.keepId}")
+      0
+    }
+    MessageThreadNotification(
+      id = message.pubId,
+      time = message.createdAt,
+      author = messageWithBasicUser.user,
+      text = message.messageText,
+      threadId = thread.pubKeepId,
+      locator = thread.deepLocator,
+      url = message.sentOnUrl.getOrElse(thread.url),
+      title = thread.pageTitle,
+      participants = orderedParticipants,
+      unread = unread,
+      muted = muted,
+      category = NotificationCategory.User.MESSAGE,
+      firstAuthor = indexOfFirstAuthor,
+      numAuthors = numAuthors,
+      numUnseenAuthors = numUnseenAuthors,
+      numMessages = numMessages,
+      numUnreadMessages = numUnread,
+      forceOverwrite = false
+    )
+  }
   implicit def writes: Writes[MessageThreadNotification] = (
     (__ \ 'id).write[PublicId[Message]] and
     (__ \ 'time).write[DateTime] and
@@ -137,6 +148,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   messageRepo: MessageRepo,
   messageFetchingCommander: MessageFetchingCommander,
   shoebox: ShoeboxServiceClient,
+  implicit val airbrake: AirbrakeNotifier,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
     extends MessageThreadNotificationBuilder {
@@ -155,11 +167,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         keepIds.map { keepId => keepId -> messageRepo.getLatest(keepId) }.toMap
       }.map {
         case (kid, msg) =>
-          val isUnsupportedSystemMessage = msg.exists(_.auxData.exists {
-            case _: AddLibraries => true
-            case _ => false
-          })
-          if (isUnsupportedSystemMessage) kid -> None else kid -> msg
+          if (msg.forall(_.auxData.forall(SystemMessageData.isFullySupported))) kid -> msg else kid -> None
       }
       val mutedById = precomputed.flatMap(_.mutedById).getOrElse {
         keepIds.map { keepId => keepId -> userThreadRepo.isMuted(userId, keepId) }.toMap
@@ -189,6 +197,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     } yield lastMsgById.collect {
       case (keepId, Some(message)) =>
         val thread = threadsById(keepId)
+        val threadStarter = basicUserByIdMap(thread.startedBy).externalId
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
@@ -204,9 +213,9 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         keepId -> MessageThreadNotification(
           message = message.withText(messageWithBasicUser.text),
           thread = thread,
+          threadStarter = threadStarter,
           messageWithBasicUser = messageWithBasicUser,
-          unread = !message.from.asUser.contains(userId),
-          originalAuthorIdx = 0,
+          unread = !message.from.asUser.safely.contains(userId),
           numUnseenAuthors = unseenAuthors,
           numAuthors = authorActivityInfos.length,
           numMessages = numMessages,

@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.json.EnumFormat
+import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
@@ -18,7 +19,7 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Comment extends KeepEventKind("comment")
   case object AddParticipants extends KeepEventKind("add_participants")
   case object AddLibraries extends KeepEventKind("add_libraries")
-  case object EditedTitle extends KeepEventKind("edited_title")
+  case object EditTitle extends KeepEventKind("edit_title")
 
   val all = _all
   def contains(str: String) = all.exists(_.value == str)
@@ -48,32 +49,37 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
 
   implicit val format: Format[KeepEventSourceKind] = EnumFormat.format(fromStr, _.value)
 
-  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap { src =>
-    src match {
-      case MessageSource.IPAD | MessageSource.IPHONE => Some(iOS)
-      case MessageSource.CHROME | MessageSource.FIREFOX | MessageSource.SAFARI |
-        MessageSource.ANDROID | MessageSource.EMAIL | MessageSource.SITE => Some(KeepEventSourceKind.apply(src.value))
-      case _ => None
-    }
+  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap {
+    case MessageSource.IPHONE => Some(iOS)
+    case src => KeepEventSourceKind.fromStr(src.value)
   }
+  def toMessageSource(eventSrc: KeepEventSourceKind): Option[MessageSource] = eventSrc match {
+    case KeepEventSourceKind.iOS => Some(MessageSource.IPHONE) // only 8 iPad messages total, all before 2015
+    case src => MessageSource.fromStr(src.value)
+  }
+
+  def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
 }
 
 sealed abstract class KeepEvent(val kind: KeepEventKind)
 object KeepEvent {
   @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends KeepEvent(KeepEventKind.AddParticipants)
   @json case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends KeepEvent(KeepEventKind.AddLibraries)
+  @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEvent(KeepEventKind.EditTitle)
   implicit val format = Format[KeepEvent](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.AddParticipants => Json.reads[AddParticipants].reads(js)
           case KeepEventKind.AddLibraries => Json.reads[AddLibraries].reads(js)
+          case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
           case kind => throw new Exception(s"unsupported reads for activity event kind $kind, js $js}")
         }
     },
     Writes {
       case ap: AddParticipants => Json.writes[AddParticipants].writes(ap).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddParticipants.value)
       case al: AddLibraries => Json.writes[AddLibraries].writes(al).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddLibraries.value)
+      case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )

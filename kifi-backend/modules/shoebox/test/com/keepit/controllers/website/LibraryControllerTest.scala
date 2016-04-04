@@ -9,11 +9,11 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.json.TestHelper
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store._
 import com.keepit.common.time._
+import com.keepit.common.util.TestHelpers.matchJson
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
@@ -24,7 +24,6 @@ import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -1068,7 +1067,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            }
            """.stripMargin)
         val actual = contentAsJson(result1)
-        TestHelper.deepCompare(actual, expected1) must beNone
+        actual must matchJson(expected1)
         1 === 1
       }
     }

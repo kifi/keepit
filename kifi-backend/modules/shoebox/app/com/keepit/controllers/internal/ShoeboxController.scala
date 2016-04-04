@@ -629,7 +629,7 @@ class ShoeboxController @Inject() (
     val input = request.body.as[Request]
     val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
     implicit val context = HeimdalContext.empty
-    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, source = KeepSource.discussion)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, input.users, source = KeepSource.discussion)
     val csKeep = db.readWrite { implicit s =>
       val keep = keepCommander.persistKeep(internResponse.newKeeps.head.withParticipants(input.users))
       CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty, emails = Set.empty)
@@ -640,7 +640,7 @@ class ShoeboxController @Inject() (
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
     val users = (request.body \ "users").as[Set[Id[User]]]
     db.readWrite { implicit s =>
-      keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUsers(users), userAttribution = Some(adderId))
+      keepCommander.unsafeModifyKeepConnections(keepRepo.get(keepId), KeepConnectionsDiff.addUsers(users), userAttribution = Some(adderId))
     }
     NoContent
   }

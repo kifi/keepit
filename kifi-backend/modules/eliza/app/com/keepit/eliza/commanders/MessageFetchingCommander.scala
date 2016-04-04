@@ -3,8 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.discussion.{ DiscussionFail, Message, DiscussionKeep }
-import com.keepit.eliza.model.SystemMessageData.AddLibraries
+import com.keepit.discussion.{ DiscussionFail, DiscussionKeep }
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
@@ -63,12 +62,7 @@ class MessageFetchingCommander @Inject() (
     val userParticipantSet = thread.participants.allUsers
     log.info(s"[get_thread] got participants for keepId ${thread.keepId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
-      val messages = getThreadMessages(thread).filter {
-        _.auxData.forall {
-          case _: AddLibraries => false // todo(cam): add "Cam added LibraryX" formatting to the extension
-          case _ => true
-        }
-      }
+      val messages = getThreadMessages(thread).filter(_.auxData.forall(SystemMessageData.isFullySupported))
       log.info(s"[get_thread] got raw messages for keepId ${thread.keepId}: ${messages.length}")
       messages.map { message => getMessageWithBasicUser(message, thread, id2BasicUser) }
     })

@@ -78,9 +78,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
 
-  // one-time admin cleanup endpoint
-  def allActive()(implicit session: RSession): Seq[Library]
-
   def deactivate(model: Library)(implicit session: RWSession): Unit
   def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int
 }
@@ -155,8 +152,6 @@ class LibraryRepoImpl @Inject() (
   initTable()
 
   private def activeRows = rows.filter(_.state === LibraryStates.ACTIVE)
-
-  def allActive()(implicit session: RSession): Seq[Library] = rows.filter(_.state === LibraryStates.ACTIVE).list
 
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())

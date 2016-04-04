@@ -181,7 +181,7 @@ class SlackSearchController @Inject() (
           val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
           val keepOpt = keepId.flatMap(keeps.get)
           val pretext = {
-            val attribution = keepId.flatMap(sourceAttributions.get).map {
+            val attribution = keepId.flatMap(sourceAttributions.get).collect {
               case TwitterAttribution(tweet) =>
                 val tweetUrl = convertUrlToKifiRedirect(tweet.permalink, command, "clickedTweetUrl")
                 Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweetUrl), "on Twitter")
@@ -233,7 +233,7 @@ class SlackSearchController @Inject() (
 
           for {
             userIdOpt <- if (request.userIdOpt.isDefined) Future.successful(request.userIdOpt) else shoeboxClient.getUserIdByIdentityId(IdentityHelpers.toIdentityId(command.teamId, command.userId))
-            experiments <- userIdOpt.map(uid => userActionsHelper.getUserExperiments(uid)(request)).getOrElse(Future.successful(Set.empty[UserExperimentType]))
+            experiments <- userIdOpt.map(uid => userActionsHelper.getUserExperiments(uid)).getOrElse(Future.successful(Set.empty[UserExperimentType]))
           } yield {
             contextBuilder.addExperiments(experiments)
             searchAnalytics.searched(userIdOpt.toLeft(right = command.userId), startTime, searchContext, endedWith, contextBuilder.build)

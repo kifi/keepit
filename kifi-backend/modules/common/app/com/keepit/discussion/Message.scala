@@ -5,7 +5,8 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.common.json.EitherFormat
+import com.keepit.common.json.{ EnumFormat, EitherFormat }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.common.core.regexExtensionOps
@@ -110,21 +111,19 @@ object DiscussionKeep {
   implicit val format = Json.format[DiscussionKeep]
 }
 
-case class MessageSource(value: String)
-object MessageSource {
-  val CHROME = MessageSource("Chrome")
-  val FIREFOX = MessageSource("Firefox")
-  val SAFARI = MessageSource("Safari")
-  val EMAIL = MessageSource("Email")
-  val IPHONE = MessageSource("iPhone")
-  val IPAD = MessageSource("iPad")
-  val ANDROID = MessageSource("Android")
-  val SERVER = MessageSource("server")
-  val SITE = MessageSource("Kifi.com")
-  val UNKNOWN = MessageSource("unknown")
+sealed abstract class MessageSource(val value: String)
+object MessageSource extends Enumerator[MessageSource] {
+  case object CHROME extends MessageSource("Chrome")
+  case object FIREFOX extends MessageSource("Firefox")
+  case object SAFARI extends MessageSource("Safari")
+  case object EMAIL extends MessageSource("Email")
+  case object IPHONE extends MessageSource("iPhone")
+  case object ANDROID extends MessageSource("Android")
+  case object SITE extends MessageSource("Kifi.com")
 
-  implicit val messageSourceFormat: Format[MessageSource] = Format(
-    Reads { js => js.validate[String].map(MessageSource.apply) },
-    Writes { o => JsString(o.value) }
-  )
+  val all = _all
+  def fromStr(str: String) = all.find(_.value == str)
+  def apply(str: String) = fromStr(str).get
+
+  implicit val messageSourceFormat: Format[MessageSource] = EnumFormat.format(fromStr, _.value)
 }
