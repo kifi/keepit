@@ -61,36 +61,34 @@ class ShoeboxMessageIngestionActor @Inject() (
         session.onTransactionSuccess {
           slackPusher.schedule(keeps.flatMap(_.recipients.libraries).toSet)
         }
-        keeps.foreach { initialKeep =>
-          messagesByKeep.get(initialKeep.id.get).foreach { msgs =>
+        messagesByKeep.foreach {
+          case (keepId, msgs) =>
             // Functions that handle keep changes
-            def updateMessageSeq(keep: Keep) = keep.withMessageSeq(msgs.map(_.seq).max)
-            def updateLastActivity(keep: Keep) = {
-              val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
-              keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
+            def updateMessageSeq() = {
+              val keep = keepRepo.get(keepId)
+              val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
+              if (updatedKeep != keep) keepRepo.save(updatedKeep)
             }
-            def handleKeepEvents(keep: Keep) = msgs.flatMap(_.auxData).foldLeft(keep) { case (k, e) => handleKeepEvent(k, e) }
-            def handleKeepEvent(keep: Keep, event: KeepEvent): Keep = event match {
+            def updateLastActivity() = {
+              val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
+              keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
+            }
+            def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
               case KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers) =>
                 val diff = KeepRecipientsDiff(
                   users = DeltaSet.empty.addAll(addedUsers.toSet),
                   emails = DeltaSet.empty.addAll(addedNonUsers.flatMap(_.asEmailAddress).toSet),
                   libraries = DeltaSet.empty
                 )
-                keepCommander.unsafeModifyKeepRecipients(keep, diff, userAttribution = Some(addedBy))
-              case KeepEvent.AddLibraries(_, _) => keep
-              case KeepEvent.EditTitle(_, _, _) => keep
+                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(addedBy))
+              case KeepEvent.AddLibraries(_, _) =>
+              case KeepEvent.EditTitle(_, _, _) =>
             }
 
             // Apply all of the functions in sequence
-            val updatedKeep = Seq[Keep => Keep](
-              updateMessageSeq,
-              updateLastActivity,
-              handleKeepEvents
-            ).foldLeft(initialKeep) { case (k, fn) => fn(k) }
-
-            if (updatedKeep != initialKeep) keepRepo.save(updatedKeep)
-          }
+            updateMessageSeq()
+            updateLastActivity()
+            handleKeepEvents()
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
       }

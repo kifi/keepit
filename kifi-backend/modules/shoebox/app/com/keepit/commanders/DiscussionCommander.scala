@@ -50,7 +50,7 @@ class DiscussionCommanderImpl @Inject() (
       Future.failed(fail)
     }.getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepRepo.get(keepId), KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
+        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
@@ -104,7 +104,7 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepRepo.get(keepId), KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
+        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers, newLibraries = Set.empty, source)
       elizaEdit.onSuccess {
@@ -130,7 +130,7 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepRepo.get(keepId), diff, userAttribution = Some(userId))
+        keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added, diff.libraries.added, source)
       elizaEdit.onSuccess {
