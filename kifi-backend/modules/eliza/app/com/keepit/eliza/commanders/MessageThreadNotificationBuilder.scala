@@ -3,8 +3,9 @@ package com.keepit.eliza.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.core.optionExtensionOps
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.discussion.Message
 import com.keepit.eliza.model.SystemMessageData.AddLibraries
@@ -39,18 +40,21 @@ case class MessageThreadNotification(
   category: NotificationCategory,
   firstAuthor: Int,
   numAuthors: Int,
-  numUnseenAuthors: Int,
+  numUnseenAuthors: Int, // if non-zero, counts as "unread = true"
   numMessages: Int,
-  numUnreadMessages: Int,
+  numUnreadMessages: Int, // used only for client bookkeeping
   forceOverwrite: Boolean) // this flag will tell the extension to overwrite any existing notifications with this keep id
 object MessageThreadNotification {
   // TODO(ryan): pray for forgiveness for this travesty
-  def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
+  def apply(message: ElizaMessage, thread: MessageThread, threadStarter: ExternalId[User], messageWithBasicUser: MessageWithBasicUser,
     unread: Boolean, numUnseenAuthors: Int, numAuthors: Int,
-    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration): MessageThreadNotification = {
+    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): MessageThreadNotification = {
     val orderedParticipants = messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName)))
     val indexOfFirstAuthor = orderedParticipants.zipWithIndex.collectFirst {
-      case (participant, idx) if messageWithBasicUser.user.safely.contains(participant) => idx
+      case (Right(user), idx) if user.externalId == threadStarter => idx
+    }.getOrElse {
+      airbrake.notify(s"Thread starter is not one of the participants for keep ${thread.keepId}")
+      0
     }
     MessageThreadNotification(
       id = message.pubId,
@@ -65,7 +69,7 @@ object MessageThreadNotification {
       unread = unread,
       muted = muted,
       category = NotificationCategory.User.MESSAGE,
-      firstAuthor = indexOfFirstAuthor getOrElse 0,
+      firstAuthor = indexOfFirstAuthor,
       numAuthors = numAuthors,
       numUnseenAuthors = numUnseenAuthors,
       numMessages = numMessages,
@@ -144,6 +148,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
   messageRepo: MessageRepo,
   messageFetchingCommander: MessageFetchingCommander,
   shoebox: ShoeboxServiceClient,
+  implicit val airbrake: AirbrakeNotifier,
   implicit val publicIdConfig: PublicIdConfiguration,
   implicit val executionContext: ExecutionContext)
     extends MessageThreadNotificationBuilder {
@@ -192,6 +197,7 @@ class MessageThreadNotificationBuilderImpl @Inject() (
     } yield lastMsgById.collect {
       case (keepId, Some(message)) =>
         val thread = threadsById(keepId)
+        val threadStarter = basicUserByIdMap(thread.startedBy).externalId
         val threadActivity = threadActivityById(keepId)
         val MessageCount(numMessages, numUnread) = msgCountById(keepId)
         val muted = mutedById(keepId)
@@ -207,8 +213,9 @@ class MessageThreadNotificationBuilderImpl @Inject() (
         keepId -> MessageThreadNotification(
           message = message.withText(messageWithBasicUser.text),
           thread = thread,
+          threadStarter = threadStarter,
           messageWithBasicUser = messageWithBasicUser,
-          unread = !message.from.asUser.contains(userId),
+          unread = !message.from.asUser.safely.contains(userId),
           numUnseenAuthors = unseenAuthors,
           numAuthors = authorActivityInfos.length,
           numMessages = numMessages,
