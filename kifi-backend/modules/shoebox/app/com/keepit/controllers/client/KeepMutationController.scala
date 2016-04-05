@@ -52,13 +52,13 @@ class KeepMutationController @Inject() (
     implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
     val schemaHelper = json.schemaHelper(reads)
   }
-  def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
+  def createKeep() = UserAction.async(parse.tolerantJson) { implicit request =>
     import ExternalKeepCreateRequest._
     implicit val context = contextBuilder.withRequestInfo(request).build
     val result = for {
-      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Success(_)).getOrElse(Failure(DiscussionFail.COULD_NOT_PARSE))
+      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(externalCreateRequest.users) }
-      internRequest <- for {
+      internRequest <- Future.fromTry(for {
         // TODO(ryan): actually handle the possibility that these fail
         users <- Success(externalCreateRequest.users.map(extId => userIdMap(extId)))
         libraries <- Success(externalCreateRequest.libraries.map(pubId => Library.decodePublicId(pubId).get))
@@ -70,8 +70,8 @@ class KeepMutationController @Inject() (
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
         recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
-      )
-      (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
+      ))
+      (keep, keepIsNew, msgOpt) <- keepCommander.internKeep(internRequest)
     } yield keep
 
     result.map { keep =>
@@ -80,7 +80,7 @@ class KeepMutationController @Inject() (
       case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
-    }.get
+    }
   }
 
   def modifyKeepRecipients(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
