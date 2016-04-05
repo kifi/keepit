@@ -332,10 +332,10 @@ class AdminBookmarksController @Inject() (
 
     val fromId = startFrom.map(Id[Keep])
     val chunkSize = 100
-    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync))).toSet
+    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
     val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
       val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
-      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get)).map { connectionsByKeep =>
+      val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
             keep.id.get -> (RawKifiAttribution(keep.userId.get, connections, keep.source), keep.state == KeepStates.ACTIVE)
@@ -344,8 +344,8 @@ class AdminBookmarksController @Inject() (
       }
 
       val nonDiscussionConnectionsFut = db.readOnlyMasterAsync { implicit s =>
-        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get), excludeStateOpt = None)
-        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get), excludeState = None)
+        val ktls = ktlRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeStateOpt = None)
+        val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeState = None)
         otherKeeps.collect {
           case keep =>
             val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
