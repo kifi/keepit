@@ -8,8 +8,8 @@ case class UserValueSettings(showFollowedLibraries: Boolean, leftHandRailSort: L
 object UserValueSettings {
 
   def readFromJsValue(body: JsValue): UserValueSettings = {
-    val showFollowedLibrariesOpt = (body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
-    val leftHandRailSortOpt = (body \ UserValueName.LEFT_HAND_RAIL_SORT.name).asOpt[String]
+    val showFollowedLibrariesOpt = (body \ "showFollowedLibraries").asOpt[Boolean].orElse((body \ "show_followed_libraries").asOpt[Boolean]) //for backward compatibility
+    val leftHandRailSortOpt = (body \ "leftHandRailSort").asOpt[String]
     val showFollowedLibraries = showFollowedLibrariesOpt.getOrElse(true)
     val leftHandRailSort = leftHandRailSortOpt.flatMap(LibraryOrdering.fromStr).getOrElse(LibraryOrdering.LAST_KEPT_INTO)
 

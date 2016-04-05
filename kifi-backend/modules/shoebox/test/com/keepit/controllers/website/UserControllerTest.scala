@@ -294,7 +294,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
-          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"show_followed_libraries":false}"""
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"showFollowedLibraries":false,"leftHandRailSort":"last_kept_into"}"""
         }
 
         // get settings
@@ -309,7 +309,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(NO_CONTENT)
 
         db.readOnlyMaster { implicit s =>
-          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"show_followed_libraries":true}"""
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.USER_PROFILE_SETTINGS).get === s"""{"showFollowedLibraries":true,"leftHandRailSort":"last_kept_into"}"""
         }
       }
     }
