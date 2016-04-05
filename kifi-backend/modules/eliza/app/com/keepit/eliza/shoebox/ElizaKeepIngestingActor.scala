@@ -59,7 +59,7 @@ class ElizaKeepIngestingActor @Inject() (
           val newEmails = keep.emails -- thread.participants.allEmails
           val newThread = threadRepo.save(thread.withParticipants(clock.now, newUsers, newEmails.map(NonUserEmailParticipant)))
           newUsers.map(u => userThreadRepo.intern(UserThread.forMessageThread(newThread)(u)))
-          newEmails.map(e => nuThreadRepo.save(NonUserThread.forMessageThread(newThread)(NonUserEmailParticipant(e))))
+          newEmails.map(e => nuThreadRepo.intern(NonUserThread.forMessageThread(newThread)(NonUserEmailParticipant(e))))
         }
       }
 
