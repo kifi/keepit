@@ -527,8 +527,8 @@ class UserController @Inject() (
       userValueRepo.getValue(request.userId, UserValues.userProfileSettings)
     }
     val userSettings = UserValueSettings.readFromJsValue(storedBody)
-    //Ok(Json.toJson(userSettings)) // todo (aaron): use this when multiple fields to settings. With only one field @json macro doesn't describe field name
-    Ok(Json.obj("showFollowedLibraries" -> userSettings.showFollowedLibraries))
+    //we *could* just sent what's in the db directly to the user, though I'm not comfortable with it now, some bad security could happen.
+    Ok(UserValueSettings.writeToJson(userSettings))
   }
 
   def setSettings() = UserAction(parse.tolerantJson) { request =>
