@@ -19,6 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.common.util.RightBias
+import com.keepit.discussion.{ MessageSource, Message, CrossServiceMessage }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
@@ -81,7 +82,7 @@ trait KeepCommander {
   def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[Keep]]
 
   // Creating
-  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
+  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Future[(Keep, Boolean, Option[Message])]
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
@@ -398,7 +399,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
+  def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Future[(Keep, Boolean, Option[Message])] = {
     val permissionsByLib = db.readOnlyMaster { implicit s =>
       permissionCommander.getLibrariesPermissions(internReq.recipients.libraries, Author.kifiUserId(internReq.author))
     }
@@ -406,9 +407,15 @@ class KeepCommanderImpl @Inject() (
       !internReq.recipients.libraries.forall(libId => permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_KEEPS)) -> KeepFail.INSUFFICIENT_PERMISSIONS
     ).collect { case (true, fail) => fail }
 
-    fails.headOption.map(Failure(_)).getOrElse {
-      db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) }
-    }
+    for {
+      _ <- fails.headOption.fold(Future.successful(()))(fail => Future.failed(fail))
+      (keep, isNew) <- Future.fromTry(db.readWrite { implicit s => keepInterner.internKeepByRequest(internReq) })
+      msgOpt <- Author.kifiUserId(internReq.author).fold(Future.successful(Option.empty[Message])) { user =>
+        internReq.note.fold(Future.successful(Option.empty[Message])) { note =>
+          eliza.sendMessageOnKeep(user, note, keep.id.get, source = Some(MessageSource.SITE)).imap(Some(_))
+        }
+      }
+    } yield (keep, isNew, msgOpt)
   }
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean) = {
