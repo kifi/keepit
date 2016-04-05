@@ -302,6 +302,10 @@ class PageCommander @Inject() (
         Left("parse_url_error")
     }
   }
+
+  def getVisibleKeepsByUrlAndRecipients(viewer: Option[Id[User]], url: String, recipients: KeepRecipients): Future[Set[Id[Keep]]] = {
+    ???
+  }
 }
 
 case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {

@@ -30,6 +30,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepInfoAssembler {
+  def assembleKeepInfos(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]]
+  def assemblePageInfos(viewer: Option[Id[User]], uriSet: Set[Id[NormalizedURI]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[NormalizedURI], NewPageInfo]]
   def assembleKeepViews(viewer: Option[Id[User]], keepSet: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
 }
