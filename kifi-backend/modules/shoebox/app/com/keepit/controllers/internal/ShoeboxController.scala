@@ -635,13 +635,24 @@ class ShoeboxController @Inject() (
   def internKeep() = Action(parse.tolerantJson) { request =>
     import InternKeep._
     val input = request.body.as[Request]
-    val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
-    implicit val context = HeimdalContext.empty
-    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, input.users, source = KeepSource.discussion)
-    val csKeep = db.readWrite { implicit s =>
-      val keep = keepCommander.persistKeep(internResponse.newKeeps.head.withParticipants(input.users))
-      CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty, emails = Set.empty)
+    val recipients = KeepRecipients(
+      users = input.users + input.creator,
+      emails = input.emails,
+      libraries = Set.empty
+    )
+    val internResponse = db.readWrite { implicit s =>
+      keepInterner.internKeepByRequest(KeepInternRequest.onKifi(
+        keeper = input.creator,
+        url = input.url,
+        source = KeepSource.discussion,
+        title = input.title,
+        note = input.note,
+        keptAt = Some(clock.now),
+        recipients = recipients
+      ))
     }
+    val keep = internResponse.get._1
+    val csKeep = CrossServiceKeep.fromKeepAndRecipients(keep, users = recipients.users, libraries = Set.empty, emails = recipients.emails)
     Ok(Json.toJson(csKeep))
   }
 

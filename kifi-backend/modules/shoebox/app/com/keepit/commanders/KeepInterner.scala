@@ -40,12 +40,21 @@ final case class KeepInternRequest(
     title: Option[String],
     note: Option[String],
     keptAt: Option[DateTime],
-    users: Set[Id[User]],
-    emails: Set[EmailAddress],
-    libraries: Set[Id[Library]]) {
+    recipients: KeepRecipients) {
   def trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
-  def usersIncludingAuthor = users ++ Author.kifiUserId(author)
-  def connections = KeepRecipients(libraries, emails, usersIncludingAuthor)
+}
+object KeepInternRequest {
+  def onKifi(keeper: Id[User], recipients: KeepRecipients, url: String, source: KeepSource, title: Option[String], note: Option[String], keptAt: Option[DateTime]): KeepInternRequest =
+    KeepInternRequest(
+      author = Author.KifiUser(keeper),
+      url = url,
+      source = source,
+      attribution = RawKifiAttribution(keptBy = keeper, source = source, connections = recipients.plusUser(keeper)),
+      title = title,
+      note = note,
+      keptAt = keptAt,
+      recipients = recipients.plusUser(keeper)
+    )
 }
 final case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
   def successes = newKeeps ++ existingKeeps
@@ -117,7 +126,7 @@ class KeepInternerImpl @Inject() (
     if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
     else {
       val uri = normalizedURIInterner.internByUri(internReq.url, contentWanted = true, candidates = Set.empty)
-      val keepToInternWith = getKeepToInternWith(uri.id.get, internReq.connections)
+      val keepToInternWith = getKeepToInternWith(uri.id.get, internReq.recipients)
       val userIdOpt = Author.kifiUserId(internReq.author)
 
       val title = Seq(internReq.trimmedTitle, keepToInternWith.flatMap(_.title), uri.title).flatten.headOption
@@ -133,7 +142,7 @@ class KeepInternerImpl @Inject() (
         keptAt = keptAt,
         note = keepToInternWith.flatMap(_.note), // The internReq.note is intended to represent a comment
         originalKeeperId = keepToInternWith.flatMap(_.userId) orElse userIdOpt,
-        recipients = KeepRecipients(libraries = internReq.libraries, users = internReq.users ++ userIdOpt, emails = internReq.emails) union keepToInternWith.map(_.recipients),
+        recipients = internReq.recipients union keepToInternWith.map(_.recipients),
         lastActivityAt = keepToInternWith.map(_.lastActivityAt).getOrElse(keptAt)
       )
       val internedKeep = try {

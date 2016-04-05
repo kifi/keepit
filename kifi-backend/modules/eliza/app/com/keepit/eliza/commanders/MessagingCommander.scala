@@ -220,7 +220,7 @@ class MessagingCommanderImpl @Inject() (
     matches.headOption match {
       case Some(mt) => Future.successful(mt, false)
       case None =>
-        shoebox.internKeep(from, userParticipants.toSet, nUriId, url, titleOpt, None).map { csKeep =>
+        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.collect { case NonUserEmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None).map { csKeep =>
           db.readWrite { implicit s =>
             val thread = threadRepo.save(MessageThread(
               uriId = nUriId,

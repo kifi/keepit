@@ -62,17 +62,14 @@ class KeepMutationController @Inject() (
         // TODO(ryan): actually handle the possibility that these fail
         users <- Success(externalCreateRequest.users.map(extId => userIdMap(extId)))
         libraries <- Success(externalCreateRequest.libraries.map(pubId => Library.decodePublicId(pubId).get))
-      } yield KeepInternRequest(
-        author = Author.KifiUser(request.userId),
+      } yield KeepInternRequest.onKifi(
+        keeper = request.userId,
         url = externalCreateRequest.url,
         source = externalCreateRequest.source,
-        attribution = RawKifiAttribution(request.userId, KeepRecipients(libraries, externalCreateRequest.emails, users), externalCreateRequest.source),
         title = externalCreateRequest.title,
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
-        users = users,
-        emails = externalCreateRequest.emails,
-        libraries = libraries
+        recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
       )
       (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
     } yield keep

@@ -138,7 +138,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
-  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
+  def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
   def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]
 }
@@ -905,9 +905,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
+  def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     import InternKeep._
-    val request = Request(creator, users, uriId, url, title, note)
+    val request = Request(creator, users + creator, emails, uriId, url, title, note)
     call(Shoebox.internal.internKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[CrossServiceKeep]
     }
@@ -925,7 +925,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
 object ShoeboxServiceClient {
   object InternKeep {
-    case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
+    case class Request(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
   object RegisterMessageOnKeep {

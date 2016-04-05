@@ -401,10 +401,10 @@ class KeepCommanderImpl @Inject() (
 
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
     val permissionsByLib = db.readOnlyMaster { implicit s =>
-      permissionCommander.getLibrariesPermissions(internReq.libraries, Author.kifiUserId(internReq.author))
+      permissionCommander.getLibrariesPermissions(internReq.recipients.libraries, Author.kifiUserId(internReq.author))
     }
     val fails: Seq[KeepFail] = Seq(
-      !internReq.libraries.forall(libId => permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_KEEPS)) -> KeepFail.INSUFFICIENT_PERMISSIONS
+      !internReq.recipients.libraries.forall(libId => permissionsByLib.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_KEEPS)) -> KeepFail.INSUFFICIENT_PERMISSIONS
     ).collect { case (true, fail) => fail }
 
     fails.headOption.map(Failure(_)).getOrElse {
