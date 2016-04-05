@@ -179,7 +179,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(Future.successful).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        val users = csKeep.owner.toSet + userId
+        val users = csKeep.users ++ csKeep.owner + userId
+        val emails = csKeep.emails
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
@@ -194,7 +195,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               keepId = csKeep.id
             ))
             users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-            log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
+            emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
             mt
           }
         }
