@@ -20,6 +20,7 @@ object AugmentableItem {
   }
 }
 
+// This represents as Keep read from the Search Index
 case class KeepDocument(
   id: Id[Keep],
   keptAt: DateTime,
@@ -31,19 +32,7 @@ case class KeepDocument(
   tags: Set[Hashtag])
 
 object KeepDocument {
-  val format = Json.format[KeepDocument]
-  val ownerReads = ((__ \ 'owner).readNullable[Id[User]] orElse (__ \ 'keptBy).readNullable[Id[User]])
-  val transitionReads: Reads[KeepDocument] = (
-    (__ \ 'id).read[Id[Keep]] and
-    (__ \ 'keptAt).read[DateTime] and
-    ownerReads and
-    ((__ \ 'users).read[Set[Id[User]]] orElse ownerReads.map(_.toSet)) and
-    ((__ \ 'libraries).read[Set[Id[Library]]] orElse (__ \ 'keptIn).readNullable[Id[Library]].map(_.toSet)) and
-    ((__ \ 'organizations).read[Set[Id[Organization]]] orElse Reads.pure(Set.empty[Id[Organization]])) and
-    (__ \ 'note).readNullable[String] and
-    (__ \ 'tags).read[Set[Hashtag]]
-  )(KeepDocument.apply _)
-  implicit val transitionFormat = Format(transitionReads, format)
+  implicit val format = Json.format[KeepDocument]
 }
 
 case class FullAugmentationInfo(keeps: Seq[KeepDocument], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
