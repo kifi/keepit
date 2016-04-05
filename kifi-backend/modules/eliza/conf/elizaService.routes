@@ -83,6 +83,7 @@ GET     /internal/eliza/getMessagesChanged          @com.keepit.eliza.controller
 GET     /internal/eliza/getElizaKeepStream          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Long] ?= None, filter: ElizaFeedFilter)
 POST    /internal/eliza/getEmailParticipantsForKeeps @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getEmailParticipantsForKeeps()
 POST    /internal/eliza/getInitialRecipientsByKeepId @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getInitialRecipientsByKeepId()
+GET     /internal/eliza/pageSystemMessages          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.pageSystemMessages(fromId: Id[Message], pageSize: Int)
 
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 

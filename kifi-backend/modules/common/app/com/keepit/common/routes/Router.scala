@@ -278,6 +278,7 @@ object Eliza extends Service {
 
     def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
     def saveKeepEvent = ServiceRoute(POST, "/internal/eliza/saveKeepEvent")
+    def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
     def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")

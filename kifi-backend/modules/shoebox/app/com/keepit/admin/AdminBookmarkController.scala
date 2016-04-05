@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -11,6 +11,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
@@ -51,6 +52,7 @@ class AdminBookmarksController @Inject() (
   rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
+  keepEventRepo: KeepEventRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
@@ -374,5 +376,33 @@ class AdminBookmarksController @Inject() (
       }
     }
     Ok.chunked(enum)
+  }
+
+  def backfillKeepEventRepo(pageSize: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
+    var startWithMessage = Id[Message](53387) // select min(id) from eliza.message where aux_data is not null;
+    FutureHelpers.doUntil {
+      eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
+        if (msgs.isEmpty) true
+        else {
+          val (msgsToPersist, lastMessage) = if (msgs.size < pageSize) (msgs, msgs.last) else (msgs.init, msgs.last)
+          msgsToPersist.foreach { msg =>
+            val eventData = msg.auxData.get
+            slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
+            if (!dryRun) {
+              val event = KeepEvent(
+                keepId = msg.keep,
+                eventData = eventData,
+                eventTime = msg.sentAt,
+                source = KeepEventSourceKind.fromMessageSource(msg.source)
+              )
+              db.readWrite(implicit s => keepEventRepo.save(event))
+            }
+          }
+          startWithMessage = lastMessage.id
+          msgs.size < pageSize
+        }
+      }
+    }
+    NoContent
   }
 }

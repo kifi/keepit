@@ -124,6 +124,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]]
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]]
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
@@ -429,6 +430,11 @@ class ElizaServiceClientImpl @Inject() (
     val request = Request(keepId, userId, event)
     call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
   }
+
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = {
+    call(Eliza.internal.pageSystemMessages(fromId, pageSize)).map(_.json.as[Seq[CrossServiceMessage]])
+  }
+
 }
 
 object ElizaServiceClient {
