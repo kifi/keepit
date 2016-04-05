@@ -727,17 +727,25 @@ class KeepCommanderImpl @Inject() (
     require(k.userId.toSet subsetOf k.recipients.users, "keep owner is not one of the connected users")
 
     val oldKeepOpt = k.id.map(keepRepo.get)
-    val (oldLibs, oldUsers) = (oldKeepOpt.map(_.recipients.libraries).getOrElse(Set.empty), oldKeepOpt.map(_.recipients.users).getOrElse(Set.empty))
-    val newKeep = keepRepo.save(k.withLibraries(oldLibs ++ k.recipients.libraries).withParticipants(oldUsers ++ k.recipients.users))
+    val oldRecipients = oldKeepOpt.map(_.recipients)
+    val newKeep = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
 
-    if (oldLibs != newKeep.recipients.libraries) {
-      val libraries = libraryRepo.getActiveByIds(newKeep.recipients.libraries -- oldLibs).values
+    val oldLibraries = oldRecipients.map(_.libraries).getOrElse(Set.empty)
+    if (oldLibraries != newKeep.recipients.libraries) {
+      val libraries = libraryRepo.getActiveByIds(newKeep.recipients.libraries -- oldLibraries).values
       libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
     }
 
+    val oldUsers = oldRecipients.map(_.users).getOrElse(Set.empty)
     if (oldUsers != newKeep.recipients.users) {
       val newUsers = newKeep.recipients.users -- oldUsers
       newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = None, addedAt = None) }
+    }
+
+    val oldEmails = oldRecipients.map(_.emails).getOrElse(Set.empty)
+    if (oldEmails != newKeep.recipients.emails) {
+      val newEmails = newKeep.recipients.emails -- oldEmails
+      newEmails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = None, addedAt = None) }
     }
 
     newKeep
