@@ -340,7 +340,7 @@ class KeepRepoImpl @Inject() (
         WHERE ktu.state = 'active' AND ktu.user_id = $userId AND ktu.uri_id in #$uriIdSet
       ) UNION (
         SELECT ktl.uri_id, ktl.keep_id FROM keep_to_library ktl INNER JOIN library_membership lm ON ktl.library_id = lm.library_id
-        WHERE ktl.state = 'active' AND ktl.uri_id in #$uriIdSet AND lm.state = 'active' AND lm.user_id = $userId #${excludeAccess.map(access => s"AND lm.access != ${access.value}").getOrElse("")}
+        WHERE ktl.state = 'active' AND ktl.uri_id in #$uriIdSet AND lm.state = 'active' AND lm.user_id = $userId #${excludeAccess.map(access => s"AND lm.access != '${access.value}'").getOrElse("")}
       );"""
       val uriAndKeepIdsByUriId = q.as[(Id[NormalizedURI], Id[Keep])].list.groupBy(_._1)
       uriIds.map { uriId => uriId -> uriAndKeepIdsByUriId.get(uriId).map(_.map(_._2).toSet).getOrElse(Set.empty) }.toMap
