@@ -258,6 +258,12 @@ object BasicKeep {
 @json
 case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
 
+case class CrossServiceKeepRecipients(id: Id[Keep], recipients: KeepRecipients)
+object CrossServiceKeepRecipients {
+  implicit val format = Json.format[CrossServiceKeepRecipients]
+  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.recipients)
+}
+
 // All the important parts of a Keep to send across services
 // NOT to be sent to clients
 // PSA: Think of a Keep as the source node of a graph

@@ -24,7 +24,7 @@ import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
+import com.keepit.shoebox.ShoeboxServiceClient.{ GetPersonalKeepRecipientsOnUris, InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackIntegrationCommander }
@@ -606,6 +606,14 @@ class ShoeboxController @Inject() (
     val limit = (request.body \ "limit").as[Int]
     val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId, beforeDate, limit)
     Ok(Json.toJson(keeps))
+  }
+
+  def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>
+    import GetPersonalKeepRecipientsOnUris._
+    val input = request.body.as[Request]
+    val keeps = keepCommander.getPersonalKeepsOnUris(input.userId, input.uriIds)
+    val keepRecipients = keeps.mapValues(_.map(CrossServiceKeepRecipients.fromKeep))
+    Ok(Json.toJson(Response(keepRecipients)))
   }
 
   def getSlackTeamIds() = Action(parse.tolerantJson) { request =>
