@@ -95,7 +95,13 @@ trait UserActionsHelper extends Logging {
 
   def getSessionIdFromRequest(request: RequestHeader): Option[UserSessionExternalId] = {
     // Unsure if `sid` is used anymore, or even is a good idea. Cookie name needs to be SecureSocial's `Authenticator.cookieName`
-    request.cookies.get("KIFI_SECURESOCIAL").map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption)).filter(_.nonEmpty).map(UserSessionExternalId(_))
+    request.cookies.get("KIFI_SECURESOCIAL").map(_.value).orElse(request.queryString.get("sid").flatMap(_.headOption)).flatMap { id =>
+      if (ExternalId.UUIDPattern.pattern.matcher(id).matches()) {
+        Some(UserSessionExternalId(id))
+      } else {
+        None
+      }
+    }
   }
 
   def getIdentityIdFromRequestBlocking(implicit request: RequestHeader): Option[IdentityId] = {
