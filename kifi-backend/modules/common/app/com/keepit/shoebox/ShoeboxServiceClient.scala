@@ -166,7 +166,6 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   keepImagesCache: KeepImagesCache,
   primaryOrgForUserCache: PrimaryOrgForUserCache,
-  basicKeepByIdCache: BasicKeepByIdCache,
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
   slackIntegrationsCache: SlackChannelIntegrationsCache,

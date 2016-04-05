@@ -70,7 +70,6 @@ class KeepRepoImpl @Inject() (
     keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
-    basicKeepByIdCache: BasicKeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
@@ -253,7 +252,6 @@ class KeepRepoImpl @Inject() (
   override def deleteCache(keep: Keep)(implicit session: RSession): Unit = {
     keep.id.foreach { keepId =>
       keepByIdCache.remove(KeepIdKey(keepId))
-      basicKeepByIdCache.remove(BasicKeepIdKey(keepId))
     }
     keep.userId.foreach { userId =>
       keepUriUserCache.remove(KeepUriUserKey(keep.uriId, userId))
@@ -266,7 +264,6 @@ class KeepRepoImpl @Inject() (
       deleteCache(keep)
     } else {
       keepByIdCache.set(KeepIdKey(keep.id.get), keep)
-      basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
       keep.userId.foreach { userId =>
         keepUriUserCache.set(KeepUriUserKey(keep.uriId, userId), keep)
         countCache.remove(KeepCountKey(userId))

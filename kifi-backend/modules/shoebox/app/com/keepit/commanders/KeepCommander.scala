@@ -74,7 +74,6 @@ trait KeepCommander {
 
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
-  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
@@ -123,7 +122,6 @@ class KeepCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
-    basicKeepCache: BasicKeepByIdCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionCommander: CollectionCommander,
     keepRepo: KeepRepo,
@@ -162,46 +160,6 @@ class KeepCommanderImpl @Inject() (
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep] = {
     val idToKeepMap = keepRepo.getByIds(ids.toSet)
     ids.map(idToKeepMap)
-  }
-
-  def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] = {
-    val (attributions, keepInfos) = db.readOnlyReplica { implicit session =>
-      val keepsById = keepRepo.getByIds(ids)
-      val ktlsByKeep = ktlRepo.getAllByKeepIds(ids)
-      val attributions = keepSourceCommander.getSourceAttributionForKeeps(keepsById.values.flatMap(_.id).toSet)
-      def getAuthor(keep: Keep): Option[BasicAuthor] = {
-        attributions.get(keep.id.get).map {
-          case (_, Some(user)) => BasicAuthor.fromUser(user)
-          case (attr, _) => BasicAuthor.fromSource(attr)
-        }.orElse {
-          keep.userId.map { id =>
-            val basicUser = basicUserRepo.load(id)
-            BasicAuthor.fromUser(basicUser)
-          }
-        }
-      }
-      val keepInfos = for {
-        (kId, keep) <- keepsById
-        author <- getAuthor(keep)
-      } yield {
-        (kId, keep, author, ktlsByKeep.getOrElse(kId, Seq.empty))
-      }
-      (attributions, keepInfos)
-    }
-
-    keepInfos.map {
-      case (kId, keep, author, ktls) =>
-        kId -> BasicKeep(
-          id = keep.externalId,
-          title = keep.title,
-          url = keep.url,
-          visibility = ktls.headOption.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
-          libraryId = ktls.headOption.map(ktl => Library.publicId(ktl.libraryId)),
-          author = author,
-          attribution = attributions.get(kId).collect { case (attr: SlackAttribution, _) => attr },
-          uriId = NormalizedURI.publicId(keep.uriId)
-        )
-    }.toMap
   }
 
   def getKeepsCountFuture(): Future[Int] = {

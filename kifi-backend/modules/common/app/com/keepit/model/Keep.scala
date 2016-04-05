@@ -231,33 +231,6 @@ object CrossServiceKeepAndTags {
   implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
-case class BasicKeep(
-  id: ExternalId[Keep],
-  title: Option[String],
-  url: String,
-  visibility: LibraryVisibility,
-  libraryId: Option[PublicId[Library]],
-  author: BasicAuthor,
-  attribution: Option[SlackAttribution],
-  uriId: PublicId[NormalizedURI])
-
-object BasicKeep {
-  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
-  implicit val format: Format[BasicKeep] = (
-    (__ \ 'id).format[ExternalId[Keep]] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'author).format[BasicAuthor] and
-    (__ \ 'slackAttribution).formatNullable[SlackAttribution] and
-    (__ \ 'uriId).format[PublicId[NormalizedURI]]
-  )(BasicKeep.apply, unlift(BasicKeep.unapply))
-}
-
-@json
-case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
-
 case class CrossServiceKeepRecipients(id: Id[Keep], recipients: KeepRecipients)
 object CrossServiceKeepRecipients {
   implicit val format = Json.format[CrossServiceKeepRecipients]
@@ -344,15 +317,6 @@ object PersonalKeep {
     (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
-
-case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 5
-  val namespace = "basic_keep_by_id"
-  def toKey(): String = id.id.toString
-}
-
-class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed abstract class KeepPermission(val value: String)
 object KeepPermission extends Enumerator[KeepPermission] {
