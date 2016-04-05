@@ -42,7 +42,7 @@ case class CrossServiceMessage(
   sentAt: DateTime,
   sentBy: Option[Either[Id[User], BasicNonUser]],
   text: String,
-  auxData: Option[KeepEvent],
+  auxData: Option[KeepEventData],
   source: Option[MessageSource])
 object CrossServiceMessage {
   private val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
@@ -62,7 +62,7 @@ object CrossServiceMessage {
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).formatNullable[Either[Id[User], BasicNonUser]] and
     (__ \ 'text).format[String] and
-    (__ \ 'auxData).formatNullable[KeepEvent] and
+    (__ \ 'auxData).formatNullable[KeepEventData] and
     (__ \ 'source).formatNullable[MessageSource](MessageSource.messageSourceFormat)
   )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
 }

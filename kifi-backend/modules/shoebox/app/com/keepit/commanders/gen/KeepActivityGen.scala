@@ -7,7 +7,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
 import com.keepit.model.KeepEventSourceKind
-import com.keepit.model.KeepEvent.{ EditTitle, AddLibraries, AddParticipants }
+import com.keepit.model.KeepEventData.{ EditTitle, AddLibraries, AddParticipants }
 import com.keepit.model.{ BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
@@ -151,6 +151,7 @@ object KeepActivityGen {
         case KeepEventKind.Comment => DescriptionElements(lastEvent.author, "commented on this page")
         case KeepEventKind.AddParticipants | KeepEventKind.AddLibraries => DescriptionElements(lastEvent.author, "added a recipient to this discussion")
         case KeepEventKind.EditTitle => DescriptionElements(lastEvent.author, "edited the title")
+        case KeepEventKind.AddRecipients => DescriptionElements(lastEvent.author, "added recipients to this discussion")
       }
       lastEvent.withHeader(newHeader)
     }

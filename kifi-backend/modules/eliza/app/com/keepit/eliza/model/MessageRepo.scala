@@ -6,14 +6,14 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
-import com.keepit.discussion.{ Message, MessageSource }
+import com.keepit.discussion.MessageSource
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ SequenceNumber, DbSequenceAssigner, Id }
 import com.keepit.model.{ OrganizationSettings, Keep, SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
-import play.api.libs.json.{ Json, JsArray, JsValue }
+import play.api.libs.json.{ Json, JsValue }
 import scala.slick.jdbc.StaticQuery
 
 case class MessageCount(total: Int, unread: Int)

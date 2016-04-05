@@ -10,7 +10,7 @@ import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ BasicLibrary, Library, KeepEvent, Keep, User, NormalizedURI }
+import com.keepit.model.{ KeepEventData, BasicLibrary, Library, KeepEventData$, Keep, User, NormalizedURI }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
@@ -101,17 +101,18 @@ object SystemMessageData {
     }
   }
 
-  def toKeepEvent(data: SystemMessageData): Option[KeepEvent] = data match {
-    case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
-    case AddLibraries(addedBy, addedLibraries) => Some(KeepEvent.AddLibraries(addedBy, addedLibraries))
-    case EditTitle(editedBy, original, updated) => Some(KeepEvent.EditTitle(editedBy, original, updated))
+  def toKeepEvent(data: SystemMessageData): Option[KeepEventData] = data match {
+    case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
+    case AddLibraries(addedBy, addedLibraries) => Some(KeepEventData.AddLibraries(addedBy, addedLibraries))
+    case EditTitle(editedBy, original, updated) => Some(KeepEventData.EditTitle(editedBy, original, updated))
     case _ => None
   }
 
-  def fromKeepEvent(event: KeepEvent): Option[SystemMessageData] = event match {
-    case KeepEvent.AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.fromBasicNonUser)))
-    case KeepEvent.AddLibraries(addedBy, addedLibs) => Some(AddLibraries(addedBy, addedLibs))
-    case KeepEvent.EditTitle(addedBy, original, updated) => Some(EditTitle(addedBy, original, updated))
+  def fromKeepEvent(event: KeepEventData): Option[SystemMessageData] = event match {
+    case KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.fromBasicNonUser)))
+    case KeepEventData.AddLibraries(addedBy, addedLibs) => Some(AddLibraries(addedBy, addedLibs))
+    case KeepEventData.EditTitle(addedBy, original, updated) => Some(EditTitle(addedBy, original, updated))
+    case _ => None
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {

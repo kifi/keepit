@@ -6,12 +6,12 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.logging.Logging
-import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient._
+import com.keepit.model.{ KeepRecipients, ElizaFeedFilter, User, Keep }
+import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
-import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
