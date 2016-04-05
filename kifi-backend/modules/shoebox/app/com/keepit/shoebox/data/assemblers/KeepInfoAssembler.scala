@@ -94,7 +94,13 @@ class KeepInfoAssemblerImpl @Inject() (
     ktesByKeep: Map[Id[Keep], Seq[KeepToEmail]])
 
   def assembleKeepViews(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
-    viewAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
+    keepViewAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
+  }
+  def assembleKeepInfos(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
+    keepInfoAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
+  }
+  def assemblePageInfos(viewer: Option[Id[User]], uriIds: Set[Id[NormalizedURI]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[NormalizedURI], NewPageInfo]] = {
+    pageInfoAssemblyHelper(viewer, uriIds, config)
   }
 
   private def getKeepsAndConnections(keepIds: Set[Id[Keep]]): KeepsAndConnections = {
@@ -106,7 +112,22 @@ class KeepInfoAssemblerImpl @Inject() (
       KeepsAndConnections(keepsById, ktlsByKeep, ktusByKeep, ktesByKeep)
     }
   }
-  private def viewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
+
+  private def keepViewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
+    val keepsById = keepsAndConnections.keepsById
+    for {
+      keepInfosByKeep <- keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
+      pageInfosByUri <- pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
+    } yield {
+      keepsById.map {
+        case (kId, keep) =>
+          val keepInfoOrFail = keepInfosByKeep.getOrElse(kId, RightBias.left(KeepFail.KEEP_NOT_FOUND))
+          val pageInfo = pageInfosByUri.get(keep.uriId)
+          kId -> keepInfoOrFail.map { keepInfo => NewKeepView(keep = keepInfo, page = pageInfo) }
+      }
+    }
+  }
+  private def keepInfoAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
     val keepsById = keepsAndConnections.keepsById
     val ktlsByKeep = keepsAndConnections.ktlsByKeep
     val ktusByKeep = keepsAndConnections.ktusByKeep
@@ -147,32 +168,11 @@ class KeepInfoAssemblerImpl @Inject() (
       }
     }
 
-    val (augmentationFut, summaryFut) = {
-      val uriIds = keepsById.values.map(_.uriId).toSeq.sorted.distinct
-
-      val augmentation = search.augment(
-        viewer,
-        config.showPublishedLibraries,
-        config.numContextualKeeps,
-        config.numContextualKeepers,
-        config.numContextualLibraries,
-        config.numContextualTags,
-        uriIds.map { uriId => AugmentableItem(uriId) }
-      ).map { contexts =>
-          (uriIds zip sanitizeContexts(contexts)).toMap
-        }
-
-      val summary = rover.getUriSummaryByUris(uriIds.toSet)
-      (augmentation, summary)
-    }
-
     for {
       sourceByKeep <- sourceInfoFut
       libsById <- libInfoFut
       imagesByKeep <- imageInfoFut
       permissionsByKeep <- permissionsFut
-      augmentationByUri <- augmentationFut
-      summaryByUri <- summaryFut
       activityByKeep <- activityFut
     } yield {
       val usersById = db.readOnlyMaster { implicit s =>
@@ -212,38 +212,64 @@ class KeepInfoAssemblerImpl @Inject() (
             viewer = viewerInfo
           )
 
-          val context = augmentationByUri.get(keep.uriId).map(augmentation => NewPageContext(
-            numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
-            numTotalKeeps = augmentation.keepsTotal,
-            keepers = augmentation.keepers.flatMap { case (userId, time) => usersById.get(userId) },
-            numVisibleKeepers = augmentation.keepers.length + augmentation.keepersOmitted,
-            numTotalKeepers = augmentation.keepersTotal,
-            libraries = augmentation.libraries.flatMap { case (libId, time, x) => libsById.get(libId) },
-            numVisibleLibraries = augmentation.libraries.length + augmentation.librariesOmitted,
-            numTotalLibraries = augmentation.librariesTotal,
-            tags = augmentation.tags,
-            numVisibleTags = augmentation.tags.length + augmentation.tagsOmitted
-          ))
-
-          val content = summaryByUri.get(keep.uriId).map(summary => NewPageContent(
-            summary = NewPageSummary(
-              authors = summary.article.authors,
-              siteName = summary.article.title,
-              publishedAt = summary.article.publishedAt,
-              description = summary.article.description,
-              wordCount = summary.article.wordCount
-            ),
-            history = Seq.empty
-          ))
-
-          val pageInfo = Some(NewPageInfo(content = content, context = context)).filter(_.nonEmpty)
-
-          NewKeepView(keep = keepInfo, page = pageInfo)
+          keepInfo
         }
       }
     }.toMap tap { result =>
       val failures = result.collect { case (kId, LeftSide(fail)) => kId -> fail }
-      if (failures.nonEmpty) slackLog.error(s"When generating keep views for $viewer, ran into errors: " + failures)
+      if (failures.nonEmpty) slackLog.error(s"When generating keep infos for $viewer, ran into errors: " + failures)
+    }
+  }
+
+  private def pageInfoAssemblyHelper(viewer: Option[Id[User]], uriIds: Set[Id[NormalizedURI]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[NormalizedURI], NewPageInfo]] = {
+    val sortedUris = uriIds.toSeq.sorted
+    val (augmentationFut, summaryFut) = {
+      val augmentation = search.augment(
+        viewer,
+        config.showPublishedLibraries,
+        config.numContextualKeeps,
+        config.numContextualKeepers,
+        config.numContextualLibraries,
+        config.numContextualTags,
+        sortedUris.map { uriId => AugmentableItem(uriId) }
+      ).map { contexts =>
+          (sortedUris zip sanitizeContexts(contexts)).toMap
+        }
+
+      val summary = rover.getUriSummaryByUris(uriIds)
+      (augmentation, summary)
+    }
+
+    for {
+      augmentationByUri <- augmentationFut
+      summaryByUri <- summaryFut
+    } yield {
+      sortedUris.flatAugmentWith { uriId =>
+        val context = augmentationByUri.get(uriId).map(augmentation => NewPageContext(
+          numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
+          numTotalKeeps = augmentation.keepsTotal,
+          keepers = augmentation.keepers.flatMap { case (userId, time) => usersById.get(userId) },
+          numVisibleKeepers = augmentation.keepers.length + augmentation.keepersOmitted,
+          numTotalKeepers = augmentation.keepersTotal,
+          libraries = augmentation.libraries.flatMap { case (libId, time, x) => libsById.get(libId) },
+          numVisibleLibraries = augmentation.libraries.length + augmentation.librariesOmitted,
+          numTotalLibraries = augmentation.librariesTotal,
+          tags = augmentation.tags,
+          numVisibleTags = augmentation.tags.length + augmentation.tagsOmitted
+        ))
+
+        val content = summaryByUri.get(uriId).map(summary => NewPageContent(
+          summary = NewPageSummary(
+            authors = summary.article.authors,
+            siteName = summary.article.title,
+            publishedAt = summary.article.publishedAt,
+            description = summary.article.description,
+            wordCount = summary.article.wordCount
+          ),
+          history = Seq.empty
+        ))
+        Some(NewPageInfo(content = content, context = context)).filter(_.nonEmpty)
+      }.toMap
     }
   }
 
