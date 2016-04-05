@@ -27,7 +27,7 @@ class KeepEventCommanderImpl @Inject() (
   def updatedKeepTitle(keepId: Id[Keep], userId: Id[User], oldTitle: Option[String], newTitle: Option[String], source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Unit = {
     val eventData: EditTitle = KeepEventData.EditTitle(userId, oldTitle, newTitle)
     val event = KeepEvent(keepId = keepId, eventData = eventData, eventTime = eventTime.getOrElse(currentDateTime), source = source)
-    eventRepo.save(event)
+    //eventRepo.save(event) // todo(cam): add back in once eliza.message has migrated over
     session.onTransactionSuccess(eliza.saveKeepEvent(keepId, userId, eventData, source))
   }
 
