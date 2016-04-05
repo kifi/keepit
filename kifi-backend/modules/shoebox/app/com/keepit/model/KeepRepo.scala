@@ -50,7 +50,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
-  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]]
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]]
 
   def deactivate(model: Keep)(implicit session: RWSession): Keep
 
@@ -70,7 +70,6 @@ class KeepRepoImpl @Inject() (
     keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
-    basicKeepByIdCache: BasicKeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
@@ -253,7 +252,6 @@ class KeepRepoImpl @Inject() (
   override def deleteCache(keep: Keep)(implicit session: RSession): Unit = {
     keep.id.foreach { keepId =>
       keepByIdCache.remove(KeepIdKey(keepId))
-      basicKeepByIdCache.remove(BasicKeepIdKey(keepId))
     }
     keep.userId.foreach { userId =>
       keepUriUserCache.remove(KeepUriUserKey(keep.uriId, userId))
@@ -266,7 +264,6 @@ class KeepRepoImpl @Inject() (
       deleteCache(keep)
     } else {
       keepByIdCache.set(KeepIdKey(keep.id.get), keep)
-      basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
       keep.userId.foreach { userId =>
         keepUriUserCache.set(KeepUriUserKey(keep.uriId, userId), keep)
         countCache.remove(KeepCountKey(userId))
@@ -332,7 +329,7 @@ class KeepRepoImpl @Inject() (
     activeRows.filter(k => k.uriId === uriId && k.participantsHash === userHash).list.filter(k => k.recipients.users == users && k.recipients.emails == emails)
   }
 
-  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]] = {
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Map[Id[NormalizedURI], Set[Id[Keep]]] = {
     if (uriIds.isEmpty) Map.empty[Id[NormalizedURI], Set[Id[Keep]]]
     else {
       import com.keepit.common.db.slick.StaticQueryFixed.interpolation
@@ -343,7 +340,7 @@ class KeepRepoImpl @Inject() (
         WHERE ktu.state = 'active' AND ktu.user_id = $userId AND ktu.uri_id in #$uriIdSet
       ) UNION (
         SELECT ktl.uri_id, ktl.keep_id FROM keep_to_library ktl INNER JOIN library_membership lm ON ktl.library_id = lm.library_id
-        WHERE ktl.state = 'active' AND lm.state = 'active' AND lm.user_id = $userId AND ktl.uri_id in #$uriIdSet
+        WHERE ktl.state = 'active' AND ktl.uri_id in #$uriIdSet AND lm.state = 'active' AND lm.user_id = $userId #${excludeAccess.map(access => s"AND lm.access != ${access.value}").getOrElse("")}
       );"""
       val uriAndKeepIdsByUriId = q.as[(Id[NormalizedURI], Id[Keep])].list.groupBy(_._1)
       uriIds.map { uriId => uriId -> uriAndKeepIdsByUriId.get(uriId).map(_.map(_._2).toSet).getOrElse(Set.empty) }.toMap

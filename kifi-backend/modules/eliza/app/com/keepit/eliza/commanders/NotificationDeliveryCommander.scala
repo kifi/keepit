@@ -188,8 +188,7 @@ class NotificationDeliveryCommander @Inject() (
       val keeps = uts.map { ut =>
         (ut.keepId, ut.unread, ut.uriId)
       } ++ otherKeeps.collect {
-        case b if !uts.exists(_.keepId == b.id) =>
-          (b.id, false, NormalizedURI.decodePublicId(b.keep.uriId).toOption)
+        case keepId if !uts.exists(_.keepId == keepId) => (keepId, false, utq.onUri)
       }
       val notifJsonsByThreadFut = threadNotifBuilder.buildForKeeps(userId, keeps.map(_._1).toSet)
 

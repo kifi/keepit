@@ -10,7 +10,7 @@ class BatchedNotificationInfos(
     private val users: Map[Id[User], BasicUser],
     private val usersExternal: Map[ExternalId[User], BasicUser],
     private val libraries: Map[Id[Library], LibraryCardInfo],
-    private val keeps: Map[Id[Keep], BasicKeep],
+    private val keeps: Map[Id[Keep], (CrossServiceKeep, Option[SourceAttribution])],
     private val orgs: Map[Id[Organization], BasicOrganization],
     private val summaries: Map[Id[Keep], RoverUriSummary]) {
 
@@ -41,7 +41,7 @@ object NotificationInfoRequest {
   case class RequestUser(id: Id[User]) extends NotificationInfoRequest[User, BasicUser]
   case class RequestUserExternal(id: ExternalId[User]) extends NotificationInfoRequest[User, BasicUser]
   case class RequestLibrary(id: Id[Library]) extends NotificationInfoRequest[Library, LibraryCardInfo]
-  case class RequestKeep(id: Id[Keep]) extends NotificationInfoRequest[Keep, BasicKeep]
+  case class RequestKeep(id: Id[Keep]) extends NotificationInfoRequest[Keep, (CrossServiceKeep, Option[SourceAttribution])]
   case class RequestUriSummary(id: Id[Keep]) extends NotificationInfoRequest[RoverUriSummary, Option[RoverUriSummary]]
   case class RequestOrganization(id: Id[Organization]) extends NotificationInfoRequest[Organization, BasicOrganization]
 
