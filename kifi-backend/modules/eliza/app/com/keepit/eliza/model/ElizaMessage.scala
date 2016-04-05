@@ -114,11 +114,9 @@ object SystemMessageData {
     case _ => None
   }
 
-  def fromKeepEvent(event: KeepEventData): Option[SystemMessageData] = event match {
-    case KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.fromBasicNonUser)))
-    case KeepEventData.AddLibraries(addedBy, addedLibs) => Some(AddLibraries(addedBy, addedLibs))
-    case KeepEventData.EditTitle(addedBy, original, updated) => Some(EditTitle(addedBy, original, updated))
-    case _ => None
+  def fromKeepEvent(event: KeepEventData.EditTitle): Option[SystemMessageData] = {
+    val KeepEventData.EditTitle(editedBy, original, updated) = event
+    Some(EditTitle(editedBy, original, updated))
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {
