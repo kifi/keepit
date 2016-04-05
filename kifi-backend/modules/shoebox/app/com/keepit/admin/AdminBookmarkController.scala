@@ -378,14 +378,13 @@ class AdminBookmarksController @Inject() (
     Ok.chunked(enum)
   }
 
-  def backfillKeepEventRepo(pageSize: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
-    var startWithMessage = Id[Message](53387) // select min(id) from eliza.message where aux_data is not null;
+  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
+    var startWithMessage = fromId
     FutureHelpers.doUntil {
       eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
         if (msgs.isEmpty) true
         else {
-          val (msgsToPersist, lastMessage) = if (msgs.size < pageSize) (msgs, msgs.last) else (msgs.init, msgs.last)
-          msgsToPersist.foreach { msg =>
+          msgs.foreach { msg =>
             val eventData = msg.auxData.get
             slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
             if (!dryRun) {
@@ -398,8 +397,8 @@ class AdminBookmarksController @Inject() (
               db.readWrite(implicit s => keepEventRepo.save(event))
             }
           }
-          startWithMessage = lastMessage.id
-          msgs.size < pageSize
+          startWithMessage = msgs.last.id
+          false
         }
       }
     }
