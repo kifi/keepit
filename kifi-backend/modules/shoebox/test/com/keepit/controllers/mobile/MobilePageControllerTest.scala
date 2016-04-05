@@ -108,58 +108,5 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         actual must matchJson(expected)
       }
     }
-
-    "query extension " in {
-      withDb(mobileControllerTestModules: _*) { implicit injector =>
-        val path = com.keepit.controllers.mobile.routes.MobilePageController.queryExtension().url
-        path === "/m/1/page/extensionQuery"
-
-        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val googleUrl = "http://www.google.com"
-        val (user1, uri) = db.readWrite { implicit s =>
-          val user1 = UserFactory.user().withName("Shanee", "Smith").withId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672").withUsername("test1").saved
-          val user2 = UserFactory.user().withName("Shachaf", "Smith").withId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
-
-          val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
-
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
-
-          val keep1 = KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri).withLibrary(lib1).saved
-          val keep2 = KeepFactory.keep().withUser(user2).withUri(uri).withLibrary(lib1).saved
-
-          val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
-          val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Baking"), createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
-
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll2.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = coll2.id.get))
-
-          val user1933 = UserFactory.user().withName("Paul", "Dirac").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
-          val user1935 = UserFactory.user().withName("James", "Chadwick").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674").withUsername("test1").saved
-          val friends = List(user1933, user1935)
-
-          val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
-          friends.zipWithIndex.foreach { case (friend, i) => userConnRepo.save(UserConnection(user1 = user1.id.get, user2 = friend.id.get, createdAt = now.plusDays(i))) }
-
-          (user1, uri)
-        }
-
-        db.readOnlyMaster { implicit s =>
-          normalizedURIInterner.getByUri(googleUrl) match {
-            case Some(nUri) =>
-              nUri === uri
-            case None =>
-              failure(s"on $googleUrl")
-          }
-        }
-
-        inject[FakeUserActionsHelper].setUser(user1)
-        val request = FakeRequest("POST", path).withBody(Json.obj("url" -> "http://www.google.com"))
-        val result = inject[MobilePageController].queryExtension(0, 1000)(request)
-
-        status(result) must equalTo(OK)
-      }
-    }
   }
 }

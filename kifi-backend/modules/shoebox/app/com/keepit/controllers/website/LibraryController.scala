@@ -26,7 +26,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
-import com.keepit.shoebox.data.keep.KeepInfo
+import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -407,7 +407,7 @@ class LibraryController @Inject() (
           val errors = badKeeps.map {
             case (keep, error) =>
               Json.obj(
-                "keep" -> KeepInfo.fromKeep(keep),
+                "keep" -> PartialKeepInfo.fromKeep(keep),
                 "error" -> error.message
               )
           }
@@ -431,7 +431,7 @@ class LibraryController @Inject() (
           val errors = badKeeps.map {
             case (keep, error) =>
               Json.obj(
-                "keep" -> KeepInfo.fromKeep(keep),
+                "keep" -> PartialKeepInfo.fromKeep(keep),
                 "error" -> error.message
               )
           }
@@ -464,7 +464,7 @@ class LibraryController @Inject() (
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
-              "keep" -> KeepInfo.fromKeep(keep),
+              "keep" -> PartialKeepInfo.fromKeep(keep),
               "error" -> error.message
             )
         }
@@ -491,7 +491,7 @@ class LibraryController @Inject() (
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
-              "keep" -> KeepInfo.fromKeep(keep),
+              "keep" -> PartialKeepInfo.fromKeep(keep),
               "error" -> error.message
             )
         }
@@ -519,7 +519,7 @@ class LibraryController @Inject() (
         keepRepo.pageByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
       val (keeps, failures) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source)
-      val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
+      val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id))
 
       log.info(s"kept ${keeps.size} keeps")
       Ok(Json.obj(

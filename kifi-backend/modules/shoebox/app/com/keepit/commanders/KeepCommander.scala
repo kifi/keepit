@@ -28,7 +28,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
-import com.keepit.shoebox.data.keep.KeepInfo
+import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
 import com.keepit.slack.LibraryToSlackChannelPusher
 import com.keepit.social.{ Author, BasicAuthor }
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
@@ -83,7 +83,7 @@ trait KeepCommander {
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Future[(Keep, Boolean, Option[Message])]
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
-  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[PartialKeepInfo], Seq[String])
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
@@ -101,8 +101,8 @@ trait KeepCommander {
   def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int
 
   // Destroying
-  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
-  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])]
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[PartialKeepInfo], Seq[ExternalId[Keep]])]
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
 
   // Data integrity
@@ -375,7 +375,7 @@ class KeepCommanderImpl @Inject() (
     (keep, isNewKeep)
   }
 
-  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String]) = {
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[PartialKeepInfo], Seq[String]) = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
@@ -384,10 +384,10 @@ class KeepCommanderImpl @Inject() (
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
 
-    (keeps.map(KeepInfo.fromKeep), internResponse.failures.map(_.url))
+    (keeps.map(PartialKeepInfo.fromKeep), internResponse.failures.map(_.url))
   }
 
-  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo] = {
     unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
       case Left(why) => Left(why)
       case Right((Seq(), _)) => Left("keep_not_found")
@@ -395,7 +395,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[PartialKeepInfo], Seq[ExternalId[Keep]])] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
@@ -436,7 +436,7 @@ class KeepCommanderImpl @Inject() (
           (inactivatedKeeps, invalidKeepIds)
         }
 
-        Right((keeps map KeepInfo.fromKeep, invalidKeepIds))
+        Right((keeps map PartialKeepInfo.fromKeep, invalidKeepIds))
       case _ =>
         Left("permission_denied")
     }

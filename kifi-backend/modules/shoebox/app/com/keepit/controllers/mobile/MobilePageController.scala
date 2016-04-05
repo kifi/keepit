@@ -43,40 +43,4 @@ class MobilePageController @Inject() (
     }
   }
 
-  def queryExtension(page: Int, pageSize: Int) = UserAction.async(parse.tolerantJson) { request =>
-
-    val url = (request.body \ "url").as[String]
-    val sortOrder = "user"
-
-    // page details
-    val pageFutures = SafeFuture { pageCommander.getPageDetails(url, request.userId, request.experiments) }
-    // user infos
-    val basicUserFutures = SafeFuture { userCommander.getUserInfo(request.user) }
-    val userAttributeFutures = userCommander.getHelpRankInfo(request.userId)
-    // keeps & collections
-    val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
-    val collectionsFuture = SafeFuture { collectionCommander.allCollections(sortOrder, request.userId) }
-    // friend connections
-    val friendsFuture = SafeFuture { userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize) }
-
-    for {
-      pageInfo <- pageFutures
-      basicUserInfo <- basicUserFutures
-      userAttributionInfo <- userAttributeFutures
-      numKeeps <- numKeepsFuture
-      collections <- collectionsFuture
-      friendConnections <- friendsFuture
-    } yield {
-      val (connectionsPage, total) = friendConnections
-      val friendsJsons = connectionsPage.map {
-        case ConnectionInfo(friend, _, unfriended, unsearched) =>
-          Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
-            "searchFriend" -> unsearched,
-            "unfriended" -> unfriended
-          )
-      }
-      Ok
-    }
-  }
-
 }
