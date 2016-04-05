@@ -6,9 +6,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
-import com.keepit.model.KeepEventSourceKind
-import com.keepit.model.KeepEventData.{ EditTitle, AddLibraries, AddParticipants }
-import com.keepit.model.{ BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{KeepRecipients, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep}
+import com.keepit.model.KeepEventData.{AddRecipients, EditTitle, AddLibraries, AddParticipants}
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
 object KeepActivityGen {
@@ -118,6 +117,24 @@ object KeepActivityGen {
                 author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
                 KeepEventKind.AddLibraries,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", addedElement),
+                body = DescriptionElements(),
+                timestamp = message.sentAt,
+                source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
+              ))
+            case Some(AddRecipients(addedBy, KeepRecipients(addedLibs, addedEmails, addedUsers))) =>
+              if (!userById.contains(addedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $addedBy on keep ${keep.id.get}, message ${message.id}")
+
+              val basicAddedBy = userById.get(addedBy)
+              val basicAddedUsers = addedUsers.flatMap(userById.get)
+              val basicAddedLibs = addedLibs.flatMap(libById.get)
+
+              val addedEntities: Set[DescriptionElement] = Set(basicAddedUsers.map(fromBasicUser), basicAddedLibs.map(fromBasicLibrary), addedEmails.map(e => fromText(e.address))).flatten
+
+              Some(BasicKeepEvent(
+                id = Some(messageId),
+                author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
+                KeepEventKind.AddRecipients,
+                header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", unwordsPretty(addedEntities.toSeq)),
                 body = DescriptionElements(),
                 timestamp = message.sentAt,
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
