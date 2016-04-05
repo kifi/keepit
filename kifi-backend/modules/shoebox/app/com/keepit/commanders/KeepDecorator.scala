@@ -244,7 +244,6 @@ class KeepDecoratorImpl @Inject() (
                 title = keep.title,
                 url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
                 path = bestEffortPath,
-                isPrivate = !ktlsByKeep.getOrElse(keepId, Seq.empty).exists(_.visibility > LibraryVisibility.SECRET),
                 user = keep.userId.flatMap(idToBasicUser.get),
                 author = author,
                 createdAt = Some(getTimestamp(keep)),
@@ -256,9 +255,6 @@ class KeepDecoratorImpl @Inject() (
                 librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
                 librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
                 sources = additionalSourcesByUriId.get(keep.uriId).collect { case sources if sources.nonEmpty => sources.take(5) },
-                collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
-                tags = Some(collsForKeep.toSet), // Used by site
-                hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
                 summary = Some(pageInfoForKeep),
                 siteName = DomainToNameMapper.getNameFromUrl(keep.url),
                 libraryId = keep.lowestLibraryId.map(Library.publicId),
