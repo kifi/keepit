@@ -286,7 +286,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result1: Future[Result] = userController.getSettings()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-        contentAsString(result1) === s"""{"showFollowedLibraries":true}"""
+        contentAsString(result1) === s"""{"showFollowedLibraries":true,"leftHandRailSort":"last_kept_into"}"""
 
         // set settings (showFollowedLibraries to false)
         val request2 = FakeRequest("POST", setPath).withBody(Json.obj("showFollowedLibraries" -> false))
@@ -301,7 +301,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val request3 = FakeRequest("GET", getPath)
         val result3: Future[Result] = userController.getSettings()(request3)
         status(result3) must equalTo(OK)
-        contentAsString(result3) === s"""{"showFollowedLibraries":false}"""
+        contentAsString(result3) === s"""{"showFollowedLibraries":false,"leftHandRailSort":"last_kept_into"}"""
 
         // reset settings (showFollowedLibraries to true)
         val request4 = FakeRequest("POST", setPath).withBody(Json.obj("showFollowedLibraries" -> true))
