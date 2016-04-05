@@ -131,7 +131,7 @@ case class UserNotFoundException(username: Username) extends Exception(username.
 trait UserCommander {
   def userFromUsername(username: Username): Option[User]
   def profile(username: Username, viewer: Option[User]): Option[UserProfile]
-  def setSettings(userId: Id[User], newSettings: UserValueSettings)
+  def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue])
   def updateUserBiography(userId: Id[User], biography: String): Unit
   def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit
   def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User
@@ -224,10 +224,13 @@ class UserCommanderImpl @Inject() (
     }
   }
 
-  def setSettings(userId: Id[User], newSettings: UserValueSettings) = {
+  def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue]) = {
     db.readWrite { implicit s =>
       var settings = userValueRepo.getValue(userId, UserValues.userProfileSettings).as[JsObject]
-      settings = settings ++ UserValueSettings.writeToJson(newSettings).as[JsObject]
+      newSettings.collect {
+        case (UserValueName(name), valueToSet) =>
+          settings = settings ++ Json.obj(name -> valueToSet)
+      }
       userValueRepo.setValue(userId, UserValueName.USER_PROFILE_SETTINGS, settings)
     }
   }

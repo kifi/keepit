@@ -532,8 +532,13 @@ class UserController @Inject() (
   }
 
   def setSettings() = UserAction(parse.tolerantJson) { request =>
-    val settings = UserValueSettings.readFromJsValue(request.body)
-    userCommander.setSettings(request.userId, settings)
+    val showFollowLibrariesOpt = (request.body \ "showFollowedLibraries").asOpt[Boolean]
+    val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
+
+    val newMapping = settingsList.collect {
+      case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
+    }
+    userCommander.setSettings(request.userId, newMapping)
     NoContent
   }
 

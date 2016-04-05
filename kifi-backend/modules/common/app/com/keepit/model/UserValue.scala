@@ -72,6 +72,8 @@ object UserValueName {
   // ↓↓↓↓ This should be combined with preferences. Why does it exist?
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
+  val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
+  val LEFT_HAND_RAIL_SORT = UserValueName("left_hand_rail_sort") // show libraries I follow
   // ↑↑↑↑↑ Should be combined with preferences
 
   // Site user preferences
