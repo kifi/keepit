@@ -16,7 +16,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, LibraryToSlac
 import com.kifi.juggle.BatchProcessingActor
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.Failure
 
 object ShoeboxMessageIngestionActor {
   val shoeboxMessageSeq = Name[SequenceNumber[Message]]("shoebox_message")
@@ -74,16 +74,14 @@ class ShoeboxMessageIngestionActor @Inject() (
               keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
             }
             def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
-              case KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers) =>
+              case KeepEventData.AddRecipients(addedBy, KeepRecipients(addedLibraries, addedNonUsers, addedUsers)) =>
                 val diff = KeepRecipientsDiff(
                   users = DeltaSet.empty.addAll(addedUsers.toSet),
-                  emails = DeltaSet.empty.addAll(addedNonUsers.flatMap(_.asEmailAddress).toSet),
-                  libraries = DeltaSet.empty
+                  emails = DeltaSet.empty.addAll(addedNonUsers.toSet),
+                  libraries = DeltaSet.empty.addAll(addedLibraries.toSet)
                 )
                 keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(addedBy))
-              case KeepEventData.AddLibraries(_, _) =>
               case KeepEventData.EditTitle(_, _, _) =>
-              case _: KeepEventData.AddRecipients =>
             }
 
             // Apply all of the functions in sequence
