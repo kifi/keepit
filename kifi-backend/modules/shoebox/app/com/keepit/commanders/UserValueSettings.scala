@@ -1,10 +1,9 @@
 package com.keepit.commanders
 
-import com.keepit.model.{ UserValueName, LibraryOrdering }
-import com.kifi.macros.json
-import play.api.libs.json.JsValue
+import com.keepit.model.{ LibraryOrdering, UserValueName }
+import play.api.libs.json.{ JsBoolean, JsObject, JsString, JsValue }
 
-@json case class UserValueSettings(showFollowedLibraries: Boolean, leftHandRailSort: LibraryOrdering)
+case class UserValueSettings(showFollowedLibraries: Boolean, leftHandRailSort: LibraryOrdering)
 
 object UserValueSettings {
 
@@ -15,5 +14,12 @@ object UserValueSettings {
     val leftHandRailSort = leftHandRailSortOpt.flatMap(LibraryOrdering.fromStr).getOrElse(LibraryOrdering.LAST_KEPT_INTO)
 
     UserValueSettings(showFollowedLibraries, leftHandRailSort)
+  }
+
+  def writeToJson(settings: UserValueSettings): JsValue = {
+    JsObject(Seq(
+      "showFollowedLibraries" -> JsBoolean(settings.showFollowedLibraries),
+      "leftHandRailSort" -> JsString(settings.leftHandRailSort.value)
+    ))
   }
 }
