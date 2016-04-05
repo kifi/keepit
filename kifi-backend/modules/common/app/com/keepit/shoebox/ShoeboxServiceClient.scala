@@ -46,7 +46,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
-  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
@@ -296,16 +295,6 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
-  }
-
-  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
-    cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
-      val payload = Json.toJson(missingKeys.map(_.id))
-      call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
-        val missing = res.json.as[Map[Id[Keep], BasicKeep]]
-        missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
-      }
-    }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
   }
 
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = {

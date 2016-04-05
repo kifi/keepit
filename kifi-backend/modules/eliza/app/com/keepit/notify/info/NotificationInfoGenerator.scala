@@ -68,10 +68,10 @@ class NotificationInfoGenerator @Inject() (
 
     val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
-    val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
+    val keepsF = shoeboxServiceClient.getCrossServiceKeepsByIds(keepRequests)
     val summaryF = keepsF.flatMap { keeps =>
       val uriIdByKeep = summaryRequests.flatAugmentWith { kId =>
-        keeps.get(kId).flatMap(k => NormalizedURI.decodePublicId(k.uriId).airbrakingOption)
+        keeps.get(kId).map(_.uriId)
       }.toMap
       roverServiceClient.getUriSummaryByUris(uriIdByKeep.values.toSet).map { summaries =>
         uriIdByKeep.flatMapValues(summaries.get)

@@ -441,11 +441,6 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
-  }
-
   def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
