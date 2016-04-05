@@ -302,6 +302,13 @@ class PageCommander @Inject() (
         Left("parse_url_error")
     }
   }
+
+  // Semantically this means:
+  // Find all keeps that are visible to this viewer, on the URI, and that have a (non-strict) SUPERSET of the provided recipients
+  def getVisibleKeepsByUrlAndRecipients(viewer: Option[Id[User]], uriId: Id[NormalizedURI], recipients: KeepRecipients): Future[Set[Id[Keep]]] = {
+    // TODO(ryan): implement this, either by retrieiving it brute-force from shoebox table, OR by leveraging search
+    ???
+  }
 }
 
 case class InferredKeeperPositionKey(id: Id[Domain]) extends Key[JsObject] {
