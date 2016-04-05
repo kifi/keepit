@@ -6,8 +6,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
-import com.keepit.model.{KeepRecipients, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep}
-import com.keepit.model.KeepEventData.{AddRecipients, EditTitle, AddLibraries, AddParticipants}
+import com.keepit.model.{ KeepRecipients, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.KeepEventData.{ AddRecipients, EditTitle, AddLibraries, AddParticipants }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
 object KeepActivityGen {
