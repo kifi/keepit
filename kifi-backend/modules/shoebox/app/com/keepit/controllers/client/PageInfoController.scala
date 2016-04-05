@@ -43,28 +43,36 @@ class PageInfoController @Inject() (
     uriOpt.fold(Future.successful(NewKeepInfosForPage.empty)) { uriId =>
       for {
         keepSet <- pageCommander.getVisibleKeepsByUrlAndRecipients(viewer, uriId, recipients)
-        pageInfo <- keepInfoAssembler.assemblePageInfos(viewer, url)
-        validKeepInfos <- keepInfoAssembler.assembleKeepViews(viewer, keepSet).map(_.flatMapValues(_.getRight))
+        pageInfo <- keepInfoAssembler.assemblePageInfos(viewer, Set(uriId)).map(_.get(uriId))
+        validKeepInfos <- keepInfoAssembler.assembleKeepInfos(viewer, keepSet).map(_.flatMapValues(_.getRight))
       } yield {
         NewKeepInfosForPage(
-          pageInfo,
-          validKeepInfos.traverseByKey
+          page = pageInfo,
+          keeps = validKeepInfos.traverseByKey
         )
       }
     }
   }
-  def getKeepsByUri(url: String) = MaybeUserAction { implicit request =>
-    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY)
+  def getKeepsByUri(url: String) = MaybeUserAction.async { implicit request =>
+    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY).map { infosForPage =>
+      Ok(Json.toJson(infosForPage))
+    }
   }
-  def getKeepsByUriAndLibrary(url: String, libPubId: PublicId[Library]) = MaybeUserAction { implicit request =>
+  def getKeepsByUriAndLibrary(url: String, libPubId: PublicId[Library]) = MaybeUserAction.async { implicit request =>
     val libId = Library.decodePublicId(libPubId).get
-    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusLibrary(libId))
+    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusLibrary(libId)).map { infosForPage =>
+      Ok(Json.toJson(infosForPage))
+    }
   }
-  def getKeepsByUriAndUser(url: String, userExtId: ExternalId[User]) = MaybeUserAction { implicit request =>
+  def getKeepsByUriAndUser(url: String, userExtId: ExternalId[User]) = MaybeUserAction.async { implicit request =>
     val userId = db.readOnlyMaster { implicit s => userRepo.convertExternalId(userExtId) }
-    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusUser(userId))
+    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusUser(userId)).map { infosForPage =>
+      Ok(Json.toJson(infosForPage))
+    }
   }
-  def getKeepsByUriAndEmail(url: String, email: EmailAddress) = MaybeUserAction { implicit request =>
-    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusEmailAddress(email))
+  def getKeepsByUriAndEmail(url: String, email: EmailAddress) = MaybeUserAction.async { implicit request =>
+    getKeepInfosForPage(request.userIdOpt, url, KeepRecipients.EMPTY.plusEmailAddress(email)).map { infosForPage =>
+      Ok(Json.toJson(infosForPage))
+    }
   }
 }

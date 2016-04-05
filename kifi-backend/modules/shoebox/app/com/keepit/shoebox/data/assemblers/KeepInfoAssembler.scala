@@ -113,7 +113,7 @@ class KeepInfoAssemblerImpl @Inject() (
     }
   }
 
-  private def keepViewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
+  private def keepViewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
     val keepsById = keepsAndConnections.keepsById
     for {
       keepInfosByKeep <- keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
@@ -121,7 +121,7 @@ class KeepInfoAssemblerImpl @Inject() (
     } yield {
       keepsById.map {
         case (kId, keep) =>
-          val keepInfoOrFail = keepInfosByKeep.getOrElse(kId, RightBias.left(KeepFail.KEEP_NOT_FOUND))
+          val keepInfoOrFail = keepInfosByKeep.getOrElse(kId, RightBias.left(KeepFail.KEEP_NOT_FOUND: KeepFail))
           val pageInfo = pageInfosByUri.get(keep.uriId)
           kId -> keepInfoOrFail.map { keepInfo => NewKeepView(keep = keepInfo, page = pageInfo) }
       }
@@ -136,13 +136,6 @@ class KeepInfoAssemblerImpl @Inject() (
 
     val sourceInfoFut = db.readOnlyReplicaAsync { implicit s =>
       keepSourceCommander.getSourceAttributionForKeeps(keepSet)
-    }
-    val libInfoFut = db.readOnlyReplicaAsync { implicit s =>
-      val basicLibById = {
-        val libSet = ktlsByKeep.values.flatMap(_.map(_.libraryId)).toSet
-        basicLibGen.getBasicLibraries(libSet)
-      }
-      basicLibById
     }
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
@@ -170,17 +163,14 @@ class KeepInfoAssemblerImpl @Inject() (
 
     for {
       sourceByKeep <- sourceInfoFut
-      libsById <- libInfoFut
       imagesByKeep <- imageInfoFut
       permissionsByKeep <- permissionsFut
       activityByKeep <- activityFut
     } yield {
-      val usersById = db.readOnlyMaster { implicit s =>
-        val userSet = SetHelpers.unions(Seq(
-          ktusByKeep.values.flatMap(_.map(_.userId)).toSet,
-          augmentationByUri.values.flatMap(_.keepers.map(_._1)).toSet
-        ))
-        basicUserRepo.loadAllActive(userSet)
+      val (usersById, libsById) = db.readOnlyMaster { implicit s =>
+        val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet
+        val libSet = ktlsByKeep.values.flatMap(_.map(_.libraryId)).toSet
+        (basicUserRepo.loadAllActive(userSet), basicLibGen.getBasicLibraries(libSet))
       }
       keepSet.toSeq.augmentWith { keepId =>
         for {
@@ -244,6 +234,11 @@ class KeepInfoAssemblerImpl @Inject() (
       augmentationByUri <- augmentationFut
       summaryByUri <- summaryFut
     } yield {
+      val (usersById, libsById) = db.readOnlyMaster { implicit s =>
+        val userSet = augmentationByUri.values.flatMap(_.keepers.map(_._1)).toSet
+        val libSet = augmentationByUri.values.flatMap(_.libraries.map(_._1)).toSet
+        (basicUserRepo.loadAllActive(userSet), basicLibGen.getBasicLibraries(libSet))
+      }
       sortedUris.flatAugmentWith { uriId =>
         val context = augmentationByUri.get(uriId).map(augmentation => NewPageContext(
           numVisibleKeeps = augmentation.keeps.length + augmentation.keepsOmitted,
