@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
-  '$scope', '$rootElement', '$analytics', '$rootScope', '$document', 'profileService', 'libraryService',
+  '$scope', '$rootElement', '$analytics', '$rootScope', '$document', 'installService', 'profileService', 'libraryService',
   '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS', '$window', 'extensionLiaison',
   function (
-    $scope, $rootElement, $analytics, $rootScope, $document, profileService, libraryService,
+    $scope, $rootElement, $analytics, $rootScope, $document, installService, profileService, libraryService,
     $location, util, KEY, modalService, $timeout, $state, mobileOS, $window, extensionLiaison) {
 
-    $scope.hasExtension = !!$window.document.documentElement.getAttribute('data-kifi-ext');
+    $scope.showExtensionInstall = !installService.installedVersion && installService.canInstall;
+    $scope.hasExtension = !!installService.installedVersion;
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
 
@@ -26,6 +27,14 @@ angular.module('kifi')
 
     $scope.viewGuide = function() {
       extensionLiaison.triggerGuide();
+    };
+
+    $scope.triggerExtensionInstall = function () {
+      installService.triggerInstall(function () {
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
+      });
     };
 
     $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');

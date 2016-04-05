@@ -50,6 +50,9 @@ angular.module('kifi')
               IconURL: '/extensions/firefox/kifi.png'
             }
           });
+        } else if (isSafari && supported) {
+          var win = $window.open('https://safari-extensions.apple.com/details/?id=com.fortytwo.kifi-V4GCE6T8A5', '_blank');
+          win.focus();
         } else {
           $window.location.href = '/unsupported';
         }
