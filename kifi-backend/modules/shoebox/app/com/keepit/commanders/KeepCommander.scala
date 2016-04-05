@@ -79,8 +79,8 @@ trait KeepCommander {
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
-  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId]
-  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[Keep]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[Keep]
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Map[Id[NormalizedURI], Set[Keep]]
 
   // Creating
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
@@ -275,30 +275,19 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[BasicKeepWithId] = {
-    val keepIds = db.readOnlyReplica { implicit session =>
-      val libs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
-      val libKeeps = ktlRepo.getByLibraryIdsAndUriIds(libs, Set(nUriId)).map(l => (l.addedAt, l.keepId))
-      val userKeeps = ktuRepo.getByUserIdAndUriIds(userId, Set(nUriId)).map(u => (u.addedAt, u.keepId))
-      // Not efficient to load this all in memory, but saves a lot of complexity
-      val allKids = (libKeeps ++ userKeeps).sortBy(_._1)(implicitly[Ordering[DateTime]].reverse)
-      val filtered = beforeDate match {
-        case Some(date) => allKids.filter(_._1.isBefore(date))
-        case None => allKids
-      }
-      filtered.take(limit).map(_._2)
+  def getRelevantKeepsByUserAndUri(userId: Id[User], nUriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Seq[Keep] = {
+    val personalKeeps = getPersonalKeepsOnUris(userId, Set(nUriId), excludeAccess = Some(LibraryAccess.READ_ONLY)).getOrElse(nUriId, Set.empty)
+    val sorted = personalKeeps.toSeq.sortBy(_.keptAt)(implicitly[Ordering[DateTime]].reverse)
+    val filtered = beforeDate match {
+      case Some(date) => sorted.filter(_.keptAt.isBefore(date))
+      case None => sorted
     }
-
-    val basicKeeps = basicKeepCache.bulkGetOrElse(keepIds.toSet.map(BasicKeepIdKey)) { missingKeys =>
-      getBasicKeeps(missingKeys.map(_.id)).map { case (k, v) => BasicKeepIdKey(k) -> v }
-    }.map(s => s._1.id -> s._2)
-
-    keepIds.flatMap { kId => basicKeeps.get(kId).map(BasicKeepWithId(kId, _)) }
+    filtered.take(limit)
   }
 
-  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[Keep]] = {
+  def getPersonalKeepsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]], excludeAccess: Option[LibraryAccess] = None): Map[Id[NormalizedURI], Set[Keep]] = {
     db.readOnlyMaster { implicit session =>
-      val keepIdsByUriIds = keepRepo.getPersonalKeepsOnUris(userId, uriIds)
+      val keepIdsByUriIds = keepRepo.getPersonalKeepsOnUris(userId, uriIds, excludeAccess)
       val keepsById = keepRepo.getByIds(keepIdsByUriIds.values.flatten.toSet)
       keepIdsByUriIds.map { case (uriId, keepIds) => uriId -> keepIds.flatMap(keepsById.get) }
     }

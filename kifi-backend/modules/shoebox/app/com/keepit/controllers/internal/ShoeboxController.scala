@@ -600,7 +600,8 @@ class ShoeboxController @Inject() (
     val beforeDate = (request.body \ "before").asOpt[DateTime]
     val limit = (request.body \ "limit").as[Int]
     val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId, beforeDate, limit)
-    Ok(Json.toJson(keeps))
+    val keepIds = keeps.map(_.id.get)
+    Ok(Json.toJson(keepIds))
   }
 
   def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>
