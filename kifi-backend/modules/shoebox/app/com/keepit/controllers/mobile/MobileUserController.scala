@@ -269,13 +269,8 @@ class MobileUserController @Inject() (
   }
 
   def setSettings() = UserAction(parse.tolerantJson) { request =>
-    val showFollowLibrariesOpt = (request.body \ "showFollowedLibraries").asOpt[Boolean]
-    val settingsList = Map(UserValueName.SHOW_FOLLOWED_LIBRARIES -> showFollowLibrariesOpt)
-
-    val newMapping = settingsList.collect {
-      case (userVal, Some(optionVal)) => userVal -> Json.toJson(optionVal)
-    }
-    userCommander.setSettings(request.userId, newMapping)
+    val settings = UserValueSettings.readFromJsValue(request.body)
+    userCommander.setSettings(request.userId, settings)
     NoContent
   }
 

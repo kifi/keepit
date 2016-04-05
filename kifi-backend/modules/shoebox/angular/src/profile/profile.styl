@@ -277,6 +277,15 @@ input.profile-last-name
   margin-bottom: 8px
   cursor: pointer
 
+.profile-lhr-lib-sort-label
+  cursor: pointer
+
+  &:hover
+    .profile-lhr-lib-sort-radio-check
+      background-color: #f5f5f5
+    .profile-lhr-lib-sort-option-text
+      color: darkBlueColor
+
 .profile-manage-label
   cursor: pointer
 
@@ -286,9 +295,11 @@ input.profile-last-name
     .profile-settings-option-text
       color: darkBlueColor
 
+.profile-lhr-lib-sort-input
 .profile-manage-input
   display: none
 
+.profile-lhr-lib-sort-radio-check
 .profile-manage-radio-check
   float: left
   width: 12px
@@ -311,14 +322,15 @@ input.profile-last-name
     border-radius: 50%
     content: ' '
 
+.profile-lhr-lib-sort-input.profile-lhr-lib-sort-input:checked ~ .profile-lhr-lib-sort-radio-check:after
 .profile-manage-input.profile-manage-input:checked ~ .profile-manage-radio-check:after
   display: block
   left: 2px
 
+.profile-lhr-lib-sort-option-text
 .profile-settings-option-text
   position: relative
   top: -2px
-
 
 .profile-setting-arrow
   position: relative
