@@ -231,10 +231,10 @@ object CrossServiceKeepAndTags {
   implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
-case class CrossServiceKeepRecipients(id: Id[Keep], recipients: KeepRecipients)
+case class CrossServiceKeepRecipients(id: Id[Keep], owner: Option[Id[User]], recipients: KeepRecipients)
 object CrossServiceKeepRecipients {
   implicit val format = Json.format[CrossServiceKeepRecipients]
-  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.recipients)
+  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.userId, keep.recipients)
 }
 
 // All the important parts of a Keep to send across services

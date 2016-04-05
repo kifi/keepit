@@ -91,7 +91,7 @@ class AugmentationCommanderImpl @Inject() (
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     if (shards.isEmpty) Future.successful(ItemAugmentationResponse.empty)
     else {
-      val ItemAugmentationRequest(items, context, showPublishedLibraries) = itemAugmentationRequest
+      val ItemAugmentationRequest(items, context, showOtherPublishedKeeps) = itemAugmentationRequest
 
       // todo(Léo): clean up these sets to avoid back and forth conversions between typed Ids and Long
 
@@ -106,7 +106,7 @@ class AugmentationCommanderImpl @Inject() (
         restrictedUsers <- futureRestrictedUsers
         libraries <- futureLibraries
         organizations <- futureOrganizations
-        allAugmentationInfos <- getAugmentationInfos(shards, users, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, showPublishedLibraries.exists(identity))
+        allAugmentationInfos <- getAugmentationInfos(shards, users, restrictedUsers, libraries, organizations, items ++ context.corpus.keySet, showOtherPublishedKeeps.exists(identity))
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -116,7 +116,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], users: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], showPublishedLibraries: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], users: Set[Id[User]], restrictedUsers: Set[Id[User]], libraries: Set[Id[Library]], organizations: Set[Id[Organization]], items: Set[AugmentableItem], showOtherPublishedKeeps: Boolean): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(users.map(_.id))
     val restrictedUserIdFilter = LongArraySet.fromSet(restrictedUsers.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraries.map(_.id))
@@ -126,7 +126,7 @@ class AugmentationCommanderImpl @Inject() (
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val librarySearcher = libraryIndexer.getSearcher
-          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, userIdFilter, restrictedUserIdFilter, libraryIdFilter, organizationIdFilter, showPublishedLibraries)(item) }.toMap
+          itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, librarySearcher, userIdFilter, restrictedUserIdFilter, libraryIdFilter, organizationIdFilter, showOtherPublishedKeeps)(item) }.toMap
         }
     }.toSeq
     Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
@@ -139,9 +139,9 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, restrictedUserIdFilter: LongArraySet, libraryIdFilter: LongArraySet, organizationIdFilter: LongArraySet, showPublishedLibraries: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
+  private def getAugmentationInfo(keepSearcher: Searcher, librarySearcher: Searcher, userIdFilter: LongArraySet, restrictedUserIdFilter: LongArraySet, libraryIdFilter: LongArraySet, organizationIdFilter: LongArraySet, showOtherPublishedKeeps: Boolean)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
-    val keeps = new ListBuffer[RestrictedKeepInfo]()
+    val keeps = new ListBuffer[KeepDocument]()
     var otherPublishedKeeps = 0
     var otherDiscoverableKeeps = 0
     // todo(Léo, Yasu): This won't scale with very popular pages, will have to implement something like HyperLogLog counting
@@ -168,12 +168,12 @@ class AugmentationCommanderImpl @Inject() (
         Some(Id(userId))
       }
 
-      @inline def getAndCountLibraryId(libraryId: Long): Option[Id[Library]] = if (libraryId < 0) None else {
+      @inline def getAndCountLibraryId(libraryId: Long): Set[Id[Library]] = if (libraryId < 0) Set.empty else {
         uniqueLibraries += libraryId
-        Some(Id(libraryId))
+        Set(Id(libraryId))
       }
 
-      @inline def getOrganizationId(orgId: Long): Option[Id[Organization]] = if (orgId < 0) None else Some(Id(orgId))
+      @inline def getOrganizationId(orgId: Long): Set[Id[Organization]] = if (orgId < 0) Set.empty else Set(Id(orgId))
 
       if (docs != null) {
         var docId = docs.nextDoc()
@@ -187,30 +187,36 @@ class AugmentationCommanderImpl @Inject() (
 
           if (item.keepId.isDefined && item.keepId.get.id == keepId) { // canonical keep, get note
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), record.note, record.tags)
+            val userIdOpt = getAndCountUserId(userId)
+            keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, getAndCountLibraryId(libraryId), getOrganizationId(orgId), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+            val userIdOpt = getAndCountUserId(userId)
+            keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, getAndCountLibraryId(libraryId), getOrganizationId(orgId), None, record.tags)
           } else if (organizationIdFilter.findIndex(orgId) >= 0) visibility match { // kept in my organizations
             case PUBLISHED | ORGANIZATION =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+              val userIdOpt = getAndCountUserId(userId)
+              keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, getAndCountLibraryId(libraryId), getOrganizationId(orgId), None, record.tags)
             case SECRET | DISCOVERABLE => // ignore
           }
           else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+              val userIdOpt = getAndCountUserId(userId)
+              keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, getAndCountLibraryId(libraryId), getOrganizationId(orgId), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
-              keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, None, None, getAndCountUserId(userId), None, Set.empty)
+              val userIdOpt = getAndCountUserId(userId)
+              keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, Set.empty, Set.empty, None, Set.empty)
             case SECRET | ORGANIZATION => // ignore
           }
           else if (restrictedUserIdFilter.findIndex(userId) < 0) visibility match { // kept by others
             case PUBLISHED =>
-              if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
+              if (showOtherPublishedKeeps && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, getAndCountLibraryId(libraryId), getOrganizationId(orgId), getAndCountUserId(userId), None, record.tags)
+                val userIdOpt = getAndCountUserId(userId)
+                keeps += KeepDocument(Id[Keep](keepId), record.keptAt, userIdOpt, userIdOpt.toSet, getAndCountLibraryId(libraryId), getOrganizationId(orgId), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }
@@ -234,13 +240,12 @@ class AugmentationCommanderImpl @Inject() (
 
     weightedAugmentationInfos.foreach {
       case (info, weight) =>
-        (info.keeps).foreach {
-          case RestrictedKeepInfo(_, _, _, libraryIdOpt, _, userIdOpt, _, tags) =>
-            libraryIdOpt.foreach { libraryId => libraryScores(libraryId) = libraryScores(libraryId) + weight }
-            userIdOpt.foreach { userId => userScores(userId) = userScores(userId) + weight }
-            tags.foreach { tag =>
-              tagScores(tag) = tagScores(tag) + weight
-            }
+        (info.keeps).foreach { keep =>
+          keep.libraries.foreach { libraryId => libraryScores(libraryId) = libraryScores(libraryId) + weight }
+          keep.owner.foreach { ownerId => userScores(ownerId) = userScores(ownerId) + weight }
+          keep.tags.foreach { tag =>
+            tagScores(tag) = tagScores(tag) + weight
+          }
         }
     }
     AugmentationScores(libraryScores.toMap, userScores.toMap, tagScores.toMap)

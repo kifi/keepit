@@ -28,7 +28,7 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.common.db.{ Id }
 import com.keepit.common.core._
 import com.keepit.search.controllers.website.WebsiteSearchController._
-import com.keepit.search.augmentation.{ RestrictedKeepInfo, AugmentedItem, AugmentationCommander }
+import com.keepit.search.augmentation.{ KeepDocument, AugmentedItem, AugmentationCommander }
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.common.json
 
@@ -68,17 +68,25 @@ class WebsiteSearchController @Inject() (
         shoeboxClient.getKeepImages(keepIds.toSet)
       }
 
-      val (futureBasicKeeps, futureLibrariesWithWriteAccess) = {
+      val (futurePersonalKeeps, futurePersonalKeepRecipients, futureLibrariesWithWriteAccess) = {
         if (userId == SearchControllerUtil.nonUser) {
-          (Future.successful(Map.empty[Id[NormalizedURI], Set[PersonalKeep]].withDefaultValue(Set.empty)), Future.successful(Set.empty[Id[Library]]))
+          (
+            Future.successful(Map.empty[Id[NormalizedURI], Set[PersonalKeep]].withDefaultValue(Set.empty)),
+            Future.successful(Map.empty[Id[NormalizedURI], Set[CrossServiceKeepRecipients]].withDefaultValue(Set.empty)),
+            Future.successful(Set.empty[Id[Library]])
+          )
         } else {
-          (shoeboxClient.getPersonalKeeps(userId, uriIds.toSet), shoeboxClient.getLibrariesWithWriteAccess(userId))
+          (
+            shoeboxClient.getPersonalKeeps(userId, uriIds.toSet),
+            shoeboxClient.getPersonalKeepRecipientsOnUris(userId, uriIds.toSet),
+            shoeboxClient.getLibrariesWithWriteAccess(userId)
+          )
         }
       }
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
         val librarySearcher = libraryIndexer.getSearcher
-        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, futureBasicKeeps, futureLibrariesWithWriteAccess, userId, maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, futurePersonalKeepRecipients, futurePersonalKeeps, futureLibrariesWithWriteAccess, userId, maxKeepsShown, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
         val futureJsHits = for {
           summaries <- futureUriSummaries
@@ -133,7 +141,8 @@ class WebsiteSearchController @Inject() (
 
   private def writesAugmentationFields(
     librarySearcher: Searcher,
-    futureBasicKeeps: Future[Map[Id[NormalizedURI], Set[PersonalKeep]]],
+    futurePersonalKeepRecipients: Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]],
+    futurePersonalKeeps: Future[Map[Id[NormalizedURI], Set[PersonalKeep]]],
     futureLibrariesWithWriteAccess: Future[Set[Id[Library]]],
     userId: Id[User],
     maxKeepsShown: Int,
@@ -150,10 +159,10 @@ class WebsiteSearchController @Inject() (
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers).flatten
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries).flatten
 
-    val userIds = ((allKeepsShown.flatMap(_.keptBy) ++ allKeepersShown.map(_._1) ++ allLibrariesShown.map(_._2)).toSet - userId).toSeq
+    val userIds = ((allKeepsShown.flatMap(_.owner) ++ allKeepersShown.map(_._1) ++ allLibrariesShown.map(_._2)).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, (allKeepsShown.flatMap(_.keptIn) ++ allLibrariesShown.map(_._1)).toSet)
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, (allKeepsShown.flatMap(_.libraries) ++ allLibrariesShown.map(_._1)).toSet)
 
     val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
     val libraryIndexById = libraryIds.zipWithIndex.toMap
@@ -181,34 +190,44 @@ class WebsiteSearchController @Inject() (
     }
 
     val futureAugmentationFields = for {
-      basicKeeps <- futureBasicKeeps
+      personalKeepsByUriId <- futurePersonalKeeps
+      personalKeepRecipientsByUriId <- futurePersonalKeepRecipients
       librariesWithWriteAccess <- futureLibrariesWithWriteAccess
       sourceAttributionByKeepId <- futureKeepSources
       usersById <- futureUsers
     } yield {
-      val allBasicKeeps = augmentedItems.map(item => basicKeeps.getOrElse(item.uri, Set.empty))
-      (augmentedItems, limitedAugmentationInfos, allBasicKeeps).zipped.map {
-        case (augmentedItem, limitedInfo, keeps) =>
+      val allPersonalKeeps = augmentedItems.map(item => personalKeepsByUriId.getOrElse(item.uri, Set.empty))
+      val allPersonalKeepRecipients = augmentedItems.map(item => personalKeepRecipientsByUriId.getOrElse(item.uri, Set.empty))
+      (augmentedItems, limitedAugmentationInfos, (allPersonalKeeps zip allPersonalKeepRecipients)).zipped.map {
+        case (augmentedItem, limitedInfo, (personalKeeps, personalKeepRecipients)) =>
 
-          def doShowKeeper(keeperId: Id[User]): Boolean = { keeperId != userId || keeps.nonEmpty } // ensuring consistency of keepers shown with the user's latest database data (race condition)
-          val keepersIndices = limitedInfo.keepers.collect { case (keeperId, _) if doShowKeeper(keeperId) => userIndexById(keeperId) }
-
-          def doShowLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries shown with the user's latest database data (race condition)
-            lazy val publicId = Library.publicId(libraryId)
-            libraryIndexById.contains(libraryId) && (!librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId))
+          def shouldHideKeeper(keeperId: Id[User]): Boolean = { // ensuring consistency of keepers shown with the user's latest database data (race condition)
+            !userIndexById.contains(keeperId) || (keeperId == userId && !personalKeepRecipients.exists(_.owner.contains(userId)))
           }
+
+          def shouldHideLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries shown with the user's latest database data (race condition)
+            !libraryIndexById.contains(libraryId) || (librariesWithWriteAccess.contains(libraryId) && !personalKeepRecipients.exists(_.recipients.libraries.contains(libraryId)))
+          }
+
+          def shouldHideLibraryOrKeeper(libraryId: Id[Library], keeperId: Id[User]): Boolean = shouldHideLibrary(libraryId) || shouldHideKeeper(keeperId)
+
+          def shouldHideKeep(keep: KeepDocument): Boolean = { // ensuring consistency of keeps shown with the user's latest database data (race condition)
+            (keep.users.contains(userId) || keep.libraries.exists(librariesWithWriteAccess.contains)) && !personalKeepRecipients.exists(_.id == keep.id)
+          }
+
+          val keepersIndices = limitedInfo.keepers.collect { case (keeperId, _) if !shouldHideKeeper(keeperId) => userIndexById(keeperId) }
           val librariesIndices = limitedInfo.libraries.collect {
-            case (libraryId, keeperId, _) if doShowLibrary(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
+            case (libraryId, keeperId, _) if !shouldHideLibraryOrKeeper(libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
           }.flatten
 
           val (libraryId, keeperId, keptAt, note) = limitedInfo.keep match {
-            case Some(RestrictedKeepInfo(_, _, keptAt, library, _, keeper, note, _)) if !library.exists(!doShowLibrary(_)) =>
-              (library, keeper, Some(keptAt), note) // canonical keep
+            case Some(keep) if !shouldHideKeep(keep) && keep.owner.exists(!shouldHideKeeper(_)) && keep.libraries.exists(!shouldHideLibrary(_)) =>
+              (keep.libraries.find(!shouldHideLibrary(_)), keep.owner, Some(keep.keptAt), keep.note) // canonical keep
             case _ => limitedInfo.libraries.collectFirst {
-              case (library, keeper, keptAt) if doShowLibrary(library) =>
-                (Some(library), Some(keeper), Some(keptAt), None) // first accessible keep
+              case (libraryId, keeperId, keptAt) if !shouldHideLibraryOrKeeper(libraryId, keeperId) =>
+                (Some(libraryId), Some(keeperId), Some(keptAt), None) // first accessible keep
             } orElse {
-              limitedInfo.keepers.headOption.map { case (keeper, keptAt) => (None, Some(keeper), Some(keptAt), None) } // first discoverable keep
+              limitedInfo.keepers.collectFirst { case (keeper, keptAt) if !shouldHideKeeper(keeper) => (None, Some(keeper), Some(keptAt), None) } // first discoverable keep
             } getOrElse (None, None, None, None)
           }
 
@@ -227,7 +246,7 @@ class WebsiteSearchController @Inject() (
             "note" -> note,
             "source" -> source.map(SourceAttribution.externalWrites.writes),
             "sources" -> sources.map(SourceAttribution.externalWrites.writes),
-            "keeps" -> keeps,
+            "keeps" -> personalKeeps,
             "keepers" -> keepersIndices,
             "keepersOmitted" -> limitedInfo.keepersOmitted,
             "keepersTotal" -> limitedInfo.keepersTotal,
