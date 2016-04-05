@@ -15,6 +15,7 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.social.{ BasicAuthor, BasicUser }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import play.api.libs.json.{ Json, JsObject }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -68,6 +69,11 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
         activity.events.size === 5
         activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders :+ "Benjamin Button started a discussion on this page")
+
+        val jsActivity = Json.toJson(activity)
+
+        val jsTimestamp = ((jsActivity \ "events").as[Seq[JsObject]].head \ "timestamp").asOpt[Long]
+        jsTimestamp must beSome(activity.events.head.timestamp.getMillis)
 
         val initialKeepEvent = activity.events.last
         initialKeepEvent.author === BasicAuthor.fromUser(basicUser)

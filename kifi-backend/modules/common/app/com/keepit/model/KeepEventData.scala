@@ -3,10 +3,8 @@ package com.keepit.model
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.json.EnumFormat
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
-import com.keepit.common.time._
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.social.{ BasicAuthor, BasicNonUser }

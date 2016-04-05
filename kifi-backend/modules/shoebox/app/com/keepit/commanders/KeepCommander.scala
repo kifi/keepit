@@ -1,20 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
-import com.keepit.common.{ json, CollectionHelpers }
+import com.keepit.commanders.gen.BasicOrganizationGen
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
@@ -23,7 +22,6 @@ import com.keepit.common.util.RightBias
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
-import com.keepit.model.KeepEventData.EditTitle
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
