@@ -656,7 +656,7 @@ class KeepCommanderImpl @Inject() (
       val suggestedTags = {
         val restrictedKeeps = response.infos(item).keeps.toSet
         val safeTags = restrictedKeeps.flatMap {
-          case myKeep if myKeep.keptBy.contains(userId) => myKeep.tags
+          case myKeep if myKeep.owner.contains(userId) => myKeep.tags
           case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
         }
         val validTags = safeTags.filterNot(tag => existingNormalizedTags.contains(tag.normalized))

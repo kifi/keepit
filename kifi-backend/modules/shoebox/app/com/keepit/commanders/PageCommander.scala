@@ -230,7 +230,7 @@ class PageCommander @Inject() (
   private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
-      showPublishedLibraries = true,
+      showOtherPublishedKeeps = true,
       maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,
       maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit

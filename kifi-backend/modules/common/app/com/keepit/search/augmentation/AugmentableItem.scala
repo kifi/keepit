@@ -1,10 +1,11 @@
 package com.keepit.search.augmentation
 
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
+import play.api.libs.functional.syntax._
 
 case class AugmentableItem(uri: Id[NormalizedURI], keepId: Option[Id[Keep]] = None)
 
@@ -19,13 +20,33 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: Id[Keep], externalId: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], organizationId: Option[Id[Organization]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+case class KeepDocument(
+  id: Id[Keep],
+  keptAt: DateTime,
+  owner: Option[Id[User]],
+  users: Set[Id[User]],
+  libraries: Set[Id[Library]],
+  organizations: Set[Id[Organization]],
+  note: Option[String],
+  tags: Set[Hashtag])
 
-object RestrictedKeepInfo {
-  implicit val format = Json.format[RestrictedKeepInfo]
+object KeepDocument {
+  val format = Json.format[KeepDocument]
+  val ownerReads = ((__ \ 'owner).readNullable[Id[User]] orElse (__ \ 'keptBy).readNullable[Id[User]])
+  val transitionReads: Reads[KeepDocument] = (
+    (__ \ 'id).read[Id[Keep]] and
+    (__ \ 'keptAt).read[DateTime] and
+    ownerReads and
+    ((__ \ 'users).read[Set[Id[User]]] orElse ownerReads.map(_.toSet)) and
+    ((__ \ 'libraries).read[Set[Id[Library]]] orElse (__ \ 'keptIn).readNullable[Id[Library]].map(_.toSet)) and
+    ((__ \ 'organizations).read[Set[Id[Organization]]] orElse Reads.pure(Set.empty[Id[Organization]])) and
+    (__ \ 'note).readNullable[String] and
+    (__ \ 'tags).read[Set[Hashtag]]
+  )(KeepDocument.apply _)
+  implicit val transitionFormat = Format(transitionReads, format)
 }
 
-case class FullAugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
+case class FullAugmentationInfo(keeps: Seq[KeepDocument], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
 object FullAugmentationInfo {
   implicit val format = Json.format[FullAugmentationInfo]
 }
@@ -65,7 +86,7 @@ object AugmentationScores {
   val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showPublishedLibraries: Option[Boolean] = None)
+case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showOtherPublishedKeeps: Option[Boolean] = None)
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]
@@ -85,8 +106,8 @@ object ItemAugmentationResponse {
 
 // todo(Léo): reconsider keeps, include sources
 case class LimitedAugmentationInfo(
-  keep: Option[RestrictedKeepInfo],
-  keeps: Seq[RestrictedKeepInfo],
+  keep: Option[KeepDocument],
+  keeps: Seq[KeepDocument],
   keepsOmitted: Int,
   keepsTotal: Int,
   keepers: Seq[(Id[User], DateTime)],
