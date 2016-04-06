@@ -511,48 +511,47 @@ class KeepRepoImpl @Inject() (
     LIMIT $offset, $limit
     """.as[Keep].list
   }
+
   def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]] = {
     import KeepQuery._
+    type Rows = Query[KeepTable, Keep, Seq]
     val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
-    activeRows |> { rs =>
-      // Actually perform the query
-      query.target match {
-        case ForLibrary(targetLib) =>
-          for {
-            k <- rs
-            ktl <- ktlRows
-            if k.id === ktl.keepId &&
-              ktl.libraryId === targetLib
-          } yield k
-      }
-    } |> { rs => // then filter down to sortable rows
-      query.fromId.fold(rs) { fromId =>
-        val fromKeep = get(fromId)
-        arrangement.ordering match {
-          case KeepOrdering.LAST_ACTIVITY_AT =>
-            val fromTime = fromKeep.lastActivityAt
-            arrangement.direction match {
-              case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
-              case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
-            }
-          case KeepOrdering.KEPT_AT =>
-            val fromTime = fromKeep.keptAt
-            arrangement.direction match {
-              case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
-              case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
-            }
-        }
-      }
-    } |> { rs => // actually sort them
-      arrangement match {
-        case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.lastActivityAt asc, r.id asc))
-        case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.lastActivityAt desc, r.id desc))
-        case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
-        case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
-      }
-    } |> { rs => // then page through the results
-      rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
+
+    def filterByTarget(rs: Rows): Rows = query.target match {
+      case ForLibrary(targetLib) =>
+        for {
+          k <- rs
+          ktl <- ktlRows
+          if k.id === ktl.keepId &&
+            ktl.libraryId === targetLib
+        } yield k
     }
+    def filterByTime(rs: Rows): Rows = query.fromId.fold(rs) { fromId =>
+      val fromKeep = get(fromId)
+      arrangement.ordering match {
+        case KeepOrdering.LAST_ACTIVITY_AT =>
+          val fromTime = fromKeep.lastActivityAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
+          }
+        case KeepOrdering.KEPT_AT =>
+          val fromTime = fromKeep.keptAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
+          }
+      }
+    }
+    def orderByTime(rs: Rows): Rows = arrangement match {
+      case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.lastActivityAt asc, r.id asc))
+      case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.lastActivityAt desc, r.id desc))
+      case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
+      case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
+    }
+    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
+
+    activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
