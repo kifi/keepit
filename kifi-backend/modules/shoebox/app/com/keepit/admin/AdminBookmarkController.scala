@@ -336,7 +336,7 @@ class AdminBookmarksController @Inject() (
     val chunkSize = 100
     val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
     val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
-      val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
+      val (discussionKeeps, otherKeeps) = keeps.partition(keep => keep.source == KeepSource.discussion || keep.recipients.libraries.isEmpty)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
@@ -378,30 +378,31 @@ class AdminBookmarksController @Inject() (
     Ok.chunked(enum)
   }
 
-  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
+  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction.async { implicit request =>
     var startWithMessage = fromId
     FutureHelpers.doUntil {
       eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
         if (msgs.isEmpty) true
         else {
           msgs.foreach { msg =>
-            val eventData = msg.auxData.get
-            slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
-            if (!dryRun) {
-              val event = KeepEvent(
-                keepId = msg.keep,
-                eventData = eventData,
-                eventTime = msg.sentAt,
-                source = KeepEventSourceKind.fromMessageSource(msg.source)
-              )
-              db.readWrite(implicit s => keepEventRepo.save(event))
+            if (msg.auxData.isEmpty) slackLog.info(s"keep ${msg.keep}, msg ${msg.id} has no data")
+            msg.auxData.foreach { eventData =>
+              slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
+              if (!dryRun) {
+                val event = KeepEvent(
+                  keepId = msg.keep,
+                  eventData = eventData,
+                  eventTime = msg.sentAt,
+                  source = KeepEventSourceKind.fromMessageSource(msg.source)
+                )
+                db.readWrite(implicit s => keepEventRepo.save(event))
+              }
             }
           }
           startWithMessage = msgs.last.id
           false
         }
       }
-    }
-    NoContent
+    }.map(_ => NoContent)
   }
 }
