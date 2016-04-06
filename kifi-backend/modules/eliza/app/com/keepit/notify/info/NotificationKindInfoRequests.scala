@@ -1,17 +1,15 @@
 package com.keepit.notify.info
 
-import com.keepit.common.store.{S3ImageConfig, ImageSize}
-import com.keepit.common.strings._
-
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
+import com.keepit.common.store.{StaticImageUrls, ImageSize, S3ImageConfig}
+import com.keepit.common.strings._
 import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
-import com.keepit.model.{LibraryPermission, SourceAttribution, SlackAttribution, Keep, LibraryAccess, NotificationCategory}
+import com.keepit.model.{Keep, LibraryAccess, LibraryPermission, NotificationCategory, SlackAttribution}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
-import com.keepit.social.{BasicAuthor, ImageUrls}
+import com.keepit.social.BasicAuthor
 import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.json.Json
 
@@ -176,7 +174,7 @@ class NotificationKindInfoRequests @Inject()(
 
       StandardNotificationInfo(
         url = library.path.absolute,
-        image = PublicImage(library.image.map(_.path.getUrl).getOrElse(ImageUrls.KIFI_LOGO)),
+        image = PublicImage(library.image.map(_.path.getUrl).getOrElse(StaticImageUrls.KIFI_LOGO)),
         title = body,
         body = body,
         linkText = "Go to library",

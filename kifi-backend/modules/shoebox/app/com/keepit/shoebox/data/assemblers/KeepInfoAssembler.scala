@@ -140,7 +140,7 @@ class KeepInfoAssemblerImpl @Inject() (
     val imageInfoFut = keepImageCommander.getBestImagesForKeepsPatiently(keepSet, ScaleImageRequest(config.idealImageSize)).map { keepImageByKeep =>
       keepImageByKeep.collect {
         case (keepId, Some(keepImage)) => keepId -> NewKeepImageInfo(
-          path = keepImage.imagePath,
+          url = keepImage.imagePath.getImageUrl,
           dimensions = keepImage.dimensions
         )
       }
