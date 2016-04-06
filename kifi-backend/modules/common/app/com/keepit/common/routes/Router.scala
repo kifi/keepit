@@ -164,7 +164,6 @@ object Shoebox extends Service {
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
-    def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
     def getCrossServiceKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getCrossServiceKeepsByIds")
     def getDiscussionKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getDiscussionKeepsByIds")
     def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
@@ -278,6 +277,7 @@ object Eliza extends Service {
 
     def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
     def saveKeepEvent = ServiceRoute(POST, "/internal/eliza/saveKeepEvent")
+    def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
     def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")

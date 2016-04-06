@@ -41,6 +41,9 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
 
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
+
+  //migration
+  def pageSystemMessages(fromId: Id[ElizaMessage], pageSize: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -208,6 +211,10 @@ class MessageRepoImpl @Inject() (
 
   def getForKeepsBySequenceNumber(keepIds: Set[Id[Keep]], seq: SequenceNumber[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage] = {
     rows.filter(msg => msg.keepId.inSet(keepIds) && msg.seq > seq).sortBy(_.seq).list
+  }
+
+  def pageSystemMessages(fromId: Id[ElizaMessage], pageSize: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    activeRows.filter(msg => msg.auxData.isDefined && msg.id > fromId).sortBy(_.id asc).take(pageSize).list
   }
 
   /**

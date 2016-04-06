@@ -230,7 +230,7 @@ class PageCommander @Inject() (
   private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
-      showPublishedLibraries = true,
+      showOtherPublishedKeeps = true,
       maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,
       maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit
@@ -301,6 +301,13 @@ class PageCommander @Inject() (
         log.error(s"Error parsing url: $url", e)
         Left("parse_url_error")
     }
+  }
+
+  // Semantically this means:
+  // Find all keeps that are visible to this viewer, on the URI, and that have a (non-strict) SUPERSET of the provided recipients
+  def getVisibleKeepsByUrlAndRecipients(viewer: Option[Id[User]], uriId: Id[NormalizedURI], recipients: KeepRecipients): Future[Set[Id[Keep]]] = {
+    // TODO(ryan): implement this, either by retrieiving it brute-force from shoebox table, OR by leveraging search
+    ???
   }
 }
 

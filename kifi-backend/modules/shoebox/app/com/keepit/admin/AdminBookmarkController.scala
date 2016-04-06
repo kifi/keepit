@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -11,6 +11,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
@@ -50,6 +51,7 @@ class AdminBookmarksController @Inject() (
   rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
+  keepEventRepo: KeepEventRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
@@ -65,11 +67,11 @@ class AdminBookmarksController @Inject() (
       val user = bookmark.userId.map(userRepo.get)
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
-      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
+      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getImageUrl))
       val libraryOpt = bookmark.lowestLibraryId.map { opt => libraryRepo.get(opt) }
 
       keywordsFut.map { keywords =>
-        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
+        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.fold("")(_.value), "", keywords, libraryOpt))
       }
     }
   }
@@ -290,7 +292,7 @@ class AdminBookmarksController @Inject() (
     val chunkSize = 100
     val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
     val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
-      val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
+      val (discussionKeeps, otherKeeps) = keeps.partition(keep => keep.source == KeepSource.discussion || (keep.isActive && keep.recipients.libraries.isEmpty))
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
@@ -330,5 +332,33 @@ class AdminBookmarksController @Inject() (
       }
     }
     Ok.chunked(enum)
+  }
+
+  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction.async { implicit request =>
+    var startWithMessage = fromId
+    FutureHelpers.doUntil {
+      eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
+        if (msgs.isEmpty) true
+        else {
+          msgs.foreach { msg =>
+            if (msg.auxData.isEmpty) slackLog.info(s"keep ${msg.keep}, msg ${msg.id} has no data")
+            msg.auxData.foreach { eventData =>
+              if (!dryRun) {
+                val event = KeepEvent(
+                  keepId = msg.keep,
+                  eventData = eventData,
+                  eventTime = msg.sentAt,
+                  source = KeepEventSourceKind.fromMessageSource(msg.source)
+                )
+                db.readWrite(implicit s => keepEventRepo.save(event))
+              }
+            }
+          }
+          slackLog.info(s"messages ${msgs.map(_.id).minMaxOpt}")
+          startWithMessage = msgs.last.id
+          false
+        }
+      }
+    }.map(_ => NoContent)
   }
 }

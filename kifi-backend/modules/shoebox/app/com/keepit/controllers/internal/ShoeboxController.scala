@@ -441,11 +441,6 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
-  }
-
   def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
@@ -605,7 +600,8 @@ class ShoeboxController @Inject() (
     val beforeDate = (request.body \ "before").asOpt[DateTime]
     val limit = (request.body \ "limit").as[Int]
     val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId, beforeDate, limit)
-    Ok(Json.toJson(keeps))
+    val keepIds = keeps.map(_.id.get)
+    Ok(Json.toJson(keepIds))
   }
 
   def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>

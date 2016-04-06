@@ -10,12 +10,11 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.time._
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
-import com.keepit.model.KeepEventData.{AddLibraries, AddParticipants}
+import com.keepit.model.KeepEventData.AddRecipients
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
-import com.keepit.social.BasicNonUser
 import org.joda.time.DateTime
 import play.api.libs.json.{JsArray, JsObject}
 
@@ -111,11 +110,9 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   )
 
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
-    val events: Stream[KeepEventData] = Stream(AddParticipants(editor, newUsers.toSeq, Seq.empty) -> newUsers.nonEmpty, AddLibraries(editor, newLibraries) -> newLibraries.nonEmpty).collect {
-      case (event, true) => event
-    }
-    val msgs = events.map(crossServiceMessageFromEvent(keepId, _, source))
-    keepEvents += (keepId -> (keepEvents(keepId) ++ msgs))
+    val event = AddRecipients(editor, KeepRecipients(newLibraries, emails = Set.empty, newUsers))
+    val msg = crossServiceMessageFromEvent(keepId, event, source)
+    keepEvents += (keepId -> (keepEvents(keepId) :+ msg))
     Future.successful(Set.empty)
   }
   def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
@@ -125,10 +122,12 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     }.toMap
     Future.successful(activityByKeepId)
   }
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData, source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
     keepEvents += (keepId -> (keepEvents(keepId) :+ crossServiceMessageFromEvent(keepId, event, source)))
     Future.successful(())
   }
+
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = ???
 
 
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = Future.successful(Map.empty)

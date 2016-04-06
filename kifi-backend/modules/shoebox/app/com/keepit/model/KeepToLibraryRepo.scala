@@ -112,7 +112,7 @@ class KeepToLibraryRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
 
-  private def activeRows = rows.filter(_.state === KeepToLibraryStates.ACTIVE)
+  def activeRows = rows.filter(_.state === KeepToLibraryStates.ACTIVE)
   def allActive(implicit session: RSession): Seq[KeepToLibrary] = activeRows.list
 
   private def getByKeepIdsHelper(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {

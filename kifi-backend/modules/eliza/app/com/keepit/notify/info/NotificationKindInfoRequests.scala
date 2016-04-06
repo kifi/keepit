@@ -1,17 +1,15 @@
 package com.keepit.notify.info
 
-import com.keepit.common.store.{S3ImageConfig, ImageSize}
-import com.keepit.common.strings._
-
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
+import com.keepit.common.store.{StaticImageUrls, ImageSize, S3ImageConfig}
+import com.keepit.common.strings._
 import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
-import com.keepit.model.{LibraryPermission, SourceAttribution, SlackAttribution, Keep, LibraryAccess, NotificationCategory}
+import com.keepit.model.{Keep, LibraryAccess, LibraryPermission, NotificationCategory, SlackAttribution}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
-import com.keepit.social.ImageUrls
+import com.keepit.social.BasicAuthor
 import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.json.Json
 
@@ -110,13 +108,14 @@ class NotificationKindInfoRequests @Inject()(
     RequestingNotificationInfos(Requests(
       RequestLibrary(event.libraryId), RequestKeep(event.keepId), RequestUriSummary(event.keepId)
     )) { batched =>
-      val newKeep = RequestKeep(event.keepId).lookup(batched)
+      val (newKeep, newKeepSourceOpt) = RequestKeep(event.keepId).lookup(batched)
       val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
       val summaryOpt = RequestUriSummary(event.keepId).lookup(batched)
-      val author = newKeep.author
+      val ownerOpt = newKeep.owner.map(ownerId => RequestUser(ownerId).lookup(batched))
+      val author = (ownerOpt.map(BasicAuthor.fromUser) orElse newKeepSourceOpt.map(BasicAuthor.fromSource)).get // should be safe right?
+      val slackAttributionOpt = newKeepSourceOpt.collect { case s: SlackAttribution => s }
 
       val body = {
-        val slackAttributionOpt = newKeep.attribution
         val displayTitle = if (TwitterHandle.fromTweetUrl(newKeep.url).nonEmpty) {
           summaryOpt.flatMap(_.article.description.map(_.abbreviate(256))).orElse(newKeep.title)
         } else newKeep.title
@@ -146,7 +145,7 @@ class NotificationKindInfoRequests @Inject()(
           "keep" -> Json.obj(
             "id" -> newKeep.id,
             "url" -> newKeep.url,
-            "attr" -> newKeep.attribution
+            "attr" -> slackAttributionOpt // maintaining current behavior, but should this include any type of attribution?
           ),
           "uriSummary" -> summaryOpt.map { summary =>
             val image = summary.images.get(ImageSize(65, 95))
@@ -175,7 +174,7 @@ class NotificationKindInfoRequests @Inject()(
 
       StandardNotificationInfo(
         url = library.path.absolute,
-        image = PublicImage(library.image.map(_.path.getUrl).getOrElse(ImageUrls.KIFI_LOGO)),
+        image = PublicImage(library.image.map(_.path.getUrl).getOrElse(StaticImageUrls.KIFI_LOGO)),
         title = body,
         body = body,
         linkText = "Go to library",

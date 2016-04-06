@@ -124,6 +124,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]]
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]]
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
@@ -138,7 +139,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData, source: Option[KeepEventSourceKind]): Future[Unit]
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit]
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]]
@@ -424,11 +425,16 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData, source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
     import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
     val request = Request(keepId, userId, event)
     call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
   }
+
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = {
+    call(Eliza.internal.pageSystemMessages(fromId, pageSize)).map(_.json.as[Seq[CrossServiceMessage]])
+  }
+
 }
 
 object ElizaServiceClient {
@@ -526,7 +532,7 @@ object ElizaServiceClient {
   }
 
   object SaveKeepEvent {
-    case class Request(keepId: Id[Keep], userId: Id[User], event: KeepEventData)
+    case class Request(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle)
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }

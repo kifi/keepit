@@ -571,7 +571,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
     val changedKeepsAndTags = changedKeeps.map { keep =>
-      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+      val libraryRecipients = keep.recipients.libraries.map { libraryId =>
+        val library = allLibraries(libraryId)
+        CrossServiceKeep.LibraryInfo(libraryId, library.visibility, library.organizationId, keep.userId)
+      }
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, keep.recipients.users, keep.recipients.emails, libraryRecipients), source = None, tagsByChangedKeep(keep.id.get))
     }
     Future.successful(changedKeepsAndTags)
   }
@@ -677,8 +681,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
 
-  def getBasicKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = Future.successful(Map.empty)
-
   def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
     ids.map(id => id -> CrossServiceKeep(
       id = id,
@@ -692,6 +694,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = "http://www.kifi.com",
       uriId = Id[NormalizedURI](1),
       keptAt = currentDateTime.minusHours(10),
+      lastActivityAt = currentDateTime.minusHours(10),
       title = Some("Kifi!"),
       note = Some("is great")
     )).toMap
@@ -706,7 +709,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = Future.successful(Seq.empty)
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], beforeDate: Option[DateTime], limit: Int): Future[Seq[Id[Keep]]] = Future.successful(Seq.empty)
   def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = Future.successful {
     val userLibraryIds = allLibraryMemberships.values.collect { case lm if lm.userId == userId => lm.libraryId }.toSet
     val personalKeeps = allBookmarks.values.filter(keep => keep.recipients.users.contains(userId) || keep.recipients.libraries.exists(userLibraryIds.contains)).toSet
@@ -728,6 +731,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = url,
       uriId = uriId,
       keptAt = currentDateTime,
+      lastActivityAt = currentDateTime,
       title = title,
       note = note
     ))

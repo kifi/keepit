@@ -68,10 +68,11 @@ class NotificationInfoGenerator @Inject() (
 
     val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
-    val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
+    val keepsF = shoeboxServiceClient.getCrossServiceKeepsByIds(keepRequests)
+    val sourcesF = keepsF.flatMap { keepsById => shoeboxServiceClient.getSourceAttributionForKeeps(keepsById.keySet) }
     val summaryF = keepsF.flatMap { keeps =>
       val uriIdByKeep = summaryRequests.flatAugmentWith { kId =>
-        keeps.get(kId).flatMap(k => NormalizedURI.decodePublicId(k.uriId).airbrakingOption)
+        keeps.get(kId).map(_.uriId)
       }.toMap
       roverServiceClient.getUriSummaryByUris(uriIdByKeep.values.toSet).map { summaries =>
         uriIdByKeep.flatMapValues(summaries.get)
@@ -87,18 +88,20 @@ class NotificationInfoGenerator @Inject() (
     val batchedInfosF = for {
       libById <- libsF
       orgById <- orgsF
-      keepByid <- keepsF
+      keepsById <- keepsF
       userIdByExternalId <- userIdByExternalIdFut
-      userIds = userRequests ++ userIdByExternalId.values.toSet
+      userIds = userRequests ++ userIdByExternalId.values.toSet ++ keepsById.values.flatMap(_.owner)
       userById <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
       userByExternalId = userIdByExternalId.mapValues(userById.get(_).get)
       summariesById <- summaryF
+      sourceByKeepId <- sourcesF
     } yield {
+      val keepAndSourceById = keepsById.map { case (keepId, keep) => keepId -> (keep, sourceByKeepId.get(keepId)) }
       new BatchedNotificationInfos(
         userById,
         userByExternalId,
         libById,
-        keepByid,
+        keepAndSourceById,
         orgById,
         summariesById
       )

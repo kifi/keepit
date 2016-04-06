@@ -3,7 +3,7 @@ package com.keepit.shoebox.data.keep
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.path.Path
-import com.keepit.common.store.{ ImageSize, ImagePath }
+import com.keepit.common.store.{ ImageUrl, ImageSize, ImagePath }
 import com.keepit.model._
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
@@ -31,7 +31,7 @@ object NewKeepInfo {
 }
 
 final case class NewKeepImageInfo(
-  path: ImagePath,
+  url: ImageUrl,
   dimensions: ImageSize)
 
 object NewKeepImageInfo {
