@@ -802,10 +802,16 @@ class KeepCommanderImpl @Inject() (
       val mergeableKeeps = similarKeeps.filter(keep.isOlderThan)
       log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
       if (mergeableKeeps.nonEmpty) {
-        mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(keep, k) // todo: Handle notes! You can't just combine tags!
+        mergeableKeeps.flatMap { k =>
+          val oldTags = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
+          val newNote = Hashtags.addTagsToString(k.note.getOrElse(""), oldTags.toSeq)
+          val allTags = Hashtags.findAllHashtagNames(newNote)
+          keep.userId.map { uid =>
+            syncTagsToNoteAndSaveKeep(uid, k, allTags.toSeq, freshTag = false)._2
+          }
+        }.flatten.foreach { c =>
+          Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
         }
-        collectionCommander.deactivateKeepTags(keep)
 
         val migratedKeep = keepRepo.deactivate(keep.withUriId(newUri.id.get))
         ktlCommander.syncAndDeleteKeep(migratedKeep)
@@ -814,12 +820,24 @@ class KeepCommanderImpl @Inject() (
       } else {
         val soonToBeDeadKeeps = similarKeeps.filter(_.isOlderThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
+        val oldTags = soonToBeDeadKeeps.flatMap { k =>
+          Hashtags.findAllHashtagNames(k.note.getOrElse(""))
+        }
+        val newNote = Hashtags.addTagsToString(keep.note.getOrElse(""), oldTags.toSeq)
+        val allTags = Hashtags.findAllHashtagNames(newNote)
+        val notedKeep = keep.userId.map { uid =>
+          val (notedKeep, colls) = syncTagsToNoteAndSaveKeep(uid, keep, allTags.toSeq, freshTag = false)
+          colls.foreach { c =>
+            Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
+          }
+          notedKeep
+        }.getOrElse(keep.withNote(Some(newNote).filter(_.nonEmpty)))
+
         soonToBeDeadKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
           deactivateKeep(k)
         }
 
-        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
+        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, notedKeep.withUriId(newUri.id.get)))
         ktlCommander.syncKeep(newKeep)
         ktuCommander.syncKeep(newKeep)
         kteCommander.syncKeep(newKeep)
@@ -832,7 +850,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     kteCommander.removeKeepFromAllEmails(keep)
     keepSourceRepo.deactivateByKeepId(keep.id.get)
-    collectionCommander.deactivateKeepTags(keep)
+    keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
     keepRepo.deactivate(keep)
   }
 
@@ -865,18 +883,17 @@ class KeepCommanderImpl @Inject() (
     )
     currentKeeps match {
       case existingKeep +: _ =>
-        combineTags(k.id.get, existingKeep.id.get)
+        combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(k.id.get, existingKeep.id.get)
         Left(LibraryError.AlreadyExistsInDest)
       case _ =>
         val copied = persistKeep(newKeep)
-        combineTags(k.id.get, copied.id.get)
+        combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(k.id.get, copied.id.get)
         Right(copied)
     }
   }
 
   // combine tag info on both keeps & saves difference on the new Keep
-  private def combineTags(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
-    // todo: Awwww crud, this doesn't edit note
+  private def combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
     val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
     val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
     val tagsToAdd = oldSet.diff(existingSet)

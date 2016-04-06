@@ -16,13 +16,11 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
-POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
 POST    /admin/bookmarks/reprocessNotes @com.keepit.controllers.admin.AdminBookmarksController.reprocessNotesOfKeeps(appendTagsToNote: Boolean)
 POST    /admin/bookmarks/replaceTags @com.keepit.controllers.admin.AdminBookmarksController.replaceTagOnKeeps()
 POST    /admin/bookmarks/removeTag  @com.keepit.controllers.admin.AdminBookmarksController.removeTagFromKeeps()
 DELETE  /admin/bookmarks/emptyLibrary @com.keepit.controllers.admin.AdminBookmarksController.deleteAllKeepsFromLibrary()
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
-DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
 POST    /admin/bookmarks/reattributeKeeps             @com.keepit.controllers.admin.AdminBookmarksController.reattributeKeeps(author: String, userId: Option[Long] ?= None, overwriteExistingOwner: Boolean ?= false, doIt: Boolean ?= false)
 POST    /admin/bookmarks/backfillKifiAttribution      @com.keepit.controllers.admin.AdminBookmarksController.backfillKifiSourceAttribution(startFrom: Option[Long] ?= None, limit: Int, dryRun: Boolean ?= true)

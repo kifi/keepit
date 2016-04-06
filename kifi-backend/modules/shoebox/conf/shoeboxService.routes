@@ -414,10 +414,6 @@ POST    /site/collections/delete    @com.keepit.controllers.website.KeepsControl
 POST    /site/collections/rename    @com.keepit.controllers.website.KeepsController.renameCollectionByTag()
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
-# Legacy:
-POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/rename @com.keepit.controllers.website.KeepsController.renameCollection(id: ExternalId[Collection])
-
 # Profile pages
 GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.UserProfileController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")

@@ -42,7 +42,6 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
-  collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
@@ -195,25 +194,6 @@ class AdminBookmarksController @Inject() (
         }
         Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
     }
-  }
-
-  def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndName(userId, Hashtag(tagName))
-    } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.unknown).build
-      collectionCommander.deleteCollection(coll)
-      NoContent
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
-    }
-  }
-
-  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = AdminUserAction {
-    db.readWrite { implicit session =>
-      keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
-    }
-    Ok
   }
 
   def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
