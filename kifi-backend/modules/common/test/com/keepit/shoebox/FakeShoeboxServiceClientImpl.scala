@@ -690,6 +690,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = "http://www.kifi.com",
       uriId = Id[NormalizedURI](1),
       keptAt = currentDateTime.minusHours(10),
+      lastActivityAt = currentDateTime.minusHours(5),
       title = Some("Kifi!"),
       note = Some("is great")
     )).toMap
@@ -726,6 +727,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = url,
       uriId = uriId,
       keptAt = currentDateTime,
+      lastActivityAt = currentDateTime,
       title = title,
       note = note
     ))
