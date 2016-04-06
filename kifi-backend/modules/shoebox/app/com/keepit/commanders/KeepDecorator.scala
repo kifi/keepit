@@ -3,7 +3,7 @@ package com.keepit.commanders
 import java.util.concurrent.TimeoutException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.gen.{ KeepActivityGen, BasicOrganizationGen }
+import com.keepit.commanders.gen.{ BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -11,11 +11,10 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ SlackLog, Logging }
+import com.keepit.common.logging.{ Logging, SlackLog }
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageStore, ImageSize, S3ImageConfig }
-import com.keepit.model._
+import com.keepit.common.store.{ ImageSize, S3ImageConfig, S3ImageStore }
 import com.keepit.common.util.Ord.dateTimeOrdering
 import com.keepit.discussion.{ CrossServiceKeepActivity, Discussion }
 import com.keepit.eliza.ElizaServiceClient
@@ -23,11 +22,12 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
-import com.keepit.shoebox.data.keep.{ KeepInfo, BasicLibraryWithKeptAt }
-import com.keepit.slack.models.{ SlackTeamId, SlackTeamRepo }
-import com.keepit.social.{ ImageUrls, BasicAuthor, BasicUser }
-import com.keepit.slack.{ SlackInfoCommander, InhouseSlackChannel, InhouseSlackClient }
+import com.keepit.shoebox.data.keep.{ BasicLibraryWithKeptAt, KeepInfo }
+import com.keepit.slack.models.SlackTeamId
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, SlackInfoCommander }
+import com.keepit.social.BasicAuthor
 import org.joda.time.DateTime
+
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
