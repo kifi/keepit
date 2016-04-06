@@ -385,16 +385,19 @@ class AdminBookmarksController @Inject() (
         if (msgs.isEmpty) true
         else {
           msgs.foreach { msg =>
-            if (msg.auxData.isEmpty) slackLog.info(s"keep ${msg.keep}, msg ${msg.id} has no data")
             msg.auxData.foreach { eventData =>
               if (!dryRun) {
                 val event = KeepEvent(
+                  state = if (msg.isDeleted) KeepEventStates.INACTIVE else KeepEventStates.ACTIVE,
                   keepId = msg.keep,
                   eventData = eventData,
                   eventTime = msg.sentAt,
-                  source = KeepEventSourceKind.fromMessageSource(msg.source)
+                  source = KeepEventSourceKind.fromMessageSource(msg.source),
+                  messageId = Some(msg.id)
                 )
-                db.readWrite(implicit s => keepEventRepo.save(event))
+                Try(db.readWrite(implicit s => keepEventRepo.save(event))).failed.map {
+                  case t: Throwable => slackLog.warn(s"failed on keep ${msg.keep}, msg ${msg.id}, reason ${t.getMessage}")
+                }
               }
             }
           }
