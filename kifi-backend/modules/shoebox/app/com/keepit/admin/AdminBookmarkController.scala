@@ -387,7 +387,6 @@ class AdminBookmarksController @Inject() (
           msgs.foreach { msg =>
             if (msg.auxData.isEmpty) slackLog.info(s"keep ${msg.keep}, msg ${msg.id} has no data")
             msg.auxData.foreach { eventData =>
-              slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
               if (!dryRun) {
                 val event = KeepEvent(
                   keepId = msg.keep,
@@ -399,6 +398,7 @@ class AdminBookmarksController @Inject() (
               }
             }
           }
+          slackLog.info(s"messages ${msgs.map(_.id).minMaxOpt}")
           startWithMessage = msgs.last.id
           false
         }
