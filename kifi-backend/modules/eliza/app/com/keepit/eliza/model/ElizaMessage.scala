@@ -102,11 +102,7 @@ object SystemMessageData {
   }
 
   def toKeepEvent(data: SystemMessageData): Option[KeepEventData] = data match {
-    case StartWithEmails(addedBy, addedUsers, addedNonUsers) =>
-      val emails = addedNonUsers.collect {
-        case NonUserEmailParticipant(email) => email
-      }.toSet
-      Some(KeepEventData.AddRecipients(addedBy, KeepRecipients(libraries = Set.empty, emails, addedUsers.toSet)))
+    case StartWithEmails(addedBy, addedUsers, addedNonUsers) => None
     case AddParticipants(addedBy, addedUsers, addedNonUsers) =>
       val emails = addedNonUsers.collect {
         case NonUserEmailParticipant(email) => email
