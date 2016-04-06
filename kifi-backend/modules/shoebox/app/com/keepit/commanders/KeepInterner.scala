@@ -49,7 +49,7 @@ object KeepInternRequest {
       author = Author.KifiUser(keeper),
       url = url,
       source = source,
-      attribution = RawKifiAttribution(keptBy = keeper, source = source, connections = recipients),
+      attribution = RawKifiAttribution(keptBy = keeper, source = source, connections = recipients.plusUser(keeper)),
       title = title,
       note = note,
       keptAt = keptAt,

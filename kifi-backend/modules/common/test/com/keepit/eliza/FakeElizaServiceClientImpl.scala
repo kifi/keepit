@@ -6,11 +6,12 @@ import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.ServiceType
+import com.keepit.common.util.DeltaSet
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.time._
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
-import com.keepit.model.KeepEventData.AddRecipients
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
@@ -110,7 +111,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   )
 
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
-    val event = AddRecipients(editor, KeepRecipients(newLibraries, emails = Set.empty, newUsers))
+    val event = ModifyRecipients(editor, KeepRecipientsDiff(users = DeltaSet.empty.addAll(newUsers), libraries = DeltaSet.empty.addAll(newLibraries), emails = DeltaSet.empty))
     val msg = crossServiceMessageFromEvent(keepId, event, source)
     keepEvents += (keepId -> (keepEvents(keepId) :+ msg))
     Future.successful(Set.empty)

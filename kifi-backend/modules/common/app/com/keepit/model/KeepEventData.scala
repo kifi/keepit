@@ -18,7 +18,7 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
   case object Comment extends KeepEventKind("comment")
   case object EditTitle extends KeepEventKind("edit_title")
-  case object AddRecipients extends KeepEventKind("add_recipients")
+  case object ModifyRecipients extends KeepEventKind("modify_recipients")
 
   val all = _all
   def contains(str: String) = all.exists(_.value == str)
@@ -62,20 +62,21 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
 object KeepEventData {
-  @json case class AddRecipients(addedBy: Id[User], keepRecipients: KeepRecipients) extends KeepEventData(KeepEventKind.AddRecipients)
+  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
+  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case KeepEventKind.AddRecipients => Json.reads[AddRecipients].reads(js)
+          case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
           case KeepEventKind.Initial | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
       case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
-      case ar: AddRecipients => Json.writes[AddRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddRecipients.value)
+      case ar: ModifyRecipients => Json.writes[ModifyRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
