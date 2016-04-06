@@ -1,7 +1,8 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.{ KeepOrdering, KeepQuery, LibraryMetadataCache, LibraryMetadataKey }
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -67,7 +68,7 @@ class KeepRepoImpl @Inject() (
     val clock: Clock,
     libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
-    keepToLibraryRepo: KeepToLibraryRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
     keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
@@ -75,6 +76,7 @@ class KeepRepoImpl @Inject() (
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
+  private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -510,21 +512,46 @@ class KeepRepoImpl @Inject() (
     """.as[Keep].list
   }
   def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val orderingStr = query.arrangement.getOrElse(KeepQuery.Arrangement.GLOBAL_DEFAULT) match {
-      case KeepQuery.Arrangement(KeepOrdering.LAST_ACTIVITY_AT, dir) => s"ORDER BY k.last_activity_at ${dir.value}, k.id ${dir.value}"
-      case KeepQuery.Arrangement(KeepOrdering.KEPT_AT, dir) => s"ORDER BY k.kept_at ${dir.value}, k.id ${dir.value}"
-    }
-    query.target match {
-      case KeepQuery.ForLibrary(libId) =>
-        sql"""
-        SELECT k.id
-        FROM bookmark k INNER JOIN keep_to_library ktl ON ktl.keep_id = k.id
-        WHERE k.state = 'active' AND ktl.state = 'active'
-          AND ktl.library_id = $libId
-        ORDER BY #$orderingStr
-        LIMIT ${query.offset.value}, ${query.limit.value}
-        """.as[Id[Keep]].list
+    import KeepQuery._
+    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+    activeRows |> { rs =>
+      // Actually perform the query
+      query.target match {
+        case ForLibrary(targetLib) =>
+          for {
+            k <- rs
+            ktl <- ktlRows
+            if k.id === ktl.keepId &&
+              ktl.libraryId === targetLib
+          } yield k
+      }
+    } |> { rs => // then filter down to sortable rows
+      query.fromId.fold(rs) { fromId =>
+        val fromKeep = get(fromId)
+        arrangement.ordering match {
+          case KeepOrdering.LAST_ACTIVITY_AT =>
+            val fromTime = fromKeep.lastActivityAt
+            arrangement.direction match {
+              case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
+              case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
+            }
+          case KeepOrdering.KEPT_AT =>
+            val fromTime = fromKeep.keptAt
+            arrangement.direction match {
+              case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
+              case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
+            }
+        }
+      }
+    } |> { rs => // actually sort them
+      arrangement match {
+        case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.lastActivityAt asc, r.id asc))
+        case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.lastActivityAt desc, r.id desc))
+        case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
+        case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
+      }
+    } |> { rs => // then page through the results
+      rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
     }
   }
 
