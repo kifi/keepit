@@ -1,25 +1,20 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
-import com.keepit.slack.models.SlackErrorCode._
-import com.keepit.commanders.{ OrganizationInfoCommander, KeepInterner, PermissionCommander, RawBookmarkRepresentation }
-import com.keepit.common.akka.{ SafeFuture, FortyTwoActor }
+import com.keepit.commanders.{ KeepInterner, OrganizationInfoCommander, PermissionCommander }
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core._
+import com.keepit.common.core.{ optionExtensionOps, _ }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.common.util.{ DescriptionElements, UrlClassifier }
-import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.slack.models.SlackIntegration.{ BrokenSlackIntegration, ForbiddenSlackIntegration }
 import com.keepit.slack.models._
 import com.kifi.juggle._
-import org.apache.commons.lang3.RandomStringUtils
-import org.joda.time.{ Duration, Period }
-import play.api.libs.json.{ JsValue, Json }
+import org.joda.time.Duration
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -101,7 +96,7 @@ class KifibotFeedbackActor @Inject() (
 
   private def ingestNewFeedback(model: KifibotFeedback, kifibot: KifiSlackBot): Future[Unit] = {
     getNewFeedbackMessages(model, kifibot.token, limit = messagesPerIngestion).map { msgs =>
-      val feedback = msgs.filter(_.userId == model.slackUserId)
+      val feedback = msgs.filter(_.userId.safely.contains(model.slackUserId))
       if (feedback.nonEmpty) {
         inhouseSlackClient.sendToSlack(InhouseSlackChannel.KIFIBOT_FUNNEL, SlackMessageRequest.inhouse(
           txt = DescriptionElements(
@@ -109,7 +104,7 @@ class KifibotFeedbackActor @Inject() (
           ),
           attachments = feedback.map(msg => SlackAttachment.simple(DescriptionElements(msg.text)))
         ))
-      }
+      } else slackLog.info("Ingested", msgs.length, "messages from", model.slackUserId.value, "but none were from the user")
       msgs.map(_.timestamp).maxOpt.foreach { timestamp =>
         slackLog.info("Setting", model.slackUserId.value, "to have timestamp", timestamp.value)
         db.readWrite { implicit s => schedulingRepo.updateLastIngestedMessage(model.id.get, timestamp) }

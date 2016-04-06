@@ -156,7 +156,8 @@ class AdminEventTriggerController @Inject() (
         slackClient.getIMChannels(team.kifiBot.get.token).map { channels =>
           channels.find(_.userId == trigger.user).fold(JsString("couldn't find that user in the list of im channels")) { dmChannel =>
             db.readWrite { implicit s =>
-              slackFeedbackRepo.intern(membership.slackTeamId, membership.slackUserId, dmChannel.channelId)
+              val model = slackFeedbackRepo.intern(membership.slackTeamId, membership.slackUserId, dmChannel.channelId)
+              slackFeedbackRepo.finishProcessing(model.id.get, clock.now minusHours 12)
             }
             slackFeedbackActor.ref ! IfYouCouldJustGoAhead
             JsString("done, interned the info and triggered the actor")
