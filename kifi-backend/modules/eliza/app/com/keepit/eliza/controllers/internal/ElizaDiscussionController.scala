@@ -182,6 +182,6 @@ class ElizaDiscussionController @Inject() (
 
   def pageSystemMessages(fromId: Id[Message], pageSize: Int) = Action { request =>
     val msgs = db.readOnlyMaster(implicit s => messageRepo.pageSystemMessages(ElizaMessage.fromCommonId(fromId), pageSize)).map(ElizaMessage.toCrossServiceMessage)
-    Ok(Json.obj("messages" -> msgs))
+    Ok(Json.toJson(msgs))
   }
 }
