@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey }
+import com.keepit.commanders.{ KeepOrdering, KeepQuery, LibraryMetadataCache, LibraryMetadataKey }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -47,6 +47,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
 
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)]
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
@@ -507,6 +508,24 @@ class KeepRepoImpl @Inject() (
     ORDER BY bm.last_activity_at DESC, bm.id DESC
     LIMIT $offset, $limit
     """.as[Keep].list
+  }
+  def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val orderingStr = query.arrangement.getOrElse(KeepQuery.Arrangement.GLOBAL_DEFAULT) match {
+      case KeepQuery.Arrangement(KeepOrdering.LAST_ACTIVITY_AT, dir) => s"ORDER BY k.last_activity_at ${dir.value}, k.id ${dir.value}"
+      case KeepQuery.Arrangement(KeepOrdering.KEPT_AT, dir) => s"ORDER BY k.kept_at ${dir.value}, k.id ${dir.value}"
+    }
+    query.target match {
+      case KeepQuery.ForLibrary(libId) =>
+        sql"""
+        SELECT k.id
+        FROM bookmark k INNER JOIN keep_to_library ktl ON ktl.keep_id = k.id
+        WHERE k.state = 'active' AND ktl.state = 'active'
+          AND ktl.library_id = $libId
+        ORDER BY #$orderingStr
+        LIMIT ${query.offset.value}, ${query.limit.value}
+        """.as[Id[Keep]].list
+    }
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
