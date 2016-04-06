@@ -8,7 +8,7 @@ import com.keepit.slack.models.SlackTeamId
 import scala.collection.mutable.{ ListBuffer }
 import com.keepit.common.CollectionHelpers
 
-class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], val allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
+class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], val allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores, librarySearcher: Searcher)(item: AugmentableItem, info: FullAugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
   def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.libraries).forall(LibraryIndexable.isSecret(librarySearcher, _)))
@@ -27,7 +27,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
     val candidates = for {
       k <- keeps
       o <- k.owner.toSeq // I guess technically we should be using addedBy here
-      l <- k.libraries
+      l <- k.libraries if LibraryIndexable.isVisible(librarySearcher, userId, allLibraries, allOrganizations, l) // todo(Léo): move this hack to AugmentationCommander
     } yield (l, o, k.keptAt)
     CollectionHelpers.dedupBy(candidates)(_._1)
   }
@@ -92,7 +92,7 @@ object AugmentedItem {
     (myKeeps.toList, moreKeeps.toList)
   }
 
-  def apply(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
-    new AugmentedItem(userId, allFriends, allOrganizations, allSlackTeamIds, allLibraries, scores)(item, info)
+  def apply(userId: Id[User], allFriends: Set[Id[User]], allOrganizations: Set[Id[Organization]], allSlackTeamIds: Set[SlackTeamId], allLibraries: Set[Id[Library]], scores: AugmentationScores, librarySearcher: Searcher)(item: AugmentableItem, info: FullAugmentationInfo) = {
+    new AugmentedItem(userId, allFriends, allOrganizations, allSlackTeamIds, allLibraries, scores, librarySearcher)(item, info)
   }
 }

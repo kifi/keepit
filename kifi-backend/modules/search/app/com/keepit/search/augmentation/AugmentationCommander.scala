@@ -59,7 +59,7 @@ class AugmentationCommanderImpl @Inject() (
       organizations <- futureOrganizations
       slackTeamIds <- futureSlackTeamIds
     } yield {
-      augmentationResponse.infos.map { case (item, info) => item -> AugmentedItem(userId, friends, organizations, slackTeamIds, libraries, augmentationResponse.scores)(item, info) }
+      augmentationResponse.infos.map { case (item, info) => item -> AugmentedItem(userId, friends, organizations, slackTeamIds, libraries, augmentationResponse.scores, libraryIndexer.getSearcher)(item, info) }
     }
   }
 
