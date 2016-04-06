@@ -1,23 +1,23 @@
 package com.keepit.slack
 
 import com.google.inject.Inject
-import com.keepit.commanders.{KeepInterner, OrganizationInfoCommander, PermissionCommander}
-import com.keepit.common.akka.{FortyTwoActor, SafeFuture}
+import com.keepit.commanders.{ KeepInterner, OrganizationInfoCommander, PermissionCommander }
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.core.{optionExtensionOps, _}
+import com.keepit.common.core.{ optionExtensionOps, _ }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
-import com.keepit.common.time.{Clock, _}
-import com.keepit.common.util.{DescriptionElements, UrlClassifier}
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.util.{ DescriptionElements, UrlClassifier }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.juggle._
 import org.joda.time.Duration
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 object KifibotFeedbackConfig {
   val delayUntilNextIngestion = Duration.standardHours(12)
