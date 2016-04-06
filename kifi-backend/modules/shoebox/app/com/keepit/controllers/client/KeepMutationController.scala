@@ -17,6 +17,8 @@ import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, Message, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.keep.NewKeepInfo
 import com.keepit.social.Author
 import org.joda.time.DateTime
 import play.api.libs.json.{ Reads, Format, Json }
@@ -32,6 +34,7 @@ class KeepMutationController @Inject() (
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
   discussionCommander: DiscussionCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
   contextBuilder: HeimdalContextBuilderFactory,
   implicit val airbrake: AirbrakeNotifier,
@@ -72,10 +75,14 @@ class KeepMutationController @Inject() (
         recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
       ))
       (keep, keepIsNew, msgOpt) <- keepCommander.internKeep(internRequest)
-    } yield keep
+      keepInfo <- keepInfoAssembler.assembleKeepInfos(Some(request.userId), Set(keep.id.get))
+    } yield keepInfo.get(keep.id.get).flatMap(_.getRight).withLeft(keep.id.get)
 
-    result.map { keep =>
-      Ok(Json.obj("id" -> Keep.publicId(keep.id.get)))
+    result.map { keepInfoOrKeepId =>
+      keepInfoOrKeepId.fold(
+        keepId => Ok(Json.obj("id" -> Keep.publicId(keepId))),
+        keepInfo => Ok(NewKeepInfo.writes.writes(keepInfo))
+      )
     }.recover {
       case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
       case fail: DiscussionFail => fail.asErrorResponse
