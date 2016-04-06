@@ -28,6 +28,12 @@ GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoCont
 GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
 GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
 
+##
+# LIBRARIES
+##
+
+GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], fromId: Option[String] ?= None)
+
 
 
 ##
