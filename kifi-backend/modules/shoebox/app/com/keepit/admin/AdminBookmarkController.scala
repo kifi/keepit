@@ -68,11 +68,11 @@ class AdminBookmarksController @Inject() (
       val user = bookmark.userId.map(userRepo.get)
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
-      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
+      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getImageUrl))
       val libraryOpt = bookmark.lowestLibraryId.map { opt => libraryRepo.get(opt) }
 
       keywordsFut.map { keywords =>
-        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
+        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.fold("")(_.value), "", keywords, libraryOpt))
       }
     }
   }
