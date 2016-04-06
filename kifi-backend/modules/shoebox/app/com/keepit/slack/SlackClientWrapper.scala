@@ -47,6 +47,9 @@ trait SlackClientWrapper {
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
   def checkUserPresence(slackTeamId: SlackTeamId, user: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserPresence]
 
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]]
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int): Future[Seq[SlackHistoryMessage]]
+
   // *Dangerous* - these APIs are only token-agnostic for a subset of parameters  
   def searchMessagesHoweverPossible(slackTeamId: SlackTeamId, request: SlackSearchRequest, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackSearchResponse]
 }
@@ -341,6 +344,13 @@ class SlackClientWrapperImpl @Inject() (
         }
       }
     }
+  }
+
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = {
+    slackClient.getIMChannels(token)
+  }
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int): Future[Seq[SlackHistoryMessage]] = {
+    slackClient.getIMHistory(token, channelId, fromTimestamp, limit, inclusive = false)
   }
 
   private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {
