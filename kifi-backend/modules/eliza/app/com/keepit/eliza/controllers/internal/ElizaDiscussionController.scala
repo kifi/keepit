@@ -171,7 +171,7 @@ class ElizaDiscussionController @Inject() (
       val threads = threadRepo.getByKeepIds(keepIds, excludeState = None)
       val recipientsByKeepId = threads.map {
         case (keepId, thread) =>
-          def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis < thread.createdAt.getMillis
+          def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis <= thread.createdAt.getMillis
           val firstUsers = thread.participants.userParticipants.collect { case (uid, added) if uid != thread.startedBy && addedNearStart(added) => uid }
           val firstNonUsers = thread.participants.nonUserParticipants.collect { case (NonUserEmailParticipant(email), added) if addedNearStart(added) => email }
           keepId -> KeepRecipients(libraries = Set.empty, firstNonUsers.toSet, firstUsers.toSet)
