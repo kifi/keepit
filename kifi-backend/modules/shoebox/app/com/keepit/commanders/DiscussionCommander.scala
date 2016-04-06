@@ -132,7 +132,7 @@ class DiscussionCommanderImpl @Inject() (
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       db.readWrite { implicit s =>
         keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
-        eventCommander.addedRecipients(keepId, userId, KeepRecipients(diff.libraries.added, diff.emails.added, diff.users.added), source, eventTime = None) // TODO(ryan): needs to be modified once we can remove participants
+        eventCommander.modifyRecipients(keepId, userId, diff, source, eventTime = None)
       }
       Future.successful(Unit)
     }

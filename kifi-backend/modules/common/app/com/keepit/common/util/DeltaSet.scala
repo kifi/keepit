@@ -24,10 +24,11 @@ object DeltaSet {
 
   def empty[T]: DeltaSet[T] = DeltaSet(DisjointSets.empty[T, AddOrRemove])
 
-  private def fromSets[T](added: Set[T], removed: Set[T]): DeltaSet[T] = DeltaSet.empty.addAll(added).removeAll(removed)
-  implicit def reads[T](implicit tReads: Reads[T]): Reads[DeltaSet[T]] = (
-    (__ \ 'add).readNullable[Set[T]].map(_ getOrElse Set.empty) and
-    (__ \ 'remove).readNullable[Set[T]].map(_ getOrElse Set.empty)
-  )(fromSets[T] _)
+  private def fromSets[T](added: Option[Set[T]], removed: Option[Set[T]]): DeltaSet[T] = DeltaSet.empty.addAll(added.getOrElse(Set.empty)).removeAll(removed.getOrElse(Set.empty))
+  private def toSets[T](delta: DeltaSet[T]): (Option[Set[T]], Option[Set[T]]) = (Some(delta.added).filter(_.isEmpty), Some(delta.removed).filter(_.isEmpty))
+  implicit def format[T](implicit tReads: Reads[T], tWrites: Writes[T]): Format[DeltaSet[T]] = (
+    (__ \ 'add).formatNullable[Set[T]] and
+    (__ \ 'remove).formatNullable[Set[T]]
+  )(fromSets, toSets)
 }
 
