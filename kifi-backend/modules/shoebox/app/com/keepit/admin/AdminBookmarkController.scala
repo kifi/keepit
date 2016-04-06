@@ -378,30 +378,31 @@ class AdminBookmarksController @Inject() (
     Ok.chunked(enum)
   }
 
-  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
+  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction.async { implicit request =>
     var startWithMessage = fromId
     FutureHelpers.doUntil {
       eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
         if (msgs.isEmpty) true
         else {
           msgs.foreach { msg =>
-            val eventData = msg.auxData.get
-            slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
-            if (!dryRun) {
-              val event = KeepEvent(
-                keepId = msg.keep,
-                eventData = eventData,
-                eventTime = msg.sentAt,
-                source = KeepEventSourceKind.fromMessageSource(msg.source)
-              )
-              db.readWrite(implicit s => keepEventRepo.save(event))
+            if (msg.auxData.isEmpty) slackLog.info(s"keep ${msg.keep}, msg ${msg.id} has no data")
+            msg.auxData.foreach { eventData =>
+              slackLog.info(s"keep ${msg.keep}, msg ${msg.id}, event $eventData")
+              if (!dryRun) {
+                val event = KeepEvent(
+                  keepId = msg.keep,
+                  eventData = eventData,
+                  eventTime = msg.sentAt,
+                  source = KeepEventSourceKind.fromMessageSource(msg.source)
+                )
+                db.readWrite(implicit s => keepEventRepo.save(event))
+              }
             }
           }
           startWithMessage = msgs.last.id
           false
         }
       }
-    }
-    NoContent
+    }.map(_ => NoContent)
   }
 }
