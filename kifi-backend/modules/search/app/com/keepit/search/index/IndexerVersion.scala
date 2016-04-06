@@ -34,7 +34,7 @@ object IndexerVersionProviders {
   case object Phrase extends IndexerVersionProvider(0, 0)
   case object Library extends IndexerVersionProvider(11, 11)
   case object LibraryMembership extends IndexerVersionProvider(3, 3)
-  case object Keep extends IndexerVersionProvider(6, 7)
+  case object Keep extends IndexerVersionProvider(7, 7)
   case object Organization extends IndexerVersionProvider(1, 1)
   case object OrganizationMembership extends IndexerVersionProvider(1, 1)
 
