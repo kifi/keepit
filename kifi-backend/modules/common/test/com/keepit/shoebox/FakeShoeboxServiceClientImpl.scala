@@ -571,7 +571,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
     val changedKeepsAndTags = changedKeeps.map { keep =>
-      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+      val libraryRecipients = keep.recipients.libraries.map { libraryId =>
+        val library = allLibraries(libraryId)
+        CrossServiceKeep.LibraryInfo(libraryId, library.visibility, library.organizationId, keep.userId)
+      }
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, keep.recipients.users, keep.recipients.emails, libraryRecipients), source = None, tagsByChangedKeep(keep.id.get))
     }
     Future.successful(changedKeepsAndTags)
   }
