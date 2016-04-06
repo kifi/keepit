@@ -169,62 +169,14 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         plugin.batchURIMigration()
 
         db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 0
-          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
-          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0
+          keepToCollectionRepo.getByKeep(bms(0).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(bms(2).id.get).size === 1
           keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
-          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
-          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 1
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 1
         }
 
-      }
-    }
-
-    "pass an extremely abusive test" in {
-      withDb(modules: _*) { implicit injector =>
-        val numUsers = 3
-        val numUrisPerUser = 15
-        val (users, lib, origUris, dupUris) = db.readWrite { implicit session =>
-
-          val users = Random.shuffle(UserFactory.users(numUsers).saved)
-          val lib = LibraryFactory.library().withOwner(users.head).withCollaborators(users.tail).saved
-
-          val urisByUser = users.map { user =>
-            val urls = for (i <- 1 to numUrisPerUser) yield s"http://${RandomStringUtils.randomAlphanumeric(10)}.com"
-            val uris = urls.map { url => normalizedURIInterner.internByUri(url, contentWanted = true) }.toSeq
-            user.id.get -> uris
-          }.toMap
-
-          uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUsers * numUrisPerUser
-          for ((user, uris) <- urisByUser) {
-            val keptAt = inject[FakeClock].now.minusHours(Random.nextInt(1000))
-            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib).withUri(uri).withKeptAt(keptAt).saved }
-          }
-
-          val allUris = Random.shuffle(urisByUser.values.toSeq.flatten)
-          val (dupUris, origUris) = allUris.splitAt(allUris.length / 3)
-
-          (users, lib, origUris, dupUris)
-        }
-
-        // Mark some of them as duplicate and schedule a URI migration
-        val plugin = inject[UriIntegrityPlugin]
-        plugin.onStart()
-        for ((origUri, dupUri) <- origUris zip dupUris) {
-          migrateUriPlease(dupUri.id.get, origUri.id.get)
-        }
-        inject[ChangedURISeqAssigner].assignSequenceNumbers()
-
-        // Do the migration
-        plugin.batchURIMigration()
-
-        db.readOnlyMaster { implicit session =>
-          val allKeeps = inject[KeepRepo].all
-          allKeeps.count(_.isActive) === origUris.length // all the dup URIs should lead to deactivated keeps
-          allKeeps.count(_.isInactive) === dupUris.length
-          allKeeps.groupBy(k => (k.recipients.librariesHash, k.isActive, k.uriId)).values.foreach(_.length === 1)
-        }
-        1 === 1
       }
     }
   }

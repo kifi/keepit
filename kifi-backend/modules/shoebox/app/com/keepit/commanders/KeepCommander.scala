@@ -685,7 +685,7 @@ class KeepCommanderImpl @Inject() (
     val newKeep = {
       val saved = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
       (saved.note, saved.userId) match {
-        case (Some(n), Some(uid)) => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
+        case (Some(n), Some(uid)) if n.nonEmpty => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
         case _ => saved
       }
     }
@@ -764,52 +764,10 @@ class KeepCommanderImpl @Inject() (
       ktuCommander.syncKeep(newKeep)
       kteCommander.syncKeep(newKeep)
     } else {
-      val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-      val similarKeeps = getKeepsByUriAndLibraries(newUri.id.get, libIds)
-
-      val mergeableKeeps = similarKeeps.filter(keep.isOlderThan)
-      log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
-      if (mergeableKeeps.nonEmpty) {
-        mergeableKeeps.flatMap { k =>
-          val oldTags = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
-          val newNote = Hashtags.addTagsToString(k.note.getOrElse(""), oldTags.toSeq)
-          val allTags = Hashtags.findAllHashtagNames(newNote)
-          keep.userId.map { uid =>
-            syncTagsToNoteAndSaveKeep(uid, k, allTags.toSeq, freshTag = false)._2
-          }
-        }.flatten.foreach { c =>
-          Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
-        }
-
-        val migratedKeep = keepRepo.deactivate(keep.withUriId(newUri.id.get))
-        ktlCommander.syncAndDeleteKeep(migratedKeep)
-        ktuCommander.syncAndDeleteKeep(migratedKeep)
-        kteCommander.syncAndDeleteKeep(migratedKeep)
-      } else {
-        val soonToBeDeadKeeps = similarKeeps.filter(_.isOlderThan(keep))
-        log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
-        val oldTags = soonToBeDeadKeeps.flatMap { k =>
-          Hashtags.findAllHashtagNames(k.note.getOrElse(""))
-        }
-        val newNote = Hashtags.addTagsToString(keep.note.getOrElse(""), oldTags.toSeq)
-        val allTags = Hashtags.findAllHashtagNames(newNote)
-        val notedKeep = keep.userId.map { uid =>
-          val (notedKeep, colls) = syncTagsToNoteAndSaveKeep(uid, keep, allTags.toSeq, freshTag = false)
-          colls.foreach { c =>
-            Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
-          }
-          notedKeep
-        }.getOrElse(keep.withNote(Some(newNote).filter(_.nonEmpty)))
-
-        soonToBeDeadKeeps.foreach { k =>
-          deactivateKeep(k)
-        }
-
-        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, notedKeep.withUriId(newUri.id.get)))
-        ktlCommander.syncKeep(newKeep)
-        ktuCommander.syncKeep(newKeep)
-        kteCommander.syncKeep(newKeep)
-      }
+      val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
+      ktlCommander.syncKeep(newKeep)
+      ktuCommander.syncKeep(newKeep)
+      kteCommander.syncKeep(newKeep)
     }
   }
 
@@ -838,21 +796,21 @@ class KeepCommanderImpl @Inject() (
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeeps = keepRepo.getByUriAndLibrariesHash(k.uriId, Set(toLibrary.id.get))
-    val newKeep = Keep(
-      userId = Some(userId),
-      url = k.url,
-      uriId = k.uriId,
-      keptAt = clock.now,
-      source = withSource.getOrElse(k.source),
-      originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      recipients = KeepRecipients(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
-      title = k.title,
-      note = k.note
-    )
     currentKeeps match {
       case existingKeep +: _ =>
         Left(LibraryError.AlreadyExistsInDest)
       case _ =>
+        val newKeep = Keep(
+          userId = Some(userId),
+          url = k.url,
+          uriId = k.uriId,
+          keptAt = clock.now,
+          source = withSource.getOrElse(k.source),
+          originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
+          recipients = KeepRecipients(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
+          title = k.title,
+          note = k.note
+        )
         val copied = persistKeep(newKeep)
         Right(copied)
     }
