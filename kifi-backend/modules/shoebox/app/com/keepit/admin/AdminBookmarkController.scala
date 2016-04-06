@@ -201,30 +201,6 @@ class AdminBookmarksController @Inject() (
     Ok(JsNumber(numFix))
   }
 
-  // This attempts to fix keep notes whenever they may be off.
-  // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
-  // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
-  def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
-    val keepIds = db.readOnlyReplica { implicit session =>
-      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
-      val rangeIds = (for {
-        start <- (request.body \ "startUser").asOpt[Long]
-        end <- (request.body \ "endUser").asOpt[Long]
-      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
-      (userIds ++ rangeIds).flatMap { u =>
-        keepRepo.getByUser(u)
-      }.sortBy(_.userId).map(_.id.get)
-    }
-
-    keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
-      if (k.id % 1000 == 0) {
-        log.info(s"[reprocessNotesOfKeeps] Still running, keep $k")
-      }
-    })
-
-    Ok(s"Running for ${keepIds.length} keeps!")
-  }
-
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
     val tagToRemove = (request.body \ "tagToRemove").as[String]
 

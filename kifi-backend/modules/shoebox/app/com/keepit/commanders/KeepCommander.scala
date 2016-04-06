@@ -728,7 +728,13 @@ class KeepCommanderImpl @Inject() (
 
     val oldKeepOpt = k.id.map(keepRepo.get)
     val (oldLibs, oldUsers) = (oldKeepOpt.map(_.recipients.libraries).getOrElse(Set.empty), oldKeepOpt.map(_.recipients.users).getOrElse(Set.empty))
-    val newKeep = keepRepo.save(k.withLibraries(oldLibs ++ k.recipients.libraries).withParticipants(oldUsers ++ k.recipients.users))
+    val newKeep = {
+      val saved = keepRepo.save(k.withLibraries(oldLibs ++ k.recipients.libraries).withParticipants(oldUsers ++ k.recipients.users))
+      (saved.note, saved.userId) match {
+        case (Some(n), Some(uid)) => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
+        case _ => saved
+      }
+    }
 
     if (oldLibs != newKeep.recipients.libraries) {
       val libraries = libraryRepo.getActiveByIds(newKeep.recipients.libraries -- oldLibs).values
@@ -883,27 +889,10 @@ class KeepCommanderImpl @Inject() (
     )
     currentKeeps match {
       case existingKeep +: _ =>
-        combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(k.id.get, existingKeep.id.get)
         Left(LibraryError.AlreadyExistsInDest)
       case _ =>
         val copied = persistKeep(newKeep)
-        combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(k.id.get, copied.id.get)
         Right(copied)
-    }
-  }
-
-  // combine tag info on both keeps & saves difference on the new Keep
-  private def combineTagsWithoutEditingNoteWhichMeansTheyllBeOverwritten(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
-    val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
-    val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
-    val tagsToAdd = oldSet.diff(existingSet)
-    tagsToAdd.foreach { tagId =>
-      val newKtc = KeepToCollection(keepId = newKeepId, collectionId = tagId)
-      val ktcOpt = keepToCollectionRepo.getOpt(newKeepId, tagId)
-      if (!ktcOpt.exists(_.isActive)) {
-        // either overwrite (if the dead one exists) or create a new one
-        keepToCollectionRepo.save(newKtc.copy(id = ktcOpt.map(_.id.get)))
-      }
     }
   }
 
