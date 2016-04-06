@@ -309,7 +309,7 @@ class SearchFactory @Inject() (
     }
     engBuilder.addFilterQuery(filterQuery)
   }
-  private def addUserFilterToUriSearch(engBuilder: QueryEngineBuilder, user: UserScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, user.id.id.toString))) }
+  private def addUserFilterToUriSearch(engBuilder: QueryEngineBuilder, user: UserScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.ownerField, user.id.id.toString))) }
   private def addOrganizationFilterToUriSearch(engBuilder: QueryEngineBuilder, organization: OrganizationScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.orgField, organization.id.id.toString))) }
   private def addSourceFilterToUriSearch(engBuilder: QueryEngineBuilder, source: SourceScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.sourceField, source.source))) }
 

@@ -51,7 +51,13 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
           libraryQualityEvaluator.getPopularityBoost(memberCount)*/
           1L
         }
-        score = score * popularityBoost
+        // This boost moved from LibraryFromKeepsScoreVectorSource, where it's tricky to apply with multiple libraries. Probably inefficient anyway
+        val inverseLibraryFrequencyBoost = {
+          /*            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
+        libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)*/
+          1L
+        }
+        score = score * popularityBoost * inverseLibraryFrequencyBoost
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
         else {
           /*          todo(Léo): boost libraries if isUserCreated

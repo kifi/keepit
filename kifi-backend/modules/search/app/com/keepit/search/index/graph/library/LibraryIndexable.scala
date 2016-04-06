@@ -81,8 +81,16 @@ object LibraryFields {
 
 object LibraryIndexable {
   def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = getVisibility(librarySearcher, libraryId.id).contains(LibraryVisibility.SECRET)
-
   def isPublished(librarySearcher: Searcher, libId: Long): Boolean = getVisibility(librarySearcher, libId).contains(LibraryVisibility.PUBLISHED)
+
+  def isVisible(librarySearcher: Searcher, userId: Id[User], myLibraries: Set[Id[Library]], myOrganizations: Set[Id[Organization]], libraryId: Id[Library]): Boolean = {
+    myLibraries.contains(libraryId) || LibraryIndexable.getVisibility(librarySearcher, libraryId.id).exists {
+      case LibraryVisibility.PUBLISHED => true
+      case LibraryVisibility.DISCOVERABLE => LibraryIndexable.getRecord(librarySearcher, libraryId).exists(_.ownerId == userId)
+      case LibraryVisibility.ORGANIZATION => LibraryIndexable.getRecord(librarySearcher, libraryId).exists(_.orgId.exists(myOrganizations.contains))
+      case _ => false
+    }
+  }
 
   def getVisibility(librarySearcher: Searcher, libId: Long): Option[LibraryVisibility] = {
     librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId).map(LibraryFields.Visibility.fromNumericCode)

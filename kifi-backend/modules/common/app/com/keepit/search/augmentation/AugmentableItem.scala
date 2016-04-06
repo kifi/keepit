@@ -35,6 +35,7 @@ object KeepDocument {
   implicit val format = Json.format[KeepDocument]
 }
 
+// todo(Léo): remove otherDiscoverableKeeps
 case class FullAugmentationInfo(keeps: Seq[KeepDocument], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
 object FullAugmentationInfo {
   implicit val format = Json.format[FullAugmentationInfo]

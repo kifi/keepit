@@ -1,9 +1,9 @@
 package com.keepit.search.index
 
+import java.nio.{ByteBuffer, LongBuffer}
 import java.nio.charset.StandardCharsets
 
-import com.keepit.common.time._
-import com.keepit.search.index.graph.Util
+import com.keepit.search.util.LongArraySet
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -11,7 +11,6 @@ import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexableField
 import org.apache.lucene.util.Attribute
-import org.joda.time.DateTime
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
 
@@ -102,4 +101,27 @@ object DocUtil {
   }
 
   val stringDocValFieldDecoder = binaryDocValFieldDecoder(new String(_, _, _, StandardCharsets.UTF_8))
+
+  def toLongBuffer(ref: BytesRef): LongBuffer = ByteBuffer.wrap(ref.bytes, ref.offset, ref.length).asLongBuffer().asReadOnlyBuffer()
+  def toLongSet(ref: BytesRef): Set[Long] = toLongBuffer(ref).array().toSet
+}
+
+object LongBufferUtil {
+  @inline def exists(buffer: LongBuffer)(p: Long => Boolean): Boolean = {
+    buffer.rewind()
+    while (buffer.hasRemaining) {
+      if (p(buffer.get())) return true
+    }
+    false
+  }
+
+  @inline def contains(buffer: LongBuffer)(value: Long): Boolean = exists(buffer)(value == _)
+  @inline def intersect(buffer: LongBuffer)(values: LongArraySet): Boolean = exists(buffer)(values.findIndex(_) >= 0)
+
+  @inline def foreach(buffer: LongBuffer)(block: Long => Unit): Unit = {
+    buffer.rewind()
+    while (buffer.hasRemaining) {
+      block(buffer.get())
+    }
+  }
 }
