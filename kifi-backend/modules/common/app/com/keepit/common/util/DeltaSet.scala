@@ -30,7 +30,7 @@ object DeltaSet {
   def removeOnly[T](items: Set[T]): DeltaSet[T] = DeltaSet.empty.removeAll(items)
 
   private def fromSets[T](added: Option[Set[T]], removed: Option[Set[T]]): DeltaSet[T] = DeltaSet.addOnly(added.getOrElse(Set.empty)).removeAll(removed.getOrElse(Set.empty))
-  private def toSets[T](delta: DeltaSet[T]): (Option[Set[T]], Option[Set[T]]) = (Some(delta.added).filter(_.isEmpty), Some(delta.removed).filter(_.isEmpty))
+  private def toSets[T](delta: DeltaSet[T]): (Option[Set[T]], Option[Set[T]]) = (Some(delta.added).filter(_.nonEmpty), Some(delta.removed).filter(_.nonEmpty))
   implicit def format[T](implicit tReads: Reads[T], tWrites: Writes[T]): Format[DeltaSet[T]] = (
     (__ \ 'add).formatNullable[Set[T]] and
     (__ \ 'remove).formatNullable[Set[T]]
