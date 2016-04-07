@@ -53,7 +53,7 @@ object Path {
 
   def apply(value: String): Path = {
     val (path, query) = splitQuery(value)
-    new Path(path, query)
+    new Path(path.stripPrefix(base), query)
   }
 
   def encode(value: String): EncodedPath = {
@@ -67,7 +67,7 @@ object Path {
   }
 
   implicit val format: Format[Path] = Format(
-    __.read[String].map(str => Path(str.stripPrefix(base))),
+    __.read[String].map(str => Path(str)),
     Writes(path => JsString(path.relativeWithLeadingSlash))
   )
 
