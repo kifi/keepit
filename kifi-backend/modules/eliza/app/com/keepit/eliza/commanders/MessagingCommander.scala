@@ -561,7 +561,7 @@ class MessagingCommanderImpl @Inject() (
           }
 
           if (updateShoebox) {
-            val newEmails = newNonUsers.map { case NonUserEmailParticipant(email) => email }
+            val newEmails = newNonUsers.map(NonUserParticipant.toEmailAddress)
             shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), DeltaSet.addOnly(newLibraries), DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
