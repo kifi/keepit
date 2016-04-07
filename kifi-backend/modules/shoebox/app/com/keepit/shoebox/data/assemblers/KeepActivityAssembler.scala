@@ -13,6 +13,7 @@ import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -33,6 +34,7 @@ class KeepActivityAssemblerImpl @Inject() (
   basicOrgGen: BasicOrganizationGen,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
+  eventRepo: KeepEventRepo,
   keepSourceCommander: KeepSourceCommander,
   eliza: ElizaServiceClient,
   private implicit val airbrake: AirbrakeNotifier,
@@ -54,38 +56,40 @@ class KeepActivityAssemblerImpl @Inject() (
       val sourceAttr = keepSourceCommander.getSourceAttributionForKeep(keepId)
       val ktus = ktuRepo.getAllByKeepId(keepId)
       val ktls = ktlRepo.getAllByKeepId(keepId)
-      (keep, sourceAttr, ktus, ktls)
+      val events = eventRepo.pageForKeep(keepId, fromTime, limit)
+      (keep, sourceAttr, events, ktus, ktls)
     }
-    val elizaFut = eliza.getCrossServiceKeepActivity(Set(keepId), fromTime, limit).map(_.get(keepId))
+    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), limit).map(_.get(keepId))
 
     val basicModelFut = shoeboxFut.map {
-      case (keep, sourceAttr, ktus, ktls) =>
+      case (keep, sourceAttr, events, ktus, ktls) =>
+        val eventDatums = events.map(_.eventData)
         db.readOnlyMaster { implicit s =>
-          val libById = libRepo.getActiveByIds(ktls.map(_.libraryId).toSet)
+          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ eventDatums.collect { case ModifyRecipients(_, KeepRecipientsDiff(_, libs, _)) => libs.added }.flatten
+          val libById = libRepo.getActiveByIds(libsNeeded.toSet)
+
           val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
           val basicOrgByLibId = libById.flatMapValues { library =>
             library.organizationId.flatMap(basicOrgById.get)
           }
+
           val basicUserById = {
             val ktuUsers = ktus.map(_.userId)
             val libOwners = libById.map { case (libId, library) => library.ownerId }
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners).toSet)
+            val recipients = eventDatums.collect { case ModifyRecipients(_, KeepRecipientsDiff(users, _, _)) => users.added }.flatten
+            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ recipients).toSet)
           }
-          val basicLibById = libById.map {
-            case (libId, library) =>
-              // I think we should use `BasicLibraryGen` here instead of constructing them manually
-              libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
-          }
+          val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
           (basicUserById, basicLibById, basicOrgByLibId)
         }
     }
 
     for {
-      (keep, sourceAttrOpt, ktus, ktls) <- shoeboxFut
+      (keep, sourceAttrOpt, events, ktus, ktls) <- shoeboxFut
       (elizaActivityOpt) <- elizaFut
       (userById, libById, orgByLibId) <- basicModelFut
     } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
     }
   }
 }

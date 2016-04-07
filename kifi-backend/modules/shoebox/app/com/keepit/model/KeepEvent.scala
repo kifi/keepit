@@ -2,8 +2,9 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ FortyTwoGenericTypeMappers, Repo, DBSession, DbRepo, DataBaseComponent }
-import com.keepit.common.db.{ ModelWithState, States, State, Id }
+import com.keepit.common.db.{ CommonClassLinker, ModelWithState, States, State, Id }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.discussion.Message
@@ -28,7 +29,7 @@ case class KeepEvent(
   def withUpdateTime(now: DateTime): KeepEvent = this.copy(updatedAt = updatedAt)
 }
 object KeepEventStates extends States[KeepEvent]
-object KeepEvent {
+object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[KeepEvent]) and
     (__ \ 'createdAt).format[DateTime] and
@@ -58,7 +59,9 @@ object KeepEvent {
 }
 
 @ImplementedBy(classOf[KeepEventRepoImpl])
-trait KeepEventRepo extends Repo[KeepEvent]
+trait KeepEventRepo extends Repo[KeepEvent] {
+  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent]
+}
 
 @Singleton
 class KeepEventRepoImpl @Inject() (
@@ -85,4 +88,16 @@ class KeepEventRepoImpl @Inject() (
 
   override def deleteCache(model: KeepEvent)(implicit session: RSession): Unit = ()
   override def invalidateCache(model: KeepEvent)(implicit session: RSession): Unit = ()
+
+  private val activeRows = rows.filter(_.state === KeepEventStates.ACTIVE)
+
+  def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent] = {
+    import com.keepit.common.util.Ord.dateTimeOrdering
+    val keepRows = activeRows.filter(r => r.keepId === keepId)
+    val rowsBefore = fromTime match {
+      case None => keepRows
+      case Some(time) => keepRows.filter(_.eventTime < fromTime)
+    }
+    rowsBefore.sortBy(_.eventTime desc).take(limit).list
+  }
 }

@@ -70,7 +70,7 @@ class ExtKeepController @Inject() (
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
         KeepRecipientsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)))
+      _ <- if (!diff.isEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent))) else Future.successful(())
     } yield {
       NoContent
     }).recover {

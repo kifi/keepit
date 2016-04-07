@@ -1,10 +1,13 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.Id
-import com.keepit.common.json.EnumFormat
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
+import com.keepit.common.db.{ CommonClassLinker, Id }
+import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.social.{ BasicAuthor, BasicNonUser }
@@ -96,8 +99,14 @@ object KeepEventData {
   )
 }
 
+case class CommonKeepEvent()
+object CommonKeepEvent extends PublicIdGenerator[CommonKeepEvent] {
+  val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(125, 15, 73, -1, 17, -36, 81, -84, -126, 92, 65, -97, 127, 47, -113, 58))
+  val publicIdPrefix = "kev"
+}
+
 case class BasicKeepEvent(
-    id: Option[PublicId[Message]],
+    id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]], // id = None when event.kind = "initial"
     author: BasicAuthor,
     kind: KeepEventKind,
     header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
@@ -108,8 +117,9 @@ case class BasicKeepEvent(
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
 object BasicKeepEvent {
+  implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
   implicit val writes: Writes[BasicKeepEvent] = (
-    (__ \ 'id).writeNullable[PublicId[Message]] and
+    (__ \ 'id).writeNullable[Either[PublicId[Message], PublicId[CommonKeepEvent]]] and
     (__ \ 'author).write[BasicAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
     (__ \ 'header).write[DescriptionElements] and
@@ -118,9 +128,14 @@ object BasicKeepEvent {
     (__ \ 'source).writeNullable[KeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
 
+  def fromMessage(message: Message)(implicit imageConfig: S3ImageConfig): BasicKeepEvent = {
+    val author = message.sentBy.fold(BasicAuthor.fromNonUser, BasicAuthor.fromUser)
+    generateCommentEvent(message.pubId, author, message.text, message.sentAt, message.source)
+  }
+
   def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
     BasicKeepEvent(
-      id = Some(id),
+      id = Some(Left(id)),
       author = author,
       kind = KeepEventKind.Comment,
       header = DescriptionElements(author, "commented on this page"),

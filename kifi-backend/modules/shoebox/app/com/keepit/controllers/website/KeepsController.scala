@@ -201,7 +201,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = UserAction.async { request =>
+  def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = MaybeUserAction.async { request =>
     Keep.decodePublicId(id) match {
       case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(keepId) =>

@@ -10,7 +10,7 @@ import com.keepit.discussion.MessageSource
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ SequenceNumber, DbSequenceAssigner, Id }
-import com.keepit.model.{ OrganizationSettings, Keep, SortDirection, User, NormalizedURI }
+import com.keepit.model.{ Keep, SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
 import play.api.libs.json.{ Json, JsValue }
