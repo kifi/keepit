@@ -447,14 +447,15 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var libraries = participants.filter(function (p) { return p.id[0] === 'l'; });
       var emails = participants.filter(function (p) { return p.email; });
 
-      this.sendModifyKeep(users, emails, libraries)
-      .then(function () {
-        this.addParticipant.apply(this, participants);
-      }.bind(this))
-      .finally(function () {
-        $input.tokenInput('clear');
-        this.toggleAddDialog();
-      }.bind(this));
+      if (participants.length > 0) {
+        this.sendModifyKeep(users, emails, libraries)
+        .then(function () {
+          this.addParticipant.apply(this, participants);
+        }.bind(this));
+      }
+
+      $input.tokenInput('clear');
+      this.toggleAddDialog();
     },
 
     sendModifyKeep: function (users, emails, libraries) {
