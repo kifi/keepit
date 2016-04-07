@@ -1,7 +1,7 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepCommander
+import com.keepit.commanders.{ KeepMutator, KeepCommander }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
@@ -27,7 +27,7 @@ class ShoeboxMessageIngestionActor @Inject() (
   db: Database,
   systemValueRepo: SystemValueRepo,
   keepRepo: KeepRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   slackPusher: LibraryToSlackChannelPusher,
@@ -71,7 +71,7 @@ class ShoeboxMessageIngestionActor @Inject() (
             }
             def updateLastActivity() = {
               val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
-              keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
+              keepMutator.updateLastActivityAtIfLater(keepId, lastMessageTime)
             }
             def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
               case KeepEventData.ModifyRecipients(editor, KeepRecipientsDiff(users, libraries, emails)) =>
@@ -80,7 +80,7 @@ class ShoeboxMessageIngestionActor @Inject() (
                   emails = DeltaSet.empty.addAll(emails.added),
                   libraries = DeltaSet.empty.addAll(libraries.added)
                 )
-                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
+                keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
               case KeepEventData.EditTitle(_, _, _) =>
             }
 

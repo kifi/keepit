@@ -90,7 +90,6 @@ trait KeepCommander {
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
-  def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -723,16 +722,6 @@ class KeepCommanderImpl @Inject() (
         slackPusher.schedule(diff.libraries.added)
       }
     }
-  }
-  def updateLastActivityAtIfLater(keepId: Id[Keep], time: DateTime)(implicit session: RWSession): Keep = {
-    val oldKeep = keepRepo.get(keepId)
-    val newKeep = oldKeep.withLastActivityAtIfLater(time)
-
-    if (newKeep.lastActivityAt != oldKeep.lastActivityAt) {
-      ktuRepo.getAllByKeepId(keepId).foreach(ktu => ktuRepo.save(ktu.withLastActivityAt(time)))
-      ktlRepo.getAllByKeepId(keepId).foreach(ktl => ktlRepo.save(ktl.withLastActivityAt(time)))
-      keepRepo.save(newKeep)
-    } else oldKeep
   }
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
     val keep = keepRepo.getNoCache(keepId)
