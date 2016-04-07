@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -23,6 +23,7 @@ class KeepInfoController @Inject() (
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
   keepInfoAssembler: KeepInfoAssembler,
+  keepActivityAssembler: KeepActivityAssembler,
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
@@ -59,7 +60,7 @@ class KeepInfoController @Inject() (
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
     val result = for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_ID))
-      activity <- keepInfoAssembler.getActivityForKeep(keepId, fromTime, limit)
+      activity <- keepActivityAssembler.getActivityForKeep(keepId, fromTime, limit)
     } yield {
       Ok(Json.toJson(activity))
     }
