@@ -467,7 +467,7 @@ class KeepCommanderImpl @Inject() (
     }
     result.getRight.foreach {
       case (oldKeep, newKeep) =>
-        db.readWrite(implicit s => eventCommander.updatedKeepTitle(keepId, userId, oldKeep.title, newKeep.title, source, eventTime = None))
+        db.readWrite(implicit s => eventCommander.registerKeepEvent(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None))
     }
     result.map(_._2)
   }

@@ -116,25 +116,28 @@ class DiscussionCommanderImpl @Inject() (
     }
   }
   def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSourceKind]): Future[Unit] = {
-    val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
-      val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
-      val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
-      (keepPermissions, uriCollisionsByLib)
-    }
-    val errs: Stream[DiscussionFail] = Stream(
-      (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
-    ).collect { case (true, fail) => fail }
-
-    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
-      db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
-        eventCommander.modifyRecipients(keepId, userId, diff, source, eventTime = None)
+    if (diff.isEmpty) Future.successful(())
+    else {
+      val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
+        val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
+        val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
+        (keepPermissions, uriCollisionsByLib)
       }
-      Future.successful(Unit)
+      val errs: Stream[DiscussionFail] = Stream(
+        (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
+      ).collect { case (true, fail) => fail }
+
+      errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+        db.readWrite { implicit s =>
+          keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+          eventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
+        }
+        Future.successful(Unit)
+      }
     }
   }
 }
