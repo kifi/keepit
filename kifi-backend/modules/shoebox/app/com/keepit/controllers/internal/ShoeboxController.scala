@@ -47,6 +47,7 @@ class ShoeboxController @Inject() (
   keepRepo: KeepRepo,
   keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
+  keepEventCommander: KeepEventCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -656,6 +657,15 @@ class ShoeboxController @Inject() (
     val users = (request.body \ "users").as[Set[Id[User]]]
     db.readWrite { implicit s =>
       keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(users), userAttribution = Some(adderId))
+    }
+    NoContent
+  }
+
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = Action(parse.tolerantJson) { request =>
+    val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
+    db.readWrite { implicit s =>
+      keepCommander.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
+      if (persistKeepEvent) keepEventCommander.modifyRecipients(keepId, editorId, diff, source, eventTime = None)
     }
     NoContent
   }

@@ -74,13 +74,13 @@ class ShoeboxMessageIngestionActor @Inject() (
               keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
             }
             def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
-              case KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users, libraries, emails)) =>
+              case KeepEventData.ModifyRecipients(editor, KeepRecipientsDiff(users, libraries, emails)) =>
                 val diff = KeepRecipientsDiff(
                   users = DeltaSet.empty.addAll(users.added),
                   emails = DeltaSet.empty.addAll(emails.added),
                   libraries = DeltaSet.empty.addAll(libraries.added)
                 )
-                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(addedBy))
+                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
               case KeepEventData.EditTitle(_, _, _) =>
             }
 

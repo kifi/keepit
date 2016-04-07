@@ -340,7 +340,7 @@ class AdminBookmarksController @Inject() (
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
-            keep.id.get -> (RawKifiAttribution(keep.userId.get, connections, keep.source), keep.state == KeepStates.ACTIVE)
+            keep.id.get -> (RawKifiAttribution(keep.userId.get, keep.note, connections, keep.source), keep.state == KeepStates.ACTIVE)
           }
         }.toMap
       }
@@ -352,7 +352,7 @@ class AdminBookmarksController @Inject() (
           case keep =>
             val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
             val firstUsers = ktus(keep.id.get).filter(ktu => !keep.userId.contains(ktu.userId) && keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepRecipients(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
             keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }

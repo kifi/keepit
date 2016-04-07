@@ -18,7 +18,7 @@ object Author {
   def fromSource(attr: RawSourceAttribution): Author = attr match {
     case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
     case RawSlackAttribution(msg, teamId) => SlackUser(teamId, msg.userId)
-    case RawKifiAttribution(userId, _, _) => KifiUser(userId)
+    case RawKifiAttribution(userId, _, _, _) => KifiUser(userId)
   }
 
   def toIndexableString(author: Author): String = {
@@ -95,7 +95,7 @@ object BasicAuthor {
       picture = StaticImageUrls.TWITTER_LOGO,
       url = tweet.permalink
     )
-    case KifiAttribution(keptBy, _, _, _, _) => fromUser(keptBy)
+    case KifiAttribution(keptBy, _, _, _, _, _) => fromUser(keptBy)
   }
   def fromNonUser(nonUser: BasicNonUser): BasicAuthor = nonUser.kind match {
     case NonUserKinds.email =>
