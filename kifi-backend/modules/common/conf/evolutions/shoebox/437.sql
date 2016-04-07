@@ -1,11 +1,8 @@
-#Shoebox
+# SHOEBOX
 
 # --- !Ups
-ALTER TABLE bookmark DROP CONSTRAINT IF EXISTS lib_primary_uri;
 
--- MySQL:
--- ALTER TABLE bookmark DROP KEY lib_primary_uri;
-
-insert into evolutions (name, description) values('437.sql', 'drop lib_primary_uri constraint on bookmark');
+alter table keep_event add message_id bigint(20) default null;
+create unique index keep_event_u_message_id on keep_event (message_id);
 
 # --- !Downs

@@ -57,6 +57,9 @@ object SlackAPI {
   def UserPresence(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.getPresence", token, userId)
   def UserInfo(token: SlackAccessToken, userId: SlackUserId) = Route(GET, "https://slack.com/api/users.info", token, userId)
   def UsersList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/users.list", token)
+  def IMList(token: SlackAccessToken) = Route(GET, "https://slack.com/api/im.list", token)
+  def IMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean) =
+    Route(GET, "https://slack.com/api/im.history", token, channelId, "oldest" -> fromTimestamp.map(_.value).getOrElse("0"), "count" -> limit, "inclusive" -> (if (inclusive) 1 else 0))
   def InviteToChannel(token: SlackAccessToken, userId: SlackUserId, channelId: SlackChannelId) = Route(GET, "https://slack.com/api/channels.invite", token, userId, channelId)
 }
 
@@ -77,6 +80,8 @@ trait SlackClient {
   def getPrivateChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPrivateChannelInfo]
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo]
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]]
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]]
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean = false): Future[Seq[SlackHistoryMessage]]
   def checkUserPresence(token: SlackAccessToken, user: SlackUserId): Future[SlackUserPresence]
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit]
 }
@@ -185,6 +190,12 @@ class SlackClientImpl(
 
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = {
     slackCall[Seq[SlackUserInfo]](SlackAPI.UsersList(token), SlackClient.longTimeout)((__ \ 'members).read)
+  }
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = {
+    slackCall[Seq[SlackIMChannelInfo]](SlackAPI.IMList(token))((__ \ 'ims).read)
+  }
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean = false): Future[Seq[SlackHistoryMessage]] = {
+    slackCall[Seq[SlackHistoryMessage]](SlackAPI.IMHistory(token, channelId, fromTimestamp, limit, inclusive))((__ \ 'messages).read)
   }
 
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = {

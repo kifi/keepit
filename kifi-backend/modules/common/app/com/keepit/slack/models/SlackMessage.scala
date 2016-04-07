@@ -166,6 +166,22 @@ object SlackMessage {
   }
 }
 
+final case class SlackHistoryMessage(
+  userId: Option[SlackUserId],
+  text: String,
+  attachments: Seq[SlackAttachment],
+  timestamp: SlackTimestamp,
+  originalJson: JsValue)
+object SlackHistoryMessage {
+  implicit val reads: Reads[SlackHistoryMessage] = (
+    (__ \ 'user).readNullable[SlackUserId] and
+    (__ \ 'text).read[String] and
+    (__ \ 'attachments).readNullable[Seq[SlackAttachment]].map(_ getOrElse Seq.empty) and
+    (__ \ 'ts).read[SlackTimestamp] and
+    __.read[JsValue]
+  )(SlackHistoryMessage.apply _)
+}
+
 @json
 case class SlackReaction(value: String)
 object SlackReaction {

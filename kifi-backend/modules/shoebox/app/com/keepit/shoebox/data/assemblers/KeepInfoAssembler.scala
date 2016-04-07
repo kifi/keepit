@@ -168,7 +168,7 @@ class KeepInfoAssemblerImpl @Inject() (
       activityByKeep <- activityFut
     } yield {
       val (usersById, libsById) = db.readOnlyMaster { implicit s =>
-        val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet
+        val userSet = ktusByKeep.values.flatMap(_.map(_.userId)).toSet ++ keepsById.values.flatMap(_.userId).toSet
         val libSet = ktlsByKeep.values.flatMap(_.map(_.libraryId)).toSet
         (basicUserRepo.loadAllActive(userSet), basicLibGen.getBasicLibraries(libSet))
       }

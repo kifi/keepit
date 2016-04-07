@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time.{Clock, _}
-import com.keepit.slack.{SlackPersonalDigestNotificationGenerator, SlackPersonalDigestNotificationActor, SlackClientWrapper, SlackOnboarder}
+import com.keepit.slack._
 import com.keepit.slack.models._
 import com.kifi.juggle.ConcurrentTaskProcessingActor.IfYouCouldJustGoAhead
 import org.joda.time.Period
@@ -25,6 +25,7 @@ object AdminEventTriggerController {
     case object SlackTeamDigest extends EventKind("slack_team_digest") { def reads = EventTrigger.SlackTeamDigest.reads }
     case object SlackPersonalDigest extends EventKind("slack_personal_digest") { def reads = EventTrigger.SlackPersonalDigest.reads }
     case object SlackIntegrationsFTUIs extends EventKind("slack_integrations_ftuis") { def reads = EventTrigger.SlackIntegrationsFTUIs.reads }
+    case object SlackKifibotFeedback extends EventKind("slack_kifibot_feedback") { def reads = EventTrigger.SlackKifibotFeedback.reads }
 
     private val all = _all.toSet
     private def get(str: String): Option[EventKind] = all.find(_.key == str)
@@ -41,6 +42,9 @@ object AdminEventTriggerController {
 
     case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
     object SlackIntegrationsFTUIs { val reads = Json.reads[SlackIntegrationsFTUIs] }
+
+    case class SlackKifibotFeedback(team: SlackTeamId, user: SlackUserId) extends EventTrigger
+    object SlackKifibotFeedback { val reads = Json.reads[SlackKifibotFeedback] }
 
     implicit val reads: Reads[EventTrigger] = Reads { j =>
       for {
@@ -64,6 +68,8 @@ class AdminEventTriggerController @Inject() (
   slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
   slackClient: SlackClientWrapper,
   slackPersonalDigestGenerator: SlackPersonalDigestNotificationGenerator,
+  slackFeedbackRepo: KifibotFeedbackRepo,
+  slackFeedbackActor: ActorInstance[KifibotFeedbackActor],
   implicit val executionContext: ExecutionContext)
     extends AdminUserActions {
   import AdminEventTriggerController._
@@ -74,6 +80,7 @@ class AdminEventTriggerController @Inject() (
       case x: SlackTeamDigest => demoSlackTeamDigest(x)
       case x: SlackPersonalDigest => demoSlackPersonalDigest(x)
       case x: SlackIntegrationsFTUIs => forceSlackIntegrationsFTUIs(x)
+      case x: SlackKifibotFeedback => triggerKifibotFeedbackIngestion(x)
     }
     result.map(Ok(_))
   }
@@ -136,6 +143,27 @@ class AdminEventTriggerController @Inject() (
       Json.obj("ok" -> true)
     }.recover {
       case fail => Json.obj("ok" -> false, "err" -> fail.getMessage)
+    }
+  }
+
+  private def triggerKifibotFeedbackIngestion(trigger: EventTrigger.SlackKifibotFeedback): Future[JsValue] = {
+    db.readOnlyMaster { implicit s =>
+      val membership = slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user)
+      val team = slackTeamRepo.getBySlackTeamId(trigger.team)
+      (membership, team)
+    } match {
+      case (Some(membership), Some(team)) if team.kifiBot.isDefined =>
+        slackClient.getIMChannels(team.kifiBot.get.token).map { channels =>
+          channels.find(_.userId == trigger.user).fold(JsString("couldn't find that user in the list of im channels")) { dmChannel =>
+            db.readWrite { implicit s =>
+              val model = slackFeedbackRepo.intern(membership.slackTeamId, membership.slackUserId, dmChannel.channelId)
+              slackFeedbackRepo.finishProcessing(model.id.get, clock.now minusHours 12)
+            }
+            slackFeedbackActor.ref ! IfYouCouldJustGoAhead
+            JsString("done, interned the info and triggered the actor")
+          }
+        }
+      case _ => Future.successful(JsString("couldn't find a membership and a team w/kifi bot"))
     }
   }
 }
