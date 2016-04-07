@@ -77,6 +77,7 @@ class LibraryCommanderImpl @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   keepToCollectionRepo: KeepToCollectionRepo,
   ktlRepo: KeepToLibraryRepo,
   ktlCommander: KeepToLibraryCommander,
@@ -608,7 +609,7 @@ class LibraryCommanderImpl @Inject() (
           val successes = collection.mutable.ListBuffer[Keep]()
 
           keeps.foreach {
-            case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) => keepCommander.moveKeep(keep, toLibrary, userId) match {
+            case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) => keepMutator.moveKeep(keep, toLibrary, userId) match {
               case Right(movedKeep) => successes += movedKeep
               case Left(error) => failures += (keep -> error)
             }
