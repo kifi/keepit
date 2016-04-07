@@ -86,49 +86,12 @@ var initFriendSearch = (function () {
   };
 
   function search(excludeIds, includeSelf, searchFor, ids, query, withResults) {
-    searchFor = searchFor || { participants: true, libraries: false, objects: false };
-
+    searchFor = searchFor || { user: true, email: true, library: false };
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    var deferreds = [ Q.defer(), Q.defer(), Q.defer() ];
-    var promises = [ deferreds[0].promise, deferreds[1].promise, deferreds[2].promise ];
-
-    if (searchFor.objects) {
-      api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids)}, function (recipients) {
-        deferreds[2].resolve(recipients);
-      });
-      deferreds[0].resolve([]);
-      deferreds[1].resolve([]);
-    } else {
-      deferreds[2].resolve([]);
-
-      if (searchFor.participants) {
-        api.port.emit('search_contacts', {q: query, n: n, includeSelf: includeSelf(ids.length), exclude: excludeIds.concat(ids)}, function (contacts) {
-          deferreds[0].resolve(contacts);
-        });
-      } else {
-        deferreds[0].resolve([]);
-      }
-
-      if (searchFor.libraries) {
-        api.port.emit('filter_libraries', query, function (results) {
-          results = results.filter(function (l) { return !~excludeIds.indexOf(l.id); }).slice(0, n);
-          deferreds[1].resolve(results);
-        });
-      } else {
-        deferreds[1].resolve([]);
-      }
-    }
-
-    Q.all(promises).done(function (vals) {
-      var contacts = vals[0];
-      var libraries = vals[1];
-      var mixedRecipients = vals[2];
-      contacts = contacts.concat(mixedRecipients.filter(function (r) { return r.id[0] !== 'l'; }));
-      libraries = libraries.concat(mixedRecipients.filter(function (r) { return r.id[0] === 'l'; })).map(function (l) {
-        l.kind = 'library';
-        return l;
-      });
-      var percentContacts = contacts.length / (libraries.length + contacts.length);
+    api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids), searchFor: searchFor }, function (recipients) {
+      var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
+      var libraries = recipients.filter(function (r) { return r.id[0] === 'l'; });
+      var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs
       var contactsCount = Math.floor(n * percentContacts);
       contacts = contacts.slice(0, contactsCount);
       libraries = libraries.slice(0, n - contactsCount);

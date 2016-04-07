@@ -573,10 +573,6 @@ var socketHandlers = {
   }
 };
 
-function shouldLinkToKeep(keep) {
-  return keep && keep.recipients && keep.recipients.libraries && keep.recipients.libraries.length <= 1;
-}
-
 function emitAllTabs(name, data, options) {
   return api.tabs.each(function(tab) {
     api.tabs.emit(tab, name, data, options);
@@ -1427,28 +1423,15 @@ api.port.on({
     data = data || {};
     data.drop = data.drop || 0;
 
-    ajax('GET', '/ext/keeps/suggestRecipients', { query: data.q, limit: data.n, drop: data.drop }, function (responseData) {
+    var searchFor = data.searchFor || { user: true, email: true, library: false };
+    var requested = Object.keys(searchFor).filter(function (k) { return searchFor[k]; }).join(',');
+
+    ajax('GET', '/ext/keeps/suggestRecipients', {query: data.q, limit: data.n, drop: data.drop, requested: requested}, function (responseData) {
       var recipients = responseData.results;
       respond(toResults(recipients, data.q, me, data.n, data.exclude, data.includeSelf));
     }, function () {
       respond(null);
     });
-  },
-  search_contacts: function (data, respond, tab) {
-    if (!contactSearchCache) {
-      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(30000);
-    }
-    var contacts = contactSearchCache.get(data.q);
-    if (contacts) {
-      respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
-    } else {
-      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n + (data.exclude && data.exclude.length) || 0}, function (contacts) {
-        contactSearchCache.put(data.q, contacts);
-        respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
-      }, function () {
-        respond(null);
-      });
-    }
   },
   delete_contact: function (email, respond) {
     ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {

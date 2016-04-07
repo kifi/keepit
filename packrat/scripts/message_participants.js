@@ -175,7 +175,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
               this.getAddDialog().removeClass('kifi-non-empty');
             }
           }.bind(this)
-        }, { objects: canChangeLibrary, participants: !canChangeLibrary });
+        }, { user: true, email: true, library: canChangeLibrary });
       }
 
       setTimeout(function () {
@@ -256,9 +256,6 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     getView: function () {
       var participants = this.getParticipants();
-      if (!participants.some(idIs(k.me.id))) {
-        participants.push(k.me);
-      }
       var participantsCount = participants.filter(function (user) {
         return user.id !== k.me.id;
       }).length + 1; // Always treat current user as a counted participant
