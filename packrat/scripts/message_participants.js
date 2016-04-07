@@ -628,7 +628,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
   }
 
   function isLibrary(o) {
-    return o && o.isLibrary === true || o.kind === 'library';
+    return o && (o.isLibrary === true || o.kind === 'library');
   }
 
   function mapId(o) {
