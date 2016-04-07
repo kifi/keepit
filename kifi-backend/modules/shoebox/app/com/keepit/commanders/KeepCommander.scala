@@ -4,7 +4,6 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.gen.BasicOrganizationGen
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.util.RightBias.FromOption
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
@@ -19,7 +18,8 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.common.util.RightBias
-import com.keepit.discussion.{ MessageSource, Message, CrossServiceMessage }
+import com.keepit.common.util.RightBias.FromOption
+import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
@@ -28,52 +28,23 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest }
-import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
+import com.keepit.shoebox.data.keep.{ KeepInfo, PartialKeepInfo }
 import com.keepit.slack.LibraryToSlackChannelPusher
-import com.keepit.social.{ Author, BasicAuthor }
+import com.keepit.social.Author
 import com.keepit.typeahead.{ HashtagHit, HashtagTypeahead, TypeaheadHit }
 import org.joda.time.DateTime
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
-case class RawBookmarksWithCollection(
-  collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
-
-object RawBookmarksWithCollection {
-  implicit val reads = (
-    (__ \ 'collectionId).read(ExternalId.format[Collection])
-    .map[Option[Either[ExternalId[Collection], String]]](c => Some(Left(c)))
-    orElse (__ \ 'collectionName).readNullable[String]
-    .map(_.map[Either[ExternalId[Collection], String]](Right(_))) and
-    (__ \ 'keeps).read[Seq[RawBookmarkRepresentation]]
-  )(RawBookmarksWithCollection.apply _)
-}
-
-case class BulkKeepSelection(
-  keeps: Option[Seq[ExternalId[Keep]]],
-  tag: Option[ExternalId[Collection]],
-  exclude: Option[Seq[ExternalId[Keep]]])
-object BulkKeepSelection {
-  implicit val format = (
-    (__ \ 'keeps).formatNullable[Seq[ExternalId[Keep]]] and
-    (__ \ 'tag).formatNullable[ExternalId[Collection]] and
-    (__ \ 'exclude).formatNullable[Seq[ExternalId[Keep]]]
-  )(BulkKeepSelection.apply, unlift(BulkKeepSelection.unapply))
-}
-
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
-  // Open db sessions, intended to be called directly from controllers
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep]
 
   // Getting
-  def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
-  def getKeepsCountFuture(): Future[Int]
+  def getKeepsCountFuture: Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], maxMessagesShown: Int, sanitizeUrls: Boolean, filterOpt: Option[FeedFilter] = None): Future[Seq[KeepInfo]]
@@ -142,11 +113,6 @@ class KeepCommanderImpl @Inject() (
     implicit val imageConfig: S3ImageConfig,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
-
-  def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep] = {
-    val idToKeepMap = keepRepo.getByIds(ids.toSet)
-    ids.map(idToKeepMap)
-  }
 
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {

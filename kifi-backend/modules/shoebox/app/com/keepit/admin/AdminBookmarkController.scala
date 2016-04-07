@@ -142,7 +142,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture.recover {
       case ex: Throwable => -1
     }
 
