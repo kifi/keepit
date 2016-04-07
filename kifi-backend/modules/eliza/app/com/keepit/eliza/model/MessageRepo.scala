@@ -229,9 +229,12 @@ class MessageRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (keepIds.isEmpty) Map.empty
     else {
-      val initStatement = db match {
-        case _: com.keepit.common.db.slick.H2 => s""" SET @idx = 0; SET @curKeep = 0; """
-        case _: com.keepit.common.db.slick.MySQL => s""" SET @idx := 0; SET @curKeep := 0; """
+      def initialize = db match {
+        case _: com.keepit.common.db.slick.H2 =>
+          StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
+        case _: com.keepit.common.db.slick.MySQL =>
+          StaticQuery.queryNA[Int] { s""" SET @idx := 0 """ }.first
+          StaticQuery.queryNA[Int] { s""" SET @curKeep := 0; """ }.first
       }
       val keepIdSetStr = keepIds.mkString("(", ",", ")")
       val updateRankStatement = db match {
@@ -239,7 +242,8 @@ class MessageRepoImpl @Inject() (
         case _: com.keepit.common.db.slick.MySQL => "@idx := IF(@curKeep = keep_id, @idx + 1, 1) AS rank"
         case _ => throw new RuntimeException("unexpected db type, not one of {H2, MySQL}")
       }
-      StaticQuery.queryNA[Int] { initStatement }.first
+
+      initialize
       StaticQuery.queryNA[(Id[Keep], Id[ElizaMessage])] {
         s"""
         SELECT keep_id, id FROM (
