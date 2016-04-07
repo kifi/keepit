@@ -332,7 +332,7 @@ class MessagingCommanderImpl @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.addUsersToKeep(adderId = user, keepId = thread.keepId, newUsers = Set(user)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSourceKind.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers
