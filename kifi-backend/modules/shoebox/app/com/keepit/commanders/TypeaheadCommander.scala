@@ -392,6 +392,7 @@ class TypeaheadCommander @Inject() (
             case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
             case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
             case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
+            case _ => false
           }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
 
           combined
