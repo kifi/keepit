@@ -18,7 +18,7 @@ import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-@ImplementedBy(classOf[KeepInfoAssemblerImpl])
+@ImplementedBy(classOf[KeepActivityAssemblerImpl])
 trait KeepActivityAssembler {
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
