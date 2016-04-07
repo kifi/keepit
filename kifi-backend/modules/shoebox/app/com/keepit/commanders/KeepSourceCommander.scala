@@ -36,7 +36,7 @@ class KeepSourceCommanderImpl @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   implicit val defaultContext: ExecutionContext)
     extends KeepSourceCommander with Logging {
 
@@ -86,7 +86,7 @@ class KeepSourceCommanderImpl @Inject() (
     keepIds.grouped(100).flatMap { batchedKeepIds =>
       db.readWrite { implicit s =>
         keepRepo.getByIds(batchedKeepIds).values.collect {
-          case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepCommander.setKeepOwner(keep, userId).id.get
+          case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepMutator.setKeepOwner(keep, userId).id.get
         }
       }
     }.toSet

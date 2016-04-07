@@ -89,7 +89,6 @@ trait KeepCommander {
   // Updating / managing
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
-  def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -485,12 +484,6 @@ class KeepCommanderImpl @Inject() (
       Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
     }
     keep
-  }
-
-  def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep = {
-    keepRepo.save(keep.withOwner(newOwner).withRecipients(keep.recipients.plusUser(newOwner))) tap { updatedKeep =>
-      ktuCommander.internKeepInUser(updatedKeep, newOwner, None, addedAt = Some(keep.keptAt))
-    }
   }
 
   private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
