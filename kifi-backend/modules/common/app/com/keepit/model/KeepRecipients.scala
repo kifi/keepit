@@ -77,7 +77,10 @@ object KeepMembers {
   val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
 }
 
-case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])
+case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress]) {
+  def isEmpty = this.users.isEmpty && this.libraries.isEmpty && this.emails.isEmpty
+  def nonEmpty = !isEmpty
+}
 object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addUsers(users: Set[Id[User]]) = KeepRecipientsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
