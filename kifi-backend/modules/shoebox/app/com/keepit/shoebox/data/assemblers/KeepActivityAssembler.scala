@@ -1,20 +1,22 @@
 package com.keepit.shoebox.data.assemblers
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
-import com.keepit.commanders.gen.{BasicLibraryGen, BasicOrganizationGen, KeepActivityGen}
+import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.mapExtensionOps
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import org.joda.time.DateTime
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepActivityAssembler {
@@ -34,6 +36,8 @@ class KeepActivityAssemblerImpl @Inject() (
   keepSourceCommander: KeepSourceCommander,
   eliza: ElizaServiceClient,
   private implicit val airbrake: AirbrakeNotifier,
+  private implicit val publicIdConfig: PublicIdConfiguration,
+  private implicit val imageConfig: S3ImageConfig,
   private implicit val executionContext: ExecutionContext)
     extends KeepActivityAssembler {
 
