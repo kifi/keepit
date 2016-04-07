@@ -184,4 +184,13 @@ class ElizaDiscussionController @Inject() (
     val msgs = db.readOnlyMaster(implicit s => messageRepo.pageSystemMessages(ElizaMessage.fromCommonId(fromId), pageSize)).map(ElizaMessage.toCrossServiceMessage)
     Ok(Json.toJson(msgs))
   }
+
+  def rpbTest() = Action(parse.tolerantJson) { implicit request =>
+    import RPBTest._
+    val input = request.body.as[Request]
+    val ans = db.readOnlyMaster { implicit s =>
+      messageRepo.getRecentByKeeps(input.keepIds, limitPerKeep = input.numPerKeep)
+    }
+    Ok(responseFormat.writes(Response(ans.mapValues(_.map(ElizaMessage.toCommonId)))))
+  }
 }

@@ -81,6 +81,13 @@ class AdminGoodiesController @Inject() (
     Ok(id)
   }
 
+  def rpbTest() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    eliza.rpbTest(keepIds, numPerKeep = 10).map { recentMsgs =>
+      Ok(Json.toJson(recentMsgs))
+    }
+  }
+
   private def registry: Seq[(String, String, Long)] = {
     PublicIdRegistry.registry.map {
       case (companion, accessor) =>
