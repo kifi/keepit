@@ -531,11 +531,9 @@ var socketHandlers = {
     messageData[o.id] = o.messages;
 
     getKeep(o.id)
-    .then(function (responseData) {
-      var keep = responseData.keep;
+    .then(function (keepData) {
+      var keep = keepData.keep;
       keepData[o.id] = keep;
-      sendThread(keep);
-
       var linkToKeep = shouldLinkToKeep(keep);
       // Do we need to update muted state and possibly participants too? or will it come in thread_info?
       forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? keep : null));
