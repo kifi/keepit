@@ -39,6 +39,11 @@ import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
+/**
+ * EVERY method in KeepCommander opens a db session. Do not call it from within a session.
+ * If you just need to perform some routine action on a keep without doing any permission
+ * checking, you may want KeepMutator
+ */
 @ImplementedBy(classOf[KeepCommanderImpl])
 trait KeepCommander {
   def updateKeepTitle(keepId: Id[Keep], userId: Id[User], title: String, source: Option[KeepEventSourceKind]): RightBias[KeepFail, Keep]

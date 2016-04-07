@@ -22,6 +22,11 @@ import org.joda.time.DateTime
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
+/**
+ * EVERY method in KeepMutator takes in an implicit db session. It is used exclusively to perform
+ * routine actions on a keep. Please do not use keepRepo.save directly. There are many entities
+ * across multiple tables that must be updated when a keep changes.
+ */
 @ImplementedBy(classOf[KeepMutatorImpl])
 trait KeepMutator {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
@@ -39,7 +44,6 @@ trait KeepMutator {
 
 @Singleton
 class KeepMutatorImpl @Inject() (
-  db: Database,
   searchClient: SearchServiceClient,
   keepToCollectionRepo: KeepToCollectionRepo,
   keepRepo: KeepRepo,
