@@ -24,10 +24,10 @@ object KifibotFeedbackConfig {
 
   val maxProcessingDuration = Duration.standardMinutes(5)
   val minConcurrency = 1
-  val maxConcurrency = 5
+  val maxConcurrency = 1
 
   val messagesPerRequest = 10
-  val messagesPerIngestion = 50
+  val messagesPerIngestion = 10
 }
 
 class KifibotFeedbackActor @Inject() (
@@ -119,6 +119,6 @@ class KifibotFeedbackActor @Inject() (
           val allMsgs = (msgs ++ nextMsgs).take(limit)
           ((allMsgs, nextMsgs.map(_.timestamp).maxOpt), nextMsgs.isEmpty || allMsgs.length == limit)
         }
-    }.map(_._1)
+    }.map(_._1.sortBy(_.timestamp))
   }
 }
