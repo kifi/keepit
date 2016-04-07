@@ -530,19 +530,19 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
 
-    getKeep(o.id, function (err, keep) {
-      if (err) {
-        return log('[socket:thread] error: ', err);
-      }
+    getKeep(o.id)
+    .then(function (responseData) {
+      var keep = responseData.keep;
       keepData[o.id] = keep;
       sendThread(keep);
-    });
 
-    function sendThread(keep) {
       var linkToKeep = shouldLinkToKeep(keep);
       // Do we need to update muted state and possibly participants too? or will it come in thread_info?
       forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? keep : null));
-    }
+    })
+    .catch(function (err) {
+      return log('[socket:thread] error: ', err);
+    });
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
@@ -1129,11 +1129,12 @@ api.port.on({
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       if (o.threadInfo && o.threadInfo.keep) {
-        getKeep(o.threadInfo.id, function (err, responseData) {
-          if (err) {
-            return log ('[send_message:getKeep] error: ', err);
-          }
+        getKeep(o.threadInfo.id)
+        .then(function (responseData) {
           keepData[o.threadInfo.id] = responseData.keep;
+        })
+        .catch(function (err) {
+          return log ('[send_message:getKeep] error: ', err);
         });
       }
       respond({threadId: o.parentId});
@@ -1194,13 +1195,14 @@ api.port.on({
   thread: function(id, _, tab) {
     var cachedKeep = keepData[id];
     if (!cachedKeep) {
-      getKeep(id, function (err, keep) {
-        if (err) {
-          log('[thread] error retrieving keep: ', err);
-          return;
-        }
+      getKeep(id)
+      .then(function (responseData) {
+        var keep = responseData.keep;
         keepData[id] = keep;
         doThread(id, keep);
+      })
+      .catch(function (err) {
+        log('[thread] error retrieving keep: ', err);
       });
     } else {
       doThread(id, cachedKeep);
@@ -2860,11 +2862,9 @@ function getPrefs(next) {
   });
 }
 
-function getKeep(keepId, cb) {
-  ajax('GET', '/api/1/keeps/' + keepId, function (responseData) {
-    cb(null, responseData.keep);
-  }, function (errData) {
-    cb(errData);
+function getKeep(keepId) {
+  return new Promise(function (resolve, reject) {
+    ajax('GET', '/api/1/keeps/' + keepId, resolve, reject);
   });
 }
 

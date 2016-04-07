@@ -256,6 +256,9 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     getView: function () {
       var participants = this.getParticipants();
+      if (!participants.some(idIs(k.me.id))) {
+        participants.push(k.me);
+      }
       var participantsCount = participants.filter(function (user) {
         return user.id !== k.me.id;
       }).length + 1; // Always treat current user as a counted participant
@@ -395,11 +398,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       if (e && e.originalEvent && e.originalEvent.participantsClosed) {
         return;
       }
+
       if (this.isExpanded()) {
         this.collapseParticipants();
-      }
-      else {
+      } else {
         this.expandParticipants();
+        this.hideAddDialog();
       }
     },
 
@@ -506,9 +510,9 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       }
       if (this.isDialogOpened()) {
         this.hideAddDialog();
-      }
-      else {
+      } else {
         this.showAddDialog();
+        this.collapseParticipants();
       }
     },
 
@@ -551,7 +555,6 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       $el.toggleClass('kifi-overflow', view.isOverflowed);
       $el.find('.kifi-message-participant-name').text(view.participantName);
       $el.find('.kifi-participant-count').text(view.participantCount);
-      $el.find('.kifi-message-participant-1-or-2-add').css('display', view.participantCount > 2 ? 'none' : null);
       var renderedAvatars = view.avatars.map(function (a) {
         a = a.email || a.user || a.library;
         var template = (a.isEmail ? 'html/keeper/message_avatar_email' : a.isUser ? 'html/keeper/message_avatar_user' : 'html/keeper/message_avatar_library');

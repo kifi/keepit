@@ -7,7 +7,7 @@
     <div class="kifi-message-participant-name">{{#onKeep}}{{author.name}}{{/onKeep}}{{^onKeep}}{{participantName}}{{/onKeep}}</div>
   </div>
   <div class="kifi-message-participants-n">
-    <div class="kifi-message-participants-title">A discussion with <span class="kifi-participant-count">{{participantCount}}</span> people</div>
+    <div class="kifi-message-participants-title">A discussion with</div>
     <div class="kifi-message-participants-avatar-container">
       <ul class="kifi-message-participants-avatars">
         {{#avatars}}
@@ -18,22 +18,22 @@
         <li><a class="kifi-message-participants-avatars-actions kifi-message-participants-avatars-expand" href="javascript:">+ Add</a></li>
       </ul>
     </div>
-    <div class="kifi-message-participant-list-root">
-      <div class="kifi-message-participant-list-wrapper">
-        <div class="kifi-message-participant-list">
-          <ul class="kifi-message-participant-list-inner kifi-scroll-inner">
-            {{#participants}}
-              {{#user}}{{>message_participant_user}}{{/user}}
-              {{#email}}{{>message_participant_email}}{{/email}}
-              {{#library}}{{>keep_box_lib}}{{/library}}
-            {{/participants}}
-          </ul>
-        </div>
-        <a class="kifi-message-participant-list-hide" href="javascript:">Hide</a>
+  </div>
+  <div class="kifi-message-participant-list-root">
+    <div class="kifi-message-participant-list-wrapper">
+      <div class="kifi-message-participant-list">
+        <ul class="kifi-message-participant-list-inner kifi-scroll-inner">
+          {{#participants}}
+            {{#user}}{{>message_participant_user}}{{/user}}
+            {{#email}}{{>message_participant_email}}{{/email}}
+            {{#library}}{{>keep_box_lib}}{{/library}}
+          {{/participants}}
+        </ul>
       </div>
+      <a class="kifi-message-participant-list-hide" href="javascript:">Hide</a>
     </div>
   </div>
-  {{^participants.2}}<div class="kifi-message-participant-1-or-2-add"><a href="javascript:" class="kifi-message-participant-1-or-2-add-link">Add participants</a></div>{{/participants.2}}
+  <div class="kifi-message-participant-1-or-2-add"><a href="javascript:" class="kifi-message-participant-1-or-2-add-link">Add participants</a></div>
   <div class="kifi-message-participant-dialog">
     <div class="kifi-message-participant-dialog-title">Add people to this conversation</div>
     <input class="kifi-message-participant-dialog-input" type="text" placeholder="Type a name..."/>

@@ -315,6 +315,10 @@ function formatParticipant(participant) {
 
   var id = participant.id || participant.email;
 
+  if (participant.isLibrary && !participant.color) {
+    participant.color = '#808080';
+  }
+
   if (participant.isEmail) {
     participant.initial = id[0].toUpperCase();
     // generate hashcode for background color
