@@ -1,33 +1,20 @@
 package com.keepit.shoebox.data.assemblers
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.commanders._
-import com.keepit.commanders.gen.{ KeepActivityGen, BasicLibraryGen, BasicOrganizationGen }
+import com.keepit.commanders.gen.{BasicLibraryGen, BasicOrganizationGen, KeepActivityGen}
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.db.Id
-import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.common.performance.StatsdTimingAsync
-import com.keepit.common.util.{ SetHelpers, RightBias }
-import com.keepit.common.core.{ anyExtensionOps, iterableExtensionOps, mapExtensionOps }
-import com.keepit.common.util.RightBias._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.SlackLog
+import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.rover.RoverServiceClient
-import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
-import com.keepit.shoebox.data.assemblers.KeepInfoAssemblerConfig.KeepViewAssemblyOptions
-import com.keepit.shoebox.data.keep._
-import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
-import com.keepit.social.{ BasicNonUser, BasicAuthor }
 import org.joda.time.DateTime
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[KeepInfoAssemblerImpl])
 trait KeepActivityAssembler {
@@ -40,27 +27,15 @@ class KeepActivityAssemblerImpl @Inject() (
   keepRepo: KeepRepo,
   libRepo: LibraryRepo,
   basicUserRepo: BasicUserRepo,
-  basicLibGen: BasicLibraryGen,
+  basicLibGen: BasicLibraryGen, // This is not used, but I think it should be
   basicOrgGen: BasicOrganizationGen,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
-  kteRepo: KeepToEmailRepo,
   keepSourceCommander: KeepSourceCommander,
-  permissionCommander: PermissionCommander,
-  keepCommander: KeepCommander,
-  keepImageCommander: KeepImageCommander,
   eliza: ElizaServiceClient,
-  rover: RoverServiceClient,
-  search: SearchServiceClient,
-  userExperimentRepo: UserExperimentRepo,
   private implicit val airbrake: AirbrakeNotifier,
-  private implicit val imageConfig: S3ImageConfig,
-  private implicit val executionContext: ExecutionContext,
-  private implicit val publicIdConfig: PublicIdConfiguration,
-  private implicit val inhouseSlackClient: InhouseSlackClient)
+  private implicit val executionContext: ExecutionContext)
     extends KeepActivityAssembler {
-
-  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
 
   @StatsdTimingAsync("KeepActivityAssembler.getActivityForKeeps")
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]] = {
@@ -94,6 +69,7 @@ class KeepActivityAssemblerImpl @Inject() (
           }
           val basicLibById = libById.map {
             case (libId, library) =>
+              // I think we should use `BasicLibraryGen` here instead of constructing them manually
               libId -> BasicLibrary(library, basicUserById(library.ownerId), basicOrgByLibId.get(libId).map(_.handle))
           }
           (basicUserById, basicLibById, basicOrgByLibId)
