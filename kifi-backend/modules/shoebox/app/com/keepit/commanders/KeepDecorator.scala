@@ -43,9 +43,7 @@ trait KeepDecorator {
 class KeepDecoratorImpl @Inject() (
   db: Database,
   basicUserRepo: BasicUserRepo,
-  keepToCollectionRepo: KeepToCollectionRepo,
   libraryRepo: LibraryRepo,
-  collectionCommander: CollectionCommander,
   libraryMembershipRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
@@ -136,10 +134,6 @@ class KeepDecoratorImpl @Inject() (
 
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
-      val colls = db.readOnlyMaster { implicit s =>
-        keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
-      }.map(collectionCommander.getBasicCollections)
-
       val sourceAttrsFut = db.readOnlyReplicaAsync { implicit s => keepSourceCommander.getSourceAttributionForKeeps(keepIds) }
 
       val additionalSourcesFuture = augmentationFuture.map { infos =>
@@ -186,8 +180,8 @@ class KeepDecoratorImpl @Inject() (
         activityByKeep <- activityWithStrictTimeout
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
-        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.flatMap {
-          case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+        val keepsInfo = (keeps, augmentationInfos, pageInfos).zipped.flatMap {
+          case (keep, augmentationInfoForKeep, pageInfoForKeep) =>
             val keepId = keep.id.get
             val keepers = viewerIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.getOrElse(keep.uriId, Set.empty)

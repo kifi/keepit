@@ -20,7 +20,6 @@ class MobilePageController @Inject() (
   keepRepo: KeepRepo,
   userCommander: UserCommander,
   userConnectionsCommander: UserConnectionsCommander,
-  collectionCommander: CollectionCommander,
   pageCommander: PageCommander)
     extends UserActions with ShoeboxServiceController {
 

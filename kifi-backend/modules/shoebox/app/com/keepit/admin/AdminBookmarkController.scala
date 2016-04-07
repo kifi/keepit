@@ -43,7 +43,6 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
-  collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
@@ -199,52 +198,9 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndName(userId, Hashtag(tagName))
-    } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.unknown).build
-      collectionCommander.deleteCollection(coll)
-      NoContent
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
-    }
-  }
-
-  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = AdminUserAction {
-    db.readWrite { implicit session =>
-      keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
-    }
-    Ok
-  }
-
   def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
     val numFix = libraryChecker.keepVisibilityCheck(libId)
     Ok(JsNumber(numFix))
-  }
-
-  // This attempts to fix keep notes whenever they may be off.
-  // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
-  // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
-  def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
-    val keepIds = db.readOnlyReplica { implicit session =>
-      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
-      val rangeIds = (for {
-        start <- (request.body \ "startUser").asOpt[Long]
-        end <- (request.body \ "endUser").asOpt[Long]
-      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
-      (userIds ++ rangeIds).flatMap { u =>
-        keepRepo.getByUser(u)
-      }.sortBy(_.userId).map(_.id.get)
-    }
-
-    keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
-      if (k.id % 1000 == 0) {
-        log.info(s"[reprocessNotesOfKeeps] Still running, keep $k")
-      }
-    })
-
-    Ok(s"Running for ${keepIds.length} keeps!")
   }
 
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
