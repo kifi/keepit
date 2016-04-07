@@ -1,10 +1,10 @@
 <div class="kifi-message-participants{{#isOverflowed}} kifi-overflow{{/isOverflowed}}" data-kifi-participants="{{participantCount}}">
   <div class="kifi-message-participants-1">
-    <div class="kifi-message-participants-title">{{#onKeep}}Comments{{/onKeep}}{{^onKeep}}Notes{{/onKeep}}</div>
+    <div class="kifi-message-participants-title">{{#keptInLibrary}}Comments{{/keptInLibrary}}{{^keptInLibrary}}Notes{{/keptInLibrary}}</div>
   </div>
   <div class="kifi-message-participants-2">
-    <div class="kifi-message-participants-title">A {{#onKeep}}keep by{{/onKeep}}{{^onKeep}}discussion with{{/onKeep}}</div>
-    <div class="kifi-message-participant-name">{{#onKeep}}{{author.name}}{{/onKeep}}{{^onKeep}}{{participantName}}{{/onKeep}}</div>
+    <div class="kifi-message-participants-title">A {{#keptInLibrary}}keep by{{/keptInLibrary}}{{^keptInLibrary}}discussion with{{/keptInLibrary}}</div>
+    <div class="kifi-message-participant-name">{{#keptInLibrary}}{{author.name}}{{/keptInLibrary}}{{^keptInLibrary}}{{participantName}}{{/keptInLibrary}}</div>
   </div>
   <div class="kifi-message-participants-n">
     <div class="kifi-message-participants-title">A discussion with</div>

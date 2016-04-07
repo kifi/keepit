@@ -256,23 +256,29 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     getView: function () {
       var participants = this.getParticipants();
-      var participantsCount = participants.filter(function (user) {
+      var keep = this.parent.keep;
+      var keepLibraries = (keep && keep.recipients && keep.recipients.libraries) || [];
+
+      // This count is no longer an accurate "number" of participants.
+      var participantCount = participants.filter(function (user) {
         return user.id !== k.me.id;
-      }).length + 1; // Always treat current user as a counted participant
-      var onKeep = !!(this.parent.keep && this.parent.keep.recipients.libraries.length > 0);
+      }).length + 1 + (keepLibraries.length ? 1 : 0);
+
       var other = participants.length <= 2 ? participants.filter(function (user) {
         return user.id !== k.me.id;
       })[0] : null;
 
-      var author = (this.parent.keep && this.parent.keep.author);
+      var author = (keep && keep.author);
       var attr = (author && author.id !== k.me.id ? author : other);
+      var keptInLibrary = keepLibraries.length > 0;
 
       return {
         author: author,
         authorName: author.name,
         participantName: attr ? this.getFullName(attr) : '',
         isOverflowed: this.isOverflowed(),
-        participantCount: participantsCount,
+        participantCount: participantCount,
+        keptInLibrary: keptInLibrary,
         avatars: this.renderAvatars(),
         participants: this.renderParticipants()
       };
