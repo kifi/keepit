@@ -43,6 +43,7 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
@@ -105,7 +106,7 @@ class AdminBookmarksController @Inject() (
   def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
-      keepCommander.deactivateKeep(keep)
+      keepMutator.deactivateKeep(keep)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
@@ -257,7 +258,7 @@ class AdminBookmarksController @Inject() (
 
     db.readWrite(attempts = 5) { implicit session =>
       keeps.foreach { keepId =>
-        keepCommander.deactivateKeep(keepRepo.get(keepId))
+        keepMutator.deactivateKeep(keepRepo.get(keepId))
       }
     }
 

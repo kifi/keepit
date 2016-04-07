@@ -99,7 +99,6 @@ trait KeepCommander {
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
   def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[PartialKeepInfo], Seq[ExternalId[Keep]])]
-  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
 
   // Data integrity
   def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep
@@ -125,6 +124,7 @@ class KeepCommanderImpl @Inject() (
     ktuRepo: KeepToUserRepo,
     ktuCommander: KeepToUserCommander,
     kteCommander: KeepToEmailCommander,
+    keepMutator: KeepMutator,
     keepSourceCommander: KeepSourceCommander,
     eventCommander: KeepEventCommander,
     keepSourceRepo: KeepSourceAttributionRepo,
@@ -413,7 +413,7 @@ class KeepCommanderImpl @Inject() (
             // TODO(ryan): stop deactivating keeps and instead just detach them from libraries
             // just uncomment the line below this and rework some of this
             // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
-            deactivateKeep(k)
+            keepMutator.deactivateKeep(k)
             k
           }
           finalizeUnkeeping(keeps, userId)
@@ -749,15 +749,6 @@ class KeepCommanderImpl @Inject() (
       ktuCommander.syncKeep(newKeep)
       kteCommander.syncKeep(newKeep)
     }
-  }
-
-  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    ktlCommander.removeKeepFromAllLibraries(keep.id.get)
-    ktuCommander.removeKeepFromAllUsers(keep)
-    kteCommander.removeKeepFromAllEmails(keep)
-    keepSourceRepo.deactivateByKeepId(keep.id.get)
-    keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
-    keepRepo.deactivate(keep)
   }
 
   @StatsdTiming("KeepCommander.getKeepStream")

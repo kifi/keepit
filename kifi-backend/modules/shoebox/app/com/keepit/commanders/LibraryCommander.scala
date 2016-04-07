@@ -405,7 +405,7 @@ class LibraryCommanderImpl @Inject() (
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         // ktlCommander.removeKeepFromLibrary(keep.id.get, libraryId)(s)
-        keepCommander.deactivateKeep(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
+        keepMutator.deactivateKeep(keep)(s) // TODO(ryan): At some point, remove this code. Keeps should only be detached from libraries
       }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
       libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)
@@ -451,7 +451,7 @@ class LibraryCommanderImpl @Inject() (
     }
 
     val deletedKeepsFut = db.readWriteAsync { implicit session =>
-      keepRepo.pageByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
+      keepRepo.pageByLibrary(libraryId, 0, Int.MaxValue).foreach(keepMutator.deactivateKeep)
       searchClient.updateKeepIndex()
     }
 
