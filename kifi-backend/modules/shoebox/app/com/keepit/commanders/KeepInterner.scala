@@ -49,7 +49,7 @@ object KeepInternRequest {
       author = Author.KifiUser(keeper),
       url = url,
       source = source,
-      attribution = RawKifiAttribution(keptBy = keeper, source = source, connections = recipients.plusUser(keeper)),
+      attribution = RawKifiAttribution(keeper, note, recipients.plusUser(keeper), source),
       title = title,
       note = note,
       keptAt = keptAt,
@@ -218,7 +218,7 @@ class KeepInternerImpl @Inject() (
     thirdPartyAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
     airbrake.verify(userIdOpt.isDefined || thirdPartyAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
-    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
+    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, note, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
 
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
 

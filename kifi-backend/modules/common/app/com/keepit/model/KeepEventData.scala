@@ -12,6 +12,7 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 sealed abstract class KeepEventKind(val value: String)
 object KeepEventKind extends Enumerator[KeepEventKind] {
@@ -58,6 +59,19 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
   }
 
   def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[KeepEventSourceKind] = new QueryStringBindable[KeepEventSourceKind] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KeepEventSourceKind]] = {
+      stringBinder.bind(key, params) map {
+        case Right(value) => Right(KeepEventSourceKind(value))
+        case _ => Left("Unable to bind a KeepEventSourceKind")
+      }
+    }
+
+    override def unbind(key: String, source: KeepEventSourceKind): String = {
+      stringBinder.unbind(key, source.value)
+    }
+  }
 }
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
