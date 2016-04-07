@@ -105,5 +105,8 @@ class FakeSlackClientImpl extends SlackClient {
   def getPrivateChannelInfo(token: SlackAccessToken, channelId: SlackChannelId): Future[SlackPrivateChannelInfo] = ???
   def getUserInfo(token: SlackAccessToken, userId: SlackUserId): Future[SlackUserInfo] = ???
   def getUsers(token: SlackAccessToken): Future[Seq[SlackUserInfo]] = ???
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = ???
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int, inclusive: Boolean = false): Future[Seq[SlackHistoryMessage]] = ???
   def inviteToChannel(token: SlackAccessToken, invitee: SlackUserId, channelId: SlackChannelId): Future[Unit] = ???
+
 }

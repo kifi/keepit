@@ -155,46 +155,15 @@ class KeepsController @Inject() (
     }
   }
 
-  def deleteCollection(id: ExternalId[Collection]) = UserAction { request =>
-    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val keepIds = db.readOnlyReplica { implicit session =>
-        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
-      }
-      collectionCommander.deleteCollection(coll)
-      val cnt = keepsCommander.removeTagFromKeeps(keepIds, coll.name)
-      Ok(Json.obj("deleted" -> coll.name, "cnt" -> cnt))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
-    }
-  }
-
-  def renameCollection(id: ExternalId[Collection]) = UserAction(parse.json) { request =>
-    val newTagName = (request.body \ "newTagName").as[String].trim
-    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val keepIds = db.readOnlyReplica { implicit session =>
-        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
-      }
-      val cnt = keepsCommander.replaceTagOnKeeps(keepIds, coll.name, Hashtag(newTagName))
-      Ok(Json.obj("renamed" -> coll.name, "cnt" -> cnt))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
-    }
-  }
-
   def deleteCollectionByTag(tag: String) = UserAction { request =>
-    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-      val keepIds = db.readOnlyReplica { implicit session =>
-        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+    val removed = db.readWrite(attempts = 3) { implicit s =>
+      collectionRepo.getByUserAndName(request.userId, Hashtag(tag)).map { coll =>
+        val keepIds = keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
+        keepsCommander.removeTagFromKeeps(keepIds, coll.name)
       }
-      collectionCommander.deleteCollection(coll)
-      val cnt = keepsCommander.removeTagFromKeeps(keepIds, coll.name)
-      Ok(Json.obj("deleted" -> coll.name, "cnt" -> cnt))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for tag $tag"))
     }
+    Ok(Json.obj("deleted" -> tag, "cnt" -> removed.getOrElse(0).toInt))
   }
 
   def renameCollectionByTag() = UserAction(parse.json) { request =>

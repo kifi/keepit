@@ -682,7 +682,13 @@ class KeepCommanderImpl @Inject() (
 
     val oldKeepOpt = k.id.map(keepRepo.get)
     val oldRecipients = oldKeepOpt.map(_.recipients)
-    val newKeep = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
+    val newKeep = {
+      val saved = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
+      (saved.note, saved.userId) match {
+        case (Some(n), Some(uid)) if n.nonEmpty => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
+        case _ => saved
+      }
+    }
 
     val oldLibraries = oldRecipients.map(_.libraries).getOrElse(Set.empty)
     if (oldLibraries != newKeep.recipients.libraries) {
@@ -758,34 +764,10 @@ class KeepCommanderImpl @Inject() (
       ktuCommander.syncKeep(newKeep)
       kteCommander.syncKeep(newKeep)
     } else {
-      val libIds = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-      val similarKeeps = getKeepsByUriAndLibraries(newUri.id.get, libIds)
-
-      val mergeableKeeps = similarKeeps.filter(keep.isOlderThan)
-      log.info(s"[URI-MIG] Of the similar keeps ${similarKeeps.map(_.id.get)}, these are mergeable: ${mergeableKeeps.map(_.id.get)}")
-      if (mergeableKeeps.nonEmpty) {
-        mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(keep, k) // todo: Handle notes! You can't just combine tags!
-        }
-        collectionCommander.deactivateKeepTags(keep)
-
-        val migratedKeep = keepRepo.deactivate(keep.withUriId(newUri.id.get))
-        ktlCommander.syncAndDeleteKeep(migratedKeep)
-        ktuCommander.syncAndDeleteKeep(migratedKeep)
-        kteCommander.syncAndDeleteKeep(migratedKeep)
-      } else {
-        val soonToBeDeadKeeps = similarKeeps.filter(_.isOlderThan(keep))
-        log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
-        soonToBeDeadKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
-          deactivateKeep(k)
-        }
-
-        val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
-        ktlCommander.syncKeep(newKeep)
-        ktuCommander.syncKeep(newKeep)
-        kteCommander.syncKeep(newKeep)
-      }
+      val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
+      ktlCommander.syncKeep(newKeep)
+      ktuCommander.syncKeep(newKeep)
+      kteCommander.syncKeep(newKeep)
     }
   }
 
@@ -794,7 +776,7 @@ class KeepCommanderImpl @Inject() (
     ktuCommander.removeKeepFromAllUsers(keep)
     kteCommander.removeKeepFromAllEmails(keep)
     keepSourceRepo.deactivateByKeepId(keep.id.get)
-    collectionCommander.deactivateKeepTags(keep)
+    keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
     keepRepo.deactivate(keep)
   }
 
@@ -814,41 +796,23 @@ class KeepCommanderImpl @Inject() (
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeeps = keepRepo.getByUriAndLibrariesHash(k.uriId, Set(toLibrary.id.get))
-    val newKeep = Keep(
-      userId = Some(userId),
-      url = k.url,
-      uriId = k.uriId,
-      keptAt = clock.now,
-      source = withSource.getOrElse(k.source),
-      originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      recipients = KeepRecipients(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
-      title = k.title,
-      note = k.note
-    )
     currentKeeps match {
       case existingKeep +: _ =>
-        combineTags(k.id.get, existingKeep.id.get)
         Left(LibraryError.AlreadyExistsInDest)
       case _ =>
+        val newKeep = Keep(
+          userId = Some(userId),
+          url = k.url,
+          uriId = k.uriId,
+          keptAt = clock.now,
+          source = withSource.getOrElse(k.source),
+          originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
+          recipients = KeepRecipients(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
+          title = k.title,
+          note = k.note
+        )
         val copied = persistKeep(newKeep)
-        combineTags(k.id.get, copied.id.get)
         Right(copied)
-    }
-  }
-
-  // combine tag info on both keeps & saves difference on the new Keep
-  private def combineTags(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
-    // todo: Awwww crud, this doesn't edit note
-    val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
-    val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
-    val tagsToAdd = oldSet.diff(existingSet)
-    tagsToAdd.foreach { tagId =>
-      val newKtc = KeepToCollection(keepId = newKeepId, collectionId = tagId)
-      val ktcOpt = keepToCollectionRepo.getOpt(newKeepId, tagId)
-      if (!ktcOpt.exists(_.isActive)) {
-        // either overwrite (if the dead one exists) or create a new one
-        keepToCollectionRepo.save(newKtc.copy(id = ktcOpt.map(_.id.get)))
-      }
     }
   }
 
