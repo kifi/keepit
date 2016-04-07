@@ -87,7 +87,6 @@ trait KeepCommander {
 
   // Updating / managing
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -462,24 +461,6 @@ class KeepCommanderImpl @Inject() (
     result.map(_._2)
   }
 
-  // Updates note on keep, making sure tags are in sync.
-  // i.e., the note is the source of truth, and tags are added/removed appropriately
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean)(implicit session: RWSession): Keep = {
-    // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
-    val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
-    val updatedKeep = oldKeep.withOwner(userId).withNote(noteToPersist)
-    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-    val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
-    session.onTransactionSuccess {
-      searchClient.updateKeepIndex()
-      slackPusher.schedule(oldKeep.recipients.libraries)
-    }
-    colls.foreach { c =>
-      Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
-    }
-    keep
-  }
-
   private def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
     val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
     val collection = collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
@@ -725,7 +706,7 @@ class KeepCommanderImpl @Inject() (
           val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
           if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
             log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            Try(updateKeepNote(keep.userId.get, keep, newNote, freshTag = false)).recover {
+            Try(keepMutator.updateKeepNote(keep.userId.get, keep, newNote, freshTag = false)).recover {
               case ex: Throwable =>
                 log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
             }
