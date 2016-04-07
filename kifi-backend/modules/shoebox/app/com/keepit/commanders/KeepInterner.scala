@@ -91,7 +91,7 @@ class KeepInternerImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   libraryRepo: LibraryRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
@@ -146,7 +146,7 @@ class KeepInternerImpl @Inject() (
         lastActivityAt = keepToInternWith.map(_.lastActivityAt).getOrElse(keptAt)
       )
       val internedKeep = try {
-        keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+        keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
           sourceAttrRepo.intern(improvedKeep.id.get, internReq.attribution)
         }
       } catch {
@@ -239,7 +239,7 @@ class KeepInternerImpl @Inject() (
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {
-      keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+      keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
         sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
       }
     } catch {
@@ -255,7 +255,7 @@ class KeepInternerImpl @Inject() (
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
     def tryFixKeepNote(keep: Keep)(implicit session: RWSession) = {
-      Try(keepCommander.updateKeepNote(keep.userId.get, keep, keep.note.getOrElse(""))) // will throw if keep.userId.isEmpty
+      Try(keepMutator.updateKeepNote(keep.userId.get, keep, keep.note.getOrElse(""))) // will throw if keep.userId.isEmpty
     }
 
     // Attach tags to keeps

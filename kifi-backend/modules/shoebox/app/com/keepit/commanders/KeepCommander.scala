@@ -84,7 +84,6 @@ trait KeepCommander {
   def internKeep(internReq: KeepInternRequest)(implicit context: HeimdalContext): Future[(Keep, Boolean, Option[Message])]
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[PartialKeepInfo], Seq[String])
-  def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
@@ -99,11 +98,6 @@ trait KeepCommander {
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, PartialKeepInfo]
   def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[PartialKeepInfo], Seq[ExternalId[Keep]])]
-
-  // Data integrity
-  def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep
-  def refreshParticipants(keepId: Id[Keep])(implicit session: RWSession): Keep
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit
 
   // On the way out, hopefully.
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
@@ -667,39 +661,6 @@ class KeepCommanderImpl @Inject() (
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
   // Only use this directly if you want to skip ALL interning features. You probably want KeepInterner.
-  def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
-    require(k.userId.toSet subsetOf k.recipients.users, "keep owner is not one of the connected users")
-
-    val oldKeepOpt = k.id.map(keepRepo.get)
-    val oldRecipients = oldKeepOpt.map(_.recipients)
-    val newKeep = {
-      val saved = keepRepo.save(k.withRecipients(k.recipients union oldRecipients))
-      (saved.note, saved.userId) match {
-        case (Some(n), Some(uid)) if n.nonEmpty => updateKeepNote(uid, saved, saved.note.getOrElse("")) // Saves again, but easiest way to do it.
-        case _ => saved
-      }
-    }
-
-    val oldLibraries = oldRecipients.map(_.libraries).getOrElse(Set.empty)
-    if (oldLibraries != newKeep.recipients.libraries) {
-      val libraries = libraryRepo.getActiveByIds(newKeep.recipients.libraries -- oldLibraries).values
-      libraries.foreach { lib => ktlCommander.internKeepInLibrary(newKeep, lib, newKeep.userId) }
-    }
-
-    val oldUsers = oldRecipients.map(_.users).getOrElse(Set.empty)
-    if (oldUsers != newKeep.recipients.users) {
-      val newUsers = newKeep.recipients.users -- oldUsers
-      newUsers.foreach { userId => ktuCommander.internKeepInUser(newKeep, userId, addedBy = None, addedAt = None) }
-    }
-
-    val oldEmails = oldRecipients.map(_.emails).getOrElse(Set.empty)
-    if (oldEmails != newKeep.recipients.emails) {
-      val newEmails = newKeep.recipients.emails -- oldEmails
-      newEmails.foreach { email => kteCommander.internKeepInEmail(newKeep, email, addedBy = None, addedAt = None) }
-    }
-
-    newKeep
-  }
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep = {
     val oldKeep = keepRepo.get(keepId)
     keepRepo.save(oldKeep.withRecipients(oldKeep.recipients.diffed(diff))) tap { newKeep =>
@@ -714,40 +675,6 @@ class KeepCommanderImpl @Inject() (
       session.onTransactionSuccess {
         slackPusher.schedule(diff.libraries.added)
       }
-    }
-  }
-  def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
-    val keep = keepRepo.getNoCache(keepId)
-    val claimedLibraries = keep.recipients.libraries
-    val actualLibraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
-    if (claimedLibraries != actualLibraries) {
-      keepRepo.save(keep.withLibraries(actualLibraries))
-    } else keep
-  }
-  def refreshParticipants(keepId: Id[Keep])(implicit session: RWSession): Keep = {
-    val keep = keepRepo.getNoCache(keepId)
-    val claimedUsers = keep.recipients.users
-    val actualUsers = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
-    if (claimedUsers != actualUsers) {
-      keepRepo.save(keep.withParticipants(actualUsers))
-    } else keep
-  }
-  private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
-    val candidates = keepRepo.getByUriAndLibrariesHash(uriId, targetLibraries)
-    val ktlsByKeep = ktlRepo.getAllByKeepIds(candidates.map(_.id.get).toSet)
-    candidates.filter(k => ktlsByKeep.get(k.id.get).exists(_.map(_.libraryId).toSet == targetLibraries)).toSet
-  }
-  def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
-    if (keep.isInactive) {
-      val newKeep = keepRepo.save(keep.withUriId(newUri.id.get))
-      ktlCommander.syncKeep(newKeep)
-      ktuCommander.syncKeep(newKeep)
-      kteCommander.syncKeep(newKeep)
-    } else {
-      val newKeep = keepRepo.save(uriHelpers.improveKeepSafely(newUri, keep.withUriId(newUri.id.get)))
-      ktlCommander.syncKeep(newKeep)
-      ktuCommander.syncKeep(newKeep)
-      kteCommander.syncKeep(newKeep)
     }
   }
 
