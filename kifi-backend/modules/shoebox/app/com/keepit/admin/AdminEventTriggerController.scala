@@ -43,7 +43,7 @@ object AdminEventTriggerController {
     case class SlackIntegrationsFTUIs(pushes: Set[Id[LibraryToSlackChannel]], ingestions: Set[Id[SlackChannelToLibrary]]) extends EventTrigger
     object SlackIntegrationsFTUIs { val reads = Json.reads[SlackIntegrationsFTUIs] }
 
-    case class SlackKifibotFeedback(team: SlackTeamId, user: SlackUserId) extends EventTrigger
+    case class SlackKifibotFeedback(team: SlackTeamId, user: Option[SlackUserId]) extends EventTrigger
     object SlackKifibotFeedback { val reads = Json.reads[SlackKifibotFeedback] }
 
     implicit val reads: Reads[EventTrigger] = Reads { j =>
@@ -148,22 +148,22 @@ class AdminEventTriggerController @Inject() (
 
   private def triggerKifibotFeedbackIngestion(trigger: EventTrigger.SlackKifibotFeedback): Future[JsValue] = {
     db.readOnlyMaster { implicit s =>
-      val membership = slackMembershipRepo.getBySlackTeamAndUser(trigger.team, trigger.user)
+      val membership = trigger.user.flatMap(userId => slackMembershipRepo.getBySlackTeamAndUser(trigger.team, userId))
       val team = slackTeamRepo.getBySlackTeamId(trigger.team)
       (membership, team)
     } match {
-      case (Some(membership), Some(team)) if team.kifiBot.isDefined =>
+      case (membershipOpt, Some(team)) if team.kifiBot.isDefined =>
         slackClient.getIMChannels(team.kifiBot.get.token).map { channels =>
-          channels.find(_.userId == trigger.user).fold(JsString("couldn't find that user in the list of im channels")) { dmChannel =>
-            db.readWrite { implicit s =>
-              val model = slackFeedbackRepo.intern(membership.slackTeamId, membership.slackUserId, dmChannel.channelId)
-              slackFeedbackRepo.finishProcessing(model.id.get, clock.now minusHours 12)
+          db.readWrite { implicit s =>
+            channels.foreach { dmChannel =>
+              val model = slackFeedbackRepo.intern(team.slackTeamId, dmChannel.userId, dmChannel.channelId)
+              slackFeedbackRepo.save(model.copy(nextIngestionAt = clock.now minusHours 12))
             }
-            slackFeedbackActor.ref ! IfYouCouldJustGoAhead
-            JsString("done, interned the info and triggered the actor")
           }
+          slackFeedbackActor.ref ! IfYouCouldJustGoAhead
+          Json.obj("ok" -> "true", "msg" -> "done, interned the info and triggered the actor", "numChannels" -> channels.length)
         }
-      case _ => Future.successful(JsString("couldn't find a membership and a team w/kifi bot"))
+      case _ => Future.successful(JsString("couldn't find that team w/kifi bot"))
     }
   }
 }
