@@ -67,8 +67,8 @@ object Path {
   }
 
   implicit val format: Format[Path] = Format(
-    __.read[String].map(str => Path(str.substring(base.length))),
-    Writes(path => JsString(path.absolute))
+    __.read[String].map(str => Path(str.stripPrefix(base))),
+    Writes(path => JsString(path.relativeWithLeadingSlash))
   )
 
   implicit val encodedFormat: Format[EncodedPath] = Format(
