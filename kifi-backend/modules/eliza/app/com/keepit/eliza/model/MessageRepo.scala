@@ -229,13 +229,6 @@ class MessageRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (keepIds.isEmpty) Map.empty
     else {
-      def initialize = db match {
-        case _: com.keepit.common.db.slick.H2 =>
-          StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
-        case _: com.keepit.common.db.slick.MySQL =>
-          StaticQuery.queryNA[Int] { s""" SET @idx := 0 """ }.first
-          StaticQuery.queryNA[Int] { s""" SET @curKeep := 0; """ }.first
-      }
       val keepIdSetStr = keepIds.mkString("(", ",", ")")
       val updateRankStatement = db match {
         case _: com.keepit.common.db.slick.H2 => "@idx := CASEWHEN(@curKeep = keep_id, @idx + 1, 1) AS rank"
@@ -243,7 +236,8 @@ class MessageRepoImpl @Inject() (
         case _ => throw new RuntimeException("unexpected db type, not one of {H2, MySQL}")
       }
 
-      initialize
+      StaticQuery.updateNA { s""" SET @idx = 0 """ }.execute
+      StaticQuery.updateNA { s""" SET @curKeep = 0 """ }.execute
       StaticQuery.queryNA[(Id[Keep], Id[ElizaMessage])] {
         s"""
         SELECT keep_id, id FROM (
@@ -251,7 +245,7 @@ class MessageRepoImpl @Inject() (
               $updateRankStatement,
               @curKeep := keep_id AS dummy
           FROM (SELECT * FROM message WHERE keep_id IN $keepIdSetStr AND state = 'active' ORDER BY keep_id, created_at DESC, id DESC) x
-        ) sub WHERE sub.rank <= $limitPerKeep;
+        ) sub WHERE sub.rank <= $limitPerKeep
         """
       }.list.groupBy(_._1).mapValues(_.map(_._2))
     }
