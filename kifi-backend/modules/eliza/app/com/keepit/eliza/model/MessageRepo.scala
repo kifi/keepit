@@ -231,10 +231,10 @@ class MessageRepoImpl @Inject() (
     else {
       def initialize = db match {
         case _: com.keepit.common.db.slick.H2 =>
-          StaticQuery.queryNA[Int] { s""" SET @idx = 0; SET @curKeep = 0; """ }.first
+          StaticQuery.updateNA { s""" SET @idx = 0; SET @curKeep = 0; """ }.execute
         case _: com.keepit.common.db.slick.MySQL =>
-          StaticQuery.queryNA[Int] { s""" SET @idx := 0 """ }.first
-          StaticQuery.queryNA[Int] { s""" SET @curKeep := 0; """ }.first
+          StaticQuery.updateNA { s""" SET @idx := 0 """ }.execute
+          StaticQuery.updateNA { s""" SET @curKeep := 0; """ }.execute
       }
       val keepIdSetStr = keepIds.mkString("(", ",", ")")
       val updateRankStatement = db match {
