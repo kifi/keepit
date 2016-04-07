@@ -153,15 +153,16 @@ class AdminEventTriggerController @Inject() (
       (membership, team)
     } match {
       case (membershipOpt, Some(team)) if team.kifiBot.isDefined =>
-        slackClient.getIMChannels(team.kifiBot.get.token).map { channels =>
+        slackClient.getIMChannels(team.kifiBot.get.token).map { allChannels =>
+          val channelsToIntern = membershipOpt.fold(allChannels)(specificUser => allChannels.filter(_.userId == specificUser.slackUserId))
           db.readWrite { implicit s =>
-            channels.foreach { dmChannel =>
+            channelsToIntern.foreach { dmChannel =>
               val model = slackFeedbackRepo.intern(team.slackTeamId, dmChannel.userId, dmChannel.channelId)
               slackFeedbackRepo.save(model.copy(nextIngestionAt = clock.now minusHours 12))
             }
           }
           slackFeedbackActor.ref ! IfYouCouldJustGoAhead
-          Json.obj("ok" -> "true", "msg" -> "done, interned the info and triggered the actor", "numChannels" -> channels.length)
+          Json.obj("ok" -> "true", "msg" -> "done, interned the info and triggered the actor", "numChannelsInterned" -> channelsToIntern.length, "channels" -> channelsToIntern.map(_.userId))
         }
       case _ => Future.successful(JsString("couldn't find that team w/kifi bot"))
     }
