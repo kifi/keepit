@@ -118,41 +118,4 @@ class ExtKeepImageController @Inject() (
       Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
     }
   }
-
-  // migration
-  def loadPrevImageForKeep(startUserId: Long, endUserId: Long) = Action.async { request =>
-
-    val users = (startUserId to endUserId).map(Id[User])
-
-    val process = FutureHelpers.foldLeft(users)(0) {
-      case (userCount, userId) =>
-        val libraryIds = db.readOnlyReplica { implicit session =>
-          libraryRepo.getByUser(userId).map(_._2.id.get)
-        }
-        FutureHelpers.foldLeft(libraryIds)(0) {
-          case (libraryCount, libraryId) =>
-            val lib = db.readOnlyMaster(implicit s => libraryRepo.get(libraryId))
-            val batchPositions = 0 to lib.keepCount by 1000
-            FutureHelpers.foldLeft(batchPositions)(0) {
-              case (batchKeepCount, batchPosition) =>
-                val keepIds = db.readOnlyReplica(keepRepo.pageByLibrary(libraryId, batchPosition, 1000)(_)).map(_.id.get)
-                FutureHelpers.foldLeft(keepIds)(0) {
-                  case (keepCount, keepId) =>
-                    keepImageCommander.autoSetKeepImage(keepId, localOnly = true, overwriteExistingChoice = false).map { s =>
-                      keepCount + 1
-                    }
-                }.map { result =>
-                  log.info(s"[kiip] Finished u:$userId, l:$libraryId, b:$batchPosition / ${batchPositions.length}, k: $result")
-                  db.readWrite { implicit session =>
-                    systemValueRepo.setValue(Name("keep_image_import_progress"), s"u:$userId, l:$libraryId, b:$batchPosition / ${batchPositions.length}, k: $result")
-                  }
-                  result
-                }
-            }
-        }
-    }
-
-    process.map(c => Ok(c.toString))
-  }
-
 }
