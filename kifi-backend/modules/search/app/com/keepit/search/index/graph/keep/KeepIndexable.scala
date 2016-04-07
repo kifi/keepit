@@ -59,7 +59,7 @@ object KeepFields {
     def apply(source: SourceAttribution): String = source match {
       case TwitterAttribution(tweet) => Source(tweet.user.screenName)
       case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)
-      case KifiAttribution(_, _, _, _, keepSource) => Source(keepSource)
+      case KifiAttribution(_, _, _, _, _, keepSource) => Source(keepSource)
     }
   }
 

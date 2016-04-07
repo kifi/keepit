@@ -15,6 +15,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
@@ -545,20 +546,23 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          if (updateShoebox) shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
-
-          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+          Some((actuallyNewUsers, actuallyNewNonUsers, actuallyNewLibraries, message, thread))
 
         }
       }
 
       resultInfoOpt.exists {
-        case (newUsers, newNonUsers, message, thread) =>
+        case (newUsers, newNonUsers, newLibraries, message, thread) =>
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
               messageRepo.refreshCache(thread.keepId)
             }
+          }
+
+          if (updateShoebox) {
+            val newEmails = newNonUsers.map(NonUserParticipant.toEmailAddress)
+            shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), DeltaSet.addOnly(newLibraries), DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
           if (newUsers.nonEmpty || newNonUsers.nonEmpty) {
