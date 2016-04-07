@@ -63,7 +63,7 @@ sealed abstract class BasicAuthor(val kind: AuthorKind) {
 object BasicAuthor {
   val Fake = KifiUser(
     id = "42424242-4242-4242-424242424242",
-    name = "fake",
+    name = "Someone",
     picture = StaticImageUrls.KIFI_LOGO,
     url = Path.base
   )
