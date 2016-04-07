@@ -81,8 +81,9 @@ object NonUserParticipant {
     case NonUserKinds.email => NonUserEmailParticipant(EmailAddress(nonUser.id))
   }
 
-  def toEmailAddress(nonUser: NonUserParticipant) = nonUser match {
-    case NonUserEmailParticipant(email) => email
+  def toEmailAddress(nonUser: NonUserParticipant): Option[EmailAddress] = nonUser match {
+    case NonUserEmailParticipant(email) => Some(email)
+    case _ => None
   }
 }
 
