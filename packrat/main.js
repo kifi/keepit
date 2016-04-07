@@ -454,6 +454,9 @@ var socketHandlers = {
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
   },
+  event: function (data) {
+    log('[socket:event] a new socket event was sent', data);
+  },
   new_pic: function (name) {
     log('[socket:new_pic]', name);
     if (me) {
@@ -526,11 +529,20 @@ var socketHandlers = {
   thread: function(o) {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
-    keepData[o.id] = o.keep;
-    var linkToKeep = shouldLinkToKeep(o.keep)
 
-    // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
+    getKeep(o.id, function (err, keep) {
+      if (err) {
+        return log('[socket:thread] error: ', err);
+      }
+      keepData[o.id] = keep;
+      sendThread(keep);
+    });
+
+    function sendThread(keep) {
+      var linkToKeep = shouldLinkToKeep(keep);
+      // Do we need to update muted state and possibly participants too? or will it come in thread_info?
+      forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? keep : null));
+    }
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
@@ -564,7 +576,7 @@ var socketHandlers = {
 };
 
 function shouldLinkToKeep(keep) {
-  return keep && keep.libraries && keep.libraries.length <= 1;
+  return keep && keep.recipients && keep.recipients.libraries && keep.recipients.libraries.length <= 1;
 }
 
 function emitAllTabs(name, data, options) {
@@ -724,32 +736,51 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
-  update_discussion_keep_library: function (data, respond, tab) {
+  update_keepscussion_recipients: function (data, respond, tab) {
     var d = pageData[tab.nUri];
-    var discussionKeep = data.discussionKeep;
+    var newUsers = data.newUsers;
+    var newEmails = data.newEmails;
     var newLibrary = data.newLibrary;
-    var oldLibrary = discussionKeep.libraries.filter(function (l) { return l.id !== newLibrary.id; })[0];
+    var oldLibrary = data.newLibrary ? (data.oldLibraries || []).filter(function (l) { return l.id !== newLibrary.id; })[0] : null;
     var params = {
       libraries: {
-        add: [ newLibrary.id ],
+        add: newLibrary ? [ newLibrary.id ] : [],
         remove: oldLibrary ? [ oldLibrary.id ] : []
+      },
+      users: {
+        add: newUsers.map(getId),
+        remove: []
+      },
+      emails: {
+        add: newEmails.map(getId),
+        remove: []
       }
     };
+    var keep = keepData[data.keepId];
+    var permissions = keep && keep.viewer && keep.viewer.permissions || [];
 
-    ajax('POST', '/ext/keeps/' + discussionKeep.id + '/recipients', params, function (result) {
-      var keep = keepData[discussionKeep.id];
-      loadLibraries(function (libraries) {
-        var canonicalLibrary = libraries.find(idIs(newLibrary.id));
-        if (keep) {
-          keep.libraries = [ canonicalLibrary ];
-        }
-        var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
-        if (pageKeep) {
-          pageKeep.libraryId = newLibrary.id;
-        }
+    if (keep && permissions.indexOf('add_participants') === -1) {
+      return respond({ success: false });
+    }
 
-        respond({ success: true, response: keep });
-      })
+    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, function (result) {
+      var keep = keepData[data.keepId];
+      keep.recipients.users = keep.recipients.users.concat(newUsers);
+      keep.recipients.emails = keep.recipients.emails.concat(newEmails);
+
+      if (newLibrary) {
+        loadLibraries(function (libraries) {
+          var canonicalLibrary = libraries.find(idIs(newLibrary.id));
+          if (keep) {
+            keep.recipients.libraries = [ canonicalLibrary ];
+          }
+          var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
+          if (pageKeep) {
+            pageKeep.libraryId = newLibrary.id;
+          }
+        });
+      }
+      respond({ success: true, response: keep });
     }, function (failData) {
       respond({ success: false })
     });
@@ -1098,7 +1129,12 @@ api.port.on({
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       if (o.threadInfo && o.threadInfo.keep) {
-        keepData[o.threadInfo.id] = o.threadInfo.keep;
+        getKeep(o.threadInfo.id, function (err, responseData) {
+          if (err) {
+            return log ('[send_message:getKeep] error: ', err);
+          }
+          keepData[o.threadInfo.id] = responseData.keep;
+        });
       }
       respond({threadId: o.parentId});
     }, function (req) {
@@ -1156,30 +1192,45 @@ api.port.on({
     sendPageThreadCount(tab, null, true);
   },
   thread: function(id, _, tab) {
-    var th = notificationsById[id];
-    var keep = keepData[id];
-    if (th) {
-      emitThreadInfoToTab(th, keep, tab);
-    } else {
-      // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_one_thread', id], function (th) {
-        if (th) {
-          standardizeNotification(th);
-          updateIfJustRead(th);
-          notificationsById[th.thread] = th;
-        } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
-          th = { thread: id };
+    var cachedKeep = keepData[id];
+    if (!cachedKeep) {
+      getKeep(id, function (err, keep) {
+        if (err) {
+          log('[thread] error retrieving keep: ', err);
+          return;
         }
-        emitThreadInfoToTab(th, keep, tab);
+        keepData[id] = keep;
+        doThread(id, keep);
       });
-    }
-    var msgs = messageData[id];
-    if (msgs) {
-      var linkToKeep = shouldLinkToKeep(keep);
-      emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
     } else {
-      // TODO: remember that this tab needs this thread until it gets it or its pane changes?
-      socket.send(['get_thread', id]);
+      doThread(id, cachedKeep);
+    }
+
+    function doThread(id, keep) {
+      var th = notificationsById[id];
+      if (th) {
+        emitThreadInfoToTab(th, keep, tab);
+      } else {
+        // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
+        socket.send(['get_one_thread', id], function (th) {
+          if (th) {
+            standardizeNotification(th);
+            updateIfJustRead(th);
+            notificationsById[th.thread] = th;
+          } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
+            th = { thread: id };
+          }
+          emitThreadInfoToTab(th, keep, tab);
+        });
+      }
+      var msgs = messageData[id];
+      if (msgs) {
+        var linkToKeep = shouldLinkToKeep(keep);
+        emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
+      } else {
+        // TODO: remember that this tab needs this thread until it gets it or its pane changes?
+        socket.send(['get_thread', id]);
+      }
     }
   },
   thread_list: function(o, _, tab) {
@@ -2650,7 +2701,7 @@ function dontShowFtueAgain(type) {
 }
 
 function toResults(contacts, q, me, n, exclude, includeSelf) {
-  exclude = exclude || [];
+  exclude = (exclude || []).filter(Boolean);
 
   var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
   if (!includeSelf) {
@@ -2806,6 +2857,14 @@ function getPrefs(next) {
       socket.send(['eip', eip]);
     }
     if (next) next();
+  });
+}
+
+function getKeep(keepId, cb) {
+  ajax('GET', '/api/1/keeps/' + keepId, function (responseData) {
+    cb(null, responseData.keep);
+  }, function (errData) {
+    cb(errData);
   });
 }
 

@@ -7,6 +7,9 @@
 // @require scripts/html/keeper/message_participant_icon.js
 // @require scripts/html/keeper/message_avatar_email.js
 // @require scripts/html/keeper/message_avatar_user.js
+// @require scripts/html/keeper/message_avatar_library.js
+// @require scripts/html/keeper/keep_box_lib.js
+// @require scripts/lib/q.min.js
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/antiscroll.min.js
@@ -33,8 +36,10 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
   var partials = {
     'message_avatar_user': 'message_avatar_user',
     'message_avatar_email': 'message_avatar_email',
+    'message_avatar_library': 'message_avatar_library',
     'message_participant_user': 'message_participant_user',
-    'message_participant_email': 'message_participant_email'
+    'message_participant_email': 'message_participant_email',
+    'keep_box_lib': 'keep_box_lib'
   };
 
   var portHandlers = {
@@ -122,19 +127,19 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       return function () {
         var submitAddParticipants = this.addParticipantTokens.bind(this);
 
-        var $el = this.get$();
-        $el.on('click', '.kifi-message-participant-avatar>a,.kifi-message-participant-a', this.openUserProfile.bind(this));
-        $el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
-        $el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
-        $el.on('click', '.kifi-message-participant-dialog-button', submitAddParticipants);
-        $el.on('keydown', '.kifi-message-participant-dialog', function (e) {
+        this.get$()
+        .on('click', '.kifi-message-participant-avatar>a,.kifi-message-participant-a', this.openUserProfile.bind(this))
+        .on('click', '.kifi-message-participants-avatars-expand,.kifi-message-participant-1-or-2-add', this.toggleAddDialog.bind(this))
+        .on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this))
+        .on('click', '.kifi-message-participant-dialog-button', submitAddParticipants)
+        .on('keydown', '.kifi-message-participant-dialog', function (e) {
           if (e.which === 13 && e.originalEvent.isTrusted !== false) {
             submitAddParticipants();
           }
         });
 
-        var $parent = this.getParent$();
-        $parent.on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
+        this.getParent$()
+        .on('click', '.kifi-message-show-participant', this.toggleParticipants.bind(this));
 
         win.setTimeout(addDocListeners.bind(this));
       };
@@ -154,8 +159,9 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      */
     initAndAsyncFocusInput: function () {
       var $input = this.$input;
-      var keptBy = this.parent.keep && this.parent.keep.keptBy;
-      var canChangeLibrary = (keptBy && keptBy.id === k.me.id);
+      var keep = this.parent.keep;
+      var permissions = keep && keep.viewer && keep.viewer.permissions || [];
+      var canChangeLibrary = permissions.indexOf('add_libraries') > -1 && permissions.indexOf('remove_libraries') > -1;
 
       if (!$input) {
         $input = this.$input = this.get$('.kifi-message-participant-dialog-input');
@@ -239,8 +245,8 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      *
      * @return {string} Full name of the user
      */
-    getFullName: function (user) {
-      return user.firstName + ' ' + user.lastName;
+    getFullName: function (o) {
+      return o.firstName ? o.firstName + ' ' + o.lastName : o.name ? o.name : o.id;
     },
 
     /**
@@ -253,25 +259,24 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       var participantsCount = participants.filter(function (user) {
         return user.id !== k.me.id;
       }).length + 1; // Always treat current user as a counted participant
-      var onKeep = !!(this.parent.keep && this.parent.keep.libraries.length > 0);
+      var onKeep = !!(this.parent.keep && this.parent.keep.recipients.libraries.length > 0);
       var other = participants.length <= 2 ? participants.filter(function (user) {
         return user.id !== k.me.id;
       })[0] : null;
 
-      var keptBy = (this.parent.keep && this.parent.keep.keptBy);
-      var attr = (keptBy && keptBy.id !== k.me.id ? keptBy : other);
+      var author = (this.parent.keep && this.parent.keep.author);
+      var attr = (author && author.id !== k.me.id ? author : other);
 
       return {
-        onKeep: onKeep,
-        keptBy: keptBy ? this.getFullName(keptBy) : null,
-        participantName: attr ? this.getFullName(attr) : null,
+        author: author,
+        authorName: author.name,
+        participantName: attr ? this.getFullName(attr) : '',
         isOverflowed: this.isOverflowed(),
         participantCount: participantsCount,
         avatars: this.renderAvatars(),
         participants: this.renderParticipants()
       };
     },
-
     /**
      * Renders and returns html for participants container.
      *
@@ -296,7 +301,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      * @return {string} html for a list of avatars
      */
     renderAvatars: function () {
-      return this.getParticipants().slice(0, OVERFLOW_LENGTH).map(this.renderAvatar);
+      return this.getParticipants().map(this.renderAvatar).sort(orderLibrariesFirst).slice(0, OVERFLOW_LENGTH);
     },
 
     /**
@@ -304,11 +309,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      *
      * @return {string} html for a single avatar
      */
-    renderAvatar: function (user) {
-      formatParticipant(user);
+    renderAvatar: function (participant) {
+      formatParticipant(participant);
       return {
-        email: user.kind === 'email' ? user : null,
-        user: user.kind !== 'email' ? user : null
+        email: participant.isEmail ? participant : null,
+        user: participant.isUser ? participant : null,
+        library: participant.isLibrary ? participant : null
       };
     },
 
@@ -318,7 +324,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      * @return {string} html for a participant list
      */
     renderParticipants: function () {
-      return this.getParticipants().map(this.renderParticipant);
+      return this.getParticipants().map(this.renderParticipant).sort(orderLibrariesFirst);
     },
 
     /**
@@ -326,11 +332,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
      *
      * @return {string} html for a participant list item
      */
-    renderParticipant: function (user) {
-      formatParticipant(user);
+    renderParticipant: function (participant) {
+      formatParticipant(participant);
       return {
-        email: user.kind === 'email' ? user : null,
-        user: user.kind !== 'email' ? user : null
+        email: participant.isEmail ? participant : null,
+        user: participant.isUser ? participant : null,
+        library: participant.isLibrary ? participant : null
       };
     },
 
@@ -430,30 +437,39 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     },
 
     addParticipantTokens: function () {
-      var $input = this.$input,
-        participants = $input.tokenInput('get'),
-        users = participants.filter(function (p) { return p.id[0] !== 'l'; }),
-        libraries = participants.filter(function (p) { return p.id[0] === 'l'; });
+      var $input = this.$input;
+      var participants = $input.tokenInput('get');
+      var users = participants.filter(function (p) { return !p.email && p.id[0] !== 'l'; });
+      var libraries = participants.filter(function (p) { return p.id[0] === 'l'; });
+      var emails = participants.filter(function (p) { return p.email; });
 
-      if (libraries.length) {
-        this.sendModifyKeep(libraries);
-      }
-      this.addParticipant.apply(this, users);
-      $input.tokenInput('clear');
-      this.toggleAddDialog();
-      this.sendAddParticipants(users);
+      this.sendModifyKeep(users, emails, libraries)
+      .then(function () {
+        this.addParticipant.apply(this, participants);
+      }.bind(this))
+      .finally(function () {
+        $input.tokenInput('clear');
+        this.toggleAddDialog();
+      }.bind(this));
     },
 
-    sendModifyKeep: function (libraries) {
+    sendModifyKeep: function (users, emails, libraries) {
+      var deferred = Q.defer();
+
       var keep = this.parent.keep;
-      return api.port.emit('update_discussion_keep_library', {
-        discussionKeep: keep,
-        newLibrary: libraries[0]
+      api.port.emit('update_keepscussion_recipients', {
+        keepId: keep.id,
+        newUsers: users || [],
+        newEmails: emails || [],
+        newLibrary: libraries[0],
+        oldLibraries: keep.recipients.libraries
       }, function success(d) {
         var keep = d.response;
         if (d.success) {
           this.parent.keep = keep;
           this.parent.refresh();
+          this.updateView();
+          deferred.resolve(keep);
         } else {
           // TODO(carlos): Add a progress bar to seem snappier
           var $toShake = this.get$();
@@ -464,15 +480,12 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
             this.parent.refresh();
           }.bind(this))
           .addClass('kifi-shake');
+
+          deferred.reject();
         }
       }.bind(this));
-    },
 
-    sendAddParticipants: function (users) {
-      return k.request('add_participants', {
-        threadId: this.parent.threadId,
-        ids: users.map(function (u) { return u.id; })
-      }, 'Could not add participants.');
+      return deferred.promise;
     },
 
     showAddDialog: function () {
@@ -500,40 +513,35 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
     },
 
     addParticipant: function () {
-      var participants = this.getParticipants(),
-        count = 0;
+      var participants = this.getParticipants();
+      var args = Array.prototype.slice.call(arguments);
+      var count = 0;
 
-      for (var i = 0, len = arguments.length, user, userId; i < len; i++) {
-        user = arguments[i];
-        userId = user && user.id;
-        if (userId && !participants.some(function (p) { return p.id === userId; })) {
-          participants.unshift(user);
+      for (var i = 0, len = arguments.length, participant, participantId; i < len; i++) {
+        participant = args[i];
+        participantId = participant && participant.id;
+
+        if (participantId && !participants.some(idIs(participantId))) {
+          if (isLibrary(participant)) { // TODO(carlos): remove for multiple libraries on keep
+            removeFromList(participants, participants.find(isLibrary));
+          }
+          participants.unshift(participant);
           count++;
         }
       }
 
       if (count) {
         this.updateView();
-        this.highlightFirstNParticipants(count);
-        this.highlightCount();
+        this.highlightParticipantsWithIds(args.map(mapId));
       }
     },
 
-    highlightCount: function () {
-      this.get$('.kifi-participant-count').addClass('kifi-highlight');
-      setTimeout(function () {
-        var $el = this.get$('.kifi-participant-count');
-        if ($el) {
-          $el.removeClass('kifi-highlight');
-        }
-      }.bind(this), 5000);
-    },
-
-    highlightFirstNParticipants: function (count) {
-      if (count) {
-        this.get$('.kifi-message-participant-item').slice(0, count).addClass('kifi-highlight');
-        this.get$('.kifi-message-participant-avatar').slice(0, count).addClass('kifi-highlight');
-      }
+    highlightParticipantsWithIds: function (ids) {
+      this.get$('.kifi-message-participant-avatar')
+      .filter(function () {
+        return ids.indexOf(this.dataset.id) > -1;
+      })
+      .addClass('kifi-highlight');
     },
 
     updateView: function () {
@@ -543,17 +551,20 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       $el.toggleClass('kifi-overflow', view.isOverflowed);
       $el.find('.kifi-message-participant-name').text(view.participantName);
       $el.find('.kifi-participant-count').text(view.participantCount);
+      $el.find('.kifi-message-participant-1-or-2-add').css('display', view.participantCount > 2 ? 'none' : null);
       var renderedAvatars = view.avatars.map(function (a) {
-        var template = (a.email ? 'html/keeper/message_avatar_email' : 'html/keeper/message_avatar_user');
-        a = a.email || a.user;
+        a = a.email || a.user || a.library;
+        var template = (a.isEmail ? 'html/keeper/message_avatar_email' : a.isUser ? 'html/keeper/message_avatar_user' : 'html/keeper/message_avatar_library');
         return $(k.render(template, a));
       });
       var renderedParticipants = view.participants.map(function (p) {
-        var template = (p.email ? 'html/keeper/message_participant_email' : 'html/keeper/message_participant_user');
-        p = p.email || p.user;
+        p = p.email || p.user || p.library;
+        var template = (p.isEmail ? 'html/keeper/message_participant_email' : p.isUser ? 'html/keeper/message_participant_user' : 'html/keeper/keep_box_lib');
         return $(k.render(template, p));
       });
-      $el.find('.kifi-message-participants-avatars').empty().append(renderedAvatars);
+      var avatarList = $el.find('.kifi-message-participants-avatars');
+      avatarList.find('> :not(:last)').remove();
+      avatarList.prepend(renderedAvatars);
       $el.find('.kifi-message-participant-list-inner').empty().append(renderedParticipants);
       this.updateParticipantsHeight();
       this.$list.data('antiscroll').refresh();
@@ -598,4 +609,33 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
       this.$input = this.$list = this.$el = null;
     }
   };
+
+  function orderLibrariesFirst(a, b) {
+    if (a.library && !b.library) {
+      return -1;
+    } else if (!a.library && b.library) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
+  function idIs(id) {
+    return function (o) { return o.id === id; };
+  }
+
+  function isLibrary(o) {
+    return o && o.isLibrary === true || o.kind === 'library';
+  }
+
+  function mapId(o) {
+    return o.id;
+  }
+
+  function removeFromList(list, item) {
+    var index = list.indexOf(item);
+    if (index > -1) {
+      list.splice(list.indexOf(item), 1);
+    }
+  }
 })(jQuery, this);

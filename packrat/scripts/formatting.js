@@ -309,14 +309,18 @@ function formatLocalDate() {
 }
 
 function formatParticipant(participant) {
-  participant.isUser = !participant.kind || participant.kind === 'user';
-  participant.isEmail = participant.kind === 'email';
+  participant.isEmail = participant.kind === 'email' || participant.email;
+  participant.isUser = !participant.isEmail && (!participant.kind || participant.kind === 'user');
+  participant.isLibrary = participant.kind === 'library';
+
+  var id = participant.id || participant.email;
+
   if (participant.isEmail) {
-    participant.initial = participant.id[0].toUpperCase();
+    participant.initial = id[0].toUpperCase();
     // generate hashcode for background color
     var hash = 0, i, chr, len;
-    for (i = 0, len = participant.id.length; i < len; i++) {
-      chr = participant.id.charCodeAt(i);
+    for (i = 0, len = id.length; i < len; i++) {
+      chr = id.charCodeAt(i);
       hash = ((hash << 5) - hash) + chr;
       hash |= 0;
     }

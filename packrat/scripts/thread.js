@@ -27,7 +27,20 @@ k.panes.thread = k.panes.thread || function () {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
         $holder.data('keep', o.keep);
-        var participants = o.th.participants || o.keep && o.keep.keptBy && [o.keep.keptBy] || [];
+        var participants;
+        if (o.keep) {
+          var recipients = o.keep.recipients;
+          participants = Object.keys(recipients).map(function (k) {
+            var p = recipients[k];
+            var kind = k === 'users' ? 'user' : k === 'emails' ? 'email' : k === 'libraries' ? 'library' : null;
+            p.forEach(function (d) {
+              d.kind = kind;
+            });
+            return p;
+          }).reduce(function (a, n) { return a.concat(n); });
+        } else {
+          participants = o.th.participants;
+        }
         k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },

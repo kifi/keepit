@@ -1,3 +1,5 @@
+@import (reference) 'lib_icons.less';
+
 .kifi-compose {
   font-size: 12px;
   line-height: 14px;
@@ -240,9 +242,9 @@ textarea.kifi-compose-draft::-moz-placeholder {
   bottom: 1px;
   cursor: pointer;
   &:hover {
-    background-color: #4c8ffb;
+    background-color: rgba(0, 0, 0, .15);
     .kifi-ti-token-selected>& {
-      background-color: #6fa6ef;
+      background-color: none;
     }
   }
 }
@@ -439,6 +441,9 @@ textarea.kifi-compose-draft::-moz-placeholder {
 .kifi-ti-dropdown b {
   font-weight: bold;
 }
+.kifi-ti-user-token {
+  background-color: #999;
+}
 .kifi-ti-user-token-icon {
   display: inline-block;
   background-repeat: no-repeat;
@@ -463,9 +468,37 @@ textarea.kifi-compose-draft::-moz-placeholder {
   display: inline-block;
   height: 14px;
   width: 9px;
-  border-radius: 20%;
-  margin-right: 4px;
-  margin-bottom: -3px;
+  margin: 0 3px -3px;
+  background-size: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  &[data-visibility="secret"] {
+    @url: %(@svgLibCardLockDataUrl, #fff);
+    background-image: url(@url);
+  }
+
+  &[data-visibility="published"] {
+    @url: %(@svgLibCardGlobeDataUrl, #fff);
+    margin-bottom: -2px;
+    background-image: url(@url);
+    background-size: 150%;
+  }
+
+  &[data-visibility="discoverable"] {
+    @url: %(@svgLibCardStarDataUrl, #fff, 4);
+    display: inline-block;
+    width: 12px;
+    margin: 0 1px -2px;
+    background-image: url(@url);
+  }
+
+  &[data-visibility="organization"] {
+    @url: %(@svgLibCardOrgPrivateDataUrl, #fff, 4);
+    display: inline-block;
+    background-image: url(@url);
+    background-size: 125%;
+  }
 }
 .kifi-ti-email-token-icon {
   display: inline-block;
