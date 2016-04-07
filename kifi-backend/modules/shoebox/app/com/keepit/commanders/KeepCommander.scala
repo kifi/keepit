@@ -91,7 +91,6 @@ trait KeepCommander {
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
-  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
 
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -777,28 +776,6 @@ class KeepCommanderImpl @Inject() (
     keepSourceRepo.deactivateByKeepId(keep.id.get)
     keepToCollectionRepo.getByKeep(keep.id.get).foreach(keepToCollectionRepo.deactivate)
     keepRepo.deactivate(keep)
-  }
-
-  def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
-    val currentKeeps = keepRepo.getByUriAndLibrariesHash(k.uriId, Set(toLibrary.id.get))
-    currentKeeps match {
-      case existingKeep +: _ =>
-        Left(LibraryError.AlreadyExistsInDest)
-      case _ =>
-        val newKeep = Keep(
-          userId = Some(userId),
-          url = k.url,
-          uriId = k.uriId,
-          keptAt = clock.now,
-          source = withSource.getOrElse(k.source),
-          originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-          recipients = KeepRecipients(libraries = Set(toLibrary.id.get), users = Set(userId), emails = Set.empty),
-          title = k.title,
-          note = k.note
-        )
-        val copied = persistKeep(newKeep)
-        Right(copied)
-    }
   }
 
   @StatsdTiming("KeepCommander.getKeepStream")

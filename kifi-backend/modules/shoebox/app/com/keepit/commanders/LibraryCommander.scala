@@ -646,7 +646,7 @@ class LibraryCommanderImpl @Inject() (
 
           val (failures, successes) = sortedKeeps.map {
             case keep if keep.recipients.libraries.exists(validSourceLibraryIds.contains) =>
-              keepCommander.copyKeep(keep, toLibrary, userId, withSource)(s) match {
+              keepMutator.copyKeep(keep, toLibrary, userId, withSource)(s) match {
                 case Right(copied) => Right(copied)
                 case Left(error) => Left(keep -> error)
               }
