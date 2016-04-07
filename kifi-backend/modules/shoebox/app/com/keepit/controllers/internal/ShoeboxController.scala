@@ -47,6 +47,7 @@ class ShoeboxController @Inject() (
   keepRepo: KeepRepo,
   keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   keepEventCommander: KeepEventCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
@@ -656,7 +657,7 @@ class ShoeboxController @Inject() (
   def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = Action(parse.tolerantJson) { request =>
     val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
-      keepCommander.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
+      keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
       if (persistKeepEvent) keepEventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
     }
     NoContent

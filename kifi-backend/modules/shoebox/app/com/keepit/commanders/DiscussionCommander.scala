@@ -29,7 +29,7 @@ class DiscussionCommanderImpl @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   eventCommander: KeepEventCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
@@ -51,7 +51,7 @@ class DiscussionCommanderImpl @Inject() (
       Future.failed(fail)
     }.getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
+        keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
@@ -105,7 +105,7 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
+        keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers, newLibraries = Set.empty, source)
       elizaEdit.onSuccess {
@@ -133,7 +133,7 @@ class DiscussionCommanderImpl @Inject() (
 
       errs.headOption.map(fail => Future.failed(fail)).getOrElse {
         db.readWrite { implicit s =>
-          keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+          keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
           eventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
         }
         Future.successful(Unit)
