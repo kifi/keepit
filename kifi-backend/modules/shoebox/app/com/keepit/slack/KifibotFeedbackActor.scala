@@ -81,14 +81,13 @@ class KifibotFeedbackActor @Inject() (
   }
 
   private def ingestFeedbackIfPossibleAndReschedule(model: KifibotFeedback, kifiBotOpt: Option[KifiSlackBot]): Future[Unit] = {
-    slackLog.info("Figuring out if we want to ingest feedback from", model.slackUserId.value, "via", kifiBotOpt.toString)
     val actualIngestion = kifiBotOpt.fold(Future.successful(()))(kifiBot => ingestNewFeedback(model, kifiBot))
     actualIngestion andThen {
       case result =>
         val now = clock.now
         db.readWrite { implicit session => schedulingRepo.finishProcessing(model.id.get, now plus delayUntilNextIngestion) }
         result match {
-          case Success(_) => slackLog.info("Successfully ingested feedback from", model.slackUserId.value, "in", model.slackTeamId.value)
+          case Success(_) =>
           case Failure(fail) => slackLog.info("Failed to ingest feedback from", model.slackUserId.value, "in", model.slackTeamId.value, "because", fail.getMessage)
         }
     }
@@ -104,15 +103,13 @@ class KifibotFeedbackActor @Inject() (
           ),
           attachments = feedback.map(msg => SlackAttachment.simple(DescriptionElements(msg.text)))
         ))
-      } else slackLog.info("Ingested", msgs.length, "messages from", model.slackUserId.value, "but none were from the user")
+      }
       msgs.map(_.timestamp).maxOpt.foreach { timestamp =>
-        slackLog.info("Setting", model.slackUserId.value, "to have timestamp", timestamp.value)
         db.readWrite { implicit s => schedulingRepo.updateLastIngestedMessage(model.id.get, timestamp) }
       }
     }
   }
   private def getNewFeedbackMessages(model: KifibotFeedback, token: SlackBotAccessToken, limit: Int): Future[Seq[SlackHistoryMessage]] = {
-    slackLog.info("Trying to grab up to", limit, "feedback messages for", model.slackUserId.value, "greater than", model.lastIngestedMessageTimestamp.toString)
     FutureHelpers.foldLeftUntil(Stream.continually(()))((Seq.empty[SlackHistoryMessage], model.lastIngestedMessageTimestamp)) {
       case ((msgs, lastTimestamp), _) =>
         slackClient.getIMHistory(token, model.kifiBotDmChannel, lastTimestamp, messagesPerRequest).map { nextMsgs =>
