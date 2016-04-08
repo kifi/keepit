@@ -123,13 +123,13 @@ class KeepInfoAssemblerImpl @Inject() (
     val keepInfoFut = TimedComputation.async {
       keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
     }.map { tc =>
-      if (viewer.safely.contains(ryan)) slackLog.info("Keep info assembly took", tc.millis)
+      if (viewer.safely.contains(ryan)) ryanLog.info("Keep info assembly took", tc.millis)
       tc.value
     }
     val pageInfoFut = TimedComputation.async {
       pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
     }.map { tc =>
-      if (viewer.safely.contains(ryan)) slackLog.info("Page info assembly took", tc.millis)
+      if (viewer.safely.contains(ryan)) ryanLog.info("Page info assembly took", tc.millis)
       tc.value
     }
     for {
