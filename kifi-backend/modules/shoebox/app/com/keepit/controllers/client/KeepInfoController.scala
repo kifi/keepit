@@ -1,6 +1,6 @@
 package com.keepit.controllers.client
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.{ anyExtensionOps, tryExtensionOps }
@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+@Singleton
 class KeepInfoController @Inject() (
   db: Database,
   val userActionsHelper: UserActionsHelper,
