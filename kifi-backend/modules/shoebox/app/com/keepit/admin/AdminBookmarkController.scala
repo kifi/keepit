@@ -308,8 +308,8 @@ class AdminBookmarksController @Inject() (
         otherKeeps.collect {
           case keep =>
             val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minByOpt(_.addedAt).map(_.libraryId)
-            val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).filter(ktu => keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).collect { case ktu if keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis => ktu.userId } ++ keep.userId.toSeq
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.toSet), keep.source)
             keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }
@@ -321,7 +321,7 @@ class AdminBookmarksController @Inject() (
           val fetchedConnections = discussionConnections ++ nonDiscussionConnections
           val missingKeeps = keeps.filter(keep => !fetchedConnections.contains(keep.id.get))
           val allConnections = fetchedConnections ++ missingKeeps.map { k =>
-            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients, k.source)
+            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients.plusUser(k.userId.get), k.source)
             k.id.get -> (rawAttribution, k.state == KeepStates.ACTIVE)
           }
           val internedKeeps = allConnections.map {
