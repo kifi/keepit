@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
-import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{ KeepRecipientsDiff, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
@@ -70,7 +70,6 @@ object KeepActivityGen {
       val messageId = Message.publicId(message.id)
       message.sentBy match {
         case Some(userOrNonUser) =>
-          import DescriptionElements._
           userOrNonUser.left.foreach { uid =>
             if (!userById.contains(uid)) airbrake.notify(s"[activityLog] no basic user stored for user $uid on keep ${keep.id.get}, message ${message.id}")
           }
@@ -79,16 +78,7 @@ object KeepActivityGen {
             userId => userOpt.map(BasicAuthor.fromUser).getOrElse { BasicAuthor.Fake },
             nonUser => BasicAuthor.fromNonUser(nonUser)
           )
-          val authorElement: DescriptionElement = userOrNonUser.fold[Option[DescriptionElement]](_ => userOpt.map(fromBasicUser), nonUser => Some(nonUser.id)).getOrElse("Someone")
-          Some(BasicKeepEvent(
-            id = Some(messageId),
-            author = msgAuthor,
-            KeepEventKind.Comment,
-            header = DescriptionElements(authorElement, "commented on this page"),
-            body = DescriptionElements(message.text),
-            timestamp = message.sentAt,
-            source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
-          ))
+          Some(BasicKeepEvent.generateCommentEvent(messageId, msgAuthor, message.text, message.sentAt, message.source))
         case None =>
           message.auxData match {
             case Some(ModifyRecipients(addedBy, KeepRecipientsDiff(users, libraries, emails))) =>
