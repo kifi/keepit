@@ -123,7 +123,7 @@ object BasicKeepEvent {
       id = Some(id),
       author = author,
       kind = KeepEventKind.Comment,
-      header = DescriptionElements(author.name, "commented on this page"),
+      header = DescriptionElements(author, "commented on this page"),
       body = text,
       timestamp = sentAt,
       source = KeepEventSourceKind.fromMessageSource(source).map(KeepEventSource(_, url = None))
