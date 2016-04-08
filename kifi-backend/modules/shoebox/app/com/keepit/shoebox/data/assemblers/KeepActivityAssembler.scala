@@ -13,7 +13,7 @@ import com.keepit.common.performance.StatsdTimingAsync
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.KeepEventData.ModifyRecipients
+import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -76,7 +76,10 @@ class KeepActivityAssemblerImpl @Inject() (
           val basicUserById = {
             val ktuUsers = ktus.map(_.userId)
             val libOwners = libById.map { case (libId, library) => library.ownerId }
-            val recipients = eventDatums.collect { case ModifyRecipients(_, KeepRecipientsDiff(users, _, _)) => users.added }.flatten
+            val recipients = eventDatums.collect {
+              case ModifyRecipients(_, KeepRecipientsDiff(users, _, _)) => users.added
+              case EditTitle(editor, _, _) => Set(editor)
+            }.flatten
             basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ recipients).toSet)
           }
           val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
