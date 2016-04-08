@@ -378,7 +378,7 @@ class MessagingCommanderImpl @Inject() (
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
-      eliza.sendKeepEvent(user, message.pubKeepId, event)
+      notificationDeliveryCommander.sendKeepEvent(user, message.pubKeepId, event)
     }
     // Anyone who got this new notification might have a NewKeep notification that is going to be
     // passively replaced by this message thread. The client will then have no way of ever marking or
