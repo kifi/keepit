@@ -47,7 +47,7 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String]) = {
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = {
     val start = System.currentTimeMillis()
     UserAction.async { implicit request =>
       TimedComputation.async {
@@ -59,7 +59,7 @@ class KeepInfoController @Inject() (
           val keepIds = TimedComputation.sync {
             db.readOnlyMaster { implicit s =>
               val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-              keepRepo.getRecentKeepsByActivity(request.userId, limit = 10, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+              keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
             }
           } |> { tc =>
             if (request.userId == ryan) ryanLog.info("Retrieving the keep ids took", tc.millis, tc.range.toString())
