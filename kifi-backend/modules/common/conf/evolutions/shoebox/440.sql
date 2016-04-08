@@ -1,7 +1,7 @@
 # SHOEBOX
 
 # --- !Ups
-CREATE TABLE `keep_to_collection` (
+CREATE TABLE `keep_tag` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `state` varchar(20) NOT NULL,
   `created_at` datetime NOT NULL,
