@@ -87,16 +87,18 @@ class KeepDecoratorImpl @Inject() (
       }
       val emailParticipantsByKeepFuture = eliza.getEmailParticipantsForKeeps(keepIds)
 
-      val (ktusByKeep, ktlsByKeep) = db.readOnlyMaster { implicit s =>
-        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds))
+      val (ktusByKeep, ktlsByKeep, eventsByKeep) = db.readOnlyMaster { implicit s =>
+        (ktuRepo.getAllByKeepIds(keeps.map(_.id.get).toSet), ktlRepo.getAllByKeepIds(keepIds), eventRepo.getForKeeps(keepIds, limit = Some(maxMessagesShown)))
       }
 
       val entitiesFutures = for {
         augmentationInfos <- augmentationFuture
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
+        val (usersFromEvents, libsFromEvents, _) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
+
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId))
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId)) ++ libsFromEvents
           db.readOnlyMaster { implicit s => libraryRepo.getActiveByIds(librariesShown) } //cached
         }
 
@@ -114,7 +116,7 @@ class KeepDecoratorImpl @Inject() (
           val keepers = keeps.flatMap(_.userId).toSet // is this needed? need to double check, it may be redundant
           val ktuUsers = ktusByKeep.values.flatten.map(_.userId) // may need to use .take(someLimit) for performance
           val emailParticipantsAddedBy = emailParticipantsByKeep.values.flatMap(_.values.map(_._1))
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy) } //cached
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers ++ ktuUsers ++ emailParticipantsAddedBy ++ usersFromEvents) } //cached
         }
         val idToBasicLibrary = idToLibrary.map {
           case (libId, library) =>
@@ -161,7 +163,6 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val eventsByKeep = db.readOnlyMaster(implicit s => keepIds.map(kid => kid -> eventRepo.pageForKeep(kid, fromTime = None, limit = maxMessagesShown)).toMap)
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {

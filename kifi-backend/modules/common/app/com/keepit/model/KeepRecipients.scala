@@ -80,6 +80,7 @@ object KeepMembers {
 case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress]) {
   def isEmpty = this.users.isEmpty && this.libraries.isEmpty && this.emails.isEmpty
   def nonEmpty = !isEmpty
+  def allEntities = (users.all, libraries.all, emails.all)
 }
 object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
