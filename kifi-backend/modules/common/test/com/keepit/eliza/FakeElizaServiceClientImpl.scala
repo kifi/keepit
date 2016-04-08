@@ -2,6 +2,7 @@ package com.keepit.eliza
 
 import akka.actor.Scheduler
 import com.google.inject.util.Providers
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
@@ -40,6 +41,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def sendToUser(userId: Id[User], data: JsArray) = Future.successful((): Unit)
 
   def sendToAllUsers(data: JsArray): Unit = {}
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit] = Future.successful(())
 
   def flush(userId: Id[User]): Future[Unit] = Future.successful((): Unit)
 

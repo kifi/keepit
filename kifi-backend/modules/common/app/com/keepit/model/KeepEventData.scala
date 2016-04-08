@@ -3,15 +3,16 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
-import com.keepit.common.db.{ CommonClassLinker, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.DescriptionElements._
 import com.keepit.discussion.{ Message, MessageSource }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
-import com.keepit.social.{ BasicAuthor, BasicNonUser }
+import com.keepit.social.BasicAuthor
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._

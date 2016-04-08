@@ -7,6 +7,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.performance.StatsdTimingAsync
@@ -23,6 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait KeepActivityAssembler {
   def getActivityForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], numEventsPerKeep: Int): Future[Map[Id[Keep], KeepActivity]]
   def getActivityForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int): Future[KeepActivity]
+  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent
 }
 
 class KeepActivityAssemblerImpl @Inject() (
@@ -30,7 +32,7 @@ class KeepActivityAssemblerImpl @Inject() (
   keepRepo: KeepRepo,
   libRepo: LibraryRepo,
   basicUserRepo: BasicUserRepo,
-  basicLibGen: BasicLibraryGen, // This is not used, but I think it should be
+  basicLibGen: BasicLibraryGen,
   basicOrgGen: BasicOrganizationGen,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
@@ -64,7 +66,7 @@ class KeepActivityAssemblerImpl @Inject() (
     val basicModelFut = shoeboxFut.map {
       case (keep, sourceAttr, events, ktus, ktls) =>
         db.readOnlyMaster { implicit s =>
-          val (usersFromEvents, libsFromEvents, _) = KeepEvent.idsInvolved(events)
+          val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(events)
 
           val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ libsFromEvents
           val libById = libRepo.getActiveByIds(libsNeeded.toSet)
@@ -91,5 +93,11 @@ class KeepActivityAssemblerImpl @Inject() (
     } yield {
       KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
     }
+  }
+
+  def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
+    val (userIds, libraries) = KeepEvent.idsInvolved(Seq(event))
+    val (usersById, libsById) = (basicUserRepo.loadAllActive(userIds), basicLibGen.getBasicLibraries(libraries))
+    KeepActivityGen.generateKeepEvent(keepId, event, usersById, libsById)
   }
 }

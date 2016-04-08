@@ -18,6 +18,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.MessageSource
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
@@ -85,6 +86,7 @@ trait MessagingCommander {
 }
 
 class MessagingCommanderImpl @Inject() (
+    eliza: ElizaServiceClient,
     threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
     nonUserThreadRepo: NonUserThreadRepo,
@@ -376,7 +378,7 @@ class MessagingCommanderImpl @Inject() (
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
-      notificationDeliveryCommander.notifyEvent(user, message.pubKeepId, event)
+      eliza.sendKeepEvent(user, message.pubKeepId, event)
     }
     // Anyone who got this new notification might have a NewKeep notification that is going to be
     // passively replaced by this message thread. The client will then have no way of ever marking or

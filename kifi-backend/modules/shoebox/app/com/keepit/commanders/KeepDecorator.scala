@@ -95,7 +95,7 @@ class KeepDecoratorImpl @Inject() (
         augmentationInfos <- augmentationFuture
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
-        val (usersFromEvents, libsFromEvents, _) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
+        val (usersFromEvents, libsFromEvents) = KeepEvent.idsInvolved(eventsByKeep.values.flatten)
 
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ ktlsByKeep.values.flatMap(_.map(_.libraryId)) ++ libsFromEvents

@@ -33,18 +33,18 @@ case class KeepEvent(
 }
 object KeepEventStates extends States[KeepEvent]
 object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
-  def idsInvolved(events: Iterable[KeepEvent]): (Set[Id[User]], Set[Id[Library]], Set[EmailAddress]) = {
-    events.foldLeft[(Set[Id[User]], Set[Id[Library]], Set[EmailAddress])]((Set.empty, Set.empty, Set.empty)) {
-      case ((users, libs, emails), event) =>
+  def idsInvolved(events: Iterable[KeepEvent]): (Set[Id[User]], Set[Id[Library]]) = {
+    events.foldLeft[(Set[Id[User]], Set[Id[Library]])]((Set.empty, Set.empty)) {
+      case ((users, libs), event) =>
 
-        val (newUsers, newLibs, newEmails) = event.eventData match {
-          case EditTitle(editedBy, _, _) => (Set(editedBy), Set.empty[Id[Library]], Set.empty[EmailAddress])
+        val (newUsers, newLibs) = event.eventData match {
+          case EditTitle(editedBy, _, _) => (Set(editedBy), Set.empty[Id[Library]])
           case ModifyRecipients(addedBy, diff) =>
-            val (users, libs, emails) = diff.allEntities
-            (users + addedBy, libs, emails)
+            val (users, libs, _) = diff.allEntities
+            (users + addedBy, libs)
         }
 
-        (users ++ newUsers, libs ++ newLibs, emails ++ newEmails)
+        (users ++ newUsers, libs ++ newLibs)
     }
   }
 
