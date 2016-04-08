@@ -3,15 +3,18 @@ package com.keepit.controllers.client
 import com.google.inject.Inject
 import com.keepit.commanders.KeepCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.core.tryExtensionOps
+import com.keepit.common.core.{ anyExtensionOps, tryExtensionOps }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.SlackLog
 import com.keepit.common.time._
-import com.keepit.common.util.RightBias
+import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
+import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -27,8 +30,12 @@ class KeepInfoController @Inject() (
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
-  private implicit val publicIdConfig: PublicIdConfiguration)
+  private implicit val publicIdConfig: PublicIdConfiguration,
+  private implicit val inhouseSlackClient: InhouseSlackClient)
     extends UserActions with ShoeboxServiceController {
+
+  private val ryanLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  private val ryan = Id[User](84792)
 
   def getKeepView(pubId: PublicId[Keep]) = MaybeUserAction.async { implicit request =>
     val keepId = Keep.decodePublicId(pubId).get
@@ -46,12 +53,23 @@ class KeepInfoController @Inject() (
         Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_ID: KeepFail)
       }.getOrElse(RightBias.right(None))
     } yield {
-      val keepIds = db.readOnlyMaster { implicit s =>
-        val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-        keepRepo.getRecentKeepsByActivity(request.userId, limit = 10, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+      val keepIds = TimedComputation.sync {
+        db.readOnlyMaster { implicit s =>
+          val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
+          keepRepo.getRecentKeepsByActivity(request.userId, limit = 10, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+        }
+      } |> { tc =>
+        if (request.userId == ryan) ryanLog.info("Retrieving the keep ids took", tc.millis)
+        tc.value
       }
       keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
-        Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
+        val viewsJson = TimedComputation.sync {
+          Json.toJson(keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight)))
+        } |> { tc =>
+          if (request.userId == ryan) ryanLog.info("Serializing the views took", tc.millis)
+          tc.value
+        }
+        Ok(Json.obj("keeps" -> viewsJson))
       }
     }
     goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
