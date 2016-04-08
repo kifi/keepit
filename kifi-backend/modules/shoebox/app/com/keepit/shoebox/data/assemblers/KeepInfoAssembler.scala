@@ -174,7 +174,7 @@ class KeepInfoAssemblerImpl @Inject() (
           permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
-          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_ID: KeepFail)
+          }.orElse(keep.userId.flatMap(keeper => usersById.get(keeper).map(BasicAuthor.fromUser))).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
         } yield {
           val viewerInfo = NewKeepViewerInfo(
             permissions = permissions

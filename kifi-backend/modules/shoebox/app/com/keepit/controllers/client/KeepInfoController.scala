@@ -52,8 +52,9 @@ class KeepInfoController @Inject() (
     UserAction.async { implicit request =>
       TimedComputation.async {
         val goodResult = for {
+          _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE)
           fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).map { pubId =>
-            Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_ID: KeepFail)
+            Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
           }.getOrElse(RightBias.right(None))
         } yield {
           val keepIds = TimedComputation.sync {
@@ -81,7 +82,7 @@ class KeepInfoController @Inject() (
 
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
     val result = for {
-      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_ID))
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_KEEP_ID))
       activity <- keepActivityAssembler.getActivityForKeep(keepId, fromTime, limit)
     } yield {
       Ok(Json.toJson(activity))
