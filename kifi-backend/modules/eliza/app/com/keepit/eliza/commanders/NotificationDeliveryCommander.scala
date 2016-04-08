@@ -49,6 +49,7 @@ trait NotificationDeliveryCommander {
   def notifyUnreadCount(userId: Id[User]): Unit
   def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int]
@@ -192,6 +193,8 @@ class NotificationDeliveryCommanderImpl @Inject() (
 
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit = sendToUser(userId, Json.arr("event", keepId, event))
 
   def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getTotalUnreadUnmutedCount(userId), category = category, experiment = pushNotificationExperiment)
