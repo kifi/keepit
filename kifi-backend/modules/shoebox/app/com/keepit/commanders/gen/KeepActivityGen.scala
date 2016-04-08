@@ -4,7 +4,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.common.util.{ Ord, DescriptionElements, DescriptionElement }
+import com.keepit.common.util.{ ShowOriginalElement, Ord, DescriptionElements, DescriptionElement }
 import com.keepit.discussion.{ Message, CrossServiceKeepActivity }
 import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
@@ -118,7 +118,7 @@ object KeepActivityGen {
                 author = basicAddedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
                 KeepEventKind.EditTitle,
                 header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "edited the title"),
-                body = DescriptionElements(original, "--->", updated),
+                body = ShowOriginalElement(original.getOrElse(""), updated.getOrElse("")),
                 timestamp = message.sentAt,
                 source = KeepEventSourceKind.fromMessageSource(message.source).map(kind => KeepEventSource(kind, url = None))
               ))
