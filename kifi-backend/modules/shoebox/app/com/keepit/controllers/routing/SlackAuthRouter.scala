@@ -4,15 +4,13 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.controller._
-import com.keepit.common.crypto.{ KifiUrlRedirectHelper, PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.http._
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.PostRegIntent
-import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRedirect }
+import com.keepit.controllers.website.DeepLinkRedirect
 import com.keepit.discussion.Message
 import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.model._
@@ -24,7 +22,7 @@ import play.api.mvc.{ Cookie, Result }
 import securesocial.core.SecureSocial
 import views.html
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class SlackAuthRouter @Inject() (
@@ -127,42 +125,53 @@ class SlackAuthRouter @Inject() (
     }
   }
 
-  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, onKifi: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "keep")) { implicit request =>
-    // show 3rd party url with ext if possible, otherwise go to keep page (with proper upsells) or 3rd party url
-    val redirOpt = db.readOnlyMaster { implicit s =>
-      Keep.decodePublicId(pubId)
-        .map(keepId => keepRepo.get(keepId)).filter(_.isActive)
-        .map { keep =>
-          val isLoggedIn = request.userIdOpt.isDefined
-          val hasMessagingPermission = permissionCommander.getKeepPermissions(keep.id.get, request.userIdOpt).contains(KeepPermission.ADD_MESSAGE)
-          val keepPageUrl = pathCommander.pathForKeep(keep).absolute
-          if (!onKifi && hasMessagingPermission) {
-            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keep.url))
-          } else if (onKifi && isLoggedIn && hasMessagingPermission) {
-            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = keepPageUrl))
-          } else if (onKifi && !isLoggedIn) {
-            val orgIdOpt = slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.organizationId)
-            val orgOpt = orgIdOpt.map(orgId => orgRepo.get(orgId))
-            orgOpt
-              .map(org => redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId)))
-              .getOrElse(Redirect(keepPageUrl))
-          } else Redirect(keep.url)
+  private def redirectWithKeep(requesterId: Option[Id[User]], slackTeamId: SlackTeamId, pubId: PublicId[Keep], viewArticle: Boolean)(implicit session: RSession, request: MaybeUserRequest[_]): Option[Result] = {
+    for {
+      keepId <- Keep.decodePublicId(pubId).toOption
+      keep <- Some(keepRepo.get(keepId)) if keep.isActive
+      found <- {
+        def keepPageUrl = pathCommander.pathForKeep(keep).absolute
+        val permissions = permissionCommander.getKeepPermissions(keep.id.get, requesterId)
+
+        if (permissions.contains(KeepPermission.VIEW_KEEP)) Some {
+          // Authorized keep
+          val noExtUrl = if (viewArticle) keep.url else keepPageUrl
+          if (permissions.contains(KeepPermission.ADD_MESSAGE)) {
+            Ok(html.maybeExtDeeplink(DeepLinkRedirect(url = keep.url, externalLocator = Some(s"/messages/${pubId.id}")), noExtUrl = noExtUrl))
+          } else {
+            // todo: we should be able to open the thread in the extension in read-only mode
+            Redirect(noExtUrl)
+          }
         }
-    }
-    redirOpt.getOrElse {
-      if (onKifi) notFound(request)
-      else {
-        db.readOnlyMaster { implicit s =>
-          uriRepo.getByUrlHash(urlHash)
-            .map(uri => Redirect(uri.url))
-            .getOrElse(notFound(request))
+        else {
+          // Unauthorized keep
+          if (viewArticle) Some(Redirect(keep.url)) // todo: should this leak the keep.url or should we defer to the url hash?
+          else for {
+            slackTeam <- slackTeamRepo.getBySlackTeamId(slackTeamId)
+            orgId <- slackTeam.organizationId
+          } yield {
+            val org = orgRepo.get(orgId)
+            redirectThroughSlackAuth(org, slackTeamId, keepPageUrl, keepId = Some(pubId))
+          }
         }
       }
+    } yield found
+  }
+
+  private def redirectWithUrlHash(urlHash: UrlHash, viewArticle: Boolean)(implicit session: RSession): Option[Result] = {
+    if (viewArticle) uriRepo.getByUrlHash(urlHash).map(uri => Redirect(uri.url)) // todo: we're hashing keep.url, so this might not work as expected with normalization
+    else None
+  }
+
+  // todo: should SlackClickTracking reports viewArticle vs replyToThread
+  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, viewArticle: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "keep")) { implicit request =>
+    db.readOnlyMaster { implicit s =>
+      redirectWithKeep(request.userIdOpt, slackTeamId, pubId, viewArticle) orElse redirectWithUrlHash(urlHash, viewArticle) getOrElse notFound(request)
     }
   }
 
   def fromSlackToMessage(slackTeamId: SlackTeamId, keepId: PublicId[Keep], urlHash: UrlHash, msgId: PublicId[Message]) = {
-    fromSlackToKeep(slackTeamId, keepId, urlHash, onKifi = false)
+    fromSlackToKeep(slackTeamId, keepId, urlHash, viewArticle = true)
   }
 
   def togglePersonalDigest(slackTeamId: SlackTeamId, slackUserId: SlackUserId, hash: String, turnOn: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "toggleDigest")) { implicit request =>
