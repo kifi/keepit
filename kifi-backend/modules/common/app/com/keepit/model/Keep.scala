@@ -354,7 +354,8 @@ sealed abstract class KeepFail(val status: Int, val err: String) extends Excepti
 }
 
 object KeepFail extends Enumerator[KeepFail] {
-  case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object INVALID_KEEP_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object LIMIT_TOO_LARGE extends KeepFail(BAD_REQUEST, "limit_too_large")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
   case object MALFORMED_URL extends KeepFail(BAD_REQUEST, "malformed_url")

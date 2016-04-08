@@ -129,7 +129,7 @@ class KeepMutationController @Inject() (
   def deleteKeep(pubId: PublicId[Keep]) = UserAction { implicit request =>
     db.readWrite { implicit s =>
       for {
-        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_ID: KeepFail)
+        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
         _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
       } yield keepMutator.deactivateKeep(keepRepo.get(keepId))
     }.fold(

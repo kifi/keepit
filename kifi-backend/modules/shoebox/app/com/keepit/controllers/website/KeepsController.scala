@@ -109,7 +109,7 @@ class KeepsController @Inject() (
   def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], maxMessagesShown: Int, authTokenOpt: Option[String]) = MaybeUserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
-      case Failure(ex) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
+      case Failure(ex) => Future.successful(KeepFail.INVALID_KEEP_ID.asErrorResponse)
       case Success(idOrExtId) =>
         keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt, maxMessagesShown, authTokenOpt)
           .map(keepInfo => Ok(Json.toJson(keepInfo)))
@@ -125,7 +125,7 @@ class KeepsController @Inject() (
   def updateKeepTitle(pubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
     import com.keepit.common.http._
     val edit = for {
-      keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_ID: KeepFail)
+      keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
       title <- (request.body \ "title").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
       editedKeep <- keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent))
     } yield editedKeep
@@ -138,7 +138,7 @@ class KeepsController @Inject() (
 
   def editKeepNote(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
     Keep.decodePublicId(keepPubId) match {
-      case Failure(_) => KeepFail.INVALID_ID.asErrorResponse
+      case Failure(_) => KeepFail.INVALID_KEEP_ID.asErrorResponse
       case Success(keepId) =>
         db.readOnlyMaster { implicit s =>
           if (permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.EDIT_KEEP))
@@ -203,7 +203,7 @@ class KeepsController @Inject() (
 
   def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = MaybeUserAction.async { request =>
     Keep.decodePublicId(id) match {
-      case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
+      case Failure(_) => Future.successful(KeepFail.INVALID_KEEP_ID.asErrorResponse)
       case Success(keepId) =>
         keepActivityAssembler.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
           Ok(Json.obj("activity" -> Json.toJson(activity)))

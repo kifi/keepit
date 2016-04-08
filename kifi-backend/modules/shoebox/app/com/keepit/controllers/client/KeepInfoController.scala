@@ -47,19 +47,20 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String]) = {
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = {
     val start = System.currentTimeMillis()
     UserAction.async { implicit request =>
       TimedComputation.async {
         val goodResult = for {
+          _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE)
           fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).map { pubId =>
-            Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_ID: KeepFail)
+            Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
           }.getOrElse(RightBias.right(None))
         } yield {
           val keepIds = TimedComputation.sync {
             db.readOnlyMaster { implicit s =>
               val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-              keepRepo.getRecentKeepsByActivity(request.userId, limit = 10, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+              keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
             }
           } |> { tc =>
             if (request.userId == ryan) ryanLog.info("Retrieving the keep ids took", tc.millis, tc.range.toString())
@@ -81,7 +82,7 @@ class KeepInfoController @Inject() (
 
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
     val result = for {
-      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_ID))
+      keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(KeepFail.INVALID_KEEP_ID))
       activity <- keepActivityAssembler.getActivityForKeep(keepId, fromTime, limit)
     } yield {
       Ok(Json.toJson(activity))
