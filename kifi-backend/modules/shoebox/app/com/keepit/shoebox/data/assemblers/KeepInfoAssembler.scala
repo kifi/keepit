@@ -112,9 +112,11 @@ class KeepInfoAssemblerImpl @Inject() (
 
   private def keepViewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
     val keepsById = keepsAndConnections.keepsById
+    val keepInfoFut = keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
+    val pageInfoFut = pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
     for {
-      keepInfosByKeep <- keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
-      pageInfosByUri <- pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
+      keepInfosByKeep <- keepInfoFut
+      pageInfosByUri <- pageInfoFut
     } yield {
       keepsById.map {
         case (kId, keep) =>
