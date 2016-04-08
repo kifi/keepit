@@ -5,8 +5,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
-import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, KeepEventData, KeepEvent, KeepEventRepo, KeepEventSourceKind, User, Keep }
+import com.keepit.model.KeepEventData.{ ModifyRecipients }
+import com.keepit.model.{ KeepEventData, KeepEvent, KeepEventRepo, KeepEventSourceKind, Keep }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 

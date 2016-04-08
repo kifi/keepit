@@ -22,7 +22,8 @@ case class Message(
   pubId: PublicId[Message],
   sentAt: DateTime,
   sentBy: BasicUserLikeEntity,
-  text: String)
+  text: String,
+  source: Option[MessageSource])
 object Message extends PublicIdGenerator[Message] {
   val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(-128, 93, 21, 18, 70, 113, -105, 79, -60, 109, -78, 108, -103, -82, 91, -14))
   val publicIdPrefix = "msg"
@@ -30,7 +31,8 @@ object Message extends PublicIdGenerator[Message] {
     (__ \ 'id).format[PublicId[Message]] and
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).format[BasicUserLikeEntity] and
-    (__ \ 'text).format[String]
+    (__ \ 'text).format[String] and
+    (__ \ 'source).formatNullable[MessageSource]
   )(Message.apply, unlift(Message.unapply))
 }
 
@@ -67,8 +69,8 @@ object CrossServiceMessage {
   )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
 }
 
-case class CrossServiceKeepActivity( // a subset of messages + system messages on a keep
-  numComments: Int, // # of non-system messages
+case class CrossServiceKeepActivity(
+  numComments: Int,
   messages: Seq[CrossServiceMessage])
 object CrossServiceKeepActivity {
   implicit val format: Format[CrossServiceKeepActivity] = (

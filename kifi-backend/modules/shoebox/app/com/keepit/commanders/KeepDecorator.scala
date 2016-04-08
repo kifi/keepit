@@ -48,6 +48,7 @@ class KeepDecoratorImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   ktuRepo: KeepToUserRepo,
+  eventRepo: KeepEventRepo,
   keepImageCommander: KeepImageCommander,
   libraryCardCommander: LibraryCardCommander,
   userCommander: UserCommander,
@@ -160,14 +161,7 @@ class KeepDecoratorImpl @Inject() (
           log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
           Map.empty[Id[Keep], Discussion]
       }
-      val activityWithStrictTimeout = TimeoutFuture(eliza.getCrossServiceKeepActivity(keepIds, eventsBefore = None, maxMessagesShown))(executionContext, 2.seconds).recover {
-        case ex =>
-          ex match {
-            case _: TimeoutException => log.warn(s"[KEEP-DECORATOR] Timed out fetching activity for keeps $keepIds")
-            case _ => airbrake.notify(s"[KEEP-DECORATOR] failed to fetch cross service keep activity, reason: $ex")
-          }
-          Map.empty[Id[Keep], CrossServiceKeepActivity]
-      }
+      val eventsByKeep = db.readOnlyMaster(implicit s => keepIds.map(kid => kid -> eventRepo.pageForKeep(kid, fromTime = None, limit = maxMessagesShown)).toMap)
       val permissionsByKeep = db.readOnlyMaster(implicit s => permissionCommander.getKeepsPermissions(keepIds, viewerIdOpt))
 
       for {
@@ -177,7 +171,6 @@ class KeepDecoratorImpl @Inject() (
         additionalSourcesByUriId <- additionalSourcesFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
         discussionsByKeep <- discussionsWithStrictTimeout
-        activityByKeep <- activityWithStrictTimeout
         emailParticipantsByKeep <- emailParticipantsByKeepFuture
       } yield {
         val keepsInfo = (keeps, augmentationInfos, pageInfos).zipped.flatMap {
@@ -221,7 +214,7 @@ class KeepDecoratorImpl @Inject() (
             }
             val keepActivity = {
               if (viewerIdOpt.exists(uid => db.readOnlyMaster(implicit s => userExperimentRepo.hasExperiment(uid, UserExperimentType.ACTIVITY_LOG)))) {
-                Some(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), activityByKeep.get(keepId),
+                Some(KeepActivityGen.generateKeepActivity(keep, sourceAttrs.get(keepId), eventsByKeep.getOrElse(keepId, Seq.empty), discussionsByKeep.get(keepId),
                   ktlsByKeep.getOrElse(keepId, Seq.empty), ktusByKeep.getOrElse(keepId, Seq.empty),
                   idToBasicUser, idToBasicLibrary, idToBasicOrg, maxMessagesShown))
               } else None

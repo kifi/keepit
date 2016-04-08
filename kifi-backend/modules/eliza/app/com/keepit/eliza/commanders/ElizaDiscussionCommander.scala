@@ -78,7 +78,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
           pubId = em.pubId,
           sentAt = em.createdAt,
           sentBy = sender,
-          text = em.messageText
+          text = em.messageText,
+          source = em.source
         )
       }
     }.toMap

@@ -85,6 +85,7 @@ object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addUsers(users: Set[Id[User]]) = KeepRecipientsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addLibrary(library: Id[Library]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
+  def addLibraries(libraries: Set[Id[Library]]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.addOnly(libraries), emails = DeltaSet.empty)
 
   val internalFormat: Format[KeepRecipientsDiff] = (
     (__ \ 'users).formatNullable[DeltaSet[Id[User]]].inmap[DeltaSet[Id[User]]](_.getOrElse(DeltaSet.empty), Some(_).filter(users => users.added.nonEmpty || users.removed.nonEmpty)) and

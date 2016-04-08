@@ -6,9 +6,10 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
 import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.time._
 import com.keepit.common.util.DescriptionElements
 import com.keepit.eliza.{ FakeElizaServiceClientImpl, ElizaServiceClient }
-import com.keepit.model.{ Library, User, BasicLibrary, LibraryFactory, KeepToUserRepo, UserFactory, KeepFactory }
+import com.keepit.model.{ KeepEventRepo, KeepRecipientsDiff, KeepEventData, Library, User, BasicLibrary, LibraryFactory, KeepToUserRepo, UserFactory, KeepFactory }
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
@@ -17,10 +18,9 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ Json, JsObject }
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-
 class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
+
+  val modules = Seq(FakeClockModule())
 
   implicit def airbrake(implicit injector: Injector) = inject[AirbrakeNotifier].asInstanceOf[FakeAirbrakeNotifier]
   implicit def imageConfig(implicit injector: Injector) = inject[S3ImageConfig]
@@ -30,7 +30,9 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
   "KeepActivityGen" should {
     "generate keep activity" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
+        val keepEventCommander = inject[KeepEventCommander]
+
         val (user, keep, usersToAdd, libsToAdd) = db.readWrite { implicit s =>
           val user = UserFactory.user().withName("Benjamin", "Button").saved
           val usersToAdd = UserFactory.users(4).saved
@@ -48,27 +50,30 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val basicLibById = libsToAdd.map(lib => lib.id.get -> BasicLibrary(lib, basicUser, None)).toMap
 
         import com.keepit.common.util.DescriptionElements._
+        val eventHeaders = db.readWrite { implicit s =>
+          Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
+            case (ids, true) => // users
+              val adding = ids.map(id => Id[User](id.id))
+              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = None, source = None)
+              val entities = adding.map(id => fromBasicUser(basicUserById(id))).toSeq
+              DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
+            case (ids, false) => // libraries
+              val adding = ids.map(id => Id[Library](id.id))
+              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = None, source = None)
+              val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
+              DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
+          }.toSeq
+        }
 
-        val eventHeaders = Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
-          case (ids, true) => // users
-            val adding = ids.map(id => Id[User](id.id))
-            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, adding.toSet, Set.empty, source = None)
-            DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(adding.map(id => fromBasicUser(basicUserById(id))).toSeq)))
-          case (ids, false) => // libraries
-            val adding = ids.map(id => Id[Library](id.id))
-            eliza.editParticipantsOnKeep(keep.id.get, user.id.get, Set.empty, adding, source = None)
-            DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq)))
-        }.toSeq
-
-        val activityByKeep = Await.result(eliza.getCrossServiceKeepActivity(Set(keep.id.get), eventsBefore = None, maxEventsPerKeep = 10), Duration(3, "seconds"))
+        val events = db.readOnlyMaster { implicit s => inject[KeepEventRepo].pageForKeep(keep.id.get, fromTime = None, limit = 10) }
 
         val activity = KeepActivityGen.generateKeepActivity(
-          keep, sourceAttrOpt = None, elizaActivity = Some(activityByKeep(keep.id.get)), ktls = Seq.empty, ktus,
+          keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus,
           basicUserById, basicLibById, orgByLibraryId = Map.empty,
           maxEvents = 5)
 
         activity.events.size === 5
-        activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders :+ "Benjamin Button started a discussion on this page")
+        activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button kept this")
 
         val jsActivity = Json.toJson(activity)
 

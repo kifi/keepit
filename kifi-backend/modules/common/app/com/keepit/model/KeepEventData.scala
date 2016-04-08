@@ -1,12 +1,16 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.Id
-import com.keepit.common.json.EnumFormat
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
+import com.keepit.common.db.{ CommonClassLinker, Id }
+import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.social.{ BasicAuthor, BasicNonUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -96,8 +100,19 @@ object KeepEventData {
   )
 }
 
+case class CommonKeepEvent()
+object CommonKeepEvent extends PublicIdGenerator[CommonKeepEvent] {
+  val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(125, 15, 73, -1, 17, -36, 81, -84, -126, 92, 65, -97, 127, 47, -113, 58))
+  val publicIdPrefix = "kev"
+}
+
+//case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]])
+//object BasicKeepEventId {
+//  def fromId(id: PublicId[])
+//}
+
 case class BasicKeepEvent(
-    id: Option[PublicId[Message]],
+    id: BasicKeepEventId,
     author: BasicAuthor,
     kind: KeepEventKind,
     header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
@@ -108,8 +123,25 @@ case class BasicKeepEvent(
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
 object BasicKeepEvent {
+
+  case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]]) // id = None when BasicKeepEvent.kind = "initial"
+  object BasicKeepEventId {
+    implicit val writes: Writes[BasicKeepEventId] = Writes { o =>
+      o.id match {
+        case None => JsNull
+        case Some(Left(msgId)) => JsString(msgId.id)
+        case Some(Right(eventId)) => JsString(eventId.id)
+      }
+    }
+
+    def initial = BasicKeepEventId(None)
+    def fromMsg(id: PublicId[Message]) = BasicKeepEventId(Some(Left(id)))
+    def fromEvent(id: PublicId[CommonKeepEvent]) = BasicKeepEventId(Some(Right(id)))
+  }
+
+  implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
   implicit val writes: Writes[BasicKeepEvent] = (
-    (__ \ 'id).writeNullable[PublicId[Message]] and
+    (__ \ 'id).write[BasicKeepEventId] and
     (__ \ 'author).write[BasicAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
     (__ \ 'header).write[DescriptionElements] and
@@ -118,9 +150,14 @@ object BasicKeepEvent {
     (__ \ 'source).writeNullable[KeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
 
+  def fromMessage(message: Message)(implicit imageConfig: S3ImageConfig): BasicKeepEvent = {
+    val author = message.sentBy.fold(BasicAuthor.fromNonUser, BasicAuthor.fromUser)
+    generateCommentEvent(message.pubId, author, message.text, message.sentAt, message.source)
+  }
+
   def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
     BasicKeepEvent(
-      id = Some(id),
+      id = BasicKeepEventId.fromMsg(id),
       author = author,
       kind = KeepEventKind.Comment,
       header = DescriptionElements(author, "commented on this page"),

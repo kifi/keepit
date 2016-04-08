@@ -419,7 +419,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = { // todo(Cam): kill
     import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
     val request = Request(keepId, userId, event)
     call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
