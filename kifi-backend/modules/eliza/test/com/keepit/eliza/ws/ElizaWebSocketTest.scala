@@ -124,7 +124,6 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2
         Set("notification", "event", "unread_notifications_count").contains(socket.out(0).as[String]) === true
         Set("notification", "event", "unread_notifications_count").contains(socket.out(0).as[String]) === true
-        Set("notification", "event", "unread_notifications_count").contains(socket.out(0).as[String]) === true
         socket.close
         socket.out === Json.arr("bye", "session")
       }
