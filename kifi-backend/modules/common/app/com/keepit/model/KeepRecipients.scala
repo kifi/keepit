@@ -77,11 +77,20 @@ object KeepMembers {
   val empty = KeepMembers(Seq.empty, Seq.empty, Seq.empty)
 }
 
-case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])
+case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress]) {
+  def isEmpty = this.users.isEmpty && this.libraries.isEmpty && this.emails.isEmpty
+  def nonEmpty = !isEmpty
+}
 object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addUsers(users: Set[Id[User]]) = KeepRecipientsDiff(users = DeltaSet.empty.addAll(users), libraries = DeltaSet.empty, emails = DeltaSet.empty)
   def addLibrary(library: Id[Library]) = KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.add(library), emails = DeltaSet.empty)
+
+  val internalFormat: Format[KeepRecipientsDiff] = (
+    (__ \ 'users).formatNullable[DeltaSet[Id[User]]].inmap[DeltaSet[Id[User]]](_.getOrElse(DeltaSet.empty), Some(_).filter(users => users.added.nonEmpty || users.removed.nonEmpty)) and
+    (__ \ 'libraries).formatNullable[DeltaSet[Id[Library]]].inmap[DeltaSet[Id[Library]]](_.getOrElse(DeltaSet.empty), Some(_).filter(libs => libs.added.nonEmpty || libs.removed.nonEmpty)) and
+    (__ \ 'emails).formatNullable[DeltaSet[EmailAddress]].inmap[DeltaSet[EmailAddress]](_.getOrElse(DeltaSet.empty), Some(_).filter(emails => emails.added.nonEmpty || emails.removed.nonEmpty))
+  )(KeepRecipientsDiff.apply, unlift(KeepRecipientsDiff.unapply))
 }
 case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSourceKind])
 object ExternalKeepRecipientsDiff {

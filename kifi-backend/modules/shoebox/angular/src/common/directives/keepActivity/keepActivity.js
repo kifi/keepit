@@ -7,7 +7,12 @@ angular.module('kifi')
     function ($filter, $window, $timeout, $rootScope, $stateParams, profileService, keepService, signupService) {
       var MARK_READ_TIMEOUT = 3000;
 
-      function bySentAt(a, b) {
+      function eventComparator(a, b) {
+        if (a.kind === 'initial') {
+          return -1;
+        } else if (b.kind === 'initial') {
+          return 1;
+        }
         return a.timestamp - b.timestamp;
       }
 
@@ -51,7 +56,7 @@ angular.module('kifi')
             };
           }
 
-          $scope.activity = $scope.keep.activity.events.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
+          $scope.activity = $scope.keep.activity.events.slice().sort(eventComparator); // don't mutate the original array, in case we need it later
 
           $scope.visibleCount = Math.min($scope.maxInitialComments || 3, $scope.activity.length);
           $scope.hasMoreToFetch = $scope.activity[0].kind !== 'initial';
@@ -182,7 +187,7 @@ angular.module('kifi')
                 fetchMessages(batchOldest.timestamp);
               }
 
-              var updatedActivity = _.uniq($scope.activity.concat(o.activity.events), 'id').sort(bySentAt);
+              var updatedActivity = _.uniq($scope.activity.concat(o.activity.events), 'id').sort(eventComparator);
               if (o.activity.events.length === 0 || o.activity.events[o.activity.events.length - 1].kind === 'initial') {
                 $scope.hasMoreToFetch = false; // We're at the beginning, can't possible paginate more.
               } else if (updatedActivity.length > $scope.visibleCount) {

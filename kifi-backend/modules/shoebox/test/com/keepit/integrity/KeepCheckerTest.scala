@@ -67,7 +67,7 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
           val library = LibraryFactory.library().withOwner(user).saved
           val keep = KeepFactory.keep().withUser(user).withLibrary(library).saved
 
-          keepCommander.deactivateKeep(keep)
+          keepMutator.deactivateKeep(keep)
           // Somehow this KTL got messed up
           ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get, excludeStateOpt = None).foreach { ktl =>
             ktlRepo.save(ktl.withState(KeepToLibraryStates.ACTIVE))

@@ -619,7 +619,7 @@ object LibraryOrdering extends Enumerator[LibraryOrdering] {
 
   implicit val format: Format[LibraryOrdering] = EnumFormat.format(fromStr, _.value)
 
-  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryOrdering] {
+  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryOrdering] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LibraryOrdering]] = {
       stringBinder.bind(key, params) map {
         case Right(str) => Right(LibraryOrdering(str))

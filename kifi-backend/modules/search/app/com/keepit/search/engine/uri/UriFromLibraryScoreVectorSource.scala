@@ -32,9 +32,7 @@ class UriFromLibraryScoreVectorSource(
 
   private[this] val libraryNameBoost = config.asFloat("libraryNameBoost")
 
-  private[this] var myOwnLibraryKeepCount = 0
-  private[this] var memberLibraryKeepCount = 0
-  private[this] var authorizedLibraryKeepCount = 0
+  private[this] var libraryKeepCount = 0
 
   private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryNameBoost, context.disableFullTextSearch)
 
@@ -67,18 +65,10 @@ class UriFromLibraryScoreVectorSource(
             taggedScores(size) = reader.nextTaggedFloatBits()
             size += 1
           }
-
-          val lastTotal = output.size
-          loadWithScore(libId, visibility, taggedScores, size, output, writer)
-          if ((visibility & Visibility.OWNER) != 0) myOwnLibraryKeepCount += output.size - lastTotal
-          else memberLibraryKeepCount += output.size - lastTotal
+          libraryKeepCount += loadWithScore(libId, visibility, taggedScores, size, output, writer)
         }
       }
     }
-
-    // load remaining URIs in the network with no score.
-    // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
-    loadWithNoScore(LongArraySet.fromSet(libsSeen), output, writer)
 
     if ((debugFlags & DebugOption.Library.flag) != 0) {
       listLibraries()
@@ -88,9 +78,9 @@ class UriFromLibraryScoreVectorSource(
 
   private def indexReaderContexts: Seq[AtomicReaderContext] = { keepSearcher.indexReader.getContext.leaves }
 
-  private def loadWithScore(libId: Long, visibility: Int, taggedScores: Array[Int], size: Int, output: DataBuffer, writer: DataBufferWriter): Unit = {
+  private def loadWithScore(libId: Long, visibility: Int, taggedScores: Array[Int], size: Int, output: DataBuffer, writer: DataBufferWriter): Int = {
+    val initialOutputSize = output.size
     val v = visibility | Visibility.HAS_SECONDARY_ID | Visibility.LIB_NAME_MATCH
-
     indexReaderContexts.foreach { readerContext =>
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
       val idFilter = context.idFilter
@@ -117,66 +107,11 @@ class UriFromLibraryScoreVectorSource(
         }
       }
     }
-  }
-
-  private def loadWithNoScore(libsSeen: LongArraySet, output: DataBuffer, writer: DataBufferWriter): Unit = {
-    indexReaderContexts.foreach { readerContext =>
-      val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
-      val idFilter = context.idFilter
-
-      val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
-      val idMapper = reader.getIdMapper
-      val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
-
-      def load(libId: Long, visibility: Int): Unit = {
-        val v = visibility | Visibility.HAS_SECONDARY_ID
-        val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
-        if (td != null) {
-          var docId = td.nextDoc()
-          while (docId < NO_MORE_DOCS) {
-            val uriId = uriIdDocValues.get(docId)
-
-            if (idFilter.findIndex(uriId) < 0 && keepVisibilityEvaluator.isRelevant(docId)) { // use findIndex to avoid boxing
-              val keepId = idMapper.getId(docId)
-
-              // write to the buffer
-              output.alloc(writer, v, 8 + 8) // id (8 bytes), keepId (8 bytes)
-              writer.putLong(uriId, keepId)
-              explanation.foreach(_.collectBufferScoreContribution(uriId, keepId, visibility, Array.empty[Int], 0, 0))
-            }
-            docId = td.nextDoc()
-          }
-        }
-      }
-
-      // load URIs from my own libraries
-      var lastTotal = output.size
-      myOwnLibraryIds.foreachLong { libId =>
-        if (libsSeen.findIndex(libId) < 0) load(libId, Visibility.OWNER)
-      }
-      myOwnLibraryKeepCount += output.size - lastTotal
-
-      // load URIs from libraries I am a member of
-      // memberLibraryIds includes myOwnLibraryIds
-      lastTotal = output.size
-      memberLibraryIds.foreachLong { libId =>
-        if (libsSeen.findIndex(libId) < 0 && myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER)
-      }
-      memberLibraryKeepCount += output.size - lastTotal
-
-      // load URIs from an authorized library as MEMBER
-      lastTotal = output.size
-      authorizedLibraryIds.foreachLong { libId =>
-        if (libsSeen.findIndex(libId) < 0 && memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER)
-      }
-      authorizedLibraryKeepCount += output.size - lastTotal
-    }
+    output.size - initialOutputSize
   }
 
   private def listLibraryKeepCounts(): Unit = {
-    debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
-    debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
-    debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
+    debugLog(s"""memberLibKeepCount: ${libraryKeepCount}""")
   }
 
   private class LibraryNameSource(protected val searcher: Searcher, libraryNameBoost: Float, disableFullTextSearch: Boolean) extends ScoreVectorSourceLike {
@@ -212,7 +147,7 @@ class UriFromLibraryScoreVectorSource(
         if (iterator.docID == docId) {
           val libId = idMapper.getId(docId)
 
-          val visibility = if (myOwnLibraryIds.contains(libId)) Visibility.OWNER else Visibility.MEMBER
+          val visibility = Visibility.OTHERS
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, libraryNameBoost)

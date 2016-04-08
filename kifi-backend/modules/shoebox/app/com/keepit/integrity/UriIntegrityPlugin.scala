@@ -2,7 +2,7 @@ package com.keepit.integrity
 
 import akka.pattern.{ ask, pipe }
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepCommander, KeepToUserCommander, KeepToLibraryCommander }
+import com.keepit.commanders.{ KeepMutator, KeepCommander, KeepToUserCommander, KeepToLibraryCommander }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db._
@@ -30,7 +30,7 @@ class UriIntegrityActor @Inject() (
     val normUriRepo: NormalizedURIRepo,
     normalizedURIInterner: NormalizedURIInterner,
     val keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     changedUriRepo: ChangedURIRepo,
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
@@ -54,7 +54,7 @@ class UriIntegrityActor @Inject() (
         airbrake.notify(s"double uri redirect found: keepId=${keep.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
-        keepCommander.changeUri(keep, newUri)
+        keepMutator.changeUri(keep, newUri)
       }
     }
   }

@@ -71,7 +71,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
-  def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
+  def augment(userId: Option[Id[User]], showOtherPublishedKeeps: Boolean, maxKeepsShown: Int, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -127,7 +127,7 @@ class SearchServiceClientImpl(
       augmentation(request).map { response =>
         items.map { item =>
           val info = response.infos(item)
-          SharingUserInfo(info.keeps.map(_.keptBy).flatten.toSet - userId, info.keeps.size + info.otherDiscoverableKeeps + info.otherPublishedKeeps)
+          SharingUserInfo(info.keeps.map(_.owner).flatten.toSet - userId, info.keeps.size + info.otherDiscoverableKeeps + info.otherPublishedKeeps)
         }
       }
     }

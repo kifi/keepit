@@ -8,7 +8,7 @@ import com.keepit.search.index.graph.library.LibraryIndexable
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.{ Searcher, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
-import org.apache.lucene.index.{ AtomicReaderContext }
+import org.apache.lucene.index.{ NumericDocValues, BinaryDocValues, AtomicReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ Query, Scorer }
 import scala.concurrent.Future
@@ -44,8 +44,7 @@ class UserFromKeepsScoreVectorSource(
 
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(reader)
 
-    val libraryIdDocValues = keepVisibilityEvaluator.libraryIdDocValues
-    val userIdDocValues = keepVisibilityEvaluator.userIdDocValues
+    val ownerIdDocValues: NumericDocValues = reader.getNumericDocValues(KeepFields.ownerIdField)
 
     val recencyScorer = getRecencyScorer(readerContext)
     if (recencyScorer == null) log.warn("RecencyScorer is null")
@@ -56,35 +55,29 @@ class UserFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val keeperId = userIdDocValues.get(docId)
+      val keeperId = ownerIdDocValues.get(docId)
 
       if (keeperId > 0 && idFilter.findIndex(keeperId) < 0) { // use findIndex to avoid boxing
-        val visibility = keepVisibilityEvaluator(docId)
+        val visibility = keepVisibilityEvaluator(docId) // todo(Léo): the keep visibility should probably not end up in the buffer
 
         if (visibility != Visibility.RESTRICTED) {
-          val libId = libraryIdDocValues.get(docId)
           val recencyBoost = getRecencyBoost(recencyScorer, docId)
-          val inverseLibraryFrequencyBoost = {
-            /*            val keepCount = LibraryIndexable.getKeepCount(librarySearcher, libId) getOrElse 1L
-                        libraryQualityEvaluator.getInverseLibraryFrequencyBoost(keepCount)*/
-            1L
-          }
-          val boost = recencyBoost * inverseLibraryFrequencyBoost
+          val boost = recencyBoost
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
 
           // write to the buffer
-          output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // keeperId (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(keeperId, libId).putTaggedFloatBits(taggedScores, size)
-          explanation.foreach(_.collectBufferScoreContribution(keeperId, libId, visibility, taggedScores, size, weights.length))
+          output.alloc(writer, visibility, 8 + 8 + size * 4) // keeperId (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(keeperId).putTaggedFloatBits(taggedScores, size)
+          explanation.foreach(_.collectBufferScoreContribution(keeperId, -1, visibility, taggedScores, size, weights.length))
 
           docId = pq.top.doc // next doc
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
         }
       } else {
-        docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
+        docId = pq.skipCurrentDoc() // this keep owner is irrelevant anyway, skipping...
       }
     }
   }

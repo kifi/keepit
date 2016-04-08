@@ -389,8 +389,7 @@ object BasicLibraryStatistics {
 }
 
 // For service-to-Shoebox calls needing library metadata. Specialized for search's needs, ask search before changing.
-@json
-case class BasicLibraryDetails(
+final case class BasicLibraryDetails(
     name: String,
     slug: LibrarySlug,
     color: Option[LibraryColor],
@@ -405,6 +404,26 @@ case class BasicLibraryDetails(
     url: Path,
     permissions: Set[LibraryPermission]) {
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+}
+
+object BasicLibraryDetails {
+  // TODO(léo): uncomment this line and destroy my travesty
+  // implicit val format: Format[BasicLibraryDetails] = Json.format[BasicLibraryDetails]
+  implicit val format: Format[BasicLibraryDetails] = (
+    (__ \ 'name).format[String] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'imageUrl).formatNullable[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'numFollowers).format[Int] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'keepCount).format[Int] and
+    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
+    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'organizationId).formatNullable[Id[Organization]] and
+    (__ \ 'url).format[String].inmap[Path](Path(_), _.absolute) and
+    (__ \ 'permissions).format[Set[LibraryPermission]]
+  )(BasicLibraryDetails.apply _, unlift(BasicLibraryDetails.unapply))
 }
 
 sealed abstract class LibraryColor(val value: String, val hex: String)

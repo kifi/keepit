@@ -6,11 +6,12 @@ import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.ServiceType
+import com.keepit.common.util.DeltaSet
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.time._
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
-import com.keepit.model.KeepEventData.AddRecipients
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
@@ -64,9 +65,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(Seq.fill(uriIds.size)(false))
   }
 
-  //migration
-  def importThread(data: JsObject): Unit = {}
-
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
@@ -110,7 +108,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   )
 
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
-    val event = AddRecipients(editor, KeepRecipients(newLibraries, emails = Set.empty, newUsers))
+    val event = ModifyRecipients(editor, KeepRecipientsDiff(users = DeltaSet.empty.addAll(newUsers), libraries = DeltaSet.empty.addAll(newLibraries), emails = DeltaSet.empty))
     val msg = crossServiceMessageFromEvent(keepId, event, source)
     keepEvents += (keepId -> (keepEvents(keepId) :+ msg))
     Future.successful(Set.empty)
@@ -146,4 +144,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = Future.successful(Seq.empty)
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])] = Future.successful((None, Some(Id[User](1)))) // should be different userId than arg
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]] = ???
+  def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]] = ???
 }

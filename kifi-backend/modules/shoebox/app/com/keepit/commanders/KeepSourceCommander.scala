@@ -36,7 +36,7 @@ class KeepSourceCommanderImpl @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   implicit val defaultContext: ExecutionContext)
     extends KeepSourceCommander with Logging {
 
@@ -65,7 +65,7 @@ class KeepSourceCommanderImpl @Inject() (
       val basicUserOpt = attr match {
         case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id).flatMap(basicUserById.get)
         case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId)).flatMap(basicUserById.get)
-        case KifiAttribution(keptBy, _, _, _, _) => Some(keptBy)
+        case KifiAttribution(keptBy, _, _, _, _, _) => Some(keptBy)
       }
       (attr, basicUserOpt)
     }
@@ -86,7 +86,7 @@ class KeepSourceCommanderImpl @Inject() (
     keepIds.grouped(100).flatMap { batchedKeepIds =>
       db.readWrite { implicit s =>
         keepRepo.getByIds(batchedKeepIds).values.collect {
-          case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepCommander.setKeepOwner(keep, userId).id.get
+          case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepMutator.setKeepOwner(keep, userId).id.get
         }
       }
     }.toSet
@@ -103,10 +103,10 @@ class KeepSourceAugmentor @Inject() (
   def rawToSourceAttribution(source: RawSourceAttribution)(implicit session: RSession): SourceAttribution = source match {
     case RawTwitterAttribution(tweet) => TwitterAttribution(PrettyTweet.fromRawTweet(tweet))
     case RawSlackAttribution(message, teamId) => SlackAttribution(genBasicSlackMessage(teamId, message), teamId)
-    case RawKifiAttribution(keptBy, KeepRecipients(libraries, nonUsers, users), keepSource) => {
+    case RawKifiAttribution(keptBy, note, KeepRecipients(libraries, nonUsers, users), keepSource) => {
       val userById = basicUserRepo.loadAll(users + keptBy)
       val libById = basicLibGen.getBasicLibraries(libraries)
-      KifiAttribution(userById(keptBy), users.flatMap(userById.get), nonUsers, libraries.flatMap(libById.get), keepSource)
+      KifiAttribution(userById(keptBy), note, users.flatMap(userById.get), nonUsers, libraries.flatMap(libById.get), keepSource)
     }
   }
 

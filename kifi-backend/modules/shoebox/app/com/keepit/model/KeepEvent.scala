@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.{ FortyTwoGenericTypeMappers, Repo, DBSession,
 import com.keepit.common.db.{ ModelWithState, States, State, Id }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -20,7 +21,9 @@ case class KeepEvent(
     keepId: Id[Keep],
     eventData: KeepEventData,
     eventTime: DateTime,
-    source: Option[KeepEventSourceKind]) extends ModelWithState[KeepEvent] {
+    source: Option[KeepEventSourceKind],
+    // unique constraint on messageId to ensure message rows are not duplicated
+    messageId: Option[Id[Message]] = None) extends ModelWithState[KeepEvent] {
   def withId(id: Id[KeepEvent]): KeepEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): KeepEvent = this.copy(updatedAt = updatedAt)
 }
@@ -34,7 +37,8 @@ object KeepEvent {
     (__ \ 'keepId).format(Id.format[Keep]) and
     (__ \ 'eventData).format[KeepEventData] and
     (__ \ 'eventTime).format[DateTime] and
-    (__ \ 'source).formatNullable[KeepEventSourceKind]
+    (__ \ 'source).formatNullable[KeepEventSourceKind] and
+    (__ \ 'messageId).formatNullable[Id[Message]]
   )(KeepEvent.apply, unlift(KeepEvent.unapply))
 
   def fromDbRow(
@@ -45,10 +49,11 @@ object KeepEvent {
     keepId: Id[Keep],
     eventData: KeepEventData,
     eventTime: DateTime,
-    source: Option[KeepEventSourceKind]): KeepEvent = KeepEvent(id, createdAt, updatedAt, state, keepId, eventData, eventTime, source)
+    source: Option[KeepEventSourceKind],
+    messageId: Option[Id[Message]]): KeepEvent = KeepEvent(id, createdAt, updatedAt, state, keepId, eventData, eventTime, source, messageId)
 
-  def toDbRow(event: KeepEvent): Option[(Option[Id[KeepEvent]], DateTime, DateTime, State[KeepEvent], Id[Keep], KeepEventData, DateTime, Option[KeepEventSourceKind])] = {
-    Some(event.id, event.createdAt, event.updatedAt, event.state, event.keepId, event.eventData, event.eventTime, event.source)
+  def toDbRow(event: KeepEvent): Option[(Option[Id[KeepEvent]], DateTime, DateTime, State[KeepEvent], Id[Keep], KeepEventData, DateTime, Option[KeepEventSourceKind], Option[Id[Message]])] = {
+    Some((event.id, event.createdAt, event.updatedAt, event.state, event.keepId, event.eventData, event.eventTime, event.source, event.messageId))
   }
 }
 
@@ -71,8 +76,9 @@ class KeepEventRepoImpl @Inject() (
     def eventData = column[KeepEventData]("event_data", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
     def source = column[Option[KeepEventSourceKind]]("source", O.Nullable)
+    def messageId = column[Option[Id[Message]]]("message_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, eventData, eventTime, source) <> ((KeepEvent.fromDbRow _).tupled, KeepEvent.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, keepId, eventData, eventTime, source, messageId) <> ((KeepEvent.fromDbRow _).tupled, KeepEvent.toDbRow)
   }
 
   def table(tag: Tag) = new KeepEventTable(tag)

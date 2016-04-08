@@ -25,6 +25,7 @@ class KeepChecker @Inject() (
     db: Database,
     keepRepo: KeepRepo,
     keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     ktlRepo: KeepToLibraryRepo,
     ktuRepo: KeepToUserRepo,
     kteRepo: KeepToEmailRepo,
@@ -130,7 +131,7 @@ class KeepChecker @Inject() (
     val libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
     if (keep.recipients.libraries != libraries) {
       log.error(s"[KTL-MATCH] Keep $keepId's libraries don't match: ${keep.recipients.libraries} != $libraries")
-      keepCommander.refreshLibraries(keepId)
+      keepMutator.refreshLibraries(keepId)
     }
   }
 
@@ -139,7 +140,7 @@ class KeepChecker @Inject() (
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
     if (keep.recipients.users != users) {
       log.error(s"[KTU-MATCH] Keep $keepId's participants don't match: ${keep.recipients.users} != $users")
-      keepCommander.refreshParticipants(keepId)
+      keepMutator.refreshParticipants(keepId)
     }
   }
 

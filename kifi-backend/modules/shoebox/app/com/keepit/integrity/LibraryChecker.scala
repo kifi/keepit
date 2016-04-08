@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepCommander, KeepToLibraryCommander, LibraryInfoCommander, LibraryCommander }
+import com.keepit.commanders._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -12,17 +12,18 @@ import com.keepit.model._
 import com.keepit.common.core._
 
 class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
-    val clock: Clock,
-    val db: Database,
-    val keepRepo: KeepRepo,
-    val keepCommander: KeepCommander,
-    val ktlRepo: KeepToLibraryRepo,
-    val ktlCommander: KeepToLibraryCommander,
-    libraryCommander: LibraryCommander,
-    val libraryMembershipRepo: LibraryMembershipRepo,
-    val libraryRepo: LibraryRepo,
-    val userRepo: UserRepo,
-    val systemValueRepo: SystemValueRepo) extends Logging {
+  clock: Clock,
+  db: Database,
+  keepRepo: KeepRepo,
+  keepMutator: KeepMutator,
+  ktlRepo: KeepToLibraryRepo,
+  ktlCommander: KeepToLibraryCommander,
+  libraryCommander: LibraryCommander,
+  libraryMembershipRepo: LibraryMembershipRepo,
+  libraryRepo: LibraryRepo,
+  userRepo: UserRepo,
+  systemValueRepo: SystemValueRepo)
+    extends Logging {
 
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)
@@ -61,7 +62,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
               // zombieKtls.foreach(ktlCommander.deactivate)
               zombieKtls.foreach { ktl =>
                 val keep = keepRepo.get(ktl.keepId)
-                keepCommander.deactivateKeep(keep)
+                keepMutator.deactivateKeep(keep)
               }
             }
           }

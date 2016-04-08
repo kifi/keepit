@@ -231,10 +231,10 @@ object CrossServiceKeepAndTags {
   implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
-case class CrossServiceKeepRecipients(id: Id[Keep], recipients: KeepRecipients)
+case class CrossServiceKeepRecipients(id: Id[Keep], owner: Option[Id[User]], recipients: KeepRecipients)
 object CrossServiceKeepRecipients {
   implicit val format = Json.format[CrossServiceKeepRecipients]
-  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.recipients)
+  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.userId, keep.recipients)
 }
 
 // All the important parts of a Keep to send across services
@@ -256,6 +256,7 @@ case class CrossServiceKeep(
     url: String,
     uriId: Id[NormalizedURI],
     keptAt: DateTime,
+    lastActivityAt: DateTime,
     title: Option[String],
     note: Option[String]) {
   def isActive: Boolean = state == KeepStates.ACTIVE
@@ -278,6 +279,7 @@ object CrossServiceKeep {
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'keptAt).format[DateTime] and
+    (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
@@ -295,6 +297,7 @@ object CrossServiceKeep {
       url = keep.url,
       uriId = keep.uriId,
       keptAt = keep.keptAt,
+      lastActivityAt = keep.lastActivityAt,
       title = keep.title,
       note = keep.note
     )

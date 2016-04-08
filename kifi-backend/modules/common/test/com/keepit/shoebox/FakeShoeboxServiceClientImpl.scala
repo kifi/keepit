@@ -571,7 +571,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
     val changedKeepsAndTags = changedKeeps.map { keep =>
-      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, Set.empty, Set.empty, Set.empty), source = None, tagsByChangedKeep(keep.id.get))
+      val libraryRecipients = keep.recipients.libraries.map { libraryId =>
+        val library = allLibraries(libraryId)
+        CrossServiceKeep.LibraryInfo(libraryId, library.visibility, library.organizationId, keep.userId)
+      }
+      CrossServiceKeepAndTags(CrossServiceKeep.fromKeepAndRecipients(keep, keep.recipients.users, keep.recipients.emails, libraryRecipients), source = None, tagsByChangedKeep(keep.id.get))
     }
     Future.successful(changedKeepsAndTags)
   }
@@ -690,6 +694,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = "http://www.kifi.com",
       uriId = Id[NormalizedURI](1),
       keptAt = currentDateTime.minusHours(10),
+      lastActivityAt = currentDateTime.minusHours(10),
       title = Some("Kifi!"),
       note = Some("is great")
     )).toMap
@@ -726,11 +731,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       url = url,
       uriId = uriId,
       keptAt = currentDateTime,
+      lastActivityAt = currentDateTime,
       title = title,
       note = note
     ))
   }
 
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = Future.successful(())
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], recipients: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]): Future[Unit] = Future.successful(())
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(())
 }

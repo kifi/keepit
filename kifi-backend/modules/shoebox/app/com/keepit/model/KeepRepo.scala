@@ -1,7 +1,8 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.{ KeepOrdering, KeepQuery, LibraryMetadataCache, LibraryMetadataKey }
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -47,6 +48,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
 
   def getRecentKeepsByActivity(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]], filterOpt: Option[ShoeboxFeedFilter] = None)(implicit session: RSession): Seq[(Keep, DateTime)]
   def pageByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]]
   def getChangedKeepsFromLibrary(libraryId: Id[Library], seq: SequenceNumber[Keep])(implicit session: RSession): Seq[Keep]
   def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], libIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByUriAndParticipantsHash(uriId: Id[NormalizedURI], users: Set[Id[User]], emails: Set[EmailAddress])(implicit session: RSession): Seq[Keep]
@@ -66,7 +68,7 @@ class KeepRepoImpl @Inject() (
     val clock: Clock,
     libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
-    keepToLibraryRepo: KeepToLibraryRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
     keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
@@ -74,6 +76,7 @@ class KeepRepoImpl @Inject() (
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
+  private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -340,7 +343,7 @@ class KeepRepoImpl @Inject() (
         WHERE ktu.state = 'active' AND ktu.user_id = $userId AND ktu.uri_id in #$uriIdSet
       ) UNION (
         SELECT ktl.uri_id, ktl.keep_id FROM keep_to_library ktl INNER JOIN library_membership lm ON ktl.library_id = lm.library_id
-        WHERE ktl.state = 'active' AND ktl.uri_id in #$uriIdSet AND lm.state = 'active' AND lm.user_id = $userId #${excludeAccess.map(access => s"AND lm.access != ${access.value}").getOrElse("")}
+        WHERE ktl.state = 'active' AND ktl.uri_id in #$uriIdSet AND lm.state = 'active' AND lm.user_id = $userId #${excludeAccess.map(access => s"AND lm.access != '${access.value}'").getOrElse("")}
       );"""
       val uriAndKeepIdsByUriId = q.as[(Id[NormalizedURI], Id[Keep])].list.groupBy(_._1)
       uriIds.map { uriId => uriId -> uriAndKeepIdsByUriId.get(uriId).map(_.map(_._2).toSet).getOrElse(Set.empty) }.toMap
@@ -507,6 +510,48 @@ class KeepRepoImpl @Inject() (
     ORDER BY bm.last_activity_at DESC, bm.id DESC
     LIMIT $offset, $limit
     """.as[Keep].list
+  }
+
+  def getKeepIdsForQuery(query: KeepQuery)(implicit session: RSession): Seq[Id[Keep]] = {
+    import KeepQuery._
+    type Rows = Query[KeepTable, Keep, Seq]
+    val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+
+    def filterByTarget(rs: Rows): Rows = query.target match {
+      case ForLibrary(targetLib) =>
+        for {
+          k <- rs
+          ktl <- ktlRows
+          if k.id === ktl.keepId &&
+            ktl.libraryId === targetLib
+        } yield k
+    }
+    def filterByTime(rs: Rows): Rows = query.fromId.fold(rs) { fromId =>
+      val fromKeep = get(fromId)
+      arrangement.ordering match {
+        case KeepOrdering.LAST_ACTIVITY_AT =>
+          val fromTime = fromKeep.lastActivityAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.lastActivityAt > fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.lastActivityAt < fromKeep.lastActivityAt || (r.lastActivityAt === fromTime && r.id < fromId))
+          }
+        case KeepOrdering.KEPT_AT =>
+          val fromTime = fromKeep.keptAt
+          arrangement.direction match {
+            case SortDirection.ASCENDING => rs.filter(r => r.keptAt > fromKeep.keptAt || (r.keptAt === fromTime && r.id > fromId))
+            case SortDirection.DESCENDING => rs.filter(r => r.keptAt < fromKeep.keptAt || (r.keptAt === fromTime && r.id < fromId))
+          }
+      }
+    }
+    def orderByTime(rs: Rows): Rows = arrangement match {
+      case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.lastActivityAt asc, r.id asc))
+      case Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.lastActivityAt desc, r.id desc))
+      case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
+      case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
+    }
+    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
+
+    activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {

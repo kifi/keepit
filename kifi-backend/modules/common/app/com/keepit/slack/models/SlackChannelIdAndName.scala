@@ -125,3 +125,17 @@ object SlackPrivateChannelInfo {
     (__ \ 'purpose \ 'value).readNullable[SlackChannelPurpose].map(_.filter(_.value.nonEmpty))
   )(SlackPrivateChannelInfo.apply _)
 }
+
+// There is more stuff than just this returned
+final case class SlackIMChannelInfo(
+  channelId: SlackChannelId.DM,
+  userId: SlackUserId,
+  originalJson: JsValue)
+
+object SlackIMChannelInfo {
+  implicit val reads: Reads[SlackIMChannelInfo] = (
+    (__ \ 'id).read[SlackChannelId.DM] and
+    (__ \ 'user).read[SlackUserId] and
+    __.read[JsValue]
+  )(SlackIMChannelInfo.apply _)
+}

@@ -78,7 +78,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     ktlRepo: KeepToLibraryRepo,
     ktuRepo: KeepToUserRepo,
     orgRepo: OrganizationRepo,
@@ -886,7 +886,7 @@ class AdminUserController @Inject() (
     slackTeamMembershipRepo.getByUserId(userId).foreach(slackTeamMembershipRepo.deactivate)
 
     // URI Graph
-    keepRepo.getByUser(userId).foreach(keepCommander.deactivateKeep)
+    keepRepo.getByUser(userId).foreach(keepMutator.deactivateKeep)
     ktuRepo.getAllByUserId(userId).foreach(ktuRepo.deactivate)
     collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 
@@ -1059,8 +1059,9 @@ class AdminUserController @Inject() (
     }
   }
 
-  def suggestRecipient(userId: Id[User], query: Option[String], limit: Option[Int], drop: Option[Int]) = AdminUserAction.async { request =>
-    typeAheadCommander.searchForKeepRecipients(userId, query.getOrElse(""), limit, drop).map { suggestions =>
+  def suggestRecipient(userId: Id[User], query: Option[String], limit: Option[Int], drop: Option[Int], requested: Option[String]) = AdminUserAction.async { request =>
+    val requestedSet = requested.map(_.split(",").map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
+    typeAheadCommander.searchForKeepRecipients(userId, query.getOrElse(""), limit, drop, requestedSet).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
         case u: UserContactResult => Json.toJson(u)
         case e: EmailContactResult => Json.toJson(e)

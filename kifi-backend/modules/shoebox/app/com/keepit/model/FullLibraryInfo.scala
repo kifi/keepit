@@ -37,6 +37,11 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String) extends Exception(message) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
+object LibraryFail {
+  val INVALID_LIBRARY_ID = LibraryFail(BAD_REQUEST, "invalid_library_id")
+  val INVALID_KEEP_ID = LibraryFail(BAD_REQUEST, "invalid_keep_id")
+  val INSUFFICIENT_PERMISSIONS = LibraryFail(FORBIDDEN, "insufficient_permissions")
+}
 
 case class ExternalLibraryInitialValues(
   name: String,

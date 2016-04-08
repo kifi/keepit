@@ -1,10 +1,11 @@
 package com.keepit.search.augmentation
 
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
+import play.api.libs.functional.syntax._
 
 case class AugmentableItem(uri: Id[NormalizedURI], keepId: Option[Id[Keep]] = None)
 
@@ -19,13 +20,23 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: Id[Keep], externalId: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], organizationId: Option[Id[Organization]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+// This represents as Keep read from the Search Index
+case class KeepDocument(
+  id: Id[Keep],
+  keptAt: DateTime,
+  owner: Option[Id[User]],
+  users: Set[Id[User]],
+  libraries: Set[Id[Library]],
+  organizations: Set[Id[Organization]],
+  note: Option[String],
+  tags: Set[Hashtag])
 
-object RestrictedKeepInfo {
-  implicit val format = Json.format[RestrictedKeepInfo]
+object KeepDocument {
+  implicit val format = Json.format[KeepDocument]
 }
 
-case class FullAugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
+// todo(Léo): remove otherDiscoverableKeeps
+case class FullAugmentationInfo(keeps: Seq[KeepDocument], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, librariesTotal: Int, keepersTotal: Int)
 object FullAugmentationInfo {
   implicit val format = Json.format[FullAugmentationInfo]
 }
@@ -65,7 +76,7 @@ object AugmentationScores {
   val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showPublishedLibraries: Option[Boolean] = None)
+case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext, showOtherPublishedKeeps: Option[Boolean] = None)
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]
@@ -85,8 +96,8 @@ object ItemAugmentationResponse {
 
 // todo(Léo): reconsider keeps, include sources
 case class LimitedAugmentationInfo(
-  keep: Option[RestrictedKeepInfo],
-  keeps: Seq[RestrictedKeepInfo],
+  keep: Option[KeepDocument],
+  keeps: Seq[KeepDocument],
   keepsOmitted: Int,
   keepsTotal: Int,
   keepers: Seq[(Id[User], DateTime)],

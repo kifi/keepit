@@ -33,8 +33,11 @@ class SlackOAuthProviderImpl @Inject() (
   def getRichIdentity(auth: SlackAuthorizationResponse): Future[SlackIdentity] = {
     for {
       userIdentity <- slackClient.identifyUser(auth.accessToken)
-      userInfo <- slackClient.getUserInfo(userIdentity.teamId, userIdentity.userId, if (auth.scopes.contains(SlackAuthScope.UsersRead)) Seq(auth.accessToken) else Seq.empty)
-    } yield SlackIdentity(auth, userIdentity, Some(userInfo))
+      userInfoOpt <- {
+        val preferredTokens = if (auth.scopes.contains(SlackAuthScope.UsersRead)) Seq(auth.accessToken) else Seq.empty
+        slackClient.getUserInfo(userIdentity.teamId, userIdentity.userId, preferredTokens).imap(Some(_)).recover { case SlackFail.NoValidToken => None }
+      }
+    } yield SlackIdentity(auth, userIdentity, userInfoOpt)
   }
 
   def doOAuth[A]()(implicit request: Request[A]): Future[Either[Result, SlackAuthorizationResponse]] = {

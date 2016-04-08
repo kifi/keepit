@@ -12,13 +12,14 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 sealed abstract class KeepEventKind(val value: String)
 object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
   case object Comment extends KeepEventKind("comment")
   case object EditTitle extends KeepEventKind("edit_title")
-  case object AddRecipients extends KeepEventKind("add_recipients")
+  case object ModifyRecipients extends KeepEventKind("modify_recipients")
 
   val all = _all
   def contains(str: String) = all.exists(_.value == str)
@@ -58,24 +59,38 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
   }
 
   def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[KeepEventSourceKind] = new QueryStringBindable[KeepEventSourceKind] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KeepEventSourceKind]] = {
+      stringBinder.bind(key, params) map {
+        case Right(value) => Right(KeepEventSourceKind(value))
+        case _ => Left("Unable to bind a KeepEventSourceKind")
+      }
+    }
+
+    override def unbind(key: String, source: KeepEventSourceKind): String = {
+      stringBinder.unbind(key, source.value)
+    }
+  }
 }
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
 object KeepEventData {
-  @json case class AddRecipients(addedBy: Id[User], keepRecipients: KeepRecipients) extends KeepEventData(KeepEventKind.AddRecipients)
+  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
+  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
           case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case KeepEventKind.AddRecipients => Json.reads[AddRecipients].reads(js)
+          case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
           case KeepEventKind.Initial | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
       case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
-      case ar: AddRecipients => Json.writes[AddRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddRecipients.value)
+      case ar: ModifyRecipients => Json.writes[ModifyRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
@@ -102,6 +117,18 @@ object BasicKeepEvent {
     (__ \ 'timestamp).write[DateTime] and
     (__ \ 'source).writeNullable[KeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
+
+  def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
+    BasicKeepEvent(
+      id = Some(id),
+      author = author,
+      kind = KeepEventKind.Comment,
+      header = DescriptionElements(author, "commented on this page"),
+      body = text,
+      timestamp = sentAt,
+      source = KeepEventSourceKind.fromMessageSource(source).map(KeepEventSource(_, url = None))
+    )
+  }
 }
 
 case class KeepActivity(latestEvent: BasicKeepEvent, events: Seq[BasicKeepEvent], numComments: Int)

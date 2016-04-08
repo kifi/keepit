@@ -84,6 +84,7 @@ object UserValueName {
   val SLACK_INT_PROMO = UserValueName("slack_int_promo")
   val SLACK_UPSELL_WIDGET = UserValueName("slack_upsell_widget")
   val SHOW_SLACK_CREATE_TEAM_POPUP = UserValueName("show_slack_create_team_popup")
+  val HIDE_EXTENSION_UPSELL = UserValueName("hide_extension_upsell")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 
@@ -96,6 +97,7 @@ object UserValueName {
   val PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL = UserValueName("pending_org_domain_ownership_by_email")
 
   val DEFAULT_LIBRARY_ARRANGEMENT = UserValueName("default_library_arrangement")
+  val DEFAULT_KEEP_ARRANGEMENT = UserValueName("default_keep_arrangement")
   val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
   val LAST_RECORDED_LOCATION = UserValueName("last_recorded_location")
 
