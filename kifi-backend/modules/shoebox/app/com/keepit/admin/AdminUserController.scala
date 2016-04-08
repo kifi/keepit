@@ -78,7 +78,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     ktlRepo: KeepToLibraryRepo,
     ktuRepo: KeepToUserRepo,
     orgRepo: OrganizationRepo,
@@ -886,7 +886,7 @@ class AdminUserController @Inject() (
     slackTeamMembershipRepo.getByUserId(userId).foreach(slackTeamMembershipRepo.deactivate)
 
     // URI Graph
-    keepRepo.getByUser(userId).foreach(keepCommander.deactivateKeep)
+    keepRepo.getByUser(userId).foreach(keepMutator.deactivateKeep)
     ktuRepo.getAllByUserId(userId).foreach(ktuRepo.deactivate)
     collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 

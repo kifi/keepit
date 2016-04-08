@@ -28,6 +28,7 @@ class KeepsController @Inject() (
   collectionRepo: CollectionRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
+  keepMutator: KeepMutator,
   keepActivityAssembler: KeepActivityAssembler,
   keepInfoAssembler: KeepInfoAssembler,
   keepExportCommander: KeepExportCommander,
@@ -149,7 +150,7 @@ class KeepsController @Inject() (
           case Some(keep) =>
             val newNote = (request.body \ "note").as[String]
             db.readWrite { implicit session =>
-              keepsCommander.updateKeepNote(request.userId, keep, newNote)
+              keepMutator.updateKeepNote(request.userId, keep, newNote)
             }
             NoContent
         }

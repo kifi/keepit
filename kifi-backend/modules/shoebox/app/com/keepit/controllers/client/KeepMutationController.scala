@@ -33,6 +33,7 @@ class KeepMutationController @Inject() (
   permissionCommander: PermissionCommander,
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   discussionCommander: DiscussionCommander,
   keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
@@ -130,7 +131,7 @@ class KeepMutationController @Inject() (
       for {
         keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_ID: KeepFail)
         _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
-      } yield keepCommander.deactivateKeep(keepRepo.get(keepId))
+      } yield keepMutator.deactivateKeep(keepRepo.get(keepId))
     }.fold(
       fail => fail.asErrorResponse,
       _ => NoContent
