@@ -52,10 +52,10 @@ class KeepInfoController @Inject() (
     UserAction.async { implicit request =>
       TimedComputation.async {
         val goodResult = for {
-          _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE)
-          fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).map { pubId =>
-            Keep.decodePublicIdStr(pubId).airbrakingOption.map(Option(_)).withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
-          }.getOrElse(RightBias.right(None))
+          _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
+          fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
+            Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
+          }
         } yield {
           val keepIds = TimedComputation.sync {
             db.readOnlyMaster { implicit s =>
