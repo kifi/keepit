@@ -2,12 +2,15 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ FortyTwoGenericTypeMappers, Repo, DBSession, DbRepo, DataBaseComponent }
 import com.keepit.common.db.{ CommonClassLinker, ModelWithState, States, State, Id }
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
+import com.keepit.model.KeepEventData.{ EditTitle, ModifyRecipients }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -30,6 +33,23 @@ case class KeepEvent(
 }
 object KeepEventStates extends States[KeepEvent]
 object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
+  def idsInvolved(events: Iterable[KeepEvent]): (Set[Id[User]], Set[Id[Library]], Set[EmailAddress]) = {
+    events.foldLeft[(Set[Id[User]], Set[Id[Library]], Set[EmailAddress])]((Set.empty, Set.empty, Set.empty)) {
+      case ((users, libs, emails), event) =>
+
+        val (newUsers, newLibs, newEmails) = event.eventData match {
+          case EditTitle(editedBy, _, _) => (Set(editedBy), Set.empty[Id[Library]], Set.empty[EmailAddress])
+          case ModifyRecipients(addedBy, diff) =>
+            val (users, libs, emails) = diff.allEntities
+            (users + addedBy, libs, emails)
+        }
+
+        (users ++ newUsers, libs ++ newLibs, emails ++ newEmails)
+    }
+  }
+
+  def publicId(id: Id[KeepEvent])(implicit config: PublicIdConfiguration): PublicId[CommonKeepEvent] = CommonKeepEvent.publicId(KeepEvent.toCommonId(id))
+
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[KeepEvent]) and
     (__ \ 'createdAt).format[DateTime] and
@@ -61,6 +81,7 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
 @ImplementedBy(classOf[KeepEventRepoImpl])
 trait KeepEventRepo extends Repo[KeepEvent] {
   def pageForKeep(keepId: Id[Keep], fromTime: Option[DateTime], limit: Int)(implicit session: RSession): Seq[KeepEvent]
+  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int])(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]]
 }
 
 @Singleton
@@ -99,5 +120,11 @@ class KeepEventRepoImpl @Inject() (
       case Some(time) => keepRows.filter(_.eventTime < fromTime)
     }
     rowsBefore.sortBy(_.eventTime desc).take(limit).list
+  }
+
+  def getForKeeps(keepIds: Set[Id[Keep]], limit: Option[Int])(implicit s: RSession): Map[Id[Keep], Seq[KeepEvent]] = {
+    import com.keepit.common.core._
+    // todo(cam): be more efficient here by perhaps using Ryan's fancy query for MessageRepo.getRecentByKeeps (i.e. don't paginate in-memory)
+    activeRows.filter(r => r.keepId.inSet(keepIds)).list.groupBy(_.keepId).mapValuesStrict(_.sortBy(_.eventTime.getMillis * -1).take(limit.getOrElse(Int.MaxValue)))
   }
 }

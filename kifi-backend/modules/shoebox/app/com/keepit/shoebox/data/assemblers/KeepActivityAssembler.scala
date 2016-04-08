@@ -63,9 +63,10 @@ class KeepActivityAssemblerImpl @Inject() (
 
     val basicModelFut = shoeboxFut.map {
       case (keep, sourceAttr, events, ktus, ktls) =>
-        val eventDatums = events.map(_.eventData)
         db.readOnlyMaster { implicit s =>
-          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ eventDatums.collect { case ModifyRecipients(_, KeepRecipientsDiff(_, libs, _)) => libs.added }.flatten
+          val (usersFromEvents, libsFromEvents, _) = KeepEvent.idsInvolved(events)
+
+          val libsNeeded: Seq[Id[Library]] = ktls.map(_.libraryId) ++ libsFromEvents
           val libById = libRepo.getActiveByIds(libsNeeded.toSet)
 
           val basicOrgById = basicOrgGen.getBasicOrganizations(libById.values.flatMap(_.organizationId).toSet)
@@ -76,11 +77,7 @@ class KeepActivityAssemblerImpl @Inject() (
           val basicUserById = {
             val ktuUsers = ktus.map(_.userId)
             val libOwners = libById.map { case (libId, library) => library.ownerId }
-            val recipients = eventDatums.collect {
-              case ModifyRecipients(_, KeepRecipientsDiff(users, _, _)) => users.added
-              case EditTitle(editor, _, _) => Set(editor)
-            }.flatten
-            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ recipients).toSet)
+            basicUserRepo.loadAllActive((ktuUsers ++ libOwners ++ usersFromEvents).toSet)
           }
           val basicLibById = basicLibGen.getBasicLibraries(libById.keySet)
           (basicUserById, basicLibById, basicOrgByLibId)
