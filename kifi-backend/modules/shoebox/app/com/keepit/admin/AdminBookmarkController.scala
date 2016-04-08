@@ -289,10 +289,11 @@ class AdminBookmarksController @Inject() (
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
     import com.keepit.common.core._
 
-    val fromId = startFrom.map(Id[Keep])
+    var fromId = startFrom.map(Id[Keep])
     val chunkSize = 100
-    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
-    val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
+    val numPages = limit / chunkSize
+    val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
+      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, page * chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
       def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
       val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
@@ -334,6 +335,7 @@ class AdminBookmarksController @Inject() (
           (internedKeeps, missingKeeps)
         }
       } yield {
+        fromId = keeps.maxBy(_.id.get).id
         s"${keeps.map(_.id.get).minMaxOpt}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
       }
     }
