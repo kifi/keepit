@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.gen.BasicLibraryGen
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -65,7 +65,9 @@ class KeepSourceCommanderImpl @Inject() (
       val basicUserOpt = attr match {
         case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id).flatMap(basicUserById.get)
         case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId)).flatMap(basicUserById.get)
-        case KifiAttribution(keptBy, _, _, _, _, _) => Some(keptBy)
+        case KifiAttribution(keptBy, _, _, _, libs, _) =>
+          if (keptBy.externalId == ExternalId[User]("6455802a-a5e6-4265-8748-8acdaccb7e8c")) log.info(s"[activityLog] propagated basic libs ${libs.map(_.id)}")
+          Some(keptBy)
       }
       (attr, basicUserOpt)
     }
