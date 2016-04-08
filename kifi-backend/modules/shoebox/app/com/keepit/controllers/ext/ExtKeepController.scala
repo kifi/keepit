@@ -61,15 +61,16 @@ class ExtKeepController @Inject() (
   }
 
   def modifyConnectionsForKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    import com.keepit.common.http._
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      input <- request.body.validate[ExternalKeepConnectionsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       diff <- db.readOnlyReplicaAsync { implicit s =>
         val userIdMap = userRepo.convertExternalIds(input.users.all)
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
-        KeepConnectionsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
+        KeepRecipientsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
+      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)))
     } yield {
       NoContent
     }).recover {

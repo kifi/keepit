@@ -26,7 +26,7 @@ trait ElizaDiscussionCommander {
   def getDiscussionForKeep(keepId: Id[Keep], maxMessagesShown: Int): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit]
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSourceKind])(implicit context: HeimdalContext): Future[Boolean]
@@ -147,7 +147,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEvent): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle): Future[Unit] = {
     getOrCreateMessageThreadWithUser(keepId, userId).map { thread =>
       db.readWrite { implicit s =>
         messageRepo.save(ElizaMessage(
@@ -179,7 +179,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }.map(Future.successful).getOrElse {
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw DiscussionFail.INVALID_KEEP_ID)
-        val users = csKeep.owner.toSet + userId
+        val users = csKeep.users ++ csKeep.owner + userId
+        val emails = csKeep.emails
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
@@ -194,7 +195,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               keepId = csKeep.id
             ))
             users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
-            log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
+            emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
             mt
           }
         }

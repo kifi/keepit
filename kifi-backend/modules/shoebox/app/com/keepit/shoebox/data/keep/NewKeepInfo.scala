@@ -1,13 +1,15 @@
 package com.keepit.shoebox.data.keep
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.path.Path
-import com.keepit.common.store.{ ImageSize, ImagePath }
+import com.keepit.common.store.{ ImageUrl, ImageSize, ImagePath }
 import com.keepit.model._
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.social.{ BasicNonUser, BasicAuthor, BasicUser }
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 final case class NewKeepInfo(
   id: PublicId[Keep],
@@ -29,7 +31,7 @@ object NewKeepInfo {
 }
 
 final case class NewKeepImageInfo(
-  path: ImagePath,
+  url: ImageUrl,
   dimensions: ImageSize)
 
 object NewKeepImageInfo {
@@ -38,11 +40,16 @@ object NewKeepImageInfo {
 
 final case class KeepRecipientsInfo(
   users: Seq[BasicUser],
-  emails: Seq[BasicNonUser],
+  emails: Seq[BasicContact],
   libraries: Seq[BasicLibrary])
 
 object KeepRecipientsInfo {
-  implicit val writes: Writes[KeepRecipientsInfo] = Json.writes[KeepRecipientsInfo]
+  private implicit val bastardizedBasicContactWrites: Writes[BasicContact] = Writes { bc => BasicContact.format.writes(bc) ++ Json.obj("id" -> bc.email) }
+  implicit val writes: Writes[KeepRecipientsInfo] = (
+    (__ \ 'users).write[Seq[BasicUser]] and
+    (__ \ 'emails).write[Seq[BasicContact]] and
+    (__ \ 'libraries).write[Seq[BasicLibrary]]
+  )(unlift(KeepRecipientsInfo.unapply))
 }
 
 case class NewKeepViewerInfo(

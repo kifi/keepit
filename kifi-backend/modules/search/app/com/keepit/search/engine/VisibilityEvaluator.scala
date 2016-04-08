@@ -1,12 +1,14 @@
 package com.keepit.search.engine
 
+import java.nio.LongBuffer
+
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.search.SearchContext
-import com.keepit.search.index.{ WrappedSubReader }
+import com.keepit.search.{ SearchFilter, SearchContext }
+import com.keepit.search.index.{ LongBufferUtil, DocUtil, WrappedSubReader }
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.{ NumericDocValues }
+import org.apache.lucene.index.{ BinaryDocValues, NumericDocValues }
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
@@ -24,37 +26,25 @@ trait VisibilityEvaluator { self: DebugOption =>
 
   lazy val restrictedUserIds = LongArraySet.fromSet(monitoredAwait.result(restrictedUserIdsFuture, 5 seconds, s"getting restricted user ids"))
 
-  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
+  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds, myLibraryIds) = {
     val (myLibIds, memberLibIds, trustedLibIds, authorizedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
 
     require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
 
-    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds), LongArraySet.fromSet(memberLibIds ++ authorizedLibIds))
   }
 
-  lazy val orgIds = LongArraySet.fromSet(monitoredAwait.result(orgIdsFuture, 5 seconds, s"getting org ids"))
+  lazy val myOrgIds = LongArraySet.fromSet(monitoredAwait.result(orgIdsFuture, 5 seconds, s"getting org ids"))
 
   protected def getKeepVisibilityEvaluator(reader: WrappedSubReader): KeepVisibilityEvaluator = {
-
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-    val orgIdDocValues = reader.getNumericDocValues(KeepFields.orgIdField)
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-
-    new KeepVisibilityEvaluator(
+    KeepVisibilityEvaluator(
       userId,
       myFriendIds,
       restrictedUserIds,
-      myOwnLibraryIds,
-      memberLibraryIds,
-      trustedLibraryIds,
-      authorizedLibraryIds,
-      orgIds,
-      context,
-      userIdDocValues,
-      libraryIdDocValues,
-      orgIdDocValues,
-      visibilityDocValues)
+      myLibraryIds,
+      myOrgIds,
+      context.filter
+    )(reader)
   }
 
   protected def getLibraryVisibilityEvaluator(reader: WrappedSubReader): LibraryVisibilityEvaluator = {
@@ -66,7 +56,7 @@ trait VisibilityEvaluator { self: DebugOption =>
       memberLibraryIds,
       myFriendIds,
       restrictedUserIds,
-      orgIds,
+      myOrgIds,
       context,
       ownerIdDocValues,
       orgIdDocValues,
@@ -93,72 +83,82 @@ final class KeepVisibilityEvaluator(
     userId: Long,
     myFriendIds: LongArraySet,
     restrictedUserIds: LongArraySet,
-    myOwnLibraryIds: LongArraySet,
-    memberLibraryIds: LongArraySet,
-    trustedLibraryIds: LongArraySet,
-    authorizedLibraryIds: LongArraySet,
-    orgIds: LongArraySet,
-    context: SearchContext,
-    val userIdDocValues: NumericDocValues,
-    val libraryIdDocValues: NumericDocValues,
-    val orgIdDocValues: NumericDocValues,
-    visibilityDocValues: NumericDocValues) {
+    myLibraryIds: LongArraySet,
+    myOrgIds: LongArraySet,
+    filter: SearchFilter,
+    ownerIdDocValues: NumericDocValues,
+    userIdsDocValues: BinaryDocValues,
+    libraryIdsDocValues: BinaryDocValues,
+    orgIdsDocValues: BinaryDocValues,
+    orgIdsDiscoverableDocValues: BinaryDocValues,
+    userIdDiscoverableDocValues: BinaryDocValues,
+    publishedDocValues: NumericDocValues) {
 
-  private[this] val published = LibraryFields.Visibility.PUBLISHED
-  private[this] val organization = LibraryFields.Visibility.ORGANIZATION
-  private val noFilter = (context.filter.libraryIds.isEmpty) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
+  import LongBufferUtil._
 
-  @inline
-  private def isRelevant(libId: Long, keeperId: Long, orgId: Long) = {
-    (context.filter.libraryIds.isEmpty || context.filter.libraryIds.findIndex(libId) >= 0) && (context.filter.userId < 0 || context.filter.userId == keeperId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
+  private val noFilter = (filter.libraryIds.isEmpty) && (filter.userId < 0) && (filter.orgId < 0) // optimization
+
+  @inline private def keeperId(docId: Int) = ownerIdDocValues.get(docId)
+  @inline private def keepUserIds(docId: Int) = DocUtil.toLongBuffer(userIdsDocValues.get(docId))
+  @inline private def keepLibraryIds(docId: Int) = DocUtil.toLongBuffer(libraryIdsDocValues.get(docId))
+  @inline private def keepOrgIds(docId: Int) = DocUtil.toLongBuffer(orgIdsDocValues.get(docId))
+  @inline private def keepDiscoverableOrgIds(docId: Int) = DocUtil.toLongBuffer(orgIdsDiscoverableDocValues.get(docId))
+  @inline private def keepDiscoverableUserIds(docId: Int) = DocUtil.toLongBuffer(userIdDiscoverableDocValues.get(docId))
+  @inline private def isPublishedKeep(docId: Int) = publishedDocValues.get(docId) > 0
+  @inline private def isRestrictedKeeper(docId: Int) = restrictedUserIds.findIndex(keeperId(docId)) >= 0
+
+  @inline private def isRelevant(keeperId: Long, libraryIds: LongBuffer, orgIds: LongBuffer): Boolean = {
+    (filter.userId < 0 || filter.userId == keeperId) && (filter.libraryIds.isEmpty || intersect(libraryIds)(filter.libraryIds)) && (filter.orgId < 0 || contains(orgIds)(filter.orgId))
   }
 
-  def isRelevant(docId: Int): Boolean = noFilter || {
-    val libId = libraryIdDocValues.get(docId)
-    val keeperId = userIdDocValues.get(docId)
-    val orgId = orgIdDocValues.get(docId)
-    isRelevant(libId, keeperId, orgId)
-  }
+  @inline def isRelevant(docId: Int): Boolean = noFilter || isRelevant(keeperId(docId), keepLibraryIds(docId), keepOrgIds(docId))
 
   def apply(docId: Int): Int = {
-    val libId = libraryIdDocValues.get(docId)
-    val keeperId = userIdDocValues.get(docId)
-    val orgId = orgIdDocValues.get(docId)
-
-    if (noFilter || isRelevant(libId, keeperId, orgId)) {
-      if (memberLibraryIds.findIndex(libId) >= 0) {
-        if (myOwnLibraryIds.findIndex(libId) >= 0) {
-          Visibility.OWNER // the keep is in my library (I may or may not have kept it)
-        } else if (keeperId == userId) {
-          Visibility.OWNER // the keep in a library I am a member of, and I kept it
-        } else {
-          Visibility.MEMBER // the keep is in a library I am a member of
-        }
-      } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
-        Visibility.MEMBER // the keep is in an authorized library
-      } else {
-        val visibility = visibilityDocValues.get(docId)
-        if (orgIds.findIndex(orgId) >= 0) {
-          if (visibility == organization || visibility == published) Visibility.MEMBER // library is owned by an org that I am a member of
-          else Visibility.RESTRICTED
-        } else if (visibility == published) {
-          if (myFriendIds.findIndex(keeperId) >= 0) {
-            Visibility.NETWORK // the keep is in a published library, and my friend kept it
-          } else if (trustedLibraryIds.findIndex(libId) >= 0) {
-            Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
-          } else if (restrictedUserIds.findIndex(keeperId) >= 0) {
-            Visibility.RESTRICTED // explicitly restricted user (e.g. fake user for non-admins)
-          } else {
-            Visibility.OTHERS // another published keep
-          }
-        } else {
-          Visibility.RESTRICTED
-        }
-      }
-    } else {
-      Visibility.RESTRICTED
-    }
+    if (noFilter || isRelevant(docId)) {
+      if (keeperId(docId) == userId) Visibility.OWNER // I own that keep
+      else if (contains(keepUserIds(docId))(userId)) Visibility.MEMBER // I am a member of that keep
+      else if (intersect(keepLibraryIds(docId))(myLibraryIds)) Visibility.MEMBER // the keep is in a library I am a member of / I am authorized in
+      else if (intersect(keepDiscoverableOrgIds(docId))(myOrgIds)) Visibility.NETWORK // the keep in one of my organizations' visible libraries
+      else if (intersect(keepDiscoverableUserIds(docId))(myFriendIds)) Visibility.NETWORK // the keep in one of my friends' visible libraries
+      else if (isPublishedKeep(docId) && !isRestrictedKeeper(docId)) Visibility.OTHERS // the keep is in a published library, from a non explicitly restricted user (e.g. fake user for non-admins) - we're not checking for trusted libraries at the moment
+      else Visibility.RESTRICTED
+    } else Visibility.RESTRICTED
   }
+}
+
+object KeepVisibilityEvaluator {
+  def apply(
+    userId: Long,
+    myFriendIds: LongArraySet,
+    restrictedUserIds: LongArraySet,
+    myLibraryIds: LongArraySet,
+    myOrgIds: LongArraySet,
+    filter: SearchFilter)(reader: WrappedSubReader): KeepVisibilityEvaluator = {
+    val ownerIdDocValues: NumericDocValues = reader.getNumericDocValues(KeepFields.ownerIdField)
+    val userIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.userIdsDiscoverableField)
+    val libraryIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.libraryIdsField)
+    val orgIdsDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.orgIdsField)
+    val orgIdsDiscoverableDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.orgIdsDiscoverableField)
+    val userIdDiscoverableDocValues: BinaryDocValues = reader.getBinaryDocValues(KeepFields.userIdsDiscoverableField)
+    val publishedDocValues: NumericDocValues = reader.getNumericDocValues(KeepFields.published)
+
+    new KeepVisibilityEvaluator(
+      userId,
+      myFriendIds,
+      restrictedUserIds,
+      myLibraryIds,
+      myOrgIds,
+      filter,
+      ownerIdDocValues,
+      userIdsDocValues,
+      libraryIdsDocValues,
+      orgIdsDocValues,
+      orgIdsDiscoverableDocValues,
+      userIdDiscoverableDocValues,
+      publishedDocValues
+    )
+  }
+
 }
 
 final class LibraryVisibilityEvaluator(

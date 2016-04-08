@@ -31,6 +31,18 @@ case class NonUserThread(
 
 object NonUserThreadStates extends States[NonUserThread]
 
+object NonUserThread {
+  def forMessageThread(mt: MessageThread)(nu: NonUserParticipant) = NonUserThread(
+    createdBy = mt.startedBy,
+    participant = nu,
+    keepId = mt.keepId,
+    uriId = Some(mt.uriId),
+    notifiedCount = 0,
+    lastNotifiedAt = None,
+    threadUpdatedByOtherAt = None
+  )
+}
+
 sealed trait NonUserParticipant {
   val identifier: String
   val referenceId: Option[String]
@@ -67,6 +79,11 @@ object NonUserParticipant {
 
   def fromBasicNonUser(nonUser: BasicNonUser) = nonUser.kind match {
     case NonUserKinds.email => NonUserEmailParticipant(EmailAddress(nonUser.id))
+  }
+
+  def toEmailAddress(nonUser: NonUserParticipant): Option[EmailAddress] = nonUser match {
+    case NonUserEmailParticipant(email) => Some(email)
+    case _ => None
   }
 }
 

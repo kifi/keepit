@@ -26,13 +26,13 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             userId = Some(Id[User](3)),
             originalKeeperId = Some(Id[User](3)),
             source = KeepSource.keeper,
-            connections = KeepConnections(libraries = Set(Id(4)), users = Set(Id(3)), emails = Set(EmailAddress("ryan@kifi.com")))
+            recipients = KeepRecipients(libraries = Set(Id(4)), users = Set(Id(3)), emails = Set(EmailAddress("ryan@kifi.com")))
           ))
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
           val cacheKeep = keepRepo.get(savedKeep.id.get)
 
           // The savedKeep is not equal to the dbKeep because of originalKeeperId
-          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.userId, k.source, k.connections)
+          def f(k: Keep) = (k.id.get, k.uriId, k.url, k.userId, k.source, k.recipients)
           f(dbKeep) === f(savedKeep)
           f(dbKeep) === f(cacheKeep)
         }

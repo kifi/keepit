@@ -182,7 +182,8 @@ class ExtPreferenceController @Inject() (
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
         showExtMoveIntro = UserValues.showExtMoveIntro.parseFromMap(userVals),
         messagingEmails = messagingEmails,
-        quoteAnywhereFtue = UserValues.quoteAnywhereFtue.parseFromMap(userVals))
+        quoteAnywhereFtue = UserValues.quoteAnywhereFtue.parseFromMap(userVals)
+      )
     }
   }
 }

@@ -128,8 +128,8 @@ class KeepChecker @Inject() (
   private def ensureLibrariesIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
     val libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
-    if (keep.connections.libraries != libraries) {
-      log.error(s"[KTL-MATCH] Keep $keepId's libraries don't match: ${keep.connections.libraries} != $libraries")
+    if (keep.recipients.libraries != libraries) {
+      log.error(s"[KTL-MATCH] Keep $keepId's libraries don't match: ${keep.recipients.libraries} != $libraries")
       keepCommander.refreshLibraries(keepId)
     }
   }
@@ -137,8 +137,8 @@ class KeepChecker @Inject() (
   private def ensureParticipantsIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
-    if (keep.connections.users != users) {
-      log.error(s"[KTU-MATCH] Keep $keepId's participants don't match: ${keep.connections.users} != $users")
+    if (keep.recipients.users != users) {
+      log.error(s"[KTU-MATCH] Keep $keepId's participants don't match: ${keep.recipients.users} != $users")
       keepCommander.refreshParticipants(keepId)
     }
   }

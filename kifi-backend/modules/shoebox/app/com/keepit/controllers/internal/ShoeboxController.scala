@@ -24,7 +24,7 @@ import com.keepit.normalizer._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.shoebox.ShoeboxServiceClient.{ InternKeep, RegisterMessageOnKeep }
+import com.keepit.shoebox.ShoeboxServiceClient.{ GetPersonalKeepRecipientsOnUris, InternKeep, RegisterMessageOnKeep }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackIntegrationCommander }
@@ -47,6 +47,7 @@ class ShoeboxController @Inject() (
   keepRepo: KeepRepo,
   keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
+  keepEventCommander: KeepEventCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -441,11 +442,6 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
-  }
-
   def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
@@ -605,7 +601,16 @@ class ShoeboxController @Inject() (
     val beforeDate = (request.body \ "before").asOpt[DateTime]
     val limit = (request.body \ "limit").as[Int]
     val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId, beforeDate, limit)
-    Ok(Json.toJson(keeps))
+    val keepIds = keeps.map(_.id.get)
+    Ok(Json.toJson(keepIds))
+  }
+
+  def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>
+    import GetPersonalKeepRecipientsOnUris._
+    val input = request.body.as[Request]
+    val keeps = keepCommander.getPersonalKeepsOnUris(input.userId, input.uriIds)
+    val keepRecipients = keeps.mapValues(_.map(CrossServiceKeepRecipients.fromKeep))
+    Ok(Json.toJson(Response(keepRecipients)))
   }
 
   def getSlackTeamIds() = Action(parse.tolerantJson) { request =>
@@ -627,20 +632,32 @@ class ShoeboxController @Inject() (
   def internKeep() = Action(parse.tolerantJson) { request =>
     import InternKeep._
     val input = request.body.as[Request]
-    val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
-    implicit val context = HeimdalContext.empty
-    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), Some(input.creator), libraryOpt = None, input.users, source = KeepSource.discussion)
-    val csKeep = db.readWrite { implicit s =>
-      val keep = keepCommander.persistKeep(internResponse.newKeeps.head.withParticipants(input.users))
-      CrossServiceKeep.fromKeepAndRecipients(keep, users = Set(input.creator), libraries = Set.empty, emails = Set.empty)
+    val recipients = KeepRecipients(
+      users = input.users + input.creator,
+      emails = input.emails,
+      libraries = Set.empty
+    )
+    val internResponse = db.readWrite { implicit s =>
+      keepInterner.internKeepByRequest(KeepInternRequest.onKifi(
+        keeper = input.creator,
+        url = input.url,
+        source = KeepSource.discussion,
+        title = input.title,
+        note = input.note,
+        keptAt = Some(clock.now),
+        recipients = recipients
+      ))
     }
+    val keep = internResponse.get._1
+    val csKeep = CrossServiceKeep.fromKeepAndRecipients(keep, users = recipients.users, libraries = Set.empty, emails = recipients.emails)
     Ok(Json.toJson(csKeep))
   }
 
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
-    val users = (request.body \ "users").as[Set[Id[User]]]
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = Action(parse.tolerantJson) { request =>
+    val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
-      keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUsers(users), userAttribution = Some(adderId))
+      keepCommander.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
+      if (persistKeepEvent) keepEventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
     }
     NoContent
   }
@@ -651,7 +668,7 @@ class ShoeboxController @Inject() (
     val keep = db.readWrite { implicit s =>
       keepRepo.saveAndIncrementSequenceNumber(keepRepo.get(input.keepId).withMessageSeq(input.msg.seq))
     }
-    libToSlackPusher.schedule(keep.connections.libraries)
+    libToSlackPusher.schedule(keep.recipients.libraries)
     NoContent
   }
 }

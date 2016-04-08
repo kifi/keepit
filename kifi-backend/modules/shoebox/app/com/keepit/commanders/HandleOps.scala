@@ -5,7 +5,7 @@ import com.keepit.model.Handle
 object HandleOps {
   import scala.collection.immutable.HashSet
   // Words that cannot appear anywhere in a handle
-  val censorList = HashSet("support", "help", "kifi", "link", "friend", "friends", "invite", "admin", "about", "password", "billing", "pricing", "redir", "tags", "organizations", "teams", "settings", "profile", "find", "connections")
+  val censorList = HashSet("support", "help", "kifi", "link", "friend", "friends", "invite", "admin", "about", "password", "billing", "pricing", "redir", "tags", "organizations", "teams", "settings", "profile", "find", "connections", "api")
 
   // No exact normalized matches
   private val paths = HashSet("r", "k")

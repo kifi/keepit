@@ -139,7 +139,7 @@ object BasicContact {
   private val readsFromString = Reads[BasicContact](_.validate[String].flatMap { contact =>
     fromString(contact).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage()) }.get
   })
-  implicit val format: Format[BasicContact] = Format(Json.reads[BasicContact] orElse readsFromString, Json.writes[BasicContact])
+  implicit val format: OFormat[BasicContact] = OFormat(Json.reads[BasicContact] orElse readsFromString, Json.writes[BasicContact])
 
   def fromRichContact(richContact: RichContact): BasicContact = BasicContact(richContact.email, richContact.name, richContact.firstName, richContact.lastName)
 }

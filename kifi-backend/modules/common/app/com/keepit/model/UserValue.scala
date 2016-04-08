@@ -72,7 +72,6 @@ object UserValueName {
   // ↓↓↓↓ This should be combined with preferences. Why does it exist?
   // User Profile Settings (be sure to add to UserValueSettings.defaultSettings for default values)
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
-  val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
   // ↑↑↑↑↑ Should be combined with preferences
 
   // Site user preferences
@@ -85,6 +84,7 @@ object UserValueName {
   val SLACK_INT_PROMO = UserValueName("slack_int_promo")
   val SLACK_UPSELL_WIDGET = UserValueName("slack_upsell_widget")
   val SHOW_SLACK_CREATE_TEAM_POPUP = UserValueName("show_slack_create_team_popup")
+  val HIDE_EXTENSION_UPSELL = UserValueName("hide_extension_upsell")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 
@@ -97,6 +97,7 @@ object UserValueName {
   val PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL = UserValueName("pending_org_domain_ownership_by_email")
 
   val DEFAULT_LIBRARY_ARRANGEMENT = UserValueName("default_library_arrangement")
+  val DEFAULT_KEEP_ARRANGEMENT = UserValueName("default_keep_arrangement")
   val HORRIFYING_LOGGING_METHOD = UserValueName("horrifying_logging_method")
   val LAST_RECORDED_LOCATION = UserValueName("last_recorded_location")
 
@@ -191,31 +192,4 @@ object UserValues {
   val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 
   val pendingOrgDomainOwnershipByEmail = UserValueJsValueHandler(UserValueName.PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL, default = Json.obj())
-}
-
-@json case class UserValueSettings(showFollowedLibraries: Boolean)
-
-object UserValueSettings {
-
-  val defaultSettings: Map[UserValueName, Boolean] = Map(
-    UserValueName.SHOW_FOLLOWED_LIBRARIES -> true
-  )
-
-  def readFromJsValue(body: JsValue): UserValueSettings = {
-    val showFollowedLibrariesOpt = (body \ UserValueName.SHOW_FOLLOWED_LIBRARIES.name).asOpt[Boolean]
-
-    UserValueSettings(
-      showFollowedLibraries = showFollowedLibrariesOpt.getOrElse(UserValueSettings.defaultSettings(UserValueName.SHOW_FOLLOWED_LIBRARIES))
-    )
-  }
-
-  def retrieveSetting(targetVal: UserValueName, userVals: JsValue): Boolean = {
-    retrieveSettings(Set(targetVal), userVals)(targetVal)
-  }
-
-  def retrieveSettings(targetVals: Set[UserValueName], userVals: JsValue): Map[UserValueName, Boolean] = {
-    targetVals.map { userVal =>
-      userVal -> (userVals \ userVal.name).asOpt[Boolean].getOrElse(defaultSettings(userVal))
-    }.toMap
-  }
 }

@@ -36,17 +36,17 @@ case class Keep(
   title: Option[String] = None,
   note: Option[String] = None,
   uriId: Id[NormalizedURI],
-  url: String, // denormalized for efficiency
+  url: String,
   userId: Option[Id[User]], // userId is None iff the message was imported from a foreign source (Slack, etc) and we don't have a Kifi user to attribute it to
   originalKeeperId: Option[Id[User]],
   source: KeepSource,
   keptAt: DateTime = currentDateTime,
   lastActivityAt: DateTime = currentDateTime, // denormalized to KeepToUser and KeepToLibrary, modify using KeepCommander.updateLastActivityAtifLater
   messageSeq: Option[SequenceNumber[Message]] = None,
-  connections: KeepConnections)
+  recipients: KeepRecipients)
     extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, connections = KeepConnections.EMPTY)
+  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, recipients = KeepRecipients.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -60,9 +60,9 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(title => title.nonEmpty && title != url))
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
 
-  def withConnections(newConnections: KeepConnections): Keep = this.copy(connections = newConnections)
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withConnections(connections.withLibraries(libraries))
-  def withParticipants(users: Set[Id[User]]): Keep = this.withConnections(connections.withUsers(users))
+  def withRecipients(newRecipients: KeepRecipients): Keep = this.copy(recipients = newRecipients)
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.withRecipients(recipients.withLibraries(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.withRecipients(recipients.withUsers(users))
 
   // denormalized to KeepToUser and KeepToLibrary, use in KeepCommander.updateLastActivityAtifLater
   def withLastActivityAtIfLater(time: DateTime): Keep = if (lastActivityAt isBefore time) this.copy(lastActivityAt = time) else this
@@ -79,7 +79,7 @@ case class Keep(
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 
   // Only for use in old code which expects keeps to have a single library
-  def lowestLibraryId: Option[Id[Library]] = connections.libraries.minByOpt(_.id)
+  def lowestLibraryId: Option[Id[Library]] = recipients.libraries.minByOpt(_.id)
 }
 
 object Keep extends PublicIdGenerator[Keep] {
@@ -110,7 +110,7 @@ object Keep extends PublicIdGenerator[Keep] {
     (__ \ 'keptAt).format[DateTime] and
     (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'messageSeq).formatNullable[SequenceNumber[Message]] and
-    (__ \ 'connections).format[KeepConnections]
+    (__ \ 'connections).format[KeepRecipients]
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -231,32 +231,11 @@ object CrossServiceKeepAndTags {
   implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
-case class BasicKeep(
-  id: ExternalId[Keep],
-  title: Option[String],
-  url: String,
-  visibility: LibraryVisibility,
-  libraryId: Option[PublicId[Library]],
-  author: BasicAuthor,
-  attribution: Option[SlackAttribution],
-  uriId: PublicId[NormalizedURI])
-
-object BasicKeep {
-  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
-  implicit val format: Format[BasicKeep] = (
-    (__ \ 'id).format[ExternalId[Keep]] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'author).format[BasicAuthor] and
-    (__ \ 'slackAttribution).formatNullable[SlackAttribution] and
-    (__ \ 'uriId).format[PublicId[NormalizedURI]]
-  )(BasicKeep.apply, unlift(BasicKeep.unapply))
+case class CrossServiceKeepRecipients(id: Id[Keep], owner: Option[Id[User]], recipients: KeepRecipients)
+object CrossServiceKeepRecipients {
+  implicit val format = Json.format[CrossServiceKeepRecipients]
+  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.userId, keep.recipients)
 }
-
-@json
-case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
 
 // All the important parts of a Keep to send across services
 // NOT to be sent to clients
@@ -277,6 +256,7 @@ case class CrossServiceKeep(
     url: String,
     uriId: Id[NormalizedURI],
     keptAt: DateTime,
+    lastActivityAt: DateTime,
     title: Option[String],
     note: Option[String]) {
   def isActive: Boolean = state == KeepStates.ACTIVE
@@ -299,6 +279,7 @@ object CrossServiceKeep {
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'keptAt).format[DateTime] and
+    (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
@@ -316,6 +297,7 @@ object CrossServiceKeep {
       url = keep.url,
       uriId = keep.uriId,
       keptAt = keep.keptAt,
+      lastActivityAt = keep.lastActivityAt,
       title = keep.title,
       note = keep.note
     )
@@ -338,15 +320,6 @@ object PersonalKeep {
     (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
-
-case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 5
-  val namespace = "basic_keep_by_id"
-  def toKey(): String = id.id.toString
-}
-
-class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed abstract class KeepPermission(val value: String)
 object KeepPermission extends Enumerator[KeepPermission] {

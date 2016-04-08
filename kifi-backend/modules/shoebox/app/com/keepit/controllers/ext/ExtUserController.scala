@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.kifi.macros.json
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsValue, JsNull, Json }
+import play.api.libs.json.{ JsObject, JsValue, JsNull, Json }
 
 import com.google.inject.Inject
 
@@ -73,13 +73,14 @@ class ExtUserController @Inject() (
     }
   }
 
-  @json case class RecipientSuggestion(query: Option[String], results: Seq[JsValue /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], drop: Option[Int])
-  def suggestRecipient(query: Option[String], limit: Option[Int], drop: Option[Int]) = UserAction.async { request =>
-    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, drop).map { suggestions =>
+  @json case class RecipientSuggestion(query: Option[String], results: Seq[JsObject /* TypeaheadResult */ ], mayHaveMore: Boolean, limit: Option[Int], drop: Option[Int])
+  def suggestRecipient(query: Option[String], limit: Option[Int], drop: Option[Int], requested: Option[String]) = UserAction.async { request =>
+    val requestedSet = requested.map(_.split(",").map(_.trim).flatMap(TypeaheadRequest.applyOpt).toSet).filter(_.nonEmpty).getOrElse(TypeaheadRequest.all)
+    typeAheadCommander.searchForKeepRecipients(request.userId, query.getOrElse(""), limit, drop, requestedSet).map { suggestions =>
       val body = suggestions.take(limit.getOrElse(20)).collect {
-        case u: UserContactResult => Json.toJson(u)
-        case e: EmailContactResult => Json.toJson(e)
-        case l: LibraryResult => Json.toJson(l)
+        case u: UserContactResult => Json.toJson(u).as[JsObject] ++ Json.obj("kind" -> "user")
+        case e: EmailContactResult => Json.toJson(e).as[JsObject] ++ Json.obj("kind" -> "email")
+        case l: LibraryResult => Json.toJson(l).as[JsObject] ++ Json.obj("kind" -> "library")
       }
       Ok(Json.toJson(RecipientSuggestion(query.map(_.trim).filter(_.nonEmpty), body, suggestions.nonEmpty, limit, drop)))
     }

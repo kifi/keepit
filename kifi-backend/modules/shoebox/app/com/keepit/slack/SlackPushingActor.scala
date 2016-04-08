@@ -27,6 +27,7 @@ import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.juggle.ConcurrentTaskProcessingActor
 import org.joda.time.{ DateTime, Duration }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -272,7 +273,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) =>
               slackLog.warn(s"Failed to update keep ${k.id.get} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForKeepRepo.save(oldPush.uneditable) }
               ()
@@ -299,7 +300,7 @@ class SlackPushingActor @Inject() (
             }
             ()
           }.recover {
-            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) =>
+            case SlackErrorCode(EDIT_WINDOW_CLOSED) | SlackErrorCode(CANT_UPDATE_MESSAGE) | SlackErrorCode(CHANNEL_NOT_FOUND) =>
               slackLog.warn(s"Failed to update message ${msg.id} because slack says it's uneditable, removing it from the cache")
               db.readWrite { implicit s => slackPushForMessageRepo.save(oldPush.uneditable) }
               ()
@@ -426,7 +427,7 @@ class SlackPushingActor @Inject() (
   }
   private def messageAsSlackMessage(msg: CrossServiceMessage, keep: Keep, lib: Library, slackTeamId: SlackTeamId, attribution: Option[SourceAttribution], user: Option[BasicUser])(implicit items: PushItems): SlackMessageRequest = {
     airbrake.verify(msg.keep == keep.id.get, s"Message $msg does not belong to keep $keep")
-    airbrake.verify(keep.connections.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
+    airbrake.verify(keep.recipients.libraries.contains(lib.id.get), s"Keep $keep is not in library $lib")
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)

@@ -13,6 +13,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
@@ -335,19 +336,24 @@ class TypeaheadCommander @Inject() (
   private val maxSearchHistory = 40 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
   private val maxSuggestHistory = 200 // Users can paginate through maxHistory suggestions. For more, they'll need to search.
 
-  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int]): Future[Seq[TypeaheadSearchResult]] = {
+  def searchForKeepRecipients(userId: Id[User], query: String, limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Future[Seq[TypeaheadSearchResult]] = {
     // Users, emails, and libraries
     query.trim match {
       case q if q.isEmpty && dropOpt.exists(_ >= maxSuggestHistory) => Future.successful(Seq.empty)
       case q if q.nonEmpty && dropOpt.exists(_ >= maxSearchHistory) => Future.successful(Seq.empty)
       case q if q.isEmpty =>
-        Future.successful(suggestResults(userId, limitOpt, dropOpt))
+        Future.successful(suggestResults(userId, limitOpt, dropOpt, requested))
       case q =>
         val drop = dropOpt.map(Math.min(_, 40)).getOrElse(0)
         val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10) // Fetch too many, we'll drop later.
         val ceil = drop + limit
-        val friendsF = searchFriendsAndContacts(userId, q, includeSelf = true, Some(ceil))
-        val librariesF = libraryTypeahead.topN(userId, q, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+
+        val friendsF = if (requested.contains(TypeaheadRequest.User) || requested.contains(TypeaheadRequest.Email)) {
+          searchFriendsAndContacts(userId, q, includeSelf = true, Some(ceil))
+        } else Future.successful((Seq.empty, Seq.empty))
+        val librariesF = if (requested.contains(TypeaheadRequest.Library)) {
+          libraryTypeahead.topN(userId, q, Some(ceil))(TypeaheadHit.defaultOrdering[LibraryTypeaheadResult])
+        } else Future.successful(Seq.empty)
 
         val (userScore, emailScore, libScore) = {
           val interactions = interactionCommander.getRecentInteractions(userId).zipWithIndex
@@ -382,32 +388,34 @@ class TypeaheadCommander @Inject() (
             case ((id, lib), idx) =>
               (libScore(id), idx + libIdToImportance(id), lib)
           }
-          val combined = (userRes ++ emailRes ++ libRes).sortBy(d => (d._1, d._2)).slice(drop, ceil)
+          val combined: Seq[TypeaheadSearchResult] = (userRes ++ emailRes ++ libRes).filter {
+            case (_, _, u: UserContactResult) if requested.contains(TypeaheadRequest.User) => true
+            case (_, _, e: EmailContactResult) if requested.contains(TypeaheadRequest.Email) => true
+            case (_, _, l: LibraryResult) if requested.contains(TypeaheadRequest.Library) => true
+            case _ => false
+          }.sortBy(d => (d._1, d._2)).slice(drop, ceil).map { case (_, _, res) => res }
 
-          // For diagnosis, not for public release!
-          val summary = combined.map {
-            case (s1, s2, u: UserContactResult) => s"u($s1,$s2)"
-            case (s1, s2, e: EmailContactResult) => s"e($s1,$s2)"
-            case (s1, s2, l: LibraryResult) => s"l($s1,$s2)"
-          }.mkString(" ")
-          log.info(s"[searchForKeepRecipients] $userId q=$query ($limit/$drop), l=${combined.length}, s=$summary")
-          // For diagnosis, not for public release!
-
-          combined.map { case (_, _, res) => res }
+          combined
         }
     }
   }
 
-  private def suggestResults(userId: Id[User], limitOpt: Option[Int], dropOpt: Option[Int]): Seq[TypeaheadSearchResult] = {
-    if (!dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) }
+  private def suggestResults(userId: Id[User], limitOpt: Option[Int], dropOpt: Option[Int], requested: Set[TypeaheadRequest]): Seq[TypeaheadSearchResult] = {
+    if (!dropOpt.exists(_ > 0)) { prefetchTypeaheads(userId) } // side effects, preloads result into cache
 
     val drop = dropOpt.map(Math.min(_, maxSuggestHistory)).getOrElse(0)
     val limit = limitOpt.map(Math.min(_, 20)).getOrElse(10)
 
     val interactions = interactionCommander.getRecentInteractions(userId)
 
+    val interactionRecipients: Seq[InteractionRecipient] = interactions.collect {
+      case InteractionScore(u: UserInteractionRecipient, _) if requested.contains(TypeaheadRequest.User) => u
+      case InteractionScore(e: EmailInteractionRecipient, _) if requested.contains(TypeaheadRequest.Email) => e
+      case InteractionScore(l: LibraryInteraction, _) if requested.contains(TypeaheadRequest.Library) => l
+    }
+
     val usersById = {
-      val userIds = interactions.collect { case InteractionScore(UserInteractionRecipient(u), _) => u }
+      val userIds = interactionRecipients.collect { case UserInteractionRecipient(u) => u }
       db.readOnlyMaster { implicit session =>
         basicUserRepo.loadAll(userIds.toSet).map {
           case (id, bu) =>
@@ -416,16 +424,10 @@ class TypeaheadCommander @Inject() (
       }
     }
 
-    val interactionRecipients: Seq[InteractionRecipient] = interactions.map {
-      case InteractionScore(u: UserInteractionRecipient, _) => u
-      case InteractionScore(e: EmailInteractionRecipient, _) => e
-      case InteractionScore(l: LibraryInteraction, _) => l
-    }
-
     val ceil = drop + limit
-    val suggestions = if (interactionRecipients.length >= ceil) {
+    val suggestions = if (interactionRecipients.length >= ceil || !requested.contains(TypeaheadRequest.Library)) {
       interactionRecipients.slice(drop, ceil)
-    } else {
+    } else { // Only if TypeaheadRequest.Library is requested
       val libs = getRelevantLibrariesToSuggest(userId, ceil).map(LibraryInteraction).filter(l => !interactionRecipients.contains(l))
       (interactionRecipients ++ libs).slice(drop, ceil)
     }
@@ -511,6 +513,23 @@ sealed trait TypeaheadSearchResult
 @json case class LibraryResult(id: PublicId[Library], name: String, color: Option[LibraryColor], visibility: LibraryVisibility,
   path: String, hasCollaborators: Boolean, collaborators: Seq[BasicUser], orgAvatar: Option[ImagePath],
   membership: Option[LibraryMembershipInfo]) extends TypeaheadSearchResult // Same as LibraryData. Duck typing would rock.
+
+sealed trait TypeaheadRequest
+object TypeaheadRequest extends Enumerator[TypeaheadRequest] {
+  case object Library extends TypeaheadRequest
+  case object User extends TypeaheadRequest
+  case object Email extends TypeaheadRequest
+
+  val all = _all.toSet
+  def applyOpt(str: String): Option[TypeaheadRequest] = {
+    str match {
+      case "library" => Some(TypeaheadRequest.Library)
+      case "user" => Some(TypeaheadRequest.User)
+      case "email" => Some(TypeaheadRequest.Email)
+      case _ => None
+    }
+  }
+}
 
 sealed abstract class ContactType(val value: String)
 object ContactType {

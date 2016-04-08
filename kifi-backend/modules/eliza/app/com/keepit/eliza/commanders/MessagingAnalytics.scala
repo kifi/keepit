@@ -221,8 +221,8 @@ class MessagingAnalytics @Inject() (
       sender match {
         case MessageSender.User(userId) =>
           val uriId = thread.uriId
-          shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
-            contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
+          shoebox.getPersonalKeepRecipientsOnUris(userId, Set(uriId)).foreach { personalKeeps =>
+            contextBuilder += ("isKeep", personalKeeps.getOrElse(uriId, Set.empty).exists(_.recipients.libraries.nonEmpty))
             getOrganizationsSharedByParticipants(thread.participants)
               .foreach { sharedOrgs =>
                 if (sharedOrgs.nonEmpty) contextBuilder += ("allParticipantsInOrgId", Random.shuffle(sharedOrgs).head.toString)

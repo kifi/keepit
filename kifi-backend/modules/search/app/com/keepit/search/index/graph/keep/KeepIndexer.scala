@@ -60,11 +60,12 @@ class ShardedKeepIndexer(
     }
   }
 
-  //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
   private def processIndexables(indexables: Seq[KeepIndexable], maxSeq: SequenceNumber[Keep]): Future[Int] = updateLock.synchronized {
-    val counts = indexShards.values.toSeq.map { indexer => indexer.processIndexables(indexables) }
-    sequenceNumber = maxSeq
-    Future.successful(counts.sum)
+    val futureCounts: Seq[Future[Int]] = indexShards.values.toSeq.map { indexer => SafeFuture { indexer.processIndexables(indexables) } }
+    Future.sequence(futureCounts).map { counts =>
+      sequenceNumber = maxSeq
+      counts.sum
+    }
   }
 }
 

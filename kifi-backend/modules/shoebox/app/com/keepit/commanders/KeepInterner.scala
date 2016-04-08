@@ -40,12 +40,21 @@ final case class KeepInternRequest(
     title: Option[String],
     note: Option[String],
     keptAt: Option[DateTime],
-    users: Set[Id[User]],
-    emails: Set[EmailAddress],
-    libraries: Set[Id[Library]]) {
+    recipients: KeepRecipients) {
   def trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
-  def usersIncludingAuthor = users ++ Author.kifiUserId(author)
-  def connections = KeepConnections(libraries, emails, usersIncludingAuthor)
+}
+object KeepInternRequest {
+  def onKifi(keeper: Id[User], recipients: KeepRecipients, url: String, source: KeepSource, title: Option[String], note: Option[String], keptAt: Option[DateTime]): KeepInternRequest =
+    KeepInternRequest(
+      author = Author.KifiUser(keeper),
+      url = url,
+      source = source,
+      attribution = RawKifiAttribution(keeper, note, recipients.plusUser(keeper), source),
+      title = title,
+      note = note,
+      keptAt = keptAt,
+      recipients = recipients.plusUser(keeper)
+    )
 }
 final case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
   def successes = newKeeps ++ existingKeeps
@@ -104,20 +113,20 @@ class KeepInternerImpl @Inject() (
   private val httpPrefix = "https?://".r
   implicit private val fj = ExecutionContext.fj
 
-  private def getKeepToInternWith(uriId: Id[NormalizedURI], connections: KeepConnections)(implicit session: RSession): Option[Keep] = {
+  private def getKeepToInternWith(uriId: Id[NormalizedURI], connections: KeepRecipients)(implicit session: RSession): Option[Keep] = {
     val candidates = if (connections.libraries.nonEmpty) {
       keepRepo.getByUriAndLibrariesHash(uriId, connections.libraries)
     } else {
       keepRepo.getByUriAndParticipantsHash(uriId, connections.users, connections.emails)
     }
-    candidates.maxByOpt { keep => (keep.connections == connections, keep.lastActivityAt, keep.id.get) }
+    candidates.maxByOpt { keep => (keep.recipients == connections, keep.lastActivityAt, keep.id.get) }
   }
   def internKeepByRequest(internReq: KeepInternRequest)(implicit session: RWSession): Try[(Keep, Boolean)] = {
     val urlIsCompletelyUnusable = httpPrefix.findPrefixOf(internReq.url.toLowerCase).isEmpty || normalizationService.prenormalize(internReq.url).isFailure
     if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
     else {
       val uri = normalizedURIInterner.internByUri(internReq.url, contentWanted = true, candidates = Set.empty)
-      val keepToInternWith = getKeepToInternWith(uri.id.get, internReq.connections)
+      val keepToInternWith = getKeepToInternWith(uri.id.get, internReq.recipients)
       val userIdOpt = Author.kifiUserId(internReq.author)
 
       val title = Seq(internReq.trimmedTitle, keepToInternWith.flatMap(_.title), uri.title).flatten.headOption
@@ -133,7 +142,7 @@ class KeepInternerImpl @Inject() (
         keptAt = keptAt,
         note = keepToInternWith.flatMap(_.note), // The internReq.note is intended to represent a comment
         originalKeeperId = keepToInternWith.flatMap(_.userId) orElse userIdOpt,
-        connections = KeepConnections(libraries = internReq.libraries, users = internReq.users ++ userIdOpt, emails = internReq.emails) union keepToInternWith.map(_.connections),
+        recipients = internReq.recipients union keepToInternWith.map(_.recipients),
         lastActivityAt = keepToInternWith.map(_.lastActivityAt).getOrElse(keptAt)
       )
       val internedKeep = try {
@@ -209,7 +218,7 @@ class KeepInternerImpl @Inject() (
     thirdPartyAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
     airbrake.verify(userIdOpt.isDefined || thirdPartyAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
-    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, KeepConnections(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
+    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, note, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
 
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
 
@@ -226,7 +235,7 @@ class KeepInternerImpl @Inject() (
       keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
       note = kNote,
       originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-      connections = KeepConnections(libraryOpt.map(_.id.get).toSet, Set.empty, userIdOpt.toSet ++ usersAdded),
+      recipients = KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, userIdOpt.toSet ++ usersAdded),
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {

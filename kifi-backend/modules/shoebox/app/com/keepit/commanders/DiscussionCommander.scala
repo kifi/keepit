@@ -21,7 +21,7 @@ trait DiscussionCommander {
 
   // deprecate this in favor of modifyConnectionsForKeep
   def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSourceKind]): Future[Unit]
-  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepConnectionsDiff, source: Option[KeepEventSourceKind]): Future[Unit]
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSourceKind]): Future[Unit]
 }
 
 @Singleton
@@ -30,6 +30,7 @@ class DiscussionCommanderImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   keepCommander: KeepCommander,
+  eventCommander: KeepEventCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
   airbrake: AirbrakeNotifier,
@@ -50,7 +51,7 @@ class DiscussionCommanderImpl @Inject() (
       Future.failed(fail)
     }.getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUser(userId), userAttribution = Some(userId))
+        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
@@ -104,40 +105,39 @@ class DiscussionCommanderImpl @Inject() (
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
       val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepConnections(keepId, KeepConnectionsDiff.addUsers(newUsers), userAttribution = Some(userId))
+        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
       }
       val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers, newLibraries = Set.empty, source)
       elizaEdit.onSuccess {
         case elizaUsers =>
-          airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
+          airbrake.verify(elizaUsers == keep.recipients.users, s"Shoebox keep.users (${keep.recipients.users}) does not match Eliza participants ($elizaUsers)")
       }
       elizaEdit.map { res => Unit }
     }
   }
-  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepConnectionsDiff, source: Option[KeepEventSourceKind]): Future[Unit] = {
-    val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
-      val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
-      val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
-      (keepPermissions, uriCollisionsByLib)
-    }
-    val errs: Stream[DiscussionFail] = Stream(
-      (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
-    ).collect { case (true, fail) => fail }
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSourceKind]): Future[Unit] = {
+    if (diff.isEmpty) Future.successful(())
+    else {
+      val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
+        val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
+        val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
+        (keepPermissions, uriCollisionsByLib)
+      }
+      val errs: Stream[DiscussionFail] = Stream(
+        (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
+      ).collect { case (true, fail) => fail }
 
-    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
-      val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepConnections(keepId, diff, userAttribution = Some(userId))
+      errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+        db.readWrite { implicit s =>
+          keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+          eventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
+        }
+        Future.successful(Unit)
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, diff.users.added, diff.libraries.added, source) // TODO(ryan): needs to be modified once we can remove participants
-      elizaEdit.onSuccess {
-        case elizaUsers =>
-          airbrake.verify(elizaUsers == keep.connections.users, s"Shoebox keep.users (${keep.connections.users}) does not match Eliza participants ($elizaUsers)")
-      }
-      elizaEdit.map { res => Unit }
     }
   }
 }

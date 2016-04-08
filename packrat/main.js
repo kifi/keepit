@@ -1375,39 +1375,31 @@ api.port.on({
         linkedin: dev ? 'ovlhms1y0fjr' : 'r11loldy9zlg'
       }});
   },
+  search_recipients: function (data, respond, tab) {
+    data = data || {};
+    data.drop = data.drop || 0;
+
+    ajax('GET', '/ext/keeps/suggestRecipients', { query: data.q, limit: data.n, drop: data.drop }, function (responseData) {
+      var recipients = responseData.results;
+      respond(toResults(recipients, data.q, me, data.n, data.exclude, data.includeSelf));
+    }, function () {
+      respond(null);
+    });
+  },
   search_contacts: function (data, respond, tab) {
     if (!contactSearchCache) {
       contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(30000);
     }
     var contacts = contactSearchCache.get(data.q);
     if (contacts) {
-      respond(toResults(contacts));
+      respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
     } else {
       ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n + (data.exclude && data.exclude.length) || 0}, function (contacts) {
         contactSearchCache.put(data.q, contacts);
-        respond(toResults(contacts));
+        respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
       }, function () {
         respond(null);
       });
-    }
-    function toResults(contacts) {
-      var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-      if (!data.includeSelf) {
-        contacts = contacts.filter(idIsNot(me.id));
-      } else if (!contacts.some(idIs(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
-        appendUserResult(contacts, data.n, me);
-      }
-      if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
-        appendUserResult(contacts, data.n, SUPPORT);
-      }
-      var results = contacts
-        .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
-        .slice(0, data.n)
-        .map(toContactResult, {sf: sf, q: data.q});
-      if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
-        results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
-      }
-      return results;
     }
   },
   delete_contact: function (email, respond) {
@@ -2658,6 +2650,28 @@ function dontShowFtueAgain(type) {
   }
   (prefs || {})[prefName] = false;
   ajax('POST', '/ext/pref/' + prefName + '?show=false');
+}
+
+function toResults(contacts, q, me, n, exclude, includeSelf) {
+  exclude = exclude || [];
+
+  var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+  if (!includeSelf) {
+    contacts = contacts.filter(idIsNot(me.id));
+  } else if (!contacts.some(idIs(me.id)) && (q ? sf.filter(q, [me], getName).length : contacts.length < n)) {
+    appendUserResult(contacts, n, me);
+  }
+  if (!contacts.some(idIs(SUPPORT.id)) && (q ? sf.filter(q, [SUPPORT], getName).length : contacts.length < n)) {
+    appendUserResult(contacts, n, SUPPORT);
+  }
+  var results = contacts
+    .filter(function (elem) { return exclude.indexOf(elem.id || elem.email) === -1; })
+    .slice(0, n)
+    .map(toContactResult, {sf: sf, q: q});
+  if (results.length < n && q && !exclude.some(idIs(q)) && !results.some(emailIs(q))) {
+    results.push({id: 'q', q: q, isValidEmail: emailRe.test(q)});
+  }
+  return results;
 }
 
 function toContactResult(o) {

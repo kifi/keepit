@@ -134,7 +134,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit: Option[Int])
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
-GET     /ext/keeps/suggestRecipients @com.keepit.controllers.ext.ExtUserController.suggestRecipient(query:Option[String], limit: Option[Int], drop: Option[Int])
+GET     /ext/keeps/suggestRecipients @com.keepit.controllers.ext.ExtUserController.suggestRecipient(query:Option[String], limit: Option[Int], drop: Option[Int], requested: Option[String])
 
 POST    /ext/keeps/:id/recipients   @com.keepit.controllers.ext.ExtKeepController.modifyConnectionsForKeep(id: PublicId[Keep])
 
@@ -176,7 +176,6 @@ GET     /m/1/user/friends/recommended       @com.keepit.controllers.mobile.Mobil
 POST    /m/1/user/friends/:id/hide          @com.keepit.controllers.mobile.MobilePeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])
 
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
-POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
@@ -414,10 +413,6 @@ GET     /site/collections/page      @com.keepit.controllers.website.KeepsControl
 POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
 POST    /site/collections/rename    @com.keepit.controllers.website.KeepsController.renameCollectionByTag()
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
-
-# Legacy:
-POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/rename @com.keepit.controllers.website.KeepsController.renameCollection(id: ExternalId[Collection])
 
 # Profile pages
 GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
@@ -711,7 +706,6 @@ GET      /internal/shoebox/database/getSocialConnections                        
 GET      /internal/shoebox/image/getUserImageUrl                   @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/canViewLibrary                 @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 POST     /internal/shoebox/database/getPersonalKeeps               @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
-POST     /internal/shoebox/database/getBasicKeepsByIds             @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
 POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxDataPipeController.getCrossServiceKeepsByIds()
 POST     /internal/shoebox/database/getDiscussionKeepsByIds        @com.keepit.controllers.internal.ShoeboxController.getDiscussionKeepsByIds()
 POST     /internal/shoebox/database/getBasicLibraryDetails         @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
@@ -723,11 +717,12 @@ GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.c
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
 POST     /internal/shoebox/database/getRelevantKeepsByUserAndUri       @com.keepit.controllers.internal.ShoeboxController.getRelevantKeepsByUserAndUri()
+POST     /internal/shoebox/database/getPersonalKeepRecipientsOnUris    @com.keepit.controllers.internal.ShoeboxController.getPersonalKeepRecipientsOnUris()
 POST     /internal/shoebox/database/getSlackTeamIds                @com.keepit.controllers.internal.ShoeboxController.getSlackTeamIds()
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: SlackTeamId)
 
 POST     /internal/shoebox/database/internKeep              @com.keepit.controllers.internal.ShoeboxController.internKeep()
-POST     /internal/shoebox/database/addUsersToKeep          @com.keepit.controllers.internal.ShoeboxController.addUsersToKeep(adderId: Id[User], keepId: Id[Keep])
+POST     /internal/shoebox/database/editRecipientsOnKeep     @com.keepit.controllers.internal.ShoeboxController.editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind] ?= None)
 POST     /internal/shoebox/database/registerMessageOnKeep   @com.keepit.controllers.internal.ShoeboxController.registerMessageOnKeep()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)

@@ -77,11 +77,11 @@ object ProviderController extends Controller with Logging {
         try {
           p.authenticate().fold(result => result, {
             user =>
-              log.info(s"[handleAuth] user [${user.email} ${user.identityId}] found from provider - completing auth")
+              log.info(s"[handleAuth][$provider] user [${user.email} ${user.identityId}] found from provider - completing auth")
               completeAuthentication(user, request.session)
           }) match {
             case badResult if badResult.header.status == 400 =>
-              log.error(s"[handleAuth] ${badResult.header.status} from $provider")
+              log.error(s"[handleAuth][$provider] ${badResult.header.status} from $provider")
               val discardingCookies = Seq("intent", "publicLibraryId", "libAuthToken", "publicOrgId", "orgAuthToken", "publicKeepId", "keepAuthToken",
                 "slackTeamId", "creditCode", "slackExtraScopes").filter(request.cookies.get(_).isDefined).map(DiscardingCookie(_))
               val failUrl = request.cookies.get("onFailUrl").map(_.value).getOrElse(toUrl(badResult.session))
@@ -90,12 +90,12 @@ object ProviderController extends Controller with Logging {
           }
         } catch {
           case ex: AccessDeniedException => {
-            log.error("[handleAuth] Access Denied for user logging in")
+            log.error(s"[handleAuth][$provider] Access Denied for user logging in")
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
 
           case other: Throwable => {
-            val message = "[handleAuth] Unable to log user in. An exception was thrown"
+            val message = s"[handleAuth][$provider] Unable to log user in. An exception was thrown"
             log.error(message, other)
             AirbrakeNotifierStatic.notify(message, other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))

@@ -2,19 +2,13 @@ package com.keepit.social
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.path.Path
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ StaticImageUrls, S3ImageConfig }
 import com.keepit.common.strings.ValidLong
 import com.keepit.model._
 import com.keepit.slack.models.{ SlackMessage, SlackUsername, SlackUserId, SlackTeamId }
 import com.keepit.social.twitter.{ RawTweet, TwitterUserId }
 import play.api.libs.json.{ JsValue, Reads, Format, OWrites, Json, Writes }
 import com.keepit.common.core.jsObjectExtensionOps
-
-object ImageUrls {
-  val SLACK_LOGO = "https://djty7jcqog9qu.cloudfront.net/oa/98c4c6dc6bf8aeca952d2316df5b242b_200x200-0x0-200x200_cs.png"
-  val KIFI_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
-  val TWITTER_LOGO = "https://d1dwdv9wd966qu.cloudfront.net/img/twitter_logo_104.png"
-}
 
 sealed abstract class Author(val kind: AuthorKind)
 object Author {
@@ -24,7 +18,7 @@ object Author {
   def fromSource(attr: RawSourceAttribution): Author = attr match {
     case RawTwitterAttribution(tweet) => TwitterUser(tweet.user.id)
     case RawSlackAttribution(msg, teamId) => SlackUser(teamId, msg.userId)
-    case RawKifiAttribution(userId, _, _) => KifiUser(userId)
+    case RawKifiAttribution(userId, _, _, _) => KifiUser(userId)
   }
 
   def toIndexableString(author: Author): String = {
@@ -70,7 +64,7 @@ object BasicAuthor {
   val Fake = KifiUser(
     id = "42424242-4242-4242-424242424242",
     name = "Someone",
-    picture = ImageUrls.KIFI_LOGO,
+    picture = StaticImageUrls.KIFI_LOGO,
     url = Path.base
   )
   case class KifiUser(id: String, name: String, picture: String, url: String) extends BasicAuthor(AuthorKind.Kifi)
@@ -92,16 +86,16 @@ object BasicAuthor {
     case SlackAttribution(msg, teamId) => SlackUser(
       id = msg.userId.value,
       name = s"@${msg.username.value}",
-      picture = ImageUrls.SLACK_LOGO,
+      picture = StaticImageUrls.SLACK_LOGO,
       url = msg.permalink
     )
     case TwitterAttribution(tweet) => TwitterUser(
       id = tweet.user.id.id.toString,
       name = tweet.user.name,
-      picture = ImageUrls.TWITTER_LOGO,
+      picture = StaticImageUrls.TWITTER_LOGO,
       url = tweet.permalink
     )
-    case KifiAttribution(keptBy, _, _, _, _) => fromUser(keptBy)
+    case KifiAttribution(keptBy, _, _, _, _, _) => fromUser(keptBy)
   }
   def fromNonUser(nonUser: BasicNonUser): BasicAuthor = nonUser.kind match {
     case NonUserKinds.email =>

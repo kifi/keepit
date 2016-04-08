@@ -16,6 +16,7 @@ import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
@@ -222,7 +223,7 @@ class MessagingCommanderImpl @Inject() (
     matches.headOption match {
       case Some(mt) => Future.successful(mt, false)
       case None =>
-        shoebox.internKeep(from, userParticipants.toSet, nUriId, url, titleOpt, None).map { csKeep =>
+        shoebox.internKeep(from, userParticipants.toSet, nonUserRecipients.collect { case NonUserEmailParticipant(address) => address }.toSet, nUriId, url, titleOpt, None).map { csKeep =>
           db.readWrite { implicit s =>
             val thread = threadRepo.save(MessageThread(
               uriId = nUriId,
@@ -333,7 +334,7 @@ class MessagingCommanderImpl @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.addUsersToKeep(adderId = user, keepId = thread.keepId, newUsers = Set(user)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSourceKind.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers
@@ -556,20 +557,23 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          if (updateShoebox) shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
-
-          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+          Some((actuallyNewUsers, actuallyNewNonUsers, actuallyNewLibraries, message, thread))
 
         }
       }
 
       resultInfoOpt.exists {
-        case (newUsers, newNonUsers, message, thread) =>
+        case (newUsers, newNonUsers, newLibraries, message, thread) =>
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
               messageRepo.refreshCache(thread.keepId)
             }
+          }
+
+          if (updateShoebox) {
+            val newEmails = newNonUsers.flatMap(NonUserParticipant.toEmailAddress)
+            shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), DeltaSet.addOnly(newLibraries), DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
           if (newUsers.nonEmpty || newNonUsers.nonEmpty) {

@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
@@ -38,13 +39,13 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("foo bar").saved
             (keep, user, lib)
           }
-          val view = Await.result(inject[KeepInfoAssembler].assembleKeepViews(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get).getRight.get
+          val info = Await.result(inject[KeepInfoAssembler].assembleKeepInfos(viewer = Some(user.id.get), keepSet = Set(keep.id.get)), Duration.Inf)(keep.id.get).getRight.get
           // TODO(ryan): when the activity log is released, uncomment this line and use it in `expected`
           // val activity = Await.result(keepCommander.getActivityForKeep(keep.id.get, None, 5), Duration.Inf)
-          val actual = NewKeepInfo.writes.writes(view.keep)
+          val actual = NewKeepInfo.writes.writes(info)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),
-            "path" -> keep.path.absolute,
+            "path" -> keep.path.relativeWithLeadingSlash,
             "url" -> keep.url,
             "title" -> keep.title,
             // "imagePath" -> JsNull,
@@ -53,7 +54,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
             // "source" -> JsNull,
             "recipients" -> Json.obj(
               "users" -> Seq(BasicUser.fromUser(user)),
-              "emails" -> Seq.empty[BasicNonUser],
+              "emails" -> Seq.empty[BasicContact],
               "libraries" -> Seq(BasicLibrary(lib, BasicUser.fromUser(user), None))
             ),
             "viewer" -> Json.obj(

@@ -8,6 +8,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -15,7 +16,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, LibraryToSlac
 import com.kifi.juggle.BatchProcessingActor
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.Failure
 
 object ShoeboxMessageIngestionActor {
   val shoeboxMessageSeq = Name[SequenceNumber[Message]]("shoebox_message")
@@ -58,16 +59,35 @@ class ShoeboxMessageIngestionActor @Inject() (
       db.readWrite { implicit session =>
         val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
         session.onTransactionSuccess {
-          slackPusher.schedule(keeps.flatMap(_.connections.libraries).toSet)
+          slackPusher.schedule(keeps.flatMap(_.recipients.libraries).toSet)
         }
-        keeps.foreach { keep =>
-          messagesByKeep.get(keep.id.get).foreach { msgs =>
-            val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
-            if (updatedKeep.messageSeq != keep.messageSeq) keepRepo.save(updatedKeep)
+        messagesByKeep.foreach {
+          case (keepId, msgs) =>
+            // Functions that handle keep changes
+            def updateMessageSeq() = {
+              val keep = keepRepo.get(keepId)
+              val updatedKeep = keep.withMessageSeq(msgs.map(_.seq).max)
+              if (updatedKeep != keep) keepRepo.save(updatedKeep)
+            }
+            def updateLastActivity() = {
+              val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
+              keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
+            }
+            def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
+              case KeepEventData.ModifyRecipients(editor, KeepRecipientsDiff(users, libraries, emails)) =>
+                val diff = KeepRecipientsDiff(
+                  users = DeltaSet.empty.addAll(users.added),
+                  emails = DeltaSet.empty.addAll(emails.added),
+                  libraries = DeltaSet.empty.addAll(libraries.added)
+                )
+                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
+              case KeepEventData.EditTitle(_, _, _) =>
+            }
 
-            val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
-            keepCommander.updateLastActivityAtIfLater(keep.id.get, lastMessageTime)
-          }
+            // Apply all of the functions in sequence
+            updateMessageSeq()
+            updateLastActivity()
+            handleKeepEvents()
         }
         systemValueRepo.setSequenceNumber(shoeboxMessageSeq, maxSeq)
       }

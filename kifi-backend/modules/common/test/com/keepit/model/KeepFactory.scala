@@ -22,7 +22,7 @@ object KeepFactory {
       userId = Some(userId),
       source = KeepSource.keeper,
       note = None,
-      connections = KeepConnections(libraries = Set.empty, users = Set(userId), emails = Set.empty),
+      recipients = KeepRecipients(libraries = Set.empty, users = Set(userId), emails = Set.empty),
       originalKeeperId = Some(userId),
       lastActivityAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt)
     ), explicitLibs = Seq.empty, implicitLibs = Seq.empty)
@@ -31,10 +31,10 @@ object KeepFactory {
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
   case class PartialKeep private[KeepFactory] (keep: Keep, explicitLibs: Seq[Library], implicitLibs: Seq[(Id[Library], LibraryVisibility, Option[Id[Organization]])]) {
-    def withNoUser() = this.copy(keep = keep.copy(userId = None, connections = keep.connections.copy(users = Set.empty)))
-    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), connections = keep.connections.withUsers(Set(id))))
-    def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), connections = keep.connections.withUsers(Set(user.id.get))))
-    def withEmail(address: String) = this.copy(keep = keep.copy(connections = keep.connections.plusEmailAddress(EmailAddress(address))))
+    def withNoUser() = this.copy(keep = keep.copy(userId = None, recipients = keep.recipients.copy(users = Set.empty)))
+    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = Some(id), recipients = keep.recipients.withUsers(Set(id))))
+    def withUser(user: User) = this.copy(keep = keep.copy(userId = Some(user.id.get), recipients = keep.recipients.withUsers(Set(user.id.get))))
+    def withEmail(address: String) = this.copy(keep = keep.copy(recipients = keep.recipients.plusEmailAddress(EmailAddress(address))))
     def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
     def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
     def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))
@@ -46,9 +46,9 @@ object KeepFactory {
     def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
     def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
     def withLibrary(library: Library) =
-      this.copy(explicitLibs = explicitLibs :+ library, keep = keep.withConnections(keep.connections.plusLibrary(library.id.get)))
+      this.copy(explicitLibs = explicitLibs :+ library, keep = keep.withRecipients(keep.recipients.plusLibrary(library.id.get)))
     def withLibraryId(idAndInfo: (Id[Library], LibraryVisibility, Option[Id[Organization]])) =
-      this.copy(implicitLibs = implicitLibs :+ idAndInfo, keep = keep.withConnections(keep.connections.plusLibrary(idAndInfo._1)))
+      this.copy(implicitLibs = implicitLibs :+ idAndInfo, keep = keep.withRecipients(keep.recipients.plusLibrary(idAndInfo._1)))
     def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
     def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))

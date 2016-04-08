@@ -17,6 +17,8 @@ import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, Message, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.keep.NewKeepInfo
 import com.keepit.social.Author
 import org.joda.time.DateTime
 import play.api.libs.json.{ Reads, Format, Json }
@@ -32,6 +34,7 @@ class KeepMutationController @Inject() (
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
   discussionCommander: DiscussionCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
   contextBuilder: HeimdalContextBuilderFactory,
   implicit val airbrake: AirbrakeNotifier,
@@ -52,49 +55,50 @@ class KeepMutationController @Inject() (
     implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
     val schemaHelper = json.schemaHelper(reads)
   }
-  def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
+  def createKeep() = UserAction.async(parse.tolerantJson) { implicit request =>
     import ExternalKeepCreateRequest._
     implicit val context = contextBuilder.withRequestInfo(request).build
     val result = for {
-      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Success(_)).getOrElse(Failure(DiscussionFail.COULD_NOT_PARSE))
+      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(externalCreateRequest.users) }
-      internRequest <- for {
+      internRequest <- Future.fromTry(for {
         // TODO(ryan): actually handle the possibility that these fail
         users <- Success(externalCreateRequest.users.map(extId => userIdMap(extId)))
         libraries <- Success(externalCreateRequest.libraries.map(pubId => Library.decodePublicId(pubId).get))
-      } yield KeepInternRequest(
-        author = Author.KifiUser(request.userId),
+      } yield KeepInternRequest.onKifi(
+        keeper = request.userId,
         url = externalCreateRequest.url,
         source = externalCreateRequest.source,
-        attribution = RawKifiAttribution(request.userId, KeepConnections(libraries, externalCreateRequest.emails, users), externalCreateRequest.source),
         title = externalCreateRequest.title,
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
-        users = users,
-        emails = externalCreateRequest.emails,
-        libraries = libraries
-      )
-      (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
-    } yield keep
+        recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
+      ))
+      (keep, keepIsNew, msgOpt) <- keepCommander.internKeep(internRequest)
+      keepInfo <- keepInfoAssembler.assembleKeepInfos(Some(request.userId), Set(keep.id.get))
+    } yield keepInfo.get(keep.id.get).flatMap(_.getRight).withLeft(keep.id.get)
 
-    result.map { keep =>
-      Ok(Json.obj("id" -> Keep.publicId(keep.id.get)))
+    result.map { keepInfoOrKeepId =>
+      keepInfoOrKeepId.fold(
+        keepId => Ok(Json.obj("id" -> Keep.publicId(keepId))),
+        keepInfo => Ok(NewKeepInfo.writes.writes(keepInfo))
+      )
     }.recover {
       case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
-    }.get
+    }
   }
 
   def modifyKeepRecipients(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
-      input <- request.body.validate[ExternalKeepConnectionsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
+      input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(input.users.all) }
       diff <- for {
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
-      } yield KeepConnectionsDiff(users = users, libraries = libraries, emails = input.emails)
+      } yield KeepRecipientsDiff(users = users, libraries = libraries, emails = input.emails)
       _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
     } yield {
       NoContent

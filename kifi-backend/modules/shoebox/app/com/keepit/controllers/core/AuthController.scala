@@ -154,7 +154,7 @@ class AuthController @Inject() (
         res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
       }
     } else if (res.header.status == 400) {
-      airbrake.notify(s"[handleAuth] loginSocial failed due to ${res.header.status} response from $provider")
+      airbrake.notify(s"[handleAuth][$provider] loginSocial failed due to ${res.header.status} response from $provider")
       Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
     } else {
       res
@@ -166,19 +166,19 @@ class AuthController @Inject() (
         authHelper.transformResult(res) { (cookies: Seq[Cookie], sess: Session) =>
           if (link != "") {
             // Manually link accounts. Annoying...
-            log.info(s"[logInWithUserPass] Attempting to link $link to newly logged in user ${sess.getUserId}")
+            log.info(s"[logInWithUserPass][$link] Attempting to link $link to newly logged in user ${sess.getUserId}")
             val linkAttempt = for {
               identityId <- request.identityId
               identity <- authCommander.getUserIdentity(identityId)
               userId <- sess.getUserId
             } yield {
-              log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
+              log.info(s"[logInWithUserPass][$link] Linking userId $userId to $link, social data from $identity")
               val linkedIdentity = identity.withUserId(userId)
               authCommander.saveUserIdentity(linkedIdentity)
-              log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $linkedIdentity")
+              log.info(s"[logInWithUserPass][$link] Done. Hope it worked? for userId $userId / $link, $linkedIdentity")
             }
             if (linkAttempt.isEmpty) {
-              log.info(s"[logInWithUserPass] No identity/userId found, ${request.identityId}, userId ${sess.getUserId}")
+              log.info(s"[logInWithUserPass][$link] No identity/userId found, ${request.identityId}, userId ${sess.getUserId}")
             }
           }
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(sess)
@@ -196,17 +196,17 @@ class AuthController @Inject() (
             user => completeAuthentication(user, request.session)
           ) match {
               case result if result.header.status == 400 =>
-                airbrake.notify(s"[handleAuth] ${result.header.status} response from $provider")
+                airbrake.notify(s"[handleAuth][$provider] ${result.header.status} response from $provider")
                 Redirect(RoutesHelper.login()).discardingCookies(PostRegIntent.discardingCookies: _*)
               case result => result
             }
         } catch {
           case ex: AccessDeniedException => {
-            log.error("[handleAuth] Unable to log user in. Access was denied.", ex)
+            log.error(s"[handleAuth][$provider] Unable to log user in. Access was denied.", ex)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
           case other: Throwable => {
-            val message = "[handleAuth] Unable to log user in. An exception was thrown"
+            val message = s"[handleAuth][$provider] Unable to log user in. An exception was thrown"
             log.error(message, other)
             airbrake.notify(message, other)
             Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
@@ -218,7 +218,7 @@ class AuthController @Inject() (
   }
 
   private def completeAuthentication(socialUser: Identity, session: Session)(implicit request: RequestHeader): Result = {
-    log.info(s"[completeAuthentication] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
+    log.info(s"[completeAuthentication][${socialUser.identityId.providerId}] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
     val redirectUrl = ProviderController.toUrl(session)
     val newSession = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
     Authenticator.create(socialUser) match {
@@ -231,7 +231,7 @@ class AuthController @Inject() (
           .withCookies(authenticator.toCookie)
       }
       case Left(error) => {
-        log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
+        log.error(s"[completeAuthentication][${socialUser.identityId.providerId}] Caught error $error while creating authenticator; cause=${error.getCause}")
         throw new RuntimeException("Error creating authenticator", error)
       }
     }
@@ -352,7 +352,7 @@ class AuthController @Inject() (
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map {
       case badResult if badResult.header.status == 400 =>
-        airbrake.notify(s"[handleAuth] signup failed because provider $provider returned status ${badResult.header.status}")
+        airbrake.notify(s"[handleAuth][$provider] signup failed because provider $provider returned status ${badResult.header.status}")
         Redirect("/signup").discardingCookies(PostRegIntent.discardingCookies: _*)
       case result =>
         authHelper.transformResult(result) { (_, sess: Session) =>
@@ -448,7 +448,7 @@ class AuthController @Inject() (
                 Ok(views.html.authMinimal.signupGetName())
             }
           } else {
-            log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state}")
+            log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state} ${ur.identityId}")
             // User but no identity. Huh?
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
             Redirect("/logout")

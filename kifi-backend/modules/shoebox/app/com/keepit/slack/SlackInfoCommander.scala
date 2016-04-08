@@ -7,6 +7,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.KeyFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
@@ -102,6 +103,7 @@ class SlackInfoCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   basicOrganizationGen: BasicOrganizationGen,
   permissionCommander: PermissionCommander,
+  airbrake: AirbrakeNotifier,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -151,12 +153,14 @@ class SlackInfoCommanderImpl @Inject() (
       val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
 
       val fromSlackGroupedInfos = fromSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromSTL).map {
-        case (key, Seq(fs)) =>
+        case (key, fs +: thisSeqReallyOughtToBeEmpty) =>
+          airbrake.verify(thisSeqReallyOughtToBeEmpty.isEmpty, s"Uniqueness constraint violation on slack_channel_to_library $libId + $key")
           val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
-        case (key, Seq(ts)) =>
+        case (key, ts +: thisSeqReallyOughtToBeEmpty) =>
+          airbrake.verify(thisSeqReallyOughtToBeEmpty.isEmpty, s"Uniqueness constraint violation on library_to_slack_channel $libId + $key")
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }

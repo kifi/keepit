@@ -59,7 +59,7 @@ object KeepFactoryHelper {
         injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
         incrementKeepCount(library.id.get)
       }
-      finalKeep.connections.users.foreach { userId =>
+      finalKeep.recipients.users.foreach { userId =>
         val ktu = KeepToUser(
           keepId = finalKeep.id.get,
           userId = userId,
@@ -70,7 +70,7 @@ object KeepFactoryHelper {
         )
         injector.getInstance(classOf[KeepToUserRepo]).save(ktu)
       }
-      finalKeep.connections.emails.foreach { emailAddress =>
+      finalKeep.recipients.emails.foreach { emailAddress =>
         val kte = KeepToEmail(
           keepId = finalKeep.id.get,
           emailAddress = emailAddress,

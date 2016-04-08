@@ -90,7 +90,7 @@ object RawSlackAttribution {
   implicit val format = Json.format[RawSlackAttribution]
 }
 
-case class RawKifiAttribution(keptBy: Id[User], connections: KeepConnections, source: KeepSource) extends RawSourceAttribution
+case class RawKifiAttribution(keptBy: Id[User], note: Option[String], connections: KeepRecipients, source: KeepSource) extends RawSourceAttribution
 object RawKifiAttribution {
   implicit val format = Json.format[RawKifiAttribution]
 }

@@ -20,7 +20,7 @@ import com.keepit.common.performance._
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.shoebox.data.keep.KeepInfo
+import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
 import com.keepit.social.BasicUser
 import play.twirl.api.Html
 
@@ -34,7 +34,7 @@ trait LibraryInfoView {
   def description: Option[String] = libInfo.description.map(_.abbreviate(250))
   def ownerName: String = libInfo.owner.fullName
   def owner: BasicUser = libInfo.owner
-  def keeps: Seq[KeepInfoView] = libInfo.keeps map KeepInfoView
+  def keeps: Seq[KeepInfoView] = libInfo.keeps.map(KeepInfoView(_))
   def numFollowers: Int = libInfo.numFollowers
   def numKeeps: Int = libInfo.numKeeps
   def image: Option[LibraryImageInfo] = libInfo.image
@@ -62,14 +62,26 @@ case class LibraryInfoViewWithKeepImages(view: LibraryInfoView, keepImages: Seq[
 
 case class LibraryInviteInfoView(invitedByUsers: Seq[Id[User]], libraryId: Id[Library], libInfo: FullLibraryInfo) extends LibraryInfoView
 
-case class KeepInfoView(private val keepInfo: KeepInfo) {
-  private val summary = keepInfo.summary
-  private val imageUrl = summary flatMap (_.imageUrl)
-  private val imageWidth = summary flatMap (_.imageWidth)
+trait KeepInfoView {
+  def title: String
+  def url: String
+  def imageUrlAndWidth: Option[(String, Int)]
+}
+object KeepInfoView {
+  def apply(partial: PartialKeepInfo): KeepInfoView = new KeepInfoView {
+    val title = partial.title getOrElse partial.url
+    val url = partial.url
+    val imageUrlAndWidth: Option[(String, Int)] = None
+  }
+  def apply(keepInfo: KeepInfo): KeepInfoView = new KeepInfoView {
+    private val summary = keepInfo.summary
+    private val imageUrl = summary flatMap (_.imageUrl)
+    private val imageWidth = summary flatMap (_.imageWidth)
 
-  val title = keepInfo.title orElse (summary flatMap (_.title)) orElse keepInfo.siteName getOrElse keepInfo.url
-  val url = keepInfo.url
-  val imageUrlAndWidth: Option[(String, Int)] = imageUrl flatMap { url => imageWidth map ((url, _)) }
+    val title = keepInfo.title orElse (summary flatMap (_.title)) orElse keepInfo.siteName getOrElse keepInfo.url
+    val url = keepInfo.url
+    val imageUrlAndWidth: Option[(String, Int)] = imageUrl flatMap { url => imageWidth map ((url, _)) }
+  }
 }
 
 case class ActivityEmailData(
@@ -393,7 +405,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
       libInfosF map { libInfos =>
         libInfos.zip(libraryKeeps) map {
           case ((libId, libInfo), (lib, keeps)) =>
-            val keepInfos = keeps map { k => KeepInfoView(KeepInfo.fromKeep(k)) }
+            val keepInfos = keeps map { k => KeepInfoView(PartialKeepInfo.fromKeep(k)) }
             BaseLibraryInfoView(libId, libInfo) -> keepInfos
         }
       }

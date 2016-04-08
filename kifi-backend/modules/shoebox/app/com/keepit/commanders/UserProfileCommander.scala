@@ -117,14 +117,14 @@ class UserProfileCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+          val showFollowLibraries = getUserValueSetting(user.id.get).showFollowedLibraries
           if (showFollowLibraries) {
             libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
         case Some(other) if other.id == user.id =>
           libraryRepo.getFollowingLibrariesForSelf(user.id.get, page, ordering, direction, orderedByPriority)
         case Some(other) =>
-          val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
+          val showFollowLibraries = getUserValueSetting(user.id.get).showFollowedLibraries
           if (showFollowLibraries) {
             libraryRepo.getFollowingLibrariesForOtherUser(user.id.get, other.id.get, page, ordering, direction, orderedByPriority)
           } else Seq.empty
@@ -279,9 +279,9 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
+  private def getUserValueSetting(userId: Id[User])(implicit rs: RSession): UserValueSettings = {
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
-    UserValueSettings.retrieveSetting(userVal, settingsJs)
+    UserValueSettings.readFromJsValue(settingsJs)
   }
 
   def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement], windowSize: Option[Int]): LeftHandRailResponse = {

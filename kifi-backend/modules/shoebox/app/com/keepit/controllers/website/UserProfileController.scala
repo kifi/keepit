@@ -115,7 +115,7 @@ class UserProfileController @Inject() (
         numKeeps = profile.numKeeps,
         numConnections = numConnections,
         numFollowers = numFollowers,
-        numTags = collectionCommander.getCount(profile.userId),
+        numTags = 0,
         numInvitedLibraries = numInvitedLibs,
         biography = userBiography,
         orgs = orgInfos,

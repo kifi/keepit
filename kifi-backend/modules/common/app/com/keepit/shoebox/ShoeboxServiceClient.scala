@@ -23,7 +23,7 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetSlackTeamInfo }
+import com.keepit.shoebox.ShoeboxServiceClient.{ RegisterMessageOnKeep, InternKeep, GetPersonalKeepRecipientsOnUris, GetSlackTeamInfo }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -46,7 +46,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
-  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
@@ -133,12 +132,13 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]]
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[Id[Keep]]]
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]]
   def getSlackTeamIds(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], SlackTeamId]]
   def getSlackTeamInfo(slackTeamId: SlackTeamId): Future[Option[InternalSlackTeamInfo]]
   // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
-  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit]
+  def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]): Future[Unit]
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit]
 }
 
@@ -166,7 +166,6 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   keepImagesCache: KeepImagesCache,
   primaryOrgForUserCache: PrimaryOrgForUserCache,
-  basicKeepByIdCache: BasicKeepByIdCache,
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
   slackIntegrationsCache: SlackChannelIntegrationsCache,
@@ -295,16 +294,6 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }
-  }
-
-  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
-    cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
-      val payload = Json.toJson(missingKeys.map(_.id))
-      call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
-        val missing = res.json.as[Map[Id[Keep], BasicKeep]]
-        missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
-      }
-    }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
   }
 
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = {
@@ -869,10 +858,19 @@ class ShoeboxServiceClientImpl @Inject() (
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
 
-  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[BasicKeepWithId]] = {
+  def getRelevantKeepsByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI], before: Option[DateTime], limit: Int): Future[Seq[Id[Keep]]] = {
     val payload = Json.obj("userId" -> userId, "uriId" -> uriId, "before" -> before, "limit" -> limit)
     call(Shoebox.internal.getRelevantKeepsByUserAndUri(), payload).map { j =>
-      j.json.asOpt[Seq[BasicKeepWithId]].getOrElse(Seq.empty)
+      j.json.asOpt[Seq[Id[Keep]]].getOrElse(Seq.empty)
+    }
+  }
+
+  def getPersonalKeepRecipientsOnUris(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty)
+    else {
+      import GetPersonalKeepRecipientsOnUris._
+      val request = Request(userId, uriIds)
+      call(Shoebox.internal.getPersonalKeepRecipientsOnUris(), body = Json.toJson(request)).map(_.json.as[Response].keepRecipientsByUriId)
     }
   }
 
@@ -895,17 +893,19 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
+  def internKeep(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
     import InternKeep._
-    val request = Request(creator, users, uriId, url, title, note)
+    val request = Request(creator, users + creator, emails, uriId, url, title, note)
     call(Shoebox.internal.internKeep(), body = Json.toJson(request)).map { response =>
       response.json.as[CrossServiceKeep]
     }
   }
 
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = {
-    call(Shoebox.internal.addUsersToKeep(adderId, keepId), body = Json.obj("users" -> newUsers)).map(_ => ())
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]): Future[Unit] = {
+    val jsRecipients = Json.toJson(diff)(KeepRecipientsDiff.internalFormat)
+    call(Shoebox.internal.editRecipientsOnKeep(editorId, keepId, persistKeepEvent, source), body = Json.obj("diff" -> jsRecipients)).map(_ => ())
   }
+
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = {
     import RegisterMessageOnKeep._
     val request = Request(keepId, msg)
@@ -915,7 +915,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
 object ShoeboxServiceClient {
   object InternKeep {
-    case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
+    case class Request(creator: Id[User], users: Set[Id[User]], emails: Set[EmailAddress], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
   object RegisterMessageOnKeep {
@@ -925,6 +925,13 @@ object ShoeboxServiceClient {
 
   object GetSlackTeamInfo {
     case class Response(teamInfo: InternalSlackTeamInfo)
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+
+  object GetPersonalKeepRecipientsOnUris {
+    case class Request(userId: Id[User], uriIds: Set[Id[NormalizedURI]])
+    case class Response(keepRecipientsByUriId: Map[Id[NormalizedURI], Set[CrossServiceKeepRecipients]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

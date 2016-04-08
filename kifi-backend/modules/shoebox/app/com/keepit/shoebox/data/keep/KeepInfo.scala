@@ -25,7 +25,6 @@ case class KeepInfo(
     title: Option[String],
     url: String,
     path: String,
-    isPrivate: Boolean, // deprecated
     user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
     author: BasicAuthor,
     createdAt: Option[DateTime] = None,
@@ -37,9 +36,6 @@ case class KeepInfo(
     librariesOmitted: Option[Int] = None,
     librariesTotal: Option[Int] = None,
     sources: Option[Seq[SourceAttribution]] = None,
-    collections: Option[Set[String]] = None, // deprecated
-    tags: Option[Set[BasicCollection]] = None, // deprecated
-    hashtags: Option[Set[Hashtag]] = None,
     summary: Option[URISummary] = None,
     siteName: Option[String] = None,
     libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
@@ -59,7 +55,7 @@ case class KeepInfo(
     path = path,
     title = title,
     note = note,
-    tags = hashtags.getOrElse(Set.empty),
+    tags = Set.empty,
     keptBy = user,
     keptAt = createdAt.get,
     imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
@@ -84,7 +80,6 @@ object KeepInfo {
         "title" -> o.title,
         "url" -> o.url,
         "path" -> o.path,
-        "isPrivate" -> o.isPrivate,
         "user" -> o.user,
         "createdAt" -> o.createdAt,
         "keeps" -> o.keeps,
@@ -95,9 +90,7 @@ object KeepInfo {
         "librariesOmitted" -> o.librariesOmitted,
         "librariesTotal" -> o.librariesTotal,
         "sources" -> o.sources.map(_.map(SourceAttribution.externalWrites.writes(_))),
-        "collections" -> o.collections,
-        "tags" -> o.tags,
-        "hashtags" -> o.hashtags,
+        "hashtags" -> Set.empty[Int], // Android is expecting this field, but does not use it.
         "summary" -> o.summary,
         "siteName" -> o.siteName,
         "libraryId" -> o.libraryId,
@@ -113,10 +106,30 @@ object KeepInfo {
       ).nonNullFields
     }
   }
+}
 
-  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url,
-      bookmark.path.relativeWithLeadingSlash, false, user = None, author = BasicAuthor.Fake, libraryId = bookmark.lowestLibraryId.map(Library.publicId),
-      sourceAttribution = None, discussion = None, activity = None, participants = Seq.empty, members = KeepMembers.empty, permissions = Set.empty)
+// Currently used in some cases when we send down keep information directly from a keep
+// I bet most usage is deprecated and old, but this lets us stop using KeepInfo as a kitchen-sink class
+case class PartialKeepInfo(id: ExternalId[Keep], pubId: PublicId[Keep], title: Option[String], url: String, path: String, libraryId: Option[PublicId[Library]])
+object PartialKeepInfo {
+  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): PartialKeepInfo = {
+    PartialKeepInfo(bookmark.externalId, Keep.publicId(bookmark.id.get), bookmark.title, bookmark.url,
+      bookmark.path.relativeWithLeadingSlash, libraryId = bookmark.lowestLibraryId.map(Library.publicId))
   }
+  implicit val writes = new Writes[PartialKeepInfo] {
+    import com.keepit.common.core._
+    def writes(o: PartialKeepInfo) = Json.obj(
+      "id" -> o.id,
+      "pubId" -> o.pubId,
+      "title" -> o.title,
+      "url" -> o.url,
+      "path" -> o.path,
+      "author" -> BasicAuthor.Fake,
+      "libraryId" -> o.libraryId,
+      "participants" -> Seq.empty[Int],
+      "members" -> KeepMembers.empty,
+      "permissions" -> Set.empty[Int]
+    ).nonNullFields
+  }
+
 }

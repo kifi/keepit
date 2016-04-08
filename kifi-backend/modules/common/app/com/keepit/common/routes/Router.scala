@@ -164,7 +164,6 @@ object Shoebox extends Service {
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
-    def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
     def getCrossServiceKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getCrossServiceKeepsByIds")
     def getDiscussionKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getDiscussionKeepsByIds")
     def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
@@ -174,10 +173,11 @@ object Shoebox extends Service {
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
     def getRelevantKeepsByUserAndUri() = ServiceRoute(POST, "/internal/shoebox/database/getRelevantKeepsByUserAndUri")
+    def getPersonalKeepRecipientsOnUris() = ServiceRoute(POST, "/internal/shoebox/database/getPersonalKeepRecipientsOnUris")
     def getSlackTeamIds() = ServiceRoute(POST, "/internal/shoebox/database/getSlackTeamIds")
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
-    def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = ServiceRoute(POST, "/internal/shoebox/database/addUsersToKeep", Param("adderId", adderId), Param("keepId", keepId))
+    def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = ServiceRoute(POST, "/internal/shoebox/database/editRecipientsOnKeep", Param("editorId", editorId), Param("keepId", keepId), Param("persistKeepEvent", persistKeepEvent), Param("source", source.map(_.value)))
     def registerMessageOnKeep() = ServiceRoute(POST, "/internal/shoebox/database/registerMessageOnKeep")
   }
 }
@@ -277,6 +277,8 @@ object Eliza extends Service {
 
     def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
     def saveKeepEvent = ServiceRoute(POST, "/internal/eliza/saveKeepEvent")
+    def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
+    def rpbTest = ServiceRoute(POST, "/internal/eliza/rpbTest")
 
     def getEmailParticipantsForKeeps() = ServiceRoute(POST, "/internal/eliza/getEmailParticipantsForKeeps")
     def getInitialRecipientsByKeepId() = ServiceRoute(POST, "/internal/eliza/getInitialRecipientsByKeepId")

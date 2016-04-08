@@ -22,7 +22,7 @@ import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, Extern
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
-import com.keepit.shoebox.data.keep.KeepInfo
+import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -574,7 +574,7 @@ class MobileLibraryController @Inject() (
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
     }
     Ok(Json.obj(
-      "keep" -> Json.toJson(KeepInfo.fromKeep(keep))
+      "keep" -> Json.toJson(PartialKeepInfo.fromKeep(keep))
     ))
   }
 
