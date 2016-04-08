@@ -5,9 +5,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.{ DescriptionElements, DescriptionElement, ShowOriginalElement }
-import com.keepit.model.{ KeepRecipientsDiff, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId
+import com.keepit.model.{ CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
-import com.keepit.model._
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
@@ -57,7 +57,7 @@ object KeepActivityGen {
 
       val body = DescriptionElements(keep.note)
       BasicKeepEvent(
-        id = None,
+        id = BasicKeepEventId.initial,
         author = basicAuthor.get,
         KeepEventKind.Initial,
         header = header,
@@ -94,7 +94,7 @@ object KeepActivityGen {
       }
 
       BasicKeepEvent(
-        id = Some(Right(publicEventId)),
+        id = BasicKeepEventId.fromEvent(publicEventId),
         author = addedBy.map(BasicAuthor.fromUser).getOrElse(BasicAuthor.Fake),
         kind = kind,
         header = header,

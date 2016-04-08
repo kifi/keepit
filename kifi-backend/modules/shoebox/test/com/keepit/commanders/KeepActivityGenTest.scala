@@ -49,21 +49,17 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
         val basicUserById = usersToAdd.map(usr => usr.id.get -> BasicUser.fromUser(usr)).toMap + (user.id.get -> basicUser)
         val basicLibById = libsToAdd.map(lib => lib.id.get -> BasicLibrary(lib, basicUser, None)).toMap
 
-        var timer = 0
-
         import com.keepit.common.util.DescriptionElements._
         val eventHeaders = db.readWrite { implicit s =>
           Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
             case (ids, true) => // users
               val adding = ids.map(id => Id[User](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now().plusMinutes(timer)), source = None)
-              timer += 1
+              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = None, source = None)
               val entities = adding.map(id => fromBasicUser(basicUserById(id))).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
             case (ids, false) => // libraries
               val adding = ids.map(id => Id[Library](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now().plusMinutes(timer)), source = None)
-              timer += 1
+              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = None, source = None)
               val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
           }.toSeq

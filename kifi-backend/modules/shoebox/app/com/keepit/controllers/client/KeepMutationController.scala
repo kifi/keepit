@@ -100,7 +100,7 @@ class KeepMutationController @Inject() (
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
       } yield KeepRecipientsDiff(users = users, libraries = libraries, emails = input.emails)
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
+      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source) else Future.successful(())
     } yield {
       NoContent
     }).recover {

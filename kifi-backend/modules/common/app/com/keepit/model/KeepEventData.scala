@@ -10,6 +10,7 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
 import com.keepit.discussion.{ Message, MessageSource }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.social.{ BasicAuthor, BasicNonUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -105,8 +106,13 @@ object CommonKeepEvent extends PublicIdGenerator[CommonKeepEvent] {
   val publicIdPrefix = "kev"
 }
 
+//case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]])
+//object BasicKeepEventId {
+//  def fromId(id: PublicId[])
+//}
+
 case class BasicKeepEvent(
-    id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]], // id = None when event.kind = "initial"
+    id: BasicKeepEventId,
     author: BasicAuthor,
     kind: KeepEventKind,
     header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
@@ -117,9 +123,25 @@ case class BasicKeepEvent(
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
 object BasicKeepEvent {
+
+  case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]]) // id = None when BasicKeepEvent.kind = "initial"
+  object BasicKeepEventId {
+    implicit val writes: Writes[BasicKeepEventId] = Writes { o =>
+      o.id match {
+        case None => JsNull
+        case Some(Left(msgId)) => JsString(msgId.id)
+        case Some(Right(eventId)) => JsString(eventId.id)
+      }
+    }
+
+    def initial = BasicKeepEventId(None)
+    def fromMsg(id: PublicId[Message]) = BasicKeepEventId(Some(Left(id)))
+    def fromEvent(id: PublicId[CommonKeepEvent]) = BasicKeepEventId(Some(Right(id)))
+  }
+
   implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
   implicit val writes: Writes[BasicKeepEvent] = (
-    (__ \ 'id).writeNullable[Either[PublicId[Message], PublicId[CommonKeepEvent]]] and
+    (__ \ 'id).write[BasicKeepEventId] and
     (__ \ 'author).write[BasicAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
     (__ \ 'header).write[DescriptionElements] and
@@ -135,7 +157,7 @@ object BasicKeepEvent {
 
   def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
     BasicKeepEvent(
-      id = Some(Left(id)),
+      id = BasicKeepEventId.fromMsg(id),
       author = author,
       kind = KeepEventKind.Comment,
       header = DescriptionElements(author, "commented on this page"),
