@@ -292,7 +292,8 @@ class AdminBookmarksController @Inject() (
     val chunkSize = 100
     val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
     val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
-      val (discussionKeeps, otherKeeps) = keeps.partition(keep => keep.source == KeepSource.discussion || (keep.isActive && keep.recipients.libraries.isEmpty))
+      def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
+      val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
@@ -317,8 +318,12 @@ class AdminBookmarksController @Inject() (
         discussionConnections <- discussionConnectionsFut
         nonDiscussionConnections <- nonDiscussionConnectionsFut
         (success, fail) <- db.readWriteAsync { implicit s =>
-          val allConnections = discussionConnections ++ nonDiscussionConnections
-          val missingKeeps = keeps.map(_.id.get).filter(!allConnections.contains(_))
+          val fetchedConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keeps.filter(keep => !fetchedConnections.contains(keep.id.get))
+          val allConnections = fetchedConnections ++ missingKeeps.map { k =>
+            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients, k.source)
+            k.id.get -> (rawAttribution, k.state == KeepStates.ACTIVE)
+          }
           val internedKeeps = allConnections.map {
             case (kid, (attr, isActive)) =>
               val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
