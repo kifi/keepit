@@ -45,7 +45,7 @@ class KeepDataFormatTest extends TestKitSupport with SpecificationLike with Shoe
           val actual = NewKeepInfo.writes.writes(info)
           val expected = Json.obj(
             "id" -> Keep.publicId(keep.id.get),
-            "path" -> keep.path.absolute,
+            "path" -> keep.path.relativeWithLeadingSlash,
             "url" -> keep.url,
             "title" -> keep.title,
             // "imagePath" -> JsNull,

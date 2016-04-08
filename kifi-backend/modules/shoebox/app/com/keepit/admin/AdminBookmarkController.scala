@@ -43,6 +43,7 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
@@ -105,7 +106,7 @@ class AdminBookmarksController @Inject() (
   def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
-      keepCommander.deactivateKeep(keep)
+      keepMutator.deactivateKeep(keep)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
@@ -141,7 +142,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture.recover {
       case ex: Throwable => -1
     }
 
@@ -257,7 +258,7 @@ class AdminBookmarksController @Inject() (
 
     db.readWrite(attempts = 5) { implicit session =>
       keeps.foreach { keepId =>
-        keepCommander.deactivateKeep(keepRepo.get(keepId))
+        keepMutator.deactivateKeep(keepRepo.get(keepId))
       }
     }
 
@@ -288,15 +289,17 @@ class AdminBookmarksController @Inject() (
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
     import com.keepit.common.core._
 
-    val fromId = startFrom.map(Id[Keep])
+    var fromId = startFrom.map(Id[Keep])
     val chunkSize = 100
-    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
-    val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
-      val (discussionKeeps, otherKeeps) = keeps.partition(keep => keep.source == KeepSource.discussion || (keep.isActive && keep.recipients.libraries.isEmpty))
+    val numPages = limit / chunkSize
+    val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
+      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, page * chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
+      def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
+      val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
-            keep.id.get -> (RawKifiAttribution(keep.userId.get, connections, keep.source), keep.state == KeepStates.ACTIVE)
+            keep.id.get -> (RawKifiAttribution(keep.userId.get, keep.note, connections, keep.source), keep.state == KeepStates.ACTIVE)
           }
         }.toMap
       }
@@ -306,9 +309,9 @@ class AdminBookmarksController @Inject() (
         val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeState = None)
         otherKeeps.collect {
           case keep =>
-            val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
-            val firstUsers = ktus(keep.id.get).filter(ktu => !keep.userId.contains(ktu.userId) && keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepRecipients(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minByOpt(_.addedAt).map(_.libraryId)
+            val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).collect { case ktu if keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis => ktu.userId } ++ keep.userId.toSeq
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.toSet), keep.source)
             keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }
@@ -317,8 +320,12 @@ class AdminBookmarksController @Inject() (
         discussionConnections <- discussionConnectionsFut
         nonDiscussionConnections <- nonDiscussionConnectionsFut
         (success, fail) <- db.readWriteAsync { implicit s =>
-          val allConnections = discussionConnections ++ nonDiscussionConnections
-          val missingKeeps = keeps.map(_.id.get).filter(!allConnections.contains(_))
+          val fetchedConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keeps.filter(keep => !fetchedConnections.contains(keep.id.get))
+          val allConnections = fetchedConnections ++ missingKeeps.map { k =>
+            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients.plusUser(k.userId.get), k.source)
+            k.id.get -> (rawAttribution, k.state == KeepStates.ACTIVE)
+          }
           val internedKeeps = allConnections.map {
             case (kid, (attr, isActive)) =>
               val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
@@ -328,6 +335,7 @@ class AdminBookmarksController @Inject() (
           (internedKeeps, missingKeeps)
         }
       } yield {
+        fromId = keeps.maxBy(_.id.get).id
         s"${keeps.map(_.id.get).minMaxOpt}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
       }
     }

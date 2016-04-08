@@ -16,7 +16,7 @@ import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.util.MapHelpers
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
-import com.keepit.eliza.ElizaServiceClient.{GetInitialRecipientsByKeepId, GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
+import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -115,9 +115,6 @@ trait ElizaServiceClient extends ServiceClient {
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
-  //migration
-  def importThread(data: JsObject): Unit
-
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
@@ -145,6 +142,8 @@ trait ElizaServiceClient extends ServiceClient {
   def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
+
+  def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -264,11 +263,6 @@ class ElizaServiceClientImpl @Inject() (
       val machineResponses = responses.map(_.json.as[Map[Id[User], Boolean]])
       MapHelpers.unionsWith[Id[User], Boolean](_ || _)(machineResponses)
     }
-  }
-
-  //migration
-  def importThread(data: JsObject): Unit = {
-    call(Eliza.internal.importThread, data)
   }
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
@@ -425,7 +419,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = { // todo(Cam): kill
     import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
     val request = Request(keepId, userId, event)
     call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
@@ -435,6 +429,12 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.pageSystemMessages(fromId, pageSize)).map(_.json.as[Seq[CrossServiceMessage]])
   }
 
+  def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]] = {
+    import RPBTest._
+    call(Eliza.internal.rpbTest, body = Json.toJson(Request(keepIds, numPerKeep))).map {
+      _.json.as[Response].recentMessages
+    }
+  }
 }
 
 object ElizaServiceClient {
@@ -534,5 +534,12 @@ object ElizaServiceClient {
   object SaveKeepEvent {
     case class Request(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle)
     implicit val requestFormat: Format[Request] = Json.format[Request]
+  }
+
+  object RPBTest {
+    case class Request(keepIds: Set[Id[Keep]], numPerKeep: Int)
+    case class Response(recentMessages: Map[Id[Keep], Seq[Id[Message]]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

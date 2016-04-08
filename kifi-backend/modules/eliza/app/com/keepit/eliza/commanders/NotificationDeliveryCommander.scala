@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.{ ByteBuffer, CharBuffer }
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -37,7 +37,49 @@ case class UserThreadQuery(
 
 case class UnreadThreadCounts(total: Int, unmuted: Int)
 
-class NotificationDeliveryCommander @Inject() (
+@ImplementedBy(classOf[NotificationDeliveryCommanderImpl])
+trait NotificationDeliveryCommander {
+  // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
+  def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit
+  def notifyEmailParticipants(thread: MessageThread): Unit
+  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit
+  def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit
+  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
+  def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
+  def notifyUnread(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
+  def notifyUnreadCount(userId: Id[User]): Unit
+  def notifyRemoveThread(userId: Id[User], keepId: Id[Keep]): Unit
+  def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int]
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int]
+  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
+  def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity], forceOverwrite: Boolean = false): Unit
+  def sendPushNotificationForMessage(userId: Id[User], message: ElizaMessage, sender: Option[BasicUserLikeEntity], orderedActivityInfo: Seq[UserThreadActivity]): Unit
+  def setAllNotificationsRead(userId: Id[User]): Unit
+  def setSystemNotificationsRead(userId: Id[User]): Unit
+  def setMessageNotificationsRead(userId: Id[User]): Unit
+  def setAllNotificationsReadBefore(user: Id[User], messageId: Id[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime
+  def getSendableNotification(userId: Id[User], keepId: Id[Keep], includeUriSummary: Boolean): Future[Option[NotificationJson]]
+  def getUnreadThreadNotifications(userId: Id[User]): Seq[UserThreadNotification]
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[(Seq[NotificationJson], Int)]
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int, includeUriSummary: Boolean): Future[(String, Seq[NotificationJson], Int, Int)]
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]]
+  def connectedSockets: Int
+  def notifyUserAboutMuteChange(userId: Id[User], keepId: PublicId[Keep], mute: Boolean)
+  def getUnreadUnmutedThreads(userId: Id[User], howMany: Int): Seq[UserThreadView]
+  def getUnreadCounts(userId: Id[User]): (Int, Int, Int)
+  def getTotalUnreadUnmutedCount(userId: Id[User]): Int
+}
+
+@Singleton
+class NotificationDeliveryCommanderImpl @Inject() (
     threadRepo: MessageThreadRepo,
     userThreadRepo: UserThreadRepo,
     nonUserThreadRepo: NonUserThreadRepo,
@@ -53,7 +95,7 @@ class NotificationDeliveryCommander @Inject() (
     emailCommander: ElizaEmailCommander,
     notificationRepo: NotificationRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends NotificationDeliveryCommander with Logging {
 
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit = {
     val emailParticipants = thread.participants.allNonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
@@ -119,6 +161,9 @@ class NotificationDeliveryCommander @Inject() (
 
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", keepId, message))
+
+  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit =
+    sendToUser(userId, Json.arr("event", keepId, event))
 
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
     // TODO(ryan): stop manually forcing the date to go to millis, fix the Json formatter

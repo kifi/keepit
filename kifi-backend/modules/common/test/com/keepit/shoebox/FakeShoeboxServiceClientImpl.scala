@@ -737,6 +737,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     ))
   }
 
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]]): Future[Unit] = Future.successful(())
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], recipients: KeepRecipientsDiff, persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]): Future[Unit] = Future.successful(())
   def registerMessageOnKeep(keepId: Id[Keep], msg: CrossServiceMessage): Future[Unit] = Future.successful(())
 }

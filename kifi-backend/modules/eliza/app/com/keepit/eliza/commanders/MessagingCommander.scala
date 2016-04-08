@@ -14,7 +14,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.MessageSource
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.SystemMessageData._
@@ -23,12 +25,12 @@ import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.LibraryNewKeep
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicUser, BasicUserLikeEntity, NonUserKinds }
+import com.keepit.social.{ BasicAuthor, BasicUser, BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util.{ Failure, Random, Success }
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
@@ -101,7 +103,8 @@ class MessagingCommanderImpl @Inject() (
     notifItemRepo: NotificationItemRepo,
     notifCommander: NotificationCommander,
     implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends MessagingCommander with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig) extends MessagingCommander with Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
@@ -331,7 +334,7 @@ class MessagingCommanderImpl @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.addUsersToKeep(adderId = user, keepId = thread.keepId, newUsers = Set(user)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSourceKind.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers
@@ -362,9 +365,18 @@ class MessagingCommanderImpl @Inject() (
       participantSet.toSeq.map(u => BasicUserLikeEntity(id2BasicUser(u))) ++ basicNonUserParticipants
     )
 
+    val author = message.from match {
+      case MessageSender.User(id) => BasicAuthor.fromUser(id2BasicUser(id))
+      case MessageSender.NonUser(nup) => BasicAuthor.fromNonUser(NonUserParticipant.toBasicNonUser(nup))
+      case _ => BasicAuthor.Fake
+    }
+
+    val event = BasicKeepEvent.generateCommentEvent(message.pubId, author, message.messageText, message.createdAt, message.source)
+
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, message.pubKeepId, messageWithBasicUser)
+      notificationDeliveryCommander.notifyEvent(user, message.pubKeepId, event)
     }
     // Anyone who got this new notification might have a NewKeep notification that is going to be
     // passively replaced by this message thread. The client will then have no way of ever marking or
@@ -545,20 +557,23 @@ class MessagingCommanderImpl @Inject() (
             ))
           }
 
-          if (updateShoebox) shoebox.addUsersToKeep(adderUserId, keepId, actuallyNewUsers.toSet)
-
-          Some((actuallyNewUsers, actuallyNewNonUsers, message, thread))
+          Some((actuallyNewUsers, actuallyNewNonUsers, actuallyNewLibraries, message, thread))
 
         }
       }
 
       resultInfoOpt.exists {
-        case (newUsers, newNonUsers, message, thread) =>
+        case (newUsers, newNonUsers, newLibraries, message, thread) =>
 
           SafeFuture {
             db.readOnlyMaster { implicit session =>
               messageRepo.refreshCache(thread.keepId)
             }
+          }
+
+          if (updateShoebox) {
+            val newEmails = newNonUsers.flatMap(NonUserParticipant.toEmailAddress)
+            shoebox.editRecipientsOnKeep(adderUserId, keepId, KeepRecipientsDiff(DeltaSet.addOnly(newUsers.toSet), DeltaSet.addOnly(newLibraries), DeltaSet.addOnly(newEmails.toSet)), persistKeepEvent = true, source)
           }
 
           if (newUsers.nonEmpty || newNonUsers.nonEmpty) {

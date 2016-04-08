@@ -28,6 +28,7 @@ class MobileKeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
   keepsCommander: KeepCommander,
+  keepMutator: KeepMutator,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
@@ -120,7 +121,7 @@ class MobileKeepsController @Inject() (
         if (titleToPersist != keep.title || noteToPersist != keep.note) {
           db.readWrite { implicit s =>
             val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
-            keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
+            keepMutator.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
           }
         }
 

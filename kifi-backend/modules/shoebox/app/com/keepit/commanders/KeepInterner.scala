@@ -49,7 +49,7 @@ object KeepInternRequest {
       author = Author.KifiUser(keeper),
       url = url,
       source = source,
-      attribution = RawKifiAttribution(keptBy = keeper, source = source, connections = recipients.plusUser(keeper)),
+      attribution = RawKifiAttribution(keeper, note, recipients.plusUser(keeper), source),
       title = title,
       note = note,
       keptAt = keptAt,
@@ -91,7 +91,7 @@ class KeepInternerImpl @Inject() (
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
   libraryRepo: LibraryRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   airbrake: AirbrakeNotifier,
@@ -146,7 +146,7 @@ class KeepInternerImpl @Inject() (
         lastActivityAt = keepToInternWith.map(_.lastActivityAt).getOrElse(keptAt)
       )
       val internedKeep = try {
-        keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+        keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
           sourceAttrRepo.intern(improvedKeep.id.get, internReq.attribution)
         }
       } catch {
@@ -218,7 +218,7 @@ class KeepInternerImpl @Inject() (
     thirdPartyAttribution: Option[RawSourceAttribution], note: Option[String])(implicit session: RWSession) = {
     airbrake.verify(userIdOpt.isDefined || thirdPartyAttribution.isDefined, s"interning a keep (uri ${uri.id.get}, lib ${libraryOpt.map(_.id.get)}) with no user AND no source?!?!?!")
 
-    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
+    val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, note, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
 
     val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
 
@@ -239,7 +239,7 @@ class KeepInternerImpl @Inject() (
       lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
     )
     val internedKeep = try {
-      keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+      keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
         sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
       }
     } catch {
@@ -255,7 +255,7 @@ class KeepInternerImpl @Inject() (
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
     def tryFixKeepNote(keep: Keep)(implicit session: RWSession) = {
-      Try(keepCommander.updateKeepNote(keep.userId.get, keep, keep.note.getOrElse(""))) // will throw if keep.userId.isEmpty
+      Try(keepMutator.updateKeepNote(keep.userId.get, keep, keep.note.getOrElse(""))) // will throw if keep.userId.isEmpty
     }
 
     // Attach tags to keeps

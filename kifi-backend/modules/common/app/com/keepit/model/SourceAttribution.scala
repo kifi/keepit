@@ -104,7 +104,7 @@ object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
 }
 
-case class KifiAttribution(keptBy: BasicUser, users: Set[BasicUser], nonUsers: Set[EmailAddress], libraries: Set[BasicLibrary], source: KeepSource) extends SourceAttribution
+case class KifiAttribution(keptBy: BasicUser, note: Option[String], users: Set[BasicUser], nonUsers: Set[EmailAddress], libraries: Set[BasicLibrary], source: KeepSource) extends SourceAttribution
 object KifiAttribution {
   implicit val format = Json.format[KifiAttribution]
 }

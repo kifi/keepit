@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, _ }
@@ -28,6 +28,8 @@ class KeepsController @Inject() (
   collectionRepo: CollectionRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
+  keepMutator: KeepMutator,
+  keepActivityAssembler: KeepActivityAssembler,
   keepInfoAssembler: KeepInfoAssembler,
   keepExportCommander: KeepExportCommander,
   permissionCommander: PermissionCommander,
@@ -148,7 +150,7 @@ class KeepsController @Inject() (
           case Some(keep) =>
             val newNote = (request.body \ "note").as[String]
             db.readWrite { implicit session =>
-              keepsCommander.updateKeepNote(request.userId, keep, newNote)
+              keepMutator.updateKeepNote(request.userId, keep, newNote)
             }
             NoContent
         }
@@ -199,11 +201,11 @@ class KeepsController @Inject() (
     }
   }
 
-  def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = UserAction.async { request =>
+  def getActivityForKeep(id: PublicId[Keep], eventsBefore: Option[DateTime], maxEvents: Int) = MaybeUserAction.async { request =>
     Keep.decodePublicId(id) match {
       case Failure(_) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(keepId) =>
-        keepInfoAssembler.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
+        keepActivityAssembler.getActivityForKeep(keepId, eventsBefore, maxEvents).map { activity =>
           Ok(Json.obj("activity" -> Json.toJson(activity)))
         }
     }

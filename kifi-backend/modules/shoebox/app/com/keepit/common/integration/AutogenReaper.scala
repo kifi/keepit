@@ -1,6 +1,6 @@
 package com.keepit.common.integration
 
-import com.keepit.commanders.KeepCommander
+import com.keepit.commanders.{ KeepMutator, KeepCommander }
 import com.keepit.model._
 import scala.concurrent.duration._
 
@@ -52,7 +52,7 @@ private[integration] class AutogenReaper @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     emailAddressRepo: UserEmailAddressRepo,
     keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     collectionRepo: CollectionRepo,
     k2cRepo: KeepToCollectionRepo,
     airbrake: AirbrakeNotifier,
@@ -121,7 +121,7 @@ private[integration] class AutogenReaper @Inject() (
           db.readWrite { implicit s =>
             // bookmarks
             for (bookmark <- keepRepo.getByUser(exp.userId)) {
-              keepCommander.deactivateKeep(bookmark)
+              keepMutator.deactivateKeep(bookmark)
             }
           }
           db.readWrite { implicit s =>

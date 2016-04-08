@@ -33,6 +33,7 @@ class KeepMutationController @Inject() (
   permissionCommander: PermissionCommander,
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   discussionCommander: DiscussionCommander,
   keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
@@ -99,7 +100,7 @@ class KeepMutationController @Inject() (
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
       } yield KeepRecipientsDiff(users = users, libraries = libraries, emails = input.emails)
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
+      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source) else Future.successful(())
     } yield {
       NoContent
     }).recover {
@@ -130,7 +131,7 @@ class KeepMutationController @Inject() (
       for {
         keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_ID: KeepFail)
         _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
-      } yield keepCommander.deactivateKeep(keepRepo.get(keepId))
+      } yield keepMutator.deactivateKeep(keepRepo.get(keepId))
     }.fold(
       fail => fail.asErrorResponse,
       _ => NoContent
