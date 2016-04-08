@@ -65,9 +65,7 @@ class KeepSourceCommanderImpl @Inject() (
       val basicUserOpt = attr match {
         case TwitterAttribution(tweet) => userByTwitterId.get(tweet.user.id).flatMap(basicUserById.get)
         case SlackAttribution(message, teamId) => userBySlackIdentity.get((teamId, message.userId)).flatMap(basicUserById.get)
-        case KifiAttribution(keptBy, _, _, _, libs, _) =>
-          if (keptBy.externalId == ExternalId[User]("6455802a-a5e6-4265-8748-8acdaccb7e8c")) log.info(s"[activityLog] propagated basic libs ${libs.map(_.id)}")
-          Some(keptBy)
+        case KifiAttribution(keptBy, _, _, _, libs, _) => Some(keptBy)
       }
       (attr, basicUserOpt)
     }

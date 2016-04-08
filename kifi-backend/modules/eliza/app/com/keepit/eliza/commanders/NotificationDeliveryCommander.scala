@@ -44,7 +44,6 @@ trait NotificationDeliveryCommander {
   def notifyEmailParticipants(thread: MessageThread): Unit
   def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit
-  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
   def notifyUnread(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit
   def notifyUnreadCount(userId: Id[User]): Unit
@@ -161,9 +160,6 @@ class NotificationDeliveryCommanderImpl @Inject() (
 
   def notifyMessage(userId: Id[User], keepId: PublicId[Keep], message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", keepId, message))
-
-  def notifyEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Unit =
-    sendToUser(userId, Json.arr("event", keepId, event))
 
   def notifyRead(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
     // TODO(ryan): stop manually forcing the date to go to millis, fix the Json formatter

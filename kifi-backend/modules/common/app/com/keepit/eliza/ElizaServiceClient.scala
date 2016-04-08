@@ -3,6 +3,7 @@ package com.keepit.eliza
 import com.google.inject.Inject
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{TraversableFormat, TupleFormat}
@@ -102,6 +103,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean = false): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int]
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit]
 
   def connectedClientCount: Future[Seq[Int]]
   def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit]
@@ -178,6 +180,8 @@ class ElizaServiceClientImpl @Inject() (
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
     call(Eliza.internal.sendOrgPushNotification, Json.toJson(request), callTimeouts = longTimeout).map(response => response.body.toInt)
   }
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit] = sendToUser(userId, Json.arr("event", keepId, event))
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {
     val payload = Json.obj("userId" -> userId, "data" -> data)
