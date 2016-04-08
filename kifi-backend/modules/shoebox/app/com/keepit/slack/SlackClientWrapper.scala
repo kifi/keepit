@@ -71,7 +71,7 @@ class SlackClientWrapperImpl @Inject() (
     extends SlackClientWrapper with Logging {
 
   val debouncer = new Debouncing.Dropper[Unit]
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
     pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
@@ -102,13 +102,12 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot)
     }
     bot match {
+      case None => Future.failed(SlackFail.NoValidBotToken)
       case Some(kifiBot) =>
         slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(kifiBot.token))
           .recoverWith {
             case botFail @ SlackErrorCode(NOT_IN_CHANNEL) =>
-              slackLog.warn(s"Kifi-bot for $slackTeamId is not in channel $slackChannel so it can't post. Trying to invite it in now")
               inviteToChannel(kifiBot.userId, slackTeamId, slackChannel).flatMap { _ =>
-                slackLog.info(s":boom:, got it, kifi-bot is now in $slackChannel in $slackTeamId")
                 slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser)
               }.recoverWith {
                 case fail =>
@@ -116,7 +115,6 @@ class SlackClientWrapperImpl @Inject() (
                   Future.failed(botFail)
               }
           }
-      case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }
   def inviteToChannel(invitee: SlackUserId, teamId: SlackTeamId, channelId: SlackChannelId): Future[Unit] = {

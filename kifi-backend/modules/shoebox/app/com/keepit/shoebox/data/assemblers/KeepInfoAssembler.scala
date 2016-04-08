@@ -3,6 +3,7 @@ package com.keepit.shoebox.data.assemblers
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen }
+import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.core.{ anyExtensionOps, iterableExtensionOps }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -12,7 +13,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
-import com.keepit.common.util.RightBias
+import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -82,7 +83,9 @@ class KeepInfoAssemblerImpl @Inject() (
   private implicit val inhouseSlackClient: InhouseSlackClient)
     extends KeepInfoAssembler {
 
-  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
+  private val slackLog = new SlackLog(InhouseSlackChannel.ENG_SHOEBOX)
+  private val ryanLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  private val ryan = Id[User](84792)
 
   private final case class KeepsAndConnections(
     keepsById: Map[Id[Keep], Keep],
@@ -91,7 +94,12 @@ class KeepInfoAssemblerImpl @Inject() (
     ktesByKeep: Map[Id[Keep], Seq[KeepToEmail]])
 
   def assembleKeepViews(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
-    keepViewAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
+    TimedComputation.async {
+      keepViewAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
+    }.map { tc =>
+      if (viewer.safely.contains(ryan)) ryanLog.info("Keep view assembly took", tc.millis)
+      tc.value
+    }
   }
   def assembleKeepInfos(viewer: Option[Id[User]], keepIds: Set[Id[Keep]], config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepInfo]]] = {
     keepInfoAssemblyHelper(viewer, getKeepsAndConnections(keepIds), config)
@@ -112,8 +120,18 @@ class KeepInfoAssemblerImpl @Inject() (
 
   private def keepViewAssemblyHelper(viewer: Option[Id[User]], keepsAndConnections: KeepsAndConnections, config: KeepViewAssemblyOptions = KeepInfoAssemblerConfig.default): Future[Map[Id[Keep], RightBias[KeepFail, NewKeepView]]] = {
     val keepsById = keepsAndConnections.keepsById
-    val keepInfoFut = keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
-    val pageInfoFut = pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
+    val keepInfoFut = TimedComputation.async {
+      keepInfoAssemblyHelper(viewer, keepsAndConnections, config)
+    }.map { tc =>
+      if (viewer.safely.contains(ryan)) slackLog.info("Keep info assembly took", tc.millis)
+      tc.value
+    }
+    val pageInfoFut = TimedComputation.async {
+      pageInfoAssemblyHelper(viewer, keepsById.values.map(_.uriId).toSet, config)
+    }.map { tc =>
+      if (viewer.safely.contains(ryan)) slackLog.info("Page info assembly took", tc.millis)
+      tc.value
+    }
     for {
       keepInfosByKeep <- keepInfoFut
       pageInfosByUri <- pageInfoFut
@@ -148,7 +166,7 @@ class KeepInfoAssemblerImpl @Inject() (
       permissionCommander.getKeepsPermissions(keepSet, viewer)
     }
 
-    val activityFut = {
+    val activityFut = TimedComputation.async {
       val viewerHasActivityLogExperiment = viewer.exists { viewerId =>
         db.readOnlyMaster { implicit s =>
           userExperimentRepo.hasExperiment(viewerId, UserExperimentType.ACTIVITY_LOG)
@@ -156,6 +174,9 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       if (!viewerHasActivityLogExperiment) Future.successful(Map.empty[Id[Keep], KeepActivity])
       else activityAssembler.getActivityForKeeps(keepSet, fromTime = None, numEventsPerKeep = config.numEventsPerKeep)
+    }.map { tc =>
+      if (viewer.safely.contains(ryan)) ryanLog.info("Activity took", tc.millis, "to assemble")
+      tc.value
     }
 
     for {
