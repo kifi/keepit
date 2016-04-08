@@ -308,12 +308,6 @@ class AdminUserController @Inject() (
     val form = request.request.body.asFormUrlEncoded.map { req => req.map(r => (r._1 -> r._2.head)) }
 
     val bookmarkSearch = form.flatMap { _.get("bookmarkSearch") }
-    val collectionFilter = form.flatMap(_.get("collectionFilter")).collect {
-      case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
-    }
-    val bookmarkFilter = collectionFilter.map { collId =>
-      db.readOnlyReplica { implicit s => keepToCollectionRepo.getKeepsForTag(collId) }
-    }
     val filteredBookmarks = db.readOnlyReplica { implicit s =>
       val query = bookmarkSearch.getOrElse("").toLowerCase()
       (if (query.trim.length == 0) {
@@ -321,14 +315,13 @@ class AdminUserController @Inject() (
       } else {
         bookmarks.filter { case (b, u) => b.title.exists { t => t.toLowerCase().indexOf(query) >= 0 } }
       }) collect {
-        case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
+        case (mark, uri) =>
           val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
           (mark, uri, colls)
       }
     }
-    val collections = db.readOnlyReplica { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) }
 
-    Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
+    Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch))
   }
 
   def bulkMessageUsers() = AdminUserPage { implicit request =>

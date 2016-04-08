@@ -38,27 +38,15 @@ class MobileKeepsController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def allKeepsV1(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
-    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, true)
-  }
-
   def allKeepsV2(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
     getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, false)
   }
 
   private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, v1: Boolean) = {
     keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, userId) map { res =>
-      val basicCollection = collectionOpt.flatMap { collStrExtId =>
-        ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
-          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(userId, collExtId)(_)).map { c =>
-            BasicCollection.fromCollection(c.summary)
-          }
-        }
-      }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, v1)))
       Ok(Json.obj(
-        "collection" -> basicCollection,
         "before" -> before,
         "after" -> after,
         "keeps" -> Json.toJson(sanitizedKeeps)

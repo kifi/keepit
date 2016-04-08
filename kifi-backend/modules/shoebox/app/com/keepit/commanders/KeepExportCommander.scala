@@ -103,10 +103,11 @@ class KeepExportCommanderImpl @Inject() (
         }
     }
     val keeps = keepRepo.getByIds(keepIds).values.toSeq
-
-    val tagIds = ktcRepo.getCollectionsForKeeps(keeps)
-    val idToTag = collectionRepo.getByIds(tagIds.flatten.toSet).mapValues(_.name.tag)
-    val tagsByKeepId = (keeps zip tagIds).map { case (keep, keepTags) => keep.id.get -> keepTags.map(idToTag(_)) }.toMap
+    val tagsByKeepId = {
+      val tagIds = ktcRepo.getCollectionsForKeeps(keeps)
+      val idToTag = collectionRepo.getByIds(tagIds.flatten.toSet).mapValues(_.name.tag)
+      (keeps zip tagIds).map { case (keep, keepTags) => keep.id.get -> keepTags.map(idToTag(_)) }.toMap
+    }
 
     val libIdsByKeep = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).mapValues(ktls => ktls.map(_.libraryId))
     val idToLib = libraryRepo.getActiveByIds(libIdsByKeep.values.flatten.toSet)

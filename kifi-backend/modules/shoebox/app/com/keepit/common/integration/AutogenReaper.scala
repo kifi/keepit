@@ -125,14 +125,7 @@ private[integration] class AutogenReaper @Inject() (
             }
           }
           db.readWrite { implicit s =>
-            // collections & k2c
-            for (collection <- collectionRepo.getUnfortunatelyIncompleteTagsByUser(exp.userId)) {
-              for (k2c <- k2cRepo.getByCollection(collection.id.get)) {
-                k2cRepo.save(k2c.sanitizeForDelete)
-              }
-              collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
-              collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = false)
-            }
+            // todo: Clean up tags!
           }
           db.readWrite { implicit s =>
             userRepo.save(user.withState(UserStates.INACTIVE))
