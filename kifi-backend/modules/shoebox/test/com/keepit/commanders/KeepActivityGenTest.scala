@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.commanders.gen.KeepActivityGen
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
@@ -70,10 +71,8 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
 
         val events = db.readOnlyMaster { implicit s => inject[KeepEventRepo].pageForKeep(keep.id.get, fromTime = None, limit = 10) }
 
-        val activity = KeepActivityGen.generateKeepActivity(
-          keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus,
-          basicUserById, basicLibById, orgByLibraryId = Map.empty,
-          maxEvents = 5)
+        implicit val info = SerializationInfo(basicUserById, basicLibById, orgByLibraryId = Map.empty)
+        val activity = KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt = None, events = events, discussionOpt = None, ktls = Seq.empty, ktus, maxEvents = 5)
 
         activity.events.size === 5
         activity.events.map { event => DescriptionElements.formatPlain(event.header) } === (eventHeaders.reverse :+ "Benjamin Button kept this")

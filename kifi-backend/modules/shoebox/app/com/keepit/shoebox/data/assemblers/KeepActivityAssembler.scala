@@ -2,6 +2,7 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.mapExtensionOps
@@ -91,7 +92,8 @@ class KeepActivityAssemblerImpl @Inject() (
       (elizaActivityOpt) <- elizaFut
       (userById, libById, orgByLibId) <- basicModelFut
     } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
+      implicit val info = SerializationInfo(userById, libById, orgByLibId)
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, limit)
     }
   }
 

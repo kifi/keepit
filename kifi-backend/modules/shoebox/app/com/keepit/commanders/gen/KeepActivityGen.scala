@@ -6,10 +6,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
-import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.util.{ DeltaSet, DescriptionElements, DescriptionElement, ShowOriginalElement }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
-import com.keepit.model.{ CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{ CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
@@ -27,23 +26,18 @@ object KeepActivityGen {
     discussionOpt: Option[Discussion],
     ktls: Seq[KeepToLibrary],
     ktus: Seq[KeepToUser],
-    userById: Map[Id[User], BasicUser],
-    libById: Map[Id[Library], BasicLibrary],
-    orgByLibraryId: Map[Id[Library], BasicOrganization],
-    maxEvents: Int)(implicit airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
+    maxEvents: Int)(implicit info: SerializationInfo, airbrake: AirbrakeNotifier, imageConfig: S3ImageConfig, pubIdConfig: PublicIdConfiguration): KeepActivity = {
 
     import com.keepit.common.util.DescriptionElements._
-
-    implicit val serializationInfo = SerializationInfo(userById, libById, orgByLibraryId)
 
     lazy val initialEvent = {
       val basicAuthor = sourceAttrOpt.map {
         case (sourceAttr, basicUserOpt) => BasicAuthor(sourceAttr, basicUserOpt)
-      }.orElse(keep.userId.flatMap(userById.get).map(BasicAuthor.fromUser))
+      }.orElse(keep.userId.flatMap(info.userById.get).map(BasicAuthor.fromUser))
       if (basicAuthor.isEmpty) airbrake.notify(s"[activityLog] can't generate author for keep ${keep.id.get}, keep.user = ${keep.userId}")
       val authorElement: DescriptionElement = basicAuthor.map(fromBasicAuthor).getOrElse(fromText("Someone"))
 
-      val (firstLibrary, orgOpt) = (ktls.headOption.flatMap(ktl => libById.get(ktl.libraryId)), ktls.headOption.flatMap(ktl => orgByLibraryId.get(ktl.libraryId)))
+      val (firstLibrary, orgOpt) = (ktls.headOption.flatMap(ktl => info.libById.get(ktl.libraryId)), ktls.headOption.flatMap(ktl => info.orgByLibraryId.get(ktl.libraryId)))
 
       val header = sourceAttrOpt.map(_._1) match {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
@@ -104,7 +98,7 @@ object KeepActivityGen {
   def generateKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit info: SerializationInfo, imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BasicKeepEvent = {
     val publicEventId = CommonKeepEvent.publicId(KeepEvent.toCommonId(event.id.get))
     val (addedBy, kind, header, body) = event.eventData match {
-      case ModifyRecipients(adder, KeepRecipientsDiff(users, libraries, emails)) =>
+      case ModifyRecipients(adder, diff) =>
         val basicAddedBy = {
           if (!info.userById.contains(adder)) airbrake.notify(s"[activityLog] no basic user stored for user $adder on keep $keepId, event ${event.id}")
           info.userById.get(adder)
@@ -112,8 +106,9 @@ object KeepActivityGen {
         val header = {
           val userElement = basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone"))
           val actionElement = Seq(
-            specialCaseForMovedLibrary(users, libraries, emails)
+            specialCaseForMovedLibrary(diff)
           ).flatten.headOption.getOrElse {
+              val KeepRecipientsDiff(users, libraries, emails) = diff
               val addedUserElements = users.added.flatMap(info.userById.get).map(fromBasicUser)
               val addedLibElements = libraries.added.flatMap(info.libById.get).map(fromBasicLibrary)
               val addedEmailElements = emails.added.map(email => fromText(email.address))
@@ -147,7 +142,8 @@ object KeepActivityGen {
     )
   }
 
-  private def specialCaseForMovedLibrary(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])(implicit info: SerializationInfo): Option[DescriptionElements] = {
+  private def specialCaseForMovedLibrary(diff: KeepRecipientsDiff)(implicit info: SerializationInfo): Option[DescriptionElements] = {
+    val KeepRecipientsDiff(users, libraries, emails) = diff
     if (users.isEmpty && emails.isEmpty && libraries.added.size == 1 && libraries.removed.size == 1) for {
       fromLib <- info.libById.get(libraries.removed.head)
       toLib <- info.libById.get(libraries.added.head)
