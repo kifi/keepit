@@ -43,7 +43,13 @@ class KeepEventCommanderImpl @Inject() (
 
       val usersToSendTo = ktuRepo.getAllByKeepId(keepId).map(_.userId)
       val basicEvent = keepActivityAssembler.assembleBasicKeepEvent(keepId, event)
-      session.onTransactionSuccess(broadcastKeepEvent(keepId, usersToSendTo.toSet, basicEvent))
+      session.onTransactionSuccess {
+        eventData match {
+          case mr: ModifyRecipients => eliza.syncAddParticipants(keepId, mr, source)
+          case _ =>
+        }
+        broadcastKeepEvent(keepId, usersToSendTo.toSet, basicEvent)
+      }
     }
 
     isValidEvent

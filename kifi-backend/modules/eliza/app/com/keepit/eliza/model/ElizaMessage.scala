@@ -6,6 +6,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.json._
 import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Message }
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.notify.model.Recipient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
@@ -115,9 +116,10 @@ object SystemMessageData {
       Some(KeepEventData.EditTitle(editedBy, original, updated))
   }
 
-  def fromKeepEvent(event: KeepEventData.EditTitle): Option[SystemMessageData] = {
-    val KeepEventData.EditTitle(editedBy, original, updated) = event
-    Some(EditTitle(editedBy, original, updated))
+  def fromKeepEvent(event: KeepEventData.ModifyRecipients): Option[SystemMessageData] = {
+    val KeepRecipientsDiff(usersDelta, _, emailsDelta) = event.diff
+    val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
+    Some(AddParticipants(event.addedBy, usersAdded, emailsAdded))
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {

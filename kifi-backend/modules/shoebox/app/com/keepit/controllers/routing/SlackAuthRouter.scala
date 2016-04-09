@@ -164,7 +164,7 @@ class SlackAuthRouter @Inject() (
   }
 
   // todo: should SlackClickTracking reports viewArticle vs replyToThread
-  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, viewArticle: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), "keep")) { implicit request =>
+  def fromSlackToKeep(slackTeamId: SlackTeamId, pubId: PublicId[Keep], urlHash: UrlHash, viewArticle: Boolean) = (MaybeUserAction andThen SlackClickTracking(Some(slackTeamId), if (viewArticle) "viewArticle" else "reply")) { implicit request =>
     db.readOnlyMaster { implicit s =>
       redirectWithKeep(request.userIdOpt, slackTeamId, pubId, viewArticle) orElse redirectWithUrlHash(urlHash, viewArticle) getOrElse notFound(request)
     }

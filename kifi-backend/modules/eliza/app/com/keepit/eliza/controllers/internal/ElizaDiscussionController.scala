@@ -60,10 +60,10 @@ class ElizaDiscussionController @Inject() (
     }
   }
 
-  def saveKeepEvent = Action.async(parse.tolerantJson) { request =>
-    import SaveKeepEvent._
+  def syncAddParticipants = Action.async(parse.tolerantJson) { request =>
+    import SyncAddParticipants._
     val input = request.body.as[Request]
-    discussionCommander.saveKeepEvent(input.keepId, input.userId, input.event).map(_ => NoContent)
+    discussionCommander.syncAddParticipants(input.keepId, input.event, input.source).map(_ => NoContent)
   }
 
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>

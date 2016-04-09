@@ -81,9 +81,9 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
 object KeepEventData {
+  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
-  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
