@@ -51,17 +51,20 @@ object KeepActivityGen {
           )
       }
 
-      val source = sourceAttrOpt.map(_._1).collect {
-        case SlackAttribution(message, _) => KeepEventSource(KeepEventSourceKind.Slack, Some(message.permalink))
-        case TwitterAttribution(tweet) => KeepEventSource(KeepEventSourceKind.Twitter, Some(tweet.permalink))
+      val body = sourceAttrOpt.map {
+        case (ka: KifiAttribution, _) => ka.note.getOrElse("")
+        case (SlackAttribution(msg, _), _) => msg.text
+        case (TwitterAttribution(tweet), _) => tweet.text
       }
+
+      val source = sourceAttrOpt.flatMap { case (attr, bu) => KeepEventSource.fromSourceAttribution(attr) }
 
       BasicKeepEvent(
         id = BasicKeepEventId.initial,
         author = basicAuthor.get,
         KeepEventKind.Initial,
         header = header,
-        body = DescriptionElements(keep.note),
+        body = DescriptionElements(body),
         timestamp = keep.keptAt,
         source = source
       )
