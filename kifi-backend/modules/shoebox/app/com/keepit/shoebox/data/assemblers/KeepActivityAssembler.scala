@@ -97,7 +97,11 @@ class KeepActivityAssemblerImpl @Inject() (
 
   def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
     val (userIds, libraries) = KeepEvent.idsInvolved(Seq(event))
-    val (usersById, libsById) = (basicUserRepo.loadAllActive(userIds), basicLibGen.getBasicLibraries(libraries))
-    KeepActivityGen.generateKeepEvent(keepId, event, usersById, libsById)
+    implicit val info = KeepActivityGen.SerializationInfo(
+      userById = basicUserRepo.loadAllActive(userIds),
+      libById = basicLibGen.getBasicLibraries(libraries),
+      orgByLibraryId = Map.empty
+    )
+    KeepActivityGen.generateKeepEvent(keepId, event)
   }
 }
