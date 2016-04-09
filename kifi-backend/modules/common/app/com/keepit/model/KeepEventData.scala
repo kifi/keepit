@@ -35,6 +35,15 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
 }
 
 @json case class KeepEventSource(kind: KeepEventSourceKind, url: Option[String])
+object KeepEventSource {
+  def fromSourceAttribution(attribution: SourceAttribution): Option[KeepEventSource] = {
+    attribution match {
+      case SlackAttribution(message, _) => Some(KeepEventSource(KeepEventSourceKind.Slack, Some(message.permalink)))
+      case TwitterAttribution(tweet) => Some(KeepEventSource(KeepEventSourceKind.Twitter, Some(tweet.permalink)))
+      case KifiAttribution(_, note, _, _, _, source) => KeepEventSourceKind.fromKeepSource(source).map(src => KeepEventSource(src, None))
+    }
+  }
+}
 
 sealed abstract class KeepEventSourceKind(val value: String)
 object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
@@ -63,6 +72,14 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
     case src => MessageSource.fromStr(src.value)
   }
 
+  def fromKeepSource(keepSrc: KeepSource): Option[KeepEventSourceKind] = keepSrc match {
+    case KeepSource.site => Some(KeepEventSourceKind.Site)
+    case KeepSource.email => Some(KeepEventSourceKind.Email)
+    case KeepSource.slack => Some(KeepEventSourceKind.Slack)
+    case KeepSource.twitterFileImport | KeepSource.twitterSync => Some(KeepEventSourceKind.Twitter)
+    case _ => None
+  }
+
   def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[KeepEventSourceKind] = new QueryStringBindable[KeepEventSourceKind] {
@@ -81,9 +98,9 @@ object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
 object KeepEventData {
+  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
-  implicit val diffFormat = KeepRecipientsDiff.internalFormat
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
