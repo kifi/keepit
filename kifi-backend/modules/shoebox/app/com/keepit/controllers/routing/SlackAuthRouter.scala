@@ -21,7 +21,6 @@ import com.keepit.slack.models.{ SlackTeamId, SlackTeamMembershipRepo, SlackTeam
 import play.api.mvc.{ Cookie, Result }
 import securesocial.core.SecureSocial
 import views.html
-import com.keepit.common.core._
 
 import scala.concurrent.ExecutionContext
 
@@ -128,7 +127,7 @@ class SlackAuthRouter @Inject() (
 
   private def redirectWithKeep(requesterId: Option[Id[User]], slackTeamId: SlackTeamId, pubId: PublicId[Keep], viewArticle: Boolean)(implicit session: RSession, request: MaybeUserRequest[_]): Option[Result] = {
     for {
-      keepId <- Keep.decodePublicId(pubId).airbrakingOption
+      keepId <- Keep.decodePublicId(pubId).toOption
       keep <- Some(keepRepo.get(keepId)) if keep.isActive
       found <- {
         def keepPageUrl = pathCommander.pathForKeep(keep).absolute
