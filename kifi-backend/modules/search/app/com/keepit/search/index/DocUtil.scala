@@ -13,6 +13,7 @@ import org.apache.lucene.index.IndexableField
 import org.apache.lucene.util.Attribute
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
+import scala.collection.mutable.{ Set => MutableSet }
 
 trait FieldDecoder {
   def apply(indexableField: IndexableField): String = {
@@ -103,7 +104,7 @@ object DocUtil {
   val stringDocValFieldDecoder = binaryDocValFieldDecoder(new String(_, _, _, StandardCharsets.UTF_8))
 
   def toLongBuffer(ref: BytesRef): LongBuffer = ByteBuffer.wrap(ref.bytes, ref.offset, ref.length).asLongBuffer().asReadOnlyBuffer()
-  def toLongSet(ref: BytesRef): Set[Long] = toLongBuffer(ref).array().toSet
+  def toLongSet(ref: BytesRef): Set[Long] = LongBufferUtil.toLongSet(toLongBuffer(ref))
 }
 
 object LongBufferUtil {
@@ -124,4 +125,11 @@ object LongBufferUtil {
       block(buffer.get())
     }
   }
+
+  def toLongSet(buffer: LongBuffer): Set[Long] = {
+    val longSet = MutableSet[Long]()
+    foreach(buffer)(longSet += _)
+    longSet.toSet
+  }
+
 }

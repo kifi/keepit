@@ -1,6 +1,6 @@
 package com.keepit.search.index
 
-import java.nio.{ LongBuffer, ByteBuffer }
+import java.nio.ByteBuffer
 
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.{ Id, SequenceNumber }
