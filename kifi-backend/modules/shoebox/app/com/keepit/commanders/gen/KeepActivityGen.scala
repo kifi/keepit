@@ -3,9 +3,11 @@ package com.keepit.commanders.gen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
-import com.keepit.common.util.{ DescriptionElements, DescriptionElement, ShowOriginalElement }
+import com.keepit.common.core.mapExtensionOps
+import com.keepit.common.util.{ DeltaSet, DescriptionElements, DescriptionElement, ShowOriginalElement }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, KeepEventSourceKind, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
@@ -13,6 +15,11 @@ import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
 
 object KeepActivityGen {
+  final case class SerializationInfo(
+    userById: Map[Id[User], BasicUser],
+    libById: Map[Id[Library], BasicLibrary],
+    orgByLibraryId: Map[Id[Library], BasicOrganization])
+
   def generateKeepActivity(
     keep: Keep,
     sourceAttrOpt: Option[(SourceAttribution, Option[BasicUser])],
@@ -27,6 +34,8 @@ object KeepActivityGen {
 
     import com.keepit.common.util.DescriptionElements._
 
+    implicit val serializationInfo = SerializationInfo(userById, libById, orgByLibraryId)
+
     lazy val initialEvent = {
       val basicAuthor = sourceAttrOpt.map {
         case (sourceAttr, basicUserOpt) => BasicAuthor(sourceAttr, basicUserOpt)
@@ -37,7 +46,7 @@ object KeepActivityGen {
       val (firstLibrary, orgOpt) = (ktls.headOption.flatMap(ktl => libById.get(ktl.libraryId)), ktls.headOption.flatMap(ktl => orgByLibraryId.get(ktl.libraryId)))
 
       val header = sourceAttrOpt.map(_._1) match {
-        case Some(KifiAttribution(keptBy, note, users, emails, libraries, source)) =>
+        case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
           val nonKeeperRecipients = users.filter(_.id != keptBy.externalId)
           val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
           val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("added", recipientsElement, "to this discussion") else DescriptionElements("started a discussion on this page")
@@ -70,7 +79,7 @@ object KeepActivityGen {
       )
     }
 
-    val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event, userById, libById))
+    val keepEvents = events.map(event => generateKeepEvent(keep.id.get, event))
     val comments = discussionOpt.map(_.messages.map(BasicKeepEvent.fromMessage)).getOrElse(Seq.empty)
 
     val basicEvents = {
@@ -92,29 +101,35 @@ object KeepActivityGen {
     KeepActivity(latestEvent, basicEvents, numComments = discussionOpt.map(_.numMessages).getOrElse(0) + keep.note.size)
   }
 
-  def generateKeepEvent(
-    keepId: Id[Keep], event: KeepEvent,
-    userById: Map[Id[User], BasicUser], libById: Map[Id[Library], BasicLibrary])(implicit imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BasicKeepEvent = {
+  def generateKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit info: SerializationInfo, imageConfig: S3ImageConfig, idConfig: PublicIdConfiguration, airbrake: AirbrakeNotifier): BasicKeepEvent = {
     val publicEventId = CommonKeepEvent.publicId(KeepEvent.toCommonId(event.id.get))
     val (addedBy, kind, header, body) = event.eventData match {
-      case ModifyRecipients(addedBy, KeepRecipientsDiff(users, libraries, emails)) =>
-        if (!userById.contains(addedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $addedBy on keep ${keepId}, event ${event.id}")
-
-        val basicAddedBy = userById.get(addedBy)
-        val addedUserElements = users.added.flatMap(userById.get).map(fromBasicUser)
-        val addedLibElements = libraries.added.flatMap(libById.get).map(fromBasicLibrary)
-        val addedEmailElements = emails.added.map(email => fromText(email.address))
-        val addedEntities: Seq[DescriptionElement] = (addedUserElements ++ addedLibElements ++ addedEmailElements).toSeq
-
-        val header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "added", unwordsPretty(addedEntities), "to this discussion")
+      case ModifyRecipients(adder, KeepRecipientsDiff(users, libraries, emails)) =>
+        val basicAddedBy = {
+          if (!info.userById.contains(adder)) airbrake.notify(s"[activityLog] no basic user stored for user $adder on keep $keepId, event ${event.id}")
+          info.userById.get(adder)
+        }
+        val header = {
+          val userElement = basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone"))
+          val actionElement = Seq(
+            specialCaseForMovedLibrary(users, libraries, emails)
+          ).flatten.headOption.getOrElse {
+              val addedUserElements = users.added.flatMap(info.userById.get).map(fromBasicUser)
+              val addedLibElements = libraries.added.flatMap(info.libById.get).map(fromBasicLibrary)
+              val addedEmailElements = emails.added.map(email => fromText(email.address))
+              val addedEntities: Seq[DescriptionElement] = (addedUserElements ++ addedLibElements ++ addedEmailElements).toSeq
+              DescriptionElements("added", unwordsPretty(addedEntities), "to this discussion")
+            }
+          DescriptionElements(userElement, actionElement)
+        }
         val body = DescriptionElements()
 
         (basicAddedBy, KeepEventKind.ModifyRecipients, header, body)
 
       case EditTitle(editedBy, original, updated) =>
-        if (!userById.contains(editedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $editedBy on keep ${keepId}, event ${event.id}")
+        if (!info.userById.contains(editedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $editedBy on keep $keepId, event ${event.id}")
 
-        val basicAddedBy = userById.get(editedBy)
+        val basicAddedBy = info.userById.get(editedBy)
         val header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "edited the title")
         val body = DescriptionElements(ShowOriginalElement(original.getOrElse(""), updated.getOrElse("")))
 
@@ -130,5 +145,15 @@ object KeepActivityGen {
       timestamp = event.eventTime,
       source = event.source.map(src => KeepEventSource(src, url = None))
     )
+  }
+
+  private def specialCaseForMovedLibrary(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[Library]], emails: DeltaSet[EmailAddress])(implicit info: SerializationInfo): Option[DescriptionElements] = {
+    if (users.isEmpty && emails.isEmpty && libraries.added.size == 1 && libraries.removed.size == 1) for {
+      fromLib <- info.libById.get(libraries.removed.head)
+      toLib <- info.libById.get(libraries.added.head)
+    } yield {
+      DescriptionElements("moved this discussion from", fromLib, "to", toLib)
+    }
+    else None
   }
 }
