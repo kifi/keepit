@@ -48,36 +48,26 @@ class KeepInfoController @Inject() (
     }
   }
 
-  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = {
-    val start = System.currentTimeMillis()
-    UserAction.async { implicit request =>
-      TimedComputation.async {
-        val goodResult = for {
-          _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
-          fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
-            Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
-          }
-        } yield {
-          val keepIds = TimedComputation.sync {
-            db.readOnlyMaster { implicit s =>
-              val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-              keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
-            }
-          } |> { tc =>
-            if (request.userId == ryan) ryanLog.info("Retrieving the keep ids took", tc.millis, tc.range.toString())
-            tc.value
-          }
-          TimedComputation.async(keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet)).map { tc =>
-            if (request.userId == ryan) ryanLog.info("Generating keep views took", tc.millis, tc.range.toString())
-            val viewMap = tc.value
-            Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
-          }
+  def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = UserAction.async { implicit request =>
+    TimedComputation.async {
+      val goodResult = for {
+        _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
+        fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
+          Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
         }
-        goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
-      }.map { tc =>
-        if (request.userId == ryan) ryanLog.info("The whole request took", tc.millis, tc.range.toString(), "and the method was invoked at", start)
-        tc.value
+      } yield {
+        val keepIds = db.readOnlyMaster { implicit s =>
+          val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
+          keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+        }
+        keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
+          Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
+        }
       }
+      goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
+    }.map { tc =>
+      if (request.userId == ryan) ryanLog.info("getKeepStream request took", tc.millis)
+      tc.value
     }
   }
 
