@@ -40,7 +40,7 @@ object KeepEventSource {
     attribution match {
       case SlackAttribution(message, _) => Some(KeepEventSource(KeepEventSourceKind.Slack, Some(message.permalink)))
       case TwitterAttribution(tweet) => Some(KeepEventSource(KeepEventSourceKind.Twitter, Some(tweet.permalink)))
-      case KifiAttribution(_, note, _, _, _, source) => KeepEventSourceKind.fromKeepSource(source).map(src => KeepEventSource(src, None))
+      case ka: KifiAttribution => KeepEventSourceKind.fromKeepSource(ka.source).map(src => KeepEventSource(src, None))
     }
   }
 }

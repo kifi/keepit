@@ -57,7 +57,7 @@ object KeepActivityGen {
         case (TwitterAttribution(tweet), _) => tweet.text
       }
 
-      val source = sourceAttrOpt.flatMap { case (attr, bu) => KeepEventSource.fromSourceAttribution(attr) }
+      val source = sourceAttrOpt.flatMap { case (attr, _) => KeepEventSource.fromSourceAttribution(attr) }
 
       BasicKeepEvent(
         id = BasicKeepEventId.initial,
