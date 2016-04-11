@@ -426,7 +426,7 @@ class KeepCommanderImpl @Inject() (
       case (oldKeep, newKeep) =>
         db.readWrite { implicit s =>
           keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), Some(userId))
-          eventCommander.registerKeepEvent(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None)
+          eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.EditTitle(userId, oldKeep.title, newKeep.title), source, eventTime = None)
         }
     }
     result.map(_._2)

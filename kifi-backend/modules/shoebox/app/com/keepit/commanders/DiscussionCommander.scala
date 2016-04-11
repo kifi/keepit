@@ -134,7 +134,7 @@ class DiscussionCommanderImpl @Inject() (
       errs.headOption.map(fail => Future.failed(fail)).getOrElse {
         db.readWrite { implicit s =>
           keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
-          eventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
+          eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
         }
         Future.successful(Unit)
       }

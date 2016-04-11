@@ -16,7 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 @ImplementedBy(classOf[KeepEventCommanderImpl])
 trait KeepEventCommander {
-  def registerKeepEvent(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Boolean
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
+  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
 }
 
 @Singleton
@@ -30,17 +31,10 @@ class KeepEventCommanderImpl @Inject() (
     implicit val ec: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepEventCommander {
 
-  def registerKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Boolean = {
-    val isValidEvent = eventData match {
-      case ModifyRecipients(_, diff) if diff.isEmpty => false
-      case _ => true
-    }
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
+    val eventOpt = persistKeepEvent(keepId, eventData, source, eventTime)
 
-    if (isValidEvent) {
-      val time = eventTime.getOrElse(currentDateTime)
-      val event = eventRepo.save(KeepEvent(keepId = keepId, eventData = eventData, eventTime = time, source = source))
-      keepMutator.updateLastActivityAtIfLater(keepId, time)
-
+    eventOpt.map { event =>
       val usersToSendTo = ktuRepo.getAllByKeepId(keepId).map(_.userId)
       val basicEvent = keepActivityAssembler.assembleBasicKeepEvent(keepId, event)
       session.onTransactionSuccess {
@@ -50,12 +44,32 @@ class KeepEventCommanderImpl @Inject() (
         }
         broadcastKeepEvent(keepId, usersToSendTo.toSet, basicEvent)
       }
+      basicEvent
     }
 
-    isValidEvent
+    eventOpt
   }
 
-  def broadcastKeepEvent(keepId: Id[Keep], users: Set[Id[User]], event: BasicKeepEvent): Future[Unit] = {
+  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
+    val isValidEvent = eventData match {
+      case ModifyRecipients(_, diff) if diff.isEmpty => false
+      case _ => true
+    }
+
+    val event = {
+      if (!isValidEvent) None
+      else {
+        val time = eventTime.getOrElse(currentDateTime)
+        val event = eventRepo.save(KeepEvent(keepId = keepId, eventData = eventData, eventTime = time, source = source))
+        keepMutator.updateLastActivityAtIfLater(keepId, time)
+        Some(event)
+      }
+    }
+
+    event
+  }
+
+  private def broadcastKeepEvent(keepId: Id[Keep], users: Set[Id[User]], event: BasicKeepEvent): Future[Unit] = {
     Future.sequence(users.map(uid => eliza.sendKeepEvent(uid, Keep.publicId(keepId), event))).map(_ => ())
   }
 }

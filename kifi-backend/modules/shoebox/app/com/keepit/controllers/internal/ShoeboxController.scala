@@ -658,7 +658,7 @@ class ShoeboxController @Inject() (
     val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
       keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
-      if (persistKeepEvent) keepEventCommander.registerKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
+      if (persistKeepEvent) keepEventCommander.persistKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
     }
     NoContent
   }

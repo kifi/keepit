@@ -55,13 +55,13 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
           Map(userIdsToAdd.take(2) -> true, libIdsToAdd.take(4) -> false, userIdsToAdd.takeRight(2) -> true, libIdsToAdd.takeRight(4) -> false).map {
             case (ids, true) => // users
               val adding = ids.map(id => Id[User](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
+              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
               val entities = adding.map(id => fromBasicUser(basicUserById(id))).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
             case (ids, false) => // libraries
               val adding = ids.map(id => Id[Library](id.id))
-              keepEventCommander.registerKeepEvent(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
+              keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addLibraries(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
               val entities = adding.map(id => fromBasicLibrary(basicLibById(id))).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
