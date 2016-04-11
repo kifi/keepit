@@ -69,7 +69,8 @@ class KeepRepoImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
-    keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToUserRepoImpl: Provider[KeepToUserRepoImpl],
+    keepToEmailRepoImpl: Provider[KeepToEmailRepoImpl],
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
@@ -77,6 +78,8 @@ class KeepRepoImpl @Inject() (
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
   private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
+  private lazy val ktuRows = keepToUserRepoImpl.get.activeRows
+  private lazy val kteRows = keepToEmailRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -526,6 +529,13 @@ class KeepRepoImpl @Inject() (
           if k.id === ktl.keepId &&
             ktl.libraryId === targetLib
         } yield k
+      case ForUri(uri, recips) =>
+        for {
+          k <- rs if k.uriId === uri &&
+            (if (recips.libraries.isEmpty) true else ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size) &&
+            (if (recips.users.isEmpty) true else ktuRows.filter(ktu => ktu.keepId === k.id && ktu.userId.inSet(recips.users)).length === recips.users.size) &&
+            (if (recips.emails.isEmpty) true else kteRows.filter(kte => kte.keepId === k.id && kte.emailAddress.inSet(recips.emails)).length === recips.emails.size)
+        } yield k
     }
     def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>
       val fromKeep = get(fromId)
@@ -550,9 +560,10 @@ class KeepRepoImpl @Inject() (
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
     }
-    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value).list
+    def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value)
 
-    activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    val q = activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    q.list
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
