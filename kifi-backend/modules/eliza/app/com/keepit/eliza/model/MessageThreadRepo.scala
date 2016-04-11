@@ -45,12 +45,13 @@ class MessageThreadRepoImpl @Inject() (
     participants: MessageThreadParticipants,
     participantsHash: Int, // exists only in the db, will not be put into the model
     pageTitle: Option[String],
-    keepId: Id[Keep]): MessageThread = {
-    MessageThread(id, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, pageTitle, keepId)
+    keepId: Id[Keep],
+    numMessages: Option[Int]): MessageThread = {
+    MessageThread(id, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, pageTitle, keepId, numMessages getOrElse 0)
   }
   private def messageThreadToDbRow(mt: MessageThread) = {
     Some((
-      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId
+      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId, Option(mt.numMessages)
     ))
   }
 
@@ -64,7 +65,8 @@ class MessageThreadRepoImpl @Inject() (
     def participantsHash = column[Int]("participants_hash", O.NotNull)
     def pageTitle = column[Option[String]]("page_title", O.Nullable)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
+    def numMessages = column[Option[Int]]("num_messages", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId, numMessages) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 

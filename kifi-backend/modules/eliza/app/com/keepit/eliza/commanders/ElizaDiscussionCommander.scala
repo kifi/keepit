@@ -193,7 +193,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
               pageTitle = csKeep.title,
               startedBy = csKeep.owner getOrElse userId,
               participants = MessageThreadParticipants(users),
-              keepId = csKeep.id
+              keepId = csKeep.id,
+              numMessages = 0
             ))
             users.foreach(userId => userThreadRepo.intern(UserThread.forMessageThread(mt)(userId)))
             emails.foreach(email => nonUserThreadRepo.intern(NonUserThread.forMessageThread(mt)(NonUserEmailParticipant(email))))
