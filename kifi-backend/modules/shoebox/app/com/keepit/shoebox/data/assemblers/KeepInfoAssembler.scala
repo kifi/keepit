@@ -170,7 +170,7 @@ class KeepInfoAssemblerImpl @Inject() (
       }
       keepSet.toSeq.augmentWith { keepId =>
         for {
-          keep <- keepsById.get(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+          keep <- keepsById.get(keepId).filter(_.isActive).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
           permissions <- RightBias.right(permissionsByKeep.getOrElse(keepId, Set.empty)).filter(_.contains(KeepPermission.VIEW_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
           author <- sourceByKeep.get(keepId).map {
             case (attr, userOpt) => BasicAuthor(attr, userOpt)
