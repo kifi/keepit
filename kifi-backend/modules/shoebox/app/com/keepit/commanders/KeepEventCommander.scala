@@ -45,7 +45,7 @@ class KeepEventCommanderImpl @Inject() (
       val basicEvent = keepActivityAssembler.assembleBasicKeepEvent(keepId, event)
       session.onTransactionSuccess {
         eventData match {
-          case mr: ModifyRecipients => eliza.syncAddParticipants(keepId, mr, source)
+          case mr: ModifyRecipients if mr.diff.users.added.nonEmpty || mr.diff.emails.added.nonEmpty => eliza.syncAddParticipants(keepId, mr, source)
           case _ =>
         }
         broadcastKeepEvent(keepId, usersToSendTo.toSet, basicEvent)
