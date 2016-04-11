@@ -2,6 +2,7 @@ package com.keepit.shoebox.data.assemblers
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders._
+import com.keepit.commanders.gen.KeepActivityGen.SerializationInfo
 import com.keepit.commanders.gen.{ BasicLibraryGen, BasicOrganizationGen, KeepActivityGen }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.mapExtensionOps
@@ -91,13 +92,18 @@ class KeepActivityAssemblerImpl @Inject() (
       (elizaActivityOpt) <- elizaFut
       (userById, libById, orgByLibId) <- basicModelFut
     } yield {
-      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, userById, libById, orgByLibId, limit)
+      implicit val info = SerializationInfo(userById, libById, orgByLibId)
+      KeepActivityGen.generateKeepActivity(keep, sourceAttrOpt, events, elizaActivityOpt, ktls, ktus, limit)
     }
   }
 
   def assembleBasicKeepEvent(keepId: Id[Keep], event: KeepEvent)(implicit session: RSession): BasicKeepEvent = {
     val (userIds, libraries) = KeepEvent.idsInvolved(Seq(event))
-    val (usersById, libsById) = (basicUserRepo.loadAllActive(userIds), basicLibGen.getBasicLibraries(libraries))
-    KeepActivityGen.generateKeepEvent(keepId, event, usersById, libsById)
+    implicit val info = KeepActivityGen.SerializationInfo(
+      userById = basicUserRepo.loadAllActive(userIds),
+      libById = basicLibGen.getBasicLibraries(libraries),
+      orgByLibraryId = Map.empty
+    )
+    KeepActivityGen.generateKeepEvent(keepId, event)
   }
 }
