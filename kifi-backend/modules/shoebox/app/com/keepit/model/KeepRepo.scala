@@ -70,6 +70,7 @@ class KeepRepoImpl @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
     keepToUserRepoImpl: Provider[KeepToUserRepoImpl],
+    keepToEmailRepoImpl: Provider[KeepToEmailRepoImpl],
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
@@ -78,6 +79,7 @@ class KeepRepoImpl @Inject() (
 
   private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
   private lazy val ktuRows = keepToUserRepoImpl.get.activeRows
+  private lazy val kteRows = keepToEmailRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -529,11 +531,10 @@ class KeepRepoImpl @Inject() (
         } yield k
       case ForUri(uri, recips) =>
         for {
-          k <- rs if k.uriId === uri && (
-            ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size
-          ) && (
-              ktuRows.filter(ktu => ktu.keepId === k.id && ktu.userId.inSet(recips.users)).length === recips.users.size
-            )
+          k <- rs if k.uriId === uri &&
+            (if (recips.libraries.isEmpty) true else ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size) &&
+            (if (recips.users.isEmpty) true else ktuRows.filter(ktu => ktu.keepId === k.id && ktu.userId.inSet(recips.users)).length === recips.users.size) &&
+            (if (recips.emails.isEmpty) true else kteRows.filter(kte => kte.keepId === k.id && kte.emailAddress.inSet(recips.emails)).length === recips.emails.size)
         } yield k
     }
     def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>
@@ -559,9 +560,11 @@ class KeepRepoImpl @Inject() (
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
     }
-    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value).list
+    def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value)
 
-    activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    val q = activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
+    println(q.selectStatement)
+    q.list
   }
 
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {

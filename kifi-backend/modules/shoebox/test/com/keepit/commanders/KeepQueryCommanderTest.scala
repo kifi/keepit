@@ -2,9 +2,10 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.commanders.KeepQuery.Arrangement.FromOrdering
-import com.keepit.commanders.KeepQuery.ForLibrary
+import com.keepit.commanders.KeepQuery.{ ForUri, ForLibrary }
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.util.Ord
 import com.keepit.model.KeepFactoryHelper.KeepPersister
@@ -58,6 +59,33 @@ class KeepQueryCommanderTest extends Specification with ShoeboxTestInjector {
 
           // Page by id
           inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.fromId(byLAA(5))) === byLAA.drop(6).take(10)
+        }
+        1 === 1
+      }
+    }
+    "get keeps on a uri with at least the specified set of recipients" in {
+      withDb(modules: _*) { implicit injector =>
+        val uri = Id[NormalizedURI](42)
+        val (user, lib) = db.readWrite { implicit s =>
+          val user = UserFactory.user().saved
+          val lib = LibraryFactory.library().withOwner(user).saved
+          KeepFactory.keep().withURIId(uri).withLibrary(lib).withUser(user).saved
+          KeepFactory.keep().withURIId(uri).withLibrary(lib).saved
+          KeepFactory.keep().withURIId(uri).withUser(user).saved
+          KeepFactory.keep().withURIId(uri).saved
+          (user, lib)
+        }
+
+        val query = KeepQuery(
+          target = ForUri(uri, KeepRecipients.EMPTY),
+          arrangement = None,
+          paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10))
+        )
+        db.readOnlyMaster { implicit s =>
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query).length === 4
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusUser(user.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusLibrary(lib.id.get)))).length === 2
+          inject[KeepQueryCommander].getKeeps(Some(user.id.get), query.copy(target = ForUri(uri, KeepRecipients.EMPTY.plusUser(user.id.get).plusLibrary(lib.id.get)))).length === 1
         }
         1 === 1
       }
