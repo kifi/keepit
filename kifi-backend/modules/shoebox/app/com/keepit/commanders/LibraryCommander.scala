@@ -592,7 +592,7 @@ class LibraryCommanderImpl @Inject() (
   def moveAllKeepsFromLibrary(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val keeps = db.readOnlyReplica { implicit session =>
       val keepIds = ktlRepo.getAllByLibraryId(fromLibraryId).map(_.keepId).toSet
-      keepRepo.getByIds(keepIds).values.toSeq
+      keepRepo.getActiveByIds(keepIds).values.toSeq
     }
     moveKeeps(userId, toLibraryId, keeps)
   }

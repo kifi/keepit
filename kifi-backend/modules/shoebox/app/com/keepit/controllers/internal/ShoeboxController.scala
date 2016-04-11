@@ -447,7 +447,7 @@ class ShoeboxController @Inject() (
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
-    val keepById = db.readOnlyMaster { implicit s => keepRepo.getByIds(keepIds) }
+    val keepById = db.readOnlyMaster { implicit s => keepRepo.getActiveByIds(keepIds) }
     val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),

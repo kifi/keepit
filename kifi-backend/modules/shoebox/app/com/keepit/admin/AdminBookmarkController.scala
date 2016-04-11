@@ -210,7 +210,7 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
+        keepRepo.getActiveByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
         keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
@@ -232,7 +232,7 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
+        keepRepo.getActiveByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
         keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet

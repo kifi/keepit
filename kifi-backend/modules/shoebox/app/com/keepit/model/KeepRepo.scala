@@ -18,8 +18,8 @@ import scala.slick.jdbc.{ GetResult, PositionedResult }
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
-  def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep]
+  def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP!
@@ -278,22 +278,25 @@ class KeepRepoImpl @Inject() (
   }
 
   override def get(id: Id[Keep])(implicit session: RSession): Keep = {
-    keepByIdCache.getOrElse(KeepIdKey(id)) {
-      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    val cacheKeep = keepByIdCache.get(KeepIdKey(id))
+    cacheKeep.getOrElse {
+      val internalKeep = getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+      if (internalKeep.isActive) keepByIdCache.set(KeepIdKey(id), internalKeep)
+      internalKeep
     }
   }
 
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep] = {
     keepByIdCache.getOrElseOpt(KeepIdKey(id)) {
-      getCompiled(id).firstOption.filter(keep => !excludeStates.contains(keep.state))
+      getCompiled(id).firstOption.filter(_.isActive)
     }
   }
 
-  def getByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
+  def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep] = {
     keepByIdCache.bulkGetOrElse(ids.map(KeepIdKey)) { missingKeys =>
       val missingIds = missingKeys.map(_.id)
       activeRows.filter(_.id.inSet(missingIds)).list.map { k => KeepIdKey(k.id.get) -> k }.toMap
-    }.map { case (k, v) => k.id -> v }
+    }.collect { case (k, v) if v.isActive => k.id -> v }
   }
 
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
@@ -639,7 +642,7 @@ class KeepRepoImpl @Inject() (
 
     val shouldFilterByUser = filterOpt.contains(OwnKeeps)
     val keepIds = keepsAndLastActivityAt.map { case (keepId, _) => keepId }
-    val keepsById = getByIds(keepIds.toSet)
+    val keepsById = getActiveByIds(keepIds.toSet)
     keepsAndLastActivityAt.map { case (keepId, lastActivityAt) => keepsById(keepId) -> lastActivityAt }
       .filter { case (keep, _) => !shouldFilterByUser || keep.userId.contains(userId) }
   }

@@ -259,7 +259,7 @@ class PermissionCommanderImpl @Inject() (
     val libIds = librariesByKeep.values.flatten.toSet
     val libraries = libraryRepo.getActiveByIds(libIds)
     val libPermissions = getLibrariesPermissions(libIds, userIdOpt)
-    val keeps = keepRepo.getByIds(keepIds)
+    val keeps = keepRepo.getActiveByIds(keepIds)
 
     keeps.map {
       case (kId, k) =>

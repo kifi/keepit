@@ -300,7 +300,7 @@ class AdminUserController @Inject() (
           ktlRepo.getAllByKeepIds(allKeepIds).filterValues(_.exists(!_.isPrivate)).keySet
         }
       }
-      val bookmarks = keepRepo.getByIds(keepIds).values
+      val bookmarks = keepRepo.getActiveByIds(keepIds).values
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }

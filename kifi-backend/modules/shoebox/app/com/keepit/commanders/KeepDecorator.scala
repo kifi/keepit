@@ -308,7 +308,7 @@ class KeepDecoratorImpl @Inject() (
       val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
       val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
       val keepIds = direct ++ indirectViaLibraries
-      val keepsById = keepRepo.getByIds(keepIds)
+      val keepsById = keepRepo.getActiveByIds(keepIds)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       (keepsById, ktlsByKeep)
     }

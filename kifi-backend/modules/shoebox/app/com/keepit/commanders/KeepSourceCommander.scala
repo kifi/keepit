@@ -85,7 +85,7 @@ class KeepSourceCommanderImpl @Inject() (
     val keepIds = db.readOnlyMaster { implicit session => sourceAttributionRepo.getKeepIdsByAuthor(author) }
     keepIds.grouped(100).flatMap { batchedKeepIds =>
       db.readWrite { implicit s =>
-        keepRepo.getByIds(batchedKeepIds).values.collect {
+        keepRepo.getActiveByIds(batchedKeepIds).values.collect {
           case keep if !keep.userId.contains(userId) && (keep.userId.isEmpty || overwriteExistingOwner) => keepMutator.setKeepOwner(keep, userId).id.get
         }
       }
