@@ -25,7 +25,8 @@ class ElizaTasksPlugin @Inject() (
 
   override def onStop() {
     Seq(
-      keepIngestingActor
+      keepIngestingActor,
+      dataIntegrity.messageThreadByMessage
     ).foreach(_.ref ! Close)
     super.onStop()
   }
