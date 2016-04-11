@@ -89,6 +89,7 @@ var initFriendSearch = (function () {
     searchFor = searchFor || { user: true, email: true, library: false };
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
     api.port.emit('search_recipients', {q: query, n: n, exclude: excludeIds.concat(ids), searchFor: searchFor }, function (recipients) {
+      recipients = recipients || [];
       var contacts = recipients.filter(function (r) { return r.id[0] !== 'l'; });
       var libraries = recipients.filter(function (r) { return r.id[0] === 'l'; });
       var percentContacts = contacts.length / (libraries.length + contacts.length); // keep it a good mix of users + libs

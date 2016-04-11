@@ -8,10 +8,13 @@ var slackFormat = (function () {
   }
 
   // Converts link markup to plain text. If `emptyIfOnlyEntity` and the entire message is an entity, returns ''
-  function flattenLinks(message) {
+  function flattenLinks(message, truncate) {
+    truncate = (typeof truncate !== 'undefined' ? truncate : true);
     return message.replace(/<(\S*?)\|(.*?)>|<(\S*?)>/g, function (match, href, linkText, onlyHref) {
         var text = onlyHref || linkText;
-        text = text.length < 30 ? text : text.slice(0, 25) + '…';
+        if (truncate) {
+          text = text.length < 30 ? text : text.slice(0, 25) + '…';
+        }
         return text;
     });
   }
@@ -25,13 +28,18 @@ var slackFormat = (function () {
 
 
   return {
-    plain: function (message, emptyIfInsignificant) {
-      if (emptyIfInsignificant && !isSubstantial(message)) {
+    plain: function (message, options) {
+      options = options || {};
+      options.emptyIfInsignificant = options.emptyIfInsignificant || false;
+      options.truncate = (typeof options.truncate !== 'undefined' ? options.truncate : true);
+
+      if (options.emptyIfInsignificant && !isSubstantial(message)) {
         return '';
       } else {
-        return emoji.decode(flattenLinks(stripEntityBrackets(message)));
+        return emoji.decode(flattenLinks(stripEntityBrackets(message), options.truncate));
       }
-    }
+    },
+
     // todo: html(message), returns HTML that makes clickable things clickable
   };
 })();

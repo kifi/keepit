@@ -282,7 +282,7 @@ k.panes.notices = k.panes.notices || function () {
 
       var message;
       if (notice.extra.keep.attr && notice.extra.keep.attr.teamId) { // Heuristic to identify Slack
-        message = slackFormat.plain(notice.extra.keep.attr.message.text, false);
+        message = slackFormat.plain(notice.extra.keep.attr.message.text);
       } else {
         message = 'New keep in ' + notice.extra.library.name;
       }

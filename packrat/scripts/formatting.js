@@ -221,8 +221,9 @@ var formatMessage = (function () {
       }
       var escapedUri = Mustache.escape(uri);
       var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
+      var isTruncated = (escapedUri.length > 40);
       parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
-        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" onerror="this.outerHTML=this.src" src="' + escapedUrl + '"/>' : escapedUri);
+        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" onerror="this.outerHTML=this.src" src="' + escapedUrl + '"/>' : (isTruncated ? escapedUrl.slice(0, 40) + '…' : escapedUri));
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {
@@ -310,7 +311,7 @@ function formatLocalDate() {
 
 function formatParticipant(participant) {
   participant.isEmail = participant.kind === 'email' || participant.email;
-  participant.isUser = !participant.isEmail && (!participant.kind || participant.kind === 'user');
+  participant.isUser = !participant.isEmail && (!participant.kind || participant.kind === 'user' || participant.kind === 'kifi');
   participant.isLibrary = participant.kind === 'library';
 
   var id = participant.id || participant.email;

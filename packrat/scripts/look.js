@@ -150,7 +150,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
       if (this.classList.contains('kifi-compose-draft')) {
         return 'you';
       } else {
-        return $(this).find('.kifi-message-name').text().trim().replace(/ .*/, '');
+        return $(this).find('.kifi-message-sent-header-item[data-kind="author"]').text().trim().replace(/ .*/, '');
       }
     })[0];
     var self = this;
