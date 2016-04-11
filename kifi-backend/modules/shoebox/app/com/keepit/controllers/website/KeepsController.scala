@@ -142,7 +142,7 @@ class KeepsController @Inject() (
       case Success(keepId) =>
         db.readOnlyMaster { implicit s =>
           if (permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.EDIT_KEEP))
-            keepRepo.getOption(keepId)
+            keepRepo.getActive(keepId)
           else None
         } match {
           case None =>

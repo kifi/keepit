@@ -165,7 +165,7 @@ class KeepCommanderImpl @Inject() (
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], maxMessagesShown: Int, authTokenOpt: Option[String]): Future[KeepInfo] = {
     val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
-        { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
+        { id: Id[Keep] => keepRepo.getActive(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
       )
     } match {
       case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
@@ -416,7 +416,7 @@ class KeepCommanderImpl @Inject() (
     val result = db.readWrite { implicit s =>
       def canEdit(keepId: Id[Keep]) = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.EDIT_KEEP)
       for {
-        oldKeep <- keepRepo.getOption(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
+        oldKeep <- keepRepo.getActive(keepId).withLeft(KeepFail.KEEP_NOT_FOUND: KeepFail)
         _ <- RightBias.unit.filter(_ => canEdit(oldKeep.id.get), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
       } yield {
         (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))

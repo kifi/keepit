@@ -18,7 +18,7 @@ import scala.slick.jdbc.{ GetResult, PositionedResult }
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def saveAndIncrementSequenceNumber(model: Keep)(implicit session: RWSession): Keep // more expensive and deadlock-prone than `save`
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep]
   def getActiveByIds(ids: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Keep]
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
@@ -278,14 +278,17 @@ class KeepRepoImpl @Inject() (
   }
 
   override def get(id: Id[Keep])(implicit session: RSession): Keep = {
-    keepByIdCache.getOrElse(KeepIdKey(id)) {
-      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+    val cacheKeep = keepByIdCache.get(KeepIdKey(id))
+    cacheKeep.getOrElse {
+      val internalKeep = getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
+      if (internalKeep.isActive) keepByIdCache.set(KeepIdKey(id), internalKeep)
+      internalKeep
     }
   }
 
-  def getOption(id: Id[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+  def getActive(id: Id[Keep])(implicit session: RSession): Option[Keep] = {
     keepByIdCache.getOrElseOpt(KeepIdKey(id)) {
-      getCompiled(id).firstOption.filter(keep => !excludeStates.contains(keep.state))
+      getCompiled(id).firstOption.filter(_.isActive)
     }
   }
 
