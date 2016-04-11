@@ -234,7 +234,8 @@ class MessagingCommanderImpl @Inject() (
               pageTitle = titleOpt,
               startedBy = from,
               participants = mtParticipants,
-              keepId = csKeep.id
+              keepId = csKeep.id,
+              numMessages = 0
             ))
             (thread, true)
           }
@@ -441,7 +442,7 @@ class MessagingCommanderImpl @Inject() (
         db.readWrite { implicit s => messageRepo.updateUriId(message, nUriId) }
       }
     }
-    messagingAnalytics.sentMessage(from, message, thread, isNew, context)
+    messagingAnalytics.sentMessage(message, thread, isNew, context)
 
     (thread, message)
   }

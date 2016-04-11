@@ -36,6 +36,7 @@ trait MessageRepo extends Repo[ElizaMessage] with SeqNumberFunction[ElizaMessage
 
   // PSA: please just use this method going forward, it has the cleanest API
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount
+  def countByKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getByKeepBefore(keepId: Id[Keep], fromOpt: Option[DateTime], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
   def getAllByKeep(keepId: Id[Keep])(implicit session: RSession): Seq[ElizaMessage]
@@ -177,6 +178,12 @@ class MessageRepoImpl @Inject() (
   def countByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): MessageCount = {
     val (total, unread) = (getByThreadHelper(keepId, None, dir).length, getByThreadHelper(keepId, fromId, dir).length).run
     MessageCount(total, unread)
+  }
+
+  def countByKeeps(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
+    activeRows.filter(_.keepId.inSet(keepIds)).groupBy(_.keepId).map {
+      case (kId, msgs) => kId -> msgs.length
+    }.list.toMap
   }
   def getByKeep(keepId: Id[Keep], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
     if (limit <= 0) Seq.empty
