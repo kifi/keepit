@@ -123,7 +123,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     }.toMap
     Future.successful(activityByKeepId)
   }
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData.EditTitle, source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSourceKind]): Future[Unit] = {
     keepEvents += (keepId -> (keepEvents(keepId) :+ crossServiceMessageFromEvent(keepId, event, source)))
     Future.successful(())
   }
