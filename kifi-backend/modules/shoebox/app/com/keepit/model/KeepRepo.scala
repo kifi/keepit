@@ -563,7 +563,6 @@ class KeepRepoImpl @Inject() (
     def pageThroughOrderedRows(rs: Rows) = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value)
 
     val q = activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
-    println(q.selectStatement)
     q.list
   }
 
