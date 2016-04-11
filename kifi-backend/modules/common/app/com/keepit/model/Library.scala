@@ -176,7 +176,7 @@ object SortDirection extends Enumerator[SortDirection] {
   case object DESCENDING extends SortDirection("desc")
   val all = _all.toSet
   def fromStr(str: String): Option[SortDirection] = all.find(_.value == str)
-  def apply(str: String) = fromStr(str).get
+  def apply(str: String) = fromStr(str).getOrElse(throw new Exception(s"could not extract sort direction from $str"))
 
   implicit val format: Format[SortDirection] = EnumFormat.format(fromStr, _.value)
 

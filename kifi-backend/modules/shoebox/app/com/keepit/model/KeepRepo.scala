@@ -1,7 +1,7 @@
 package com.keepit.model
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepOrdering, KeepQuery, LibraryMetadataCache, LibraryMetadataKey }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.commanders.{ KeepQuery, LibraryMetadataCache }
 import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -10,8 +10,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import org.joda.time.DateTime
 import com.keepit.model.FeedFilter._
+import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult }
 
@@ -516,6 +516,7 @@ class KeepRepoImpl @Inject() (
     import KeepQuery._
     type Rows = Query[KeepTable, Keep, Seq]
     val arrangement = query.arrangement.getOrElse(Arrangement.GLOBAL_DEFAULT)
+    val paging = query.paging
 
     def filterByTarget(rs: Rows): Rows = query.target match {
       case ForLibrary(targetLib) =>
@@ -526,7 +527,7 @@ class KeepRepoImpl @Inject() (
             ktl.libraryId === targetLib
         } yield k
     }
-    def filterByTime(rs: Rows): Rows = query.fromId.fold(rs) { fromId =>
+    def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>
       val fromKeep = get(fromId)
       arrangement.ordering match {
         case KeepOrdering.LAST_ACTIVITY_AT =>
@@ -549,7 +550,7 @@ class KeepRepoImpl @Inject() (
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.ASCENDING) => rs.sortBy(r => (r.keptAt asc, r.id asc))
       case Arrangement(KeepOrdering.KEPT_AT, SortDirection.DESCENDING) => rs.sortBy(r => (r.keptAt desc, r.id desc))
     }
-    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(query.offset.value).take(query.limit.value).list
+    def pageThroughOrderedRows(rs: Rows): Seq[Id[Keep]] = rs.map(_.id).drop(paging.offset.value).take(paging.limit.value).list
 
     activeRows |> filterByTarget |> filterByTime |> orderByTime |> pageThroughOrderedRows
   }
