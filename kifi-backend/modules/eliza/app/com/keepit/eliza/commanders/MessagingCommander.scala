@@ -313,27 +313,31 @@ class MessagingCommanderImpl @Inject() (
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
+  private def sendMessage(from: MessageSender, initialThread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     from match {
       case MessageSender.User(id) =>
-        if (!thread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
+        if (!initialThread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.NonUser(nup) =>
-        if (!thread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+        if (!initialThread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${initialThread.id.get}")
       case MessageSender.System =>
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
 
-    log.info(s"Sending message from $from to ${thread.participants}")
-    val message = db.readWrite { implicit session =>
-      messageRepo.save(ElizaMessage(
-        keepId = thread.keepId,
+    log.info(s"Sending message from $from to ${initialThread.participants}")
+    val (message, thread) = db.readWrite { implicit session =>
+      val msg = messageRepo.save(ElizaMessage(
+        keepId = initialThread.keepId,
         from = from,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(thread.url)),
-        sentOnUriId = Some(thread.uriId)
-      )) tap { msg => userThreadRepo.registerMessage(msg) }
+        sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(initialThread.url)),
+        sentOnUriId = Some(initialThread.uriId)
+      ))
+      val thread = threadRepo.save(initialThread.withNumMessages(initialThread.numMessages + 1))
+      userThreadRepo.registerMessage(msg)
+      (msg, thread)
     }
+
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
