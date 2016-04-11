@@ -132,7 +132,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         // make sure things are broken
         db.readOnlyMaster { implicit session =>
           libraryRepo.get(lib.id.get).state === LibraryStates.INACTIVE
-          keepRepo.getByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.ACTIVE }
+          keepRepo.getActiveByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.ACTIVE }
           ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.ACTIVE }
           ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.ACTIVE }
         }
@@ -143,7 +143,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         // Make sure they're fixed
         db.readOnlyMaster { implicit session =>
           libraryRepo.get(lib.id.get).state === LibraryStates.INACTIVE
-          keepRepo.getByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.INACTIVE }
+          keepRepo.getActiveByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.INACTIVE }
           ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.INACTIVE }
           ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.INACTIVE } // TODO(ryan): keepscussions should make this part fail
         }

@@ -321,7 +321,7 @@ class SlackPushingActor @Inject() (
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
     val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
-      val keepById = keepRepo.getByIds(changedKeepIds)
+      val keepById = keepRepo.getActiveByIds(changedKeepIds)
       val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
       changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
     }

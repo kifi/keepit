@@ -83,7 +83,7 @@ class LibraryInfoCommanderImpl @Inject() (
     if (limit <= 0) Seq.empty
     else db.readOnlyReplica { implicit s =>
       val keepIds = ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit))
-      val keepsById = keepRepo.getByIds(keepIds.toSet)
+      val keepsById = keepRepo.getActiveByIds(keepIds.toSet)
       keepIds.flatMap(keepsById.get)
     }
   }
@@ -193,7 +193,7 @@ class LibraryInfoCommanderImpl @Inject() (
               case _ =>
             }
             val keepIds = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown))
-            val keepsById = keepRepo.getByIds(keepIds.toSet)
+            val keepsById = keepRepo.getActiveByIds(keepIds.toSet)
             keepIds.flatMap(keepsById.get)
           }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, maxMessagesShown, sanitizeUrls)

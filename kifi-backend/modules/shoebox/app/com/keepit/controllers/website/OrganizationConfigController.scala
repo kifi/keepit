@@ -85,7 +85,7 @@ class OrganizationConfigController @Inject() (
       do {
         val keepIds = keepToLibraryRepo.getByOrganizationId(request.orgId, drop = pos, take = batchSize).map(_.keepId)
         if (keepIds.nonEmpty) {
-          val blacklisted = keepRepo.getByIds(keepIds.toSet).values.filter { keep =>
+          val blacklisted = keepRepo.getActiveByIds(keepIds.toSet).values.filter { keep =>
             keep.source == KeepSource.slack && SlackIngestingBlacklist.blacklistedUrl(keep.url, blacklist)
           }.toSeq
           blacklistedKeeps ++= blacklisted

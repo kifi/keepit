@@ -101,7 +101,7 @@ class KeepInfoAssemblerImpl @Inject() (
 
   private def getKeepsAndConnections(keepIds: Set[Id[Keep]]): KeepsAndConnections = {
     db.readOnlyMaster { implicit s =>
-      val keepsById = keepRepo.getByIds(keepIds)
+      val keepsById = keepRepo.getActiveByIds(keepIds)
       val ktlsByKeep = ktlRepo.getAllByKeepIds(keepIds)
       val ktusByKeep = ktuRepo.getAllByKeepIds(keepIds)
       val ktesByKeep = kteRepo.getAllByKeepIds(keepIds)
