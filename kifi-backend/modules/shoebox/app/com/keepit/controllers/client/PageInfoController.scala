@@ -1,7 +1,8 @@
 package com.keepit.controllers.client
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ PageCommander, KeepCommander }
+import com.keepit.commanders.KeepQuery.ForUri
+import com.keepit.commanders.{ KeepQuery, KeepQueryCommander, PageCommander, KeepCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.core.tryExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -28,7 +29,7 @@ class PageInfoController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   uriInterner: NormalizedURIInterner,
-  pageCommander: PageCommander,
+  queryCommander: KeepQueryCommander,
   keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
   implicit val airbrake: AirbrakeNotifier,
@@ -41,14 +42,23 @@ class PageInfoController @Inject() (
       uriInterner.getByUri(url).map(_.id.get)
     }
     uriOpt.fold(Future.successful(NewKeepInfosForPage.empty)) { uriId =>
+      val query = KeepQuery(
+        target = ForUri(uriId, recipients),
+        paging = KeepQuery.Paging(fromId = None, offset = Offset(0), limit = Limit(10)),
+        arrangement = None
+      )
       for {
-        keepSet <- pageCommander.getVisibleKeepsByUrlAndRecipients(viewer, uriId, recipients)
-        pageInfo <- keepInfoAssembler.assemblePageInfos(viewer, Set(uriId)).map(_.get(uriId))
-        validKeepInfos <- keepInfoAssembler.assembleKeepInfos(viewer, keepSet).map(_.flatMapValues(_.getRight))
+        keepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(viewer, query) }
+        (pageInfo, keepInfos) <- {
+          // Launch these in parallel
+          val pageInfoFut = keepInfoAssembler.assemblePageInfos(viewer, Set(uriId)).map(_.get(uriId))
+          val keepInfosFut = keepInfoAssembler.assembleKeepInfos(viewer, keepIds.toSet)
+          for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
+        }
       } yield {
         NewKeepInfosForPage(
           page = pageInfo,
-          keeps = validKeepInfos.traverseByKey
+          keeps = keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
         )
       }
     }

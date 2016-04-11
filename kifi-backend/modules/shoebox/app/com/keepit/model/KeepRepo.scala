@@ -69,7 +69,7 @@ class KeepRepoImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     keepToLibraryRepoImpl: Provider[KeepToLibraryRepoImpl],
-    keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToUserRepoImpl: Provider[KeepToUserRepoImpl],
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
@@ -77,6 +77,7 @@ class KeepRepoImpl @Inject() (
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
   private lazy val ktlRows = keepToLibraryRepoImpl.get.activeRows
+  private lazy val ktuRows = keepToUserRepoImpl.get.activeRows
   import db.Driver.simple._
 
   type First = (Option[Id[Keep]], // id
@@ -525,6 +526,14 @@ class KeepRepoImpl @Inject() (
           ktl <- ktlRows
           if k.id === ktl.keepId &&
             ktl.libraryId === targetLib
+        } yield k
+      case ForUri(uri, recips) =>
+        for {
+          k <- rs if k.uriId === uri && (
+            ktlRows.filter(ktl => ktl.keepId === k.id && ktl.libraryId.inSet(recips.libraries)).length === recips.libraries.size
+          ) && (
+              ktuRows.filter(ktu => ktu.keepId === k.id && ktu.userId.inSet(recips.users)).length === recips.users.size
+            )
         } yield k
     }
     def filterByTime(rs: Rows): Rows = paging.fromId.fold(rs) { fromId =>

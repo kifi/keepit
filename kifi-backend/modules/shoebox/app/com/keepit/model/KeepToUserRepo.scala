@@ -72,7 +72,8 @@ class KeepToUserRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToUserTable(tag)
   initTable()
 
-  private def activeRows = rows.filter(_.state === KeepToUserStates.ACTIVE)
+  def activeRows = rows.filter(_.state === KeepToUserStates.ACTIVE)
+
   def allActive(implicit session: RSession): Seq[KeepToUser] = activeRows.list
 
   private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
