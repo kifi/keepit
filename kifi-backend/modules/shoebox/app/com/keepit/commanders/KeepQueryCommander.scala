@@ -13,25 +13,50 @@ import com.keepit.model._
 import play.api.libs.json.{ Format, Json }
 import play.api.mvc.QueryStringBindable
 
-import scala.util.Try
+import scala.util.{ Success, Try }
 
 case class KeepQuery(
     target: KeepQuery.Target,
     arrangement: Option[KeepQuery.Arrangement] = None,
-    fromId: Option[Id[Keep]],
-    offset: Offset,
-    limit: Limit) {
+    paging: Option[KeepQuery.Paging] = None) {
   def withArrangement(newArrangement: KeepQuery.Arrangement) = this.copy(arrangement = Some(newArrangement))
+  def withPaging(newPaging: KeepQuery.Paging) = this.copy(paging = Some(newPaging))
 }
 
 object KeepQuery {
   sealed abstract class Target
   case class ForLibrary(libId: Id[Library]) extends Target
 
-  case class Arrangement(ordering: KeepOrdering, direction: SortDirection)
+  final case class Arrangement(ordering: KeepOrdering, direction: SortDirection)
   object Arrangement {
     implicit val format: Format[Arrangement] = Json.format[Arrangement]
     val GLOBAL_DEFAULT = Arrangement(KeepOrdering.LAST_ACTIVITY_AT, SortDirection.DESCENDING)
+    def fromQueryString(qs: Map[String, Seq[String]]): Try[Option[Arrangement]] = {
+      for {
+        ord <- qs.get("orderBy").flatMap(_.headOption).fold[Try[Option[KeepOrdering]]](Success(None)) { ordStr => Try(Some(KeepOrdering(ordStr))) }
+        dir <- qs.get("dir").flatMap(_.headOption).fold[Try[Option[SortDirection]]](Success(None)) { dirStr => Try(Some(SortDirection(dirStr))) }
+      } yield (ord, dir) match {
+        case (None, None) => None
+        case (Some(o), None) => Some(Arrangement(o, GLOBAL_DEFAULT.direction))
+        case (None, Some(d)) => Some(Arrangement(GLOBAL_DEFAULT.ordering, d))
+        case (Some(o), Some(d)) => Some(Arrangement(o, d))
+      }
+    }
+  }
+
+  final case class Paging(fromId: Option[Id[Keep]], offset: Offset, limit: Limit)
+  object Paging {
+    val DEFAULT_LIMIT = 10
+    val GLOBAL_DEFAULT = Paging(fromId = None, offset = Offset(0), limit = Limit(10))
+    def fromQueryString(qs: Map[String, Seq[String]])(implicit publicIdConfig: PublicIdConfiguration): Try[Paging] = {
+      for {
+        fromId <- qs.get("fromId").flatMap(_.headOption).filter(_.nonEmpty).fold[Try[Option[Id[Keep]]]](Success(None)) { pubKeepId =>
+          Keep.decodePublicIdStr(pubKeepId).map(Some(_))
+        }
+        offset <- qs.get("offset").flatMap(_.headOption).fold[Try[Offset]](Success(Offset(0))) { off => Try(Offset(off.toLong)) }
+        limit <- qs.get("limit").flatMap(_.headOption).fold[Try[Limit]](Success(Limit(DEFAULT_LIMIT))) { lim => Try(Limit(lim.toLong)) }
+      } yield Paging(fromId, offset, limit)
+    }
   }
 }
 
@@ -43,7 +68,7 @@ object KeepOrdering extends Enumerator[KeepOrdering] {
 
   val all = _all
   def fromStr(str: String): Option[KeepOrdering] = all.find(_.value == str)
-  def apply(str: String): KeepOrdering = fromStr(str).get
+  def apply(str: String): KeepOrdering = fromStr(str).getOrElse(throw new Exception(s"could not extract keep ordering from $str"))
 
   implicit val format: Format[KeepOrdering] = EnumFormat.format(fromStr, _.value)
 

@@ -41,6 +41,7 @@ object LibraryFail {
   val INVALID_LIBRARY_ID = LibraryFail(BAD_REQUEST, "invalid_library_id")
   val INVALID_KEEP_ID = LibraryFail(BAD_REQUEST, "invalid_keep_id")
   val INSUFFICIENT_PERMISSIONS = LibraryFail(FORBIDDEN, "insufficient_permissions")
+  val MALFORMED_INPUT = LibraryFail(BAD_REQUEST, "malformed_input")
 }
 
 case class ExternalLibraryInitialValues(

@@ -30,12 +30,11 @@ class LibraryKeepsInfoController @Inject() (
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def getKeepsInLibrary(libPubId: PublicId[Library], fromPubKeepIdOpt: Option[String]) = MaybeUserAction.async { implicit request =>
+  def getKeepsInLibrary(libPubId: PublicId[Library]) = MaybeUserAction.async { implicit request =>
     val resultIfEverythingWentWell = for {
       libId <- Library.decodePublicId(libPubId).toOption.withLeft(LibraryFail.INVALID_LIBRARY_ID: LibraryFail)
-      fromIdOpt <- fromPubKeepIdOpt.filter(_.nonEmpty).fold[RightBias[LibraryFail, Option[Id[Keep]]]](RightBias.right(None)) { pubKeepId =>
-        Keep.decodePublicIdStr(pubKeepId).airbrakingOption.withLeft(LibraryFail.INVALID_KEEP_ID).map(Some(_))
-      }
+      arrangementOpt <- KeepQuery.Arrangement.fromQueryString(request.queryString).toOption.withLeft(LibraryFail.MALFORMED_INPUT)
+      paging <- KeepQuery.Paging.fromQueryString(request.queryString).toOption.withLeft(LibraryFail.MALFORMED_INPUT)
       permissions = db.readOnlyMaster { implicit s =>
         permissionCommander.getLibraryPermissions(libId, request.userIdOpt)
       }
@@ -44,10 +43,8 @@ class LibraryKeepsInfoController @Inject() (
       val keepIds = db.readOnlyMaster { implicit s =>
         keepQueryCommander.getKeeps(request.userIdOpt, KeepQuery(
           target = KeepQuery.ForLibrary(libId),
-          arrangement = None,
-          fromId = fromIdOpt,
-          offset = Offset(0),
-          limit = Limit(10)
+          arrangement = arrangementOpt,
+          paging = Some(paging)
         ))
       }
       keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
