@@ -293,7 +293,7 @@ class AdminBookmarksController @Inject() (
     val chunkSize = 100
     val numPages = limit / chunkSize
     val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
-      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, page * chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
+      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
       def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
       val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
