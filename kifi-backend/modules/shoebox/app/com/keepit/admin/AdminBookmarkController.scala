@@ -356,7 +356,7 @@ class AdminBookmarksController @Inject() (
                   keepId = msg.keep,
                   eventData = eventData,
                   eventTime = msg.sentAt,
-                  source = KeepEventSourceKind.fromMessageSource(msg.source),
+                  source = KeepEventSource.fromMessageSource(msg.source),
                   messageId = Some(msg.id)
                 )
                 Try(db.readWrite(implicit s => keepEventRepo.save(event))).failed.map {

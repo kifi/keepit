@@ -139,7 +139,7 @@ class KeepMutationController @Inject() (
   }
 
   private object EditTitleRequest {
-    final case class EditTitleRequest(newTitle: String, source: KeepEventSourceKind)
+    final case class EditTitleRequest(newTitle: String, source: KeepEventSource)
     implicit val reads = Json.reads[EditTitleRequest]
     val schemaHelper = json.schemaHelper(reads)
   }
