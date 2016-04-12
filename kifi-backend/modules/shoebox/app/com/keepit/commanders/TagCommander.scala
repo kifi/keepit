@@ -40,10 +40,6 @@ class TagCommanderImpl @Inject() (
     collectionRepo.count(userId)
   }
 
-  def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag]) = {
-
-  }
-
   // todo: Plug in KeepTag.
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection] = {
     db.readOnlyMaster { implicit s =>
