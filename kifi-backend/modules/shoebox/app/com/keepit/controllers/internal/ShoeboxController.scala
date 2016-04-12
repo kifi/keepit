@@ -654,7 +654,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(csKeep))
   }
 
-  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = Action(parse.tolerantJson) { request =>
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = Action(parse.tolerantJson) { request =>
     val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
       keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))

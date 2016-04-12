@@ -104,12 +104,12 @@ object KeepRecipientsDiff {
     (__ \ 'emails).formatNullable[DeltaSet[EmailAddress]].inmap[DeltaSet[EmailAddress]](_.getOrElse(DeltaSet.empty), Some(_).filter(emails => emails.added.nonEmpty || emails.removed.nonEmpty))
   )(KeepRecipientsDiff.apply, unlift(KeepRecipientsDiff.unapply))
 }
-case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSourceKind])
+case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSource])
 object ExternalKeepRecipientsDiff {
   implicit val reads: Reads[ExternalKeepRecipientsDiff] = (
     (__ \ 'users).readNullable[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'libraries).readNullable[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'emails).readNullable[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
-    (__ \ 'source).readNullable[KeepEventSourceKind]
+    (__ \ 'source).readNullable[KeepEventSource]
   )(ExternalKeepRecipientsDiff.apply _)
 }

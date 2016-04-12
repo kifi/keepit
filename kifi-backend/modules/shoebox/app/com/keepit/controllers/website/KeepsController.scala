@@ -127,7 +127,7 @@ class KeepsController @Inject() (
     val edit = for {
       keepId <- Keep.decodePublicId(pubId).toOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
       title <- (request.body \ "title").asOpt[String].withLeft(KeepFail.COULD_NOT_PARSE: KeepFail)
-      editedKeep <- keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent))
+      editedKeep <- keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent))
     } yield editedKeep
 
     edit.fold(

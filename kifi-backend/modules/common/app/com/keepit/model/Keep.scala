@@ -14,7 +14,6 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.{ BasicAuthor }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
