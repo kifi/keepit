@@ -3,6 +3,8 @@ package com.keepit.controllers.client
 import com.google.inject.Inject
 import com.keepit.commanders.KeepQuery.ForUri
 import com.keepit.common.json
+import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.performance.Stopwatch
 import com.keepit.common.util.RightBias
 import com.keepit.common.util.RightBias._
 import com.keepit.commanders.{ KeepQuery, KeepQueryCommander }
@@ -17,7 +19,9 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
 import com.keepit.shoebox.data.keep.NewKeepInfosForPage
-import play.api.libs.json.{ Writes, JsString, Reads, Json }
+import org.apache.commons.lang3.RandomStringUtils
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.api.mvc.Result
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -37,9 +41,11 @@ class PageInfoController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def getKeepInfosForPage(viewer: Id[User], url: String, recipients: KeepRecipients): Future[NewKeepInfosForPage] = {
+    val stopwatch = new Stopwatch(s"[PIC-PAGE-${RandomStringUtils.randomAlphanumeric(5)}]")
     val uriOpt = db.readOnlyReplica { implicit s =>
       uriInterner.getByUri(url).map(_.id.get)
     }
+    stopwatch.logTimeWith("uri_retrieved")
     uriOpt.fold(Future.successful(NewKeepInfosForPage.empty)) { uriId =>
       val query = KeepQuery(
         target = ForUri(uriId, recipients.plusUser(viewer)), // N.B. this `plusUser` is the only thing limiting visibility, be careful when messing around here
@@ -48,6 +54,7 @@ class PageInfoController @Inject() (
       )
       for {
         keepIds <- db.readOnlyReplicaAsync { implicit s => queryCommander.getKeeps(Some(viewer), query) }
+        _ = stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
         (pageInfo, keepInfos) <- {
           // Launch these in parallel
           val pageInfoFut = keepInfoAssembler.assemblePageInfos(Some(viewer), Set(uriId)).map(_.get(uriId))
@@ -55,6 +62,7 @@ class PageInfoController @Inject() (
           for (p <- pageInfoFut; k <- keepInfosFut) yield (p, k)
         }
       } yield {
+        stopwatch.logTimeWith("done")
         NewKeepInfosForPage(
           page = pageInfo,
           keeps = keepIds.flatMap(kId => keepInfos.get(kId).flatMap(_.getRight))
@@ -69,7 +77,12 @@ class PageInfoController @Inject() (
       users: Set[ExternalId[User]],
       libraries: Set[PublicId[Library]],
       emails: Set[EmailAddress])
-    implicit val inputReads: Reads[GetKeepsByUriAndRecipients] = Json.reads[GetKeepsByUriAndRecipients]
+    implicit val inputReads: Reads[GetKeepsByUriAndRecipients] = (
+      (__ \ 'url).read[String] and
+      (__ \ 'users).readNullable[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
+      (__ \ 'libraries).readNullable[Set[PublicId[Library]]].map(_ getOrElse Set.empty) and
+      (__ \ 'emails).readNullable[Set[EmailAddress]].map(_ getOrElse Set.empty)
+    )(GetKeepsByUriAndRecipients.apply _)
     val schema = json.schemaHelper(inputReads)
     val outputWrites: Writes[NewKeepInfosForPage] = NewKeepInfosForPage.writes
   }
