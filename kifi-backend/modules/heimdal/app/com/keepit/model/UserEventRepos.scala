@@ -174,15 +174,12 @@ class UserAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[
 }
 
 class UserExperimentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
-  private val desiredFields = Set("userStatus")
   def isDefinedAt(userEvent: UserEvent) = {
-    desiredFields.exists(!userEvent.context.data.contains(_))
+    HeimdalContextBuilder.experimentFields.exists(!userEvent.context.data.contains(_))
   }
 
   def apply(userEvent: UserEvent) = shoeboxClient.getUserExperiments(userEvent.userId).map { experiments =>
-    Seq(
-      "userStatus" -> ContextStringData(UserExperimentType.getUserStatus(experiments.toSet))
-    )
+    HeimdalContextBuilder.getExperimentFields(experiments.toSet).toSeq
   }
 }
 
