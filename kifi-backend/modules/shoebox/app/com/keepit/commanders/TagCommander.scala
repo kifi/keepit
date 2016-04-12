@@ -16,10 +16,12 @@ import scala.concurrent.ExecutionContext
 /* Does NOT check permissions to edit */
 @ImplementedBy(classOf[TagCommanderImpl])
 trait TagCommander {
+  def getTagsForKeep(keepId: Id[Keep])(implicit session: RSession): Seq[Hashtag]
   def getTagsForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
   def getCountForUser(userId: Id[User])(implicit session: RSession): Int
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection]
   def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
+  def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int
 }
 
 class TagCommanderImpl @Inject() (
@@ -38,6 +40,10 @@ class TagCommanderImpl @Inject() (
     collectionRepo.count(userId)
   }
 
+  def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag]) = {
+
+  }
+
   // todo: Plug in KeepTag.
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection] = {
     db.readOnlyMaster { implicit s =>
@@ -48,6 +54,8 @@ class TagCommanderImpl @Inject() (
       }
     }.map { case (collectionSummary, keepCount) => FakedBasicCollection.fromTag(collectionSummary.name, Some(keepCount)) }
   }
+
+  def getTagsForKeep(keepId: Id[Keep])(implicit session: RSession): Seq[Hashtag] = getTagsForKeeps(Seq(keepId))(session)(keepId)
 
   def getTagsForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]] = {
     val combined = mutable.HashMap[Id[Keep], Seq[Hashtag]]().withDefaultValue(Seq.empty)
@@ -86,6 +94,12 @@ class TagCommanderImpl @Inject() (
     }
 
     ktRemovals + colRemovals
+  }
+
+  // Primarily useful when unkeeping.
+  def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int = {
+    val tags = getTagsForKeeps(keepIds).values.flatten
+    removeTagsFromKeeps(keepIds, tags)
   }
 
 }
