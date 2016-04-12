@@ -9,12 +9,14 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
+import com.keepit.common.performance.Stopwatch
 import com.keepit.common.time._
 import com.keepit.common.util.{ TimedComputation, RightBias }
 import com.keepit.common.util.RightBias.FromOption
 import com.keepit.model._
 import com.keepit.shoebox.data.assemblers.{ KeepActivityAssembler, KeepInfoAssembler }
 import com.keepit.slack.{ InhouseSlackClient, InhouseSlackChannel }
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -49,26 +51,25 @@ class KeepInfoController @Inject() (
   }
 
   def getKeepStream(fromPubIdOpt: Option[String], limit: Int) = UserAction.async { implicit request =>
-    TimedComputation.async {
-      val goodResult = for {
-        _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
-        fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
-          Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
-        }
-      } yield {
-        val keepIds = db.readOnlyMaster { implicit s =>
-          val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
-          keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
-        }
-        keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
-          Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
-        }
+    val stopwatch = new Stopwatch(s"[KIC-STREAM-${RandomStringUtils.randomAlphanumeric(5)}]")
+    val goodResult = for {
+      _ <- RightBias.unit.filter(_ => limit < 100, KeepFail.LIMIT_TOO_LARGE: KeepFail)
+      fromIdOpt <- fromPubIdOpt.filter(_.nonEmpty).fold[RightBias[KeepFail, Option[Id[Keep]]]](RightBias.right(None)) { pubId =>
+        Keep.decodePublicIdStr(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail).map(Some(_))
       }
-      goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
-    }.map { tc =>
-      if (request.userId == ryan) ryanLog.info("getKeepStream request took", tc.millis)
-      tc.value
+    } yield {
+      stopwatch.logTimeWith("input_decoded")
+      val keepIds = db.readOnlyMaster { implicit s =>
+        val ugh = fromIdOpt.map(kId => keepRepo.get(kId).externalId) // I'm really sad about this external id right now :(
+        keepRepo.getRecentKeepsByActivity(request.userId, limit = limit, beforeIdOpt = ugh, afterIdOpt = None, filterOpt = None).map(_._1.id.get)
+      }
+      stopwatch.logTimeWith(s"query_complete_n_${keepIds.length}")
+      keepInfoAssembler.assembleKeepViews(request.userIdOpt, keepSet = keepIds.toSet).map { viewMap =>
+        stopwatch.logTimeWith("done")
+        Ok(Json.obj("keeps" -> keepIds.flatMap(kId => viewMap.get(kId).flatMap(_.getRight))))
+      }
     }
+    goodResult.getOrElse { fail => Future.successful(fail.asErrorResponse) }
   }
 
   def getActivityOnKeep(pubId: PublicId[Keep], limit: Int, fromTime: Option[DateTime]) = MaybeUserAction.async { implicit request =>
