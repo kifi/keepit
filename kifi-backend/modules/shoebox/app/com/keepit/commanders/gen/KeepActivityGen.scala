@@ -55,7 +55,7 @@ object KeepActivityGen {
       }
 
       val body = sourceAttrOpt.map {
-        case (ka: KifiAttribution, _) => ka.note.getOrElse("")
+        case (ka: KifiAttribution, _) => keep.note.getOrElse("")
         case (SlackAttribution(msg, _), _) => msg.text
         case (TwitterAttribution(tweet), _) => tweet.text
       }
