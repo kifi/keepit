@@ -138,7 +138,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
     val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
-    val slackTeamOpt = Try(viewerIdOpt.flatMap(slackInfoCommander.getOrganizationSlackTeam(orgId, _))).recover {
+    val slackTeamOpt = Try(slackInfoCommander.getOrganizationSlackTeam(orgId)).recover {
       case fail =>
         airbrake.notify(s"Failed to generate SlackInfo for org $orgId", fail)
         None

@@ -1,0 +1,60 @@
+.kf-org-profile-slack-box
+
+  padding-top: 15px
+  max-width: 340px
+  margin: 0 auto
+  font-smoothing(grayscale)
+
+  > * + *
+    margin-top: 15px
+
+.kf-org-profile-slack-box-title
+  width: 320px
+  font-size: 24px
+  color: darken(textGreyColor, 25%)
+
+slack-button-color=#68c89e
+
+.kf-org-profile-slack-box-button
+  display: block
+  padding: 10px 22.5px
+  background: slack-button-color
+  color: #fff
+  border: 0
+  max-width: 300px
+
+  &:not([disabled]):not(.disabled)
+    &:hover:not(:active)
+      background: slack-button-color
+
+    &:active
+      background: darken(slack-button-color, 20%)
+
+  &[disabled]
+    background: slack-button-color
+
+.kf-org-profile-slack-box-invite-text
+  margin-left: 1px
+  color: black
+  opacity: .7
+
+.kf-textbox.kf-org-profile-slack-box-invite-input
+  font-size: 15px
+  margin-top: 15px
+  margin-bottom: 10px
+  padding-left: 12px
+  padding-right: 0px
+
+.kf-org-profile-slack-box-invite-success
+  color: libraryGreen
+
+.kf-org-profile-slack-box-invite-error
+  display: inline-block
+  color: red
+  margin-bottom: 10px
+
+.kf-org-profile-slack-box-image
+  display: inline-block
+  width: 60px
+  margin-top: -2px
+  margin-left: 2px
