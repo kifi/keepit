@@ -107,7 +107,20 @@ object HeimdalContextBuilder {
   val userFields = Set("userCreatedAt", "daysSinceUserJoined")
   def getUserFields(user: User): Map[String, ContextData] = {
     val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - user.createdAt.getMillis) / (24 * 3600 * 1000)
-    Seq("userCreatedAt" -> ContextDate(user.createdAt), "daysSinceUserJoined" -> ContextDoubleData(daysSinceUserJoined - daysSinceUserJoined % 0.0001)).toMap
+    Map(
+      "userCreatedAt" -> ContextDate(user.createdAt),
+      "daysSinceUserJoined" -> ContextDoubleData(daysSinceUserJoined - daysSinceUserJoined % 0.0001)
+    )
+  }
+
+  val experimentFields = Set("experiments", "userStatus")
+  def getExperimentFields(experiments: Set[UserExperimentType]): Map[String, ContextData] = {
+    Map(
+      "experiments" -> ContextList(experiments.map(ex => ContextStringData(ex.value)).toSeq),
+      "userStatus" -> ContextStringData(UserExperimentType.getUserStatus(experiments))
+    ) ++ experiments.map { ex =>
+        s"exp_${ex.value}}" -> ContextBoolean(true)
+      }
   }
 }
 
@@ -189,9 +202,7 @@ class HeimdalContextBuilder extends Logging {
   def addRemoteAddress(remoteAddress: String) = this += ("remoteAddress", remoteAddress)
 
   def addExperiments(experiments: Set[UserExperimentType]): Unit = {
-    this += ("experiments", experiments.map(_.value).toSeq)
-    this += ("userStatus", UserExperimentType.getUserStatus(experiments))
-    experiments.foreach { ex => this += ("exp_" + ex.value, true) }
+    this ++= HeimdalContextBuilder.getExperimentFields(experiments)
   }
 
   def addUserAgent(userAgent: String): Unit = {
