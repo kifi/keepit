@@ -178,7 +178,7 @@ object BasicKeepEvent {
       id = BasicKeepEventId.fromMsg(id),
       author = author,
       kind = KeepEventKind.Comment,
-      header = DescriptionElements(),
+      header = DescriptionElements(author),
       body = text,
       timestamp = sentAt,
       source = KeepEventSourceKind.fromMessageSource(source).map(KeepEventSource(_, url = None))
