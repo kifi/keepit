@@ -14,11 +14,11 @@ import scala.collection.{ Traversable, Iterable }
 
 @ImplementedBy(classOf[KeepTagRepoImpl])
 trait KeepTagRepo extends Repo[KeepTag] {
-  def getByKeepIds(keepIds: Iterable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]]
+  def getByKeepIds(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag]
 
-  def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Unit
+  def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit
 }
 
@@ -59,7 +59,7 @@ class KeepTagRepoImpl @Inject() (
   def table(tag: Tag) = new KeepTagTable(tag)
   initTable()
 
-  def getByKeepIds(keepIds: Iterable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]] = {
+  def getByKeepIds(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]] = {
     rows.filter(row => row.keepId.inSet(keepIds)).list.groupBy(_.keepId)
   }
 
@@ -75,9 +75,11 @@ class KeepTagRepoImpl @Inject() (
     rows.filter(row => row.messageId === messageId).list
   }
 
-  def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Unit = {
+  def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
     val normalized = tags.map(_.normalized)
-    rows.filter(row => row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list.foreach(deactivate)
+    val toKill = rows.filter(row => row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
+    toKill.foreach(deactivate)
+    toKill.length
   }
 
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit = {

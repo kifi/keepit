@@ -60,16 +60,3 @@ class CollectionCommander @Inject() (
 
 }
 
-sealed trait TagSorting { def name: String }
-object TagSorting {
-  case object NumKeeps extends TagSorting { val name = "num_keeps" }
-  case object Name extends TagSorting { val name = "name" }
-  case object LastKept extends TagSorting { val name = "last_kept" }
-
-  def apply(str: String) = str match {
-    case NumKeeps.name => NumKeeps
-    case Name.name => Name
-    case _ => LastKept
-  }
-}
-
