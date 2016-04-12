@@ -1,11 +1,11 @@
 package com.keepit.eliza
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.eliza.integrity.ElizaMessageThreadByMessageIntegrityActor
 import com.keepit.eliza.shoebox.ElizaKeepIngestingActor
-import com.kifi.juggle.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
+import com.kifi.juggle.ConcurrentTaskProcessingActor.{Close, IfYouCouldJustGoAhead}
 
 import scala.concurrent.duration._
 

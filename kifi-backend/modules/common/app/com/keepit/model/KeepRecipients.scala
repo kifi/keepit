@@ -29,11 +29,6 @@ case class KeepRecipients(
   def union(that: KeepRecipients): KeepRecipients = KeepRecipients(libraries = libraries ++ that.libraries, users = users ++ that.users, emails = emails ++ that.emails)
   def union(that: Option[KeepRecipients]): KeepRecipients = that.fold(this)(_ union this)
 
-  def --(that: KeepRecipients) = KeepRecipientsDiff(
-    users = DeltaSet.addOnly(users).removeAll(that.users),
-    libraries = DeltaSet.addOnly(libraries).removeAll(that.libraries),
-    emails = DeltaSet.addOnly(emails).removeAll(that.emails)
-  )
   def diffed(diff: KeepRecipientsDiff) = this.copy(
     users = users ++ diff.users.added -- diff.users.removed,
     emails = emails ++ diff.emails.added -- diff.emails.removed,
@@ -86,11 +81,6 @@ case class KeepRecipientsDiff(users: DeltaSet[Id[User]], libraries: DeltaSet[Id[
   def isEmpty = this.users.isEmpty && this.libraries.isEmpty && this.emails.isEmpty
   def nonEmpty = !isEmpty
   def allEntities = (users.all, libraries.all, emails.all)
-  def onlyAdditions = KeepRecipientsDiff(
-    users = DeltaSet.addOnly(users.added),
-    libraries = DeltaSet.addOnly(libraries.added),
-    emails = DeltaSet.addOnly(emails.added)
-  )
 }
 object KeepRecipientsDiff {
   def addUser(user: Id[User]) = KeepRecipientsDiff(users = DeltaSet.empty.add(user), libraries = DeltaSet.empty, emails = DeltaSet.empty)
