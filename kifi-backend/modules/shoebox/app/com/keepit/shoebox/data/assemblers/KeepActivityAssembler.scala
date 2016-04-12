@@ -62,7 +62,7 @@ class KeepActivityAssemblerImpl @Inject() (
       val events = eventRepo.pageForKeep(keepId, fromTime, limit)
       (keep, sourceAttr, events, ktus, ktls)
     }
-    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), limit).map(_.get(keepId))
+    val elizaFut = eliza.getDiscussionsForKeeps(Set(keepId), fromTime, limit).map(_.get(keepId))
 
     val basicModelFut = shoeboxFut.map {
       case (keep, sourceAttr, events, ktus, ktls) =>
