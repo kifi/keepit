@@ -42,10 +42,8 @@
   text-decoration: underline!important;
 }
 .kifi-message-sent-header-stamp {
-  color: #a9a9a9;
-}
-.kifi-message-source {
   font-size: 10px;
+  color: #a9a9a9;
 }
 .kifi-message-source-icon {
   display: none;

@@ -18,11 +18,10 @@
       }}</span>{{!
       }}{{/header}}
       <span class="kifi-message-sent-header-stamp">
-        <span> • </span>
-        <a href="https://www.kifi.com{{keep.path}}" class="kifi-message-tip-keep-link">
+        <a class="kifi-message-tip-keep-link" href="https://www.kifi.com{{keep.path}}" target="_blank">
           <time datetime="{{timestamp}}">{{#formatLocalDate}}{{timestamp}}{{/formatLocalDate}}</time>
           {{#source}}
-            {{#url}}</a><a href="{{url}}" class="kifi-message-tip-keep-link">{{/url}}
+            {{#url}}</a><a class="kifi-message-tip-keep-link" href="{{url}}" target="_blank">{{/url}}
               <span class="kifi-message-source"> via {{kind}}</span>
               <span class="kifi-message-source-icon kifi-message-source-icon-{{kind}}"></span>
             {{#url}}</a>{{/url}}

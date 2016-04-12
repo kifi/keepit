@@ -135,8 +135,11 @@ k.panes.thread = k.panes.thread || function () {
         });
       })
       .data({threadId: threadId, compose: compose});
+
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
+
+    $holder.on('scroll', _.debounce(onScroll, 1000));
 
     $paneBox
     .on('kifi:error', function (err) {
@@ -163,6 +166,33 @@ k.panes.thread = k.panes.thread || function () {
     return $holder;
   }
 
+  function onScroll() {
+    if (!this.dataset.atTop && this.scrollTop < 40) {
+      getOlderActivity(function (isDone) {
+        if (isDone) {
+          this.dataset.atTop = true;
+        }
+      }.bind(this));
+    }
+  }
+
+  function getOlderActivity(cb) {
+    var keep = $holder.data('keep');
+    var $latestMessage = $holder.find('.kifi-message-sent').get(0);
+    var $time = $latestMessage.querySelector('time');
+    var isoDate = $time.getAttribute('datetime');
+    var timestamp = +new Date(isoDate);
+    var preTop = $holder.scrollTop();
+
+    var limit = 10;
+    api.port.emit('activity_from', { id: keep.id, limit: limit, fromTime: timestamp }, function (o) {
+      o.activity.forEach(updateActivity.bind(null, keep));
+      var postTop = $latestMessage.offsetTop;
+      $holder[0].scrollTop = (postTop + preTop);
+      cb(o.activity.length < limit);
+    });
+  }
+
   function onRemoving(threadId, compose) {
     compose.save({threadId: threadId});
     api.port.off(handlers);
@@ -176,7 +206,7 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function updateActivity(keepId, activityEvent) {
-    if (!$holder.find('.kifi-message-sent[data-id="' + activityEvent.id + '"]').length &&
+    if (!$holder.find('.kifi-message-sent[data-id="' + (activityEvent.id || 'nullId') + '"]').length &&
         !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, activityEvent.body.map(getText).join('')))) {  // transmitReply updates these
       var atBottom = scrolledToBottom($holder[0]);
       insertChronologically(renderActivityEvent($holder.data('keep'), activityEvent), activityEvent.timestamp);

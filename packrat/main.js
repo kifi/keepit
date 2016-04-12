@@ -545,7 +545,7 @@ var socketHandlers = {
     .then(function (responseData) {
       var keep = keepData[id] = responseData.keep;
       var activity = activityData[id] = responseData.activity;
-      forEachTabAtLocator('/messages/' + id, emitThreadToTab.bind(null, id, o.messages, keep, activity));
+      forEachTabAtLocator('/messages/' + id, emitThreadToTab.bind(null, id, keep, activity));
     })
     .catch(function (xhr) {
       log('#f00', '[socket:thread] error: ', err);
@@ -583,8 +583,8 @@ function emitThreadInfoToTab(th, keep, keepActivity, tab) {
   api.tabs.emit(tab, 'thread_info', {th: th, keep: keep, activity: keepActivity}, {queue: 1});
 }
 
-function emitThreadToTab(id, messages, keep, activity, tab) {
-  api.tabs.emit(tab, 'thread', {id: id, messages: messages, keep: keep, activity: activity}, {queue: 1});
+function emitThreadToTab(id, keep, activity, tab) {
+  api.tabs.emit(tab, 'thread', {id: id, keep: keep, activity: activity}, {queue: 1});
 }
 
 function emitThreadErrorToTab(id, xhr, tab) {
@@ -1203,6 +1203,30 @@ api.port.on({
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
   },
+  activity_from: function(o, respond, tab) {
+    var keepId = o.id;
+    var limit = o.limit;
+    var fromTime = o.fromTime;
+
+    var cachedActivity = activityData[keepId];
+    var cachedActivityEvents = cachedActivity.events;
+
+    getKeepActivity(keepId, limit, fromTime)
+    .catch(function (xhr) {
+      log('[activity_from] error retrieving activity', xhr);
+      emitThreadErrorToTab(keepId, xhr, tab);
+    })
+    .then(function (responseData) {
+      var newActivity = responseData.events;
+      log('[activity_from] newActivity', newActivity);
+      if (newActivity) {
+        var allActivity = activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
+          return b.timestamp - a.timestamp;
+        });
+        respond({ activity: newActivity });
+      }
+    })
+  },
   thread: function(id, _, tab) {
     var cachedKeep = keepData[id];
     var cachedActivity = activityData[id];
@@ -1240,7 +1264,7 @@ api.port.on({
       }
       var msgs = messageData[id];
       if (msgs) {
-        emitThreadToTab(id, msgs, keep, keepActivity, tab);
+        emitThreadToTab(id, keep, keepActivity, tab);
       } else {
         // TODO: remember that this tab needs this thread until it gets it or its pane changes?
         socket.send(['get_thread', id]);
@@ -2808,6 +2832,18 @@ function endsWith(ch) {
 function setProp(name, val) {
   return function (o) { o[name] = val; };
 }
+function filterDuplicates(accessor) {
+  var map = {};
+  return function (o) {
+    var v = accessor(o);
+    if (v in map) {
+      return false;
+    } else {
+      map[v] = true;
+      return true;
+    }
+  }
+}
 function extend(o, o1) {
   for (var k in o1) {
     o[k] = o1[k];
@@ -2867,9 +2903,9 @@ function getKeep(keepId) {
   });
 }
 
-function getKeepActivity(keepId) {
+function getKeepActivity(keepId, limit, fromTime) {
   return new Promise(function (resolve, reject) {
-    ajax('GET', '/api/1/keeps/' + keepId + '/activity', resolve, reject);
+    ajax('GET', '/api/1/keeps/' + keepId + '/activity', {limit: limit, fromTime: fromTime}, resolve, reject);
   });
 }
 
