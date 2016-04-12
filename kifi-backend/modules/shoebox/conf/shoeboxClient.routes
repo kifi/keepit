@@ -40,7 +40,4 @@ GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.Li
 # PAGES
 ##
 
-GET    /api/1/pages              @com.keepit.controllers.client.PageInfoController.getKeepsByUri(url: String)
-GET    /api/1/pages/library      @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndLibrary(url: String, library: PublicId[Library])
-GET    /api/1/pages/user         @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndUser(url: String, user: ExternalId[User])
-GET    /api/1/pages/email        @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndEmail(url: String, email: EmailAddress)
+POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()

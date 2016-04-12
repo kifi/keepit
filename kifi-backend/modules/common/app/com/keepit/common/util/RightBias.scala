@@ -34,21 +34,23 @@ object RightBias {
   final implicit class FromOption[R](opt: Option[R]) {
     def withLeft[L](l: L): RightBias[L, R] = opt.fold[RightBias[L, R]](left(l))(r => right(r))
   }
-  final implicit class FromSeq[T, TS, LS, RS](xs: IterableLike[T, TS]) {
-    def fragileMap[L, R](f: T => RightBias[L, R])(implicit cbfL: CanBuildFrom[TS, L, LS], cbfR: CanBuildFrom[TS, R, RS]): RightBias[LS, RS] = {
-      val lbuilder = cbfL(xs.repr)
-      val rbuilder = cbfR(xs.repr)
-      var anyLefts = false
-      xs.foreach { x =>
-        f(x) match {
-          case LeftSide(l) =>
-            anyLefts = true
-            lbuilder += l
+  final implicit class FromSeq[T, TS, RS](xs: IterableLike[T, TS]) {
+    // fragileMap will stop on the first LeftSide value and return that immediately
+    // If no values result in LeftSide then all the RightSide values will be accumulated and returned
+    def fragileMap[L, R](f: T => RightBias[L, R])(implicit cbf: CanBuildFrom[TS, R, RS]): RightBias[L, RS] = {
+      val rbuilder = cbf(xs.repr)
+      val xsIt = xs.iterator
+      var firstLeft = Option.empty[L]
+      while (xsIt.hasNext && firstLeft.isEmpty) {
+        f(xsIt.next()) match {
+          case LeftSide(l) => firstLeft = Some(l)
           case RightSide(r) => rbuilder += r
         }
       }
-      if (anyLefts) RightBias.left(lbuilder.result())
-      else RightBias.right(rbuilder.result())
+      firstLeft match {
+        case Some(l) => RightBias.left(l)
+        case None => RightBias.right(rbuilder.result())
+      }
     }
   }
 
