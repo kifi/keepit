@@ -33,7 +33,7 @@ class ElizaDiscussionController @Inject() (
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     import GetDiscussionsForKeeps._
     val input = request.body.as[Request]
-    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.maxMessagesShown).map { discussions =>
+    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown).map { discussions =>
       val output = Response(discussions)
       Ok(Json.toJson(output))
     }
@@ -50,14 +50,6 @@ class ElizaDiscussionController @Inject() (
     }
     val output = Response(crossServiceMsgs)
     Ok(Json.toJson(output))
-  }
-
-  def getCrossServiceKeepActivity = Action.async(parse.tolerantJson) { request =>
-    import GetCrossServiceKeepActivity._
-    val input = request.body.as[Request]
-    discussionCommander.getCrossServiceKeepActivity(input.keepIds, input.eventsBefore, input.maxEventsPerKeep).map { activityByKeep =>
-      Ok(Json.toJson(Response(activityByKeep)))
-    }
   }
 
   def syncAddParticipants = Action.async(parse.tolerantJson) { request =>

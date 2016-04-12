@@ -154,7 +154,7 @@ class KeepDecoratorImpl @Inject() (
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
-      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, maxMessagesShown).recover {
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds, fromTime = None, maxMessagesShown).recover {
         case fail =>
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
           Map.empty[Id[Keep], Discussion]

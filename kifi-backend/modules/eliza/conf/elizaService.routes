@@ -68,7 +68,6 @@ GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controlle
 
 POST    /internal/eliza/getCrossServiceMessages     @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceMessages
 POST    /internal/eliza/getDiscussionsForKeeps      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getDiscussionsForKeeps
-POST    /internal/eliza/getCrossServiceKeepActivity @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getCrossServiceKeepActivity
 POST    /internal/eliza/syncAddParticipants         @com.keepit.eliza.controllers.internal.ElizaDiscussionController.syncAddParticipants()
 POST    /internal/eliza/markKeepsAsReadForUser      @com.keepit.eliza.controllers.internal.ElizaDiscussionController.markKeepsAsReadForUser()
 POST    /internal/eliza/sendMessageOnKeep           @com.keepit.eliza.controllers.internal.ElizaDiscussionController.sendMessageOnKeep()

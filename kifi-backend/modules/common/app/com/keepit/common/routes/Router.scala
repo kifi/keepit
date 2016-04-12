@@ -275,7 +275,6 @@ object Eliza extends Service {
     def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = ServiceRoute(GET, "/internal/eliza/getMessagesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String) = ServiceRoute(POST, "/internal/eliza/convertNonUserThreadToUserThread", Param("userId", userId), Param("accessToken", accessToken))
 
-    def getCrossServiceKeepActivity = ServiceRoute(POST, "/internal/eliza/getCrossServiceKeepActivity")
     def syncAddParticipants = ServiceRoute(POST, "/internal/eliza/syncAddParticipants")
     def pageSystemMessages(fromId: Id[Message], pageSize: Int) = ServiceRoute(GET, "/internal/eliza/pageSystemMessages", Param("fromId", fromId.id), Param("pageSize", pageSize))
     def rpbTest = ServiceRoute(POST, "/internal/eliza/rpbTest")
