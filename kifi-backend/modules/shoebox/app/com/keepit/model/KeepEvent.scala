@@ -25,7 +25,7 @@ case class KeepEvent(
     keepId: Id[Keep],
     eventData: KeepEventData,
     eventTime: DateTime,
-    source: Option[KeepEventSourceKind],
+    source: Option[KeepEventSource],
     // unique constraint on messageId to ensure message rows are not duplicated
     messageId: Option[Id[Message]] = None) extends ModelWithState[KeepEvent] {
   def withId(id: Id[KeepEvent]): KeepEvent = this.copy(id = Some(id))
@@ -58,7 +58,7 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
     (__ \ 'keepId).format(Id.format[Keep]) and
     (__ \ 'eventData).format[KeepEventData] and
     (__ \ 'eventTime).format[DateTime] and
-    (__ \ 'source).formatNullable[KeepEventSourceKind] and
+    (__ \ 'source).formatNullable[KeepEventSource] and
     (__ \ 'messageId).formatNullable[Id[Message]]
   )(KeepEvent.apply, unlift(KeepEvent.unapply))
 
@@ -70,10 +70,10 @@ object KeepEvent extends CommonClassLinker[KeepEvent, CommonKeepEvent] {
     keepId: Id[Keep],
     eventData: KeepEventData,
     eventTime: DateTime,
-    source: Option[KeepEventSourceKind],
+    source: Option[KeepEventSource],
     messageId: Option[Id[Message]]): KeepEvent = KeepEvent(id, createdAt, updatedAt, state, keepId, eventData, eventTime, source, messageId)
 
-  def toDbRow(event: KeepEvent): Option[(Option[Id[KeepEvent]], DateTime, DateTime, State[KeepEvent], Id[Keep], KeepEventData, DateTime, Option[KeepEventSourceKind], Option[Id[Message]])] = {
+  def toDbRow(event: KeepEvent): Option[(Option[Id[KeepEvent]], DateTime, DateTime, State[KeepEvent], Id[Keep], KeepEventData, DateTime, Option[KeepEventSource], Option[Id[Message]])] = {
     Some((event.id, event.createdAt, event.updatedAt, event.state, event.keepId, event.eventData, event.eventTime, event.source, event.messageId))
   }
 }
@@ -92,14 +92,14 @@ class KeepEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val keepEventDataTypeMapper = jsonMapper[KeepEventData]
-  implicit val keepEventSourceTypeMapper = MappedColumnType.base[KeepEventSourceKind, String](_.value, KeepEventSourceKind.apply)
+  implicit val keepEventSourceTypeMapper = MappedColumnType.base[KeepEventSource, String](_.value, KeepEventSource.apply)
 
   type RepoImpl = KeepEventTable
   class KeepEventTable(tag: Tag) extends RepoTable[KeepEvent](db, tag, "keep_event") {
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def eventData = column[KeepEventData]("event_data", O.NotNull)
     def eventTime = column[DateTime]("event_time", O.NotNull)
-    def source = column[Option[KeepEventSourceKind]]("source", O.Nullable)
+    def source = column[Option[KeepEventSource]]("source", O.Nullable)
     def messageId = column[Option[Id[Message]]]("message_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, state, keepId, eventData, eventTime, source, messageId) <> ((KeepEvent.fromDbRow _).tupled, KeepEvent.toDbRow)

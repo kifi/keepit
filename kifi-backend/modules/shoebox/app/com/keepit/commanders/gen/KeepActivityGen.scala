@@ -3,12 +3,11 @@ package com.keepit.commanders.gen
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
-import com.keepit.common.util.{ DeltaSet, DescriptionElements, DescriptionElement, ShowOriginalElement }
+import com.keepit.common.util.{ DescriptionElements, DescriptionElement, ShowOriginalElement }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
-import com.keepit.model.{ CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventSource, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
+import com.keepit.model.{ BasicKeepEventSource, CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
 import com.keepit.model.KeepEventData.{ ModifyRecipients, EditTitle }
 import com.keepit.social.{ BasicUser, BasicAuthor }
@@ -55,12 +54,12 @@ object KeepActivityGen {
       }
 
       val body = sourceAttrOpt.map {
-        case (ka: KifiAttribution, _) => ka.note.getOrElse("")
+        case (ka: KifiAttribution, _) => keep.note.getOrElse("")
         case (SlackAttribution(msg, _), _) => msg.text
         case (TwitterAttribution(tweet), _) => tweet.text
       }
 
-      val source = sourceAttrOpt.flatMap { case (attr, _) => KeepEventSource.fromSourceAttribution(attr) }
+      val source = sourceAttrOpt.flatMap { case (attr, _) => BasicKeepEventSource.fromSourceAttribution(attr) }
 
       BasicKeepEvent(
         id = BasicKeepEventId.initial,
@@ -138,7 +137,7 @@ object KeepActivityGen {
       header = header,
       body = body,
       timestamp = event.eventTime,
-      source = event.source.map(src => KeepEventSource(src, url = None))
+      source = event.source.map(src => BasicKeepEventSource(src, url = None))
     )
   }
 

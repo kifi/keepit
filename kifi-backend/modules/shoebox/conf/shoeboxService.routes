@@ -721,7 +721,7 @@ POST     /internal/shoebox/database/getSlackTeamIds                @com.keepit.c
 GET      /internal/shoebox/database/getSlackTeamInfo               @com.keepit.controllers.internal.ShoeboxController.getSlackTeamInfo(slackTeamId: SlackTeamId)
 
 POST     /internal/shoebox/database/internKeep              @com.keepit.controllers.internal.ShoeboxController.internKeep()
-POST     /internal/shoebox/database/editRecipientsOnKeep     @com.keepit.controllers.internal.ShoeboxController.editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind] ?= None)
+POST     /internal/shoebox/database/editRecipientsOnKeep    @com.keepit.controllers.internal.ShoeboxController.editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource] ?= None)
 POST     /internal/shoebox/database/registerMessageOnKeep   @com.keepit.controllers.internal.ShoeboxController.registerMessageOnKeep()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)

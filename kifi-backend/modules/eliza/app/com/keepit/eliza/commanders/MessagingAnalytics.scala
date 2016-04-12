@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.core.optionExtensionOps
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{ KeepEventSourceKind, Keep, Organization, NotificationCategory, User }
+import com.keepit.model.{ KeepEventSource, Keep, Organization, NotificationCategory, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -185,7 +185,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, source: Option[KeepEventSourceKind], existingContext: HeimdalContext) = {
+  def addedParticipantsToConversation(userId: Id[User], newUserParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, source: Option[KeepEventSource], existingContext: HeimdalContext) = {
     val addedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder

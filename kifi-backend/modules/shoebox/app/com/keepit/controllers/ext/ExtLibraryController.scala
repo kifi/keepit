@@ -298,7 +298,7 @@ class ExtLibraryController @Inject() (
       case JsSuccess(titleOpt, _) =>
         titleOpt.map { title =>
           Try(db.readOnlyMaster { implicit s => keepRepo.convertExternalId(keepExtId) }).map { keepId =>
-            keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)).fold(
+            keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)).fold(
               fail => fail.asErrorResponse,
               _ => NoContent
             )

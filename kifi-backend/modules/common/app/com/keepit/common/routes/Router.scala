@@ -177,7 +177,7 @@ object Shoebox extends Service {
     def getSlackTeamIds() = ServiceRoute(POST, "/internal/shoebox/database/getSlackTeamIds")
     def getSlackTeamInfo(slackTeamId: SlackTeamId) = ServiceRoute(GET, "/internal/shoebox/database/getSlackTeamInfo", Param("slackTeamId", slackTeamId.value))
     def internKeep() = ServiceRoute(POST, "/internal/shoebox/database/internKeep")
-    def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSourceKind]) = ServiceRoute(POST, "/internal/shoebox/database/editRecipientsOnKeep", Param("editorId", editorId), Param("keepId", keepId), Param("persistKeepEvent", persistKeepEvent), Param("source", source.map(_.value)))
+    def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = ServiceRoute(POST, "/internal/shoebox/database/editRecipientsOnKeep", Param("editorId", editorId), Param("keepId", keepId), Param("persistKeepEvent", persistKeepEvent), Param("source", source.map(_.value)))
     def registerMessageOnKeep() = ServiceRoute(POST, "/internal/shoebox/database/registerMessageOnKeep")
   }
 }

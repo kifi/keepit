@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.KeepEventData.ModifyRecipients
-import com.keepit.model.{ BasicKeepEvent, KeepToUserRepo, KeepEventData, KeepEvent, KeepEventRepo, KeepEventSourceKind, User, Keep }
+import com.keepit.model.{ BasicKeepEvent, KeepToUserRepo, KeepEventData, KeepEvent, KeepEventRepo, KeepEventSource, User, Keep }
 import com.keepit.common.time._
 import com.keepit.shoebox.data.assemblers.KeepActivityAssembler
 import org.joda.time.DateTime
@@ -16,8 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 @ImplementedBy(classOf[KeepEventCommanderImpl])
 trait KeepEventCommander {
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
-  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], event: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
+  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent]
 }
 
 @Singleton
@@ -31,7 +31,7 @@ class KeepEventCommanderImpl @Inject() (
     implicit val ec: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepEventCommander {
 
-  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
+  def persistKeepEventAndUpdateEliza(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
     val eventOpt = persistKeepEvent(keepId, eventData, source, eventTime)
 
     eventOpt.map { event =>
@@ -50,7 +50,7 @@ class KeepEventCommanderImpl @Inject() (
     eventOpt
   }
 
-  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSourceKind], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
+  def persistKeepEvent(keepId: Id[Keep], eventData: KeepEventData, source: Option[KeepEventSource], eventTime: Option[DateTime])(implicit session: RWSession): Option[KeepEvent] = {
     val isValidEvent = eventData match {
       case ModifyRecipients(_, diff) if diff.isEmpty => false
       case _ => true

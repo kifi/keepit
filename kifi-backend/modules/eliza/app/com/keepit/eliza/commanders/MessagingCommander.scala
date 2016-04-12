@@ -77,7 +77,7 @@ trait MessagingCommander {
   def setUserThreadMuteState(userId: Id[User], keepId: Id[Keep], mute: Boolean)(implicit context: HeimdalContext): Boolean
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact],
-    orgIds: Seq[Id[Organization]], source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
+    orgIds: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
 
   def getChatter(userId: Id[User], urls: Seq[String]): Future[Map[String, Seq[Id[Keep]]]]
   def validateUsers(rawUsers: Seq[JsValue]): Seq[JsResult[ExternalId[User]]]
@@ -341,7 +341,7 @@ class MessagingCommanderImpl @Inject() (
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.keepId) }
       shoebox.registerMessageOnKeep(thread.keepId, ElizaMessage.toCrossServiceMessage(message))
-      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSourceKind.fromMessageSource(source)))
+      from.asUser.foreach(user => shoebox.editRecipientsOnKeep(editorId = user, keepId = thread.keepId, diff = KeepRecipientsDiff.addUser(user), persistKeepEvent = false, source = KeepEventSource.fromMessageSource(source)))
     }
 
     val participantSet = thread.participants.allUsers
@@ -481,7 +481,7 @@ class MessagingCommanderImpl @Inject() (
   // todo(cam): make this `editParticipantsOnThread` with inactivation behavior
   def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep],
     newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgIds: Seq[Id[Organization]],
-    source: Option[KeepEventSourceKind], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
+    source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     val newUserParticipantsFuture = Future.successful(newUsers)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
@@ -520,7 +520,7 @@ class MessagingCommanderImpl @Inject() (
             keepId = thread.keepId,
             from = MessageSender.System,
             messageText = "",
-            source = source.flatMap(KeepEventSourceKind.toMessageSource),
+            source = source.flatMap(KeepEventSource.toMessageSource),
             auxData = Some(AddParticipants(adderUserId, actuallyNewUsers, actuallyNewNonUsers)),
             sentOnUrl = None,
             sentOnUriId = None
