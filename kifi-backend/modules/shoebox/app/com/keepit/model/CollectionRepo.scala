@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
@@ -43,7 +42,6 @@ class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
   val userCollectionSummariesCache: UserCollectionSummariesCache,
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
-  val basicCollectionCache: BasicCollectionByIdCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
@@ -74,7 +72,6 @@ class CollectionRepoImpl @Inject() (
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
     userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
     model.id.foreach { id =>
-      basicCollectionCache.remove(BasicCollectionByIdKey(id))
       val keepToCollections = keepToCollectionRepo.getByCollection(id)
       keepToCollections.foreach(keepToCollectionRepo.deleteCache)
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))

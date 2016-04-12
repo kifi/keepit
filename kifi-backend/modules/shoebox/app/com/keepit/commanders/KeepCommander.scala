@@ -83,7 +83,6 @@ class KeepCommanderImpl @Inject() (
     searchClient: SearchServiceClient,
     globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
-    collectionCommander: CollectionCommander,
     keepRepo: KeepRepo,
     ktlRepo: KeepToLibraryRepo,
     ktlCommander: KeepToLibraryCommander,

@@ -29,7 +29,6 @@ class TagCommanderImpl @Inject() (
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
     libraryAnalytics: LibraryAnalytics,
-    basicCollectionCache: BasicCollectionByIdCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     implicit val executionContext: ExecutionContext,
     keepCommander: Provider[KeepCommander],
