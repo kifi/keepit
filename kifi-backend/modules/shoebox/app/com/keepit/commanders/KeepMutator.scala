@@ -31,6 +31,7 @@ import scala.util.Try
 trait KeepMutator {
   def persistKeep(k: Keep)(implicit session: RWSession): Keep
   def unsafeModifyKeepRecipients(keepId: Id[Keep], diff: KeepRecipientsDiff, userAttribution: Option[Id[User]])(implicit session: RWSession): Keep
+  def updateKeepTitle(oldKeep: Keep, newTitle: String)(implicit session: RWSession): Keep
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep
   def updateLastActivityAtIfLater(keepId: Id[Keep], lastActivityAt: DateTime)(implicit session: RWSession): Keep
@@ -87,6 +88,10 @@ class KeepMutatorImpl @Inject() (
       Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
     }
     keep
+  }
+
+  def updateKeepTitle(oldKeep: Keep, newTitle: String)(implicit session: RWSession): Keep = {
+    keepRepo.save(oldKeep.withTitle(Some(newTitle)))
   }
 
   def setKeepOwner(keep: Keep, newOwner: Id[User])(implicit session: RWSession): Keep = {

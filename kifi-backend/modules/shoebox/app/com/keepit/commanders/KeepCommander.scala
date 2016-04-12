@@ -422,7 +422,7 @@ class KeepCommanderImpl @Inject() (
         (oldKeep, keepRepo.save(oldKeep.withTitle(Some(title.trim))))
       }
     }
-    result.getRight.foreach {
+    result.foreach {
       case (oldKeep, newKeep) =>
         db.readWrite { implicit s =>
           keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), Some(userId))

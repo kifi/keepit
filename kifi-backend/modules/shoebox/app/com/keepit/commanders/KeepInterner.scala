@@ -126,37 +126,47 @@ class KeepInternerImpl @Inject() (
     if (urlIsCompletelyUnusable) Failure(KeepFail.MALFORMED_URL)
     else {
       val uri = normalizedURIInterner.internByUri(internReq.url, contentWanted = true, candidates = Set.empty)
-      val keepToInternWith = getKeepToInternWith(uri.id.get, internReq.recipients)
       val userIdOpt = Author.kifiUserId(internReq.author)
-
-      val title = Seq(internReq.trimmedTitle, keepToInternWith.flatMap(_.title), uri.title).flatten.headOption
-      val keptAt = keepToInternWith.map(_.keptAt).orElse(internReq.keptAt).getOrElse(clock.now)
-      val keep = Keep(
-        id = keepToInternWith.map(_.id.get),
-        externalId = keepToInternWith.map(_.externalId).getOrElse(ExternalId()),
-        title = title,
-        userId = userIdOpt,
-        uriId = uri.id.get,
-        url = internReq.url,
-        source = internReq.source,
-        keptAt = keptAt,
-        note = keepToInternWith.flatMap(_.note), // The internReq.note is intended to represent a comment
-        originalKeeperId = keepToInternWith.flatMap(_.userId) orElse userIdOpt,
-        recipients = internReq.recipients union keepToInternWith.map(_.recipients),
-        lastActivityAt = keepToInternWith.map(_.lastActivityAt).getOrElse(keptAt)
-      )
-      val internedKeep = try {
-        keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
-          sourceAttrRepo.intern(improvedKeep.id.get, internReq.attribution)
-        }
-      } catch {
-        case ex: UndeclaredThrowableException =>
-          log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
-          throw ex.getUndeclaredThrowable
+      getKeepToInternWith(uri.id.get, internReq.recipients) match {
+        case Some(existingKeep) =>
+          val updatedKeep = {
+            val keepWithNewRecipients = keepMutator.unsafeModifyKeepRecipients(
+              existingKeep.id.get,
+              (internReq.recipients -- existingKeep.recipients).onlyAdditions,
+              userAttribution = userIdOpt
+            )
+            (Author.kifiUserId(internReq.author), internReq.title) match {
+              case (Some(kifiUser), Some(newTitle)) if KeepSource.manual.contains(internReq.source) =>
+                keepMutator.updateKeepTitle(keepWithNewRecipients, newTitle)
+              case _ => keepWithNewRecipients
+            }
+          }
+          Success((updatedKeep, false))
+        case None =>
+          val keptAt = internReq.keptAt.getOrElse(clock.now)
+          val keep = Keep(
+            title = internReq.trimmedTitle orElse uri.title,
+            userId = userIdOpt,
+            uriId = uri.id.get,
+            url = internReq.url,
+            source = internReq.source,
+            keptAt = keptAt,
+            note = None,
+            originalKeeperId = userIdOpt,
+            recipients = internReq.recipients,
+            lastActivityAt = keptAt
+          )
+          val newKeep = try {
+            keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+              sourceAttrRepo.intern(improvedKeep.id.get, internReq.attribution)
+            }
+          } catch {
+            case ex: UndeclaredThrowableException =>
+              log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
+              throw ex.getUndeclaredThrowable
+          }
+          Success((newKeep, false))
       }
-
-      val isNewKeep = keepToInternWith.isEmpty
-      Success((internedKeep, isNewKeep))
     }
   }
 
@@ -220,37 +230,52 @@ class KeepInternerImpl @Inject() (
 
     val sourceAttribution = thirdPartyAttribution.orElse(userIdOpt.map(userId => RawKifiAttribution(userId, note, KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, usersAdded), source)))
 
-    val existingKeepOpt = libraryOpt.flatMap { lib => keepRepo.getByUriAndLibrariesHash(uri.id.get, Set(lib.id.get)).headOption }
+    val recipients = KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, userIdOpt.toSet ++ usersAdded)
+    val existingKeepOpt = getKeepToInternWith(uri.id.get, recipients)
+    existingKeepOpt match {
+      case Some(existingKeep) =>
+        val internedKeep = {
+          val keepWithNewRecipients = keepMutator.unsafeModifyKeepRecipients(
+            existingKeep.id.get,
+            (recipients -- existingKeep.recipients).onlyAdditions,
+            userAttribution = userIdOpt
+          )
+          (userIdOpt, title) match {
+            case (Some(kifiUser), Some(newTitle)) if KeepSource.manual.contains(source) =>
+              keepRepo.save(keepWithNewRecipients.withTitle(Some(newTitle)).withNote(note))
+            case _ => keepWithNewRecipients
+          }
+        }
+        val wasInactiveKeep = false
+        val isNewKeep = false
+        (isNewKeep, wasInactiveKeep, internedKeep)
+      case None =>
+        val keep = Keep(
+          title = title.map(_.trim).filter(_.nonEmpty) orElse uri.title,
+          userId = userIdOpt,
+          uriId = uri.id.get,
+          url = url,
+          source = source,
+          keptAt = keptAt,
+          note = note.map(_.trim).filter(_.nonEmpty),
+          originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
+          recipients = recipients,
+          lastActivityAt = keptAt
+        )
+        val internedKeep = try {
+          keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
+            sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
+          }
+        } catch {
+          case ex: UndeclaredThrowableException =>
+            log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
+            throw ex.getUndeclaredThrowable
+        }
 
-    val kTitle = List(title.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.title), uri.title).flatten.headOption
-    val kNote = List(note.map(_.trim).filter(_.nonEmpty), existingKeepOpt.flatMap(_.note)).flatten.headOption
-    val keep = Keep(
-      id = existingKeepOpt.map(_.id.get),
-      externalId = existingKeepOpt.map(_.externalId).getOrElse(ExternalId()),
-      title = kTitle,
-      userId = userIdOpt,
-      uriId = uri.id.get,
-      url = url,
-      source = source,
-      keptAt = existingKeepOpt.map(_.keptAt).getOrElse(keptAt),
-      note = kNote,
-      originalKeeperId = existingKeepOpt.flatMap(_.userId) orElse userIdOpt,
-      recipients = KeepRecipients(libraryOpt.map(_.id.get).toSet, Set.empty, userIdOpt.toSet ++ usersAdded),
-      lastActivityAt = existingKeepOpt.map(_.lastActivityAt).getOrElse(keptAt)
-    )
-    val internedKeep = try {
-      keepMutator.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
-        sourceAttribution.foreach { attr => sourceAttrRepo.intern(improvedKeep.id.get, attr) }
-      }
-    } catch {
-      case ex: UndeclaredThrowableException =>
-        log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
-        throw ex.getUndeclaredThrowable
+        val wasInactiveKeep = false // we do not resurrect dead keeps anymore
+        val isNewKeep = true
+        (isNewKeep, wasInactiveKeep, internedKeep)
     }
-
-    val wasInactiveKeep = false // we do not resurrect dead keeps anymore
-    val isNewKeep = existingKeepOpt.isEmpty
-    (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
