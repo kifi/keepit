@@ -251,7 +251,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      success <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, newNonUsers.toSeq, orgs.toSeq, source, updateShoebox = false)
+      success <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, newNonUsers.toSeq, orgs.toSeq, source, updateShoebox)
     } yield success
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
