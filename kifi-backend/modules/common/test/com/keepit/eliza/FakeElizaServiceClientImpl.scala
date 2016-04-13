@@ -7,18 +7,16 @@ import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.ServiceType
-import com.keepit.common.util.DeltaSet
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.time._
-import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Discussion, Message}
 import com.keepit.eliza.model._
-import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
 import org.joda.time.DateTime
-import play.api.libs.json.{JsArray, JsObject}
+import play.api.libs.json.JsArray
 
 import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
@@ -113,7 +111,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = Future.successful(Seq.empty)
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])] = Future.successful((None, Some(Id[User](1)))) // should be different userId than arg
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]] = ???
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSource]): Future[Set[Id[User]]] = Future.successful(Set.empty)
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean] = Future.successful(true)
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit] = ???
   def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = ???
   def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]] = ???

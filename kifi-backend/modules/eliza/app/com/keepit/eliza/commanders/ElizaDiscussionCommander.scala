@@ -28,14 +28,13 @@ trait ElizaDiscussionCommander {
   def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]
   def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean]
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean]
   def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
   def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSource]): Future[Set[Id[User]]]
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit
 }
 
@@ -185,11 +184,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId))) tap { updatedThread =>
             val ut = userThreadRepo.intern(UserThread.forMessageThread(updatedThread)(userId))
-            log.info(s"[DISC-CMDR] User $userId was added to thread ${thread.id.get} associated with keep ${thread.keepId}.")
           }
         }
       } else {
-        log.info(s"[DISC-CMDR] User $userId is already part of thread ${thread.id.get} associated with keep ${thread.keepId}.")
         thread
       }
     }
@@ -199,12 +196,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
     getOrCreateMessageThreadWithUser(keepId, userId).flatMap { thread =>
       val (_, message) = messagingCommander.sendMessage(userId, thread, txt, source, None)
       externalizeMessage(message)
-    }
-  }
-
-  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newUsers: Seq[Id[User]], emailContacts: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource])(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(keepId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, keepId, newUsers, emailContacts, orgs, newLibs = Seq.empty, source = None, updateShoebox = true)
     }
   }
 
@@ -256,12 +247,12 @@ class ElizaDiscussionCommanderImpl @Inject() (
     nonUserThreadRepo.getByAccessToken(accessToken).exists(_.keepId == keepId)
   }
 
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSource]): Future[Set[Id[User]]] = {
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Seq[Id[User]], newNonUsers: Seq[BasicContact], orgs: Seq[Id[Organization]], source: Option[KeepEventSource], updateShoebox: Boolean)(implicit context: HeimdalContext): Future[Boolean] = {
     implicit val context = HeimdalContext.empty
     for {
       thread <- getOrCreateMessageThreadWithUser(keepId, editor)
-      _ <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, Seq.empty, Seq.empty, newLibraries.toSeq, source, updateShoebox = false)
-    } yield thread.allParticipants ++ newUsers
+      success <- messagingCommander.addParticipantsToThread(editor, keepId, newUsers.toSeq, newNonUsers.toSeq, orgs.toSeq, source, updateShoebox = false)
+    } yield success
   }
   def deleteThreadsForKeeps(keepIds: Set[Id[Keep]]): Unit = db.readWrite { implicit s =>
     keepIds.foreach { keepId =>

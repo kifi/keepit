@@ -6,8 +6,9 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.BasicContact
 import com.keepit.eliza.ElizaServiceClient._
-import com.keepit.model.{ KeepRecipients, ElizaFeedFilter, User, Keep }
+import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
@@ -52,6 +53,7 @@ class ElizaDiscussionController @Inject() (
     Ok(Json.toJson(output))
   }
 
+  // deprecated, use editParticipantsOnKeep instead
   def syncAddParticipants = Action.async(parse.tolerantJson) { request =>
     import SyncAddParticipants._
     val input = request.body.as[Request]
@@ -121,9 +123,11 @@ class ElizaDiscussionController @Inject() (
   }
   def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
     import EditParticipantsOnKeep._
+    implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries, input.source).map { allUsers =>
-      val output = Response(allUsers)
+    val KeepRecipientsDiff(users, _, emails) = input.diff
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
+      val output = Response(success)
       Ok(Json.toJson(output))
     }
   }
