@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements._
-import com.keepit.common.util.{ DescriptionElements, DescriptionElement, ShowOriginalElement }
+import com.keepit.common.util.{ UserElement, AuthorElement, DescriptionElements, DescriptionElement, ShowOriginalElement }
 import com.keepit.model.BasicKeepEvent.BasicKeepEventId
 import com.keepit.model.{ BasicKeepEventSource, CommonKeepEvent, KifiAttribution, KeepEvent, KeepRecipientsDiff, BasicKeepEvent, KeepEventKind, KeepActivity, TwitterAttribution, SlackAttribution, BasicOrganization, BasicLibrary, Library, User, KeepToUser, KeepToLibrary, SourceAttribution, Keep }
 import com.keepit.discussion.Discussion
@@ -40,8 +40,8 @@ object KeepActivityGen {
 
       val header = sourceAttrOpt.map(_._1) match {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
-          val nonKeeperRecipients = users.filter(_.id != keptBy.externalId)
-          val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
+          val nonKeeperRecipients = users.filter(_.externalId != keptBy.externalId)
+          val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(generateUserElement(_, fullName = false)).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
           val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("added", recipientsElement, "to this discussion") else DescriptionElements("started a discussion on this page")
 
           DescriptionElements(authorElement, actionElement)
@@ -108,7 +108,7 @@ object KeepActivityGen {
             specialCaseForMovedLibrary(diff)
           ).flatten.headOption.getOrElse {
               val KeepRecipientsDiff(users, libraries, emails) = diff
-              val addedUserElements = users.added.flatMap(info.userById.get).map(fromBasicUser)
+              val addedUserElements = users.added.flatMap(info.userById.get).map(generateUserElement(_, fullName = false))
               val addedLibElements = libraries.added.flatMap(info.libById.get).map(fromBasicLibrary)
               val addedEmailElements = emails.added.map(email => fromText(email.address))
               val addedEntities: Seq[DescriptionElement] = (addedUserElements ++ addedLibElements ++ addedEmailElements).toSeq
