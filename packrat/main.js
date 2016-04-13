@@ -552,9 +552,6 @@ var socketHandlers = {
       forEachTabAtLocator('/messages/' + id, emitThreadErrorToTab.bind(null, id, xhr));
     });
   },
-  event: function(keepId, event) {
-    log('[socket:event]', keepId, event);
-  },
   message_read: function(nUri, threadId, time, messageId) {
     log("[socket:message_read]", nUri, threadId, time);
     removeNotificationPopups(threadId);
