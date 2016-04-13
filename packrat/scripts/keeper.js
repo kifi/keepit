@@ -550,7 +550,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   function massageSlackMessage(source) {
     var message = source.slack && source.slack.message;
     if (message) {
-      message.text = slackFormat.plain(message.text, true);
+      message.text = slackFormat.plain(message.text, {emptyIfInsignificant: true});
     }
     return source;
   }

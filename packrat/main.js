@@ -23,6 +23,7 @@ var notificationLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent
 var notificationsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var keepData = {};
+var activityData = {};
 var contactSearchCache;
 var urlPatterns;
 var guideData;
@@ -42,6 +43,7 @@ function clearDataCache() {
   notificationsById = {};
   messageData = {};
   keepData = {};
+  activityData = {};
   contactSearchCache = null;
   urlPatterns = null;
   guideData = null;
@@ -408,6 +410,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
 
   messageData = {};
   keepData = {};
+  activityData = {};
   forEachThreadOpenInPane(function (threadId) {
     socket.send(['get_thread', threadId]);
   });
@@ -453,6 +456,16 @@ var socketHandlers = {
     log('[socket:experiments]', exp);
     experiments = exp;
     api.toggleLogging(exp.indexOf('extension_logging') >= 0);
+  },
+  event: function (keepId, activityEvent) {
+    log('[socket:event]', keepId, activityEvent);
+
+    var activity = activityData[keepId];
+    activity.events.unshift(activityEvent);
+
+    forEachTabAtLocator('/messages/' + keepId, function (tab) {
+      api.tabs.emit(tab, 'activity', { keepId: keepId, activity: activity });
+    });
   },
   new_pic: function (name) {
     log('[socket:new_pic]', name);
@@ -525,22 +538,19 @@ var socketHandlers = {
   },
   thread: function(o) {
     log('[socket:thread]', o);
-    messageData[o.id] = o.messages;
-    keepData[o.id] = o.keep;
-    var linkToKeep = shouldLinkToKeep(o.keep)
+    var id = o.id;
+    messageData[id] = o.messages;
 
-    // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : null));
-  },
-  message: function(threadId, message) {
-    log('[socket:message]', threadId, message, message.nUrl);
-    forEachTabAtLocator('/messages/' + threadId, function (tab) {
-      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id}, {queue: true});
+    getKeepAndActivity(id)
+    .then(function (responseData) {
+      var keep = keepData[id] = responseData.keep;
+      var activity = activityData[id] = responseData.activity;
+      forEachTabAtLocator('/messages/' + id, emitThreadToTab.bind(null, id, keep, activity));
+    })
+    .catch(function (xhr) {
+      log('#f00', '[socket:thread] error: ', err);
+      forEachTabAtLocator('/messages/' + id, emitThreadErrorToTab.bind(null, id, xhr));
     });
-    var messages = messageData[threadId];
-    if (messages) {
-      insertUpdateChronologically(messages, message, 'createdAt');
-    }
   },
   event: function(keepId, event) {
     log('[socket:event]', keepId, event);
@@ -566,22 +576,23 @@ var socketHandlers = {
   }
 };
 
-function shouldLinkToKeep(keep) {
-  return keep && keep.libraries && keep.libraries.length <= 1;
-}
-
 function emitAllTabs(name, data, options) {
   return api.tabs.each(function(tab) {
     api.tabs.emit(tab, name, data, options);
   });
 }
 
-function emitThreadInfoToTab(th, keep, tab) {
-  api.tabs.emit(tab, 'thread_info', {th: th, keep: keep}, {queue: 1});
+function emitThreadInfoToTab(th, keep, keepActivity, tab) {
+  api.tabs.emit(tab, 'thread_info', {th: th, keep: keep, activity: keepActivity}, {queue: 1});
 }
 
-function emitThreadToTab(id, messages, keep, tab) {
-  api.tabs.emit(tab, 'thread', {id: id, messages: messages, keep: keep}, {queue: 1});
+function emitThreadToTab(id, keep, activity, tab) {
+  api.tabs.emit(tab, 'thread', {id: id, keep: keep, activity: activity}, {queue: 1});
+}
+
+function emitThreadErrorToTab(id, xhr, tab) {
+  var error = {status: xhr.status, message: xhr.response.error || xhr.statusText};
+  api.tabs.emit(tab, 'thread_error', {id: id, error: error});
 }
 
 function emitThreadsToTab(kind, tl, tab) {
@@ -727,32 +738,51 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
-  update_discussion_keep_library: function (data, respond, tab) {
+  update_keepscussion_recipients: function (data, respond, tab) {
     var d = pageData[tab.nUri];
-    var discussionKeep = data.discussionKeep;
+    var newUsers = data.newUsers;
+    var newEmails = data.newEmails;
     var newLibrary = data.newLibrary;
-    var oldLibrary = discussionKeep.libraries.filter(function (l) { return l.id !== newLibrary.id; })[0];
+    var oldLibrary = data.newLibrary ? (data.oldLibraries || []).filter(function (l) { return l.id !== newLibrary.id; })[0] : null;
     var params = {
       libraries: {
-        add: [ newLibrary.id ],
+        add: newLibrary ? [ newLibrary.id ] : [],
         remove: oldLibrary ? [ oldLibrary.id ] : []
+      },
+      users: {
+        add: newUsers.map(getId),
+        remove: []
+      },
+      emails: {
+        add: newEmails.map(getId),
+        remove: []
       }
     };
+    var keep = keepData[data.keepId];
+    var activity = activityData[data.keepId];
+    var permissions = keep && keep.viewer && keep.viewer.permissions || [];
 
-    ajax('POST', '/ext/keeps/' + discussionKeep.id + '/recipients', params, function (result) {
-      var keep = keepData[discussionKeep.id];
-      loadLibraries(function (libraries) {
-        var canonicalLibrary = libraries.find(idIs(newLibrary.id));
-        if (keep) {
-          keep.libraries = [ canonicalLibrary ];
-        }
-        var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
-        if (pageKeep) {
-          pageKeep.libraryId = newLibrary.id;
-        }
+    if (keep && permissions.indexOf('add_participants') === -1) {
+      return respond({ success: false });
+    }
 
-        respond({ success: true, response: keep });
-      })
+    ajax('POST', '/ext/keeps/' + data.keepId + '/recipients', params, function (result) {
+      keep.recipients.users = keep.recipients.users.concat(newUsers);
+      keep.recipients.emails = keep.recipients.emails.concat(newEmails);
+
+      if (newLibrary) {
+        loadLibraries(function (libraries) {
+          var canonicalLibrary = libraries.find(idIs(newLibrary.id));
+          if (keep) {
+            keep.recipients.libraries = [ canonicalLibrary ];
+          }
+          var pageKeep = d.keeps.find(libraryIdIs(oldLibrary && oldLibrary.id));
+          if (pageKeep) {
+            pageKeep.libraryId = newLibrary.id;
+          }
+        });
+      }
+      respond({ success: true, response: keep });
     }, function (failData) {
       respond({ success: false })
     });
@@ -1085,6 +1115,7 @@ api.port.on({
   send_message: function (data, respond, tab) {
     var sentAt = Date.now();
     var draft = discardDraft([tab.nUri, tab.url]);
+
     ajax('eliza', 'POST', '/eliza/messages', {
       url: data.url,
       canonical: !tab.usedHistoryApi && data.canonical || undefined,
@@ -1096,15 +1127,26 @@ api.port.on({
       text: data.text,
       recipients: data.recipients.map(makeObjectsForEmailAddresses),
       guided: data.guided
-    }, function (o) {
+    }, onSendSuccess, onSendFailure);
+
+    function onSendSuccess(o) {
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
       messageData[o.parentId] = o.messages;
       if (o.threadInfo && o.threadInfo.keep) {
-        keepData[o.threadInfo.id] = o.threadInfo.keep;
+        getKeepAndActivity(o.threadInfo.id)
+        .then(function (keepData) {
+          keepData[o.threadInfo.id] = keepData.keep;
+          activityData[o.threadInfo.id] = keepData.activity;
+        })
+        .catch(function (err) {
+          return log ('[send_message:getKeep] error: ', err);
+        });
       }
       respond({threadId: o.parentId});
-    }, function (req) {
+    }
+
+    function onSendFailure(req) {
       log('#c00', '[send_message] resp:', req);
       var response = {status: req.status};
       var elapsedMs = Date.now() - sentAt;
@@ -1116,16 +1158,22 @@ api.port.on({
       if (draft) {
         saveDraft(tab.nUri || tab.url, draft);
       }
-    });
+    }
   },
   send_reply: function(data, respond) {
-    var threadId = data.threadId;
-    delete data.threadId;
-    discardDraft([threadId]);
-    data.extVersion = api.version;
-    data.source = api.browser.name;
-    data.eip = eip;
-    ajax('shoebox', 'POST', '/ext/keeps/' + threadId + '/messages', data, logAndRespond, logErrorAndRespond);
+    var keepId = data.keepId;
+    var requestData = {
+      extVersion: api.version,
+      source: api.browser.name,
+      eip: eip,
+      text: data.text
+    };
+    discardDraft([keepId]);
+
+    sendKeepReply(keepId, requestData)
+    .then(logAndRespond)
+    .catch(logErrorAndRespond);
+
     function logAndRespond(o) {
       log('[send_reply] resp:', o);
       respond(o);
@@ -1135,10 +1183,10 @@ api.port.on({
       respond({status: req.status});
     }
   },
-  message_rendered: function(o, _, tab) {
-    whenTabFocused(tab, o.threadId, function (tab) {
-      markRead(o.threadId, o.messageId, o.time);
-      socket.send(['set_message_read', o.messageId]);
+  activity_event_rendered: function(o, _, tab) {
+    whenTabFocused(tab, o.keepId, function (tab) {
+      markRead(o.keepId, o.eventId, o.time);
+      socket.send(['set_message_read', o.eventId]);
     });
   },
   set_message_read: function (o, _, tab) {
@@ -1158,31 +1206,72 @@ api.port.on({
   get_page_thread_count: function(_, __, tab) {
     sendPageThreadCount(tab, null, true);
   },
+  activity_from: function(o, respond, tab) {
+    var keepId = o.id;
+    var limit = o.limit;
+    var fromTime = o.fromTime;
+
+    var cachedActivity = activityData[keepId];
+    var cachedActivityEvents = cachedActivity.events;
+
+    getKeepActivity(keepId, limit, fromTime)
+    .catch(function (xhr) {
+      log('[activity_from] error retrieving activity', xhr);
+      emitThreadErrorToTab(keepId, xhr, tab);
+    })
+    .then(function (responseData) {
+      var newActivity = responseData.events;
+      log('[activity_from] newActivity', newActivity);
+      if (newActivity) {
+        var allActivity = activityData[keepId].events = newActivity.concat(cachedActivityEvents).filter(filterDuplicates(getId)).sort(function (a, b) {
+          return b.timestamp - a.timestamp;
+        });
+        respond({ activity: newActivity });
+      }
+    })
+  },
   thread: function(id, _, tab) {
-    var th = notificationsById[id];
-    var keep = keepData[id];
-    if (th) {
-      emitThreadInfoToTab(th, keep, tab);
-    } else {
-      // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
-      socket.send(['get_one_thread', id], function (th) {
-        if (th) {
-          standardizeNotification(th);
-          updateIfJustRead(th);
-          notificationsById[th.thread] = th;
-        } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
-          th = { thread: id };
-        }
-        emitThreadInfoToTab(th, keep, tab);
+    var cachedKeep = keepData[id];
+    var cachedActivity = activityData[id];
+    if (!cachedKeep) {
+      getKeepAndActivity(id)
+      .then(function (responseData) {
+        var keep = keepData[id] = responseData.keep;
+        var activity = activityData[id] = responseData.activity;
+        doThread(id, keep, activity);
+      })
+      .catch(function (xhr) {
+        log('[thread] error retrieving keep: ', xhr);
+        emitThreadErrorToTab(id, xhr, tab);
       });
-    }
-    var msgs = messageData[id];
-    if (msgs) {
-      var linkToKeep = shouldLinkToKeep(keep);
-      emitThreadToTab(id, msgs, linkToKeep ? keep : null, tab);
     } else {
-      // TODO: remember that this tab needs this thread until it gets it or its pane changes?
-      socket.send(['get_thread', id]);
+      doThread(id, cachedKeep, cachedActivity);
+    }
+
+    function doThread(id, keep, keepActivity) {
+      var th = notificationsById[id];
+      if (th) {
+        emitThreadInfoToTab(th, keep, keepActivity, tab);
+      } else {
+        // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
+        socket.send(['get_one_thread', id], function (th) {
+          if (th) {
+            standardizeNotification(th);
+            updateIfJustRead(th);
+            notificationsById[th.thread] = th;
+          } else { // th = null if the thread has no notif (e.g. deeplink to user's own keep)
+            th = { thread: id };
+          }
+          emitThreadInfoToTab(th, keep, keepActivity, tab);
+        });
+      }
+      var msgs = messageData[id];
+      if (msgs) {
+        emitThreadToTab(id, keep, keepActivity, tab);
+      } else {
+        // TODO: remember that this tab needs this thread until it gets it or its pane changes?
+        socket.send(['get_thread', id]);
+      }
     }
   },
   thread_list: function(o, _, tab) {
@@ -1379,28 +1468,15 @@ api.port.on({
     data = data || {};
     data.drop = data.drop || 0;
 
-    ajax('GET', '/ext/keeps/suggestRecipients', { query: data.q, limit: data.n, drop: data.drop }, function (responseData) {
+    var searchFor = data.searchFor || { user: true, email: true, library: false };
+    var requested = Object.keys(searchFor).filter(function (k) { return searchFor[k]; }).join(',');
+
+    ajax('GET', '/ext/keeps/suggestRecipients', {query: data.q, limit: data.n, drop: data.drop, requested: requested}, function (responseData) {
       var recipients = responseData.results;
       respond(toResults(recipients, data.q, me, data.n, data.exclude, data.includeSelf));
     }, function () {
       respond(null);
     });
-  },
-  search_contacts: function (data, respond, tab) {
-    if (!contactSearchCache) {
-      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(30000);
-    }
-    var contacts = contactSearchCache.get(data.q);
-    if (contacts) {
-      respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
-    } else {
-      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n + (data.exclude && data.exclude.length) || 0}, function (contacts) {
-        contactSearchCache.put(data.q, contacts);
-        respond(toResults(contacts, data.q, me, data.n, data.exclude, data.includeSelf));
-      }, function () {
-        respond(null);
-      });
-    }
   },
   delete_contact: function (email, respond) {
     ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
@@ -2653,7 +2729,7 @@ function dontShowFtueAgain(type) {
 }
 
 function toResults(contacts, q, me, n, exclude, includeSelf) {
-  exclude = exclude || [];
+  exclude = (exclude || []).filter(Boolean);
 
   var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
   if (!includeSelf) {
@@ -2759,6 +2835,18 @@ function endsWith(ch) {
 function setProp(name, val) {
   return function (o) { o[name] = val; };
 }
+function filterDuplicates(accessor) {
+  var map = {};
+  return function (o) {
+    var v = accessor(o);
+    if (v in map) {
+      return false;
+    } else {
+      map[v] = true;
+      return true;
+    }
+  }
+}
 function extend(o, o1) {
   for (var k in o1) {
     o[k] = o1[k];
@@ -2809,6 +2897,40 @@ function getPrefs(next) {
       socket.send(['eip', eip]);
     }
     if (next) next();
+  });
+}
+
+function getKeep(keepId) {
+  return new Promise(function (resolve, reject) {
+    ajax('GET', '/api/1/keeps/' + keepId, resolve, reject);
+  });
+}
+
+function getKeepActivity(keepId, limit, fromTime) {
+  return new Promise(function (resolve, reject) {
+    ajax('GET', '/api/1/keeps/' + keepId + '/activity', {limit: limit, fromTime: fromTime}, resolve, reject);
+  });
+}
+
+function getKeepAndActivity(keepId) {
+  return Promise.all([
+    getKeep(keepId),
+    getKeepActivity(keepId)
+  ])
+  .then(function (vals) {
+    var keepResponseData = vals[0];
+    var activityResponseData = vals[1];
+    return {
+      keep: keepResponseData.keep,
+      page: keepResponseData.page,
+      activity: activityResponseData
+    }
+  });
+}
+
+function sendKeepReply(keepId, data) {
+  return new Promise(function (resolve, reject) {
+    ajax('POST', '/api/1/keeps/' + keepId + '/messages', data, resolve, reject);
   });
 }
 

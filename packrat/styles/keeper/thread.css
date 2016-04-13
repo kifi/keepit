@@ -6,9 +6,12 @@
 .kifi-messages-sent-inner {
   max-height: inherit;
 }
+.kifi-messages-sent-inner.kifi-hidden {
+  display: none;
+}
 .kifi-message-sent {
   margin: 0 9px;
-  padding: 11px 10px 11px 0;
+  padding: 10px 10px 10px 0;
   position: relative;
 }
 .kifi-message-sent:first-child {
@@ -28,23 +31,65 @@
   background-color: #fafafa;
   display: none;
 }
-.kifi-message-sent .kifi-message-tip {
-  line-height: 11px;
-  font-size: 11px;
-  float: right;
-  background-color: #fafafa;
-  color: #a9a9a9;
+.kifi-message-sent-header-item:not([data-kind="text"]) {
+  font-weight: bold;
+}
+.kifi-message-sent-header-item a[href] {
+  color: inherit;
+  font-weight: bold;
+}
+.kifi-message-sent-header-item a[href]:hover {
+  text-decoration: underline!important;
+}
+.kifi-message-sent:only-of-type:hover .kifi-message-sent-header-stamp, /* hide stamp on hover when it's the only one */
+.kifi-messages-sent:hover .kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* hide the shown-by-default last timestamp if hovering over another */
   display: none;
 }
-.kifi-message-sent:hover .kifi-message-tip,
-.kifi-message-sent:last-child .kifi-message-tip {
-  display: block;
+.kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* show last timestamp when not hovering */
+  display: inline-block;
 }
-.kifi-message-sent:hover~.kifi-message-sent:last-child .kifi-message-tip {
+.kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-header-stamp { /* show the timestamp when hovering over its message */
+  display: inline-block;
+}
+.kifi-message-sent-header-stamp {
+  position: absolute;
+  right: 0;
   display: none;
-}
-.kifi-message-source {
+  background: linear-gradient(to right, rgba(250,250,250,0) 0, rgba(250,250,250,1) 10px);
   font-size: 10px;
+  text-align: right;
+  color: #a9a9a9;
+}
+.kifi-message-sent-header-stamp-ellipsis {
+  padding-left: 13px;
+}
+.kifi-message-sent:not(:only-of-type) .kifi-message-sent-header-stamp-ellipsis::before { /* add the ellipsis to messages unless there is only one */
+  content: '…';
+}
+.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp { /* if there is only one message, display its stamp on its own line. */
+  position: static;
+  display: block!important;
+}
+.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp.kifi-message-sent-header-stamp-dummy { /* matched when measuring if an ellipsis is needed */
+  position: absolute;
+  display: inline-block!important;
+}
+.kifi-message-source-icon {
+  display: none;
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
+  background-size: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.kifi-message-source-icon-Slack {
+  display: inline-block;
+  background-image: url(/images/slackapp.png);
+}
+.kifi-message-source-icon-Twitter {
+  display: inline-block;
+  background-image: url(/images/twitter-blue.svg);
 }
 a.kifi-message-pic-a,
 span.kifi-message-pic-email {
@@ -69,30 +114,23 @@ span.kifi-message-pic-email {
   -moz-user-select: none;
   user-select: none;
 }
+.kifi-message-sent-header {
+  background: transparent;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.kifi-message-sent-header .kifi-message-p {
+  display: inline;
+}
 .kifi-message-body {
   margin-left: 40px;
   word-wrap: break-word;
 }
-.kifi-message-top {
+.kifi-message-content {
   position: relative;
   top: -2px;
-  margin-bottom: 2px;
   width: 100%;
   overflow: hidden;
-}
-.kifi-message-name {
-  font-weight: bold;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-a.kifi-message-name {
-  display: block;
-  color: inherit;
-}
-a.kifi-message-name:hover {
-  color: inherit;
-  text-decoration: underline !important;
 }
 .kifi-message-p {
   line-height: 16px;
@@ -101,7 +139,7 @@ a.kifi-message-name:hover {
 .kifi-message-pp {
   margin-top: 6px;
 }
-.kifi-message-p>a[href] {
+.kifi-message-content .kifi-message-p>a[href] {
   text-decoration: underline !important;
 }
 .kifi-image-in-message {
@@ -114,33 +152,6 @@ a.kifi-message-name:hover {
   line-height: 0;
   visibility: hidden;
   clear: both;
-}
-.kifi-message-aux .kifi-message-body,
-.kifi-message-aux .kifi-message-pic {
-  display: none;
-}
-.kifi-message-sent.kifi-message-aux {
-  padding: 0;
-}
-.kifi-message-aux {
-  text-align: center;
-  color: #b8c5d0;
-  border-top: 1px solid #b8c5d0;
-  border-bottom: 1px solid #b8c5d0;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-.kifi-message-aux .kifi-message-tip {
-  position: absolute;
-  right: 10px;
-  top: -6px;
-  padding: 0 3px;
-}
-.kifi-message-aux + .kifi-message-sent {
-  border-top: 0;
-}
-.kifi-aux-message {
-  padding: 13px;
 }
 .kifi-message-tip-keep-link {
   color: inherit;
@@ -159,6 +170,28 @@ a.kifi-message-name:hover {
   bottom: 0;
   width: 100%;
   background-color: #fafafa;
+}
+.kifi-thread-error {
+  display: none;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  flex-flow: column nowrap;
+  text-align: center;
+}
+.kifi-thread-error.kifi-showing {
+  display: flex;
+}
+.kifi-thread-error-title {
+  font-size: 20px;
+  color: #999;
+}
+.kifi-thread-error-subtitle {
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 0 30px;
+  color: #ababab;
 }
 .kifi-message-email-view,
 .kifi-message-email-learn {
