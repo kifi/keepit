@@ -139,7 +139,7 @@ k.panes.thread = k.panes.thread || function () {
     var $scroll = $tall.find('.kifi-scroll-wrap');
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
-    $holder.on('scroll', _.debounce(onScroll, 1000));
+    $holder.on('scroll', _.throttle(onScroll, 30));
 
     $paneBox
     .on('kifi:error', function (err) {
@@ -167,16 +167,16 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function onScroll() {
-    if (!this.dataset.atTop && this.scrollTop < 40) {
-      getOlderActivity(function (isDone) {
-        if (isDone) {
-          this.dataset.atTop = true;
+    if (!this.dataset.atEarliest && this.scrollTop < 5) {
+      getOlderActivity(function (atEarliest) {
+        if (atEarliest) {
+          this.dataset.atEarliest = true;
         }
       }.bind(this));
     }
   }
 
-  function getOlderActivity(cb) {
+  function getOlderActivity(cb, stayAtBottom, iteration) {
     var keep = $holder.data('keep');
     var $latestMessage = $holder.find('.kifi-message-sent').get(0);
     var $time = $latestMessage.querySelector('time');
@@ -187,9 +187,22 @@ k.panes.thread = k.panes.thread || function () {
     var limit = 10;
     api.port.emit('activity_from', { id: keep.id, limit: limit, fromTime: timestamp }, function (o) {
       o.activity.forEach(updateActivity.bind(null, keep));
+      var atEarliest = (o.activity.length < limit);
       var postTop = $latestMessage.offsetTop;
-      $holder[0].scrollTop = (postTop + preTop);
-      cb(o.activity.length < limit);
+
+      if (!stayAtBottom) {
+        $holder[0].scrollTop = (postTop + preTop);
+      } else {
+        $holder[0].scrollTop = $holder[0].clientHeight;
+      }
+
+      if (!atEarliest && $holder[0].scrollHeight <= $holder[0].clientHeight && iteration < 3) {
+        getOlderActivity(cb, stayAtBottom, (iteration || 1) + 1); // paranoia about infinite loops
+      }
+
+      if (cb) {
+        cb(atEarliest);
+      }
     });
   }
 
@@ -239,6 +252,9 @@ k.panes.thread = k.panes.thread || function () {
     }
 
     if (activityEvents.length) {
+      if ($holder[0].scrollHeight <= $holder[0].clientHeight) {
+        getOlderActivity();
+      }
       emitEventRendered(keepId, activityEvents[activityEvents.length - 1]);
     }
   }
