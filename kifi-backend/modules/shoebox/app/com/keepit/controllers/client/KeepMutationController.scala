@@ -105,7 +105,14 @@ class KeepMutationController @Inject() (
     }
   }
 
+  private object ModifyKeepRecipients {
+    private val schemaReads = ExternalKeepRecipientsDiff.schemaReads
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
+    val schemaHelper = json.schemaHelper(reads)
+  }
   def modifyKeepRecipients(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    import ModifyKeepRecipients._
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
       input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
@@ -118,6 +125,8 @@ class KeepMutationController @Inject() (
     } yield {
       NoContent
     }).recover {
+      case DiscussionFail.COULD_NOT_PARSE =>
+        schemaHelper.hintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
