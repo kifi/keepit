@@ -4,7 +4,7 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.Id
-import com.keepit.common.json.{ EitherFormat, EnumFormat }
+import com.keepit.common.json.{ SchemaReads, EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.S3ImageConfig
@@ -63,6 +63,7 @@ object KeepEventSource extends Enumerator[KeepEventSource] {
   def apply(str: String) = fromStr(str).get
 
   implicit val format: Format[KeepEventSource] = EnumFormat.format(fromStr, _.value)
+  implicit val schemaReads: SchemaReads[KeepEventSource] = SchemaReads.trivial("keep_event_source")
 
   def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSource] = msgSrc.flatMap {
     case MessageSource.IPHONE => Some(iOS)

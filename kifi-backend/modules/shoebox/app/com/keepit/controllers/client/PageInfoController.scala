@@ -104,7 +104,7 @@ class PageInfoController @Inject() (
     } yield getKeepInfosForPage(request.userId, input.url, KeepRecipients.EMPTY)
 
     resultIfEverythingChecksOut.fold(
-      fail => Future.successful(BadRequest(Json.obj("err" -> fail, "expected" -> schema.asJson, "hint" -> schemaHelper.hint(request.body)))),
+      fail => Future.successful(schemaHelper.hintResponse(request.body, schema)),
       result => result.map(ans => Ok(outputWrites.writes(ans)))
     )
   }
