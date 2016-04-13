@@ -59,7 +59,7 @@ class DeepLinkRouterImpl @Inject() (
     val keepIdOpt = keepPubIdOpt.flatMap(kid => Keep.decodePublicIdStr(kid.id).toOption)
     for {
       keepId <- keepIdOpt
-      keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
+      keep <- db.readOnlyReplica(implicit s => keepRepo.getActive(keepId))
       accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
     } yield {
       val url = {

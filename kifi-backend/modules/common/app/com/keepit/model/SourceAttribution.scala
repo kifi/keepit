@@ -104,13 +104,13 @@ object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
 }
 
-case class KifiAttribution(keptBy: BasicUser, users: Set[BasicUser], nonUsers: Set[EmailAddress], libraries: Set[BasicLibrary], source: KeepSource) extends SourceAttribution
+case class KifiAttribution(keptBy: BasicUser, note: Option[String], users: Set[BasicUser], nonUsers: Set[EmailAddress], libraries: Set[BasicLibrary], source: KeepSource) extends SourceAttribution
 object KifiAttribution {
   implicit val format = Json.format[KifiAttribution]
 }
 
 case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
-  override val version = 7
+  override val version = 8
   val namespace = "source_attribution_by_keep_id"
   def toKey(): String = keepId.id.toString
 }

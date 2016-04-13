@@ -49,6 +49,7 @@ case class SlackAttachment(
     markdownIn: Option[Set[String]] = None) {
   def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
   def withColor(newColor: String) = this.copy(color = Some(newColor))
+  def withColorMaybe(colorMaybe: Option[String]) = this.copy(color = colorMaybe)
   def withText(str: String) = this.copy(text = Some(str))
   def withImageUrl(newImageUrl: String) = this.copy(imageUrl = Some(newImageUrl))
 }
@@ -164,6 +165,22 @@ object SlackMessage {
         (obj \ "ts").asOpt[SlackTimestamp].exists(_.value == "0000000000.000000")
     }
   }
+}
+
+final case class SlackHistoryMessage(
+  userId: Option[SlackUserId],
+  text: String,
+  attachments: Seq[SlackAttachment],
+  timestamp: SlackTimestamp,
+  originalJson: JsValue)
+object SlackHistoryMessage {
+  implicit val reads: Reads[SlackHistoryMessage] = (
+    (__ \ 'user).readNullable[SlackUserId] and
+    (__ \ 'text).read[String] and
+    (__ \ 'attachments).readNullable[Seq[SlackAttachment]].map(_ getOrElse Seq.empty) and
+    (__ \ 'ts).read[SlackTimestamp] and
+    __.read[JsValue]
+  )(SlackHistoryMessage.apply _)
 }
 
 @json

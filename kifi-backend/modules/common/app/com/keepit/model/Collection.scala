@@ -124,14 +124,14 @@ object CollectionSummary {
 }
 
 case class SendableTag(
-  id: ExternalId[Collection],
+  id: String,
   name: Hashtag)
 
 object SendableTag {
   private implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val writesSendableTag = Json.writes[SendableTag]
 
-  def from(c: CollectionSummary): SendableTag = SendableTag(c.externalId, c.name)
+  def from(c: CollectionSummary): SendableTag = SendableTag(c.name.tag, c.name)
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {

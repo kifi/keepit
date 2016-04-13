@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ State, Id }
@@ -31,7 +30,6 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 class KeepToCollectionRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
   collectionsForKeepCache: CollectionsForKeepCache,
-  basicCollectionCache: BasicCollectionByIdCache,
   collectionRepoProvider: Provider[CollectionRepoImpl],
   keepRepoProvider: Provider[KeepRepoImpl],
   val db: DataBaseComponent,
@@ -47,7 +45,6 @@ class KeepToCollectionRepoImpl @Inject() (
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForKeepCache.remove(CollectionsForKeepKey(ktc.keepId))
-    basicCollectionCache.remove(BasicCollectionByIdKey(ktc.collectionId))
   }
 
   type RepoImpl = KeepToCollectionTable

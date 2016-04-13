@@ -80,6 +80,11 @@ object NonUserParticipant {
   def fromBasicNonUser(nonUser: BasicNonUser) = nonUser.kind match {
     case NonUserKinds.email => NonUserEmailParticipant(EmailAddress(nonUser.id))
   }
+
+  def toEmailAddress(nonUser: NonUserParticipant): Option[EmailAddress] = nonUser match {
+    case NonUserEmailParticipant(email) => Some(email)
+    case _ => None
+  }
 }
 
 case class NonUserEmailParticipant(address: EmailAddress) extends NonUserParticipant {

@@ -110,9 +110,17 @@ final class TraversableExtensionOps[A](xs: Traversable[A]) {
 }
 
 final class MapExtensionOps[A, B](xs: Map[A, B]) {
+  def getOrAirbrake(k: A)(implicit airbrake: AirbrakeNotifier) = {
+    val v = xs.get(k)
+    if (v.isEmpty) airbrake.notify(new Exception(s"Key $k is not in map, and we really think it should be there"))
+    v
+  }
   def mapValuesStrict[C](fn: B => C): Map[A, C] = xs.map { case (k, v) => k -> fn(v) }
   def flatMapValues[C](fn: B => Option[C]): Map[A, C] = xs.flatMap { case (k, v) => fn(v).map(k -> _) }
   def filterValues(predicate: B => Boolean): Map[A, B] = xs.filter { case (k, v) => predicate(v) }
+  def traverseByKey(implicit ord: Ordering[A]): Seq[B] = {
+    xs.toSeq.sortBy(_._1).map(_._2)
+  }
 }
 
 final class EitherExtensionOps[A, B, Repr](xs: IterableLike[Either[A, B], Repr]) {

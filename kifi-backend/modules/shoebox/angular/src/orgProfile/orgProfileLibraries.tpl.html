@@ -1,4 +1,5 @@
 <div class="kf-org-profile-libraries" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
+  <div kf-org-profile-slack-box organization="organization" ng-if="organization.slackTeam && !viewer.membership.role && !viewer.invite"></div>
   <div class="kf-upl-card-list">
     <button ng-show="loaded" ng-if="canCreateLibraries" class="kf-upl-card kf-opl-create-card kf-link-parent" ng-click="openCreateLibrary()">
       <span class="kf-opl-create-card-add-icon"><svg kf-symbol-sprite icon="plus"></svg></span>

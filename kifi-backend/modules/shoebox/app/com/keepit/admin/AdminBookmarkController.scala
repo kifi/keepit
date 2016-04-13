@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -11,6 +11,7 @@ import com.keepit.common.logging.SlackLog
 import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
@@ -42,7 +43,7 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   keepCommander: KeepCommander,
-  collectionCommander: CollectionCommander,
+  keepMutator: KeepMutator,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
@@ -51,6 +52,7 @@ class AdminBookmarksController @Inject() (
   rawKeepRepo: RawKeepRepo,
   sourceRepo: KeepSourceAttributionRepo,
   keepSourceCommander: KeepSourceCommander,
+  keepEventRepo: KeepEventRepo,
   userIdentityHelper: UserIdentityHelper,
   uriInterner: NormalizedURIInterner,
   eliza: ElizaServiceClient,
@@ -66,11 +68,11 @@ class AdminBookmarksController @Inject() (
       val user = bookmark.userId.map(userRepo.get)
       val keepId = bookmark.id.get
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
-      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
+      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getImageUrl))
       val libraryOpt = bookmark.lowestLibraryId.map { opt => libraryRepo.get(opt) }
 
       keywordsFut.map { keywords =>
-        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
+        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.fold("")(_.value), "", keywords, libraryOpt))
       }
     }
   }
@@ -104,7 +106,7 @@ class AdminBookmarksController @Inject() (
   def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
-      keepCommander.deactivateKeep(keep)
+      keepMutator.deactivateKeep(keep)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
@@ -140,7 +142,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture.recover {
       case ex: Throwable => -1
     }
 
@@ -197,52 +199,9 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndName(userId, Hashtag(tagName))
-    } map { coll =>
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.unknown).build
-      collectionCommander.deleteCollection(coll)
-      NoContent
-    } getOrElse {
-      NotFound(Json.obj("error" -> "not_found"))
-    }
-  }
-
-  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = AdminUserAction {
-    db.readWrite { implicit session =>
-      keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
-    }
-    Ok
-  }
-
   def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
     val numFix = libraryChecker.keepVisibilityCheck(libId)
     Ok(JsNumber(numFix))
-  }
-
-  // This attempts to fix keep notes whenever they may be off.
-  // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
-  // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
-  def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
-    val keepIds = db.readOnlyReplica { implicit session =>
-      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
-      val rangeIds = (for {
-        start <- (request.body \ "startUser").asOpt[Long]
-        end <- (request.body \ "endUser").asOpt[Long]
-      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
-      (userIds ++ rangeIds).flatMap { u =>
-        keepRepo.getByUser(u)
-      }.sortBy(_.userId).map(_.id.get)
-    }
-
-    keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
-      if (k.id % 1000 == 0) {
-        log.info(s"[reprocessNotesOfKeeps] Still running, keep $k")
-      }
-    })
-
-    Ok(s"Running for ${keepIds.length} keeps!")
   }
 
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
@@ -251,7 +210,7 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
+        keepRepo.getActiveByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
         keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
@@ -273,7 +232,7 @@ class AdminBookmarksController @Inject() (
     val keepIds = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).keySet
+        keepRepo.getActiveByIds(keepIds.toSet).keySet
       }
       val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
         keepRepo.getByUser(Id[User](u)).map(_.id.get).toSet
@@ -299,7 +258,7 @@ class AdminBookmarksController @Inject() (
 
     db.readWrite(attempts = 5) { implicit session =>
       keeps.foreach { keepId =>
-        keepCommander.deactivateKeep(keepRepo.get(keepId))
+        keepMutator.deactivateKeep(keepRepo.get(keepId))
       }
     }
 
@@ -330,15 +289,17 @@ class AdminBookmarksController @Inject() (
   def backfillKifiSourceAttribution(startFrom: Option[Long], limit: Int, dryRun: Boolean) = AdminUserAction { implicit request =>
     import com.keepit.common.core._
 
-    val fromId = startFrom.map(Id[Keep])
+    var fromId = startFrom.map(Id[Keep])
     val chunkSize = 100
-    val keepsToBackfill = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, limit, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
-    val enum = ChunkedResponseHelper.chunkedFuture(keepsToBackfill.grouped(chunkSize).toSeq) { keeps =>
-      val (discussionKeeps, otherKeeps) = keeps.partition(_.source == KeepSource.discussion)
+    val numPages = limit / chunkSize
+    val enum = ChunkedResponseHelper.chunkedFuture(1 to numPages) { page =>
+      val keeps = db.readOnlyMaster(implicit s => keepRepo.pageAscendingWithUserExcludingSources(fromId, chunkSize, excludeStates = Set.empty, excludeSources = Set(KeepSource.slack, KeepSource.twitterFileImport, KeepSource.twitterSync)))
+      def mightBeDiscussion(k: Keep) = k.source == KeepSource.discussion || (k.isActive && k.recipients.libraries.isEmpty && k.recipients.users.exists(uid => !k.userId.contains(uid)))
+      val (discussionKeeps, otherKeeps) = keeps.partition(mightBeDiscussion)
       val discussionConnectionsFut = eliza.getInitialRecipientsByKeepId(discussionKeeps.map(_.id.get).toSet).map { connectionsByKeep =>
         discussionKeeps.flatMap { keep =>
           connectionsByKeep.get(keep.id.get).map { connections =>
-            keep.id.get -> (RawKifiAttribution(keep.userId.get, connections, keep.source), keep.state == KeepStates.ACTIVE)
+            keep.id.get -> (RawKifiAttribution(keep.userId.get, keep.note, connections, keep.source), keep.state == KeepStates.ACTIVE)
           }
         }.toMap
       }
@@ -348,9 +309,9 @@ class AdminBookmarksController @Inject() (
         val ktus = ktuRepo.getAllByKeepIds(otherKeeps.map(_.id.get).toSet, excludeState = None)
         otherKeeps.collect {
           case keep =>
-            val firstLibrary = ktls(keep.id.get).minBy(_.addedAt).libraryId
-            val firstUsers = ktus(keep.id.get).filter(ktu => !keep.userId.contains(ktu.userId) && keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis)
-            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, KeepRecipients(Set(firstLibrary), Set.empty, firstUsers.map(_.userId).toSet), keep.source)
+            val firstLibrary = ktls.getOrElse(keep.id.get, Seq.empty).minByOpt(_.addedAt).map(_.libraryId)
+            val firstUsers = ktus.getOrElse(keep.id.get, Seq.empty).collect { case ktu if keep.keptAt.getMillis > ktu.addedAt.minusSeconds(1).getMillis => ktu.userId } ++ keep.userId.toSeq
+            val rawAttribution = RawKifiAttribution(keptBy = keep.userId.get, keep.note, KeepRecipients(firstLibrary.toSet, Set.empty, firstUsers.toSet), keep.source)
             keep.id.get -> (rawAttribution, keep.state == KeepStates.ACTIVE)
         }.toMap
       }
@@ -359,8 +320,12 @@ class AdminBookmarksController @Inject() (
         discussionConnections <- discussionConnectionsFut
         nonDiscussionConnections <- nonDiscussionConnectionsFut
         (success, fail) <- db.readWriteAsync { implicit s =>
-          val allConnections = discussionConnections ++ nonDiscussionConnections
-          val missingKeeps = keeps.map(_.id.get).filter(!allConnections.contains(_))
+          val fetchedConnections = discussionConnections ++ nonDiscussionConnections
+          val missingKeeps = keeps.filter(keep => !fetchedConnections.contains(keep.id.get))
+          val allConnections = fetchedConnections ++ missingKeeps.map { k =>
+            val rawAttribution = RawKifiAttribution(keptBy = k.userId.get, k.note, k.recipients.plusUser(k.userId.get), k.source)
+            k.id.get -> (rawAttribution, k.state == KeepStates.ACTIVE)
+          }
           val internedKeeps = allConnections.map {
             case (kid, (attr, isActive)) =>
               val state = if (isActive) KeepSourceAttributionStates.ACTIVE else KeepSourceAttributionStates.INACTIVE
@@ -370,9 +335,41 @@ class AdminBookmarksController @Inject() (
           (internedKeeps, missingKeeps)
         }
       } yield {
+        fromId = keeps.maxBy(_.id.get).id
         s"${keeps.map(_.id.get).minMaxOpt}: interned ${success.size}, failed on ${fail.mkString("(", ",", ")")}\n"
       }
     }
     Ok.chunked(enum)
+  }
+
+  def backfillKeepEventRepo(fromId: Id[Message], pageSize: Int, dryRun: Boolean) = AdminUserAction.async { implicit request =>
+    var startWithMessage = fromId
+    FutureHelpers.doUntil {
+      eliza.pageSystemMessages(startWithMessage, pageSize).map { msgs =>
+        if (msgs.isEmpty) true
+        else {
+          msgs.foreach { msg =>
+            msg.auxData.foreach { eventData =>
+              if (!dryRun) {
+                val event = KeepEvent(
+                  state = if (msg.isDeleted) KeepEventStates.INACTIVE else KeepEventStates.ACTIVE,
+                  keepId = msg.keep,
+                  eventData = eventData,
+                  eventTime = msg.sentAt,
+                  source = KeepEventSource.fromMessageSource(msg.source),
+                  messageId = Some(msg.id)
+                )
+                Try(db.readWrite(implicit s => keepEventRepo.save(event))).failed.map {
+                  case t: Throwable => slackLog.warn(s"failed on keep ${msg.keep}, msg ${msg.id}, reason ${t.getMessage}")
+                }
+              }
+            }
+          }
+          slackLog.info(s"messages ${msgs.map(_.id).minMaxOpt}")
+          startWithMessage = msgs.last.id
+          false
+        }
+      }
+    }.map(_ => NoContent)
   }
 }

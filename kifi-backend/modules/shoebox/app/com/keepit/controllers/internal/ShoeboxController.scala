@@ -47,6 +47,8 @@ class ShoeboxController @Inject() (
   keepRepo: KeepRepo,
   keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
+  keepEventCommander: KeepEventCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -441,16 +443,11 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    Ok(Json.toJson(keepCommander.getBasicKeeps(keepIds)))
-  }
-
   def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
     implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
-    val keepById = db.readOnlyMaster { implicit s => keepRepo.getByIds(keepIds) }
+    val keepById = db.readOnlyMaster { implicit s => keepRepo.getActiveByIds(keepIds) }
     val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
@@ -605,7 +602,8 @@ class ShoeboxController @Inject() (
     val beforeDate = (request.body \ "before").asOpt[DateTime]
     val limit = (request.body \ "limit").as[Int]
     val keeps = keepCommander.getRelevantKeepsByUserAndUri(userId, uriId, beforeDate, limit)
-    Ok(Json.toJson(keeps))
+    val keepIds = keeps.map(_.id.get)
+    Ok(Json.toJson(keepIds))
   }
 
   def getPersonalKeepRecipientsOnUris() = Action(parse.tolerantJson) { request =>
@@ -656,10 +654,11 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(csKeep))
   }
 
-  def addUsersToKeep(adderId: Id[User], keepId: Id[Keep]) = Action(parse.tolerantJson) { request =>
-    val users = (request.body \ "users").as[Set[Id[User]]]
+  def editRecipientsOnKeep(editorId: Id[User], keepId: Id[Keep], persistKeepEvent: Boolean, source: Option[KeepEventSource]) = Action(parse.tolerantJson) { request =>
+    val diff = (request.body \ "diff").as[KeepRecipientsDiff](KeepRecipientsDiff.internalFormat)
     db.readWrite { implicit s =>
-      keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(users), userAttribution = Some(adderId))
+      keepMutator.unsafeModifyKeepRecipients(keepId, diff, Some(editorId))
+      if (persistKeepEvent) keepEventCommander.persistKeepEvent(keepId, KeepEventData.ModifyRecipients(editorId, diff), source, eventTime = None)
     }
     NoContent
   }

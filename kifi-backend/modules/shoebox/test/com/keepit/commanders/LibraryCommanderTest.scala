@@ -1358,27 +1358,27 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res1.right.get._1.length === 1 // all successes
         res1.right.get._2.length === 0 // all successes
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 4 // 1 new keep added (it was tagged by tag1 & tag2, so two more ktc's added)
-          keepToCollectionRepo.count === 6
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
+          keepRepo.count === 4
+          keepToCollectionRepo.count === 4
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
         }
 
         // unkeep k1
         db.readWrite { implicit s =>
           keepRepo.deactivate(k1)
           keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
-          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
+          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 2
         }
         // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res2 must beRight
-        res2.right.get._1.length === 1 // 1 new keep
+        res2.right.get._1.length === 0 // 0 new keep
         res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 5
+          keepRepo.count === 4
           keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 1
-          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 2
         }
       }
     }
@@ -1465,7 +1465,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res5.right.get._1.length === 2
-        res5.right.get._2.length === 2 // already kept
+        res5.right.get._2.length === 1 // already kept
         db.readOnlyMaster { implicit s =>
           keepRepo.pageByLibrary(libUSA.id.get, 0, 10).length === 0
           keepRepo.pageByLibrary(libMurica.id.get, 0, 10).length === 3

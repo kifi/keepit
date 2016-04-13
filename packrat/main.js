@@ -542,6 +542,9 @@ var socketHandlers = {
       insertUpdateChronologically(messages, message, 'createdAt');
     }
   },
+  event: function(keepId, event) {
+    log('[socket:event]', keepId, event);
+  },
   message_read: function(nUri, threadId, time, messageId) {
     log("[socket:message_read]", nUri, threadId, time);
     removeNotificationPopups(threadId);

@@ -1,7 +1,7 @@
 package com.keepit.shoebox.eliza
 
 import com.google.inject.Inject
-import com.keepit.commanders.KeepCommander
+import com.keepit.commanders.{ KeepMutator, KeepCommander }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
@@ -16,7 +16,7 @@ import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient, LibraryToSlac
 import com.kifi.juggle.BatchProcessingActor
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure }
+import scala.util.Failure
 
 object ShoeboxMessageIngestionActor {
   val shoeboxMessageSeq = Name[SequenceNumber[Message]]("shoebox_message")
@@ -27,7 +27,7 @@ class ShoeboxMessageIngestionActor @Inject() (
   db: Database,
   systemValueRepo: SystemValueRepo,
   keepRepo: KeepRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   eliza: ElizaServiceClient,
   airbrake: AirbrakeNotifier,
   slackPusher: LibraryToSlackChannelPusher,
@@ -57,7 +57,7 @@ class ShoeboxMessageIngestionActor @Inject() (
     messages.map(_.seq).maxOpt.foreach { maxSeq =>
       val messagesByKeep = messages.groupBy(_.keep)
       db.readWrite { implicit session =>
-        val keeps = keepRepo.getByIds(messagesByKeep.keySet).values
+        val keeps = keepRepo.getActiveByIds(messagesByKeep.keySet).values
         session.onTransactionSuccess {
           slackPusher.schedule(keeps.flatMap(_.recipients.libraries).toSet)
         }
@@ -71,19 +71,17 @@ class ShoeboxMessageIngestionActor @Inject() (
             }
             def updateLastActivity() = {
               val lastMessageTime = msgs.map(_.sentAt).maxBy(_.getMillis)
-              keepCommander.updateLastActivityAtIfLater(keepId, lastMessageTime)
+              keepMutator.updateLastActivityAtIfLater(keepId, lastMessageTime)
             }
             def handleKeepEvents() = msgs.flatMap(_.auxData).foreach {
-              case KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers) =>
+              case KeepEventData.ModifyRecipients(editor, KeepRecipientsDiff(users, libraries, emails)) =>
                 val diff = KeepRecipientsDiff(
-                  users = DeltaSet.empty.addAll(addedUsers.toSet),
-                  emails = DeltaSet.empty.addAll(addedNonUsers.flatMap(_.asEmailAddress).toSet),
-                  libraries = DeltaSet.empty
+                  users = DeltaSet.empty.addAll(users.added),
+                  emails = DeltaSet.empty.addAll(emails.added),
+                  libraries = DeltaSet.empty.addAll(libraries.added)
                 )
-                keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(addedBy))
-              case KeepEventData.AddLibraries(_, _) =>
+                keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(editor))
               case KeepEventData.EditTitle(_, _, _) =>
-              case _: KeepEventData.AddRecipients =>
             }
 
             // Apply all of the functions in sequence

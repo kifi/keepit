@@ -20,8 +20,8 @@ trait DiscussionCommander {
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit]
 
   // deprecate this in favor of modifyConnectionsForKeep
-  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSourceKind]): Future[Unit]
-  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSourceKind]): Future[Unit]
+  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSource]): Future[Unit]
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Unit]
 }
 
 @Singleton
@@ -29,7 +29,7 @@ class DiscussionCommanderImpl @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   ktlRepo: KeepToLibraryRepo,
-  keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   eventCommander: KeepEventCommander,
   eliza: ElizaServiceClient,
   permissionCommander: PermissionCommander,
@@ -51,7 +51,7 @@ class DiscussionCommanderImpl @Inject() (
       Future.failed(fail)
     }.getOrElse {
       db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
+        keepMutator.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUser(userId), userAttribution = Some(userId))
       }
       eliza.sendMessageOnKeep(userId, text, keepId, source)
     }
@@ -95,7 +95,7 @@ class DiscussionCommanderImpl @Inject() (
     } yield res
   }
 
-  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSourceKind]): Future[Unit] = {
+  def editParticipantsOnKeep(userId: Id[User], keepId: Id[Keep], newUsers: Set[Id[User]], source: Option[KeepEventSource]): Future[Unit] = {
     val keepPermissions = db.readOnlyReplica { implicit s =>
       permissionCommander.getKeepPermissions(keepId, Some(userId))
     }
@@ -104,37 +104,36 @@ class DiscussionCommanderImpl @Inject() (
     ).flatten
 
     errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+      val diff = KeepRecipientsDiff.addUsers(newUsers)
       val keep = db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, KeepRecipientsDiff.addUsers(newUsers), userAttribution = Some(userId))
+        keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
       }
-      val elizaEdit = eliza.editParticipantsOnKeep(keepId, userId, newUsers, newLibraries = Set.empty, source)
-      elizaEdit.onSuccess {
-        case elizaUsers =>
-          airbrake.verify(elizaUsers == keep.recipients.users, s"Shoebox keep.users (${keep.recipients.users}) does not match Eliza participants ($elizaUsers)")
-      }
-      elizaEdit.map { res => Unit }
+      eliza.editParticipantsOnKeep(keepId, userId, diff, source).map(_ => ())
     }
   }
-  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSourceKind]): Future[Unit] = {
-    val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
-      val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
-      val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
-      (keepPermissions, uriCollisionsByLib)
-    }
-    val errs: Stream[DiscussionFail] = Stream(
-      (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
-      uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
-    ).collect { case (true, fail) => fail }
-
-    errs.headOption.map(fail => Future.failed(fail)).getOrElse {
-      db.readWrite { implicit s =>
-        keepCommander.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
-        eventCommander.addedRecipients(keepId, userId, KeepRecipients(diff.libraries.added, diff.emails.added, diff.users.added), source) // TODO(ryan): needs to be modified once we can remove participants
+  def modifyConnectionsForKeep(userId: Id[User], keepId: Id[Keep], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Unit] = {
+    if (diff.isEmpty) Future.successful(())
+    else {
+      val (keepPermissions, uriCollisionsByLib) = db.readOnlyReplica { implicit s =>
+        val keepPermissions = permissionCommander.getKeepPermissions(keepId, Some(userId))
+        val uriCollisionsByLib = ktlRepo.getByLibraryIdsAndUriIds(diff.libraries.added, uriIds = Set(keepRepo.get(keepId).uriId)).groupBy(_.libraryId)
+        (keepPermissions, uriCollisionsByLib)
       }
-      Future.successful(Unit)
+      val errs: Stream[DiscussionFail] = Stream(
+        (diff.users.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.users.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_PARTICIPANTS)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.added.nonEmpty && !keepPermissions.contains(KeepPermission.ADD_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        (diff.libraries.removed.nonEmpty && !keepPermissions.contains(KeepPermission.REMOVE_LIBRARIES)) -> DiscussionFail.INSUFFICIENT_PERMISSIONS,
+        uriCollisionsByLib.nonEmpty -> DiscussionFail.URI_COLLISION
+      ).collect { case (true, fail) => fail }
+
+      errs.headOption.map(fail => Future.failed(fail)).getOrElse {
+        db.readWrite { implicit s =>
+          keepMutator.unsafeModifyKeepRecipients(keepId, diff, userAttribution = Some(userId))
+          eventCommander.persistKeepEventAndUpdateEliza(keepId, KeepEventData.ModifyRecipients(userId, diff), source, eventTime = None)
+        }
+        Future.successful(Unit)
+      }
     }
   }
 }

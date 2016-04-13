@@ -3,6 +3,7 @@ package com.keepit.eliza
 import com.google.inject.Inject
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.{TraversableFormat, TupleFormat}
@@ -15,8 +16,8 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.util.MapHelpers
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.discussion.{CrossServiceKeepActivity, MessageSource, CrossServiceMessage, Discussion, Message}
-import com.keepit.eliza.ElizaServiceClient.{GetInitialRecipientsByKeepId, GetMessagesOnKeep, SendMessageOnKeep, MarkKeepsAsReadForUser, GetElizaKeepStream, GetEmailParticipantsForKeep, GetCrossServiceKeepActivity, GetChangedMessagesFromKeeps, GetMessageCountsForKeeps, EditMessage, DeleteMessage, EditParticipantsOnKeep, GetDiscussionsForKeeps, GetCrossServiceMessages}
+import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.eliza.model._
 import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
@@ -102,6 +103,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean = false): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int]
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit]
 
   def connectedClientCount: Future[Seq[Int]]
   def sendNotificationEvents(events: Seq[NotificationEvent]): Future[Unit]
@@ -115,20 +117,17 @@ trait ElizaServiceClient extends ServiceClient {
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def areUsersOnline(users: Seq[Id[User]]): Future[Map[Id[User], Boolean]]
 
-  //migration
-  def importThread(data: JsObject): Unit
-
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
   def getInitialRecipientsByKeepId(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], KeepRecipients]]
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]]
 
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]]
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]]
   def getEmailParticipantsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Map[EmailAddress, (Id[User], DateTime)]]]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep], source: Option[MessageSource]): Future[Message]
@@ -138,12 +137,14 @@ trait ElizaServiceClient extends ServiceClient {
   def getElizaKeepStream(userId: Id[User], limit: Int, beforeId: Option[Id[Keep]], filter: ElizaFeedFilter): Future[Map[Id[Keep], DateTime]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData, source: Option[KeepEventSourceKind]): Future[Unit]
+  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit]
 
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]]
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
   def convertNonUserThreadToUserThread(userId: Id[User], accessToken: String): Future[(Option[EmailAddress], Option[Id[User]])]
+
+  def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -178,6 +179,8 @@ class ElizaServiceClientImpl @Inject() (
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
     call(Eliza.internal.sendOrgPushNotification, Json.toJson(request), callTimeouts = longTimeout).map(response => response.body.toInt)
   }
+
+  def sendKeepEvent(userId: Id[User], keepId: PublicId[Keep], event: BasicKeepEvent): Future[Unit] = sendToUser(userId, Json.arr("event", keepId, event))
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {
     val payload = Json.obj("userId" -> userId, "data" -> data)
@@ -265,11 +268,6 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  //migration
-  def importThread(data: JsObject): Unit = {
-    call(Eliza.internal.importThread, data)
-  }
-
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
@@ -311,19 +309,11 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int): Future[Map[Id[Keep], Discussion]] = {
     import GetDiscussionsForKeeps._
-    val request = Request(keepIds, maxMessagesShown)
+    val request = Request(keepIds, fromTime, maxMessagesShown)
     call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
       response.json.as[Response].discussions
-    }
-  }
-
-  def getCrossServiceKeepActivity(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int): Future[Map[Id[Keep], CrossServiceKeepActivity]] = {
-    import GetCrossServiceKeepActivity._
-    val request = Request(keepIds, eventsBefore, maxEventsPerKeep)
-    call(Eliza.internal.getCrossServiceKeepActivity, body = Json.toJson(request)).map { response =>
-      response.json.as[Response].activityByKeep
     }
   }
 
@@ -393,11 +383,11 @@ class ElizaServiceClientImpl @Inject() (
       Unit
     }
   }
-  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind]): Future[Set[Id[User]]] = {
+  def editParticipantsOnKeep(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource]): Future[Boolean] = {
     import EditParticipantsOnKeep._
-    val request = Request(keepId, editor, newUsers, newLibraries, source)
+    val request = Request(keepId, editor, diff, source)
     call(Eliza.internal.editParticipantsOnKeep(), body = Json.toJson(request)).map { response =>
-      response.json.as[Response].users
+      response.json.as[Response].success
     }
   }
   def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
@@ -424,10 +414,21 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def saveKeepEvent(keepId: Id[Keep], userId: Id[User], event: KeepEventData, source: Option[KeepEventSourceKind]): Future[Unit] = {
-    import com.keepit.eliza.ElizaServiceClient.SaveKeepEvent._
-    val request = Request(keepId, userId, event)
-    call(Eliza.internal.saveKeepEvent, body = Json.toJson(request)).map(_ => ())
+  def syncAddParticipants(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource]): Future[Unit] = {
+    import com.keepit.eliza.ElizaServiceClient.SyncAddParticipants._
+    val request = Request(keepId, event, source)
+    call(Eliza.internal.syncAddParticipants, body = Json.toJson(request)).map(_ => ())
+  }
+
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int): Future[Seq[CrossServiceMessage]] = {
+    call(Eliza.internal.pageSystemMessages(fromId, pageSize)).map(_.json.as[Seq[CrossServiceMessage]])
+  }
+
+  def rpbTest(keepIds: Set[Id[Keep]], numPerKeep: Int): Future[Map[Id[Keep], Seq[Id[Message]]]] = {
+    import RPBTest._
+    call(Eliza.internal.rpbTest, body = Json.toJson(Request(keepIds, numPerKeep))).map {
+      _.json.as[Response].recentMessages
+    }
   }
 }
 
@@ -439,15 +440,8 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
   object GetDiscussionsForKeeps {
-    case class Request(keepIds: Set[Id[Keep]], maxMessagesShown: Int)
+    case class Request(keepIds: Set[Id[Keep]], fromTime: Option[DateTime], maxMessagesShown: Int)
     case class Response(discussions: Map[Id[Keep], Discussion])
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-    implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
-  
-  object GetCrossServiceKeepActivity {
-    case class Request(keepIds: Set[Id[Keep]], eventsBefore: Option[DateTime], maxEventsPerKeep: Int)
-    case class Response(activityByKeep: Map[Id[Keep], CrossServiceKeepActivity])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
@@ -512,8 +506,9 @@ object ElizaServiceClient {
     )
   }
   object EditParticipantsOnKeep {
-    case class Request(keepId: Id[Keep], editor: Id[User], newUsers: Set[Id[User]], newLibraries: Set[Id[Library]], source: Option[KeepEventSourceKind])
-    case class Response(users: Set[Id[User]])
+    implicit val diffFormat = KeepRecipientsDiff.internalFormat
+    case class Request(keepId: Id[Keep], editor: Id[User], diff: KeepRecipientsDiff, source: Option[KeepEventSource])
+    case class Response(success: Boolean)
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
@@ -525,8 +520,16 @@ object ElizaServiceClient {
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 
-  object SaveKeepEvent {
-    case class Request(keepId: Id[Keep], userId: Id[User], event: KeepEventData)
+  object SyncAddParticipants {
+    implicit val diffFormat = KeepRecipientsDiff.internalFormat
+    case class Request(keepId: Id[Keep], event: KeepEventData.ModifyRecipients, source: Option[KeepEventSource])
     implicit val requestFormat: Format[Request] = Json.format[Request]
+  }
+
+  object RPBTest {
+    case class Request(keepIds: Set[Id[Keep]], numPerKeep: Int)
+    case class Response(recentMessages: Map[Id[Keep], Seq[Id[Message]]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
   }
 }

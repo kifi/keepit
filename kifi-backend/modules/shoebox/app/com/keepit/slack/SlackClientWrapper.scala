@@ -47,6 +47,9 @@ trait SlackClientWrapper {
   def getUsers(slackTeamId: SlackTeamId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[Seq[SlackUserInfo]]
   def checkUserPresence(slackTeamId: SlackTeamId, user: SlackUserId, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackUserPresence]
 
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]]
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int): Future[Seq[SlackHistoryMessage]]
+
   // *Dangerous* - these APIs are only token-agnostic for a subset of parameters  
   def searchMessagesHoweverPossible(slackTeamId: SlackTeamId, request: SlackSearchRequest, preferredTokens: Seq[SlackAccessToken] = Seq.empty): Future[SlackSearchResponse]
 }
@@ -68,7 +71,7 @@ class SlackClientWrapperImpl @Inject() (
     extends SlackClientWrapper with Logging {
 
   val debouncer = new Debouncing.Dropper[Unit]
-  val slackLog = new SlackLog(InhouseSlackChannel.TEST_RYAN)
+  val slackLog = new SlackLog(InhouseSlackChannel.ENG_SLACK)
 
   def sendToSlackViaUser(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, msg: SlackMessageRequest): Future[Option[SlackMessageResponse]] = {
     pushToSlackUsingToken(slackUserId, slackTeamId, slackChannelId, msg).map(v => Some(v)).recoverWith {
@@ -99,13 +102,12 @@ class SlackClientWrapperImpl @Inject() (
       slackTeamRepo.getBySlackTeamId(slackTeamId).flatMap(_.kifiBot)
     }
     bot match {
+      case None => Future.failed(SlackFail.NoValidBotToken)
       case Some(kifiBot) =>
         slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser).andThen(onRevokedBotToken(kifiBot.token))
           .recoverWith {
             case botFail @ SlackErrorCode(NOT_IN_CHANNEL) =>
-              slackLog.warn(s"Kifi-bot for $slackTeamId is not in channel $slackChannel so it can't post. Trying to invite it in now")
               inviteToChannel(kifiBot.userId, slackTeamId, slackChannel).flatMap { _ =>
-                slackLog.info(s":boom:, got it, kifi-bot is now in $slackChannel in $slackTeamId")
                 slackClient.postToChannel(kifiBot.token, slackChannel, msg.fromUser)
               }.recoverWith {
                 case fail =>
@@ -113,7 +115,6 @@ class SlackClientWrapperImpl @Inject() (
                   Future.failed(botFail)
               }
           }
-      case None => Future.failed(SlackFail.NoValidBotToken)
     }
   }
   def inviteToChannel(invitee: SlackUserId, teamId: SlackTeamId, channelId: SlackChannelId): Future[Unit] = {
@@ -341,6 +342,13 @@ class SlackClientWrapperImpl @Inject() (
         }
       }
     }
+  }
+
+  def getIMChannels(token: SlackAccessToken): Future[Seq[SlackIMChannelInfo]] = {
+    slackClient.getIMChannels(token)
+  }
+  def getIMHistory(token: SlackAccessToken, channelId: SlackChannelId, fromTimestamp: Option[SlackTimestamp], limit: Int): Future[Seq[SlackHistoryMessage]] = {
+    slackClient.getIMHistory(token, channelId, fromTimestamp, limit, inclusive = false)
   }
 
   private def saveUserInfo(slackTeam: SlackTeam, user: SlackUserInfo)(implicit session: RWSession): SlackTeamMembership = {

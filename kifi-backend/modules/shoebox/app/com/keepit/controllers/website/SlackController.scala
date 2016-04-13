@@ -71,7 +71,7 @@ class SlackController @Inject() (
   def syncPublicChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val slackTeamIdOpt = db.readOnlyMaster { implicit session =>
-      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId).map(_.id)
     }
     val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPublicChannels()))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
@@ -81,7 +81,7 @@ class SlackController @Inject() (
   def syncPrivateChannels(organizationId: PublicId[Organization]) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val slackTeamIdOpt = db.readOnlyMaster { implicit session =>
-      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId).map(_.id)
     }
     val action = ConnectSlackTeam(request.orgId, andThen = Some(SyncPrivateChannels()))
     val res = slackAuthCommander.processActionOrElseAuthenticate(request.request.userId, slackTeamIdOpt, action)
@@ -137,7 +137,7 @@ class SlackController @Inject() (
   def mirrorComments(organizationId: PublicId[Organization], turnOn: Boolean) = OrganizationUserAction(organizationId, SlackIdentityCommander.slackSetupPermission).async { implicit request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val slackTeamIdOpt = db.readOnlyReplica { implicit session =>
-      slackInfoCommander.getOrganizationSlackTeam(request.orgId, request.request.userId).map(_.id)
+      slackInfoCommander.getOrganizationSlackTeam(request.orgId).map(_.id)
     }
     slackTeamIdOpt match {
       case Some(slackTeamId) =>

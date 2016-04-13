@@ -14,7 +14,7 @@ import com.keepit.discussion.{ MessageSource, DiscussionFail, Message }
 import com.keepit.eliza.commanders._
 import scala.collection._
 import com.keepit.heimdal._
-import com.keepit.model.{ KeepEventSourceKind, Keep, Organization, User }
+import com.keepit.model.{ KeepEventSource, Keep, Organization, User }
 import com.keepit.notify.model.Recipient
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
@@ -351,7 +351,7 @@ class MobileMessagingController @Inject() (
     (Keep.decodePublicId(pubKeepId), request.body.asOpt[AddParticipants]) match {
       case (Success(keepId), Some(addReq)) =>
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-        val source = request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)
+        val source = request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)
         contextBuilder += ("source", "mobile")
 
         val (extUserIds, orgIds) = addReq.users.flatMap {
@@ -360,7 +360,7 @@ class MobileMessagingController @Inject() (
         }.toSeq.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, addReq.emails, orgIds, source)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, addReq.emails, orgIds, source, updateShoebox = true)(contextBuilder.build)
         } yield Ok
       case _ => Future.successful(BadRequest("invalid_keep_id"))
     }
@@ -370,7 +370,7 @@ class MobileMessagingController @Inject() (
   def addParticipantsToThread(pubKeepId: PublicId[Keep], users: String, emailContacts: String) = UserAction.async { request =>
     Keep.decodePublicId(pubKeepId) match {
       case Success(keepId) =>
-        val source = request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)
+        val source = request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
         //assuming the client does the proper checks!
@@ -381,7 +381,7 @@ class MobileMessagingController @Inject() (
         }.partitionEithers
         for {
           userIds <- shoebox.getUserIdsByExternalIds(extUserIds.toSet).map(_.values.toList)
-          _ <- discussionCommander.addParticipantsToThread(request.userId, keepId, userIds, validEmails, orgIds, source)(contextBuilder.build)
+          _ <- discussionCommander.editParticipantsOnKeep(keepId, request.userId, userIds, validEmails, orgIds, source, updateShoebox = true)(contextBuilder.build)
         } yield Ok("")
       case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }

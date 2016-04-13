@@ -6,8 +6,9 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.BasicContact
 import com.keepit.eliza.ElizaServiceClient._
-import com.keepit.model.{ KeepRecipients, ElizaFeedFilter, User, Keep }
+import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, ElizaFeedFilter, User, Keep }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
@@ -33,7 +34,7 @@ class ElizaDiscussionController @Inject() (
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     import GetDiscussionsForKeeps._
     val input = request.body.as[Request]
-    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.maxMessagesShown).map { discussions =>
+    discussionCommander.getDiscussionsForKeeps(input.keepIds, input.fromTime, input.maxMessagesShown).map { discussions =>
       val output = Response(discussions)
       Ok(Json.toJson(output))
     }
@@ -52,18 +53,11 @@ class ElizaDiscussionController @Inject() (
     Ok(Json.toJson(output))
   }
 
-  def getCrossServiceKeepActivity = Action.async(parse.tolerantJson) { request =>
-    import GetCrossServiceKeepActivity._
+  // deprecated, use editParticipantsOnKeep instead
+  def syncAddParticipants = Action.async(parse.tolerantJson) { request =>
+    import SyncAddParticipants._
     val input = request.body.as[Request]
-    discussionCommander.getCrossServiceKeepActivity(input.keepIds, input.eventsBefore, input.maxEventsPerKeep).map { activityByKeep =>
-      Ok(Json.toJson(Response(activityByKeep)))
-    }
-  }
-
-  def saveKeepEvent = Action.async(parse.tolerantJson) { request =>
-    import SaveKeepEvent._
-    val input = request.body.as[Request]
-    discussionCommander.saveKeepEvent(input.keepId, input.userId, input.event).map(_ => NoContent)
+    discussionCommander.syncAddParticipants(input.keepId, input.event, input.source).map(_ => NoContent)
   }
 
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
@@ -129,9 +123,11 @@ class ElizaDiscussionController @Inject() (
   }
   def editParticipantsOnKeep() = Action.async(parse.tolerantJson) { request =>
     import EditParticipantsOnKeep._
+    implicit val context = heimdalContextBuilder().build
     val input = request.body.as[Request]
-    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, input.newUsers, input.newLibraries, input.source).map { allUsers =>
-      val output = Response(allUsers)
+    val KeepRecipientsDiff(users, _, emails) = input.diff
+    discussionCommander.editParticipantsOnKeep(input.keepId, input.editor, users.added.toSeq, emails.added.map(BasicContact(_)).toSeq, orgs = Seq.empty, input.source, updateShoebox = false).map { success =>
+      val output = Response(success)
       Ok(Json.toJson(output))
     }
   }
@@ -171,12 +167,26 @@ class ElizaDiscussionController @Inject() (
       val threads = threadRepo.getByKeepIds(keepIds, excludeState = None)
       val recipientsByKeepId = threads.map {
         case (keepId, thread) =>
-          def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis < thread.createdAt.getMillis
-          val firstUsers = thread.participants.userParticipants.collect { case (uid, added) if uid != thread.startedBy && addedNearStart(added) => uid }
+          def addedNearStart(time: DateTime) = time.minusSeconds(1).getMillis <= thread.createdAt.getMillis
+          val firstUsers = thread.participants.userParticipants.collect { case (uid, added) if addedNearStart(added) => uid }
           val firstNonUsers = thread.participants.nonUserParticipants.collect { case (NonUserEmailParticipant(email), added) if addedNearStart(added) => email }
           keepId -> KeepRecipients(libraries = Set.empty, firstNonUsers.toSet, firstUsers.toSet)
       }
       Ok(Json.toJson(Response(recipientsByKeepId)))
     }
+  }
+
+  def pageSystemMessages(fromId: Id[Message], pageSize: Int) = Action { request =>
+    val msgs = db.readOnlyMaster(implicit s => messageRepo.pageSystemMessages(ElizaMessage.fromCommonId(fromId), pageSize)).map(ElizaMessage.toCrossServiceMessage)
+    Ok(Json.toJson(msgs))
+  }
+
+  def rpbTest() = Action(parse.tolerantJson) { implicit request =>
+    import RPBTest._
+    val input = request.body.as[Request]
+    val ans = db.readOnlyMaster { implicit s =>
+      messageRepo.getRecentByKeeps(input.keepIds, limitPerKeep = input.numPerKeep)
+    }
+    Ok(responseFormat.writes(Response(ans.mapValues(_.map(ElizaMessage.toCommonId)))))
   }
 }

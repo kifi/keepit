@@ -4,70 +4,8 @@
   p
     margin: 0
 
-  .kf-org-profile-slack-box
-    max-width: 340px
-    margin: 0 auto
-    font-smoothing(grayscale)
-
-    > * + *
-      margin-top: 15px
-
-.kf-org-profile-slack-title
-  width: 320px
-  font-size: 24px
-  color: darken(textGreyColor, 25%)
-
-.kf-org-profile-slack-login
-  color: textGreyColor
-
-slack-button-color=#68c89e
-
-.kf-org-profile-slack-button
-  display: inline-block
-  padding: 10px 22.5px
-  background: slack-button-color
-  color: #fff
-  border: 0
-
-  &:not([disabled]):not(.disabled)
-    &:hover:not(:active)
-      background: slack-button-color
-
-    &:active
-      background: darken(slack-button-color, 20%)
-
-  &[disabled]
-    background: slack-button-color
-
-.kf-org-profile-slack-image
-  display: inline-block
-  width: 60px
-  margin-top: -2px
-  margin-left: 2px
-
 .kf-org-profile-slack-user-image
   display: inline-block
   border-radius: 50%
   width: 42px
   height: 42px
-
-.kf-org-profile-slack-invite-text
-  margin-left: 1px
-  color: black
-  opacity: .7
-
-.kf-textbox.kf-org-profile-slack-invite-input
-  font-size: 15px
-  margin-top: 15px
-  margin-bottom: 10px
-  padding-left: 12px
-  padding-right: 0px
-
-.kf-org-profile-slack-invite-success
-  color: libraryGreen
-
-.kf-org-profile-slack-invite-error
-  display: inline-block
-  color: red
-  margin-bottom: 10px
-

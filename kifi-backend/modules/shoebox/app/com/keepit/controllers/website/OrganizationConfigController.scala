@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ KeepCommander, PermissionCommander, OrganizationInfoCommander, OrganizationCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.core.mapExtensionOps
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
@@ -27,7 +27,7 @@ class OrganizationConfigController @Inject() (
     planCommander: PlanManagementCommander,
     keepToLibraryRepo: KeepToLibraryRepo,
     keepRepo: KeepRepo,
-    keepCommander: KeepCommander,
+    keepMutator: KeepMutator,
     orgConfigRepo: OrganizationConfigurationRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -85,7 +85,7 @@ class OrganizationConfigController @Inject() (
       do {
         val keepIds = keepToLibraryRepo.getByOrganizationId(request.orgId, drop = pos, take = batchSize).map(_.keepId)
         if (keepIds.nonEmpty) {
-          val blacklisted = keepRepo.getByIds(keepIds.toSet).values.filter { keep =>
+          val blacklisted = keepRepo.getActiveByIds(keepIds.toSet).values.filter { keep =>
             keep.source == KeepSource.slack && SlackIngestingBlacklist.blacklistedUrl(keep.url, blacklist)
           }.toSeq
           blacklistedKeeps ++= blacklisted
@@ -109,7 +109,7 @@ class OrganizationConfigController @Inject() (
       Ok(Json.obj("readonly" -> true, "keepCount" -> blacklistedKeeps.length, "sampleKeeps" -> sampleUrls))
     } else {
       val deletion = db.readWriteAsync { implicit session =>
-        blacklistedKeeps.foreach(keepCommander.deactivateKeep)
+        blacklistedKeeps.foreach(keepMutator.deactivateKeep)
       }
       deletion.onComplete {
         case a =>

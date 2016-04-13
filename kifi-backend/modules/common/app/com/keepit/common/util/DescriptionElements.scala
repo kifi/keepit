@@ -79,6 +79,18 @@ object ImageElement extends DescriptionElementHelper[ImageElement]("image") {
   implicit val writes: Writes[ImageElement] = Writes(i => Json.obj("text" -> i.text, "image" -> i.image, "kind" -> kind))
 }
 
+case class ShowOriginalElement(original: String, updated: String) extends DescriptionElement {
+  type A = ShowOriginalElement
+  def flatten = Seq(this)
+  def helper = ShowOriginalElement
+
+  val text = s"“$original” --> “$updated”"
+  val url = None
+}
+object ShowOriginalElement extends DescriptionElementHelper[ShowOriginalElement]("showOriginal") {
+  implicit val writes: Writes[ShowOriginalElement] = Writes(s => Json.obj("text" -> s.text, "original" -> s.original, "updated" -> s.updated, "kind" -> kind))
+}
+
 case class UserElement(
     id: ExternalId[User],
     name: String,
@@ -174,7 +186,9 @@ object DescriptionElements {
 
   implicit def fromDateTime(time: DateTime): TextElement = new PrettyTime().format(time.toDate)
 
-  implicit def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): UserElement = UserElement(bu.externalId, bu.firstName, bu.picturePath.getUrl, Path(s"/${bu.username.value}"))
+  def generateUserElement(bu: BasicUser, fullName: Boolean)(implicit imageConfig: S3ImageConfig): UserElement = UserElement(bu.externalId, if (fullName) bu.fullName else bu.firstName, bu.picturePath.getUrl, Path(s"/${bu.username.value}"))
+  implicit def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): UserElement = generateUserElement(bu, fullName = false)
+
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)
   implicit def fromBasicAuthor(ba: BasicAuthor): AuthorElement = ba match {

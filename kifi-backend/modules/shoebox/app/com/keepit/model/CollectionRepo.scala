@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ BasicCollectionByIdKey, BasicCollectionByIdCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
@@ -32,7 +31,6 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getHashtagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
-  def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
   def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
@@ -44,7 +42,6 @@ class CollectionRepoImpl @Inject() (
   val userCollectionsCache: UserCollectionsCache,
   val userCollectionSummariesCache: UserCollectionSummariesCache,
   val bookmarkCountForCollectionCache: KeepCountForCollectionCache,
-  val basicCollectionCache: BasicCollectionByIdCache,
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
@@ -75,7 +72,6 @@ class CollectionRepoImpl @Inject() (
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
     userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
     model.id.foreach { id =>
-      basicCollectionCache.remove(BasicCollectionByIdKey(id))
       val keepToCollections = keepToCollectionRepo.getByCollection(id)
       keepToCollections.foreach(keepToCollectionRepo.deleteCache)
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
@@ -145,27 +141,6 @@ class CollectionRepoImpl @Inject() (
     val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
-  }
-
-  def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]] = {
-    if (keepIds.isEmpty) {
-      Map.empty[Id[Keep], Seq[Hashtag]]
-    } else {
-      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-      val idSet = "(" + keepIds.mkString(",") + ")"
-      val query = sql"select kc.bookmark_id, c.name from keep_to_collection kc, collection c where kc.bookmark_id in #$idSet and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
-      val b = query.as[(Id[Keep], String)].list.map {
-        case (id, tagName) =>
-          (id, Hashtag(tagName))
-      }.groupBy(_._1).map {
-        case (id, pair) =>
-          (id, pair.map(_._2).toSeq)
-      }
-
-      keepIds.map { kId =>
-        kId -> (b.get(kId) getOrElse Seq.empty)
-      }.toMap
-    }
   }
 
   private def pageTagsByUserQuery[S](userId: Id[User], page: Int, size: Int, sortBy: String) = {

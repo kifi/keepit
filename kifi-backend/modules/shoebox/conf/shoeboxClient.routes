@@ -19,7 +19,7 @@ DELETE  /api/1/keeps/:id/messages/:msgId          @com.keepit.controllers.client
 POST    /api/1/keeps/:id/messages/:msgId/edit     @com.keepit.controllers.client.KeepMutationController.editMessageOnKeep(id: PublicId[Keep], msgId: PublicId[Message])
 
 # Info
-GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None)
+GET    /api/1/keeps/stream           @com.keepit.controllers.client.KeepInfoController.getKeepStream(fromId: Option[String] ?= None, limit: Int ?= 10)
 
 GET    /api/1/keeps/:id              @com.keepit.controllers.client.KeepInfoController.getKeepView(id: PublicId[Keep])
 GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoController.getActivityOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromTime: Option[DateTime] ?= None)
@@ -27,3 +27,17 @@ GET    /api/1/keeps/:id/activity     @com.keepit.controllers.client.KeepInfoCont
 # Exports
 GET    /api/1/keeps/export/personal  @com.keepit.controllers.client.KeepExportController.exportPersonalKeeps()
 GET    /api/1/keeps/export/org       @com.keepit.controllers.client.KeepExportController.exportOrganizationKeeps()
+
+##
+# LIBRARIES
+##
+
+GET    /api/1/libraries/:id/keeps              @com.keepit.controllers.client.LibraryKeepsInfoController.getKeepsInLibrary(id: PublicId[Library], order: Option[KeepOrdering] ?= None, dir: Option[SortDirection] ?= None, from: Option[String] ?= None, offset: Int ?= 0, limit: Int ?= 10)
+
+
+
+##
+# PAGES
+##
+
+POST    /api/1/pages/query              @com.keepit.controllers.client.PageInfoController.getKeepsByUriAndRecipients()

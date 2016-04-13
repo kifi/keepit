@@ -4,13 +4,15 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.json._
+import com.keepit.common.util.DeltaSet
 import com.keepit.discussion.{ MessageSource, CrossServiceMessage, Message }
+import com.keepit.model.KeepEventData.ModifyRecipients
 import com.keepit.notify.model.Recipient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ KeepEventData, BasicLibrary, Library, KeepEventData$, Keep, User, NormalizedURI }
+import com.keepit.model.{ KeepRecipientsDiff, KeepRecipients, KeepEventData, BasicLibrary, Library, KeepEventData$, Keep, User, NormalizedURI }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
@@ -102,17 +104,22 @@ object SystemMessageData {
   }
 
   def toKeepEvent(data: SystemMessageData): Option[KeepEventData] = data match {
-    case AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.toBasicNonUser)))
-    case AddLibraries(addedBy, addedLibraries) => Some(KeepEventData.AddLibraries(addedBy, addedLibraries))
-    case EditTitle(editedBy, original, updated) => Some(KeepEventData.EditTitle(editedBy, original, updated))
-    case _ => None
+    case StartWithEmails(addedBy, addedUsers, addedNonUsers) => None
+    case AddParticipants(addedBy, addedUsers, addedNonUsers) =>
+      val emails = addedNonUsers.collect {
+        case NonUserEmailParticipant(email) => email
+      }.toSet
+      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty.addAll(addedUsers.toSet), libraries = DeltaSet.empty, emails = DeltaSet.empty.addAll(emails))))
+    case AddLibraries(addedBy, addedLibraries) =>
+      Some(KeepEventData.ModifyRecipients(addedBy, KeepRecipientsDiff(users = DeltaSet.empty, libraries = DeltaSet.empty.addAll(addedLibraries), emails = DeltaSet.empty)))
+    case EditTitle(editedBy, original, updated) =>
+      Some(KeepEventData.EditTitle(editedBy, original, updated))
   }
 
-  def fromKeepEvent(event: KeepEventData): Option[SystemMessageData] = event match {
-    case KeepEventData.AddParticipants(addedBy, addedUsers, addedNonUsers) => Some(AddParticipants(addedBy, addedUsers, addedNonUsers.map(NonUserParticipant.fromBasicNonUser)))
-    case KeepEventData.AddLibraries(addedBy, addedLibs) => Some(AddLibraries(addedBy, addedLibs))
-    case KeepEventData.EditTitle(addedBy, original, updated) => Some(EditTitle(addedBy, original, updated))
-    case _ => None
+  def fromKeepEvent(event: KeepEventData.ModifyRecipients): Option[SystemMessageData] = {
+    val KeepRecipientsDiff(usersDelta, _, emailsDelta) = event.diff
+    val (usersAdded, emailsAdded) = (usersDelta.added.toSeq, emailsDelta.added.map(NonUserEmailParticipant).toSeq)
+    Some(AddParticipants(event.addedBy, usersAdded, emailsAdded))
   }
 
   def isFullySupported(data: SystemMessageData): Boolean = data match {

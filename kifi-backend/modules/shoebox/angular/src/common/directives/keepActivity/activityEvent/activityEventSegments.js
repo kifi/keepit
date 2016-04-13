@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfActivityEventSegments', [
-  'RecursionHelper',
-  function (RecursionHelper) {
+  'extensionLiaison', 'RecursionHelper',
+  function (extensionLiaison, RecursionHelper) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,7 +13,13 @@ angular.module('kifi')
         segments: '=kfActivityEventSegments'
       },
       compile: function (element) {
-        return RecursionHelper.compile(element);
+        function link($scope) {
+          $scope.openLookHere = function(event, segment) {
+            event.preventDefault();
+            extensionLiaison.openDeepLink(segment.url, segment.locator);
+          };
+        }
+        return RecursionHelper.compile(element, link);
       }
     };
   }

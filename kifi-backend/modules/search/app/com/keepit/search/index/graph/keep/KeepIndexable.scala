@@ -5,27 +5,12 @@ import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.search.index.{ Searcher, FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.{ LangDetector }
-import com.keepit.search.index.sharding.Shard
-import com.keepit.common.core.traversableOnceExtensionOps
-import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.{ SlackTeamId, SlackChannelId }
 import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
 object KeepFields {
-  val libraryField = "lib"
-  val libraryIdField = "libId"
-  val uriField = "uri"
-  val uriIdField = "uriId"
-  val uriDiscoverableField = "uriDisc"
-  val userField = "user"
-  val userIdField = "userId"
-  val userDiscoverableField = "userDisc"
-  val orgField = "org"
-  val orgIdField = "orgId"
-  val orgDiscoverableField = "orgDisc"
-  val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
   val titlePrefixField = "tp"
@@ -36,10 +21,30 @@ object KeepFields {
   val siteField = "site"
   val homePageField = "home_page"
   val keptAtField = "keptAt"
+  val lastActivityAt = "lastActivityAt"
   val tagsField = "h"
   val tagsStemmedField = "hs"
   val tagsKeywordField = "tag"
   val recordField = "rec"
+
+  val uriField = "uri"
+  val uriIdField = "uriId"
+  val ownerField = "owner"
+  val ownerIdField = "ownerId"
+  val userField = "user"
+  val userIdsField = "userIds"
+  val libraryField = "lib"
+  val libraryIdsField = "libIds"
+
+  // The following fields are derived from libraries
+  val orgField = "org"
+  val orgIdsField = "orgIds"
+  val orgDiscoverableField = "orgDisc"
+  val orgIdsDiscoverableField = "orgIdsDisc"
+  val userDiscoverableField = "userDisc"
+  val userIdsDiscoverableField = "userIdsDisc"
+  val published = "published"
+  val uriDiscoverableField = "uriDisc"
 
   val minimalSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
   val fullTextSearchFields = Set(contentField, contentStemmedField)
@@ -54,7 +59,7 @@ object KeepFields {
     def apply(source: SourceAttribution): String = source match {
       case TwitterAttribution(tweet) => Source(tweet.user.screenName)
       case SlackAttribution(message, teamId) => Source(teamId, message.channel.id)
-      case KifiAttribution(_, _, _, _, keepSource) => Source(keepSource)
+      case KifiAttribution(_, _, _, _, _, keepSource) => Source(keepSource)
     }
   }
 
@@ -106,41 +111,46 @@ case class KeepIndexable(keep: CrossServiceKeep, sourceAttribution: Option[Sourc
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
-    doc.add(buildKeywordField(uriField, keep.uriId.id.toString))
-    keep.owner.foreach { userId => // TODO(ryan): Léo, can this be done for every user?
-      doc.add(buildKeywordField(userField, userId.id.toString))
-    }
-
-    val keepVisibilities = keep.libraries.map(_.visibility)
-    if (keepVisibilities.contains(LibraryVisibility.DISCOVERABLE) || keepVisibilities.contains(LibraryVisibility.PUBLISHED)) { // TODO(ryan): Léo is this semantically correct?
-      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString))
-      keep.owner.foreach { userId =>
-        doc.add(buildKeywordField(userDiscoverableField, userId.id.toString))
-      }
-    }
-
-    val primaryLibrary = keep.libraries.minByOpt(_.id)
-    primaryLibrary.foreach { lib =>
-      lib.organizationId.foreach { orgId =>
-        doc.add(buildKeywordField(orgField, orgId.id.toString))
-        if (lib.visibility == LibraryVisibility.PUBLISHED || lib.visibility == LibraryVisibility.ORGANIZATION) {
-          doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString))
-        }
-      }
-    }
-
-    primaryLibrary.foreach { lib =>
-      doc.add(buildDataPayloadField(new Term(libraryField, lib.id.id.toString), titleLang.lang.getBytes(UTF8)))
-    }
-
-    doc.add(buildIdValueField(uriIdField, keep.uriId))
-    doc.add(buildIdValueField(userIdField, keep.owner.getOrElse(Id[User](-1))))
-    doc.add(buildIdValueField(libraryIdField, primaryLibrary.map(_.id).getOrElse(Id[Library](-1))))
-    doc.add(buildIdValueField(orgIdField, primaryLibrary.flatMap(_.organizationId).getOrElse(Id[Organization](-1))))
-    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(primaryLibrary.map(_.visibility).getOrElse(LibraryVisibility.SECRET))))
-
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))
+    doc.add(buildLongValueField(lastActivityAt, keep.lastActivityAt.getMillis))
+
+    doc.add(buildKeywordField(uriField, keep.uriId.id.toString))
+    doc.add(buildIdValueField(uriIdField, keep.uriId))
+
+    keep.owner.foreach { ownerId => doc.add(buildKeywordField(ownerField, ownerId.id.toString)) }
+    doc.add(buildIdValueField(ownerIdField, keep.owner.getOrElse(Id[User](-1))))
+
+    keep.users.foreach { userId => doc.add(buildKeywordField(userField, userId.id.toString)) }
+    doc.add(buildIdSetValueField(userIdsField, keep.users))
+
+    val libraryIds = keep.libraries.map(_.id)
+    libraryIds.foreach { libraryId => doc.add(buildDataPayloadField(new Term(libraryField, libraryId.id.toString), titleLang.lang.getBytes(UTF8))) }
+    doc.add(buildIdSetValueField(libraryIdsField, libraryIds))
+
+    val organizationIds = keep.libraries.flatMap(_.organizationId)
+    organizationIds.foreach { orgId => doc.add(buildKeywordField(orgField, orgId.id.toString)) }
+    doc.add(buildIdSetValueField(orgIdsField, organizationIds))
+
+    val discoverableOrganizationIds = keep.libraries.flatMap { library =>
+      if (library.visibility == LibraryVisibility.PUBLISHED || library.visibility == LibraryVisibility.ORGANIZATION) library.organizationId
+      else None
+    }
+    discoverableOrganizationIds.foreach { orgId => doc.add(buildKeywordField(orgDiscoverableField, orgId.id.toString)) }
+    doc.add(buildIdSetValueField(orgIdsDiscoverableField, discoverableOrganizationIds))
+
+    val discoverableUserIds = keep.libraries.flatMap { library =>
+      if (library.visibility == LibraryVisibility.PUBLISHED || library.visibility == LibraryVisibility.DISCOVERABLE) library.addedBy
+      else None
+    }
+    discoverableUserIds.foreach(orgId => doc.add(buildKeywordField(userDiscoverableField, orgId.id.toString)))
+    doc.add(buildIdSetValueField(userIdsDiscoverableField, discoverableUserIds))
+
+    val isPublished = keep.libraries.exists(_.visibility == LibraryVisibility.PUBLISHED)
+    doc.add(buildLongValueField(published, if (isPublished) 1L else 0L))
+
+    val isDiscoverable = isPublished || keep.libraries.exists(_.visibility == LibraryVisibility.DISCOVERABLE)
+    if (isDiscoverable) { doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.id.toString)) }
 
     doc
   }

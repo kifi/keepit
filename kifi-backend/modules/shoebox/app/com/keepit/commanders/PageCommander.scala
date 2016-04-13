@@ -65,54 +65,6 @@ class PageCommander @Inject() (
     }
   }
 
-  def getPageDetails(url: String, userId: Id[User], experiments: Set[UserExperimentType]): KeeperInfo = {
-    if (url.isEmpty) throw new Exception(s"empty url for user $userId")
-
-    // use the master. Keep, KeepToCollection, and Collection are heavily cached.
-    val (nUriStr, nUri, keepersFutureOpt, keep, ktls, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
-      val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
-        case Success(Left(nUri)) => (nUri.url, Some(nUri))
-        case Success(Right(pUri)) => (pUri, None)
-        case Failure(ex) => (url, None)
-      }
-
-      val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
-
-      val keep: Option[Keep] = nUri.flatMap { uri =>
-        keepRepo.getByUriAndUser(uri.id.get, userId)
-      }
-      val ktls = keep.map(k => ktlRepo.getAllByKeepId(k.id.get))
-      val tags: Seq[Collection] = keep.map { bm =>
-        keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>
-          collectionRepo.get(collId)
-        } filter (_.isActive)
-      }.getOrElse(Seq())
-
-      val host: Option[NormalizedHostname] = URI.parse(nUriStr).get.host.map(_.name).flatMap(name => NormalizedHostname.fromHostname(name))
-      val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-      val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
-        val position = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]).orElse(inferKeeperPosition(dom.id.get))
-        val neverShow = userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW).exists(_.state == UserToDomainStates.ACTIVE)
-        (position, neverShow)
-      }.getOrElse((None, false))
-      (nUriStr, nUri, getKeepersFutureOpt, keep, ktls, tags, position, neverOnSite, host)
-    }
-
-    val shown = nUri exists { uri =>
-      historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
-    }
-
-    val (keepers, keeps) = keepersFutureOpt.map { future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
-
-    KeeperInfo(
-      nUriStr,
-      ktls.map(x => if (x.exists(_.visibility > LibraryVisibility.SECRET)) "public" else "private"),
-      keep.map(_.externalId),
-      keep.map(k => Keep.publicId(k.id.get)),
-      tags.map { t => SendableTag.from(t.summary) },
-      position, neverOnSite, shown, keepers, keeps)
-  }
-
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
     val useMultilibLogic = experiments.contains(UserExperimentType.KEEP_MULTILIB)
     val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name, allowInvalid = true))
@@ -230,7 +182,7 @@ class PageCommander @Inject() (
   private def augmentUriInfo(normUri: NormalizedURI, userId: Id[User], useMultilibLogic: Boolean = false): Future[KeeperPagePartialInfo] = {
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
-      showPublishedLibraries = true,
+      showOtherPublishedKeeps = true,
       maxKeepsShown = 10, // actually used to compute fewer sources
       maxKeepersShown = 5,
       maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit

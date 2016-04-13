@@ -115,7 +115,7 @@ class SharedWsMessagingController @Inject() (
             for {
               userIds <- shoebox.getUserIdsByExternalIds(users.toSet).map(_.values.toList)
               orgIds <- Future.successful(orgs.flatMap(pubId => Organization.decodePublicId(pubId).toOption))
-            } discussionCommander.addParticipantsToThread(socket.userId, keepId, userIds, emailContacts, orgIds, KeepEventSourceKind.fromStr(socket.userAgent))
+            } discussionCommander.editParticipantsOnKeep(keepId, socket.userId, userIds, emailContacts, orgIds, KeepEventSource.fromStr(socket.userAgent), updateShoebox = true)
           }
         }
     },

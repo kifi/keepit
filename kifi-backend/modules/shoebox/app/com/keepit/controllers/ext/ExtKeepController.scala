@@ -27,6 +27,7 @@ class ExtKeepController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
+    import com.keepit.common.http._
     implicit val context = contextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val rawBookmark = request.body.as[RawBookmarkRepresentation]
     val libIds = (request.body \ "libraries").as[Set[PublicId[Library]]]
@@ -61,6 +62,7 @@ class ExtKeepController @Inject() (
   }
 
   def modifyConnectionsForKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
+    import com.keepit.common.http._
     (for {
       keepId <- Keep.decodePublicId(pubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_KEEP_ID))
       input <- request.body.validate[ExternalKeepRecipientsDiff].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
@@ -69,7 +71,7 @@ class ExtKeepController @Inject() (
         val libraryIdMap = input.libraries.all.map(libPubId => libPubId -> Library.decodePublicId(libPubId).get).toMap
         KeepRecipientsDiff(users = input.users.map(userIdMap(_)), libraries = input.libraries.map(libraryIdMap(_)), emails = input.emails)
       }
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
+      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source.orElse(request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent))) else Future.successful(())
     } yield {
       NoContent
     }).recover {

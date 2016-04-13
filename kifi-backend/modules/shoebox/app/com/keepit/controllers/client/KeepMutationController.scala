@@ -17,6 +17,8 @@ import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, Message, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
+import com.keepit.shoebox.data.keep.NewKeepInfo
 import com.keepit.social.Author
 import org.joda.time.DateTime
 import play.api.libs.json.{ Reads, Format, Json }
@@ -31,7 +33,9 @@ class KeepMutationController @Inject() (
   permissionCommander: PermissionCommander,
   keepRepo: KeepRepo,
   keepCommander: KeepCommander,
+  keepMutator: KeepMutator,
   discussionCommander: DiscussionCommander,
+  keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
   contextBuilder: HeimdalContextBuilderFactory,
   implicit val airbrake: AirbrakeNotifier,
@@ -52,13 +56,13 @@ class KeepMutationController @Inject() (
     implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
     val schemaHelper = json.schemaHelper(reads)
   }
-  def createKeep() = UserAction(parse.tolerantJson) { implicit request =>
+  def createKeep() = UserAction.async(parse.tolerantJson) { implicit request =>
     import ExternalKeepCreateRequest._
     implicit val context = contextBuilder.withRequestInfo(request).build
     val result = for {
-      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Success(_)).getOrElse(Failure(DiscussionFail.COULD_NOT_PARSE))
+      externalCreateRequest <- request.body.asOpt[ExternalKeepCreateRequest].map(Future.successful).getOrElse(Future.failed(DiscussionFail.COULD_NOT_PARSE))
       userIdMap = db.readOnlyReplica { implicit s => userRepo.convertExternalIds(externalCreateRequest.users) }
-      internRequest <- for {
+      internRequest <- Future.fromTry(for {
         // TODO(ryan): actually handle the possibility that these fail
         users <- Success(externalCreateRequest.users.map(extId => userIdMap(extId)))
         libraries <- Success(externalCreateRequest.libraries.map(pubId => Library.decodePublicId(pubId).get))
@@ -70,17 +74,21 @@ class KeepMutationController @Inject() (
         note = externalCreateRequest.note,
         keptAt = externalCreateRequest.keptAt,
         recipients = KeepRecipients(libraries = libraries, emails = externalCreateRequest.emails, users = users + request.userId)
-      )
-      (keep, keepIsNew) <- keepCommander.internKeep(internRequest)
-    } yield keep
+      ))
+      (keep, keepIsNew, msgOpt) <- keepCommander.internKeep(internRequest)
+      keepInfo <- keepInfoAssembler.assembleKeepInfos(Some(request.userId), Set(keep.id.get))
+    } yield keepInfo.get(keep.id.get).flatMap(_.getRight).withLeft(keep.id.get)
 
-    result.map { keep =>
-      Ok(Json.obj("id" -> Keep.publicId(keep.id.get)))
+    result.map { keepInfoOrKeepId =>
+      keepInfoOrKeepId.fold(
+        keepId => Ok(Json.obj("id" -> Keep.publicId(keepId))),
+        keepInfo => Ok(NewKeepInfo.writes.writes(keepInfo))
+      )
     }.recover {
       case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
-    }.get
+    }
   }
 
   def modifyKeepRecipients(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -92,7 +100,7 @@ class KeepMutationController @Inject() (
         users <- Future.successful(input.users.map(userIdMap(_)))
         libraries <- Future.successful(input.libraries.map(libId => Library.decodePublicId(libId).get))
       } yield KeepRecipientsDiff(users = users, libraries = libraries, emails = input.emails)
-      _ <- discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source)
+      _ <- if (diff.nonEmpty) discussionCommander.modifyConnectionsForKeep(request.userId, keepId, diff, input.source) else Future.successful(())
     } yield {
       NoContent
     }).recover {
@@ -121,9 +129,9 @@ class KeepMutationController @Inject() (
   def deleteKeep(pubId: PublicId[Keep]) = UserAction { implicit request =>
     db.readWrite { implicit s =>
       for {
-        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_ID: KeepFail)
+        keepId <- Keep.decodePublicId(pubId).airbrakingOption.withLeft(KeepFail.INVALID_KEEP_ID: KeepFail)
         _ <- RightBias.unit.filter(_ => permissionCommander.getKeepPermissions(keepId, Some(request.userId)).contains(KeepPermission.DELETE_KEEP), KeepFail.INSUFFICIENT_PERMISSIONS: KeepFail)
-      } yield keepCommander.deactivateKeep(keepRepo.get(keepId))
+      } yield keepMutator.deactivateKeep(keepRepo.get(keepId))
     }.fold(
       fail => fail.asErrorResponse,
       _ => NoContent
@@ -131,7 +139,7 @@ class KeepMutationController @Inject() (
   }
 
   private object EditTitleRequest {
-    final case class EditTitleRequest(newTitle: String, source: KeepEventSourceKind)
+    final case class EditTitleRequest(newTitle: String, source: KeepEventSource)
     implicit val reads = Json.reads[EditTitleRequest]
     val schemaHelper = json.schemaHelper(reads)
   }

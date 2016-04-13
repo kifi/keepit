@@ -35,6 +35,7 @@ class ExtLibraryController @Inject() (
   libraryMembershipCommander: LibraryMembershipCommander,
   libraryImageCommander: LibraryImageCommander,
   keepsCommander: KeepCommander,
+  keepMutator: KeepMutator,
   basicUserRepo: BasicUserRepo,
   libRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -297,7 +298,7 @@ class ExtLibraryController @Inject() (
       case JsSuccess(titleOpt, _) =>
         titleOpt.map { title =>
           Try(db.readOnlyMaster { implicit s => keepRepo.convertExternalId(keepExtId) }).map { keepId =>
-            keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSourceKind.fromUserAgent)).fold(
+            keepsCommander.updateKeepTitle(keepId, request.userId, title, request.userAgentOpt.flatMap(KeepEventSource.fromUserAgent)).fold(
               fail => fail.asErrorResponse,
               _ => NoContent
             )
@@ -317,7 +318,7 @@ class ExtLibraryController @Inject() (
           val body = request.body.as[JsObject]
           val newNote = (body \ "note").as[String]
           db.readWrite { implicit session =>
-            keepsCommander.updateKeepNote(request.userId, keep, newNote)
+            keepMutator.updateKeepNote(request.userId, keep, newNote)
           }
           NoContent
       }

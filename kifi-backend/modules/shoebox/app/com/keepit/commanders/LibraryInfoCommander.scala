@@ -80,8 +80,12 @@ class LibraryInfoCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Seq[Keep] = {
-    if (limit > 0) db.readOnlyReplica(implicit s => ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit)) |> keepCommander.idsToKeeps)
-    else Seq.empty
+    if (limit <= 0) Seq.empty
+    else db.readOnlyReplica { implicit s =>
+      val keepIds = ktlRepo.getByLibraryIdSorted(libraryId, Offset(offset), Limit(limit))
+      val keepsById = keepRepo.getActiveByIds(keepIds.toSet)
+      keepIds.flatMap(keepsById.get)
+    }
   }
 
   def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
@@ -188,7 +192,9 @@ class LibraryInfoCommanderImpl @Inject() (
               case LibraryKind.SYSTEM_SECRET => assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
               case _ =>
             }
-            ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
+            val keepIds = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown))
+            val keepsById = keepRepo.getActiveByIds(keepIds.toSet)
+            keepIds.flatMap(keepsById.get)
           }
           keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, maxMessagesShown, sanitizeUrls)
         } else Future.successful(Seq.empty)

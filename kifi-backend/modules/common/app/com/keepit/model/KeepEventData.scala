@@ -1,28 +1,30 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.PublicId
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.{ PublicIdGenerator, PublicId }
 import com.keepit.common.db.Id
-import com.keepit.common.json.EnumFormat
+import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.DescriptionElements._
 import com.keepit.discussion.{ Message, MessageSource }
-import com.keepit.social.{ BasicAuthor, BasicNonUser }
+import com.keepit.model.BasicKeepEvent.BasicKeepEventId
+import com.keepit.social.BasicAuthor
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 sealed abstract class KeepEventKind(val value: String)
 object KeepEventKind extends Enumerator[KeepEventKind] {
   case object Initial extends KeepEventKind("initial")
   case object Comment extends KeepEventKind("comment")
   case object EditTitle extends KeepEventKind("edit_title")
-
-  // todo(cam): deprecate AddParticipants + AddLibraries for the superset AddRecipients
-  case object AddRecipients extends KeepEventKind("add_recipients")
-  case object AddParticipants extends KeepEventKind("add_participants")
-  case object AddLibraries extends KeepEventKind("add_libraries")
+  case object ModifyRecipients extends KeepEventKind("modify_recipients")
 
   val all = _all
   def contains(str: String) = all.exists(_.value == str)
@@ -32,89 +34,158 @@ object KeepEventKind extends Enumerator[KeepEventKind] {
   implicit val format: Format[KeepEventKind] = EnumFormat.format(fromStr, _.value)
 }
 
-@json case class KeepEventSource(kind: KeepEventSourceKind, url: Option[String])
+@json case class BasicKeepEventSource(kind: KeepEventSource, url: Option[String])
+object BasicKeepEventSource {
+  def fromSourceAttribution(attribution: SourceAttribution): Option[BasicKeepEventSource] = {
+    attribution match {
+      case SlackAttribution(message, _) => Some(BasicKeepEventSource(KeepEventSource.Slack, Some(message.permalink)))
+      case TwitterAttribution(tweet) => Some(BasicKeepEventSource(KeepEventSource.Twitter, Some(tweet.permalink)))
+      case ka: KifiAttribution => KeepEventSource.fromKeepSource(ka.source).map(src => BasicKeepEventSource(src, None))
+    }
+  }
+}
 
-sealed abstract class KeepEventSourceKind(val value: String)
-object KeepEventSourceKind extends Enumerator[KeepEventSourceKind] {
-  case object Slack extends KeepEventSourceKind("Slack")
-  case object Twitter extends KeepEventSourceKind("Twitter")
-  case object iOS extends KeepEventSourceKind("iOS")
-  case object Android extends KeepEventSourceKind("Android")
-  case object Chrome extends KeepEventSourceKind("Chrome") // refers to ext
-  case object Firefox extends KeepEventSourceKind("Firefox")
-  case object Safari extends KeepEventSourceKind("Safari")
-  case object Email extends KeepEventSourceKind("Email")
-  case object Site extends KeepEventSourceKind("Kifi.com")
+sealed abstract class KeepEventSource(val value: String)
+object KeepEventSource extends Enumerator[KeepEventSource] {
+  case object Slack extends KeepEventSource("Slack")
+  case object Twitter extends KeepEventSource("Twitter")
+  case object iOS extends KeepEventSource("iOS")
+  case object Android extends KeepEventSource("Android")
+  case object Extension extends KeepEventSource("the extension")
+  case object Chrome extends KeepEventSource("Chrome")
+  case object Firefox extends KeepEventSource("Firefox")
+  case object Safari extends KeepEventSource("Safari")
+  case object Email extends KeepEventSource("Email")
+  case object Site extends KeepEventSource("Kifi.com")
 
   val all = _all
   def fromStr(str: String) = all.find(_.value == str)
   def apply(str: String) = fromStr(str).get
 
-  implicit val format: Format[KeepEventSourceKind] = EnumFormat.format(fromStr, _.value)
+  implicit val format: Format[KeepEventSource] = EnumFormat.format(fromStr, _.value)
 
-  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSourceKind] = msgSrc.flatMap {
+  def fromMessageSource(msgSrc: Option[MessageSource]): Option[KeepEventSource] = msgSrc.flatMap {
     case MessageSource.IPHONE => Some(iOS)
-    case src => KeepEventSourceKind.fromStr(src.value)
+    case src => KeepEventSource.fromStr(src.value)
   }
-  def toMessageSource(eventSrc: KeepEventSourceKind): Option[MessageSource] = eventSrc match {
-    case KeepEventSourceKind.iOS => Some(MessageSource.IPHONE) // only 8 iPad messages total, all before 2015
+  def toMessageSource(eventSrc: KeepEventSource): Option[MessageSource] = eventSrc match {
+    case KeepEventSource.iOS => Some(MessageSource.IPHONE) // only 8 iPad messages total, all before 2015
     case src => MessageSource.fromStr(src.value)
   }
 
-  def fromUserAgent(userAgent: UserAgent): Option[KeepEventSourceKind] = fromStr(userAgent.name)
+  def fromKeepSource(keepSrc: KeepSource): Option[KeepEventSource] = keepSrc match {
+    case KeepSource.keeper => Some(KeepEventSource.Extension)
+    case KeepSource.site => Some(KeepEventSource.Site)
+    case KeepSource.email => Some(KeepEventSource.Email)
+    case KeepSource.slack => Some(KeepEventSource.Slack)
+    case KeepSource.twitterFileImport | KeepSource.twitterSync => Some(KeepEventSource.Twitter)
+    case _ => None
+  }
+
+  def fromUserAgent(userAgent: UserAgent): Option[KeepEventSource] = fromStr(userAgent.name)
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]): QueryStringBindable[KeepEventSource] = new QueryStringBindable[KeepEventSource] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KeepEventSource]] = {
+      stringBinder.bind(key, params) map {
+        case Right(value) => Right(KeepEventSource(value))
+        case _ => Left("Unable to bind a KeepEventSourceKind")
+      }
+    }
+
+    override def unbind(key: String, source: KeepEventSource): String = {
+      stringBinder.unbind(key, source.value)
+    }
+  }
 }
 
 sealed abstract class KeepEventData(val kind: KeepEventKind)
 object KeepEventData {
-
-  // should deprecate AddParticipants and AddLibraries in favor of AddMembers
-  @json case class AddParticipants(addedBy: Id[User], addedUsers: Seq[Id[User]], addedNonUsers: Seq[BasicNonUser]) extends KeepEventData(KeepEventKind.AddParticipants)
-  @json case class AddLibraries(addedBy: Id[User], libraries: Set[Id[Library]]) extends KeepEventData(KeepEventKind.AddLibraries)
-  @json case class AddRecipients(addedBy: Id[User], keepRecipients: KeepRecipients) extends KeepEventData(KeepEventKind.AddRecipients)
-
+  implicit val diffFormat = KeepRecipientsDiff.internalFormat
+  @json case class ModifyRecipients(addedBy: Id[User], diff: KeepRecipientsDiff) extends KeepEventData(KeepEventKind.ModifyRecipients)
   @json case class EditTitle(editedBy: Id[User], original: Option[String], updated: Option[String]) extends KeepEventData(KeepEventKind.EditTitle)
   implicit val format = Format[KeepEventData](
     Reads {
       js =>
         (js \ "kind").validate[KeepEventKind].flatMap {
-          case KeepEventKind.AddParticipants => Json.reads[AddParticipants].reads(js)
-          case KeepEventKind.AddLibraries => Json.reads[AddLibraries].reads(js)
           case KeepEventKind.EditTitle => Json.reads[EditTitle].reads(js)
-          case KeepEventKind.AddRecipients => Json.reads[AddRecipients].reads(js)
+          case KeepEventKind.ModifyRecipients => Json.reads[ModifyRecipients].reads(js)
           case KeepEventKind.Initial | KeepEventKind.Comment => throw new Exception(s"unsupported reads for activity event kind, js $js}")
         }
     },
     Writes {
-      case ap: AddParticipants => Json.writes[AddParticipants].writes(ap).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddParticipants.value)
-      case al: AddLibraries => Json.writes[AddLibraries].writes(al).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddLibraries.value)
       case et: EditTitle => Json.writes[EditTitle].writes(et).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.EditTitle.value)
-      case ar: AddRecipients => Json.writes[AddRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.AddRecipients.value)
+      case ar: ModifyRecipients => Json.writes[ModifyRecipients].writes(ar).as[JsObject] ++ Json.obj("kind" -> KeepEventKind.ModifyRecipients.value)
       case o => throw new Exception(s"unsupported writes for ActivityEventData $o")
     }
   )
 }
 
+case class CommonKeepEvent()
+object CommonKeepEvent extends PublicIdGenerator[CommonKeepEvent] {
+  val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(125, 15, 73, -1, 17, -36, 81, -84, -126, 92, 65, -97, 127, 47, -113, 58))
+  val publicIdPrefix = "kev"
+}
+
+//case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]])
+//object BasicKeepEventId {
+//  def fromId(id: PublicId[])
+//}
+
 case class BasicKeepEvent(
-    id: Option[PublicId[Message]],
+    id: BasicKeepEventId,
     author: BasicAuthor,
     kind: KeepEventKind,
     header: DescriptionElements, // e.g. "Cam kept this in LibraryX"
     body: DescriptionElements, // message and keep.note content
     timestamp: DateTime,
-    source: Option[KeepEventSource]) {
+    source: Option[BasicKeepEventSource]) {
 
   def withHeader(newHeader: DescriptionElements) = this.copy(header = newHeader)
 }
 object BasicKeepEvent {
+
+  case class BasicKeepEventId(id: Option[Either[PublicId[Message], PublicId[CommonKeepEvent]]]) // id = None when BasicKeepEvent.kind = "initial"
+  object BasicKeepEventId {
+    implicit val writes: Writes[BasicKeepEventId] = Writes { o =>
+      o.id match {
+        case None => JsNull
+        case Some(Left(msgId)) => JsString(msgId.id)
+        case Some(Right(eventId)) => JsString(eventId.id)
+      }
+    }
+
+    def initial = BasicKeepEventId(None)
+    def fromMsg(id: PublicId[Message]) = BasicKeepEventId(Some(Left(id)))
+    def fromEvent(id: PublicId[CommonKeepEvent]) = BasicKeepEventId(Some(Right(id)))
+  }
+
+  implicit val idFormat = EitherFormat(Message.formatPublicId, CommonKeepEvent.formatPublicId)
   implicit val writes: Writes[BasicKeepEvent] = (
-    (__ \ 'id).writeNullable[PublicId[Message]] and
+    (__ \ 'id).write[BasicKeepEventId] and
     (__ \ 'author).write[BasicAuthor] and
     (__ \ 'kind).write[KeepEventKind] and
     (__ \ 'header).write[DescriptionElements] and
     (__ \ 'body).write[DescriptionElements] and
     (__ \ 'timestamp).write[DateTime] and
-    (__ \ 'source).writeNullable[KeepEventSource]
+    (__ \ 'source).writeNullable[BasicKeepEventSource]
   )(unlift(BasicKeepEvent.unapply))
+
+  def fromMessage(message: Message)(implicit imageConfig: S3ImageConfig): BasicKeepEvent = {
+    val author = message.sentBy.fold(BasicAuthor.fromNonUser, BasicAuthor.fromUser)
+    generateCommentEvent(message.pubId, author, message.text, message.sentAt, message.source)
+  }
+
+  def generateCommentEvent(id: PublicId[Message], author: BasicAuthor, text: String, sentAt: DateTime, source: Option[MessageSource]): BasicKeepEvent = {
+    BasicKeepEvent(
+      id = BasicKeepEventId.fromMsg(id),
+      author = author,
+      kind = KeepEventKind.Comment,
+      header = DescriptionElements(author),
+      body = text,
+      timestamp = sentAt,
+      source = KeepEventSource.fromMessageSource(source).map(BasicKeepEventSource(_, url = None))
+    )
+  }
 }
 
 case class KeepActivity(latestEvent: BasicKeepEvent, events: Seq[BasicKeepEvent], numComments: Int)

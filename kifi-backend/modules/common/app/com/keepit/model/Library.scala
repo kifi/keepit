@@ -17,6 +17,7 @@ import com.keepit.social.BasicUser
 import com.kifi.macros.json
 
 import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
@@ -26,6 +27,7 @@ import play.api.mvc.{ PathBindable, QueryStringBindable }
 import scala.concurrent.duration.Duration
 
 import scala.util.Random
+import scala.util.hashing.MurmurHash3
 
 case class Library(
     id: Option[Id[Library]] = None,
@@ -176,7 +178,7 @@ object SortDirection extends Enumerator[SortDirection] {
   case object DESCENDING extends SortDirection("desc")
   val all = _all.toSet
   def fromStr(str: String): Option[SortDirection] = all.find(_.value == str)
-  def apply(str: String) = fromStr(str).get
+  def apply(str: String) = fromStr(str).getOrElse(throw new Exception(s"could not extract sort direction from $str"))
 
   implicit val format: Format[SortDirection] = EnumFormat.format(fromStr, _.value)
 
@@ -389,8 +391,7 @@ object BasicLibraryStatistics {
 }
 
 // For service-to-Shoebox calls needing library metadata. Specialized for search's needs, ask search before changing.
-@json
-case class BasicLibraryDetails(
+final case class BasicLibraryDetails(
     name: String,
     slug: LibrarySlug,
     color: Option[LibraryColor],
@@ -407,9 +408,28 @@ case class BasicLibraryDetails(
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 }
 
+object BasicLibraryDetails {
+  // TODO(léo): uncomment this line and destroy my travesty
+  // implicit val format: Format[BasicLibraryDetails] = Json.format[BasicLibraryDetails]
+  implicit val format: Format[BasicLibraryDetails] = (
+    (__ \ 'name).format[String] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'imageUrl).formatNullable[String] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'numFollowers).format[Int] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'keepCount).format[Int] and
+    (__ \ 'membership).formatNullable[LibraryMembershipInfo] and
+    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'organizationId).formatNullable[Id[Organization]] and
+    (__ \ 'url).format[String].inmap[Path](Path(_), _.absolute) and
+    (__ \ 'permissions).format[Set[LibraryPermission]]
+  )(BasicLibraryDetails.apply _, unlift(BasicLibraryDetails.unapply))
+}
+
 sealed abstract class LibraryColor(val value: String, val hex: String)
 object LibraryColor extends Enumerator[LibraryColor] {
-
   case object BLUE extends LibraryColor("blue", "#447ab7")
   case object SKY_BLUE extends LibraryColor("sky_blue", "#5ab7e7")
   case object GREEN extends LibraryColor("green", "#4fc49e")
@@ -427,12 +447,16 @@ object LibraryColor extends Enumerator[LibraryColor] {
     Writes { o => JsString(o.hex) }
   )
 
-  val AllColors: Seq[LibraryColor] = all.toSeq.sortBy(_.value)
+  val AllColors: IndexedSeq[LibraryColor] = all.toIndexedSeq.sortBy(_.value)
+  private lazy val prng = new MersenneTwister(System.currentTimeMillis())
 
-  private lazy val rnd = new Random
+  def byHash(seed: Seq[String]): LibraryColor = {
+    val h = MurmurHash3.seqHash(seed).abs
+    AllColors(h % AllColors.length)
+  }
 
   def pickRandomLibraryColor(): LibraryColor = {
-    AllColors(rnd.nextInt(AllColors.size))
+    AllColors(prng.nextInt(AllColors.length))
   }
 
 }

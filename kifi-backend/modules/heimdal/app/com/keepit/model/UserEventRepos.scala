@@ -173,6 +173,16 @@ class UserAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[
   })
 }
 
+class UserExperimentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = {
+    HeimdalContextBuilder.experimentFields.exists(!userEvent.context.data.contains(_))
+  }
+
+  def apply(userEvent: UserEvent) = shoeboxClient.getUserExperiments(userEvent.userId).map { experiments =>
+    HeimdalContextBuilder.getExperimentFields(experiments.toSet).toSeq
+  }
+}
+
 trait UserEventDescriptorRepo extends EventDescriptorRepo[UserEvent]
 
 class UserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id.ord
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.SlackLog
 import com.keepit.common.social.BasicUserRepo
@@ -43,6 +43,7 @@ object SlackPushingActor {
   val KEEP_TITLE_MAX_DISPLAY_LENGTH = 60
 
   val imageUrlRegex = """^https?://[^\s]*\.(png|jpg|jpeg|gif)""".r
+  val jenUserId = ExternalId[User]("ae139ae4-49ad-4026-b215-1ece236f1322")
 
   sealed abstract class PushItem(val time: DateTime)
   object PushItem {
@@ -321,7 +322,7 @@ class SlackPushingActor @Inject() (
     val changedKeepIds = changedKeeps.map(_.id.get).toSet
 
     val keepAndKtlByKeep = db.readOnlyMaster { implicit s =>
-      val keepById = keepRepo.getByIds(changedKeepIds)
+      val keepById = keepRepo.getActiveByIds(changedKeepIds)
       val ktlsByKeepId = ktlRepo.getAllByKeepIds(changedKeepIds).flatMapValues { ktls => ktls.find(_.libraryId == lts.libraryId) }
       changedKeepIds.flatAugmentWith(kId => for (k <- keepById.get(kId); ktl <- ktlsByKeepId.get(kId)) yield (k, ktl)).toMap
     }
@@ -393,19 +394,20 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
     val category = NotificationCategory.NonUser.NEW_KEEP
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
     val keepElement = DescriptionElements(
       s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
       "  ",
-      "View Article" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
+      "View" --> LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("viewArticle")))),
       "|",
-      "Reply to Thread" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
+      "Reply" --> LinkElement(pathCommander.keepPageOnKifiViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some("reply"))))
     )
 
     // TODO(cam): once you backfill, `attribution` should be non-optional so you can simplify this match
     (keep.note, attribution) match {
       case (Some(note), _) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(keepElement),
-        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
       )
       case (None, None) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
@@ -431,6 +433,7 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => if (u.externalId == jenUserId) LibraryColor.PURPLE else LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
@@ -440,9 +443,9 @@ class SlackPushingActor @Inject() (
       DescriptionElements(
         s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
         "  ",
-        "View Article" --> keepLink("viewArticle"),
+        "View" --> keepLink("viewArticle"),
         "|",
-        "Reply to Thread" --> keepLink("reply")
+        "Reply" --> keepLink("reply")
       )
     }
 
@@ -455,7 +458,7 @@ class SlackPushingActor @Inject() (
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
           case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+        })).withFullMarkdown.withColorMaybe(userColor.map(_.hex)) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>

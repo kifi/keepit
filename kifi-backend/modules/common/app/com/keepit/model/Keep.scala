@@ -14,7 +14,6 @@ import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.discussion.Message
-import com.keepit.social.{ BasicAuthor }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -231,37 +230,10 @@ object CrossServiceKeepAndTags {
   implicit val format = Json.format[CrossServiceKeepAndTags]
 }
 
-case class BasicKeep(
-  id: ExternalId[Keep],
-  title: Option[String],
-  url: String,
-  visibility: LibraryVisibility,
-  libraryId: Option[PublicId[Library]],
-  author: BasicAuthor,
-  attribution: Option[SlackAttribution],
-  uriId: PublicId[NormalizedURI])
-
-object BasicKeep {
-  private def GARBAGE_UUID: ExternalId[User] = ExternalId("42424242-4242-4242-424242424242")
-  implicit val format: Format[BasicKeep] = (
-    (__ \ 'id).format[ExternalId[Keep]] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
-    (__ \ 'author).format[BasicAuthor] and
-    (__ \ 'slackAttribution).formatNullable[SlackAttribution] and
-    (__ \ 'uriId).format[PublicId[NormalizedURI]]
-  )(BasicKeep.apply, unlift(BasicKeep.unapply))
-}
-
-@json
-case class BasicKeepWithId(id: Id[Keep], keep: BasicKeep)
-
-case class CrossServiceKeepRecipients(id: Id[Keep], recipients: KeepRecipients)
+case class CrossServiceKeepRecipients(id: Id[Keep], owner: Option[Id[User]], recipients: KeepRecipients)
 object CrossServiceKeepRecipients {
   implicit val format = Json.format[CrossServiceKeepRecipients]
-  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.recipients)
+  def fromKeep(keep: Keep): CrossServiceKeepRecipients = CrossServiceKeepRecipients(keep.id.get, keep.userId, keep.recipients)
 }
 
 // All the important parts of a Keep to send across services
@@ -283,6 +255,7 @@ case class CrossServiceKeep(
     url: String,
     uriId: Id[NormalizedURI],
     keptAt: DateTime,
+    lastActivityAt: DateTime,
     title: Option[String],
     note: Option[String]) {
   def isActive: Boolean = state == KeepStates.ACTIVE
@@ -305,6 +278,7 @@ object CrossServiceKeep {
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'keptAt).format[DateTime] and
+    (__ \ 'lastActivityAt).format[DateTime] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
@@ -322,6 +296,7 @@ object CrossServiceKeep {
       url = keep.url,
       uriId = keep.uriId,
       keptAt = keep.keptAt,
+      lastActivityAt = keep.lastActivityAt,
       title = keep.title,
       note = keep.note
     )
@@ -344,15 +319,6 @@ object PersonalKeep {
     (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
-
-case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
-  override val version = 5
-  val namespace = "basic_keep_by_id"
-  def toKey(): String = id.id.toString
-}
-
-class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed abstract class KeepPermission(val value: String)
 object KeepPermission extends Enumerator[KeepPermission] {
@@ -387,7 +353,8 @@ sealed abstract class KeepFail(val status: Int, val err: String) extends Excepti
 }
 
 object KeepFail extends Enumerator[KeepFail] {
-  case object INVALID_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object INVALID_KEEP_ID extends KeepFail(BAD_REQUEST, "invalid_keep_id")
+  case object LIMIT_TOO_LARGE extends KeepFail(BAD_REQUEST, "limit_too_large")
   case object KEEP_NOT_FOUND extends KeepFail(NOT_FOUND, "no_keep_found")
   case object INSUFFICIENT_PERMISSIONS extends KeepFail(FORBIDDEN, "insufficient_permissions")
   case object MALFORMED_URL extends KeepFail(BAD_REQUEST, "malformed_url")

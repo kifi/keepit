@@ -7,6 +7,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.KeyFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
@@ -80,7 +81,7 @@ trait SlackInfoCommander {
 
   // For generating OrganizationInfo
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int] = None)(implicit session: RSession): OrganizationSlackInfo
-  def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo]
+  def getOrganizationSlackTeam(orgId: Id[Organization])(implicit session: RSession): Option[OrganizationSlackTeamInfo]
 
   // For generating UserProfileStats
   def getUserSlackInfo(userId: Id[User], viewerId: Option[Id[User]])(implicit session: RSession): UserSlackInfo
@@ -102,6 +103,7 @@ class SlackInfoCommanderImpl @Inject() (
   libRepo: LibraryRepo,
   basicOrganizationGen: BasicOrganizationGen,
   permissionCommander: PermissionCommander,
+  airbrake: AirbrakeNotifier,
   implicit val publicIdConfiguration: PublicIdConfiguration)
     extends SlackInfoCommander with Logging {
 
@@ -151,12 +153,14 @@ class SlackInfoCommanderImpl @Inject() (
       val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
 
       val fromSlackGroupedInfos = fromSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromSTL).map {
-        case (key, Seq(fs)) =>
+        case (key, fs +: thisSeqReallyOughtToBeEmpty) =>
+          airbrake.verify(thisSeqReallyOughtToBeEmpty.isEmpty, s"Uniqueness constraint violation on slack_channel_to_library $libId + $key")
           val fsPubId = SlackChannelToLibrary.publicId(fs.id.get)
           key -> SlackToLibraryIntegrationInfo(fsPubId, fs.status, isMutable = canUserJoinOrWritetoLib.getOrElse(libId, false))
       }
       val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
-        case (key, Seq(ts)) =>
+        case (key, ts +: thisSeqReallyOughtToBeEmpty) =>
+          airbrake.verify(thisSeqReallyOughtToBeEmpty.isEmpty, s"Uniqueness constraint violation on library_to_slack_channel $libId + $key")
           val tsPubId = LibraryToSlackChannel.publicId(ts.id.get)
           key -> LibraryToSlackIntegrationInfo(tsPubId, ts.status, isMutable = permissions.contains(LibraryPermission.VIEW_LIBRARY))
       }
@@ -174,14 +178,14 @@ class SlackInfoCommanderImpl @Inject() (
     }.toMap
   }
 
-  def getOrganizationSlackTeam(orgId: Id[Organization], viewerId: Id[User])(implicit session: RSession): Option[OrganizationSlackTeamInfo] = {
+  def getOrganizationSlackTeam(orgId: Id[Organization])(implicit session: RSession): Option[OrganizationSlackTeamInfo] = {
     slackTeamRepo.getByOrganizationId(orgId).map(team => OrganizationSlackTeamInfo(team.slackTeamId, team.slackTeamName, team.publicChannelsLastSyncedAt))
   }
 
   @StatsdTiming("SlackInfoCommander.getOrganizationSlackInfo")
   def getOrganizationSlackInfo(orgId: Id[Organization], viewerId: Id[User], max: Option[Int])(implicit session: RSession): OrganizationSlackInfo = {
     val (libIds, basicLibsById, integrationInfosByLib, slackTeam) = {
-      val slackTeamOpt = getOrganizationSlackTeam(orgId, viewerId)
+      val slackTeamOpt = getOrganizationSlackTeam(orgId)
       val slackTeamIdOpt = slackTeamOpt.map(_.id)
       val (visibleLibraryIds, visibleSlackToLibs, visibleLibToSlacks) = {
         val allSlackToLibs = slackTeamIdOpt.map(channelToLibRepo.getBySlackTeam(_)) getOrElse Seq.empty

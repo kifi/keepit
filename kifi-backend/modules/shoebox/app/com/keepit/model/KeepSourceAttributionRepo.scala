@@ -72,9 +72,18 @@ class KeepSourceAttributionRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === KeepSourceAttributionStates.ACTIVE)
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
-    sourceAttributionByKeepIdCache.bulkGetOrElse(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
-      getRawByKeepIds(missingKeys.map(_.keepId)).map { case (keepId, rawAttribution) => SourceAttributionKeepIdKey(keepId) -> keepSourceAugmentor.rawToSourceAttribution(rawAttribution) }
-    }.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution }
+    val attrOptByKeepId = sourceAttributionByKeepIdCache.bulkGet(keepIds.map(SourceAttributionKeepIdKey))
+    val (hits, misses) = attrOptByKeepId.partition { case (kid, attrOpt) => attrOpt.isDefined }
+    val fetchedMisses = getRawByKeepIds(misses.keySet.map(_.keepId)).map {
+      case (keepId, rawAttribution) =>
+        val richAttribution = keepSourceAugmentor.rawToSourceAttribution(rawAttribution)
+        richAttribution match {
+          case _: KifiAttribution => // don't cache BasicUser, expensive to invalidate
+          case attr => sourceAttributionByKeepIdCache.set(SourceAttributionKeepIdKey(keepId), richAttribution)
+        }
+        keepId -> richAttribution
+    }
+    fetchedMisses ++ hits.map { case (SourceAttributionKeepIdKey(keepId), attrOpt) => keepId -> attrOpt.get }
   }
 
   def getRawByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], RawSourceAttribution] = {

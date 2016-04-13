@@ -1,21 +1,16 @@
 package com.keepit.search.index
 
+import java.nio.ByteBuffer
+
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
-import com.keepit.model.User
 import com.keepit.typeahead.PrefixFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
-import org.apache.lucene.document.BinaryDocValuesField
-import org.apache.lucene.document.Document
-import org.apache.lucene.document.Field
-import org.apache.lucene.document.FieldType
-import org.apache.lucene.document.NumericDocValuesField
-import org.apache.lucene.document.StringField
-import org.apache.lucene.document.TextField
+import org.apache.lucene.document._
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import java.io.IOException
@@ -148,9 +143,16 @@ trait Indexable[T, S] extends Logging {
   }
 
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
-  def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
-
+  def buildIdValueField[V](field: String, typedId: Id[V]): Field = buildLongValueField(field, typedId.id)
   def buildLongValueField(field: String, v: Long): Field = new NumericDocValuesField(field, v)
+
+  def buildIdSetValueField[V](field: String, ids: Set[Id[V]]): Field = buildLongSetValueField(field, ids.map(_.id))
+
+  def buildLongSetValueField(field: String, longs: Set[Long]): Field = {
+    val buffer = ByteBuffer.allocate(longs.size * 8)
+    buffer.asLongBuffer().put(longs.toSeq.sorted.toArray)
+    buildBinaryDocValuesField(field, buffer.array())
+  }
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)

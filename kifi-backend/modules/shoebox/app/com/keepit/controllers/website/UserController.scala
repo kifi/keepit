@@ -337,7 +337,8 @@ class UserController @Inject() (
       STORED_CREDIT_CODE,
       SLACK_INT_PROMO,
       SLACK_UPSELL_WIDGET,
-      SHOW_SLACK_CREATE_TEAM_POPUP
+      SHOW_SLACK_CREATE_TEAM_POPUP,
+      HIDE_EXTENSION_UPSELL
     )
   }
 

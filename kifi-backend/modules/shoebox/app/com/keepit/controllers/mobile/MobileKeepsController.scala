@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.shoebox.data.keep.KeepInfo
+import com.keepit.shoebox.data.keep.{ PartialKeepInfo, KeepInfo }
 
 import play.api.libs.json._
 
@@ -28,7 +28,8 @@ class MobileKeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
   keepsCommander: KeepCommander,
-  collectionCommander: CollectionCommander,
+  keepMutator: KeepMutator,
+  tagCommander: TagCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
   libraryInfoCommander: LibraryInfoCommander,
@@ -37,27 +38,15 @@ class MobileKeepsController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def allKeepsV1(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
-    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, true)
-  }
-
   def allKeepsV2(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
     getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, false)
   }
 
   private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, v1: Boolean) = {
-    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, userId) map { res =>
-      val basicCollection = collectionOpt.flatMap { collStrExtId =>
-        ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
-          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(userId, collExtId)(_)).map { c =>
-            BasicCollection.fromCollection(c.summary)
-          }
-        }
-      }
+    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt, helprankOpt, count, userId) map { res =>
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, v1)))
       Ok(Json.obj(
-        "collection" -> basicCollection,
         "before" -> before,
         "after" -> after,
         "keeps" -> Json.toJson(sanitizedKeeps)
@@ -68,7 +57,7 @@ class MobileKeepsController @Inject() (
   def allCollections(sort: String) = UserAction.async { request =>
     for {
       numKeeps <- SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
-      collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+      collections <- SafeFuture { tagCommander.tagsForUser(request.userId, 0, 1000, TagSorting(sort)) }
     } yield {
       Ok(Json.obj(
         "keeps" -> numKeeps,
@@ -111,7 +100,7 @@ class MobileKeepsController @Inject() (
             Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }
       case Some(keep) =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, v1))))))
+        Future.successful(Ok(Json.toJson(PartialKeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, v1))))))
     }
   }
 
@@ -132,7 +121,7 @@ class MobileKeepsController @Inject() (
         if (titleToPersist != keep.title || noteToPersist != keep.note) {
           db.readWrite { implicit s =>
             val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
-            keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
+            keepMutator.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
           }
         }
 
