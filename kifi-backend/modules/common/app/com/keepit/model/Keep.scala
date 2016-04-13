@@ -5,7 +5,7 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache._
 import com.keepit.common.crypto.{ ModelWithPublicId, PublicId, PublicIdConfiguration, PublicIdGenerator }
 import com.keepit.common.db._
-import com.keepit.common.json.{ EnumFormat, TraversableFormat }
+import com.keepit.common.json.{ SchemaReads, EnumFormat, TraversableFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
@@ -206,6 +206,7 @@ object KeepSource {
     Reads { j => j.validate[String].map(KeepSource(_)) },
     Writes { o => JsString(o.value) }
   )
+  implicit val schemaReads: SchemaReads[KeepSource] = SchemaReads.trivial("keep_source")
 }
 
 case class KeepAndTags(keep: Keep, deprecated: (LibraryVisibility, Option[Id[Organization]]), source: Option[SourceAttribution], tags: Set[Hashtag])

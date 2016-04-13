@@ -12,7 +12,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.{ TraversableFormat, KeyFormat }
+import com.keepit.common.json.{ SchemaReads, TraversableFormat, KeyFormat }
 import com.keepit.common.time._
 import com.keepit.discussion.{ MessageSource, Message, DiscussionFail }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -21,7 +21,8 @@ import com.keepit.shoebox.data.assemblers.KeepInfoAssembler
 import com.keepit.shoebox.data.keep.NewKeepInfo
 import com.keepit.social.Author
 import org.joda.time.DateTime
-import play.api.libs.json.{ Reads, Format, Json }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -44,6 +45,7 @@ class KeepMutationController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   private object ExternalKeepCreateRequest {
+    import SchemaReads._
     final case class ExternalKeepCreateRequest(
       url: String,
       source: KeepSource,
@@ -53,7 +55,18 @@ class KeepMutationController @Inject() (
       users: Set[ExternalId[User]],
       emails: Set[EmailAddress],
       libraries: Set[PublicId[Library]])
-    implicit val reads: Reads[ExternalKeepCreateRequest] = Json.reads[ExternalKeepCreateRequest]
+    private val schemaReads: SchemaReads[ExternalKeepCreateRequest] = (
+      (__ \ 'url).readWithSchema[String] and
+      (__ \ 'source).readWithSchema[KeepSource] and
+      (__ \ 'title).readNullableWithSchema[String] and
+      (__ \ 'note).readNullableWithSchema[String] and
+      (__ \ 'keptAt).readNullableWithSchema[DateTime] and
+      (__ \ 'users).readNullableWithSchema[Set[ExternalId[User]]].map(_ getOrElse Set.empty) and
+      (__ \ 'emails).readNullableWithSchema[Set[EmailAddress]].map(_ getOrElse Set.empty) and
+      (__ \ 'libraries).readNullableWithSchema[Set[PublicId[Library]]].map(_ getOrElse Set.empty)
+    )(ExternalKeepCreateRequest.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
     val schemaHelper = json.schemaHelper(reads)
   }
   def createKeep() = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -85,7 +98,8 @@ class KeepMutationController @Inject() (
         keepInfo => Ok(NewKeepInfo.writes.writes(keepInfo))
       )
     }.recover {
-      case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
+      case DiscussionFail.COULD_NOT_PARSE =>
+        BadRequest(Json.obj("error" -> "malformed_payload", "expected" -> schema.asJson, "hint" -> schemaHelper.hint(request.body)))
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
     }

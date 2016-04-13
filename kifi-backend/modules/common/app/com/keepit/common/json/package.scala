@@ -5,6 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{Library, User}
+import org.joda.time.DateTime
 import play.api.data.validation.ValidationError
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -91,6 +92,7 @@ package object json {
     implicit val userId: SchemaReads[ExternalId[User]] = trivial("user_id")
     implicit val libraryId: SchemaReads[PublicId[Library]] = trivial("library_id")
     implicit val email: SchemaReads[EmailAddress] = trivial("email")
+    implicit val datetime: SchemaReads[DateTime] = trivial("datetime_int")(time.DateTimeJsonFormat)
 
     implicit class PimpedJsPath(jsp: JsPath) {
       def readWithSchema[T](implicit sr: SchemaReads[T]) =
