@@ -303,6 +303,7 @@ k.panes.thread = k.panes.thread || function () {
     if (error) {
       return Q.reject();
     }
+    var keep = $holder.data('keep');
 
     var meParticipant = meToParticipant(k.me);
     var newEvent = {
@@ -313,9 +314,12 @@ k.panes.thread = k.panes.thread || function () {
       ],
       body: [{ text: text }],
       author: meToParticipant(k.me),
+      source: {
+        kind: browserName
+      },
       displayedSource: browserName
     };
-    var $m = renderActivityEvent($holder.data('keep'), newEvent).data('text', text);
+    var $m = renderActivityEvent(keep, newEvent).data('text', text);
 
     $holder.append($m);
     scrollToBottomResiliently();
@@ -346,26 +350,32 @@ k.panes.thread = k.panes.thread || function () {
     };
     var $rendered = $(k.render('html/keeper/message_keepscussion', formattedEvent, partials));
     $rendered.find('time').timeago();
-    strategicNewline($rendered);
+    insertEllipsisIfStampOverlaps($rendered);
     return $rendered;
   }
 
   // TODO(carlos) This function could potentially be slow.
   // Consider cost vs. benefits
-  function strategicNewline($rendered) {
+  function insertEllipsisIfStampOverlaps($rendered) {
     var alreadyHeld = !!$holder.find($rendered).length;
-    if (!alreadyHeld) {
-      $rendered.appendTo($holder);
-    }
+    var $stamp = $rendered.find('.kifi-message-sent-header-stamp')[0];
+    var $stampSibling = $stamp && $stamp.previousElementSibling;
+    if ($stampSibling) {
+      if (!alreadyHeld) {
+        $rendered.appendTo($holder);
+      }
 
-    var stamp = $rendered.find('.kifi-message-sent-header-stamp')[0];
-    var r = stamp && stamp.getClientRects();
-    if (r && r[0].left > r[r.length - 1].left) {
-      stamp.style.display = 'block';
-    }
+      $stamp.style.display = 'inline-block';
+      var rects = $stampSibling.getClientRects();
+      var lastRect = rects[rects.length - 1];
+      if (lastRect.right > $stamp.getBoundingClientRect().left) {
+        $stamp.classList.add('kifi-message-sent-header-stamp-ellipsis');
+      }
+      $stamp.style.display = null;
 
-    if (!alreadyHeld) {
-      $rendered.remove()
+      if (!alreadyHeld) {
+        $rendered.remove();
+      }
     }
   }
 
