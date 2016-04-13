@@ -284,15 +284,19 @@ class UserProfileCommander @Inject() (
     UserValueSettings.readFromJsValue(settingsJs)
   }
 
-  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, arrangement: Option[Arrangement], windowSize: Option[Int]): LeftHandRailResponse = {
+  def getLeftHandRailResponse(userId: Id[User], numLibs: Int, windowSize: Option[Int]): LeftHandRailResponse = {
     db.readOnlyMaster { implicit s =>
       import LibraryQuery._
-
-      val sortingArrangement = arrangement.getOrElse(Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING))
+      val userSettings = UserValueSettings.readFromJsValue(userValueRepo.getValue(userId, UserValues.userProfileSettings))
+      val sortingArrangement = userSettings.leftHandRailSort match {
+        case LibraryOrdering.LAST_KEPT_INTO => Arrangement(LibraryOrdering.LAST_KEPT_INTO, SortDirection.DESCENDING)
+        case LibraryOrdering.ALPHABETICAL => Arrangement(LibraryOrdering.ALPHABETICAL, SortDirection.ASCENDING)
+        case _ => throw new Exception(s"unknown sorting value ${userSettings.leftHandRailSort}")
+      }
       val orgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
 
-      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
-      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, Some(sortingArrangement), fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
+      val userLibs = libQueryCommander.getLHRLibrariesForUser(userId, sortingArrangement, fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)
+      val orgLibs = orgIds.map(orgId => orgId -> libQueryCommander.getLHRLibrariesForOrg(userId, orgId, sortingArrangement, fromIdOpt = None, offset = Offset(0), limit = Limit(numLibs), windowSize)).toMap
 
       val basicOrgsWithTopLibs = basicOrganizationGen.getBasicOrganizations(orgIds.toSet).toSeq.sortBy(_._2.name)
         .map {
