@@ -1,6 +1,10 @@
 package com.keepit.common
 
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model.{Library, User}
 import play.api.data.validation.ValidationError
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
@@ -81,8 +85,12 @@ package object json {
     def trivial[T](description: String)(implicit reads: Reads[T]) =
       SchemaReads(reads, JsonSchema.Single(description))
     implicit def seq[T](implicit sr: SchemaReads[T]): SchemaReads[Seq[T]] = SchemaReads(Reads.seq(sr.reads), JsonSchema.Array(sr.schema))
+    implicit def set[T](implicit sr: SchemaReads[T]): SchemaReads[Set[T]] = SchemaReads(Reads.set(sr.reads), JsonSchema.Array(sr.schema))
     implicit val int: SchemaReads[Int] = trivial("int")
     implicit val str: SchemaReads[String] = trivial("str")
+    implicit val userId: SchemaReads[ExternalId[User]] = trivial("user_id")
+    implicit val libraryId: SchemaReads[PublicId[Library]] = trivial("library_id")
+    implicit val email: SchemaReads[EmailAddress] = trivial("email")
 
     implicit class PimpedJsPath(jsp: JsPath) {
       def readWithSchema[T](implicit sr: SchemaReads[T]) =
