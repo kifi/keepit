@@ -29,7 +29,7 @@ class MobileKeepsController @Inject() (
   keepDecorator: KeepDecorator,
   keepsCommander: KeepCommander,
   keepMutator: KeepMutator,
-  collectionCommander: CollectionCommander,
+  tagCommander: TagCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
   libraryInfoCommander: LibraryInfoCommander,
@@ -57,7 +57,7 @@ class MobileKeepsController @Inject() (
   def allCollections(sort: String) = UserAction.async { request =>
     for {
       numKeeps <- SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
-      collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
+      collections <- SafeFuture { tagCommander.tagsForUser(request.userId, 0, 1000, TagSorting(sort)) }
     } yield {
       Ok(Json.obj(
         "keeps" -> numKeeps,

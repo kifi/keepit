@@ -62,7 +62,6 @@ class UserProfileController @Inject() (
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
     userMutualConnectionsCommander: UserMutualConnectionsCommander,
-    collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
     slackInfoCommander: SlackInfoCommander,
     val userActionsHelper: UserActionsHelper,
