@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.json.SchemaReads
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.DeltaSet
 import com.keepit.social.BasicUser
@@ -106,10 +107,17 @@ object KeepRecipientsDiff {
 }
 case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSource])
 object ExternalKeepRecipientsDiff {
-  implicit val reads: Reads[ExternalKeepRecipientsDiff] = (
-    (__ \ 'users).readNullable[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
-    (__ \ 'libraries).readNullable[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
-    (__ \ 'emails).readNullable[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
-    (__ \ 'source).readNullable[KeepEventSource]
+  import SchemaReads._
+  private implicit def deltasetSchemaReads[T](implicit srt: SchemaReads[T]): SchemaReads[DeltaSet[T]] = (
+    (__ \ 'add).readNullableWithSchema[Set[T]] and
+    (__ \ 'remove).readNullableWithSchema[Set[T]]
+  )(DeltaSet.fromSets[T] _)
+  val schemaReads: SchemaReads[ExternalKeepRecipientsDiff] = (
+    (__ \ 'users).readNullableWithSchema[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
+    (__ \ 'libraries).readNullableWithSchema[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
+    (__ \ 'emails).readNullableWithSchema[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
+    (__ \ 'source).readNullableWithSchema[KeepEventSource]
   )(ExternalKeepRecipientsDiff.apply _)
+
+  implicit val reads: Reads[ExternalKeepRecipientsDiff] = schemaReads.reads
 }
