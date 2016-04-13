@@ -146,6 +146,7 @@ object LibraryToSlackChannelFactory {
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
     def withChannel(cn: SlackChannel) = this.copy(lts = lts.copy(slackChannelId = cn.slackChannelId))
     def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))
+    def withLastActivatedAt(time: DateTime) = this.copy(lts = lts.copy(changedStatusAt = time))
     def on() = this.copy(lts = lts.withStatus(SlackIntegrationStatus.On))
     def withStatus(newStatus: SlackIntegrationStatus) = this.copy(lts = lts.copy(status = newStatus))
   }
