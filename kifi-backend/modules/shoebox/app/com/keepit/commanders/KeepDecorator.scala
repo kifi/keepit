@@ -126,7 +126,7 @@ class KeepDecoratorImpl @Inject() (
             libId -> BasicLibrary(library, user, orgOpt.map(_.handle))
         }
         val libraryCardByLibId = {
-          val libraries = keeps.flatMap(_.lowestLibraryId.map(idToLibrary(_)))
+          val libraries = idToLibrary.values.toSeq
           val cards = db.readOnlyMaster { implicit s =>
             libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, viewerIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
           }
