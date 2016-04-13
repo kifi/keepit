@@ -1,8 +1,14 @@
 package com.keepit.common
 
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model.{Library, User}
 import play.api.data.validation.ValidationError
 import play.api.http.Status._
+import play.api.libs.functional.syntax._
+import play.api.libs.functional._
 import play.api.libs.json._
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
@@ -55,6 +61,57 @@ package object json {
         Reads[T] { j => JsSuccess(default) },
         OWrites[T] { v => Json.obj() }
       )
+    }
+  }
+
+  sealed abstract class JsonSchema {
+    def asJson: JsValue
+  }
+  object JsonSchema {
+    final case class Single(description: String) extends JsonSchema { def asJson = JsString(description) }
+    final case class Optional(field: JsonSchema) extends JsonSchema { def asJson = field.asJson }
+    final case class Array(kind: JsonSchema) extends JsonSchema { def asJson = Json.arr(kind.asJson) }
+    final case class Object(fields: Seq[(String, JsonSchema)]) extends JsonSchema {
+      def asJson = JsObject(fields.map {
+        case (name, JsonSchema.Optional(schema)) => (name + "?") -> schema.asJson
+        case (name, schema) => name -> schema.asJson
+      })
+    }
+  }
+  final case class SchemaReads[T](reads: Reads[T], schema: JsonSchema) {
+    def map[S](f: T => S) = this.copy(reads = reads.map(f))
+  }
+  object SchemaReads {
+    def trivial[T](description: String)(implicit reads: Reads[T]) =
+      SchemaReads(reads, JsonSchema.Single(description))
+    implicit def seq[T](implicit sr: SchemaReads[T]): SchemaReads[Seq[T]] = SchemaReads(Reads.seq(sr.reads), JsonSchema.Array(sr.schema))
+    implicit def set[T](implicit sr: SchemaReads[T]): SchemaReads[Set[T]] = SchemaReads(Reads.set(sr.reads), JsonSchema.Array(sr.schema))
+    implicit val int: SchemaReads[Int] = trivial("int")
+    implicit val str: SchemaReads[String] = trivial("str")
+    implicit val userId: SchemaReads[ExternalId[User]] = trivial("user_id")
+    implicit val libraryId: SchemaReads[PublicId[Library]] = trivial("library_id")
+    implicit val email: SchemaReads[EmailAddress] = trivial("email")
+
+    implicit class PimpedJsPath(jsp: JsPath) {
+      def readWithSchema[T](implicit sr: SchemaReads[T]) =
+        SchemaReads(jsp.read(sr.reads), JsonSchema.Object(Seq(jsp.path.map(_.toJsonString).mkString.stripPrefix(".") -> sr.schema)))
+
+      def readNullableWithSchema[T](implicit sr: SchemaReads[T]) =
+        SchemaReads(jsp.readNullable(sr.reads), JsonSchema.Object(Seq(jsp.path.map(_.toJsonString).mkString.stripPrefix(".") -> JsonSchema.Optional(sr.schema))))
+    }
+
+    implicit val fcbSchemaReads: FunctionalCanBuild[SchemaReads] = new FunctionalCanBuild[SchemaReads] {
+      def apply[A, B](ma: SchemaReads[A], mb: SchemaReads[B]): SchemaReads[~[A, B]] = {
+        val newReads = implicitly[FunctionalCanBuild[Reads]].apply(ma.reads, mb.reads)
+        val newSchema = (ma.schema, mb.schema) match {
+          case (JsonSchema.Object(as), JsonSchema.Object(bs)) => JsonSchema.Object(as ++ bs)
+          case _ => throw new Exception("cannot functionally combine non-object schemas")
+        }
+        SchemaReads[~[A, B]](newReads, newSchema)
+      }
+    }
+    implicit val functorSchemaReads: Functor[SchemaReads] = new Functor[SchemaReads] {
+      def fmap[A, B](ma: SchemaReads[A], f: A => B): SchemaReads[B] = SchemaReads(ma.reads.map(f), ma.schema)
     }
   }
   object EnumFormat {

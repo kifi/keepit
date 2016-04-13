@@ -132,6 +132,52 @@ class JsonTest extends Specification {
         hinter.hint(Json.obj("x" -> 1, "y" -> Seq(1, 2, 3))) === Json.obj("obj.y" -> "expected a string", "obj.z" -> "required field")
       }
     }
+    "generate full schemas" in {
+      "for a simple case class" in {
+        case class Foo(x: Int, y: String, z: Seq[String])
+        object Foo {
+          import SchemaReads._
+          val schemaReads: SchemaReads[Foo] = (
+            (__ \ 'x).readWithSchema[Int] and
+            (__ \ 'y).readWithSchema[String] and
+            (__ \ 'z).readWithSchema[Seq[String]]
+          )(Foo.apply _)
+        }
+        Foo.schemaReads.schema.asJson === Json.obj(
+          "x" -> "int",
+          "y" -> "str",
+          "z" -> Json.arr("str")
+        )
+        1 === 1
+      }
+      "for nested garbage" in {
+        case class A(b: B, c: C)
+        case class B(c: Option[C], D: D)
+        case class C(x: Int, y: Option[String])
+        case class D(value: Long)
+        object ABC {
+          import SchemaReads._
+          implicit val dsr: SchemaReads[D] = SchemaReads.trivial("D")(Reads.IntReads.map(D(_)))
+          implicit val csr: SchemaReads[C] = (
+            (__ \ 'x).readWithSchema[Int] and
+            (__ \ 'y).readNullableWithSchema[String]
+          )(C.apply _)
+          implicit val bsr: SchemaReads[B] = (
+            (__ \ 'c).readNullableWithSchema[C] and
+            (__ \ 'd).readWithSchema[D]
+          )(B.apply _)
+          implicit val asr: SchemaReads[A] = (
+            (__ \ 'b).readWithSchema[B] and
+            (__ \ 'c).readWithSchema[C]
+          )(A.apply _)
+        }
+        println(Json.prettyPrint(ABC.asr.schema.asJson))
+        ABC.dsr.schema.asJson === JsString("D")
+        ABC.csr.schema.asJson === Json.obj("x" -> "int", "y?" -> "str")
+        ABC.bsr.schema.asJson === Json.obj("c?" -> ABC.csr.schema.asJson, "d" -> "D")
+        ABC.asr.schema.asJson === Json.obj("b" -> ABC.bsr.schema.asJson, "c" -> ABC.csr.schema.asJson)
+      }
+    }
   }
 
 }
