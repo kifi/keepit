@@ -187,7 +187,7 @@ object DescriptionElements {
   implicit def fromDateTime(time: DateTime): TextElement = new PrettyTime().format(time.toDate)
 
   def generateUserElement(bu: BasicUser, fullName: Boolean)(implicit imageConfig: S3ImageConfig): UserElement = UserElement(bu.externalId, if (fullName) bu.fullName else bu.firstName, bu.picturePath.getUrl, Path(s"/${bu.username.value}"))
-  implicit def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): UserElement = generateUserElement(bu, fullName = true)
+  implicit def fromBasicUser(bu: BasicUser)(implicit imageConfig: S3ImageConfig): UserElement = generateUserElement(bu, fullName = false)
 
   implicit def fromBasicOrg(bo: BasicOrganization): OrganizationElement = OrganizationElement(bo.orgId, bo.name, bo.avatarPath.path, bo.path)
   implicit def fromNonUser(bnu: BasicNonUser): NonUserElement = NonUserElement(bnu.id)

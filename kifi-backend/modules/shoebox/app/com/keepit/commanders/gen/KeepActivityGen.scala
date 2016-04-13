@@ -41,7 +41,7 @@ object KeepActivityGen {
       val header = sourceAttrOpt.map(_._1) match {
         case Some(KifiAttribution(keptBy, _, users, emails, libraries, _)) =>
           val nonKeeperRecipients = users.filter(_.externalId != keptBy.externalId)
-          val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(generateUserElement(_, fullName = false)).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
+          val recipientsElement = DescriptionElements.unwordsPretty(Seq(nonKeeperRecipients.map(fromBasicUser).toSeq, emails.map(e => fromText(e.address)).toSeq, libraries.map(fromBasicLibrary).toSeq).flatten)
           val actionElement = if (recipientsElement.flatten.nonEmpty) DescriptionElements("added", recipientsElement, "to this discussion") else DescriptionElements("started a discussion on this page")
 
           DescriptionElements(authorElement, actionElement)
@@ -108,7 +108,7 @@ object KeepActivityGen {
             specialCaseForMovedLibrary(diff)
           ).flatten.headOption.getOrElse {
               val KeepRecipientsDiff(users, libraries, emails) = diff
-              val addedUserElements = users.added.flatMap(info.userById.get).map(generateUserElement(_, fullName = false))
+              val addedUserElements = users.added.flatMap(info.userById.get).map(fromBasicUser)
               val addedLibElements = libraries.added.flatMap(info.libById.get).map(fromBasicLibrary)
               val addedEmailElements = emails.added.map(email => fromText(email.address))
               val addedEntities: Seq[DescriptionElement] = (addedUserElements ++ addedLibElements ++ addedEmailElements).toSeq
@@ -124,7 +124,7 @@ object KeepActivityGen {
         if (!info.userById.contains(editedBy)) airbrake.notify(s"[activityLog] no basic user stored for user $editedBy on keep $keepId, event ${event.id}")
 
         val basicAddedBy = info.userById.get(editedBy)
-        val header = DescriptionElements(basicAddedBy.map(fromBasicUser).getOrElse(fromText("Someone")), "edited the title")
+        val header = DescriptionElements(basicAddedBy.map(generateUserElement(_, fullName = true)).getOrElse(fromText("Someone")), "edited the title")
         val body = DescriptionElements(ShowOriginalElement(original.getOrElse(""), updated.getOrElse("")))
 
         (basicAddedBy, KeepEventKind.EditTitle, header, body)
