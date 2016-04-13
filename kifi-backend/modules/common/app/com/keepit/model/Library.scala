@@ -451,7 +451,7 @@ object LibraryColor extends Enumerator[LibraryColor] {
   private lazy val prng = new MersenneTwister(System.currentTimeMillis())
 
   def byHash(seed: Seq[String]): LibraryColor = {
-    val h = MurmurHash3.seqHash(seed)
+    val h = MurmurHash3.seqHash(seed).abs
     AllColors(h % AllColors.length)
   }
 
