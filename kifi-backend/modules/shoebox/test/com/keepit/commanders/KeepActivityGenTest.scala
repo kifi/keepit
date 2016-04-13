@@ -58,7 +58,7 @@ class KeepActivityGenTest extends Specification with ShoeboxTestInjector {
               val adding = ids.map(id => Id[User](id.id))
               keepEventCommander.persistKeepEventAndUpdateEliza(keep.id.get, KeepEventData.ModifyRecipients(user.id.get, KeepRecipientsDiff.addUsers(adding)), eventTime = Some(fakeClock.now()), source = None)
               fakeClock += Hours.ONE
-              val entities = adding.map(id => fromBasicUser(basicUserById(id))).toSeq
+              val entities = adding.map(id => generateUserElement(basicUserById(id), fullName = false)).toSeq
               DescriptionElements.formatPlain(DescriptionElements(basicUser, "added", unwordsPretty(entities), "to this discussion"))
             case (ids, false) => // libraries
               val adding = ids.map(id => Id[Library](id.id))
