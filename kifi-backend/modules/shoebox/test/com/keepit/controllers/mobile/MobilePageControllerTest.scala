@@ -99,8 +99,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           "keepId" -> keep1.externalId,
           "pubId" -> Keep.publicId(keep1.id.get),
           "tags" -> Seq(
-            Json.obj("id" -> "eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672", "name" -> "Cooking"),
-            Json.obj("id" -> "ffffffff-51ad-4c7d-a88e-d4e6e3c9a673", "name" -> "Baking")),
+            Json.obj("id" -> "Cooking", "name" -> "Cooking"),
+            Json.obj("id" -> "Baking", "name" -> "Baking")),
           "keepers" -> Seq(
             Json.obj("id" -> "aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672", "firstName" -> "Shanee", "lastName" -> "Smith", "pictureName" -> "0.jpg", "username" -> "test1")),
           "keeps" -> 1)

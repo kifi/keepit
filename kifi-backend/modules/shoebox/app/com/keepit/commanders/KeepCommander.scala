@@ -72,7 +72,7 @@ trait KeepCommander {
   def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[PartialKeepInfo], Seq[ExternalId[Keep]])]
 
   // On the way out, hopefully.
-  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
+  def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[String], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
   def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit]
 }
 
@@ -212,14 +212,15 @@ class KeepCommanderImpl @Inject() (
   def allKeeps(
     before: Option[ExternalId[Keep]],
     after: Option[ExternalId[Keep]],
-    collectionId: Option[ExternalId[Collection]],
+    collectionId: Option[String],
     helprankOpt: Option[String],
     count: Int,
     userId: Id[User]): Future[Seq[KeepInfo]] = {
 
-    def getKeepsFromCollection(userId: Id[User], collectionId: ExternalId[Collection], beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Seq[Keep] = {
+    def getKeepsFromCollection(userId: Id[User], collectionId: String, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Seq[Keep] = {
       db.readOnlyReplica { implicit session =>
-        val collectionOpt = collectionRepo.getByUserAndExternalId(userId, collectionId)
+        val collectionOpt = collectionRepo.getByUserAndName(userId, Hashtag(collectionId))
+          .orElse(ExternalId.asOpt[Collection](collectionId).flatMap(cid => collectionRepo.getByUserAndExternalId(userId, cid)))
         val keeps = collectionOpt.map { collection =>
           keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
         } getOrElse Seq.empty

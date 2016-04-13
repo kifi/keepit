@@ -6,7 +6,7 @@ import com.keepit.discussion.Message
 import org.joda.time.DateTime
 
 case class KeepTag(
-    id: Option[Id[KeepTag]],
+    id: Option[Id[KeepTag]] = None,
     state: State[KeepTag] = KeepTagStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,

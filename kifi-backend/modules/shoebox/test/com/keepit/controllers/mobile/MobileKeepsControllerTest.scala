@@ -116,9 +116,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val expected = Json.parse(s"""
           {"keeps":0,
            "collections":[
-               {"id":"${ext1}","name":"myCollaction1","keeps":1},
-               {"id":"${ext2}","name":"myCollaction2","keeps":1},
-               {"id":"${ext3}","name":"myCollaction3","keeps":1}
+               {"id":"myCollaction1","name":"myCollaction1","keeps":1},
+               {"id":"myCollaction2","name":"myCollaction2","keeps":1},
+               {"id":"myCollaction3","name":"myCollaction3","keeps":1}
             ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
