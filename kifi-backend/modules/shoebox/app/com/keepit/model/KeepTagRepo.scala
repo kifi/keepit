@@ -15,9 +15,9 @@ import scala.collection.{ Traversable, Iterable }
 @ImplementedBy(classOf[KeepTagRepoImpl])
 trait KeepTagRepo extends Repo[KeepTag] {
   def getByKeepIds(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]]
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
+  def getTagsByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag]
-
+  def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag]
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def deactivate(model: KeepTag)(implicit session: RWSession): Unit
 }
@@ -59,25 +59,31 @@ class KeepTagRepoImpl @Inject() (
   def table(tag: Tag) = new KeepTagTable(tag)
   initTable()
 
+  private def activeRows = rows.filter(_.state === KeepTagStates.ACTIVE)
+
   def getByKeepIds(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepTag]] = {
-    rows.filter(row => row.keepId.inSet(keepIds)).list.groupBy(_.keepId)
+    activeRows.filter(row => row.keepId.inSet(keepIds)).list.groupBy(_.keepId).withDefaultValue(Seq.empty)
   }
 
   // todo: Sorting, pagination
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
-    rows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
+  def getTagsByUser(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
+    activeRows.filter(row => row.userId === userId).groupBy(_.normalizedTag)
       .map { case (normalizedTag, q) => (q.map(_.tagName).max, q.length) }
       .list
       .collect { case (Some(t), b) => (t, b) }
   }
 
   def getByMessage(messageId: Id[Message])(implicit session: RSession): Seq[KeepTag] = {
-    rows.filter(row => row.messageId === messageId).list
+    activeRows.filter(row => row.messageId === messageId).list
+  }
+
+  def getAllByTagAndUser(tag: Hashtag, userId: Id[User])(implicit session: RSession): Seq[KeepTag] = {
+    activeRows.filter(row => row.normalizedTag === tag.normalized && row.userId === userId).list
   }
 
   def removeTagsFromKeep(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int = {
     val normalized = tags.map(_.normalized)
-    val toKill = rows.filter(row => row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
+    val toKill = activeRows.filter(row => row.keepId.inSet(keepIds) && row.normalizedTag.inSet(normalized)).list
     toKill.foreach(deactivate)
     toKill.length
   }

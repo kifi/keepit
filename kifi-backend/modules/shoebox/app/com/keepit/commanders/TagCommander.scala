@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.kifi.macros.json
@@ -16,9 +17,10 @@ import scala.concurrent.ExecutionContext
 /* Does NOT check permissions to edit */
 @ImplementedBy(classOf[TagCommanderImpl])
 trait TagCommander {
+  def getCountForUser(userId: Id[User])(implicit session: RSession): Int
+  def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag], userIdOpt: Option[Id[User]], messageIdOpt: Option[Id[Message]])(implicit session: RWSession): Unit
   def getTagsForKeep(keepId: Id[Keep])(implicit session: RSession): Seq[Hashtag]
   def getTagsForKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
-  def getCountForUser(userId: Id[User])(implicit session: RSession): Int
   def tagsForUser(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting): Seq[FakedBasicCollection]
   def removeTagsFromKeeps(keepIds: Traversable[Id[Keep]], tags: Traversable[Hashtag])(implicit session: RWSession): Int
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int
@@ -36,8 +38,28 @@ class TagCommanderImpl @Inject() (
     keepCommander: Provider[KeepCommander],
     clock: Clock) extends TagCommander with Logging {
 
+  // todo:
+  /*
+  deleteCollectionByTag: (userId, hashtag), delete
+  renameCollectionByTag: (userId, hashtag), rename  (used by removeTagFromKeeps)
+
+  getByUser (userId, sorting, limit, offset)
+  getByMessage (messageId)
+   */
+
   def getCountForUser(userId: Id[User])(implicit session: RSession): Int = {
     collectionRepo.count(userId)
+  }
+
+  def addTagsToKeep(keepId: Id[Keep], tags: Traversable[Hashtag], userIdOpt: Option[Id[User]], messageIdOpt: Option[Id[Message]])(implicit session: RWSession): Unit = {
+    val existingTags = keepTagRepo.getByKeepIds(Seq(keepId))(session)(keepId).map(t => t.tag.normalized -> t).toMap
+
+    tags.foreach { tag =>
+      existingTags.get(tag.normalized) match {
+        case Some(existing) => existing
+        case None => keepTagRepo.save(KeepTag(tag = tag, keepId = keepId, messageId = messageIdOpt, userId = userIdOpt))
+      }
+    }
   }
 
   // todo: Plug in KeepTag.
@@ -94,8 +116,7 @@ class TagCommanderImpl @Inject() (
 
   // Primarily useful when unkeeping.
   def removeAllTagsFromKeeps(keepIds: Traversable[Id[Keep]])(implicit session: RWSession): Int = {
-    val tags = getTagsForKeeps(keepIds).values.flatten
-    removeTagsFromKeeps(keepIds, tags)
+    removeTagsFromKeeps(keepIds, getTagsForKeeps(keepIds).values.flatten)
   }
 
 }
