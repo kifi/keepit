@@ -19,7 +19,8 @@ import scala.util.{Failure, Success, Try}
 package object json {
   abstract class FormatSchemaHelper {
     def hint(input: JsValue): JsValue
-    def hintResponse(input: JsValue): Result = Status(BAD_REQUEST)(Json.obj("error" -> "malformed_payload", "hint" -> hint(input)))
+    def hintResponse(input: JsValue, schema: JsonSchema): Result =
+      Status(BAD_REQUEST)(Json.obj("error" -> "malformed_payload", "expected" -> schema.asJson, "hint" -> hint(input)))
   }
   def schemaHelper[T](reads: Reads[T]): FormatSchemaHelper = new FormatSchemaHelper {
     override def hint(input: JsValue): JsValue = {
@@ -92,7 +93,7 @@ package object json {
     implicit val userId: SchemaReads[ExternalId[User]] = trivial("user_id")
     implicit val libraryId: SchemaReads[PublicId[Library]] = trivial("library_id")
     implicit val email: SchemaReads[EmailAddress] = trivial("email")
-    implicit val datetime: SchemaReads[DateTime] = trivial("datetime_int")(time.DateTimeJsonFormat)
+    implicit val datetime: SchemaReads[DateTime] = trivial("datetime_int")(time.DateTimeJsonFormat) // TBH it can read both Long and String inputs
 
     implicit class PimpedJsPath(jsp: JsPath) {
       def readWithSchema[T](implicit sr: SchemaReads[T]) =

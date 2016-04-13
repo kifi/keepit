@@ -99,7 +99,7 @@ class KeepMutationController @Inject() (
       )
     }.recover {
       case DiscussionFail.COULD_NOT_PARSE =>
-        BadRequest(Json.obj("error" -> "malformed_payload", "expected" -> schema.asJson, "hint" -> schemaHelper.hint(request.body)))
+        schemaHelper.hintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
     }
@@ -153,8 +153,14 @@ class KeepMutationController @Inject() (
   }
 
   private object EditTitleRequest {
+    import SchemaReads._
     final case class EditTitleRequest(newTitle: String, source: KeepEventSource)
-    implicit val reads = Json.reads[EditTitleRequest]
+    private val schemaReads: SchemaReads[EditTitleRequest] = (
+      (__ \ 'newTitle).readWithSchema[String] and
+      (__ \ 'source).readWithSchema[KeepEventSource]
+    )(EditTitleRequest.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
     val schemaHelper = json.schemaHelper(reads)
   }
   def editKeepTitle(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { implicit request =>
@@ -166,14 +172,21 @@ class KeepMutationController @Inject() (
     } yield editedKeep
 
     edit.map(_ => NoContent).getOrElse {
-      case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
+      case DiscussionFail.COULD_NOT_PARSE =>
+        schemaHelper.hintResponse(request.body, schema)
       case fail => fail.asErrorResponse
     }
   }
 
   private object SendMessageRequest {
+    import SchemaReads._
     final case class SendMessageRequest(text: String, source: MessageSource)
-    implicit val reads = Json.reads[SendMessageRequest]
+    private val schemaReads: SchemaReads[SendMessageRequest] = (
+      (__ \ 'text).readWithSchema[String] and
+      (__ \ 'source).readWithSchema[MessageSource]
+    )(SendMessageRequest.apply _)
+    implicit val reads = schemaReads.reads
+    val schema = schemaReads.schema
     val schemaHelper = json.schemaHelper(reads)
   }
   def sendMessageOnKeep(pubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -185,7 +198,8 @@ class KeepMutationController @Inject() (
     } yield {
       Ok(Json.toJson(msg))
     }).recover {
-      case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
+      case DiscussionFail.COULD_NOT_PARSE =>
+        schemaHelper.hintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
@@ -202,8 +216,14 @@ class KeepMutationController @Inject() (
   }
 
   private object EditMessageRequest {
+    import SchemaReads._
     final case class EditMessageRequest(text: String, source: MessageSource)
-    implicit val reads: Reads[EditMessageRequest] = Json.reads[EditMessageRequest]
+    private val schemaReads: SchemaReads[EditMessageRequest] = (
+      (__ \ 'text).readWithSchema[String] and
+      (__ \ 'source).readWithSchema[MessageSource]
+    )(EditMessageRequest.apply _)
+    implicit val reads: Reads[EditMessageRequest] = schemaReads.reads
+    val schema = schemaReads.schema
     val schemaHelper = json.schemaHelper(reads)
   }
   def editMessageOnKeep(keepPubId: PublicId[Keep], msgPubId: PublicId[Message]) = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -216,7 +236,8 @@ class KeepMutationController @Inject() (
     } yield {
       Ok(Json.obj("message" -> editedMsg))
     }).recover {
-      case DiscussionFail.COULD_NOT_PARSE => schemaHelper.hintResponse(request.body)
+      case DiscussionFail.COULD_NOT_PARSE =>
+        schemaHelper.hintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
