@@ -2,14 +2,14 @@ package com.keepit.common
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.AirbrakeNotifierStatic
+import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeNotifierStatic }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{Library, User}
 import org.joda.time.DateTime
 import play.api.data.validation.ValidationError
 import play.api.http.Status._
-import play.api.libs.functional.syntax._
 import play.api.libs.functional._
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Result
 import play.api.mvc.Results.Status
@@ -21,6 +21,10 @@ package object json {
     def hint(input: JsValue): JsValue
     def hintResponse(input: JsValue, schema: JsonSchema): Result =
       Status(BAD_REQUEST)(Json.obj("error" -> "malformed_payload", "expected" -> schema.asJson, "hint" -> hint(input)))
+    def loudHintResponse(input: JsValue, schema: JsonSchema)(implicit airbrake: AirbrakeNotifier): Result = {
+      airbrake.notify(s"Invalid API endpoint payload $input", new Exception())
+      hintResponse(input, schema)
+    }
   }
   def schemaHelper[T](reads: Reads[T]): FormatSchemaHelper = new FormatSchemaHelper {
     override def hint(input: JsValue): JsValue = {

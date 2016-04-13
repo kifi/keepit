@@ -39,7 +39,7 @@ class KeepMutationController @Inject() (
   keepInfoAssembler: KeepInfoAssembler,
   clock: Clock,
   contextBuilder: HeimdalContextBuilderFactory,
-  implicit val airbrake: AirbrakeNotifier,
+  private implicit val airbrake: AirbrakeNotifier,
   private implicit val defaultContext: ExecutionContext,
   private implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -99,7 +99,7 @@ class KeepMutationController @Inject() (
       )
     }.recover {
       case DiscussionFail.COULD_NOT_PARSE =>
-        schemaHelper.hintResponse(request.body, schema)
+        schemaHelper.loudHintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
       case fail: KeepFail => fail.asErrorResponse
     }
@@ -126,7 +126,7 @@ class KeepMutationController @Inject() (
       NoContent
     }).recover {
       case DiscussionFail.COULD_NOT_PARSE =>
-        schemaHelper.hintResponse(request.body, schema)
+        schemaHelper.loudHintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
@@ -182,7 +182,7 @@ class KeepMutationController @Inject() (
 
     edit.map(_ => NoContent).getOrElse {
       case DiscussionFail.COULD_NOT_PARSE =>
-        schemaHelper.hintResponse(request.body, schema)
+        schemaHelper.loudHintResponse(request.body, schema)
       case fail => fail.asErrorResponse
     }
   }
@@ -208,7 +208,7 @@ class KeepMutationController @Inject() (
       Ok(Json.toJson(msg))
     }).recover {
       case DiscussionFail.COULD_NOT_PARSE =>
-        schemaHelper.hintResponse(request.body, schema)
+        schemaHelper.loudHintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
@@ -246,7 +246,7 @@ class KeepMutationController @Inject() (
       Ok(Json.obj("message" -> editedMsg))
     }).recover {
       case DiscussionFail.COULD_NOT_PARSE =>
-        schemaHelper.hintResponse(request.body, schema)
+        schemaHelper.loudHintResponse(request.body, schema)
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
