@@ -328,23 +328,31 @@ class SlackPushingActor @Inject() (
     }
 
     val keepsToPushFut = db.readOnlyReplicaAsync { implicit s =>
-      val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet)
-      // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
-      def comesFromDestinationChannel(keep: Keep): Boolean = keep.source == KeepSource.slack
+      (keepSourceAttributionRepo.getByKeepIds(changedKeepIds.toSet), lts.lastProcessedKeep.map(ktlRepo.get))
+    }.map {
+      case (attributionByKeepId, lastPushedKtl) =>
+        def shouldKeepBePushed(keep: Keep, ktl: KeepToLibrary): Boolean = {
+          // TODO(ryan): temporarily making this more aggressive, something bad is happening in prod
+          keep.source != KeepSource.slack && ktl.addedAt.isAfter(lts.changedStatusAt)
+        }
 
-      val lastPushedKtl = lts.lastProcessedKeep.map(ktlRepo.get)
-      def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
-        ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
-      }
-      val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
-      (oldKeeps, newKeeps.filter { case (k, ktl) => !comesFromDestinationChannel(k) }, attributionByKeepId)
+        def hasAlreadyBeenPushed(ktl: KeepToLibrary) = lastPushedKtl.exists { last =>
+          ktl.addedAt.isBefore(last.addedAt) || (ktl.addedAt.isEqual(last.addedAt) && ktl.id.get.id <= last.id.get.id)
+        }
+        val (oldKeeps, newKeeps) = keepAndKtlByKeep.values.toSeq.partition { case (k, ktl) => hasAlreadyBeenPushed(ktl) }
+        (oldKeeps, newKeeps.filter { case (k, ktl) => shouldKeepBePushed(k, ktl) }, attributionByKeepId)
     }
     val msgsToPushFut = eliza.getChangedMessagesFromKeeps(changedKeepIds, lts.lastProcessedMsgSeq getOrElse SequenceNumber.ZERO).map { changedMsgs =>
       def hasAlreadyBeenPushed(msg: CrossServiceMessage) = lts.lastProcessedMsg.exists(msg.id.id <= _.id)
-      def wasSentAfterKeepWasAddedToLibrary(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists { case (k, ktl) => ktl.addedAt isBefore msg.sentAt }
+      def shouldMessageBePushed(msg: CrossServiceMessage) = keepAndKtlByKeep.get(msg.keep).exists {
+        case (k, ktl) =>
+          def messageWasSentAfterKeepWasAddedToThisLibrary = ktl.addedAt isBefore msg.sentAt
+          def keepWasAddedToThisLibraryAfterIntegrationWasActivated = ktl.addedAt isAfter lts.changedStatusAt
+          messageWasSentAfterKeepWasAddedToThisLibrary && keepWasAddedToThisLibraryAfterIntegrationWasActivated
+      }
       val msgsWithKeep = changedMsgs.flatAugmentWith(msg => keepAndKtlByKeep.get(msg.keep).map(_._1)).map(_.swap)
       msgsWithKeep
-        .filter { case (k, msg) => wasSentAfterKeepWasAddedToLibrary(msg) }
+        .filter { case (k, msg) => shouldMessageBePushed(msg) }
         .partition { case (k, msg) => hasAlreadyBeenPushed(msg) }
     }
 
