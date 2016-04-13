@@ -41,17 +41,16 @@
 .kifi-message-sent-header-item a[href]:hover {
   text-decoration: underline!important;
 }
-.kifi-message-sent:only-of-type:last-of-type:hover .kifi-message-sent-header-stamp,
-.kifi-messages-sent:hover .kifi-message-sent:last-of-type .kifi-message-sent-header-stamp {
+.kifi-message-sent:only-of-type:hover .kifi-message-sent-header-stamp, /* hide stamp on hover when it's the only one */
+.kifi-messages-sent:hover .kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* hide the shown-by-default last timestamp if hovering over another */
   display: none;
 }
-.kifi-message-sent:last-of-type .kifi-message-sent-header-stamp {
+.kifi-message-sent:last-of-type .kifi-message-sent-header-stamp { /* show last timestamp when not hovering */
   display: inline-block;
 }
-.kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-header-stamp {
+.kifi-message-sent.kifi-message-sent.kifi-message-sent:hover .kifi-message-sent-header-stamp { /* show the timestamp when hovering over its message */
   display: inline-block;
 }
-
 .kifi-message-sent-header-stamp {
   position: absolute;
   right: 0;
@@ -62,8 +61,16 @@
   text-align: right;
   color: #a9a9a9;
 }
-.kifi-message-sent-header-stamp-ellipsis::before {
+.kifi-message-sent:not(:only-of-type) .kifi-message-sent-header-stamp-ellipsis::before { /* add the ellipsis to messages unless there is only one */
   content: '…';
+}
+.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp { /* if there is only one message, display its stamp on its own line. */
+  position: static;
+  display: block!important;
+}
+.kifi-message-sent:only-of-type .kifi-message-sent-header-stamp.kifi-message-sent-header-stamp-dummy { /* matched when measuring if an ellipsis is needed */
+  position: absolute;
+  display: inline-block!important;
 }
 .kifi-message-source-icon {
   display: none;

@@ -365,6 +365,7 @@ k.panes.thread = k.panes.thread || function () {
         $rendered.appendTo($holder);
       }
 
+      $stamp.classList.add('kifi-message-sent-header-stamp-dummy');
       $stamp.style.display = 'inline-block';
       var rects = $stampSibling.getClientRects();
       var lastRect = rects[rects.length - 1];
@@ -372,6 +373,7 @@ k.panes.thread = k.panes.thread || function () {
         $stamp.classList.add('kifi-message-sent-header-stamp-ellipsis');
       }
       $stamp.style.display = null;
+      $stamp.classList.remove('kifi-message-sent-header-stamp-dummy');
 
       if (!alreadyHeld) {
         $rendered.remove();
