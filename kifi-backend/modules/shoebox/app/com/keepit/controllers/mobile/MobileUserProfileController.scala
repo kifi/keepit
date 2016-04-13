@@ -34,7 +34,7 @@ class MobileUserProfileController @Inject() (
   orgInviteRepo: OrganizationInviteRepo,
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
-  tagCommander: TagCommander,
+  collectionCommander: CollectionCommander,
   friendStatusCommander: FriendStatusCommander,
   slackInfoCommander: SlackInfoCommander,
   implicit val executionContext: ExecutionContext)
@@ -57,7 +57,7 @@ class MobileUserProfileController @Inject() (
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewerOpt.map(_.id.get))
-        val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs, slackInfo, tagCount) = db.readOnlyMaster { implicit s =>
+        val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs, slackInfo) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val numFollowers = userProfileCommander.countFollowers(profile.userId, viewerOpt.map(_.id.get))
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -72,8 +72,7 @@ class MobileUserProfileController @Inject() (
             }.getOrElse(Seq.empty, Set.empty)
           }
           val slackInfo = slackInfoCommander.getUserSlackInfo(profile.userId, viewerOpt.map(_.id.get))
-          val tagCount = tagCommander.getCountForUser(profile.userId)
-          (numConnections, numFollowers, userBio, orgInfos, pendingOrgs, slackInfo, tagCount)
+          (numConnections, numFollowers, userBio, orgInfos, pendingOrgs, slackInfo)
         }
 
         val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -84,7 +83,7 @@ class MobileUserProfileController @Inject() (
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
           numFollowers = numFollowers,
-          numTags = tagCount,
+          numTags = collectionCommander.getCount(profile.userId),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography,
           orgs = orgInfos,
