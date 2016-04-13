@@ -17,6 +17,7 @@ import com.keepit.social.BasicUser
 import com.kifi.macros.json
 
 import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.math3.random.MersenneTwister
 import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
@@ -26,6 +27,7 @@ import play.api.mvc.{ PathBindable, QueryStringBindable }
 import scala.concurrent.duration.Duration
 
 import scala.util.Random
+import scala.util.hashing.MurmurHash3
 
 case class Library(
     id: Option[Id[Library]] = None,
@@ -428,7 +430,6 @@ object BasicLibraryDetails {
 
 sealed abstract class LibraryColor(val value: String, val hex: String)
 object LibraryColor extends Enumerator[LibraryColor] {
-
   case object BLUE extends LibraryColor("blue", "#447ab7")
   case object SKY_BLUE extends LibraryColor("sky_blue", "#5ab7e7")
   case object GREEN extends LibraryColor("green", "#4fc49e")
@@ -446,12 +447,16 @@ object LibraryColor extends Enumerator[LibraryColor] {
     Writes { o => JsString(o.hex) }
   )
 
-  val AllColors: Seq[LibraryColor] = all.toSeq.sortBy(_.value)
+  val AllColors: IndexedSeq[LibraryColor] = all.toIndexedSeq.sortBy(_.value)
+  private lazy val prng = new MersenneTwister(System.currentTimeMillis())
 
-  private lazy val rnd = new Random
+  def byHash(seed: Seq[String]): LibraryColor = {
+    val h = MurmurHash3.seqHash(seed)
+    AllColors(h % AllColors.length)
+  }
 
   def pickRandomLibraryColor(): LibraryColor = {
-    AllColors(rnd.nextInt(AllColors.size))
+    AllColors(prng.nextInt(AllColors.length))
   }
 
 }

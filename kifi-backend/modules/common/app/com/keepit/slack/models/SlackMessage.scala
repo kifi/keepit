@@ -49,6 +49,7 @@ case class SlackAttachment(
     markdownIn: Option[Set[String]] = None) {
   def withFullMarkdown = this.copy(markdownIn = Some(Set("text")))
   def withColor(newColor: String) = this.copy(color = Some(newColor))
+  def withColorMaybe(colorMaybe: Option[String]) = this.copy(color = colorMaybe)
   def withText(str: String) = this.copy(text = Some(str))
   def withImageUrl(newImageUrl: String) = this.copy(imageUrl = Some(newImageUrl))
 }

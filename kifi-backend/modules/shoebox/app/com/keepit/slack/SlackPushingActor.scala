@@ -393,6 +393,7 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
     val category = NotificationCategory.NonUser.NEW_KEEP
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
     val keepElement = DescriptionElements(
       s"_${keep.title.getOrElse(keep.url).abbreviate(KEEP_TITLE_MAX_DISPLAY_LENGTH)}_",
       "  ",
@@ -405,7 +406,7 @@ class SlackPushingActor @Inject() (
     (keep.note, attribution) match {
       case (Some(note), _) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(keepElement),
-        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColor(LibraryColor.BLUE.hex).withFullMarkdown)
+        attachments = Seq(SlackAttachment.simple(DescriptionElements(s"*$userStr:*", Hashtags.format(note))).withColorMaybe(userColor.map(_.hex)).withFullMarkdown)
       )
       case (None, None) => SlackMessageRequest.fromKifi(
         text = DescriptionElements.formatForSlack(DescriptionElements(s"*$userStr*", "sent", keepElement))
@@ -431,6 +432,7 @@ class SlackPushingActor @Inject() (
     import DescriptionElements._
 
     val userStr = user.fold[String]("Someone")(_.firstName)
+    val userColor = user.map(u => LibraryColor.byHash(Seq(keep.externalId.id, u.externalId.id)))
 
     val category = NotificationCategory.NonUser.NEW_COMMENT
     def keepLink(subaction: String) = LinkElement(pathCommander.keepPageOnUrlViaSlack(keep, slackTeamId).withQuery(SlackAnalytics.generateTrackingParams(items.slackChannelId, category, Some(subaction))))
@@ -455,7 +457,7 @@ class SlackPushingActor @Inject() (
           case Left(str) => DescriptionElements(str)
           case Right(Success((pointer, ref))) => pointer --> msgLink("lookHere")
           case Right(Failure(fail)) => "look here" --> msgLink("lookHere")
-        })).withFullMarkdown.withColor(LibraryColor.BLUE.hex) +: textAndLookHeres.collect {
+        })).withFullMarkdown.withColorMaybe(userColor.map(_.hex)) +: textAndLookHeres.collect {
           case Right(Success((pointer, ref))) =>
             imageUrlRegex.findFirstIn(ref) match {
               case Some(url) =>
