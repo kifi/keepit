@@ -9,10 +9,13 @@ import play.api.libs.json._
 import scala.util.Try
 
 class JsonTest extends Specification {
-  private case class Foo(x: Int, y: Double, z: String)
-  private object Foo { implicit val format = Json.format[Foo] }
   "json package" should {
     "format JsObject maps" in {
+      object FooObj {
+        case class Foo(x: Int, y: Double, z: String)
+        implicit val format = Json.format[Foo]
+      }
+      import FooObj._
       val f = TraversableFormat.mapFormat[ExternalId[Foo], Foo](_.id, s => Try(ExternalId[Foo](s)).toOption)
       val obj = Map[ExternalId[Foo], Foo](
         ExternalId("180922ae-7aab-4622-b4ad-131e9c901fa6") -> Foo(1, 2.0, "3"),
@@ -171,7 +174,7 @@ class JsonTest extends Specification {
             (__ \ 'c).readWithSchema[C]
           )(A.apply _)
         }
-        println(Json.prettyPrint(ABC.asr.schema.asJson))
+        // println(Json.prettyPrint(ABC.asr.schema.asJson))
         ABC.dsr.schema.asJson === JsString("D")
         ABC.csr.schema.asJson === Json.obj("x" -> "int", "y?" -> "str")
         ABC.bsr.schema.asJson === Json.obj("c?" -> ABC.csr.schema.asJson, "d" -> "D")

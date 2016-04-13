@@ -108,16 +108,23 @@ object KeepRecipientsDiff {
 case class ExternalKeepRecipientsDiff(users: DeltaSet[ExternalId[User]], libraries: DeltaSet[PublicId[Library]], emails: DeltaSet[EmailAddress], source: Option[KeepEventSource])
 object ExternalKeepRecipientsDiff {
   import SchemaReads._
+
+  // NB: weird story time
+  /*
+  The classes herein are entirely composed of nullable fields. Because of that, some really weird stuff can get through
+  _.readNullable is pretty forgiving. If you remove the Reads.JsObjectReads below, JsNumber(10).as[ExternalKeepRecipientsDiff] will succeed
+  It seems that the readNullable does not care if the top-level object even has the correct type.
+  It probably checks each path individually
+   */
   private implicit def deltasetSchemaReads[T](implicit srt: SchemaReads[T]): SchemaReads[DeltaSet[T]] = (
     (__ \ 'add).readNullableWithSchema[Set[T]] and
     (__ \ 'remove).readNullableWithSchema[Set[T]]
-  )(DeltaSet.fromSets[T] _)
+  )(DeltaSet.fromSets[T] _) keepAnd Reads.JsObjectReads
   val schemaReads: SchemaReads[ExternalKeepRecipientsDiff] = (
     (__ \ 'users).readNullableWithSchema[DeltaSet[ExternalId[User]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'libraries).readNullableWithSchema[DeltaSet[PublicId[Library]]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'emails).readNullableWithSchema[DeltaSet[EmailAddress]].map(_ getOrElse DeltaSet.empty) and
     (__ \ 'source).readNullableWithSchema[KeepEventSource]
-  )(ExternalKeepRecipientsDiff.apply _)
-
-  implicit val reads: Reads[ExternalKeepRecipientsDiff] = schemaReads.reads
+  )(ExternalKeepRecipientsDiff.apply _) keepAnd Reads.JsObjectReads
+  implicit val reads = schemaReads.reads
 }

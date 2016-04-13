@@ -82,6 +82,7 @@ package object json {
   }
   final case class SchemaReads[T](reads: Reads[T], schema: JsonSchema) {
     def map[S](f: T => S) = this.copy(reads = reads.map(f))
+    def keepAnd[S](sreads: Reads[S]) = this.copy(reads = reads keepAnd sreads)
   }
   object SchemaReads {
     def trivial[T](description: String)(implicit reads: Reads[T]) =
