@@ -57,6 +57,23 @@ package object json {
       )
     }
   }
+
+  sealed abstract class JsonSchema
+  object JsonSchema {
+    final case class Single(description: String) extends JsonSchema
+    final case class Optional(field: JsonSchema) extends JsonSchema
+    final case class Array(kind: Single) extends JsonSchema
+    final case class Object(fields: Seq[(String, JsonSchema)]) extends JsonSchema
+  }
+  final case class SchemaReads[T](reads: Reads[T], schema: JsonSchema)
+  object SchemaReads {
+    implicit class PimpedJsPath(jsp: JsPath) {
+      def readWithSchema[T](implicit sr: SchemaReads[T]) =
+        SchemaReads(jsp.read(sr.reads), JsonSchema.Object(Seq(jsp.toJsonString -> sr.schema)))
+      def readNullableWithSchema[T](implicit sr: SchemaReads[T]) =
+        SchemaReads(jsp.readNullable(sr.reads), JsonSchema.Object(Seq(jsp.toJsonString -> JsonSchema.Optional(sr.schema))))
+    }
+  }
   object EnumFormat {
     def reads[T](fromStr: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
       def errMsg = if (domain.nonEmpty) s"$j is not one of these: $domain" else s"Could not recognize $j"

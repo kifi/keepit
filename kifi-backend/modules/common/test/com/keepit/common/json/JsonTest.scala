@@ -132,6 +132,18 @@ class JsonTest extends Specification {
         hinter.hint(Json.obj("x" -> 1, "y" -> Seq(1, 2, 3))) === Json.obj("obj.y" -> "expected a string", "obj.z" -> "required field")
       }
     }
+    "generate full schemas" in {
+      "trivially" in {
+        case class Foo(x: Int, y: String, z: Seq[String])
+        object Foo {
+          val schemaReads: SchemaReads[Foo] = (
+            (__ \ 'x).read[Int] and
+            (__ \ 'y).read[String] and
+            (__ \ 'z).read[Seq[String]]
+          )(Foo.apply _)
+        }
+      }
+    }
   }
 
 }
